@@ -11,7 +11,7 @@ export {
   loginAsTechnician,
   loginAsManager,
   loginAsDispatcher,
-  loginAsClient,
+  loginAsCustomer,
   logout,
   isAuthenticated,
   getAuthToken,

@@ -266,7 +266,7 @@ describe('Users CRUD API - Integration Tests', () => {
     it('should create user with role_id', async () => {
       // Arrange - Get client role ID from database
       const db = require('../../db/connection');
-      const roleResult = await db.query("SELECT id FROM roles WHERE name = 'client' LIMIT 1");
+      const roleResult = await db.query("SELECT id FROM roles WHERE name = 'customer' LIMIT 1");
       const clientRoleId = roleResult.rows[0]?.id;
 
       if (!clientRoleId) {

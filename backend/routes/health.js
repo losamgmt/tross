@@ -19,6 +19,7 @@ const { logger } = require('../config/logger');
  *     description: |
  *       Public endpoint for liveness probe. Checks database connectivity and returns server uptime.
  *       Use this for load balancer health checks and monitoring.
+ *       ENHANCED: Now includes database response time, memory metrics, and Node.js version.
  *     responses:
  *       200:
  *         description: Service is healthy
@@ -38,6 +39,30 @@ const { logger } = require('../config/logger');
  *                   type: number
  *                   description: Server uptime in seconds
  *                   example: 3600.5
+ *                 database:
+ *                   type: object
+ *                   properties:
+ *                     connected:
+ *                       type: boolean
+ *                     responseTime:
+ *                       type: number
+ *                       description: Database query response time in milliseconds
+ *                 memory:
+ *                   type: object
+ *                   properties:
+ *                     rss:
+ *                       type: number
+ *                       description: Resident Set Size in MB
+ *                     heapUsed:
+ *                       type: number
+ *                       description: Heap memory used in MB
+ *                     heapTotal:
+ *                       type: number
+ *                       description: Total heap allocated in MB
+ *                 nodeVersion:
+ *                   type: string
+ *                   description: Node.js version
+ *                   example: v18.16.0
  *       503:
  *         description: Service is unhealthy
  *         content:
@@ -58,12 +83,28 @@ const { logger } = require('../config/logger');
 router.get('/', async (req, res) => {
   try {
     // Check database connectivity
-    await db.raw('SELECT 1');
+    const dbStart = Date.now();
+    await db.query('SELECT 1');
+    const dbResponseTime = Date.now() - dbStart;
+
+    // Memory metrics
+    const memUsage = process.memoryUsage();
+    const memoryMB = {
+      rss: Math.round(memUsage.rss / 1024 / 1024),
+      heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024),
+      heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024),
+    };
 
     res.json({
       status: 'healthy',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
+      database: {
+        connected: true,
+        responseTime: dbResponseTime,
+      },
+      memory: memoryMB,
+      nodeVersion: process.version,
     });
   } catch (error) {
     logger.error('Health check failed:', error);
@@ -92,7 +133,7 @@ router.get('/', async (req, res) => {
  *       - Degraded: Response time 100-500ms or connection usage 80-95%
  *       - Critical: Response time > 500ms or connection usage > 95%
  *     security:
- *       - bearerAuth: []
+ *       - BearerAuth: []
  *     responses:
  *       200:
  *         description: Database health metrics retrieved

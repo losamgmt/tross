@@ -85,7 +85,7 @@ describe("Constants Service", () => {
       expect(USER_ROLES.MANAGER).toBe("manager");
       expect(USER_ROLES.DISPATCHER).toBe("dispatcher");
       expect(USER_ROLES.TECHNICIAN).toBe("technician");
-      expect(USER_ROLES.CLIENT).toBe("client");
+      expect(USER_ROLES.CLIENT).toBe("customer");
     });
   });
 

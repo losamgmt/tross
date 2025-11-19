@@ -281,6 +281,7 @@ module.exports = {
   hasMinimumRole,
   getMinimumRole,
   getRowLevelSecurity,
+  getRLSRule: getRowLevelSecurity, // Alias for clarity
   reloadPermissions,
 
   // Legacy compatibility (for gradual migration)

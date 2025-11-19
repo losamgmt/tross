@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Role = require('../db/models/Role');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
+const { enforceRLS } = require('../middleware/row-level-security');
 const {
   validateRoleCreate,
   validateRoleUpdate,
@@ -24,6 +25,8 @@ const roleMetadata = require('../config/models/role-metadata'); // NEW: Role met
  *     description: |
  *       Returns a paginated list of roles with optional search, filtering, and sorting.
  *       All query parameters are optional and can be combined.
+ *     security:
+ *       - BearerAuth: []
  *     parameters:
  *       - in: query
  *         name: page
@@ -112,6 +115,7 @@ router.get(
   '/',
   authenticateToken,
   requirePermission('roles', 'read'),
+  enforceRLS('roles'),
   validatePagination(),
   validateQuery(roleMetadata), // NEW: Metadata-driven validation
   async (req, res) => {
@@ -120,7 +124,7 @@ router.get(
       const { page, limit } = req.validated.pagination;
       const { search, filters, sortBy, sortOrder } = req.validated.query;
 
-      // Call model with all query options
+      // Call model with all query options + req for RLS
       const result = await Role.findAll({
         page,
         limit,
@@ -128,6 +132,7 @@ router.get(
         filters,
         sortBy,
         sortOrder,
+        req,
       });
 
       res.json({
@@ -136,6 +141,7 @@ router.get(
         count: result.data.length,
         pagination: result.pagination,
         appliedFilters: result.appliedFilters, // NEW: Show what filters were applied
+        rlsApplied: result.rlsApplied,
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
@@ -186,11 +192,12 @@ router.get(
   '/:id',
   authenticateToken,
   requirePermission('roles', 'read'),
+  enforceRLS('roles'),
   validateIdParam(),
   async (req, res) => {
     try {
       const roleId = req.validated.id; // From validateIdParam middleware
-      const role = await Role.findById(roleId);
+      const role = await Role.findById(roleId, req);
 
       if (!role) {
         return res.status(404).json({
@@ -324,7 +331,7 @@ router.get(
  *     summary: Create new role (admin only)
  *     description: Create a new role. Role name must be unique. Requires admin privileges.
  *     security:
- *       - bearerAuth: []
+ *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -371,7 +378,7 @@ router.post(
   validateRoleCreate,
   async (req, res) => {
     try {
-      const { name } = req.body;
+      const { name, priority, description } = req.body;
 
       // Check if role name already exists
       if (!name) {
@@ -383,8 +390,14 @@ router.post(
         });
       }
 
-      // Create role
-      const newRole = await Role.create(name);
+      // Create role with optional priority
+      const newRole = await Role.create(name, priority);
+
+      // If description was provided, update it
+      if (description !== undefined) {
+        await Role.update(newRole.id, { description });
+        newRole.description = description;
+      }
 
       // Log the creation
       await auditService.log({
@@ -392,7 +405,7 @@ router.post(
         action: 'role_create',
         resourceType: 'role',
         resourceId: newRole.id,
-        newValues: { name: newRole.name },
+        newValues: { name: newRole.name, priority: newRole.priority, description: newRole.description },
         ipAddress: getClientIp(req),
         userAgent: getUserAgent(req),
       });
@@ -448,7 +461,7 @@ router.post(
  *       - Role names are automatically converted to lowercase
  *       - Whitespace is trimmed
  *     security:
- *       - bearerAuth: []
+ *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -561,7 +574,7 @@ router.put(
       const { name, description, permissions, is_active, priority } = req.body;
 
       // Get old role for audit
-      const oldRole = await Role.findById(roleId);
+      const oldRole = await Role.findById(roleId, req);
       if (!oldRole) {
         return res.status(HTTP_STATUS.NOT_FOUND).json({
           success: false,
@@ -674,7 +687,7 @@ router.put(
  *     summary: Delete role (admin only)
  *     description: Delete a role. Cannot delete protected roles (admin, client) or roles with assigned users. Requires admin privileges.
  *     security:
- *       - bearerAuth: []
+ *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id

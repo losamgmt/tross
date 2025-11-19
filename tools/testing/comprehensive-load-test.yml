@@ -1,0 +1,275 @@
+/**
+ * Artillery Load Test Configuration
+ * 
+ * Tests performance under realistic load for all critical endpoints.
+ * 
+ * Usage:
+ *   npm install -g artillery  (if not installed)
+ *   artillery run tools/testing/comprehensive-load-test.yml
+ *   artillery run tools/testing/comprehensive-load-test.yml --output report.json
+ *   artillery report report.json
+ */
+
+config:
+  target: 'http://localhost:3001'
+  phases:
+    # Warm-up phase
+    - duration: 30
+      arrivalRate: 5
+      name: "Warm-up"
+    
+    # Normal load
+    - duration: 120
+      arrivalRate: 20
+      name: "Normal operations"
+    
+    # Peak load simulation
+    - duration: 60
+      arrivalRate: 50
+      name: "Peak traffic"
+    
+    # Cool down
+    - duration: 30
+      arrivalRate: 10
+      name: "Cool down"
+  
+  # Performance thresholds - fail if exceeded
+  ensure:
+    maxErrorRate: 1  # Max 1% error rate
+    p95: 500  # 95th percentile < 500ms
+    p99: 1000  # 99th percentile < 1s
+  
+  processor: "./load-test-functions.js"
+  
+  # Variables for test data
+  variables:
+    adminEmail: "admin@trossapp.com"
+    
+  plugins:
+    expect: {}
+    metrics-by-endpoint: {}
+
+scenarios:
+  # ============================================
+  # PUBLIC ENDPOINTS (No Auth Required)
+  # ============================================
+  
+  - name: "Health Check - High Volume"
+    weight: 30
+    flow:
+      - get:
+          url: "/api/health"
+          expect:
+            - statusCode: 200
+            - hasProperty: "status"
+            - contentType: json
+            - equals:
+                - "$.status"
+                - "healthy"
+
+  # ============================================
+  # AUTHENTICATED READ OPERATIONS
+  # ============================================
+  
+  - name: "Customers List - Paginated Read"
+    weight: 20
+    flow:
+      - function: "generateAdminToken"
+      - get:
+          url: "/api/customers?page=1&limit=10"
+          headers:
+            Authorization: "Bearer {{ adminToken }}"
+          expect:
+            - statusCode: 200
+            - hasProperty: "data"
+            - hasProperty: "pagination"
+            - hasProperty: "rlsApplied"
+      - think: 1
+
+  - name: "Work Orders List - Search & Filter"
+    weight: 20
+    flow:
+      - function: "generateDispatcherToken"
+      - get:
+          url: "/api/work_orders?search=repair&sortBy=created_at&sortOrder=desc&page=1&limit=20"
+          headers:
+            Authorization: "Bearer {{ dispatcherToken }}"
+          expect:
+            - statusCode: 200
+      - think: 2
+
+  - name: "Invoices List - Heavy Query"
+    weight: 15
+    flow:
+      - function: "generateAdminToken"
+      - get:
+          url: "/api/invoices?page=1&limit=50"
+          headers:
+            Authorization: "Bearer {{ adminToken }}"
+          expect:
+            - statusCode: 200
+      - think: 1
+
+  - name: "Inventory List - Public Resource"
+    weight: 15
+    flow:
+      - function: "generateDispatcherToken"
+      - get:
+          url: "/api/inventory?page=1&limit=25"
+          headers:
+            Authorization: "Bearer {{ dispatcherToken }}"
+          expect:
+            - statusCode: 200
+            - hasProperty: "rlsApplied"
+      - think: 1
+
+  # ============================================
+  # AUTHENTICATED WRITE OPERATIONS  
+  # ============================================
+  
+  - name: "Create & Update Work Order Flow"
+    weight: 10
+    flow:
+      - function: "generateAdminToken"
+      - function: "getTestCustomerId"
+      
+      # Create work order
+      - post:
+          url: "/api/work_orders"
+          headers:
+            Authorization: "Bearer {{ adminToken }}"
+            Content-Type: "application/json"
+          json:
+            title: "Load Test Work Order {{ $randomString() }}"
+            customer_id: "{{ customerId }}"
+            description: "Performance testing work order"
+            priority: "normal"
+            status: "pending"
+          capture:
+            - json: "$.data.id"
+              as: "workOrderId"
+          expect:
+            - statusCode: 201
+      
+      - think: 1
+      
+      # Update work order
+      - patch:
+          url: "/api/work_orders/{{ workOrderId }}"
+          headers:
+            Authorization: "Bearer {{ adminToken }}"
+            Content-Type: "application/json"
+          json:
+            status: "in_progress"
+          expect:
+            - statusCode: 200
+      
+      - think: 1
+      
+      # Clean up - soft delete
+      - delete:
+          url: "/api/work_orders/{{ workOrderId }}"
+          headers:
+            Authorization: "Bearer {{ adminToken }}"
+          expect:
+            - statusCode: 200
+
+  # ============================================
+  # ERROR HANDLING PERFORMANCE
+  # ============================================
+  
+  - name: "Error Handling - Invalid Requests"
+    weight: 5
+    flow:
+      - function: "generateAdminToken"
+      
+      # Invalid ID format
+      - get:
+          url: "/api/work_orders/invalid-id"
+          headers:
+            Authorization: "Bearer {{ adminToken }}"
+          expect:
+            - statusCode: 400
+      
+      - think: 1
+      
+      # Non-existent resource
+      - get:
+          url: "/api/work_orders/999999"
+          headers:
+            Authorization: "Bearer {{ adminToken }}"
+          expect:
+            - statusCode: 404
+      
+      - think: 1
+      
+      # Missing auth
+      - get:
+          url: "/api/work_orders"
+          expect:
+            - statusCode: 401
+
+  # ============================================
+  # RLS PERFORMANCE TEST
+  # ============================================
+  
+  - name: "RLS Filtering Performance"
+    weight: 10
+    flow:
+      - function: "generateCustomerToken"
+      
+      # Customer sees filtered data
+      - get:
+          url: "/api/work_orders?page=1&limit=20"
+          headers:
+            Authorization: "Bearer {{ customerToken }}"
+          expect:
+            - statusCode: 200
+            - hasProperty: "rlsApplied"
+            - equals:
+                - "$.rlsApplied"
+                - true
+      
+      - think: 2
+      
+      # Get specific work order (RLS check)
+      - function: "getTestWorkOrderId"
+      - get:
+          url: "/api/work_orders/{{ workOrderId }}"
+          headers:
+            Authorization: "Bearer {{ customerToken }}"
+          expect:
+            - statusCode: [200, 404]  # 404 if not owned by customer
+
+  # ============================================
+  # CONCURRENT OPERATIONS STRESS TEST
+  # ============================================
+  
+  - name: "Concurrent Mixed Operations"
+    weight: 15
+    flow:
+      - function: "generateAdminToken"
+      
+      # Parallel reads across different entities
+      - parallel:
+          - get:
+              url: "/api/customers?page=1&limit=5"
+              headers:
+                Authorization: "Bearer {{ adminToken }}"
+          
+          - get:
+              url: "/api/work_orders?page=1&limit=5"
+              headers:
+                Authorization: "Bearer {{ adminToken }}"
+          
+          - get:
+              url: "/api/invoices?page=1&limit=5"
+              headers:
+                Authorization: "Bearer {{ adminToken }}"
+          
+          - get:
+              url: "/api/inventory?page=1&limit=5"
+              headers:
+                Authorization: "Bearer {{ adminToken }}"
+      
+      - think: 1

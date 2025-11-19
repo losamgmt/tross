@@ -26,8 +26,10 @@ setTestEnv({
   TEST_DB_PASSWORD: DATABASE.TEST.PASSWORD,
 });
 
-// Global test timeout (integration tests need more time)
-jest.setTimeout(30000);
+// Global test timeout - AGGRESSIVE: Even integration tests should be fast!
+// Integration tests: 10s per test (configured in jest.config.integration.json)
+// Setup/teardown: 20s max
+jest.setTimeout(20000);
 
 // Note: Database setup is now handled by globalSetup (jest.global.setup.js)
 // This runs ONCE before all test files, preventing race conditions

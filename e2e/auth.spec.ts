@@ -15,9 +15,10 @@ import {
   getDevToken,
   cleanupAllTestData 
 } from './helpers';
+import { URLS } from './config/constants';
 
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:8080';
+const BACKEND_URL = URLS.BACKEND;
+const FRONTEND_URL = URLS.FRONTEND;
 
 test.describe('Authentication & Authorization E2E', () => {
   // Cleanup after all tests

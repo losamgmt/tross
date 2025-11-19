@@ -26,14 +26,14 @@ const devStrategy = new DevAuthStrategy();
  *       **DEVELOPMENT ONLY** - Always available regardless of AUTH_MODE.
  *       Token is valid for 24 hours.
  *
- *       Supports all roles: admin, manager, dispatcher, technician, client.
+ *       Supports all roles: admin, manager, dispatcher, technician, customer.
  *       Defaults to technician if no role specified (backward compatible).
  *     parameters:
  *       - in: query
  *         name: role
  *         schema:
  *           type: string
- *           enum: [admin, manager, dispatcher, technician, client]
+ *           enum: [admin, manager, dispatcher, technician, customer]
  *         required: false
  *         description: Role for the test token (defaults to technician)
  *     responses:
@@ -80,7 +80,7 @@ router.get('/token', async (req, res) => {
     const requestedRole = req.query.role || 'technician';
 
     // Validate role (must be one of the 5 defined roles)
-    const validRoles = ['admin', 'manager', 'dispatcher', 'technician', 'client'];
+    const validRoles = ['admin', 'manager', 'dispatcher', 'technician', 'customer'];
     if (!validRoles.includes(requestedRole)) {
       return res.status(HTTP_STATUS.BAD_REQUEST).json({
         success: false,
@@ -117,78 +117,6 @@ router.get('/token', async (req, res) => {
       error: 'Failed to generate test token',
       message: error.message,
       timestamp: new Date().toISOString(),
-    });
-  }
-});
-
-/**
- * @openapi
- * /api/dev/admin-token:
- *   get:
- *     tags: [Development]
- *     summary: "[DEPRECATED] Generate test token (admin role)"
- *     deprecated: true
- *     description: |
- *       **DEPRECATED:** Use `/api/dev/token?role=admin` instead.
- *
- *       This endpoint is maintained for backward compatibility only.
- *       Generate a JWT token for testing with admin role.
- *       **DEVELOPMENT ONLY** - Always available regardless of AUTH_MODE.
- *       Token is valid for 24 hours.
- *     responses:
- *       200:
- *         description: Admin test token generated
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 token:
- *                   type: string
- *                 user:
- *                   type: object
- *                 provider:
- *                   type: string
- *                 expires_in:
- *                   type: integer
- *                 instructions:
- *                   type: string
- *                 deprecated_warning:
- *                   type: string
- *                 timestamp:
- *                   type: string
- *                   format: date-time
- */
-router.get('/admin-token', async (req, res) => {
-  try {
-    // DEPRECATED: Redirect to generic endpoint with role param
-    // Kept for backward compatibility only
-    const { token, user } = await devStrategy.authenticate({ role: 'admin' });
-
-    logger.warn('⚠️  Deprecated endpoint used: /admin-token - use /token?role=admin instead');
-
-    res.json({
-      success: true,
-      token,
-      user: {
-        auth0_id: user.auth0_id,
-        email: user.email,
-        name: user.first_name + ' ' + user.last_name,
-        role: user.role,
-      },
-      provider: 'development',
-      expires_in: 86400, // 24 hours (dev tokens are long-lived for convenience)
-      instructions: 'Use this token in Authorization header: Bearer <token>',
-      deprecated_warning: 'This endpoint is deprecated. Use /api/dev/token?role=admin instead.',
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error) {
-    logger.error('Failed to generate admin token:', error);
-    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-      error: 'Failed to generate admin token',
-      message: error.message,
     });
   }
 });
@@ -235,10 +163,9 @@ router.get('/status', (req, res) => {
     dev_auth_enabled: true,
     provider: 'development',
     message: 'Dev auth always available (independent of AUTH_MODE)',
-    supported_roles: ['admin', 'manager', 'dispatcher', 'technician', 'client'],
+    supported_roles: ['admin', 'manager', 'dispatcher', 'technician', 'customer'],
     available_endpoints: [
-      'GET /api/dev/token?role=<role> - Get test token for any role (admin, manager, dispatcher, technician, client)',
-      'GET /api/dev/admin-token - [DEPRECATED] Use /token?role=admin instead',
+      'GET /api/dev/token?role=<role> - Get test token for any role (admin, manager, dispatcher, technician, customer)',
       'GET /api/dev/status - This endpoint',
     ],
     note: 'Dev auth works alongside Auth0 - use for testing and internal users',

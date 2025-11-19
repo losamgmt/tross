@@ -92,13 +92,27 @@ pool.on('error', (err, _client) => {
   // Don't exit process - let application handle gracefully
 });
 
-// Simple query interface with error logging
+// Query interface with slow query logging
+const { DATABASE_PERFORMANCE } = require('../config/constants');
+
 const query = async (text, params) => {
   const start = Date.now();
   try {
     const result = await pool.query(text, params);
     const duration = Date.now() - start;
-    logger.debug(`Query executed in ${duration}ms`);
+
+    // Log slow queries for optimization
+    if (duration >= DATABASE_PERFORMANCE.SLOW_QUERY_THRESHOLD_MS) {
+      logger.warn('🐌 Slow query detected', {
+        duration: `${duration}ms`,
+        query: text.substring(0, 200), // Truncate long queries
+        params: params ? params.length : 0,
+        threshold: `${DATABASE_PERFORMANCE.SLOW_QUERY_THRESHOLD_MS}ms`,
+      });
+    } else {
+      logger.debug(`Query executed in ${duration}ms`);
+    }
+
     return result;
   } catch (error) {
     logger.error('Query error:', { error: error.message, query: text });

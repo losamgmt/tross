@@ -25,10 +25,56 @@ const router = express.Router();
 const auth0Strategy = new Auth0Strategy();
 
 /**
- * POST /api/auth0/callback
- * Exchange authorization code for tokens
- *
- * ALWAYS uses Auth0Strategy - works regardless of AUTH_MODE
+ * @openapi
+ * /api/auth0/callback:
+ *   post:
+ *     tags: [Auth0]
+ *     summary: Exchange Auth0 authorization code for tokens
+ *     description: |
+ *       OAuth2 callback endpoint for authorization code flow.
+ *       ALWAYS uses Auth0Strategy - works regardless of AUTH_MODE.
+ *       Exchanges authorization code for access/refresh tokens.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - code
+ *             properties:
+ *               code:
+ *                 type: string
+ *                 description: Authorization code from Auth0
+ *               redirect_uri:
+ *                 type: string
+ *                 description: Redirect URI (must match Auth0 config)
+ *                 default: http://localhost:8080/callback
+ *     responses:
+ *       200:
+ *         description: Authentication successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 access_token:
+ *                   type: string
+ *                   description: JWT access token
+ *                 refresh_token:
+ *                   type: string
+ *                   description: Refresh token for token renewal
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *                 provider:
+ *                   type: string
+ *                   example: auth0
+ *       401:
+ *         description: Authentication failed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.post('/callback', validateAuthCallback, async (req, res) => {
   try {
@@ -101,10 +147,52 @@ router.post('/callback', validateAuthCallback, async (req, res) => {
 });
 
 /**
- * POST /api/auth0/validate
- * Validate Auth0 ID token (for PKCE flow)
- *
- * ALWAYS uses Auth0Strategy - works regardless of AUTH_MODE
+ * @openapi
+ * /api/auth0/validate:
+ *   post:
+ *     tags: [Auth0]
+ *     summary: Validate Auth0 ID token (PKCE flow)
+ *     description: |
+ *       Validates Auth0 ID token from PKCE flow and generates app token.
+ *       ALWAYS uses Auth0Strategy - works regardless of AUTH_MODE.
+ *       Used by frontend after successful PKCE authentication.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - id_token
+ *             properties:
+ *               id_token:
+ *                 type: string
+ *                 description: Auth0 ID token from PKCE flow
+ *     responses:
+ *       200:
+ *         description: Token validated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 token:
+ *                   type: string
+ *                   description: App JWT token
+ *                 app_token:
+ *                   type: string
+ *                   description: App JWT token (alias)
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *                 provider:
+ *                   type: string
+ *                   example: auth0
+ *       401:
+ *         description: Token validation failed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.post('/validate', validateAuth0Token, async (req, res) => {
   try {
@@ -138,8 +226,44 @@ router.post('/validate', validateAuth0Token, async (req, res) => {
 });
 
 /**
- * POST /api/auth0/refresh
- * Refresh access token using refresh token
+ * @openapi
+ * /api/auth0/refresh:
+ *   post:
+ *     tags: [Auth0]
+ *     summary: Refresh access token
+ *     description: Refresh expired access token using refresh token
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - refresh_token
+ *             properties:
+ *               refresh_token:
+ *                 type: string
+ *                 description: Valid refresh token
+ *     responses:
+ *       200:
+ *         description: Token refreshed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 access_token:
+ *                   type: string
+ *                   description: New JWT access token
+ *                 expires_in:
+ *                   type: integer
+ *                   description: Token expiration time in seconds
+ *       401:
+ *         description: Invalid or expired refresh token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.post('/refresh', refreshLimiter, validateAuth0Refresh, async (req, res) => {
   try {
@@ -162,8 +286,33 @@ router.post('/refresh', refreshLimiter, validateAuth0Refresh, async (req, res) =
 });
 
 /**
- * GET /api/auth0/logout
- * Get Auth0 logout URL
+ * @openapi
+ * /api/auth0/logout:
+ *   get:
+ *     tags: [Auth0]
+ *     summary: Get Auth0 logout URL
+ *     description: Returns Auth0 logout URL for client-side redirect
+ *     responses:
+ *       200:
+ *         description: Logout URL retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 logout_url:
+ *                   type: string
+ *                   description: Auth0 logout URL
+ *                 message:
+ *                   type: string
+ *       500:
+ *         description: Logout failed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.get('/logout', async (req, res) => {
   try {

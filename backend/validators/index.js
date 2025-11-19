@@ -52,6 +52,18 @@ const {
   validateAuth0Token,
   validateAuth0Refresh,
   validateRefreshToken,
+  validateCustomerCreate,
+  validateCustomerUpdate,
+  validateTechnicianCreate,
+  validateTechnicianUpdate,
+  validateWorkOrderCreate,
+  validateWorkOrderUpdate,
+  validateInvoiceCreate,
+  validateInvoiceUpdate,
+  validateContractCreate,
+  validateContractUpdate,
+  validateInventoryCreate,
+  validateInventoryUpdate,
 } = require('./body-validators');
 
 module.exports = {
@@ -86,6 +98,18 @@ module.exports = {
   validateAuth0Token,
   validateAuth0Refresh,
   validateRefreshToken,
+  validateCustomerCreate,
+  validateCustomerUpdate,
+  validateTechnicianCreate,
+  validateTechnicianUpdate,
+  validateWorkOrderCreate,
+  validateWorkOrderUpdate,
+  validateInvoiceCreate,
+  validateInvoiceUpdate,
+  validateContractCreate,
+  validateContractUpdate,
+  validateInventoryCreate,
+  validateInventoryUpdate,
 
   // Logging
   logValidationFailure,

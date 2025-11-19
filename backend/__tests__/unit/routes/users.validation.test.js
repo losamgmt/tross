@@ -63,6 +63,7 @@ jest.mock("../../../validators", () => ({
 }));
 
 const request = require("supertest");
+const express = require("express");
 const usersRouter = require("../../../routes/users");
 const User = require("../../../db/models/User");
 const auditService = require("../../../services/audit-service");
@@ -74,30 +75,60 @@ const {
   validateIdParam,
 } = require("../../../validators");
 const { HTTP_STATUS } = require("../../../config/constants");
-const {
-  createRouteTestApp,
-  setupRouteMocks,
-  teardownRouteMocks,
-} = require("../../helpers/route-test-setup");
 
-// Create test app
-const app = createRouteTestApp(usersRouter, "/api/users");
+let app; // Declare app variable to create fresh in beforeEach
 
 describe("Users Routes - Validation & Error Handling", () => {
   beforeEach(() => {
-    setupRouteMocks({
-      getClientIp,
-      getUserAgent,
-      authenticateToken,
-      requirePermission,
-      validateIdParam,
-      validateUserCreate,
-      validateProfileUpdate,
+    // CRITICAL: Reset ALL mocks to prevent contamination
+    jest.clearAllMocks();
+    
+    // Reset middleware to fresh implementations
+    authenticateToken.mockImplementation((req, res, next) => {
+      req.dbUser = { id: 1, role: 'admin' };
+      req.user = { userId: 1, user_id: 1, email: 'admin@example.com' };
+      next();
     });
-  });
-
-  afterEach(() => {
-    teardownRouteMocks();
+    requirePermission.mockImplementation(() => (req, res, next) => next());
+    
+    // Reset validators
+    validateUserCreate.mockImplementation((req, res, next) => next());
+    validateProfileUpdate.mockImplementation((req, res, next) => next());
+    validateIdParam.mockImplementation((req, res, next) => {
+      const id = parseInt(req.params.id);
+      if (!req.validated) req.validated = {};
+      req.validated.id = id;
+      req.validatedId = id;
+      next();
+    });
+    
+    // Reset audit and request helpers
+    getClientIp.mockReturnValue('127.0.0.1');
+    getUserAgent.mockReturnValue('Jest Test Agent');
+    auditService.log.mockResolvedValue(true);
+    
+    // Create fresh Express app for each test to avoid state pollution
+    app = express();
+    app.use(express.json());
+    app.use("/api/users", usersRouter);
+    
+    // Reset middleware to fresh implementations
+    authenticateToken.mockImplementation((req, res, next) => {
+      req.dbUser = { id: 1, email: "admin@example.com", role: "admin" };
+      req.user = { userId: 1 };
+      next();
+    });
+    requirePermission.mockImplementation(() => (req, res, next) => next());
+    validateIdParam.mockImplementation((req, res, next) => {
+      req.validatedId = parseInt(req.params.id);
+      if (!req.validated) req.validated = {};
+      req.validated.id = req.validatedId;
+      next();
+    });
+    
+    // Reset request helpers
+    getClientIp.mockReturnValue("127.0.0.1");
+    getUserAgent.mockReturnValue("Jest Test Agent");
   });
 
   describe("GET /api/users - Error Handling", () => {

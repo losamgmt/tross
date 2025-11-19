@@ -23,7 +23,7 @@
       "priority": 2,
       "description": "Executes work orders, can view user list"
     },
-    "client": {
+    "customer": {
       "priority": 1,
       "description": "Basic access - can view own data and work orders"
     }
@@ -33,7 +33,7 @@
     "users": {
       "description": "User accounts and profiles",
       "rowLevelSecurity": {
-        "client": "own_record_only",
+        "customer": "own_record_only",
         "technician": "all_records",
         "dispatcher": "all_records",
         "manager": "all_records",
@@ -93,7 +93,7 @@
     "work_orders": {
       "description": "Service requests and work tickets",
       "rowLevelSecurity": {
-        "client": "assigned_only",
+        "customer": "assigned_only",
         "technician": "assigned_or_available",
         "dispatcher": "all_records",
         "manager": "all_records",
@@ -106,7 +106,7 @@
           "description": "Dispatchers and above can create work orders"
         },
         "read": {
-          "minimumRole": "client",
+          "minimumRole": "customer",
           "minimumPriority": 1,
           "description": "Everyone can read work orders (row-level security applies)"
         },
@@ -128,7 +128,7 @@
       "rowLevelSecurity": null,
       "permissions": {
         "create": {
-          "minimumRole": "client",
+          "minimumRole": "customer",
           "minimumPriority": 1,
           "description": "System automatically creates audit logs for all users"
         },

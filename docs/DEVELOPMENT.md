@@ -1,0 +1,366 @@
+# Development Guide
+
+Daily development workflow and best practices.
+
+---
+
+## Development Workflow
+
+### Starting Your Day
+1. Pull latest changes: `git pull origin main`
+2. Update dependencies: `npm install && cd frontend && flutter pub get`
+3. Run migrations: `cd backend && npm run migrate`
+4. Start services: `npm run dev` (root) or `./scripts/start-dev.bat`
+5. Verify tests pass: `npm test` (backend) + `flutter test` (frontend)
+
+### Feature Development
+1. **Create branch:** `git checkout -b feature/your-feature-name`
+2. **Write tests first** (TDD approach)
+3. **Implement feature** (smallest possible change)
+4. **Run tests:** Verify all pass
+5. **Commit:** Clear, atomic commits
+6. **Push & PR:** Open pull request for review
+
+---
+
+## Code Organization
+
+### Backend Structure
+```
+backend/
+├── server.js              # Express app entry
+├── routes/                # API endpoints
+│   ├── auth.js
+│   ├── users.js
+│   └── customers.js
+├── db/
+│   ├── connection.js      # Database pool
+│   └── models/            # Data access layer
+├── middleware/            # Auth, validation, etc.
+├── services/              # Business logic
+├── validators/            # Input validation
+└── __tests__/             # Jest tests
+    ├── unit/
+    └── integration/
+```
+
+### Frontend Structure
+```
+frontend/lib/
+├── main.dart              # App entry
+├── config/                # Configuration
+├── models/                # Data models
+├── providers/             # State management
+├── services/              # API clients
+├── widgets/               # UI components
+│   ├── atoms/             # Buttons, inputs
+│   ├── molecules/         # Composed components
+│   └── organisms/         # Complex components
+└── screens/               # Full pages
+```
+
+---
+
+## Testing Philosophy
+
+### Backend Testing
+**Pyramid:** Unit → Integration → E2E
+
+**Unit Tests** (`__tests__/unit/`)
+- Test single functions/methods
+- Mock external dependencies
+- Fast (<5s timeout)
+- Example: Model validation, service logic
+
+**Integration Tests** (`__tests__/integration/`)
+- Test API endpoints + database
+- Use test database
+- Moderate speed (<10s timeout)
+- Example: Full CRUD workflows
+
+**Run Tests:**
+```bash
+cd backend
+npm test              # All tests
+npm run test:unit     # Unit only
+npm run test:integration  # Integration only
+npm run test:watch    # Watch mode
+```
+
+### Frontend Testing
+**Widget Tests** (`test/widgets/`)
+- Test UI components in isolation
+- Verify rendering and interactions
+- Fast feedback
+
+**Integration Tests**
+- Test full user flows
+- Provider integration
+- Navigation flows
+
+**Run Tests:**
+```bash
+cd frontend
+flutter test                    # All tests
+flutter test test/widgets/      # Widget tests only
+flutter test --coverage         # With coverage
+```
+
+---
+
+## Development Patterns
+
+### Adding a New Entity
+
+**1. Database Migration**
+```bash
+cd backend
+npm run migrate:create add_entity_table
+
+# Edit migration file:
+# - Add TIER 1 fields (id, identity_field, is_active, created_at, updated_at)
+# - Add TIER 2 fields (status, if needed)
+# - Add indexes
+
+npm run migrate
+```
+
+**2. Create Model** (`backend/db/models/Entity.js`)
+```javascript
+class Entity {
+  static async findAll(filters = {}, options = {}) { }
+  static async findById(id) { }
+  static async create(data) { }
+  static async update(id, data) { }
+  static async delete(id) { }  // Soft delete (is_active = false)
+}
+```
+
+**3. Create Routes** (`backend/routes/entities.js`)
+```javascript
+router.get('/', authenticateToken, requirePermission('entities:read'), async (req, res) => {
+  // GET /api/entities
+});
+
+router.post('/', authenticateToken, requirePermission('entities:create'), async (req, res) => {
+  // POST /api/entities
+});
+```
+
+**4. Add Tests**
+- Unit: `__tests__/unit/models/Entity.crud.test.js`
+- Integration: `__tests__/integration/entities-api.test.js`
+
+**5. Frontend Model** (`frontend/lib/models/entity_model.dart`)
+```dart
+class Entity {
+  final int id;
+  final String name;
+  final bool isActive;
+  
+  Entity.fromJson(Map<String, dynamic> json)
+    : id = json['id'],
+      name = json['name'],
+      isActive = json['is_active'];
+}
+```
+
+---
+
+## Git Workflow
+
+### Commit Messages
+Follow [Conventional Commits](https://www.conventionalcommits.org/):
+
+```
+feat: add customer filtering by status
+fix: resolve null pointer in user validation
+test: add integration tests for work orders
+docs: update architecture decision for RLS
+refactor: extract common validation logic
+```
+
+### Branch Naming
+```
+feature/customer-filtering
+fix/user-validation-bug
+test/work-order-integration
+docs/architecture-update
+refactor/validation-extraction
+```
+
+### Pull Request Template
+```markdown
+## What
+Brief description of changes
+
+## Why
+Rationale for the change
+
+## Testing
+- [ ] Unit tests added/updated
+- [ ] Integration tests pass
+- [ ] Manual testing completed
+
+## Checklist
+- [ ] Tests pass locally
+- [ ] No console errors
+- [ ] Documentation updated
+```
+
+---
+
+## Code Style
+
+### Backend (JavaScript)
+- **ESLint:** Follow `.eslintrc.js`
+- **Naming:** camelCase for variables, PascalCase for classes
+- **Async:** Always use `async/await`, not callbacks
+- **Errors:** Always wrap in try-catch, never swallow
+- **Comments:** Explain WHY, not WHAT
+
+**Good:**
+```javascript
+// Strategy pattern allows swapping auth methods in dev vs prod
+const strategy = AppConfig.devAuthEnabled 
+  ? new DevelopmentStrategy() 
+  : new Auth0Strategy();
+```
+
+**Bad:**
+```javascript
+// Create strategy
+const strategy = new Strategy();
+```
+
+### Frontend (Dart)
+- **Linter:** Follow `analysis_options.yaml`
+- **Naming:** camelCase for variables, PascalCase for classes
+- **Widgets:** Prefer const constructors
+- **State:** Provider for global, StatefulWidget for local
+
+---
+
+## Database Migrations
+
+### Creating Migrations
+```bash
+cd backend
+npm run migrate:create your_migration_name
+
+# Edit migrations/YYYYMMDDHHMMSS_your_migration_name.js
+# Implement up() and down()
+
+npm run migrate          # Apply
+npm run migrate:rollback # Undo last
+```
+
+### Migration Best Practices
+- **One change per migration**
+- **Always write `down()`** (rollback)
+- **Test rollback** before merging
+- **Never edit applied migrations** (create new one)
+
+---
+
+## Debugging
+
+### Backend Debugging
+```bash
+# Enable verbose logging
+DEBUG=* npm run dev
+
+# Inspect database queries
+# Add to .env:
+DEBUG_SQL=true
+
+# View logs
+tail -f backend/logs/combined.log
+```
+
+### Frontend Debugging
+```bash
+# Flutter DevTools
+flutter run -d chrome --observatory-port=9200
+
+# Print debugging
+debugPrint('Value: $value');
+
+# Widget inspector
+# Open Chrome DevTools while running
+```
+
+---
+
+## Performance
+
+### Backend Performance
+- **Connection pooling:** Max 20 connections (configured)
+- **Slow query logging:** Warns on queries >100ms
+- **Request timeout:** 30s max
+- **Rate limiting:** 100 req/min per IP
+
+### Frontend Performance
+- **Lazy loading:** Use `ListView.builder` for long lists
+- **Const constructors:** Reduce rebuilds
+- **Avoid `setState()` in build:** Move to initState/didChangeDependencies
+
+---
+
+## Security Checklist
+
+**Before Every Commit:**
+- [ ] No secrets in code (use .env)
+- [ ] Input validation on all endpoints
+- [ ] SQL queries use parameterized statements
+- [ ] Auth middleware on protected routes
+- [ ] RBAC permission checks in place
+- [ ] Error messages don't leak sensitive info
+
+---
+
+## Troubleshooting
+
+### Backend Won't Start
+```bash
+# Check environment variables
+cd backend
+node -e "require('./config/app-config'); console.log('✓ Config valid')"
+
+# Verify database connection
+psql -d trossapp_dev -c "SELECT 1"
+
+# Check port availability
+npx kill-port 3001
+```
+
+### Tests Failing
+```bash
+# Reset test database
+cd backend
+npm run db:reset:test
+
+# Run tests in isolation
+npm test -- --testPathPattern=customers
+
+# Verbose mode
+npm test -- --verbose
+```
+
+### Frontend Build Errors
+```bash
+cd frontend
+flutter clean
+rm -rf pubspec.lock
+flutter pub get
+flutter run -d chrome
+```
+
+---
+
+## Next Steps
+
+- **[Architecture](ARCHITECTURE.md)** - Understand core patterns
+- **[Testing Guide](TESTING.md)** - Deep dive into testing
+- **[API Documentation](API.md)** - Explore endpoints
+- **[Deployment](DEPLOYMENT.md)** - Deploy to production

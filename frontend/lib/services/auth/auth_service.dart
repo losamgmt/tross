@@ -190,7 +190,7 @@ class AuthService {
 
   /// Development Test Token Login
   ///
-  /// Supports all roles: admin, manager, dispatcher, technician, client
+  /// Supports all roles: admin, manager, dispatcher, technician, customer
   /// Security: Triple-validated (UI hidden, service blocked, backend rejected)
   Future<bool> loginWithTestToken({required String role}) async {
     ErrorService.logInfo('Test token login started', context: {'role': role});

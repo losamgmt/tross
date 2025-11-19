@@ -1,47 +1,73 @@
 /**
- * Centralized Mock System - Index
+ * Smart Mock Infrastructure - Main Exports
  * 
- * SRP: ONLY exports all mock factories
- * Use: Single import point for all mocks
+ * Centralized mock factory for consistent, intelligent test mocking
  * 
- * Example:
- * const { createMockDb, MOCK_USERS, createMockRequest } = require('../mocks');
+ * USAGE:
+ *   const { createSmartMocks, createDBMock } = require('../mocks');
+ *   
+ *   // Simple setup (most common)
+ *   const mocks = createSmartMocks();
+ *   jest.mock('../../services/query-builder-service', () => mocks.queryBuilder);
+ *   jest.mock('../../services/pagination-service', () => mocks.pagination);
+ *   jest.mock('../../db/connection', () => createDBMock({ rows: [...] }));
+ *   
+ *   // Advanced setup (error simulation)
+ *   const mocks = createSmartMocks({
+ *     queryBuilderOverrides: {
+ *       buildFilterClause: () => { throw new Error('Metadata missing') }
+ *     }
+ *   });
  */
 
-// Database mocks
+// Smart service mocks (NEW)
+const {
+  createQueryBuilderMock,
+  createPaginationMock,
+  createSmartMocks,
+} = require('./service-mocks');
+
+// Smart database mocks (NEW)
+const {
+  createDBMock,
+  createFailingDBMock,
+  createRetryableDBMock,
+  createConstraintViolationMock,
+} = require('./db-mocks');
+
+// Smart utility mocks (NEW)
+const {
+  createLoggerMock,
+  createAuditMock,
+  createMetadataMock,
+} = require('./utility-mocks');
+
+// Legacy mocks (OLD - keeping for backward compatibility)
 const dbMocks = require('./db.mock');
-
-// Model mocks
 const modelMocks = require('./models.mock');
-
-// Service mocks
 const serviceMocks = require('./services.mock');
-
-// Middleware mocks
 const middlewareMocks = require('./middleware.mock');
-
-// Logger mocks
 const loggerMocks = require('./logger.mock');
-
-// Fixtures (re-export for convenience)
 const fixtures = require('../fixtures');
 
 module.exports = {
-  // Database
+  // NEW: Smart Mock Infrastructure (use these for new tests)
+  createQueryBuilderMock,
+  createPaginationMock,
+  createSmartMocks,
+  createDBMock,
+  createFailingDBMock,
+  createRetryableDBMock,
+  createConstraintViolationMock,
+  createLoggerMock,
+  createAuditMock,
+  createMetadataMock,
+
+  // OLD: Legacy mocks (for backward compatibility)
   ...dbMocks,
-  
-  // Models
   ...modelMocks,
-  
-  // Services
   ...serviceMocks,
-  
-  // Middleware
   ...middlewareMocks,
-  
-  // Logger
   ...loggerMocks,
-  
-  // Fixtures (data)
   ...fixtures,
 };

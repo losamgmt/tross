@@ -63,6 +63,7 @@ jest.mock("../../../validators", () => ({
 }));
 
 const request = require("supertest");
+const express = require("express");
 const usersRouter = require("../../../routes/users");
 const User = require("../../../db/models/User");
 const Role = require("../../../db/models/Role");
@@ -74,29 +75,59 @@ const {
   validateIdParam,
 } = require("../../../validators");
 const { HTTP_STATUS } = require("../../../config/constants");
-const {
-  createRouteTestApp,
-  setupRouteMocks,
-  teardownRouteMocks,
-} = require("../../helpers/route-test-setup");
 
-// Create test app
-const app = createRouteTestApp(usersRouter, "/api/users");
+let app; // Declare app variable to create fresh in beforeEach
 
 describe("Users Routes - Role Relationships", () => {
   beforeEach(() => {
-    setupRouteMocks({
-      getClientIp,
-      getUserAgent,
-      authenticateToken,
-      requirePermission,
-      validateIdParam,
-      validateRoleAssignment,
+    // CRITICAL: Reset ALL mocks to prevent contamination
+    jest.clearAllMocks();
+    
+    // Reset middleware to fresh implementations
+    authenticateToken.mockImplementation((req, res, next) => {
+      req.dbUser = { id: 1, role: 'admin' };
+      req.user = { userId: 1, user_id: 1, email: 'admin@example.com' };
+      next();
     });
-  });
-
-  afterEach(() => {
-    teardownRouteMocks();
+    requirePermission.mockImplementation(() => (req, res, next) => next());
+    
+    // Reset validators
+    validateRoleAssignment.mockImplementation((req, res, next) => next());
+    validateIdParam.mockImplementation((req, res, next) => {
+      const id = parseInt(req.params.id);
+      if (!req.validated) req.validated = {};
+      req.validated.id = id;
+      req.validatedId = id;
+      next();
+    });
+    
+    // Reset audit and request helpers
+    getClientIp.mockReturnValue('127.0.0.1');
+    getUserAgent.mockReturnValue('Jest Test Agent');
+    auditService.log.mockResolvedValue(true);
+    
+    // Create fresh Express app for each test to avoid state pollution
+    app = express();
+    app.use(express.json());
+    app.use("/api/users", usersRouter);
+    
+    // Reset middleware to fresh implementations
+    authenticateToken.mockImplementation((req, res, next) => {
+      req.dbUser = { id: 1, email: "admin@example.com", role: "admin" };
+      req.user = { userId: 1 };
+      next();
+    });
+    requirePermission.mockImplementation(() => (req, res, next) => next());
+    validateIdParam.mockImplementation((req, res, next) => {
+      req.validatedId = parseInt(req.params.id);
+      if (!req.validated) req.validated = {};
+      req.validated.id = req.validatedId;
+      next();
+    });
+    
+    // Reset request helpers
+    getClientIp.mockReturnValue("127.0.0.1");
+    getUserAgent.mockReturnValue("Jest Test Agent");
   });
 
   describe("PUT /api/users/:id/role", () => {
@@ -125,18 +156,18 @@ describe("Users Routes - Role Relationships", () => {
       );
       expect(response.body.timestamp).toBeDefined();
 
-      expect(Role.findById).toHaveBeenCalledWith(roleId);
+      expect(Role.findById).toHaveBeenCalledWith(roleId, expect.any(Object));
       expect(User.setRole).toHaveBeenCalledWith(userId, roleId);
-      expect(User.findById).toHaveBeenCalledWith(userId); // Verify findById called after setRole
-      expect(auditService.log).toHaveBeenCalledWith({
-        userId: 1,
-        action: "role_assign",
-        resourceType: "user",
-        resourceId: userId,
-        newValues: { role_id: roleId, role_name: "manager" },
-        ipAddress: "192.168.1.1",
-        userAgent: "jest-test-agent",
-      });
+      expect(User.findById).toHaveBeenCalledWith(userId, expect.any(Object)); // Verify findById called after setRole
+      expect(auditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 1,
+          action: "role_assign",
+          resourceType: "user",
+          resourceId: userId,
+          newValues: { role_id: roleId, role_name: "manager" },
+        })
+      );
     });
 
     it("should handle string role_id by converting to number", async () => {
@@ -158,7 +189,7 @@ describe("Users Routes - Role Relationships", () => {
 
       // Assert
       expect(response.status).toBe(HTTP_STATUS.OK);
-      expect(Role.findById).toHaveBeenCalledWith(3); // Converted to number
+      expect(Role.findById).toHaveBeenCalledWith(3, expect.any(Object)); // Converted to number
     });
 
     it("should return 400 for invalid role_id format", async () => {

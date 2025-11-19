@@ -130,7 +130,7 @@ class Role {
 
   /// Check if role is protected (cannot be deleted/modified)
   bool get isProtected {
-    return ['admin', 'client'].contains(name.toLowerCase());
+    return ['admin', 'customer'].contains(name.toLowerCase());
   }
 
   /// Copy with method for immutable updates

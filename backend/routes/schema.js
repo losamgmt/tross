@@ -20,7 +20,7 @@ const { authenticateToken } = require('../middleware/auth');
  *     summary: Get all available tables
  *     description: Returns list of tables in public schema with metadata
  *     security:
- *       - bearerAuth: []
+ *       - BearerAuth: []
  *     responses:
  *       200:
  *         description: List of tables
@@ -69,7 +69,7 @@ router.get('/', authenticateToken, async (req, res) => {
  *     summary: Get table schema metadata
  *     description: Returns complete schema info for auto-generating UI (columns, types, constraints, relationships)
  *     security:
- *       - bearerAuth: []
+ *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: tableName
@@ -153,7 +153,7 @@ router.get('/:tableName', authenticateToken, async (req, res) => {
  *     summary: Get select options for foreign key field
  *     description: Returns {value, label} pairs for dropdown/select fields
  *     security:
- *       - bearerAuth: []
+ *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: tableName

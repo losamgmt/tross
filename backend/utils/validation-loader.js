@@ -183,26 +183,58 @@ function buildCompositeSchema(operationName) {
 
   const schemaFields = {};
 
+  // Context-aware field mapping for role operations
+  const isRoleOperation = operationName === 'createRole' || operationName === 'updateRole';
+
   // Map field names to their definitions
   const fieldMapping = {
     email: 'email',
-    first_name: 'firstName',
+    first_name: 'first_name',
     firstName: 'firstName',
-    last_name: 'lastName',
+    last_name: 'last_name',
     lastName: 'lastName',
-    role_id: 'roleId',
+    role_id: 'role_id',
     roleId: 'roleId',
-    is_active: 'isActive',
+    is_active: 'is_active',
     isActive: 'isActive',
-    name: 'roleName',
+    name: 'roleName', // Default to roleName for backward compatibility
     roleName: 'roleName',
-    priority: 'rolePriority',
+    priority: isRoleOperation ? 'rolePriority' : 'priority', // Context-aware
     rolePriority: 'rolePriority',
-    description: 'roleDescription',
+    description: isRoleOperation ? 'roleDescription' : 'description', // Context-aware
     roleDescription: 'roleDescription',
-    password: 'password',
     phone: 'phone',
     url: 'url',
+    company_name: 'company_name',
+    companyName: 'companyName',
+    license_number: 'license_number',
+    licenseNumber: 'licenseNumber',
+    hourly_rate: 'hourly_rate',
+    hourlyRate: 'hourlyRate',
+    customer_id: 'customer_id',
+    customerId: 'customerId',
+    technician_id: 'technicianId',
+    technicianId: 'technicianId',
+    assigned_technician_id: 'assigned_technician_id',
+    assignedTechnicianId: 'assigned_technician_id',
+    work_order_id: 'work_order_id',
+    workOrderId: 'workOrderId',
+    invoice_number: 'invoice_number',
+    invoiceNumber: 'invoiceNumber',
+    contract_number: 'contract_number',
+    contractNumber: 'contractNumber',
+    title: 'title',
+    amount: 'amount',
+    total: 'total',
+    tax: 'tax',
+    sku: 'sku',
+    quantity: 'quantity',
+    status: 'status',
+    start_date: 'start_date',
+    startDate: 'start_date',
+    end_date: 'end_date',
+    endDate: 'end_date',
+    value: 'value',
   };
 
   // Add required fields

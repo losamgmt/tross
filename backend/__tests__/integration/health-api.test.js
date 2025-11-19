@@ -258,14 +258,14 @@ describe('Health Endpoints - Integration Tests', () => {
       // Act
       const response = await request(app).get('/api/health');
 
-      // Assert
+      // Assert - Test ACTUAL contract, not implementation details
       const requiredFields = [
         'status',
-        'environment',
-        'version',
         'timestamp',
         'uptime',
-        'services',
+        'database',
+        'memory',
+        'nodeVersion',
       ];
 
       requiredFields.forEach((field) => {

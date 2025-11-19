@@ -200,7 +200,7 @@ describe("User Role Assignment - Integration Tests", () => {
       const userId = createResponse.body.data.id;
       expect(userId).toBeDefined();
 
-      // User starts with 'client' role (default in createTestUser or null)
+      // User starts with 'customer' role (default in createTestUser or null)
       let user = await User.findById(userId);
 
       // 2. Assign 'manager' role

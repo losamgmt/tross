@@ -12,6 +12,12 @@ const ENVIRONMENTS = Object.freeze({
   TEST: 'test',
 });
 
+// Database Performance Constants
+const DATABASE_PERFORMANCE = Object.freeze({
+  SLOW_QUERY_THRESHOLD_MS: 100, // Log queries taking longer than 100ms
+  SLOW_QUERY_EXPLAIN_THRESHOLD_MS: 500, // Run EXPLAIN for queries over 500ms
+});
+
 // Authentication Constants
 const AUTH = Object.freeze({
   AUTH_MODES: Object.freeze({
@@ -35,7 +41,7 @@ const USER_ROLES = Object.freeze({
   MANAGER: 'manager',
   DISPATCHER: 'dispatcher',
   TECHNICIAN: 'technician',
-  CLIENT: 'client',
+  CLIENT: 'customer',
 });
 
 // HTTP Status Constants
@@ -180,6 +186,7 @@ const MODEL_ERRORS = Object.freeze({
 
 module.exports = Object.freeze({
   ENVIRONMENTS,
+  DATABASE_PERFORMANCE,
   AUTH,
   USER_ROLES,
   HTTP_STATUS,

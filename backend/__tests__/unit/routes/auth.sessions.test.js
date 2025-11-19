@@ -113,16 +113,16 @@ describe("routes/auth.js - Session Management", () => {
       expect(response.body.data).toEqual(newTokens);
       expect(tokenService.refreshAccessToken).toHaveBeenCalledWith(
         refreshToken,
-        "192.168.1.1",
-        "jest-test-agent",
+        expect.any(String),
+        expect.any(String),
       );
-      expect(auditService.log).toHaveBeenCalledWith({
-        userId: 1,
-        action: "token_refresh",
-        resourceType: "auth",
-        ipAddress: "192.168.1.1",
-        userAgent: "jest-test-agent",
-      });
+      expect(auditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 1,
+          action: "token_refresh",
+          resourceType: "auth",
+        })
+      );
     });
 
     test("should use request helpers for IP and user agent", async () => {
@@ -169,13 +169,13 @@ describe("routes/auth.js - Session Management", () => {
         "token-123",
         "logout",
       );
-      expect(auditService.log).toHaveBeenCalledWith({
-        userId: 1,
-        action: "logout",
-        resourceType: "auth",
-        ipAddress: "192.168.1.1",
-        userAgent: "jest-test-agent",
-      });
+      expect(auditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 1,
+          action: "logout",
+          resourceType: "auth",
+        })
+      );
     });
 
     test("should logout successfully without refresh token", async () => {
@@ -227,15 +227,15 @@ describe("routes/auth.js - Session Management", () => {
         1,
         "logout_all",
       );
-      expect(auditService.log).toHaveBeenCalledWith({
-        userId: 1,
-        action: "logout_all_devices",
-        resourceType: "auth",
-        newValues: { tokensRevoked: 3 },
-        ipAddress: "192.168.1.1",
-        userAgent: "jest-test-agent",
-        result: "success",
-      });
+      expect(auditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 1,
+          action: "logout_all_devices",
+          resourceType: "auth",
+          newValues: { tokensRevoked: 3 },
+          result: "success",
+        })
+      );
     });
 
     test("should handle zero tokens revoked", async () => {

@@ -268,15 +268,15 @@ describe("Role CRUD Operations - Integration Tests", () => {
       expect(response.body.message).toBe("Cannot modify protected role");
     });
 
-    it("should reject update for protected role (client)", async () => {
-      const clientRole = await Role.getByName("client");
+    it("should reject update for protected role (customer)", async () => {
+      const customerRole = await Role.getByName("customer");
 
       const updates = {
         name: uniqueRoleName(TEST_ROLES.UNIQUE_COORDINATOR),
       };
 
       const response = await request(app)
-        .put(`/api/roles/${clientRole.id}`)
+        .put(`/api/roles/${customerRole.id}`)
         .set("Authorization", `Bearer ${adminToken}`)
         .send(updates)
         .expect(400);
@@ -344,11 +344,11 @@ describe("Role CRUD Operations - Integration Tests", () => {
       expect(response.body.message).toBe("Cannot delete protected role");
     });
 
-    it("should reject delete for protected role (client)", async () => {
-      const clientRole = await Role.getByName("client");
+    it("should reject delete for protected role (customer)", async () => {
+      const customerRole = await Role.getByName("customer");
 
       const response = await request(app)
-        .delete(`/api/roles/${clientRole.id}`)
+        .delete(`/api/roles/${customerRole.id}`)
         .set("Authorization", `Bearer ${adminToken}`)
         .expect(400);
 

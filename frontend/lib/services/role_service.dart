@@ -174,7 +174,7 @@ class RoleService {
   /// Example:
   /// ```dart
   /// final roleNames = await RoleService.getAvailableRoleNames();
-  /// // ['admin', 'manager', 'dispatcher', 'technician', 'client']
+  /// // ['admin', 'manager', 'dispatcher', 'technician', 'customer']
   /// ```
   static Future<List<String>> getAvailableRoleNames() async {
     final roles = await getAll();

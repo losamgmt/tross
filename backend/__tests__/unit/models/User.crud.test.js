@@ -166,7 +166,7 @@ describe("User Model - CRUD Operations", () => {
   // CREATE: createFromAuth0()
   // ===========================
   describe("createFromAuth0()", () => {
-    it("should create user from Auth0 data with default client role", async () => {
+    it("should create user from Auth0 data with default customer role", async () => {
       // Arrange
       const auth0Data = {
         sub: "auth0|123456",
@@ -180,7 +180,7 @@ describe("User Model - CRUD Operations", () => {
         email: "newuser@example.com",
         first_name: "Jane",
         last_name: "Smith",
-        role_id: 2,
+        role_id: 5,
       };
       db.query.mockResolvedValue({ rows: [mockCreatedUser] });
 
@@ -191,7 +191,7 @@ describe("User Model - CRUD Operations", () => {
       expect(user).toEqual(mockCreatedUser);
       expect(db.query).toHaveBeenCalledWith(
         expect.stringContaining("INSERT INTO users"),
-        ["auth0|123456", "newuser@example.com", "Jane", "Smith", "client"],
+        ["auth0|123456", "newuser@example.com", "Jane", "Smith", "customer"],
       );
     });
 
@@ -243,7 +243,7 @@ describe("User Model - CRUD Operations", () => {
       expect(user).toEqual(mockCreatedUser);
       expect(db.query).toHaveBeenCalledWith(
         expect.stringContaining("INSERT INTO users"),
-        ["auth0|minimal", "minimal@example.com", "", "", "client"],
+        ["auth0|minimal", "minimal@example.com", "", "", "customer"],
       );
     });
   });
@@ -333,7 +333,7 @@ describe("User Model - CRUD Operations", () => {
       );
     });
 
-    it("should default to client role when role_id not provided", async () => {
+    it("should default to customer role when role_id not provided", async () => {
       // Arrange
       const userData = {
         email: "defaultrole@example.com",
@@ -341,11 +341,11 @@ describe("User Model - CRUD Operations", () => {
         last_name: "User",
       };
 
-      // Mock Role.getByName to return client role
-      Role.getByName = jest.fn().mockResolvedValue({ id: 2, name: "client" });
+      // Mock Role.getByName to return customer role
+      Role.getByName = jest.fn().mockResolvedValue({ id: 5, name: "customer" });
 
-      const mockCreatedUser = { id: 21, ...userData, role_id: 2 };
-      const mockUserWithRole = { ...mockCreatedUser, role: "client" };
+      const mockCreatedUser = { id: 21, ...userData, role_id: 5 };
+      const mockUserWithRole = { ...mockCreatedUser, role: "customer" };
 
       db.query
         .mockResolvedValueOnce({ rows: [mockCreatedUser] }) // create
@@ -355,10 +355,10 @@ describe("User Model - CRUD Operations", () => {
       const user = await User.create(userData);
 
       // Assert
-      expect(Role.getByName).toHaveBeenCalledWith("client");
+      expect(Role.getByName).toHaveBeenCalledWith("customer");
       expect(db.query).toHaveBeenCalledWith(
         expect.stringContaining("INSERT INTO users"),
-        ["defaultrole@example.com", "Default", "User", 2, null, "pending_activation"],
+        ["defaultrole@example.com", "Default", "User", 5, null, "pending_activation"],
       );
     });
 
@@ -372,7 +372,7 @@ describe("User Model - CRUD Operations", () => {
         last_name: "",
         role_id: 2,
       };
-      const mockUserWithRole = { ...mockCreatedUser, role: "client" };
+      const mockUserWithRole = { ...mockCreatedUser, role: "customer" };
 
       db.query
         .mockResolvedValueOnce({ rows: [mockCreatedUser] })

@@ -271,7 +271,7 @@ describe("Authentication Flow Integration", () => {
     });
 
     test("should validate different user roles", async () => {
-      const roles = ["admin", "manager", "dispatcher", "technician", "client"];
+      const roles = ["admin", "manager", "dispatcher", "technician", "customer"];
 
       for (const role of roles) {
         // Mock token verification for each role

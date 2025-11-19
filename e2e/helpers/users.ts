@@ -4,7 +4,9 @@
  * Provides reusable helpers for creating, managing, and cleaning up test users
  */
 
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
+import { URLS, TEST_DATA } from '../config/constants';
+
+const BACKEND_URL = URLS.BACKEND;
 
 /**
  * User data returned from API
@@ -46,7 +48,7 @@ export async function createTestUser(
   } = {}
 ): Promise<TestUser> {
   const timestamp = Date.now();
-  const email = `e2e-test-${timestamp}@example.com`;
+  const email = TEST_DATA.EMAIL.unique(TEST_DATA.PREFIXES.USER);
   
   const response = await fetch(`${BACKEND_URL}/api/users`, {
     method: 'POST',

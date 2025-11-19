@@ -17,6 +17,10 @@
     "test:watch:integration": "jest --watch --config jest.config.integration.json",
     "test:coverage": "jest --coverage --config jest.config.integration.json",
     "test:coverage:unit": "jest --coverage --config jest.config.unit.json",
+    "test:coverage:all": "jest --coverage",
+    "coverage:check": "node scripts/check-coverage.js",
+    "coverage:report": "npm run test:coverage && npm run coverage:check",
+    "coverage:open": "node -e \"require('child_process').exec(process.platform === 'win32' ? 'scripts\\\\open-coverage.bat' : 'bash scripts/open-coverage.sh')\"",
     "seed:admin": "node scripts/seed-admin-user.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"

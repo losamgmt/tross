@@ -11,8 +11,9 @@
 
 import { test, expect } from '@playwright/test';
 import { getDevToken, cleanupTestRoles } from './helpers';
+import { URLS } from './config/constants';
 
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
+const BACKEND_URL = URLS.BACKEND;
 
 test.describe.configure({ mode: 'serial' });
 

@@ -5,8 +5,52 @@ const { MODEL_ERRORS } = require('../../config/constants');
 const PaginationService = require('../../services/pagination-service');
 const QueryBuilderService = require('../../services/query-builder-service');
 const roleMetadata = require('../../config/models/role-metadata');
+const { logger } = require('../../config/logger');
 
 class Role {
+  /**
+   * Build RLS filter clause based on user's policy
+   * @private
+   * @param {Object} req - Express request with RLS context (rlsPolicy, rlsUserId)
+   * @returns {Object} { clause: string, values: array, applied: boolean }
+   */
+  static _buildRLSFilter(req) {
+    // No RLS context = no filtering
+    if (!req || !req.hasOwnProperty('rlsPolicy')) {
+      return { clause: '', values: [], applied: false };
+    }
+
+    const { rlsPolicy } = req;
+
+    // null policy = no filtering (roles are public reference data)
+    // Everyone can see all roles (needed for dropdowns, UI, etc)
+    if (rlsPolicy === null) {
+      return { clause: '', values: [], applied: false };
+    }
+
+    // All other policies also mean no filtering for roles
+    return { clause: '', values: [], applied: false };
+  }
+
+  /**
+   * Apply RLS filter to existing WHERE clause
+   * @private
+   * @param {Object} req - Express request with RLS context
+   * @param {string} existingWhere - Existing WHERE clause (may be empty)
+   * @param {array} existingValues - Existing query parameter values
+   * @returns {Object} { whereClause: string, values: array, rlsApplied: boolean }
+   */
+  static _applyRLSFilter(req, existingWhere = '', existingValues = []) {
+    const rlsFilter = this._buildRLSFilter(req);
+
+    // For roles, RLS never adds filtering (public reference data)
+    return {
+      whereClause: existingWhere,
+      values: existingValues,
+      rlsApplied: rlsFilter.applied,
+    };
+  }
+
   /**
    * Find all roles with pagination, search, filters, and sorting
    * Contract v2.0: Metadata-driven query building (ZERO hardcoding!)
@@ -21,7 +65,8 @@ class Role {
    * @param {Object} [options.filters] - Filters (e.g., { priority[gte]: 50, is_active: true })
    * @param {string} [options.sortBy] - Field to sort by (validated against metadata)
    * @param {string} [options.sortOrder] - 'ASC' or 'DESC'
-   * @returns {Promise<Object>} { data: Role[], pagination: {...}, appliedFilters: {...} }
+   * @param {Object} [options.req] - Express request object for RLS
+   * @returns {Promise<Object>} { data: Role[], pagination: {...}, appliedFilters: {...}, rlsApplied: boolean }
    */
   static async findAll(options = {}) {
     try {
@@ -59,10 +104,15 @@ class Role {
         : '';
 
       // Combine parameters
-      const params = [
+      let params = [
         ...(search?.params || []),
         ...(filters?.params || []),
       ];
+
+      // Apply RLS filter
+      const rlsResult = this._applyRLSFilter(options.req, whereClause, params);
+      const finalWhereClause = rlsResult.whereClause;
+      params = rlsResult.values;
 
       // Build sort clause (validated against sortableFields)
       const sortClause = QueryBuilderService.buildSortClause(
@@ -76,7 +126,7 @@ class Role {
       const countQuery = `
         SELECT COUNT(*) as total
         FROM roles
-        ${whereClause}
+        ${finalWhereClause}
       `;
       const countResult = await db.query(countQuery, params);
       const total = parseInt(countResult.rows[0].total);
@@ -85,7 +135,7 @@ class Role {
       const query = `
         SELECT * 
         FROM roles 
-        ${whereClause} 
+        ${finalWhereClause} 
         ORDER BY ${sortClause}
         LIMIT ${limit} OFFSET ${offset}
       `;
@@ -103,6 +153,7 @@ class Role {
           sortBy: options.sortBy || defaultSort.field,
           sortOrder: options.sortOrder || defaultSort.order,
         },
+        rlsApplied: rlsResult.rlsApplied,
       };
     } catch (_error) {
       throw new Error('Failed to retrieve roles');
@@ -115,16 +166,30 @@ class Role {
    * TYPE SAFE: Validates id is a positive integer
    *
    * @param {number|string} id - Role ID (will be coerced to integer)
+   * @param {Object} [req=null] - Express request object for RLS
    * @returns {Promise<Object|undefined>} Role object or undefined if not found
    * @throws {Error} If id is not a valid positive integer
    */
-  static async findById(id) {
+  static async findById(id, req = null) {
     // TYPE SAFETY: Ensure id is a valid positive integer
     const safeId = toSafeInteger(id, 'roleId', { min: 1, allowNull: false });
 
-    const query = 'SELECT * FROM roles WHERE id = $1';
-    const result = await db.query(query, [safeId]);
-    return result.rows[0];
+    // Build base query
+    const whereClause = 'WHERE id = $1';
+    const params = [safeId];
+
+    // Apply RLS filter
+    const rlsResult = this._applyRLSFilter(req, whereClause, params);
+
+    const query = `SELECT * FROM roles ${rlsResult.whereClause}`;
+    const result = await db.query(query, rlsResult.values);
+
+    const role = result.rows[0];
+    if (role) {
+      role.rlsApplied = rlsResult.rlsApplied;
+    }
+
+    return role;
   }
 
   // Get role by name
@@ -136,7 +201,7 @@ class Role {
 
   // Check if role is protected (cannot be modified/deleted)
   static isProtected(roleName) {
-    const protectedRoles = ['admin', 'client'];
+    const protectedRoles = ['admin', 'customer'];
     return protectedRoles.includes(roleName.toLowerCase());
   }
 

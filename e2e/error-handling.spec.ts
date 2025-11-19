@@ -12,8 +12,9 @@
 
 import { test, expect } from '@playwright/test';
 import { getDevToken, cleanupTestUsers, cleanupTestRoles } from './helpers';
+import { URLS, TEST_USERS } from './config/constants';
 
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
+const BACKEND_URL = URLS.BACKEND;
 
 test.describe('Error Handling E2E - API Level', () => {
   let adminToken: string;
@@ -79,7 +80,7 @@ test.describe('Error Handling E2E - API Level', () => {
         },
         data: {
           email: `test-${timestamp}@example.com`,
-          first_name: '123',  // Numbers not allowed
+          first_name: TEST_USERS.INVALID.FIRST_NAME,  // Numbers not allowed
           last_name: 'User',
           role_id: 5,
         },
@@ -290,7 +291,7 @@ test.describe('Error Handling E2E - API Level', () => {
     });
 
     test('Client cannot access user list (missing pagination)', async ({ request }) => {
-      const clientToken = await getDevToken('client');
+      const clientToken = await getDevToken('customer');
       
       const response = await request.get(`${BACKEND_URL}/api/users`, {
         headers: {

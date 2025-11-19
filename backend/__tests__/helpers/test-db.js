@@ -91,10 +91,14 @@ async function runMigrations(pool) {
       SELECT COUNT(*) as count 
       FROM information_schema.tables 
       WHERE table_schema = 'public' 
-      AND table_name IN ('users', 'roles', 'refresh_tokens', 'audit_logs')
+      AND table_name IN (
+        'users', 'roles', 'refresh_tokens', 'audit_logs',
+        'customers', 'technicians', 'work_orders', 
+        'invoices', 'contracts', 'inventory'
+      )
     `);
 
-    const expectedTables = 4;
+    const expectedTables = 10;
     const hasSchema = parseInt(tableCheck.rows[0].count) === expectedTables;
 
     if (hasSchema) {
@@ -135,19 +139,25 @@ async function runMigrations(pool) {
 async function cleanupTestDatabase() {
   try {
     // KISS: Truncate test data tables (preserve roles as they're seeded by schema)
-    // Note: user_roles table no longer exists (simplified to users.role_id)
+    // CASCADE handles foreign key dependencies automatically
     await centralPool.query(`
       TRUNCATE TABLE 
         audit_logs,
         refresh_tokens,
+        inventory,
+        contracts,
+        invoices,
+        work_orders,
+        technicians,
+        customers,
         users
       RESTART IDENTITY CASCADE;
     `);
 
     // Note: We don't truncate 'roles' table because it contains seed data
-    // from schema (admin, manager, dispatcher, technician, client)
+    // from schema (admin, manager, dispatcher, technician, customer)
 
-    testLogger.log("🧹 Test database cleaned");
+    testLogger.log("🧹 Test database cleaned (all business tables + audit/auth)");
   } catch (error) {
     testLogger.error("❌ Database cleanup failed:", error.message);
     throw error;

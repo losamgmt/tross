@@ -19,6 +19,15 @@ const { getClientIp, getUserAgent } = require('../utils/request-helpers');
 const router = express.Router();
 
 /**
+ * NOTE: Customer signup handled by Auth0 → /api/auth0/callback
+ * This project uses Auth0 for authentication - no password-based signup endpoint needed
+ * Users are created automatically during Auth0 callback with auth0_id
+ * Customer/technician profiles are linked via polymorphic foreign keys:
+ *   - users.customer_profile_id → customers(id)
+ *   - users.technician_profile_id → technicians(id)
+ */
+
+/**
  * @openapi
  * /api/auth/me:
  *   get:
@@ -26,7 +35,7 @@ const router = express.Router();
  *     summary: Get current user profile
  *     description: Returns the authenticated user's profile information. Auto-creates user in database if first time.
  *     security:
- *       - bearerAuth: []
+ *       - BearerAuth: []
  *     responses:
  *       200:
  *         description: User profile retrieved successfully
@@ -87,7 +96,7 @@ router.get('/me', authenticateToken, async (req, res) => {
  *     summary: Update current user profile
  *     description: Update the authenticated user's profile (first name, last name only)
  *     security:
- *       - bearerAuth: []
+ *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -287,7 +296,7 @@ router.post(
  *     summary: Logout from current session
  *     description: Revoke refresh token and log out from current device
  *     security:
- *       - bearerAuth: []
+ *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -356,7 +365,7 @@ router.post('/logout', authenticateToken, async (req, res) => {
  *     summary: Logout from all devices
  *     description: Revoke all refresh tokens for the authenticated user across all devices
  *     security:
- *       - bearerAuth: []
+ *       - BearerAuth: []
  *     responses:
  *       200:
  *         description: Logged out from all devices
@@ -427,7 +436,7 @@ router.post('/logout-all', authenticateToken, async (req, res) => {
  *     summary: Get active sessions
  *     description: Returns all active sessions (refresh tokens) for the authenticated user
  *     security:
- *       - bearerAuth: []
+ *       - BearerAuth: []
  *     responses:
  *       200:
  *         description: Active sessions retrieved

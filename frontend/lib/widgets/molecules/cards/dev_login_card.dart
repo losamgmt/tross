@@ -17,7 +17,7 @@ import '../../../config/app_spacing.dart';
 import '../../../utils/helpers/string_helper.dart';
 
 // TEMPORARY: Hardcoded role list until this moves to organisms
-const _devRoles = ['admin', 'technician', 'manager', 'dispatcher', 'client'];
+const _devRoles = ['admin', 'technician', 'manager', 'dispatcher', 'customer'];
 
 class DevLoginCard extends StatefulWidget {
   /// Callback when dev login button pressed with selected role

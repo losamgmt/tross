@@ -72,7 +72,7 @@ const options = {
     ],
     components: {
       securitySchemes: {
-        bearerAuth: {
+        BearerAuth: {
           type: 'http',
           scheme: 'bearer',
           bearerFormat: 'JWT',
@@ -325,7 +325,7 @@ const options = {
       },
       {
         name: 'Auth0',
-        description: 'Auth0 OAuth2/OIDC endpoints (Production mode - stubs)',
+        description: 'Auth0 OAuth2/OIDC endpoints (Production authentication)',
       },
       {
         name: 'Users',
@@ -334,6 +334,10 @@ const options = {
       {
         name: 'Roles',
         description: 'Role management and user-role assignment',
+      },
+      {
+        name: 'Schema',
+        description: 'Database schema introspection for auto-generated UIs',
       },
       {
         name: 'Development',

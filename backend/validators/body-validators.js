@@ -28,17 +28,12 @@ try {
  * DRY principle: Single error handler for all validators
  */
 const createValidator = (schema) => (req, res, next) => {
-  console.log('[VALIDATOR] Incoming request body:', JSON.stringify(req.body, null, 2));
-  console.log('[VALIDATOR] Body keys:', Object.keys(req.body));
-  console.log('[VALIDATOR] Email value:', req.body.email, 'Type:', typeof req.body.email);
-
   const { error } = schema.validate(req.body, {
     abortEarly: false, // Return all errors, not just the first
     stripUnknown: true, // Remove unknown fields for security
   });
 
   if (error) {
-    console.log('[VALIDATOR] Validation failed:', error.details);
     return res.status(HTTP_STATUS.BAD_REQUEST).json({
       error: 'Validation Error',
       message: error.details[0].message,
@@ -50,7 +45,6 @@ const createValidator = (schema) => (req, res, next) => {
     });
   }
 
-  console.log('[VALIDATOR] Validation passed!');
   next();
 };
 
@@ -170,6 +164,126 @@ const validateRefreshToken = createValidator(
   }),
 );
 
+/**
+ * Customer Creation Validation
+ * Validates: POST /api/customers
+ * USES CENTRALIZED SCHEMA from validation-rules.json
+ */
+const validateCustomerCreate = createValidator(
+  buildCompositeSchema('createCustomer'),
+);
+
+/**
+ * Customer Update Validation
+ * Validates: PATCH /api/customers/:id
+ * USES CENTRALIZED SCHEMA from validation-rules.json
+ */
+const validateCustomerUpdate = createValidator(
+  buildCompositeSchema('updateCustomer').min(1).messages({
+    'object.min': 'At least one field must be provided for update',
+  }),
+);
+
+/**
+ * Technician Creation Validation
+ * Validates: POST /api/technicians
+ * USES CENTRALIZED SCHEMA from validation-rules.json
+ */
+const validateTechnicianCreate = createValidator(
+  buildCompositeSchema('createTechnician'),
+);
+
+/**
+ * Technician Update Validation
+ * Validates: PATCH /api/technicians/:id
+ * USES CENTRALIZED SCHEMA from validation-rules.json
+ */
+const validateTechnicianUpdate = createValidator(
+  buildCompositeSchema('updateTechnician').min(1).messages({
+    'object.min': 'At least one field must be provided for update',
+  }),
+);
+
+/**
+ * Work Order Creation Validation
+ * Validates: POST /api/work_orders
+ * USES CENTRALIZED SCHEMA from validation-rules.json
+ */
+const validateWorkOrderCreate = createValidator(
+  buildCompositeSchema('createWorkOrder'),
+);
+
+/**
+ * Work Order Update Validation
+ * Validates: PATCH /api/work_orders/:id
+ * USES CENTRALIZED SCHEMA from validation-rules.json
+ */
+const validateWorkOrderUpdate = createValidator(
+  buildCompositeSchema('updateWorkOrder').min(1).messages({
+    'object.min': 'At least one field must be provided for update',
+  }),
+);
+
+/**
+ * Invoice Creation Validation
+ * Validates: POST /api/invoices
+ * USES CENTRALIZED SCHEMA from validation-rules.json
+ */
+const validateInvoiceCreate = createValidator(
+  buildCompositeSchema('createInvoice'),
+);
+
+/**
+ * Invoice Update Validation
+ * Validates: PATCH /api/invoices/:id
+ * USES CENTRALIZED SCHEMA from validation-rules.json
+ */
+const validateInvoiceUpdate = createValidator(
+  buildCompositeSchema('updateInvoice').min(1).messages({
+    'object.min': 'At least one field must be provided for update',
+  }),
+);
+
+/**
+ * Contract Creation Validation
+ * Validates: POST /api/contracts
+ * USES CENTRALIZED SCHEMA from validation-rules.json
+ */
+const validateContractCreate = createValidator(
+  buildCompositeSchema('createContract'),
+);
+
+/**
+ * Contract Update Validation
+ * Validates: PATCH /api/contracts/:id
+ * USES CENTRALIZED SCHEMA from validation-rules.json
+ */
+const validateContractUpdate = createValidator(
+  buildCompositeSchema('updateContract').min(1).messages({
+    'object.min': 'At least one field must be provided for update',
+  }),
+);
+
+/**
+ * Inventory Creation Validation
+ * Validates: POST /api/inventory
+ * USES CENTRALIZED SCHEMA from validation-rules.json
+ */
+const validateInventoryCreate = createValidator(
+  buildCompositeSchema('createInventory'),
+);
+
+/**
+ * Inventory Update Validation
+ * Validates: PATCH /api/inventory/:id
+ * USES CENTRALIZED SCHEMA from validation-rules.json
+ */
+const validateInventoryUpdate = createValidator(
+  buildCompositeSchema('updateInventory').min(1).messages({
+    'object.min': 'At least one field must be provided for update',
+  }),
+);
+
 module.exports = {
   validateUserCreate,
   validateProfileUpdate,
@@ -180,4 +294,16 @@ module.exports = {
   validateAuth0Token,
   validateAuth0Refresh,
   validateRefreshToken,
+  validateCustomerCreate,
+  validateCustomerUpdate,
+  validateTechnicianCreate,
+  validateTechnicianUpdate,
+  validateWorkOrderCreate,
+  validateWorkOrderUpdate,
+  validateInvoiceCreate,
+  validateInvoiceUpdate,
+  validateContractCreate,
+  validateContractUpdate,
+  validateInventoryCreate,
+  validateInventoryUpdate,
 };

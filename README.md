@@ -4,7 +4,7 @@
 
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> **Quick Start:** [docs/QUICK_START.md](docs/QUICK_START.md) | **Development:** [docs/DEVELOPMENT_WORKFLOW.md](docs/DEVELOPMENT_WORKFLOW.md) | **API Docs:** http://localhost:3001/api-docs
+> **Quick Start:** [docs/QUICK_START.md](docs/QUICK_START.md) | **Development:** [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | **Architecture:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 
 ---
 
@@ -88,13 +88,23 @@ npm run dev:frontend   # Frontend on :8080
 
 ## 📚 Documentation
 
-- **[Development Workflow](docs/DEVELOPMENT_WORKFLOW.md)** - Development practices and workflows
-- **[Testing Guide](docs/testing/TESTING_GUIDE.md)** - Testing philosophy and patterns
-- **[API Documentation](docs/api/README.md)** - REST API reference
-- **[Architecture Decisions](docs/architecture/decisions/)** - Key design choices (ADRs)
-- **[Database Architecture](docs/DATABASE_ARCHITECTURE.md)** - Schema design and migrations
-- **[Authentication Guide](docs/auth/AUTH_GUIDE.md)** - Auth0 integration and RBAC
+### Core Documentation
+- **[Quick Start](docs/QUICK_START.md)** - Get up and running in 5 minutes
+- **[Architecture](docs/ARCHITECTURE.md)** - Core patterns, decisions, and locked patterns
+- **[Development](docs/DEVELOPMENT.md)** - Daily workflow and code organization
+- **[Testing](docs/TESTING.md)** - Test philosophy and patterns (3416+ tests: 1675 backend, 1553 frontend, 188 E2E)
+- **[Security](docs/SECURITY.md)** - Defense-in-depth architecture
+- **[Authentication](docs/AUTH.md)** - Dual auth (dev + Auth0), RBAC
+- **[API](docs/API.md)** - RESTful patterns and conventions
+- **[Deployment](docs/DEPLOYMENT.md)** - Production deployment and CI/CD
+
+### Reference Documentation
+- **[Database Architecture](docs/architecture/DATABASE_ARCHITECTURE.md)** - Schema design and migrations
+- **[Entity Lifecycle](docs/architecture/ENTITY_LIFECYCLE.md)** - Data flow patterns
+- **[Validation Architecture](docs/architecture/VALIDATION_ARCHITECTURE.md)** - Triple-tier validation
 - **[Environment Variables](backend/ENVIRONMENT_VARIABLES.md)** - Configuration reference
+
+> **📖 Full Documentation Index:** [docs/README.md](docs/README.md)
 
 ---
 
@@ -130,7 +140,7 @@ npm run dev:frontend   # Frontend on :8080
 
 - RESTful endpoints following OpenAPI 3.0 specification
 - Comprehensive health checks and monitoring
-- See [API Documentation](docs/api/README.md) for details
+- See [API Documentation](docs/API.md) for details
 
 ## 🔒 Security Features
 
@@ -163,11 +173,11 @@ npm run clean    # Reset build artifacts
 npm run dev:backend       # Start backend server (nodemon)
 npm run dev:frontend      # Start Flutter web (Chrome)
 
-# Testing
+# Testing (3416+ tests total)
 npm test                  # Run all tests (backend + frontend)
-npm run test:backend      # Backend Jest tests
-npm run test:frontend     # Flutter tests
-npm run test:e2e          # Playwright end-to-end tests
+npm run test:backend      # Backend Jest tests (1675+ tests)
+npm run test:frontend     # Flutter tests (1553+ tests)
+npm run test:e2e          # Playwright E2E tests (188 tests)
 npm run test:all          # All tests including E2E
 npm run test:watch        # Watch mode for backend tests
 npm run test:coverage     # Generate coverage reports
@@ -239,7 +249,7 @@ npm run clean:flutter     # Clean Flutter build cache
 - **Database**: Managed PostgreSQL service
 - **Monitoring**: Application insights and error tracking
 
-See [Deployment Guide](docs/DEPLOYMENT.md) for detailed instructions.
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed instructions.
 
 ## 🤝 Contributing
 

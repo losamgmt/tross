@@ -392,7 +392,7 @@ class ApiClient {
 
   /// Get test token (development only)
   ///
-  /// Supports all roles: admin, manager, dispatcher, technician, client
+  /// Supports all roles: admin, manager, dispatcher, technician, customer
   /// Defaults to technician if no role specified (backward compatible)
   static Future<String?> getTestToken({String role = 'technician'}) async {
     // Validate role

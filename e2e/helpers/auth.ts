@@ -6,9 +6,10 @@
  */
 
 import { Page } from '@playwright/test';
+import { URLS } from '../config/constants';
 
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:8080';
+const BACKEND_URL = URLS.BACKEND;
+const FRONTEND_URL = URLS.FRONTEND;
 
 /**
  * Get dev mode authentication token
@@ -25,7 +26,7 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:8080';
  * ```
  */
 export async function getDevToken(
-  role: 'admin' | 'manager' | 'dispatcher' | 'technician' | 'client' = 'admin'
+  role: 'admin' | 'manager' | 'dispatcher' | 'technician' | 'customer' = 'admin'
 ): Promise<string> {
   const response = await fetch(`${BACKEND_URL}/api/dev/token?role=${role}`);
   
@@ -143,12 +144,12 @@ export async function loginAsDispatcher(page: Page): Promise<void> {
 }
 
 /**
- * Login to frontend as client user
+ * Login to frontend as customer user
  * 
  * @param page - Playwright page instance
  */
-export async function loginAsClient(page: Page): Promise<void> {
-  const token = await getDevToken('client');
+export async function loginAsCustomer(page: Page): Promise<void> {
+  const token = await getDevToken('customer');
   
   await page.goto(FRONTEND_URL);
   

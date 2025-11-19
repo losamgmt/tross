@@ -32,5 +32,8 @@
   },
   "coverageReporters": ["text", "lcov", "html"],
   "testTimeout": 5000,
-  "verbose": true
+  "verbose": true,
+  "bail": false,
+  "detectOpenHandles": false,
+  "forceExit": false
 }

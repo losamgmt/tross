@@ -6,52 +6,26 @@ const swaggerSpec = require('./config/swagger');
 const { HTTP_STATUS, SECURITY } = require('./config/constants');
 const { TIMEOUTS } = require('./config/timeouts');
 const { logger, requestLogger } = require('./config/logger');
-const { healthManager } = require('./services/health-manager');
 const { securityHeaders, sanitizeInput } = require('./middleware/security');
 const {
   apiLimiter,
   authLimiter,
-  refreshLimiter: _refreshLimiter,
+  refreshLimiter: __refreshLimiter,
 } = require('./middleware/rate-limit');
 const { requestTimeout, timeoutHandler } = require('./middleware/timeout');
+const { validateEnvironment } = require('./utils/env-validator');
 require('dotenv').config();
 
-// Production Environment Validation
-// Ensures critical secrets are properly configured before starting the server
+// Environment Validation
+// Comprehensive validation of all environment variables at startup
+// Skipped during tests to allow test-specific configuration
+if (process.env.NODE_ENV !== 'test') {
+  validateEnvironment();
+}
+
+// Legacy production checks (kept for backwards compatibility)
+// Note: Most validation now handled by env-validator.js
 if (process.env.NODE_ENV === 'production') {
-  const requiredEnvVars = [
-    'JWT_SECRET',
-    'DB_PASSWORD',
-    'DB_HOST',
-    'DB_NAME',
-    'DB_USER',
-  ];
-
-  // Check for missing environment variables
-  const missing = requiredEnvVars.filter((envVar) => !process.env[envVar]);
-  if (missing.length > 0) {
-    logger.error(
-      '❌ FATAL: Missing required environment variables in production',
-      { missing },
-    );
-    logger.error('Please set the following environment variables:', missing);
-    process.exit(1);
-  }
-
-  // Validate JWT_SECRET strength
-  if (
-    process.env.JWT_SECRET === 'dev-secret-key' ||
-    process.env.JWT_SECRET.length < 32
-  ) {
-    logger.error(
-      '❌ FATAL: JWT_SECRET must be a strong secret (32+ characters) in production',
-    );
-    logger.error(
-      'Current JWT_SECRET is weak or uses default development value',
-    );
-    process.exit(1);
-  }
-
   // Validate DB_PASSWORD strength
   if (
     process.env.DB_PASSWORD === 'tross123' ||
@@ -133,48 +107,8 @@ app.get('/api-docs.json', (req, res) => {
   res.send(swaggerSpec);
 });
 
-/**
- * @openapi
- * /api/health:
- *   get:
- *     tags: [Health]
- *     summary: Get system health status
- *     description: Returns comprehensive health information about all system services (database, memory, filesystem)
- *     responses:
- *       200:
- *         description: System health information
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/HealthStatus'
- *       503:
- *         description: System is experiencing issues
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/HealthStatus'
- */
-app.get('/api/health', async (req, res) => {
-  try {
-    const health = await healthManager.getSystemHealth();
-    const statusCode =
-      health.status === 'critical'
-        ? HTTP_STATUS.SERVICE_UNAVAILABLE
-        : HTTP_STATUS.OK;
-    res.status(statusCode).json(health);
-  } catch (error) {
-    logger.error('Health check system failed', { error: error.message });
-    // Even if health manager fails, return basic server status
-    res.status(HTTP_STATUS.OK).json({
-      status: 'basic',
-      service: 'TrossApp Backend',
-      timestamp: new Date().toISOString(),
-      message: 'Server running in isolation mode',
-      error: 'Health system unavailable',
-    });
-  }
-});
-
+// Health endpoints moved to routes/health.js for SRP
+// REMOVED duplicate /api/health - causes route conflict with healthRoutes
 // Individual service health endpoints - DISABLED: Conflicts with /api/health/databases route
 // Use healthRoutes instead which has specific handlers
 /*
@@ -201,10 +135,22 @@ const devAuthRoutes = require('./routes/dev-auth');
 const auth0Routes = require('./routes/auth0');
 const healthRoutes = require('./routes/health');
 const schemaRoutes = require('./routes/schema');
+const customersRoutes = require('./routes/customers');
+const techniciansRoutes = require('./routes/technicians');
+const workOrdersRoutes = require('./routes/work_orders');
+const invoicesRoutes = require('./routes/invoices');
+const contractsRoutes = require('./routes/contracts');
+const inventoryRoutes = require('./routes/inventory');
 
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/users', apiLimiter, usersRoutes); // RESTful user management
 app.use('/api/roles', apiLimiter, roleRoutes);
+app.use('/api/customers', apiLimiter, customersRoutes);
+app.use('/api/technicians', apiLimiter, techniciansRoutes);
+app.use('/api/work_orders', apiLimiter, workOrdersRoutes);
+app.use('/api/invoices', apiLimiter, invoicesRoutes);
+app.use('/api/contracts', apiLimiter, contractsRoutes);
+app.use('/api/inventory', apiLimiter, inventoryRoutes);
 app.use('/api/dev', devAuthRoutes); // Development auth endpoints (no rate limit - dev only)
 app.use('/api/health', apiLimiter, healthRoutes); // Health monitoring endpoints
 app.use('/api/auth0', authLimiter, auth0Routes); // Auth0 OAuth endpoints - rate limited for brute force protection

@@ -1,6 +1,8 @@
 {
   "testEnvironment": "node",
   "maxWorkers": 1,
+  "bail": 1,
+  "verbose": true,
   "projects": [
     {
       "displayName": "unit",
@@ -15,7 +17,7 @@
       "setupFilesAfterEnv": ["<rootDir>/__tests__/setup/jest.integration.setup.js"],
       "globalSetup": "<rootDir>/__tests__/setup/jest.global.setup.js",
       "globalTeardown": "<rootDir>/__tests__/setup/jest.integration.teardown.js",
-      "testTimeout": 15000,
+      "testTimeout": 10000,
       "maxWorkers": 1
     }
   ],
@@ -29,7 +31,15 @@
     "!**/*-backup.js",
     "!**/auth0-setup.json"
   ],
-  "coverageReporters": ["text", "lcov", "html"],
+  "coverageReporters": ["text", "lcov", "html", "json-summary"],
+  "coverageThreshold": {
+    "global": {
+      "branches": 80,
+      "functions": 80,
+      "lines": 80,
+      "statements": 80
+    }
+  },
   "testPathIgnorePatterns": [
     "/node_modules/",
     "/__tests__/fixtures/",
@@ -37,6 +47,5 @@
     "/__tests__/setup/"
   ],
   "forceExit": true,
-  "detectOpenHandles": true,
-  "verbose": false
+  "detectOpenHandles": true
 }

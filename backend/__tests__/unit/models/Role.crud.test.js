@@ -150,14 +150,14 @@ describe("Role Model - CRUD Operations", () => {
     });
 
     it("should query with exact name provided (no normalization)", async () => {
-      const mockRole = { id: 2, name: "client", created_at: "2025-01-02" };
+      const mockRole = { id: 2, name: "customer", created_at: "2025-01-02" };
       db.query.mockResolvedValue({ rows: [mockRole] });
 
-      await Role.getByName("CLIENT");
+      await Role.getByName("CUSTOMER");
 
       expect(db.query).toHaveBeenCalledWith(
         expect.any(String),
-        ["CLIENT"], // Not normalized in getByName
+        ["CUSTOMER"], // Not normalized in getByName
       );
     });
   });

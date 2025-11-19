@@ -57,13 +57,13 @@ CREATE TABLE IF NOT EXISTS roles (
 );
 
 -- Insert the 5 core roles (idempotent)
--- Hierarchy: admin(5) > manager(4) > dispatcher(3) > technician(2) > client(1)
+-- Hierarchy: admin(5) > manager(4) > dispatcher(3) > technician(2) > customer(1)
 INSERT INTO roles (name, description, priority) VALUES 
 ('admin', 'Full system access and user management', 5),
 ('manager', 'Full data access, manages work orders and technicians', 4),  
 ('dispatcher', 'Medium access, assigns and schedules work orders', 3),
 ('technician', 'Limited access, updates assigned work orders', 2),
-('client', 'Basic access, submits and tracks service requests', 1)
+('customer', 'Basic access, submits and tracks service requests', 1)
 ON CONFLICT (name) DO UPDATE SET 
     description = EXCLUDED.description,
     priority = EXCLUDED.priority;
@@ -273,6 +273,337 @@ COMMENT ON COLUMN audit_logs.old_values IS 'Entity state before change (JSONB)';
 COMMENT ON COLUMN audit_logs.new_values IS 'Entity state after change (JSONB)';
 
 -- ============================================================================
+-- WORK ORDER SYSTEM TABLES (Added: 2025-11-13)
+-- ============================================================================
+-- Run migration 008 to create these tables:
+--   cat migrations/008_add_work_order_schema.sql | docker exec -i trossapp-postgres psql -U postgres -d trossapp_dev
+--
+-- Tables added:
+--   - customers (polymorphic profile for role_id=5)
+--   - technicians (polymorphic profile for role_id=2)
+--   - work_orders (core business entity)
+--   - invoices (billing)
+--   - contracts (service agreements)
+--   - inventory (parts/supplies)
+--
+-- Users table updated with polymorphic profile links:
+--   - customer_profile_id → customers(id)
+--   - technician_profile_id → technicians(id)
+--
+-- See: migrations/008_add_work_order_schema.sql for full schema
+-- ============================================================================
+
+-- ============================================================================
+-- CUSTOMERS TABLE
+-- ============================================================================
+-- Business entity: Customer profiles (polymorphic profile for role_id=5)
+-- Contract compliance: ✓ FULL
+--
+-- Identity field: email
+-- Soft deletes: is_active
+-- Lifecycle states: status (pending → active → suspended)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS customers (
+    -- TIER 1: Universal Entity Contract Fields
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,  -- Identity field
+    is_active BOOLEAN DEFAULT true NOT NULL,  -- Soft delete flag
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    
+    -- TIER 2: Entity-Specific Lifecycle Field
+    status VARCHAR(50) DEFAULT 'pending'
+        CHECK (status IN ('pending', 'active', 'suspended')),
+    
+    -- Entity-specific data fields
+    phone VARCHAR(50),
+    company_name VARCHAR(255),
+    billing_address JSONB,  -- { street, city, state, zip, country }
+    service_address JSONB   -- { street, city, state, zip, country }
+);
+
+-- ============================================================================
+-- TECHNICIANS TABLE
+-- ============================================================================
+-- Business entity: Technician profiles (polymorphic profile for role_id=2)
+-- Contract compliance: ✓ FULL
+--
+-- Identity field: license_number
+-- Soft deletes: is_active
+-- Lifecycle states: status (available → on_job → off_duty → suspended)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS technicians (
+    -- TIER 1: Universal Entity Contract Fields
+    id SERIAL PRIMARY KEY,
+    license_number VARCHAR(100) UNIQUE NOT NULL,  -- Identity field
+    is_active BOOLEAN DEFAULT true NOT NULL,  -- Soft delete flag
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    
+    -- TIER 2: Entity-Specific Lifecycle Field
+    status VARCHAR(50) DEFAULT 'available'
+        CHECK (status IN ('available', 'on_job', 'off_duty', 'suspended')),
+    
+    -- Entity-specific data fields
+    certifications JSONB,  -- [{ name, issued_by, expires_at }]
+    skills JSONB,          -- ['plumbing', 'electrical', 'hvac']
+    hourly_rate DECIMAL(10, 2)
+);
+
+-- ============================================================================
+-- WORK_ORDERS TABLE
+-- ============================================================================
+-- Business entity: Service work orders
+-- Contract compliance: ✓ FULL
+--
+-- Identity field: title
+-- Soft deletes: is_active
+-- Lifecycle states: status (pending → assigned → in_progress → completed → cancelled)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS work_orders (
+    -- TIER 1: Universal Entity Contract Fields
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,  -- Identity field
+    is_active BOOLEAN DEFAULT true NOT NULL,  -- Soft delete flag
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    
+    -- TIER 2: Entity-Specific Lifecycle Field
+    status VARCHAR(50) DEFAULT 'pending'
+        CHECK (status IN ('pending', 'assigned', 'in_progress', 'completed', 'cancelled')),
+    
+    -- Entity-specific data fields
+    description TEXT,
+    priority VARCHAR(50) DEFAULT 'normal'
+        CHECK (priority IN ('low', 'normal', 'high', 'urgent')),
+    
+    -- Relationships
+    customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE RESTRICT,
+    assigned_technician_id INTEGER REFERENCES technicians(id) ON DELETE SET NULL,
+    
+    -- Scheduling
+    scheduled_start TIMESTAMP,
+    scheduled_end TIMESTAMP,
+    completed_at TIMESTAMP
+);
+
+-- ============================================================================
+-- INVOICES TABLE
+-- ============================================================================
+-- Business entity: Billing invoices
+-- Contract compliance: ✓ FULL
+--
+-- Identity field: invoice_number
+-- Soft deletes: is_active
+-- Lifecycle states: status (draft → sent → paid → overdue → cancelled)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS invoices (
+    -- TIER 1: Universal Entity Contract Fields
+    id SERIAL PRIMARY KEY,
+    invoice_number VARCHAR(100) UNIQUE NOT NULL,  -- Identity field
+    is_active BOOLEAN DEFAULT true NOT NULL,  -- Soft delete flag
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    
+    -- TIER 2: Entity-Specific Lifecycle Field
+    status VARCHAR(50) DEFAULT 'draft'
+        CHECK (status IN ('draft', 'sent', 'paid', 'overdue', 'cancelled')),
+    
+    -- Entity-specific data fields
+    work_order_id INTEGER REFERENCES work_orders(id) ON DELETE SET NULL,
+    customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE RESTRICT,
+    
+    -- Financial data
+    amount DECIMAL(10, 2) NOT NULL,
+    tax DECIMAL(10, 2) DEFAULT 0,
+    total DECIMAL(10, 2) NOT NULL,
+    
+    -- Payment tracking
+    due_date DATE,
+    paid_at TIMESTAMP
+);
+
+-- ============================================================================
+-- CONTRACTS TABLE
+-- ============================================================================
+-- Business entity: Service contracts
+-- Contract compliance: ✓ FULL
+--
+-- Identity field: contract_number
+-- Soft deletes: is_active
+-- Lifecycle states: status (draft → active → expired → cancelled)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS contracts (
+    -- TIER 1: Universal Entity Contract Fields
+    id SERIAL PRIMARY KEY,
+    contract_number VARCHAR(100) UNIQUE NOT NULL,  -- Identity field
+    is_active BOOLEAN DEFAULT true NOT NULL,  -- Soft delete flag
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    
+    -- TIER 2: Entity-Specific Lifecycle Field
+    status VARCHAR(50) DEFAULT 'draft'
+        CHECK (status IN ('draft', 'active', 'expired', 'cancelled')),
+    
+    -- Entity-specific data fields
+    customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE RESTRICT,
+    
+    -- Contract details
+    start_date DATE NOT NULL,
+    end_date DATE,
+    terms TEXT,
+    value DECIMAL(10, 2),
+    billing_cycle VARCHAR(50)
+        CHECK (billing_cycle IN ('monthly', 'quarterly', 'annually', 'one_time'))
+);
+
+-- ============================================================================
+-- INVENTORY TABLE
+-- ============================================================================
+-- Business entity: Parts and supplies inventory
+-- Contract compliance: ✓ FULL
+--
+-- Identity field: name
+-- Soft deletes: is_active
+-- Lifecycle states: status (in_stock → low_stock → out_of_stock → discontinued)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS inventory (
+    -- TIER 1: Universal Entity Contract Fields
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,  -- Identity field
+    is_active BOOLEAN DEFAULT true NOT NULL,  -- Soft delete flag
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    
+    -- TIER 2: Entity-Specific Lifecycle Field
+    status VARCHAR(50) DEFAULT 'in_stock'
+        CHECK (status IN ('in_stock', 'low_stock', 'out_of_stock', 'discontinued')),
+    
+    -- Entity-specific data fields
+    sku VARCHAR(100) UNIQUE NOT NULL,
+    description TEXT,
+    
+    -- Inventory management
+    quantity INTEGER DEFAULT 0 NOT NULL,
+    reorder_level INTEGER DEFAULT 10,
+    unit_cost DECIMAL(10, 2),
+    
+    -- Warehouse details
+    location VARCHAR(255),
+    supplier VARCHAR(255)
+);
+
+-- ============================================================================
+-- USERS TABLE UPDATE - POLYMORPHIC PROFILE LINKS
+-- ============================================================================
+-- Add foreign keys to link users to their specific profile types
+-- - role_id=5 (customer) → customer_profile_id populated
+-- - role_id=2 (technician) → technician_profile_id populated
+-- - Other roles (admin, manager, dispatcher) → both NULL
+-- ============================================================================
+ALTER TABLE users 
+ADD COLUMN IF NOT EXISTS customer_profile_id INTEGER REFERENCES customers(id) ON DELETE SET NULL;
+
+ALTER TABLE users 
+ADD COLUMN IF NOT EXISTS technician_profile_id INTEGER REFERENCES technicians(id) ON DELETE SET NULL;
+
+-- ============================================================================
+-- PERFORMANCE INDEXES
+-- ============================================================================
+
+-- Customers indexes
+CREATE INDEX IF NOT EXISTS idx_customers_email ON customers(email);
+CREATE INDEX IF NOT EXISTS idx_customers_active ON customers(is_active) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS idx_customers_status ON customers(status);
+CREATE INDEX IF NOT EXISTS idx_customers_created ON customers(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_customers_company ON customers(company_name);
+
+-- Technicians indexes
+CREATE INDEX IF NOT EXISTS idx_technicians_license ON technicians(license_number);
+CREATE INDEX IF NOT EXISTS idx_technicians_active ON technicians(is_active) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS idx_technicians_status ON technicians(status);
+CREATE INDEX IF NOT EXISTS idx_technicians_created ON technicians(created_at DESC);
+
+-- Work orders indexes
+CREATE INDEX IF NOT EXISTS idx_work_orders_customer ON work_orders(customer_id);
+CREATE INDEX IF NOT EXISTS idx_work_orders_technician ON work_orders(assigned_technician_id);
+CREATE INDEX IF NOT EXISTS idx_work_orders_active ON work_orders(is_active) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS idx_work_orders_status ON work_orders(status);
+CREATE INDEX IF NOT EXISTS idx_work_orders_priority ON work_orders(priority);
+CREATE INDEX IF NOT EXISTS idx_work_orders_created ON work_orders(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_work_orders_scheduled ON work_orders(scheduled_start);
+
+-- Invoices indexes
+CREATE INDEX IF NOT EXISTS idx_invoices_number ON invoices(invoice_number);
+CREATE INDEX IF NOT EXISTS idx_invoices_customer ON invoices(customer_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_work_order ON invoices(work_order_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_active ON invoices(is_active) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
+CREATE INDEX IF NOT EXISTS idx_invoices_due_date ON invoices(due_date);
+CREATE INDEX IF NOT EXISTS idx_invoices_created ON invoices(created_at DESC);
+
+-- Contracts indexes
+CREATE INDEX IF NOT EXISTS idx_contracts_number ON contracts(contract_number);
+CREATE INDEX IF NOT EXISTS idx_contracts_customer ON contracts(customer_id);
+CREATE INDEX IF NOT EXISTS idx_contracts_active ON contracts(is_active) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS idx_contracts_status ON contracts(status);
+CREATE INDEX IF NOT EXISTS idx_contracts_dates ON contracts(start_date, end_date);
+CREATE INDEX IF NOT EXISTS idx_contracts_created ON contracts(created_at DESC);
+
+-- Inventory indexes
+CREATE INDEX IF NOT EXISTS idx_inventory_sku ON inventory(sku);
+CREATE INDEX IF NOT EXISTS idx_inventory_name ON inventory(name);
+CREATE INDEX IF NOT EXISTS idx_inventory_active ON inventory(is_active) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS idx_inventory_status ON inventory(status);
+CREATE INDEX IF NOT EXISTS idx_inventory_quantity ON inventory(quantity);
+CREATE INDEX IF NOT EXISTS idx_inventory_created ON inventory(created_at DESC);
+
+-- Users polymorphic profile indexes
+CREATE INDEX IF NOT EXISTS idx_users_customer_profile ON users(customer_profile_id);
+CREATE INDEX IF NOT EXISTS idx_users_technician_profile ON users(technician_profile_id);
+
+-- ============================================================================
+-- AUTOMATIC TIMESTAMP MANAGEMENT
+-- ============================================================================
+-- Apply updated_at trigger to all new tables
+
+DROP TRIGGER IF EXISTS update_customers_updated_at ON customers;
+CREATE TRIGGER update_customers_updated_at
+    BEFORE UPDATE ON customers
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_technicians_updated_at ON technicians;
+CREATE TRIGGER update_technicians_updated_at
+    BEFORE UPDATE ON technicians
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_work_orders_updated_at ON work_orders;
+CREATE TRIGGER update_work_orders_updated_at
+    BEFORE UPDATE ON work_orders
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_invoices_updated_at ON invoices;
+CREATE TRIGGER update_invoices_updated_at
+    BEFORE UPDATE ON invoices
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_contracts_updated_at ON contracts;
+CREATE TRIGGER update_contracts_updated_at
+    BEFORE UPDATE ON contracts
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_inventory_updated_at ON inventory;
+CREATE TRIGGER update_inventory_updated_at
+    BEFORE UPDATE ON inventory
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================================================
 -- CONTRACT VALIDATION
 -- ============================================================================
 -- Run validation functions to ensure compliance:
@@ -288,4 +619,10 @@ COMMENT ON COLUMN audit_logs.new_values IS 'Entity state after change (JSONB)';
 --   -----------+-----------+--------
 --   roles      | t         | NULL
 --   users      | t         | NULL
+--   customers  | t         | NULL
+--   technicians| t         | NULL
+--   work_orders| t         | NULL
+--   invoices   | t         | NULL
+--   contracts  | t         | NULL
+--   inventory  | t         | NULL
 -- ============================================================================

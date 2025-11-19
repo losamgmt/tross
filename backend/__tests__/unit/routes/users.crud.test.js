@@ -51,9 +51,11 @@ jest.mock("../../../validators", () => ({
       };
     }
   }),
-  validateUserCreate: jest.fn((req, res, next) => next()),
-  validateProfileUpdate: jest.fn((req, res, next) => next()),
-  validateRoleAssignment: jest.fn((req, res, next) => next()),
+  // CRITICAL: Direct middleware CANNOT be jest.fn() wrapped
+  // These are direct validators, not factories - plain functions only
+  validateUserCreate: (req, res, next) => next(),
+  validateProfileUpdate: (req, res, next) => next(),
+  validateRoleAssignment: (req, res, next) => next(),
 }));
 
 const request = require("supertest");
@@ -89,8 +91,8 @@ describe("Users Routes - CRUD Operations", () => {
       req.validatedId = parseInt(req.params.id);
       next();
     });
-    validateUserCreate.mockImplementation((req, res, next) => next());
-    validateProfileUpdate.mockImplementation((req, res, next) => next());
+    // Note: validateUserCreate, validateProfileUpdate, validateRoleAssignment
+    // are direct middleware (plain functions), not jest.fn() - no mockImplementation needed
   });
 
   afterEach(() => jest.resetAllMocks());
@@ -182,7 +184,7 @@ describe("Users Routes - CRUD Operations", () => {
 
       expect(response.status).toBe(HTTP_STATUS.OK);
       expect(response.body.data).toEqual(mockUser);
-      expect(User.findById).toHaveBeenCalledWith(userId);
+      expect(User.findById).toHaveBeenCalledWith(userId, expect.any(Object));
     });
 
     it("should return 404 when user not found", async () => {
@@ -208,7 +210,7 @@ describe("Users Routes - CRUD Operations", () => {
 
       await request(app).get("/api/users/5");
 
-      expect(User.findById).toHaveBeenCalledWith(5);
+      expect(User.findById).toHaveBeenCalledWith(5, expect.any(Object));
     });
   });
 

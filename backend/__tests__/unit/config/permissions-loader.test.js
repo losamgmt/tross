@@ -18,6 +18,7 @@ const {
   getRoleHierarchy,
   getPermissionMatrix,
   getRowLevelSecurity,
+  getRLSRule,
   loadPermissions,
 } = require('../../../config/permissions-loader');
 
@@ -62,7 +63,7 @@ describe('Permission System - Data-Driven Tests', () => {
     it('should include standard roles', () => {
       expect(ROLE_HIERARCHY).toHaveProperty('admin');
       expect(ROLE_HIERARCHY).toHaveProperty('manager');
-      expect(ROLE_HIERARCHY).toHaveProperty('client');
+      expect(ROLE_HIERARCHY).toHaveProperty('customer');
     });
   });
 
@@ -99,7 +100,7 @@ describe('Permission System - Data-Driven Tests', () => {
   describe('getRolePriority()', () => {
     it('should return correct priority for valid roles', () => {
       expect(getRolePriority('admin')).toBe(ROLE_HIERARCHY.admin);
-      expect(getRolePriority('client')).toBe(ROLE_HIERARCHY.client);
+      expect(getRolePriority('customer')).toBe(ROLE_HIERARCHY.customer);
     });
 
     it('should be case-insensitive', () => {
@@ -186,14 +187,14 @@ describe('Permission System - Data-Driven Tests', () => {
     it('should return true when user role >= required role', () => {
       expect(hasMinimumRole('admin', 'admin')).toBe(true);
       expect(hasMinimumRole('admin', 'manager')).toBe(true);
-      expect(hasMinimumRole('admin', 'client')).toBe(true);
+      expect(hasMinimumRole('admin', 'customer')).toBe(true);
       expect(hasMinimumRole('manager', 'manager')).toBe(true);
-      expect(hasMinimumRole('manager', 'client')).toBe(true);
+      expect(hasMinimumRole('manager', 'customer')).toBe(true);
     });
 
     it('should return false when user role < required role', () => {
-      expect(hasMinimumRole('client', 'admin')).toBe(false);
-      expect(hasMinimumRole('client', 'manager')).toBe(false);
+      expect(hasMinimumRole('customer', 'admin')).toBe(false);
+      expect(hasMinimumRole('customer', 'manager')).toBe(false);
       expect(hasMinimumRole('manager', 'admin')).toBe(false);
     });
 
@@ -260,6 +261,48 @@ describe('Permission System - Data-Driven Tests', () => {
 
     it('should return null for unknown resources', () => {
       expect(getRowLevelSecurity('admin', 'unknown_resource')).toBeNull();
+    });
+
+    it('should have getRLSRule alias for getRowLevelSecurity', () => {
+      expect(getRLSRule).toBe(getRowLevelSecurity);
+      expect(getRLSRule('customer', 'customers')).toBe(getRowLevelSecurity('customer', 'customers'));
+    });
+
+    it('should return deny_all for technician access to contracts', () => {
+      // Technicians should have NO access to contracts (explicit deny_all, not null)
+      expect(getRowLevelSecurity('technician', 'contracts')).toBe('deny_all');
+      expect(getRLSRule('technician', 'contracts')).toBe('deny_all');
+    });
+
+    it('should return "assigned_work_orders_only" for technician work_orders', () => {
+      // Technicians should only see assigned work orders, not available ones
+      expect(getRowLevelSecurity('technician', 'work_orders')).toBe('assigned_work_orders_only');
+      expect(getRLSRule('technician', 'work_orders')).toBe('assigned_work_orders_only');
+    });
+
+    it('should validate all RLS rules match expected patterns', () => {
+      const config = loadPermissions();
+      const validPatterns = [
+        'own_record_only',
+        'own_work_orders_only',
+        'own_invoices_only',
+        'own_contracts_only',
+        'assigned_work_orders_only',
+        'all_records',
+        'deny_all',
+        'public_resource',
+        null,
+      ];
+
+      for (const [resourceName, resourceConfig] of Object.entries(config.resources)) {
+        if (resourceConfig.rowLevelSecurity) {
+          // rowLevelSecurity must ALWAYS be an object with per-role policies (no string shorthand)
+          expect(typeof resourceConfig.rowLevelSecurity).toBe('object');
+          for (const [roleName, rlsRule] of Object.entries(resourceConfig.rowLevelSecurity)) {
+            expect(validPatterns).toContain(rlsRule);
+          }
+        }
+      }
     });
   });
 

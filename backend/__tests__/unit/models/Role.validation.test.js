@@ -29,16 +29,16 @@ describe("Role Model - Validation", () => {
       expect(Role.isProtected("admin")).toBe(true);
     });
 
-    it("should return true for client role", () => {
-      expect(Role.isProtected("client")).toBe(true);
+    it("should return true for customer role", () => {
+      expect(Role.isProtected("customer")).toBe(true);
     });
 
     it("should return true for admin role (uppercase)", () => {
       expect(Role.isProtected("ADMIN")).toBe(true);
     });
 
-    it("should return true for client role (mixed case)", () => {
-      expect(Role.isProtected("Client")).toBe(true);
+    it("should return true for customer role (mixed case)", () => {
+      expect(Role.isProtected("Customer")).toBe(true);
     });
 
     it("should return false for non-protected roles", () => {
@@ -156,11 +156,11 @@ describe("Role Model - Validation", () => {
       expect(db.query).toHaveBeenCalledTimes(1); // Only findById, no update
     });
 
-    it("should reject update for protected role (client)", async () => {
-      const protectedRole = { id: 2, name: "client", created_at: "2025-01-02" };
+    it("should reject update for protected role (customer)", async () => {
+      const protectedRole = { id: 5, name: "customer", created_at: "2025-01-02" };
       db.query.mockResolvedValueOnce({ rows: [protectedRole] });
 
-      await expect(Role.update(2, { name: "customer" })).rejects.toThrow(
+      await expect(Role.update(5, { name: "client" })).rejects.toThrow(
         "Cannot modify protected role",
       );
     });
@@ -247,11 +247,11 @@ describe("Role Model - Validation", () => {
       expect(db.query).toHaveBeenCalledTimes(1); // Only findById
     });
 
-    it("should reject delete for protected role (client)", async () => {
-      const protectedRole = { id: 2, name: "client", created_at: "2025-01-02" };
+    it("should reject delete for protected role (customer)", async () => {
+      const protectedRole = { id: 5, name: "customer", created_at: "2025-01-02" };
       db.query.mockResolvedValueOnce({ rows: [protectedRole] });
 
-      await expect(Role.delete(2)).rejects.toThrow(
+      await expect(Role.delete(5)).rejects.toThrow(
         "Cannot delete protected role",
       );
     });

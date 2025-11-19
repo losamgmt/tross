@@ -74,9 +74,14 @@ if (!isDevelopment) {
 
 /**
  * Express middleware for request logging - Clean & Simple
+ * EXTENDED: Request ID tracing for distributed debugging
  */
 const requestLogger = (req, res, next) => {
   const start = Date.now();
+
+  // Generate unique request ID (timestamp + random, 12 chars for tracing)
+  req.requestId = `${Date.now().toString(36)}${Math.random().toString(36).substr(2, 5)}`;
+  res.setHeader('X-Request-Id', req.requestId);
 
   res.on('finish', () => {
     const duration = Date.now() - start;
@@ -86,8 +91,8 @@ const requestLogger = (req, res, next) => {
       return;
     }
 
-    // Clean, readable format: METHOD /path (status, duration)
-    const message = `${req.method} ${req.url} → ${res.statusCode} (${duration}ms)`;
+    // Clean, readable format: [requestId] METHOD /path (status, duration)
+    const message = `[${req.requestId}] ${req.method} ${req.url} → ${res.statusCode} (${duration}ms)`;
 
     if (res.statusCode >= 400) {
       logger.warn(`⚠️  ${message}`);

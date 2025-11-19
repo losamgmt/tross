@@ -31,6 +31,90 @@ class User {
   }
 
   /**
+   * Build RLS filter clause based on user's policy
+   * @private
+   * @param {Object} req - Express request with RLS context (rlsPolicy, rlsUserId)
+   * @returns {Object} { clause: string, values: array, applied: boolean }
+   */
+  static _buildRLSFilter(req) {
+    // No RLS context = no filtering
+    if (!req || !req.hasOwnProperty('rlsPolicy')) {
+      return { clause: '', values: [], applied: false };
+    }
+
+    const { rlsPolicy, rlsUserId } = req;
+
+    // Unknown policy = security failsafe (deny all)
+    if (!['all_records', 'own_record_only'].includes(rlsPolicy)) {
+      logger.warn('Unknown RLS policy for users', { policy: rlsPolicy, userId: rlsUserId });
+      return { clause: '1=0', values: [], applied: true };
+    }
+
+    // all_records policy = no filtering (technician+ see everything)
+    if (rlsPolicy === 'all_records') {
+      return { clause: '', values: [], applied: true };
+    }
+
+    // own_record_only = filter by user id (customers see only themselves)
+    if (rlsPolicy === 'own_record_only') {
+      if (!rlsUserId) {
+        logger.error('RLS userId missing for own_record_only policy', { policy: rlsPolicy });
+        return { clause: '1=0', values: [], applied: true };
+      }
+      return { clause: 'u.id = $1', values: [rlsUserId], applied: true };
+    }
+
+    // Fallback (shouldn't reach here)
+    return { clause: '', values: [], applied: false };
+  }
+
+  /**
+   * Apply RLS filter to existing WHERE clause
+   * @private
+   * @param {Object} req - Express request with RLS context
+   * @param {string} existingWhere - Existing WHERE clause (may be empty)
+   * @param {array} existingValues - Existing query parameter values
+   * @returns {Object} { whereClause: string, values: array, rlsApplied: boolean }
+   */
+  static _applyRLSFilter(req, existingWhere = '', existingValues = []) {
+    const rlsFilter = this._buildRLSFilter(req);
+
+    // No RLS filtering needed
+    if (!rlsFilter.clause) {
+      return {
+        whereClause: existingWhere,
+        values: existingValues,
+        rlsApplied: rlsFilter.applied,
+      };
+    }
+
+    // Apply RLS filter
+    const hasExistingWhere = existingWhere.trim().length > 0;
+    const cleanedWhere = hasExistingWhere ? existingWhere.replace(/^WHERE\s+/i, '') : '';
+
+    let combinedClause;
+    let combinedValues;
+
+    if (hasExistingWhere) {
+      // Adjust RLS parameter placeholders to account for existing params
+      const paramOffset = existingValues.length;
+      const adjustedRlsClause = rlsFilter.clause.replace(/\$(\d+)/g, (_, num) => `$${parseInt(num) + paramOffset}`);
+
+      combinedClause = `WHERE ${cleanedWhere} AND ${adjustedRlsClause}`;
+      combinedValues = [...existingValues, ...rlsFilter.values];
+    } else {
+      combinedClause = `WHERE ${rlsFilter.clause}`;
+      combinedValues = rlsFilter.values;
+    }
+
+    return {
+      whereClause: combinedClause,
+      values: combinedValues,
+      rlsApplied: rlsFilter.applied,
+    };
+  }
+
+  /**
    * Validate user data contextually
    * Handles nullable auth0_id for legitimate cases:
    *  - Dev mode: synthetic IDs generated
@@ -115,16 +199,18 @@ class User {
    * TYPE SAFE: Validates id is a positive integer
    *
    * @param {number|string} id - User ID (will be coerced to integer)
+   * @param {Object} req - Express request with RLS context (optional)
    * @returns {Promise<Object|null>} User object with role or null if not found
    * @throws {Error} If id is not a valid positive integer
    */
-  static async findById(id) {
+  static async findById(id, req = null) {
     // TYPE SAFETY: Ensure id is a valid positive integer
     const safeId = toSafeInteger(id, 'userId', { min: 1, allowNull: false });
 
     try {
-      const query = this._buildUserWithRoleQuery('WHERE u.id = $1');
-      const result = await db.query(query, [safeId]);
+      const { whereClause, values } = this._applyRLSFilter(req, 'WHERE u.id = $1', [safeId]);
+      const query = this._buildUserWithRoleQuery(whereClause);
+      const result = await db.query(query, values);
       const user = result.rows[0] || null;
 
       // Validate and enrich user data before returning
@@ -147,7 +233,7 @@ class User {
    * @param {string} auth0Data.email - User email
    * @param {string} [auth0Data.given_name] - User first name
    * @param {string} [auth0Data.family_name] - User last name
-   * @param {string} [auth0Data.role] - User role (defaults to 'client')
+   * @param {string} [auth0Data.role] - User role from JWT custom claim (Auth0 Action sets this)
    * @returns {Promise<Object>} Created user object
    */
   static async createFromAuth0(auth0Data) {
@@ -158,8 +244,10 @@ class User {
     }
 
     try {
-      // Assign role from JWT token or default to 'client'
-      const userRole = role || 'client';
+      // Use role from JWT token (signed by Auth0)
+      // SECURITY: Role is in JWT custom claims added by Auth0 Action
+      // Falls back to 'customer' only if JWT is missing role (shouldn't happen after Action is deployed)
+      const userRole = role || 'customer';
 
       // Single INSERT with role_id - no transaction needed (KISS)
       const userQuery = `
@@ -253,12 +341,12 @@ class User {
     }
 
     try {
-      // Assign role if provided, otherwise use client role
+      // Assign role if provided, otherwise use customer role
       let assignedRoleId = role_id;
       if (!assignedRoleId) {
         const Role = require('./Role');
-        const clientRole = await Role.getByName('client');
-        assignedRoleId = clientRole.id;
+        const customerRole = await Role.getByName('customer');
+        assignedRoleId = customerRole.id;
       }
 
       // Determine initial status:
@@ -344,7 +432,7 @@ class User {
         whereClauses.push(`u.is_active = $${isActiveParamIndex}`);
       }
 
-      const whereClause = whereClauses.length > 0
+      const baseWhereClause = whereClauses.length > 0
         ? `WHERE ${whereClauses.join(' AND ')}`
         : '';
 
@@ -359,6 +447,9 @@ class User {
         params.push(true);
       }
 
+      // Apply RLS filter
+      const { whereClause: finalWhereClause, values: rlsValues, rlsApplied } = this._applyRLSFilter(options.req, baseWhereClause, params);
+
       // Build sort clause (validated against sortableFields)
       const sortClause = QueryBuilderService.buildSortClause(
         options.sortBy,
@@ -371,17 +462,17 @@ class User {
       const countQuery = `
         SELECT COUNT(*) as total
         FROM users u
-        ${whereClause}
+        ${finalWhereClause}
       `;
-      const countResult = await db.query(countQuery, params);
+      const countResult = await db.query(countQuery, rlsValues);
       const total = parseInt(countResult.rows[0].total);
 
       // Get paginated users with role data
       const query = this._buildUserWithRoleQuery(
-        whereClause,
+        finalWhereClause,
         `ORDER BY u.${sortClause} LIMIT ${limit} OFFSET ${offset}`,
       );
-      const result = await db.query(query, params);
+      const result = await db.query(query, rlsValues);
 
       // Apply validation to all users in the result set
       const validatedUsers = result.rows.map(user =>
@@ -400,6 +491,7 @@ class User {
           sortBy: options.sortBy || defaultSort.field,
           sortOrder: options.sortOrder || defaultSort.order,
         },
+        rlsApplied,
       };
     } catch (error) {
       logger.error('Error finding all users', { error: error.message });

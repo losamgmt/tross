@@ -9,6 +9,7 @@
     "/__tests__/setup/"
   ],
   "setupFilesAfterEnv": ["<rootDir>/__tests__/setup/jest.integration.setup.js"],
+  "globalSetup": "<rootDir>/__tests__/setup/jest.global.setup.js",
   "globalTeardown": "<rootDir>/__tests__/setup/jest.integration.teardown.js",
   "collectCoverageFrom": [
     "**/*.js",
@@ -24,5 +25,7 @@
   "testTimeout": 10000,
   "verbose": true,
   "maxWorkers": 1,
-  "forceExit": true
+  "forceExit": true,
+  "bail": 1,
+  "detectOpenHandles": true
 }

@@ -1,0 +1,388 @@
+# Authentication
+
+Dual authentication system: dev mode for rapid development, Auth0 for production.
+
+---
+
+## Authentication Philosophy
+
+**Why Dual Auth:**
+- **Development speed** - No Auth0 setup needed for local dev
+- **Production security** - Industry-standard OAuth2/OIDC
+- **Strategy pattern** - Both modes coexist cleanly
+
+**Design decision:** Never compromise security for convenience. Dev mode is isolated, production is bulletproof.
+
+---
+
+## Architecture
+
+### Strategy Pattern
+```
+AuthStrategy (Base)
+├── DevelopmentStrategy → File-based test users
+└── Auth0Strategy → OAuth2/OIDC
+```
+
+**Why Strategy Pattern:**
+- Both auth methods work simultaneously
+- Easy to add new providers (SAML, LDAP, etc.)
+- Clean separation of concerns
+- No conditional auth logic scattered across codebase
+
+---
+
+## Development Authentication
+
+### Purpose
+Fast local development without Auth0 configuration.
+
+### How It Works
+1. Pre-configured test users in `backend/config/test-users.js`
+2. Request dev token via `/api/dev-auth/login`
+3. Instant JWT generation (no external API calls)
+4. Full RBAC permissions for testing
+
+### Test Users
+```javascript
+// backend/config/test-users.js
+admin@dev.local      // Admin (full access)
+manager@dev.local    // Manager (team management)
+dispatcher@dev.local // Dispatcher (work order assignment)
+tech@dev.local       // Technician (own work orders)
+customer@dev.local   // Customer (own data only)
+```
+
+### Login Flow
+```bash
+POST /api/dev-auth/login
+{
+  "email": "admin@dev.local"
+}
+
+Response:
+{
+  "token": "eyJhbGciOiJIUzI1NiIs...",
+  "user": {
+    "id": null,
+    "email": "admin@dev.local",
+    "role": "admin",
+    "provider": "development"
+  }
+}
+```
+
+**Security:** Dev tokens are REJECTED in production (`AppConfig.devAuthEnabled` check).
+
+---
+
+## Production Authentication (Auth0)
+
+### Purpose
+Industry-standard OAuth2/OIDC for production security.
+
+### Why Auth0
+- **Security expertise** - Auth is their core business
+- **OAuth2/OIDC compliant** - Industry standards
+- **MFA ready** - Two-factor authentication
+- **Social login** - Google, GitHub, etc.
+- **Reduces attack surface** - We don't store passwords
+
+### Authentication Flow
+```
+User → Auth0 Login UI → OAuth2 Authorization Code Flow
+  ↓
+Auth0 validates credentials (password, social, MFA)
+  ↓
+Redirect to /api/auth0/callback with code
+  ↓
+Backend exchanges code for Auth0 token (RS256)
+  ↓
+Backend creates internal JWT (HS256) + stores user
+  ↓
+Return token to frontend
+```
+
+### Token Exchange (RS256 → HS256)
+**Why two tokens?**
+- **Auth0 token (RS256):** Verifies identity, short-lived
+- **Internal JWT (HS256):** App authorization, our control
+
+**Process:**
+1. Verify Auth0 token signature (JWKS)
+2. Extract user info (email, auth0_id)
+3. Create/update user in our database
+4. Generate internal JWT with our roles
+5. Return internal JWT to client
+
+**Code:**
+```javascript
+// backend/services/auth/Auth0Strategy.js
+const auth0Token = verifyAuth0Token(code); // RS256 verification
+const user = await User.findOrCreate(auth0Token.email);
+const internalJwt = generateToken(user); // HS256 with our roles
+return { token: internalJwt, user };
+```
+
+---
+
+## Authorization (RBAC)
+
+### Role Hierarchy
+```
+Admin (5)       Full system access
+  ↓
+Manager (4)     Team management, reports
+  ↓
+Dispatcher (3)  Work order assignment
+  ↓
+Technician (2)  Own work orders
+  ↓
+Customer (1)    Own data only
+```
+
+**Hierarchy rule:** Higher roles inherit lower permissions.
+
+### Permission Format
+```
+resource:action
+
+Examples:
+users:read        // View users
+customers:create  // Create customers
+work_orders:update // Update work orders
+```
+
+### Permission Check
+```javascript
+// backend/middleware/auth.js
+function requirePermission(permission) {
+  return (req, res, next) => {
+    const [resource, action] = permission.split(':');
+    
+    if (!hasPermission(req.user.role, resource, action)) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+    
+    next();
+  };
+}
+
+// Usage
+router.post('/api/customers',
+  authenticateToken,           // Layer 1: Verify identity
+  requirePermission('customers:create'), // Layer 2: Check permission
+  async (req, res) => { ... }
+);
+```
+
+### Permission Matrix
+See `config/permissions.json` for complete matrix.
+
+**Example:**
+```json
+{
+  "admin": {
+    "users": ["create", "read", "update", "delete"],
+    "customers": ["create", "read", "update", "delete"]
+  },
+  "technician": {
+    "work_orders": ["read", "update"],
+    "customers": ["read"]
+  }
+}
+```
+
+---
+
+## JWT Token Standard
+
+### Token Structure (RFC 7519)
+```json
+{
+  "header": {
+    "alg": "HS256",
+    "typ": "JWT"
+  },
+  "payload": {
+    "userId": 123,
+    "email": "user@example.com",
+    "role": "admin",
+    "iat": 1700000000,
+    "exp": 1700003600
+  },
+  "signature": "..."
+}
+```
+
+### Token Lifecycle
+- **Access Token:** 1 hour lifetime
+- **Refresh Token:** 7 days lifetime
+- **Refresh endpoint:** `/api/auth/refresh`
+
+### Token Refresh
+```bash
+POST /api/auth/refresh
+{
+  "refreshToken": "eyJhbGciOiJIUzI1NiIs..."
+}
+
+Response:
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIs...",  // New 1-hour token
+  "refreshToken": "eyJhbGciOiJIUzI1NiIs..."  // New 7-day token
+}
+```
+
+---
+
+## Session Management
+
+### Multi-Device Support
+Users can be logged in on multiple devices simultaneously.
+
+### Session Endpoints
+```bash
+GET /api/auth/sessions       # List active sessions
+POST /api/auth/logout        # Logout current device
+POST /api/auth/logout-all    # Logout all devices
+```
+
+### Session Storage
+Sessions tracked in `refresh_tokens` table:
+```sql
+CREATE TABLE refresh_tokens (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id),
+  token TEXT NOT NULL,
+  device_info TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  expires_at TIMESTAMP NOT NULL
+);
+```
+
+---
+
+## Audit Logging
+
+All authentication events logged to `audit_logs` table:
+
+**Logged Events:**
+- `auth.login.success` / `auth.login.failure`
+- `auth.logout`
+- `auth.token.refresh`
+- `auth.permission.denied`
+
+**Example:**
+```javascript
+await auditService.logEvent('auth.login.success', {
+  email: user.email,
+  ip: req.ip,
+  userAgent: req.headers['user-agent']
+}, user.id);
+```
+
+---
+
+## Setup Guide
+
+### Development Mode (No Setup)
+Works out of the box. Just start the backend:
+```bash
+cd backend
+npm run dev
+```
+
+### Production Mode (Auth0)
+
+**1. Create Auth0 Application**
+- Go to [auth0.com](https://auth0.com)
+- Create new "Regular Web Application"
+- Note: Domain, Client ID, Client Secret
+
+**2. Configure Callback URLs**
+```
+Allowed Callback URLs:
+http://localhost:3001/api/auth0/callback
+https://your-domain.com/api/auth0/callback
+
+Allowed Logout URLs:
+http://localhost:8080
+https://your-domain.com
+```
+
+**3. Set Environment Variables**
+```bash
+# backend/.env
+AUTH0_DOMAIN=your-tenant.auth0.com
+AUTH0_CLIENT_ID=your-client-id
+AUTH0_CLIENT_SECRET=your-client-secret
+AUTH0_CALLBACK_URL=http://localhost:3001/api/auth0/callback
+```
+
+**4. Restart Backend**
+```bash
+cd backend
+npm run dev
+```
+
+Auth0 authentication now enabled alongside dev mode.
+
+---
+
+## Security Best Practices
+
+### Token Security
+- ✅ Store tokens in httpOnly cookies (XSS protection)
+- ✅ Use secure flag in production (HTTPS only)
+- ✅ Short access token lifetime (1 hour)
+- ❌ Never store tokens in localStorage (XSS vulnerable)
+
+### Password Requirements (if using database auth)
+- Minimum 8 characters
+- Mixed case, numbers, special characters
+- Bcrypt hashing (cost factor 12)
+
+### Rate Limiting
+```javascript
+// 5 login attempts per 15 minutes per IP
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: 'Too many login attempts, try again later'
+});
+
+app.use('/api/auth/login', loginLimiter);
+```
+
+---
+
+## Troubleshooting
+
+### "Invalid token" errors
+- Check token expiration (decode at jwt.io)
+- Verify JWT_SECRET matches across environments
+- Ensure token format: `Bearer <token>`
+
+### Auth0 callback fails
+- Verify callback URL matches Auth0 settings
+- Check AUTH0_* environment variables
+- Ensure Auth0 application is enabled
+
+### Dev mode not working
+- Check `AppConfig.devAuthEnabled` is true
+- Verify test users exist in `config/test-users.js`
+- Ensure `/api/dev-auth/*` routes are registered
+
+### Permission denied (403)
+- Check user role in JWT payload
+- Verify permission exists in `config/permissions.json`
+- Ensure RBAC middleware is applied to route
+
+---
+
+## Further Reading
+
+- [Security Guide](SECURITY.md) - Triple-tier security details
+- [Architecture](ARCHITECTURE.md) - Strategy pattern explanation
+- [API Documentation](API.md) - All auth endpoints

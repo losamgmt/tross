@@ -5,6 +5,7 @@
  */
 const express = require('express');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
+const { enforceRLS } = require('../middleware/row-level-security');
 const {
   validateUserCreate,
   validateProfileUpdate,
@@ -44,7 +45,7 @@ function sanitizeUserData(user) {
 /**
  * Sanitize array of users
  */
-function _sanitizeUserList(users) {
+function __sanitizeUserList(users) {
   if (!Array.isArray(users)) {return users;}
   return users.map(sanitizeUserData);
 }
@@ -59,7 +60,7 @@ function _sanitizeUserList(users) {
  *       Retrieve a paginated list of users with optional search, filtering, and sorting.
  *       All query parameters are optional and can be combined.
  *     security:
- *       - bearerAuth: []
+ *       - BearerAuth: []
  *     parameters:
  *       - in: query
  *         name: page
@@ -187,6 +188,7 @@ router.get(
   '/',
   authenticateToken,
   requirePermission('users', 'read'),
+  enforceRLS('users'),
   validatePagination({ maxLimit: 200 }),
   validateQuery(userMetadata), // NEW: Metadata-driven validation
   async (req, res) => {
@@ -208,6 +210,7 @@ router.get(
         sortBy,
         sortOrder,
         includeInactive, // Pass through to model
+        req,
       });
 
       res.json({
@@ -216,6 +219,7 @@ router.get(
         count: result.data.length,
         pagination: result.pagination,
         appliedFilters: result.appliedFilters, // NEW: Show what filters were applied
+        rlsApplied: result.rlsApplied,
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
@@ -237,7 +241,7 @@ router.get(
  *     summary: Get user by ID (admin only)
  *     description: Retrieve a single user by their ID
  *     security:
- *       - bearerAuth: []
+ *       - BearerAuth: []
  *     parameters:
  *       - name: id
  *         in: path
@@ -256,11 +260,12 @@ router.get(
   '/:id',
   authenticateToken,
   requirePermission('users', 'read'),
+  enforceRLS('users'),
   validateIdParam(),
   async (req, res) => {
     try {
       const userId = req.validated.id; // From validateIdParam middleware
-      const user = await User.findById(userId);
+      const user = await User.findById(userId, req);
 
       if (!user) {
         return res.status(HTTP_STATUS.NOT_FOUND).json({
@@ -297,7 +302,7 @@ router.get(
  *     summary: Create new user (admin only)
  *     description: Manually create a new user. Requires admin privileges.
  *     security:
- *       - bearerAuth: []
+ *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -339,7 +344,7 @@ router.post(
     try {
       const { email, first_name, last_name, role_id } = req.body;
 
-      // Create user (will default to 'client' role if no role_id provided)
+      // Create user (will default to 'customer' role if no role_id provided)
       const newUser = await User.create({
         email,
         first_name,
@@ -402,7 +407,7 @@ router.post(
  *       - Deactivated users cannot authenticate
  *       - Audit trail tracked in audit_logs table (who/when)
  *     security:
- *       - bearerAuth: []
+ *       - BearerAuth: []
  *     parameters:
  *       - name: id
  *         in: path
@@ -493,7 +498,7 @@ router.put(
       const { email, first_name, last_name, is_active } = req.body;
 
       // Verify user exists
-      const existingUser = await User.findById(userId);
+      const existingUser = await User.findById(userId, req);
       if (!existingUser) {
         return res.status(HTTP_STATUS.NOT_FOUND).json({
           error: 'Not Found',
@@ -559,7 +564,7 @@ router.put(
  *     summary: Set user's role (admin only)
  *     description: Change a user's role (REPLACES existing role - one role per user)
  *     security:
- *       - bearerAuth: []
+ *       - BearerAuth: []
  *     parameters:
  *       - name: id
  *         in: path
@@ -607,7 +612,7 @@ router.put(
       }
 
       // Verify role exists
-      const role = await Role.findById(roleIdNum);
+      const role = await Role.findById(roleIdNum, req);
       if (!role) {
         return res.status(404).json({
           error: 'Role Not Found',
@@ -620,7 +625,7 @@ router.put(
       await User.setRole(userId, role_id);
 
       // Fetch updated user with role name via JOIN
-      const updatedUser = await User.findById(userId);
+      const updatedUser = await User.findById(userId, req);
 
       if (!updatedUser) {
         return res.status(404).json({
@@ -671,7 +676,7 @@ router.put(
  *     summary: Delete user (admin only)
  *     description: Soft delete a user (sets is_active = false)
  *     security:
- *       - bearerAuth: []
+ *       - BearerAuth: []
  *     parameters:
  *       - name: id
  *         in: path
@@ -705,7 +710,7 @@ router.delete(
       }
 
       // Verify user exists
-      const user = await User.findById(userId);
+      const user = await User.findById(userId, req);
       if (!user) {
         return res.status(HTTP_STATUS.NOT_FOUND).json({
           error: 'Not Found',

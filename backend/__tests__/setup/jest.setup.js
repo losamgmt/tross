@@ -38,7 +38,10 @@ setTestEnv({
 });
 
 // Global test timeout
-jest.setTimeout(30000);
+// Let jest.config.*.json control per-test timeout (5s for unit, 10s for integration)
+// This global timeout is ONLY for beforeAll/afterAll hooks
+// Do NOT set jest.setTimeout() here - it overrides config values
+// jest.setTimeout(20000); // REMOVED - causes config override
 
 // Mock console methods to reduce test noise
 global.console = {

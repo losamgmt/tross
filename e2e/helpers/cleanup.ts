@@ -7,8 +7,9 @@
 
 import { getDevToken } from './auth';
 import { getAllUsers, deleteTestUser } from './users';
+import { URLS, CLEANUP } from '../config/constants';
 
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
+const BACKEND_URL = URLS.BACKEND;
 
 /**
  * Role data returned from API
@@ -159,7 +160,7 @@ export async function cleanupAllTestData(token?: string): Promise<void> {
 /**
  * Create test role via API
  * 
- * Creates a role for testing. Name will be prefixed with 'e2e-test-' for cleanup.
+ * Creates a role for testing. Name will be prefixed with cleanup pattern for automatic cleanup.
  * 
  * @param token - Admin authentication token
  * @param options - Role creation options
@@ -174,7 +175,7 @@ export async function createTestRole(
   } = {}
 ): Promise<TestRole> {
   const timestamp = Date.now();
-  const name = options.name || `e2e-test-role-${timestamp}`;
+  const name = options.name || `${CLEANUP.ROLE_PATTERN}-${timestamp}`;
   
   const response = await fetch(`${BACKEND_URL}/api/roles`, {
     method: 'POST',
@@ -183,7 +184,7 @@ export async function createTestRole(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      name: name.startsWith('e2e-test-') ? name : `e2e-test-${name}`,
+      name: name.startsWith(CLEANUP.ROLE_PATTERN) ? name : `${CLEANUP.ROLE_PATTERN}-${name}`,
       description: options.description || 'E2E test role',
       priority: options.priority || 10,
     }),

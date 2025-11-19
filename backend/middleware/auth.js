@@ -121,8 +121,14 @@ const authenticateToken = async (req, res, next) => {
       next();
     } else {
       // Auth0 provider: find or create user in database
+      // SECURITY: decoded.role comes from JWT (signed by Auth0 Action - tamper-proof)
       const dbUser = await userDataService.findOrCreateUser(decoded);
-      req.dbUser = dbUser;
+
+      // Attach role from JWT (already verified by signature)
+      req.dbUser = {
+        ...dbUser,
+        role: decoded.role || dbUser.role, // Prefer JWT role (signed), fallback to DB
+      };
 
       // CRITICAL SECURITY: Check if user is active (deactivated users cannot authenticate)
       if (req.dbUser.is_active === false) {

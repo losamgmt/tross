@@ -291,7 +291,7 @@ class AuthProvider extends ChangeNotifier {
   /// - `manager` - Management operations
   /// - `dispatcher` - Dispatch operations
   /// - `technician` - Field technician access
-  /// - `client` - Client/customer access
+  /// - `customer` - Customer/client access
   ///
   /// **Security:**
   /// - Only works with development backend (NODE_ENV=development)
@@ -580,7 +580,7 @@ class AuthProvider extends ChangeNotifier {
 
   /// Check if user has minimum role level
   ///
-  /// Roles are hierarchical: admin > manager > dispatcher > technician > client
+  /// Roles are hierarchical: admin > manager > dispatcher > technician > customer
   /// A manager has "minimum role" of technician (but not vice versa).
   ///
   /// **Usage Examples:**

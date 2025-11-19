@@ -13,7 +13,7 @@
 // TEST ROLES
 // ============================================================================
 // IMPORTANT: Use unique names that DON'T conflict with migrations
-// Migration 001 seeds: admin, client, technician, dispatcher, manager
+// Migration 001 seeds: admin, customer, technician, dispatcher, manager
 const TEST_ROLES = Object.freeze({
   // Unique test role names with test_ prefix to avoid migration conflicts
   UNIQUE_COORDINATOR: 'test_coordinator',
@@ -44,8 +44,8 @@ const TEST_USERS = Object.freeze({
 
   CLIENT: Object.freeze({
     first_name: 'Test',
-    last_name: 'Client',
-    role: 'client',
+    last_name: 'Customer',
+    role: 'customer',
     provider: 'development',
   }),
 
@@ -67,7 +67,7 @@ const TEST_USERS = Object.freeze({
   FOR_UPDATE: Object.freeze({
     first_name: 'Original',
     last_name: 'User',
-    role: 'client',
+    role: 'customer',
     provider: 'development',
   }),
 
@@ -115,7 +115,7 @@ const TEST_TOKEN_CLAIMS = Object.freeze({
     iss: 'test-trossapp',
     aud: 'trossapp-api',
     provider: 'development',
-    role: 'client',
+    role: 'customer',
   }),
 
   MANAGER_CLAIMS: Object.freeze({
