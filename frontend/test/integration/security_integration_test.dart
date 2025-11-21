@@ -34,7 +34,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      if (AppConfig.isDevMode) {
+      if (AppConfig.devAuthEnabled) {
         // In dev mode, dev card should be visible
         expect(
           find.text('Developer Login'),
@@ -69,7 +69,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      if (AppConfig.isDevMode) {
+      if (AppConfig.devAuthEnabled) {
         // In dev mode, banner should be visible
         expect(
           find.byType(Container),
@@ -96,7 +96,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      if (AppConfig.isDevMode) {
+      if (AppConfig.devAuthEnabled) {
         expect(
           find.text('Development'),
           findsOneWidget,
@@ -144,7 +144,7 @@ void main() {
       );
 
       // Dev features conditional on environment
-      if (AppConfig.isDevMode) {
+      if (AppConfig.devAuthEnabled) {
         // Layer 1: UI shows dev features
         // Note: DevModeBanner exists but isn't rendered in LoginScreen
         // It's used in other screens - testing its existence separately
@@ -163,8 +163,8 @@ void main() {
     test('UI and Service security configurations are aligned', () {
       // INTEGRATION TEST: Config consistency
 
-      // Layer 1 (UI) uses AppConfig.isDevMode
-      final uiShowsDevFeatures = AppConfig.isDevMode;
+      // Layer 1 (UI) uses AppConfig.devAuthEnabled
+      final uiShowsDevFeatures = AppConfig.devAuthEnabled;
 
       // Layer 2 (Service) uses AppConfig.devAuthEnabled
       final serviceAllowsDevAuth = AppConfig.devAuthEnabled;
@@ -178,7 +178,7 @@ void main() {
       // Both should match the environment
       expect(
         uiShowsDevFeatures,
-        AppConfig.isDevelopment,
+        AppConfig.isLocalBackend,
         reason: 'Dev mode should match development environment',
       );
     });
@@ -186,18 +186,18 @@ void main() {
     test('security feature flags are boolean and consistent', () {
       // INTEGRATION TEST: Type safety and consistency
 
-      expect(AppConfig.isDevMode, isA<bool>());
       expect(AppConfig.devAuthEnabled, isA<bool>());
-      expect(AppConfig.isDevelopment, isA<bool>());
-      expect(AppConfig.isProduction, isA<bool>());
+      expect(AppConfig.devAuthEnabled, isA<bool>());
+      expect(AppConfig.isLocalBackend, isA<bool>());
+      expect(AppConfig.useProdBackend, isA<bool>());
 
       // Development and production are opposites
-      expect(AppConfig.isDevelopment, !AppConfig.isProduction);
+      expect(AppConfig.isLocalBackend, !AppConfig.useProdBackend);
 
       // Dev mode implies development environment
-      if (AppConfig.isDevMode) {
+      if (AppConfig.devAuthEnabled) {
         expect(
-          AppConfig.isDevelopment,
+          AppConfig.isLocalBackend,
           isTrue,
           reason: 'Dev mode should only exist in development',
         );
@@ -212,27 +212,27 @@ void main() {
 
       // All derived properties should match
       if (environment == 'Development') {
-        expect(AppConfig.isDevelopment, isTrue);
-        expect(AppConfig.isProduction, isFalse);
-        expect(AppConfig.isDevMode, isTrue);
+        expect(AppConfig.isLocalBackend, isTrue);
+        expect(AppConfig.useProdBackend, isFalse);
+        expect(AppConfig.devAuthEnabled, isTrue);
         expect(AppConfig.devAuthEnabled, isTrue);
       } else {
-        expect(AppConfig.isDevelopment, isFalse);
-        expect(AppConfig.isProduction, isTrue);
-        expect(AppConfig.isDevMode, isFalse);
+        expect(AppConfig.isLocalBackend, isFalse);
+        expect(AppConfig.useProdBackend, isTrue);
+        expect(AppConfig.devAuthEnabled, isFalse);
         expect(AppConfig.devAuthEnabled, isFalse);
       }
     });
 
     group('Defense-in-Depth Validation', () {
       test('three security layers are independently configured', () {
-        // Layer 1: UI (AppConfig.isDevMode)
+        // Layer 1: UI (AppConfig.devAuthEnabled)
         // Layer 2: Service (AppConfig.validateDevAuth)
         // Layer 3: Backend (checked via middleware)
 
         // Verify each layer has its mechanism
         expect(
-          AppConfig.isDevMode,
+          AppConfig.devAuthEnabled,
           isA<bool>(),
           reason: 'Layer 1: UI has dev mode flag',
         );
@@ -256,7 +256,7 @@ void main() {
         // Production scenario simulation:
         if (!AppConfig.devAuthEnabled) {
           // Layer 1: UI wouldn't render dev buttons (verified in widget tests)
-          expect(AppConfig.isDevMode, isFalse);
+          expect(AppConfig.devAuthEnabled, isFalse);
 
           // Layer 2: Service validation would throw
           expect(() => AppConfig.validateDevAuth(), throwsA(isA<StateError>()));
@@ -268,12 +268,12 @@ void main() {
       test('all layers respect the same environment configuration', () {
         // Single source of truth: AppConfig
 
-        final isDev = AppConfig.isDevelopment;
+        final isDev = AppConfig.isLocalBackend;
 
         // All security decisions derive from this
-        expect(AppConfig.isDevMode, isDev);
         expect(AppConfig.devAuthEnabled, isDev);
-        expect(AppConfig.isProduction, !isDev);
+        expect(AppConfig.devAuthEnabled, isDev);
+        expect(AppConfig.useProdBackend, !isDev);
 
         // URLs also reflect environment
         if (isDev) {
@@ -310,19 +310,19 @@ void main() {
       test('production build has all dev features disabled', () {
         // This test documents what should be true in production
 
-        if (AppConfig.isProduction) {
+        if (AppConfig.useProdBackend) {
           expect(
             AppConfig.devAuthEnabled,
             isFalse,
             reason: 'Production must disable dev auth',
           );
           expect(
-            AppConfig.isDevMode,
+            AppConfig.devAuthEnabled,
             isFalse,
             reason: 'Production must disable dev mode',
           );
           expect(
-            AppConfig.isDevelopment,
+            AppConfig.isLocalBackend,
             isFalse,
             reason: 'Production environment check',
           );
@@ -330,7 +330,7 @@ void main() {
       });
 
       test('production URLs do not contain localhost', () {
-        if (AppConfig.isProduction) {
+        if (AppConfig.useProdBackend) {
           expect(
             AppConfig.baseUrl.contains('localhost'),
             isFalse,
@@ -341,10 +341,10 @@ void main() {
       });
 
       test('production has proper security configuration', () {
-        if (AppConfig.isProduction) {
+        if (AppConfig.useProdBackend) {
           // Verify all security features are properly locked down
           expect(AppConfig.devAuthEnabled, isFalse);
-          expect(AppConfig.isDevMode, isFalse);
+          expect(AppConfig.devAuthEnabled, isFalse);
 
           // Dev endpoints should still exist (for error messages)
           // but validation will prevent their use

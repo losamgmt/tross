@@ -46,10 +46,11 @@ enum ResourceType {
   roles,
   workOrders('work_orders'),
   auditLogs('audit_logs'),
-  projects, // Future
-  tasks, // Future
-  invoices, // Future
-  documents; // Future
+  contracts,
+  customers,
+  inventory,
+  invoices,
+  technicians;
 
   final String? _value;
   const ResourceType([this._value]);
@@ -67,7 +68,7 @@ enum UserRole {
   manager(4),
   dispatcher(3),
   technician(2),
-  client(1);
+  customer(1);
 
   final int priority;
   const UserRole(this.priority);

@@ -9,38 +9,46 @@ class AppConfig {
   AppConfig._();
 
   // ============================================================================
-  // ENVIRONMENT DETECTION
+  // ENVIRONMENT DETECTION - TWO INDEPENDENT AXES
   // ============================================================================
 
-  /// Detects if running in development mode
-  /// Uses compile-time constant with fallback to kDebugMode
-  static const bool isDevelopment = bool.fromEnvironment(
-    'DEVELOPMENT',
-    defaultValue: true,
+  /// AXIS 1: Which backend to target?
+  /// --dart-define=USE_PROD_BACKEND=true  → Railway production
+  /// --dart-define=USE_PROD_BACKEND=false → localhost:3001 (default)
+  static const bool useProdBackend = bool.fromEnvironment(
+    'USE_PROD_BACKEND',
+    defaultValue: false,
   );
 
-  /// Runtime environment check (Flutter framework)
-  static bool get isDebugMode => kDebugMode;
+  /// AXIS 2: Is frontend running locally or deployed?
+  /// kDebugMode=true  → Running via `flutter run` (local development)
+  /// kDebugMode=false → Production build deployed to Vercel
+  static bool get isLocalFrontend => kDebugMode;
+  static bool get isDeployedFrontend => !kDebugMode;
 
-  /// Production mode check
-  static bool get isProduction => !isDevelopment;
-
-  /// Development mode with all features enabled
-  static bool get isDevMode => isDevelopment || kDebugMode;
+  /// Convenience: Is backend localhost (not Railway)?
+  static bool get isLocalBackend => !useProdBackend;
 
   // ============================================================================
   // FEATURE FLAGS
   // ============================================================================
 
   /// Enable development authentication (test tokens)
-  /// CRITICAL: Must be false in production for security
-  static bool get devAuthEnabled => isDevMode;
+  ///
+  /// SECURITY RULE: Dev auth ONLY available when:
+  /// - Frontend is running locally (flutter run), AND
+  /// - Backend target is localhost (not production Railway)
+  ///
+  /// This prevents:
+  /// - Testing prod backend with fake credentials
+  /// - Accidentally enabling dev auth in deployed frontend
+  static bool get devAuthEnabled => isLocalFrontend && !useProdBackend;
 
   /// Enable health monitoring dashboard
   static const bool healthMonitoringEnabled = true;
 
-  /// Enable verbose logging
-  static bool get verboseLogging => isDevMode;
+  /// Enable verbose logging (local dev only)
+  static bool get verboseLogging => isLocalFrontend;
 
   // ============================================================================
   // API CONFIGURATION
@@ -53,9 +61,10 @@ class AppConfig {
   static const String _prodBackendUrl =
       'https://tross-api-production.up.railway.app';
 
-  static String get baseUrl => isDevelopment ? _devBaseUrl : _prodBaseUrl;
+  /// Backend URL - controlled by USE_PROD_BACKEND flag
+  static String get baseUrl => useProdBackend ? _prodBaseUrl : _devBaseUrl;
   static String get backendUrl =>
-      isDevelopment ? _devBackendUrl : _prodBackendUrl;
+      useProdBackend ? _prodBackendUrl : _devBackendUrl;
 
   // ============================================================================
   // FRONTEND CONFIGURATION
@@ -65,9 +74,17 @@ class AppConfig {
   static const String _prodFrontendUrl =
       'https://trossapp.vercel.app'; // Update when deployed
 
-  static String get frontendUrl =>
-      isDevelopment ? _devFrontendUrl : _prodFrontendUrl;
-  static String get callbackUrl => '$frontendUrl/callback';
+  /// Frontend URL - always localhost when running `flutter run` locally
+  /// Only uses prodFrontendUrl when actually deployed to Vercel
+  static String get frontendUrl => isLocalFrontend
+      ? _devFrontendUrl
+      : (useProdBackend ? _prodFrontendUrl : _devFrontendUrl);
+
+  /// Callback URL for Auth0 - always localhost during local development
+  /// This allows testing prod backend with local frontend
+  static String get callbackUrl => kDebugMode
+      ? '$_devFrontendUrl/callback' // Always localhost when running locally
+      : '$frontendUrl/callback'; // Only use prod URL when deployed
 
   // ============================================================================
   // HEALTH MONITORING ENDPOINTS
@@ -147,5 +164,5 @@ class AppConfig {
 
   /// Gets environment name for display
   static String get environmentName =>
-      isProduction ? 'Production' : 'Development';
+      useProdBackend ? 'Production' : 'Development';
 }

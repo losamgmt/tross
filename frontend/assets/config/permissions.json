@@ -1,10 +1,10 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://trossapp.com/schemas/permissions.json",
   "title": "TrossApp Permission Configuration",
   "description": "Single source of truth for role-based access control (RBAC). Used by both backend and frontend to ensure permission parity.",
-  "version": "1.0.0",
-  "lastModified": "2025-11-04",
+  "version": "3.0.0",
+  "lastModified": "2025-11-17",
   
   "roles": {
     "admin": {
@@ -46,7 +46,7 @@
           "description": "Only admins can create new user accounts"
         },
         "read": {
-          "minimumRole": "client",
+          "minimumRole": "customer",
           "minimumPriority": 1,
           "description": "Everyone can read users (row-level security applies)"
         },
@@ -65,7 +65,13 @@
 
     "roles": {
       "description": "User roles and permissions",
-      "rowLevelSecurity": null,
+      "rowLevelSecurity": {
+        "customer": "public_resource",
+        "technician": "public_resource",
+        "dispatcher": "public_resource",
+        "manager": "public_resource",
+        "admin": "public_resource"
+      },
       "permissions": {
         "create": {
           "minimumRole": "admin",
@@ -73,9 +79,9 @@
           "description": "Only admins can create roles"
         },
         "read": {
-          "minimumRole": "manager",
-          "minimumPriority": 4,
-          "description": "Managers and above can view roles"
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Everyone can view roles (needed for UI dropdowns and role awareness)"
         },
         "update": {
           "minimumRole": "admin",
@@ -91,19 +97,19 @@
     },
 
     "work_orders": {
-      "description": "Service requests and work tickets",
+      "description": "Work orders and job assignments",
       "rowLevelSecurity": {
-        "customer": "assigned_only",
-        "technician": "assigned_or_available",
+        "customer": "own_work_orders_only",
+        "technician": "assigned_work_orders_only",
         "dispatcher": "all_records",
         "manager": "all_records",
         "admin": "all_records"
       },
       "permissions": {
         "create": {
-          "minimumRole": "dispatcher",
-          "minimumPriority": 3,
-          "description": "Dispatchers and above can create work orders"
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Customers can create their own work orders (self-service), dispatcher+ can create work orders for any customer"
         },
         "read": {
           "minimumRole": "customer",
@@ -111,21 +117,27 @@
           "description": "Everyone can read work orders (row-level security applies)"
         },
         "update": {
-          "minimumRole": "technician",
-          "minimumPriority": 2,
-          "description": "Technicians and above can update work orders"
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Customers can update their own work orders, technicians can update assigned work orders, dispatcher+ can update any work order"
         },
         "delete": {
           "minimumRole": "manager",
           "minimumPriority": 4,
-          "description": "Managers and above can delete work orders"
+          "description": "Managers and above can delete work orders. Customers can only cancel (status change), not hard delete."
         }
       }
     },
 
     "audit_logs": {
       "description": "System audit trail and security events",
-      "rowLevelSecurity": null,
+      "rowLevelSecurity": {
+        "customer": "deny_all",
+        "technician": "deny_all",
+        "dispatcher": "deny_all",
+        "manager": "deny_all",
+        "admin": "all_records"
+      },
       "permissions": {
         "create": {
           "minimumRole": "customer",
@@ -150,110 +162,167 @@
       }
     },
 
-    "projects": {
-      "description": "[FUTURE] Project management (not yet implemented)",
-      "rowLevelSecurity": null,
+    "customers": {
+      "description": "Customer profiles and contact information",
+      "rowLevelSecurity": {
+        "customer": "own_record_only",
+        "technician": "all_records",
+        "dispatcher": "all_records",
+        "manager": "all_records",
+        "admin": "all_records"
+      },
       "permissions": {
         "create": {
-          "minimumRole": "admin",
-          "minimumPriority": 5,
-          "description": "Placeholder - admin only until implemented"
+          "minimumRole": "dispatcher",
+          "minimumPriority": 3,
+          "description": "Dispatchers and above can create customer profiles (manual intake). Public signup uses /api/auth/signup endpoint."
         },
         "read": {
-          "minimumRole": "admin",
-          "minimumPriority": 5,
-          "description": "Placeholder - admin only until implemented"
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Everyone can read customer profiles (row-level security applies)"
         },
         "update": {
-          "minimumRole": "admin",
-          "minimumPriority": 5,
-          "description": "Placeholder - admin only until implemented"
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Customers can update their own profiles, dispatcher+ can update any customer"
         },
         "delete": {
-          "minimumRole": "admin",
-          "minimumPriority": 5,
-          "description": "Placeholder - admin only until implemented"
+          "minimumRole": "manager",
+          "minimumPriority": 4,
+          "description": "Managers and above can deactivate customer accounts (soft delete only)"
         }
       }
     },
 
-    "tasks": {
-      "description": "[FUTURE] Task management (not yet implemented)",
-      "rowLevelSecurity": null,
+    "technicians": {
+      "description": "Technician profiles, certifications, and availability",
+      "rowLevelSecurity": {
+        "customer": "all_records",
+        "technician": "all_records",
+        "dispatcher": "all_records",
+        "manager": "all_records",
+        "admin": "all_records"
+      },
       "permissions": {
         "create": {
-          "minimumRole": "admin",
-          "minimumPriority": 5,
-          "description": "Placeholder - admin only until implemented"
+          "minimumRole": "manager",
+          "minimumPriority": 4,
+          "description": "Managers and above can create technician profiles (hiring process)"
         },
         "read": {
-          "minimumRole": "admin",
-          "minimumPriority": 5,
-          "description": "Placeholder - admin only until implemented"
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Everyone can read technician profiles (customers see assigned tech). Field-level filtering applies."
         },
         "update": {
-          "minimumRole": "admin",
-          "minimumPriority": 5,
-          "description": "Placeholder - admin only until implemented"
+          "minimumRole": "technician",
+          "minimumPriority": 2,
+          "description": "Technicians can update their own profiles, manager+ can update any technician"
         },
         "delete": {
-          "minimumRole": "admin",
-          "minimumPriority": 5,
-          "description": "Placeholder - admin only until implemented"
+          "minimumRole": "manager",
+          "minimumPriority": 4,
+          "description": "Managers and above can deactivate technician accounts (soft delete only)"
         }
       }
     },
 
     "invoices": {
-      "description": "[FUTURE] Invoice management (not yet implemented)",
-      "rowLevelSecurity": null,
+      "description": "Customer invoices and billing",
+      "rowLevelSecurity": {
+        "customer": "own_invoices_only",
+        "technician": "deny_all",
+        "dispatcher": "all_records",
+        "manager": "all_records",
+        "admin": "all_records"
+      },
       "permissions": {
         "create": {
-          "minimumRole": "admin",
-          "minimumPriority": 5,
-          "description": "Placeholder - admin only until implemented"
+          "minimumRole": "dispatcher",
+          "minimumPriority": 3,
+          "description": "Dispatchers and above can create invoices"
         },
         "read": {
-          "minimumRole": "admin",
-          "minimumPriority": 5,
-          "description": "Placeholder - admin only until implemented"
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Customers can read their own invoices, dispatcher+ can read all invoices"
         },
         "update": {
-          "minimumRole": "admin",
-          "minimumPriority": 5,
-          "description": "Placeholder - admin only until implemented"
+          "minimumRole": "dispatcher",
+          "minimumPriority": 3,
+          "description": "Dispatchers and above can update invoices"
         },
         "delete": {
-          "minimumRole": "admin",
-          "minimumPriority": 5,
-          "description": "Placeholder - admin only until implemented"
+          "minimumRole": "manager",
+          "minimumPriority": 4,
+          "description": "Managers and above can delete invoices"
         }
       }
     },
 
-    "documents": {
-      "description": "[FUTURE] Document management (not yet implemented)",
-      "rowLevelSecurity": null,
+    "contracts": {
+      "description": "Service contracts and agreements",
+      "rowLevelSecurity": {
+        "customer": "own_contracts_only",
+        "technician": "deny_all",
+        "dispatcher": "all_records",
+        "manager": "all_records",
+        "admin": "all_records"
+      },
       "permissions": {
         "create": {
-          "minimumRole": "admin",
-          "minimumPriority": 5,
-          "description": "Placeholder - admin only until implemented"
+          "minimumRole": "manager",
+          "minimumPriority": 4,
+          "description": "Managers and above can create contracts"
         },
         "read": {
-          "minimumRole": "admin",
-          "minimumPriority": 5,
-          "description": "Placeholder - admin only until implemented"
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Customers can read their own contracts, technicians can read contracts for assigned customers, dispatcher+ can read all contracts"
         },
         "update": {
-          "minimumRole": "admin",
-          "minimumPriority": 5,
-          "description": "Placeholder - admin only until implemented"
+          "minimumRole": "manager",
+          "minimumPriority": 4,
+          "description": "Managers and above can update contracts"
         },
         "delete": {
-          "minimumRole": "admin",
-          "minimumPriority": 5,
-          "description": "Placeholder - admin only until implemented"
+          "minimumRole": "manager",
+          "minimumPriority": 4,
+          "description": "Managers and above can delete contracts"
+        }
+      }
+    },
+
+    "inventory": {
+      "description": "Parts and supplies inventory management",
+      "rowLevelSecurity": {
+        "customer": "public_resource",
+        "technician": "public_resource",
+        "dispatcher": "public_resource",
+        "manager": "public_resource",
+        "admin": "public_resource"
+      },
+      "permissions": {
+        "create": {
+          "minimumRole": "dispatcher",
+          "minimumPriority": 3,
+          "description": "Dispatchers and above can add inventory items"
+        },
+        "read": {
+          "minimumRole": "technician",
+          "minimumPriority": 2,
+          "description": "Technicians and above can view inventory (all records visible)"
+        },
+        "update": {
+          "minimumRole": "technician",
+          "minimumPriority": 2,
+          "description": "Technicians and above can update inventory (mark parts used, update quantities)"
+        },
+        "delete": {
+          "minimumRole": "manager",
+          "minimumPriority": 4,
+          "description": "Managers and above can delete inventory items"
         }
       }
     }
@@ -262,6 +331,17 @@
   "_comments": {
     "usage": "This file is the single source of truth for permissions. Both backend and frontend load this file dynamically.",
     "rowLevelSecurity": "Defines what records a role can see. Frontend uses this for UI, backend enforces in queries.",
+    "rlsPolicies": {
+      "all_records": "No filtering - role can see all records (applied: false)",
+      "own_record_only": "Filter by user ID - user sees only their own record (applied: true)",
+      "own_work_orders_only": "Filter by customer_id - customers see their work orders (applied: true)",
+      "assigned_work_orders_only": "Filter by assigned_technician_id - technicians see assigned work orders (applied: true)",
+      "own_invoices_only": "Filter by customer_id - customers see their invoices (applied: true)",
+      "own_contracts_only": "Filter by customer_id - customers see their contracts (applied: true)",
+      "public_resource": "No filtering - resource is public to all authorized users (applied: false)",
+      "deny_all": "Deny all access - role cannot access any records (applied: true, returns 1=0)",
+      "admin_only": "Admin-only resource - non-admins get deny_all (applied: varies by role)"
+    },
     "minimumPriority": "Due to hierarchy, all roles with priority >= minimumPriority inherit the permission.",
     "testing": "Tests are data-driven - they validate structure and parity, not hardcoded values.",
     "deployment": "Changing this file does NOT require code deployment, only config reload.",

@@ -38,10 +38,10 @@ void main() {
     });
 
     test('should have future resources defined', () {
-      expect(ResourceType.values, contains(ResourceType.projects));
-      expect(ResourceType.values, contains(ResourceType.tasks));
+      expect(ResourceType.values, contains(ResourceType.contracts));
+      expect(ResourceType.values, contains(ResourceType.workOrders));
       expect(ResourceType.values, contains(ResourceType.invoices));
-      expect(ResourceType.values, contains(ResourceType.documents));
+      expect(ResourceType.values, contains(ResourceType.auditLogs));
     });
 
     test('toString should handle snake_case conversion', () {
@@ -51,7 +51,7 @@ void main() {
 
       // Resources without _value use enum name
       expect(ResourceType.users.toString(), 'users');
-      expect(ResourceType.projects.toString(), 'projects');
+      expect(ResourceType.contracts.toString(), 'projects');
     });
 
     test('should be comparable', () {
@@ -67,7 +67,7 @@ void main() {
       expect(UserRole.values, contains(UserRole.manager));
       expect(UserRole.values, contains(UserRole.dispatcher));
       expect(UserRole.values, contains(UserRole.technician));
-      expect(UserRole.values, contains(UserRole.client));
+      expect(UserRole.values, contains(UserRole.customer));
     });
 
     test('should have correct priority hierarchy', () {
@@ -75,7 +75,7 @@ void main() {
       expect(UserRole.manager.priority, 4);
       expect(UserRole.dispatcher.priority, 3);
       expect(UserRole.technician.priority, 2);
-      expect(UserRole.client.priority, 1); // Lowest
+      expect(UserRole.customer.priority, 1); // Lowest
     });
 
     test('priorities should be unique', () {
@@ -88,7 +88,7 @@ void main() {
       expect(UserRole.manager.toString(), 'manager');
       expect(UserRole.dispatcher.toString(), 'dispatcher');
       expect(UserRole.technician.toString(), 'technician');
-      expect(UserRole.client.toString(), 'client');
+      expect(UserRole.customer.toString(), 'client');
     });
 
     group('fromString()', () {
@@ -97,7 +97,7 @@ void main() {
         expect(UserRole.fromString('manager'), UserRole.manager);
         expect(UserRole.fromString('dispatcher'), UserRole.dispatcher);
         expect(UserRole.fromString('technician'), UserRole.technician);
-        expect(UserRole.fromString('client'), UserRole.client);
+        expect(UserRole.fromString('client'), UserRole.customer);
       });
 
       test('should be case-insensitive', () {
@@ -175,7 +175,7 @@ void main() {
       expect(UserRole.dispatcher.priority > UserRole.technician.priority, true);
 
       // Technician > Client
-      expect(UserRole.technician.priority > UserRole.client.priority, true);
+      expect(UserRole.technician.priority > UserRole.customer.priority, true);
     });
 
     test('can create permission check scenarios', () {
@@ -235,7 +235,7 @@ void main() {
       }
 
       expect(isManagement(UserRole.admin), true);
-      expect(isManagement(UserRole.client), false);
+      expect(isManagement(UserRole.customer), false);
     });
   });
 }

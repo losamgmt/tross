@@ -87,15 +87,15 @@ class RoleService {
   /// DEV ONLY: Returns hardcoded role list matching backend test users.
   /// Used by login screen to populate role selector BEFORE authentication.
   ///
-  /// SECURITY: Only callable in dev mode (checked by caller via AppConfig.isDevMode)
+  /// SECURITY: Only callable in dev mode (checked by caller via AppConfig.devAuthEnabled)
   /// In production, this should never be called - use getAll() instead.
   ///
   /// @returns Unmodifiable list of 5 hardcoded roles
   ///
   /// Example:
   /// ```dart
-  /// if (AppConfig.isDevMode) {
-  ///   final roles = RoleService.getAllForDevMode();
+  /// if (AppConfig.devAuthEnabled) {
+  ///   final roles = RoleService.getAllForDevMe();
   ///   // Show role selector in login screen
   /// }
   /// ```

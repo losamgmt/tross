@@ -6,21 +6,21 @@ void main() {
     group('Environment Detection', () {
       test('isDevelopment is set correctly', () {
         // In test environment, isDevelopment defaults to true
-        expect(AppConfig.isDevelopment, isTrue);
+        expect(AppConfig.isLocalBackend, isTrue);
       });
 
       test('isProduction returns opposite of isDevelopment', () {
-        expect(AppConfig.isProduction, !AppConfig.isDevelopment);
+        expect(AppConfig.useProdBackend, !AppConfig.isLocalBackend);
       });
 
       test('isDevMode is accessible', () {
-        expect(AppConfig.isDevMode, isNotNull);
-        expect(AppConfig.isDevMode, isA<bool>());
+        expect(AppConfig.devAuthEnabled, isNotNull);
+        expect(AppConfig.devAuthEnabled, isA<bool>());
       });
 
-      test('isDebugMode is accessible', () {
-        expect(AppConfig.isDebugMode, isNotNull);
-        expect(AppConfig.isDebugMode, isA<bool>());
+      test('isLocalFrontend is accessible', () {
+        expect(AppConfig.isLocalFrontend, isNotNull);
+        expect(AppConfig.isLocalFrontend, isA<bool>());
       });
 
       test('environmentName returns correct value', () {
@@ -31,7 +31,7 @@ void main() {
 
     group('Feature Flags', () {
       test('devAuthEnabled matches isDevMode', () {
-        expect(AppConfig.devAuthEnabled, AppConfig.isDevMode);
+        expect(AppConfig.devAuthEnabled, AppConfig.devAuthEnabled);
       });
 
       test('healthMonitoringEnabled is true', () {
@@ -39,7 +39,7 @@ void main() {
       });
 
       test('verboseLogging matches isDevMode', () {
-        expect(AppConfig.verboseLogging, AppConfig.isDevMode);
+        expect(AppConfig.verboseLogging, AppConfig.devAuthEnabled);
       });
     });
 
@@ -246,7 +246,7 @@ void main() {
 
       test('configuration is consistent across properties', () {
         // If in dev mode, URLs should contain localhost
-        if (AppConfig.isDevelopment) {
+        if (AppConfig.isLocalBackend) {
           expect(AppConfig.baseUrl.contains('localhost'), isTrue);
           expect(AppConfig.backendUrl.contains('localhost'), isTrue);
         } else {

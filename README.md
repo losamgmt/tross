@@ -177,9 +177,10 @@ npm run clean    # Reset build artifacts
 ### All Available Scripts
 
 ```bash
-# Development
-npm run dev:backend       # Start backend server (nodemon)
-npm run dev:frontend      # Start Flutter web (Chrome)
+# Development - Two-Axis Configuration
+npm run dev:backend              # Start backend server (nodemon) on localhost:3001
+npm run dev:frontend             # Local frontend → localhost backend (dev auth enabled)
+npm run dev:frontend:prod-backend # Local frontend → Railway backend (dev auth disabled, Auth0 only)
 
 # Testing (3416+ tests total)
 npm test                  # Run all tests (backend + frontend)

@@ -1,20 +1,34 @@
 /// Backend Availability Detection for Tests
 ///
 /// Smart test helper that detects if backend is running before attempting
-/// integration tests. Allows tests to:
-/// - Run full suite when backend available (local dev, CI with services)
-/// - Skip gracefully with warnings when backend offline (unit test mode)
+/// integration tests. Respects AppConfig backend target (localhost vs Railway).
+///
+/// **Backend Targeting:**
+/// - Default: Tests run against localhost:3001
+/// - With --dart-define=USE_PROD_BACKEND=true: Tests run against Railway
+///
+/// **Test Behavior:**
+/// - Integration tests: Run against whichever backend is configured
+/// - Dev mode tests (test tokens): Only run against localhost (skip on Railway)
 ///
 /// **Usage:**
 /// ```dart
-/// test('should login with backend', () async {
-///   final backendAvailable = await BackendAvailability.check();
-///   if (!backendAvailable) {
-///     print('⚠️  SKIPPED: Backend not available');
-///     return; // Skip test gracefully
+/// test('should fetch users', () async {
+///   final available = await BackendAvailability.check();
+///   if (!available) {
+///     BackendAvailability.printSkipMessage('User fetch test');
+///     return;
 ///   }
+///   // Runs against localhost OR Railway based on AppConfig
+/// });
 ///
-///   // Run integration test...
+/// test('should login with test token', () async {
+///   final devMode = await BackendAvailability.checkDevMode();
+///   if (!devMode) {
+///     BackendAvailability.printSkipMessage('Test token login');
+///     return;
+///   }
+///   // Only runs against localhost (dev mode feature)
 /// });
 /// ```
 library;
@@ -22,6 +36,7 @@ library;
 import 'dart:io';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:http/http.dart' as http;
+import 'package:tross_app/config/app_config.dart';
 
 /// Backend availability checker for intelligent test execution
 class BackendAvailability {
@@ -30,12 +45,12 @@ class BackendAvailability {
   static DateTime? _cacheTime;
   static const _cacheDuration = Duration(seconds: 30);
 
-  /// Backend health endpoint
-  static const String healthEndpoint = 'http://localhost:3001/api/health';
+  /// Backend health endpoint - respects AppConfig backend target
+  static String get healthEndpoint => '${AppConfig.backendUrl}/api/health';
 
-  /// Test token endpoint (dev mode only)
-  static const String testTokenEndpoint =
-      'http://localhost:3001/api/dev/token?role=admin';
+  /// Test token endpoint (dev mode only) - only available on localhost
+  static String get testTokenEndpoint =>
+      '${AppConfig.backendUrl}/api/dev/token?role=admin';
 
   /// Check if backend is available and responding
   ///
@@ -102,8 +117,17 @@ class BackendAvailability {
 
   /// Check if backend dev mode (test tokens) is available
   ///
-  /// More specific check for authentication tests that need test tokens.
+  /// Dev mode (test tokens) only available when targeting localhost backend.
+  /// Production backend never has dev mode endpoints for security.
   static Future<bool> checkDevMode() async {
+    // Dev mode only exists on localhost backend
+    if (AppConfig.useProdBackend) {
+      debugPrint(
+        '⚠️  Dev mode unavailable: targeting production backend (${AppConfig.backendUrl})',
+      );
+      return false;
+    }
+
     try {
       final response = await http
           .get(Uri.parse(testTokenEndpoint))
@@ -111,7 +135,6 @@ class BackendAvailability {
 
       // 200 = success
       final available = response.statusCode == 200;
-      response.statusCode == 200 || response.statusCode == 400;
 
       if (available) {
         debugPrint('✅ Backend dev mode available (test tokens enabled)');
@@ -127,10 +150,16 @@ class BackendAvailability {
   /// Print helpful message about skipped tests
   static void printSkipMessage(String testName, {String? reason}) {
     final msg = reason ?? 'Backend not available';
+    final target = AppConfig.useProdBackend ? 'Railway' : 'localhost:3001';
+    final howToRun = AppConfig.useProdBackend
+        ? 'This test requires localhost backend (dev mode only)'
+        : 'Start backend with `npm run dev:backend`';
+
     debugPrint('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     debugPrint('⏭️  SKIPPED: $testName');
     debugPrint('   Reason: $msg');
-    debugPrint('   To run: Start backend with `npm run dev:backend`');
+    debugPrint('   Backend target: $target');
+    debugPrint('   To run: $howToRun');
     debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
   }
 

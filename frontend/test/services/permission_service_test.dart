@@ -639,7 +639,7 @@ void main() {
           CrudOperation.read,
         ),
         UserRole
-            .client, // Changed from technician - config has minimumRole: "client"
+            .customer, // Changed from technician - config has minimumRole: "customer"
       );
       expect(
         PermissionService.getMinimumRole(
@@ -654,7 +654,7 @@ void main() {
       // Future resource not in permissions matrix
       expect(
         PermissionService.getMinimumRole(
-          ResourceType.projects,
+          ResourceType.contracts,
           CrudOperation.read,
         ),
         null,

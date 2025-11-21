@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Centralized validation rules for TrossApp - shared across frontend and backend",
-  "lastUpdated": "2025-11-10",
+  "lastUpdated": "2025-11-13",
   "policy": {
     "email": {
       "tldValidation": "permissive",
@@ -153,23 +153,6 @@
         "invalid": [""]
       }
     },
-    "password": {
-      "type": "string",
-      "required": true,
-      "minLength": 8,
-      "maxLength": 128,
-      "pattern": "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]+$",
-      "errorMessages": {
-        "required": "Password is required",
-        "minLength": "Password must be at least 8 characters",
-        "maxLength": "Password cannot exceed 128 characters",
-        "pattern": "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"
-      },
-      "examples": {
-        "valid": ["SecureP@ss123", "MyP@ssw0rd!"],
-        "invalid": ["short", "nouppercaseornumber", "NoSpecialChar123"]
-      }
-    },
     "phone": {
       "type": "string",
       "required": false,
@@ -199,6 +182,334 @@
         ],
         "invalid": ["not-a-url", "ftp://example.com", "example.com"]
       }
+    },
+    "companyName": {
+      "type": "string",
+      "required": false,
+      "maxLength": 255,
+      "trim": true,
+      "errorMessages": {
+        "maxLength": "Company name cannot exceed 255 characters"
+      }
+    },
+    "licenseNumber": {
+      "type": "string",
+      "required": true,
+      "minLength": 3,
+      "maxLength": 100,
+      "trim": true,
+      "errorMessages": {
+        "required": "License number is required",
+        "minLength": "License number must be at least 3 characters",
+        "maxLength": "License number cannot exceed 100 characters"
+      }
+    },
+    "hourlyRate": {
+      "type": "number",
+      "required": false,
+      "min": 0,
+      "max": 9999.99,
+      "errorMessages": {
+        "type": "Hourly rate must be a number",
+        "min": "Hourly rate cannot be negative",
+        "max": "Hourly rate cannot exceed 9999.99"
+      }
+    },
+    "sku": {
+      "type": "string",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 100,
+      "trim": true,
+      "errorMessages": {
+        "required": "SKU is required",
+        "minLength": "SKU cannot be empty",
+        "maxLength": "SKU cannot exceed 100 characters"
+      }
+    },
+    "quantity": {
+      "type": "integer",
+      "required": true,
+      "min": 0,
+      "errorMessages": {
+        "required": "Quantity is required",
+        "type": "Quantity must be an integer",
+        "min": "Quantity cannot be negative"
+      }
+    },
+    "amount": {
+      "type": "number",
+      "required": true,
+      "min": 0,
+      "errorMessages": {
+        "required": "Amount is required",
+        "type": "Amount must be a number",
+        "min": "Amount cannot be negative"
+      }
+    },
+    "invoiceNumber": {
+      "type": "string",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 100,
+      "trim": true,
+      "errorMessages": {
+        "required": "Invoice number is required",
+        "minLength": "Invoice number cannot be empty",
+        "maxLength": "Invoice number cannot exceed 100 characters"
+      }
+    },
+    "contractNumber": {
+      "type": "string",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 100,
+      "trim": true,
+      "errorMessages": {
+        "required": "Contract number is required",
+        "minLength": "Contract number cannot be empty",
+        "maxLength": "Contract number cannot exceed 100 characters"
+      }
+    },
+    "title": {
+      "type": "string",
+      "required": true,
+      "minLength": 3,
+      "maxLength": 255,
+      "trim": true,
+      "errorMessages": {
+        "required": "Title is required",
+        "minLength": "Title must be at least 3 characters",
+        "maxLength": "Title cannot exceed 255 characters"
+      }
+    },
+    "description": {
+      "type": "string",
+      "required": false,
+      "maxLength": 5000,
+      "trim": true,
+      "errorMessages": {
+        "maxLength": "Description cannot exceed 5000 characters"
+      }
+    },
+    "customerId": {
+      "type": "integer",
+      "required": true,
+      "min": 1,
+      "errorMessages": {
+        "required": "Customer ID is required",
+        "type": "Customer ID must be an integer",
+        "min": "Customer ID must be positive"
+      }
+    },
+    "technicianId": {
+      "type": "integer",
+      "required": false,
+      "min": 1,
+      "errorMessages": {
+        "type": "Technician ID must be an integer",
+        "min": "Technician ID must be positive"
+      }
+    },
+    "workOrderId": {
+      "type": "integer",
+      "required": false,
+      "min": 1,
+      "errorMessages": {
+        "type": "Work order ID must be an integer",
+        "min": "Work order ID must be positive"
+      }
+    },
+    "status": {
+      "type": "string",
+      "required": false,
+      "maxLength": 50,
+      "trim": true,
+      "errorMessages": {
+        "maxLength": "Status cannot exceed 50 characters"
+      }
+    },
+    "priority": {
+      "type": "string",
+      "required": false,
+      "enum": ["low", "normal", "high", "urgent"],
+      "errorMessages": {
+        "enum": "Priority must be one of: low, normal, high, urgent"
+      }
+    },
+    "company_name": {
+      "type": "string",
+      "required": false,
+      "maxLength": 255,
+      "trim": true,
+      "errorMessages": {
+        "maxLength": "Company name cannot exceed 255 characters"
+      }
+    },
+    "first_name": {
+      "type": "string",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 100,
+      "trim": true,
+      "pattern": "^[a-zA-Z\\s'-]+$",
+      "errorMessages": {
+        "required": "First name is required",
+        "minLength": "First name cannot be empty",
+        "maxLength": "First name cannot exceed 100 characters",
+        "pattern": "First name can only contain letters, spaces, hyphens, and apostrophes"
+      }
+    },
+    "last_name": {
+      "type": "string",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 100,
+      "trim": true,
+      "pattern": "^[a-zA-Z\\s'-]+$",
+      "errorMessages": {
+        "required": "Last name is required",
+        "minLength": "Last name cannot be empty",
+        "maxLength": "Last name cannot exceed 100 characters",
+        "pattern": "Last name can only contain letters, spaces, hyphens, and apostrophes"
+      }
+    },
+    "role_id": {
+      "type": "integer",
+      "required": false,
+      "min": 1,
+      "max": 2147483647,
+      "errorMessages": {
+        "type": "Role ID must be a number",
+        "min": "Role ID must be positive",
+        "max": "Role ID exceeds maximum value"
+      }
+    },
+    "is_active": {
+      "type": "boolean",
+      "required": false,
+      "errorMessages": {
+        "type": "is_active must be true or false"
+      }
+    },
+    "license_number": {
+      "type": "string",
+      "required": true,
+      "minLength": 3,
+      "maxLength": 100,
+      "trim": true,
+      "errorMessages": {
+        "required": "License number is required",
+        "minLength": "License number must be at least 3 characters",
+        "maxLength": "License number cannot exceed 100 characters"
+      }
+    },
+    "hourly_rate": {
+      "type": "number",
+      "required": false,
+      "min": 0,
+      "max": 9999.99,
+      "errorMessages": {
+        "type": "Hourly rate must be a number",
+        "min": "Hourly rate cannot be negative",
+        "max": "Hourly rate cannot exceed 9999.99"
+      }
+    },
+    "customer_id": {
+      "type": "integer",
+      "required": true,
+      "min": 1,
+      "errorMessages": {
+        "required": "Customer ID is required",
+        "type": "Customer ID must be an integer",
+        "min": "Customer ID must be positive"
+      }
+    },
+    "assigned_technician_id": {
+      "type": "integer",
+      "required": false,
+      "min": 1,
+      "errorMessages": {
+        "type": "Assigned technician ID must be an integer",
+        "min": "Assigned technician ID must be positive"
+      }
+    },
+    "work_order_id": {
+      "type": "integer",
+      "required": false,
+      "min": 1,
+      "errorMessages": {
+        "type": "Work order ID must be an integer",
+        "min": "Work order ID must be positive"
+      }
+    },
+    "invoice_number": {
+      "type": "string",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 100,
+      "trim": true,
+      "errorMessages": {
+        "required": "Invoice number is required",
+        "minLength": "Invoice number cannot be empty",
+        "maxLength": "Invoice number cannot exceed 100 characters"
+      }
+    },
+    "contract_number": {
+      "type": "string",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 100,
+      "trim": true,
+      "errorMessages": {
+        "required": "Contract number is required",
+        "minLength": "Contract number cannot be empty",
+        "maxLength": "Contract number cannot exceed 100 characters"
+      }
+    },
+    "start_date": {
+      "type": "string",
+      "required": false,
+      "format": "date",
+      "errorMessages": {
+        "format": "Start date must be in YYYY-MM-DD format"
+      }
+    },
+    "end_date": {
+      "type": "string",
+      "required": false,
+      "format": "date",
+      "errorMessages": {
+        "format": "End date must be in YYYY-MM-DD format"
+      }
+    },
+    "value": {
+      "type": "number",
+      "required": false,
+      "min": 0,
+      "errorMessages": {
+        "type": "Value must be a number",
+        "min": "Value cannot be negative"
+      }
+    },
+    "total": {
+      "type": "number",
+      "required": true,
+      "min": 0,
+      "errorMessages": {
+        "required": "Total is required",
+        "type": "Total must be a number",
+        "min": "Total cannot be negative"
+      }
+    },
+    "tax": {
+      "type": "number",
+      "required": false,
+      "min": 0,
+      "errorMessages": {
+        "type": "Tax must be a number",
+        "min": "Tax cannot be negative"
+      }
     }
   },
   "compositeValidations": {
@@ -221,12 +532,83 @@
       "requiredFields": [],
       "optionalFields": ["name", "priority", "description", "is_active"],
       "description": "Validation rules for updating an existing role"
+    },
+    "createCustomer": {
+      "requiredFields": ["email"],
+      "optionalFields": ["phone", "company_name"],
+      "description": "Validation rules for creating a customer profile"
+    },
+    "updateCustomer": {
+      "requiredFields": [],
+      "optionalFields": ["email", "phone", "company_name", "is_active", "status"],
+      "description": "Validation rules for updating a customer profile"
+    },
+    "createTechnician": {
+      "requiredFields": ["license_number"],
+      "optionalFields": ["hourly_rate", "status"],
+      "description": "Validation rules for creating a technician profile"
+    },
+    "updateTechnician": {
+      "requiredFields": [],
+      "optionalFields": ["license_number", "hourly_rate", "is_active", "status"],
+      "description": "Validation rules for updating a technician profile"
+    },
+    "createWorkOrder": {
+      "requiredFields": ["title", "customer_id"],
+      "optionalFields": ["description", "assigned_technician_id", "priority", "status"],
+      "description": "Validation rules for creating a work order"
+    },
+    "updateWorkOrder": {
+      "requiredFields": [],
+      "optionalFields": ["title", "description", "assigned_technician_id", "priority", "status", "is_active"],
+      "description": "Validation rules for updating a work order"
+    },
+    "createInvoice": {
+      "requiredFields": ["invoice_number", "customer_id", "amount", "total"],
+      "optionalFields": ["work_order_id", "tax", "status"],
+      "description": "Validation rules for creating an invoice"
+    },
+    "updateInvoice": {
+      "requiredFields": [],
+      "optionalFields": ["invoice_number", "amount", "tax", "total", "status", "is_active"],
+      "description": "Validation rules for updating an invoice"
+    },
+    "createContract": {
+      "requiredFields": ["contract_number", "customer_id"],
+      "optionalFields": ["start_date", "end_date", "value", "status"],
+      "description": "Validation rules for creating a contract"
+    },
+    "updateContract": {
+      "requiredFields": [],
+      "optionalFields": ["contract_number", "start_date", "end_date", "value", "status", "is_active"],
+      "description": "Validation rules for updating a contract"
+    },
+    "createInventory": {
+      "requiredFields": ["name", "sku"],
+      "optionalFields": ["description", "quantity", "status"],
+      "description": "Validation rules for creating an inventory item"
+    },
+    "updateInventory": {
+      "requiredFields": [],
+      "optionalFields": ["name", "sku", "description", "quantity", "status", "is_active"],
+      "description": "Validation rules for updating an inventory item"
     }
   },
   "metadata": {
     "maintainer": "TrossApp Team",
     "documentation": "docs/VALIDATION_ARCHITECTURE.md",
     "changelog": [
+      {
+        "version": "2.0.0",
+        "date": "2025-11-13",
+        "changes": [
+          "Added validation rules for work order system",
+          "Added fields: companyName, licenseNumber, hourlyRate, sku, quantity, amount, invoiceNumber, contractNumber, title, description, customerId, technicianId, workOrderId, status, priority",
+          "REMOVED password field - Auth0 handles all authentication",
+          "REMOVED signup validation - customers sign up via Auth0 UI",
+          "Added composite validations for: customers, technicians, work_orders, invoices, contracts, inventory"
+        ]
+      },
       {
         "version": "1.0.0",
         "date": "2025-11-10",

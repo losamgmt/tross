@@ -48,7 +48,7 @@ class DevModeIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Hide in production unless alwaysShow is true
-    if (AppConfig.isProduction && !alwaysShow) {
+    if (AppConfig.useProdBackend && !alwaysShow) {
       return const SizedBox.shrink();
     }
 
@@ -56,7 +56,7 @@ class DevModeIndicator extends StatelessWidget {
 
     // Get environment details
     final envName = AppConfig.environmentName;
-    final isDev = AppConfig.isDevMode;
+    final isDev = AppConfig.devAuthEnabled;
 
     // Choose badge style and icon based on environment
     final badgeStyle = isDev ? BadgeStyle.warning : BadgeStyle.success;
@@ -109,7 +109,7 @@ class DevModeIndicatorWithTooltip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Hide in production unless alwaysShow is true
-    if (AppConfig.isProduction && !alwaysShow) {
+    if (AppConfig.useProdBackend && !alwaysShow) {
       return const SizedBox.shrink();
     }
 
@@ -139,7 +139,7 @@ class DevModeBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Hide in production
-    if (AppConfig.isProduction) {
+    if (AppConfig.useProdBackend) {
       return const SizedBox.shrink();
     }
 

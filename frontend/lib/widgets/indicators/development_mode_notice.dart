@@ -10,7 +10,7 @@ class DevelopmentModeNotice extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    if (!AppConfig.isDevelopment) {
+    if (!AppConfig.isLocalFrontend) {
       return const SizedBox.shrink();
     }
 

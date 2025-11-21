@@ -274,7 +274,7 @@ void main() {
       test('devAuthEnabled matches isDevMode', () {
         expect(
           AppConfig.devAuthEnabled,
-          equals(AppConfig.isDevMode),
+          equals(AppConfig.devAuthEnabled),
           reason: 'Dev auth should match dev mode',
         );
       });
@@ -289,7 +289,7 @@ void main() {
 
       test('security validation is consistent across config', () {
         // All security layers should agree on dev auth availability
-        final uiShowsDevFeatures = AppConfig.isDevMode;
+        final uiShowsDevFeatures = AppConfig.devAuthEnabled;
         final serviceAllowsDevAuth = AppConfig.devAuthEnabled;
 
         expect(

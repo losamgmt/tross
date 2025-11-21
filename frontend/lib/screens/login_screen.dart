@@ -63,7 +63,7 @@ class LoginScreen extends StatelessWidget {
                           const ProductionLoginCard(),
 
                           // Dev authentication (conditional)
-                          if (AppConfig.isDevMode) ...[
+                          if (AppConfig.devAuthEnabled) ...[
                             spacing.gapXL,
                             // Use hardcoded dev roles (no auth required)
                             // Matches backend test-users.js roles

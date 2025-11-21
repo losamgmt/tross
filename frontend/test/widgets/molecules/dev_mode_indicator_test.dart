@@ -8,7 +8,7 @@ void main() {
   group('DevModeIndicator', () {
     testWidgets('shows badge in development mode', (tester) async {
       // Verify we're in dev mode for this test
-      expect(AppConfig.isDevMode, true, reason: 'Tests should run in dev mode');
+      expect(AppConfig.devAuthEnabled, true, reason: 'Tests should run in dev mode');
 
       await tester.pumpWidget(
         const MaterialApp(home: Scaffold(body: DevModeIndicator())),
@@ -34,7 +34,7 @@ void main() {
         ),
       );
 
-      if (AppConfig.isProduction) {
+      if (AppConfig.useProdBackend) {
         // Should be hidden (SizedBox.shrink)
         expect(find.byType(StatusBadge), findsNothing);
       } else {
@@ -107,7 +107,7 @@ void main() {
       );
 
       // In dev mode, should show code icon
-      if (AppConfig.isDevMode) {
+      if (AppConfig.devAuthEnabled) {
         expect(find.byIcon(Icons.code), findsOneWidget);
       }
     });
@@ -123,7 +123,7 @@ void main() {
       final badge = tester.widget<StatusBadge>(badgeFinder);
 
       // In dev mode, should use warning style
-      if (AppConfig.isDevMode) {
+      if (AppConfig.devAuthEnabled) {
         expect(badge.style, BadgeStyle.warning);
       }
     });
@@ -168,7 +168,7 @@ void main() {
         ),
       );
 
-      if (AppConfig.isProduction) {
+      if (AppConfig.useProdBackend) {
         // Should be hidden
         expect(find.byType(DevModeIndicator), findsNothing);
       } else {
@@ -214,7 +214,7 @@ void main() {
         const MaterialApp(home: Scaffold(body: DevModeBanner())),
       );
 
-      if (AppConfig.isDevMode) {
+      if (AppConfig.devAuthEnabled) {
         // Should show banner content
         expect(find.text('Development Environment'), findsOneWidget);
         expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
@@ -226,7 +226,7 @@ void main() {
         const MaterialApp(home: Scaffold(body: DevModeBanner())),
       );
 
-      if (AppConfig.isProduction) {
+      if (AppConfig.useProdBackend) {
         // Should be hidden
         expect(find.text('Development Environment'), findsNothing);
         expect(find.byIcon(Icons.warning_amber_rounded), findsNothing);
@@ -238,7 +238,7 @@ void main() {
         const MaterialApp(home: Scaffold(body: DevModeBanner())),
       );
 
-      if (AppConfig.isDevMode) {
+      if (AppConfig.devAuthEnabled) {
         expect(
           find.text('Development Mode - Test authentication available below'),
           findsOneWidget,
@@ -255,7 +255,7 @@ void main() {
         ),
       );
 
-      if (AppConfig.isDevMode) {
+      if (AppConfig.devAuthEnabled) {
         expect(find.text(customMessage), findsOneWidget);
       }
     });
@@ -274,7 +274,7 @@ void main() {
         ),
       );
 
-      if (AppConfig.isDevMode) {
+      if (AppConfig.devAuthEnabled) {
         // Should show action button
         expect(find.text('View Details'), findsOneWidget);
         expect(find.byType(TextButton), findsOneWidget);
@@ -305,7 +305,7 @@ void main() {
         ),
       );
 
-      if (AppConfig.isDevMode) {
+      if (AppConfig.devAuthEnabled) {
         final containerFinder = find.byType(Container).first;
         final container = tester.widget<Container>(containerFinder);
 
@@ -318,7 +318,7 @@ void main() {
         const MaterialApp(home: Scaffold(body: DevModeBanner())),
       );
 
-      if (AppConfig.isDevMode) {
+      if (AppConfig.devAuthEnabled) {
         // Should have Row layout
         expect(find.byType(Row), findsWidgets);
 
@@ -345,7 +345,7 @@ void main() {
         ),
       );
 
-      if (AppConfig.isDevMode) {
+      if (AppConfig.devAuthEnabled) {
         // Should find all variants
         expect(
           find.byType(DevModeIndicator),
@@ -430,7 +430,7 @@ void main() {
         const MaterialApp(home: Scaffold(body: DevModeBanner())),
       );
 
-      if (AppConfig.isDevMode) {
+      if (AppConfig.devAuthEnabled) {
         final textFinders = find.byType(Text);
         expect(textFinders, findsWidgets);
 
@@ -450,7 +450,7 @@ void main() {
       );
 
       // InkWell provides touch feedback
-      if (AppConfig.isDevMode) {
+      if (AppConfig.devAuthEnabled) {
         expect(find.byType(InkWell), findsOneWidget);
       }
     });
