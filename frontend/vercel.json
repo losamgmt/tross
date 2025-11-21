@@ -10,12 +10,12 @@
   "installCommand": "if [ ! -d \"../flutter\" ]; then cd .. && git clone https://github.com/flutter/flutter.git && cd frontend; fi && ../flutter/bin/flutter pub get",
   "framework": null,
   "devCommand": null,
-  "cleanUrls": true,
+  "cleanUrls": false,
   "trailingSlash": false,
-  "rewrites": [
+  "routes": [
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ],
   "headers": [
