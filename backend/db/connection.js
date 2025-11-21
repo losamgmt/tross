@@ -3,6 +3,7 @@ const { Pool } = require('pg');
 const { logger } = require('../config/logger');
 const { DATABASE } = require('../config/constants');
 const { TIMEOUTS } = require('../config/timeouts');
+const { getDatabaseConfig } = require('../config/deployment-adapter');
 require('dotenv').config();
 
 // Determine which database configuration to use based on environment
@@ -30,24 +31,35 @@ const testDbConfig = {
 
 // Default database configuration (standard PostgreSQL port 5432)
 // Used for both development (trossapp_dev) and production (trossapp_prod)
-// Actual database determined by DB_NAME environment variable
-// Uses constants.js for single source of truth
-const defaultDbConfig = {
-  user: process.env.DB_USER || DATABASE.DEV.USER,
-  host: process.env.DB_HOST || DATABASE.DEV.HOST,
-  database: process.env.DB_NAME || DATABASE.DEV.NAME,
-  password: process.env.DB_PASSWORD || DATABASE.DEV.PASSWORD,
-  port: parseInt(process.env.DB_PORT) || DATABASE.DEV.PORT,
+// Supports both DATABASE_URL (Railway/Heroku) and individual env vars (AWS/local)
+// Uses deployment-adapter for platform-agnostic configuration
+const adapterConfig = getDatabaseConfig();
 
-  // Default pool configuration (optimized for performance)
-  max: DATABASE.DEV.POOL.MAX,
-  min: DATABASE.DEV.POOL.MIN,
-  idleTimeoutMillis: TIMEOUTS.DATABASE.IDLE_TIMEOUT_MS,
-  connectionTimeoutMillis: TIMEOUTS.DATABASE.CONNECTION_TIMEOUT_MS,
-  statement_timeout: TIMEOUTS.DATABASE.STATEMENT_TIMEOUT_MS,
-  query_timeout: TIMEOUTS.DATABASE.QUERY_TIMEOUT_MS,
-  application_name: 'trossapp_backend',
-};
+// Handle both string (DATABASE_URL) and object (individual vars) formats
+const defaultDbConfig =
+  typeof adapterConfig === 'string'
+    ? {
+        // DATABASE_URL format - add pool and timeout config
+        connectionString: adapterConfig,
+        max: DATABASE.DEV.POOL.MAX,
+        min: DATABASE.DEV.POOL.MIN,
+        idleTimeoutMillis: TIMEOUTS.DATABASE.IDLE_TIMEOUT_MS,
+        connectionTimeoutMillis: TIMEOUTS.DATABASE.CONNECTION_TIMEOUT_MS,
+        statement_timeout: TIMEOUTS.DATABASE.STATEMENT_TIMEOUT_MS,
+        query_timeout: TIMEOUTS.DATABASE.QUERY_TIMEOUT_MS,
+        application_name: 'trossapp_backend',
+      }
+    : {
+        // Individual vars format - merge with pool and timeout config
+        ...adapterConfig,
+        max: DATABASE.DEV.POOL.MAX,
+        min: DATABASE.DEV.POOL.MIN,
+        idleTimeoutMillis: TIMEOUTS.DATABASE.IDLE_TIMEOUT_MS,
+        connectionTimeoutMillis: TIMEOUTS.DATABASE.CONNECTION_TIMEOUT_MS,
+        statement_timeout: TIMEOUTS.DATABASE.STATEMENT_TIMEOUT_MS,
+        query_timeout: TIMEOUTS.DATABASE.QUERY_TIMEOUT_MS,
+        application_name: 'trossapp_backend',
+      };
 
 // Create connection pool with appropriate configuration
 const poolConfig = isTest ? testDbConfig : defaultDbConfig;
@@ -142,10 +154,10 @@ const testConnection = async (retries = 3, delay = 1000) => {
         {
           error: error.message,
           code: error.code,
-          host: productionConfig.host,
-          port: productionConfig.port,
-          database: productionConfig.database,
-          user: productionConfig.user,
+          host: poolConfig.host,
+          port: poolConfig.port,
+          database: poolConfig.database,
+          user: poolConfig.user,
         },
       );
       if (attempt < retries) {

@@ -1,5 +1,9 @@
 # Backend Dockerfile - Production Build
 # Multi-stage build for optimized production image
+# 
+# Platform-agnostic: Works with deployment-adapter.js for any platform
+# Supports: AWS ECS, GCP Cloud Run, Fly.io, self-hosted Kubernetes
+# Note: Railway uses Nixpacks, Vercel uses serverless - they don't need this
 
 # Stage 1: Build stage
 FROM node:18-alpine AS builder

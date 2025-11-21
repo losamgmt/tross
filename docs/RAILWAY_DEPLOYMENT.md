@@ -2,6 +2,14 @@
 
 Complete guide to deploying TrossApp backend to Railway.
 
+## Platform-Agnostic Architecture
+
+**TrossApp uses deployment-adapter.js for zero-config multi-platform support.**
+
+The backend automatically detects Railway (via `RAILWAY_ENVIRONMENT` env var) and uses `DATABASE_URL` for database connection. No code changes needed if you switch to Render, Fly.io, Heroku, or AWS—just change environment variables.
+
+See `backend/config/deployment-adapter.js` for platform detection logic.
+
 ## Prerequisites
 
 - GitHub account connected to Railway

@@ -340,13 +340,88 @@ role_id INTEGER REFERENCES roles(id) ON DELETE SET NULL
 - If role is deleted, user's `role_id` becomes `NULL` (not orphaned)
 - Application handles null role appropriately
 
+## 🔌 Database Connection Architecture
+
+### **Platform-Agnostic Connection Layer**
+
+**Location:** `backend/db/connection.js` with `backend/config/deployment-adapter.js`
+
+TrossApp uses a **deployment-adapter pattern** to support multiple hosting platforms without code changes. The connection layer automatically detects the deployment environment and configures the database accordingly.
+
+#### **Supported Platforms**
+
+- **Railway** - Uses `DATABASE_URL` (auto-detected via `RAILWAY_ENVIRONMENT`)
+- **Render** - Uses `DATABASE_URL` (auto-detected via `RENDER`)
+- **Fly.io** - Uses `DATABASE_URL` (auto-detected via `FLY_APP_NAME`)
+- **Heroku** - Uses `DATABASE_URL` (auto-detected via `DYNO`)
+- **AWS/GCP/Local** - Uses individual DB environment variables
+
+#### **Configuration Formats**
+
+The adapter supports two formats and automatically chooses the correct one:
+
+**Format 1: Connection String (Cloud Platforms)**
+```bash
+DATABASE_URL=postgresql://user:password@host:5432/database
+```
+
+**Format 2: Individual Variables (AWS/Local)**
+```bash
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=trossapp_dev
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_POOL_MIN=2
+DB_POOL_MAX=10
+```
+
+#### **Connection Pool Configuration**
+
+```javascript
+// Automatic pool sizing based on environment
+const poolConfig = {
+  min: 2,    // Minimum connections
+  max: 10,   // Maximum connections (20 in production)
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
+  statement_timeout: 10000,
+  query_timeout: 10000
+};
+```
+
+#### **Test Database Isolation**
+
+Test environment uses **separate database and port**:
+- **Development:** `trossapp_dev` on port `5432`
+- **Test:** `trossapp_test` on port `5433` (smaller pool, faster cleanup)
+
+This ensures integration tests never interfere with development data.
+
+#### **Health Checks & Monitoring**
+
+```javascript
+// Connection test with retry logic
+await testConnection(retries = 3, delay = 1000);
+
+// Slow query logging (threshold: 1000ms)
+// Automatic logging of queries exceeding threshold
+
+// Graceful shutdown
+await closePool(); // Drains connections before exit
+```
+
+See `backend/config/deployment-adapter.js` for platform detection logic and `backend/db/connection.js` for pool management.
+
+---
+
 ## 📈 Future Enhancements
 
 ### **Phase 8: Production Hardening**
 
 - [ ] Add `deleted_at` timestamp for soft delete auditing
 - [ ] Implement database replication (read replicas)
-- [ ] Add connection pooling with PgBouncer
+- [x] ~~Add connection pooling with PgBouncer~~ (Using pg Pool with platform-agnostic adapter)
 - [ ] Set up automated backups with retention policy
 
 ### **Phase 9: Work Orders Module**

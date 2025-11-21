@@ -180,6 +180,31 @@ Preview: https://trossapp-pr-123.vercel.app
 Push to main → Railway builds → Health check → Live
 ```
 
+**Platform-Agnostic Configuration:**
+
+TrossApp's backend uses `deployment-adapter.js` for zero-config deployment across platforms:
+
+- **Railway** - Auto-detects via `RAILWAY_ENVIRONMENT`, uses `DATABASE_URL`
+- **Render** - Auto-detects via `RENDER`, uses `DATABASE_URL`
+- **Fly.io** - Auto-detects via `FLY_APP_NAME`, uses `DATABASE_URL`
+- **Heroku** - Auto-detects via `DYNO`, uses `DATABASE_URL`
+- **AWS/GCP** - Falls back to individual DB environment variables
+
+**No code changes needed** when switching platforms—just set the appropriate environment variables.
+
+**Railway Environment Variables Required:**
+```bash
+NODE_ENV=production
+DATABASE_URL=postgresql://...  # Auto-provided by Railway Postgres
+JWT_SECRET=...
+AUTH0_DOMAIN=...
+AUTH0_AUDIENCE=...
+AUTH0_ISSUER=...
+FRONTEND_URL=https://trossapp.vercel.app
+```
+
+Railway automatically provides `DATABASE_URL` when you provision a PostgreSQL database. The deployment adapter handles the rest.
+
 **URLs:**
 ```
 Production: https://trossapp-production.up.railway.app

@@ -1,5 +1,10 @@
 # Frontend Dockerfile - Flutter Web Production Build
 # Multi-stage build for optimized static web serving
+# 
+# Platform-agnostic: Works with any container platform
+# Supports: AWS ECS, GCP Cloud Run, Fly.io, self-hosted Kubernetes
+# Note: Vercel auto-builds Flutter web - doesn't need this Dockerfile
+#       Railway can use this OR Nixpacks (both work)
 
 # Stage 1: Flutter build stage
 FROM flutter:3.16.0 AS builder

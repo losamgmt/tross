@@ -1,5 +1,6 @@
 # Development & Staging Workflow
 # Lightweight checks for development branches
+# Fast feedback loop - lint and analyze only (no database tests)
 
 name: Development Checks
 

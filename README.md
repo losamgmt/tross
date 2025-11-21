@@ -99,12 +99,18 @@ npm run dev:frontend   # Frontend on :8080
 - **[Deployment](docs/DEPLOYMENT.md)** - Production deployment and CI/CD
 
 ### Collaboration & Deployment
+- **[Fork Workflow Guide](docs/FORK_WORKFLOW_GUIDE.md)** - Step-by-step guide for collaborators (AI-empowered, non-technical friendly)
 - **[CI/CD Guide](docs/CI_CD_GUIDE.md)** - Complete pipeline, fork workflow, deployment automation
 - **[Railway Deployment](docs/RAILWAY_DEPLOYMENT.md)** - Backend hosting ($10-15/month, PostgreSQL included)
 - **[Vercel Deployment](docs/VERCEL_DEPLOYMENT.md)** - Frontend hosting (free tier, PR previews)
+- **[Branch Protection Setup](docs/GITHUB_BRANCH_PROTECTION.md)** - GitHub UI configuration guide
+- **[Pipeline Quick Guide](docs/PIPELINE_QUICK_GUIDE.md)** - Non-technical overview of development pipeline
 - **[GitHub Codespaces](docs/CODESPACES.md)** - Cloud dev environment for non-technical collaborators
-- **[Branch Protection Setup](.github/BRANCH_PROTECTION_SETUP.md)** - GitHub UI configuration guide
 - **[Contributors Guide](CONTRIBUTORS.md)** - How to contribute, fork workflow, testing requirements
+
+### Production Operations
+- **[Health Monitoring](docs/HEALTH_MONITORING.md)** - Monitoring setup, metrics, alerting, incident response
+- **[Rollback Procedures](docs/ROLLBACK.md)** - Emergency rollback guide for backend, frontend, database
 
 ### Reference Documentation
 - **[Database Architecture](docs/architecture/DATABASE_ARCHITECTURE.md)** - Schema design and migrations
@@ -152,6 +158,8 @@ npm run dev:frontend   # Frontend on :8080
 
 ## 🔒 Security Features
 
+> **⚠️ SECURITY NOTE:** This repository contains source code only. All secrets, API keys, database credentials, and sensitive configuration are stored as environment variables and **never** committed to version control. See [backend/.env.example](backend/.env.example) for configuration template.
+
 - **Authentication**: Auth0 OAuth2/OIDC with PKCE flow for web, development tokens for testing
 - **Authorization**: Role-based access control (RBAC) with dynamic permission system
 - **Triple-Tier Validation**: Database constraints, API validation, UI input validation
@@ -163,6 +171,16 @@ npm run dev:frontend   # Frontend on :8080
 - **Input Sanitization**: Comprehensive validation with type coercion
 - **Error Handling**: Secure error messages, no stack traces in production
 - **Process Management**: Graceful shutdown handling
+
+### Environment Variables Security
+
+All sensitive data is configured via environment variables:
+- **Database credentials** (DB_PASSWORD, DATABASE_URL)
+- **Auth0 secrets** (AUTH0_CLIENT_SECRET)
+- **JWT signing keys** (JWT_SECRET)
+- **API keys** and third-party service credentials
+
+**Production deployments** (Railway, Vercel) store these securely in their respective platforms. Never commit `.env` files to git.
 
 ## 🚦 Development Workflow
 

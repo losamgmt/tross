@@ -32,6 +32,36 @@ Production deployment guide using Docker and environment configuration.
 
 ## Environment Configuration
 
+### Platform-Agnostic Database Configuration
+
+**TrossApp uses `backend/config/deployment-adapter.js` for platform-agnostic deployment.**
+
+The adapter automatically detects your deployment platform and configures the database connection appropriately. It supports two configuration formats:
+
+#### Option 1: DATABASE_URL (Recommended for Railway, Heroku, Render)
+
+```bash
+DATABASE_URL=postgresql://user:password@db-host:5432/trossapp_prod
+```
+
+Most cloud platforms (Railway, Heroku, Render) provide a single `DATABASE_URL` environment variable. The adapter automatically uses this if present.
+
+#### Option 2: Individual Variables (AWS, Google Cloud, Local)
+
+```bash
+DB_HOST=your-db-host.region.rds.amazonaws.com
+DB_PORT=5432
+DB_NAME=trossapp_prod
+DB_USER=your_db_user
+DB_PASSWORD=your_db_password
+DB_POOL_MIN=2
+DB_POOL_MAX=20
+```
+
+If `DATABASE_URL` is not set, the adapter falls back to individual environment variables. This is useful for AWS RDS, Google Cloud SQL, or local development.
+
+**The adapter automatically chooses the right format—you don't need to change any code.**
+
 ### Production Environment Variables
 
 Create `.env.production`:
@@ -41,8 +71,18 @@ Create `.env.production`:
 NODE_ENV=production
 PORT=3001
 
-# Database (Use managed service in production)
+# Database - Choose ONE format:
+# Format 1: Single URL (Railway, Heroku, Render)
 DATABASE_URL=postgresql://user:password@db-host:5432/trossapp_prod
+
+# Format 2: Individual vars (AWS, Google Cloud, or if DATABASE_URL not available)
+# DB_HOST=your-db-host
+# DB_PORT=5432
+# DB_NAME=trossapp_prod
+# DB_USER=your_db_user
+# DB_PASSWORD=your_db_password
+
+# Database Pool Configuration (optional, defaults shown)
 DB_POOL_MAX=20
 DB_POOL_MIN=2
 

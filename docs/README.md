@@ -58,14 +58,30 @@ Backend hosting guide. $10-15/month, PostgreSQL included, auto-deploy on push.
 ### ▲ [Vercel Deployment](VERCEL_DEPLOYMENT.md)
 Frontend hosting guide. Free tier, PR preview URLs, auto-deploy on merge.
 
+### 🍴 [Fork Workflow Guide](FORK_WORKFLOW_GUIDE.md)
+Step-by-step guide for collaborators. How to fork, branch, commit, PR, and merge.
+
+### 🛡️ [Branch Protection Setup](GITHUB_BRANCH_PROTECTION.md)
+GitHub UI configuration guide. Require PR approval, CI checks, maintainer-only merge.
+
+### 📊 [Pipeline Quick Guide](PIPELINE_QUICK_GUIDE.md)
+Non-technical overview. How code flows from development to production.
+
 ### ☁️ [GitHub Codespaces](CODESPACES.md)
 Cloud development environment. Zero local setup, perfect for non-technical collaborators.
 
-### 🔒 [Branch Protection Setup](../.github/BRANCH_PROTECTION_SETUP.md)
-GitHub UI configuration guide. Require PR approval, CI checks, maintainer-only merge.
-
 ### 🤝 [Contributors Guide](../CONTRIBUTORS.md)
 How to contribute. Fork workflow, testing requirements, team recognition.
+
+---
+
+## Production Operations
+
+### 🩺 [Health Monitoring](HEALTH_MONITORING.md)
+Monitoring setup, metrics collection, alerting, incident response procedures.
+
+### ↩️ [Rollback Procedures](ROLLBACK.md)
+Emergency rollback guide. Backend, frontend, database recovery procedures.
 
 ---
 
