@@ -5,9 +5,9 @@
     "silent": false,
     "autoJobCancelation": true
   },
-  "buildCommand": "flutter build web --release --web-renderer canvaskit",
+  "buildCommand": "if [ ! -d \"../flutter\" ]; then cd .. && git clone https://github.com/flutter/flutter.git && cd frontend; fi && ../flutter/bin/flutter build web --release --web-renderer canvaskit",
   "outputDirectory": "build/web",
-  "installCommand": "flutter pub get",
+  "installCommand": "if [ ! -d \"../flutter\" ]; then cd .. && git clone https://github.com/flutter/flutter.git && cd frontend; fi && ../flutter/bin/flutter pub get",
   "framework": null,
   "devCommand": null,
   "cleanUrls": true,
