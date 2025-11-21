@@ -13,14 +13,15 @@ library;
 class Environment {
   /// API base URL - configurable per environment
   ///
-  /// Development: http://localhost:3001/api
-  /// Production: Set via --dart-define=API_BASE_URL=https://api.trossapp.com
+  /// NOTE: This class is deprecated - use AppConfig instead for centralized configuration
+  /// AppConfig automatically handles dev/prod URLs based on DEVELOPMENT flag
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: 'http://localhost:3001/api',
   );
 
   /// Frontend URL - used for CORS, redirects, etc.
+  /// NOTE: Use AppConfig.frontendUrl instead for automatic dev/prod switching
   static const String frontendUrl = String.fromEnvironment(
     'FRONTEND_URL',
     defaultValue: 'http://localhost:8080',

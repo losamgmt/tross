@@ -47,13 +47,27 @@ class AppConfig {
   // ============================================================================
 
   static const String _devBaseUrl = 'http://localhost:3001/api';
-  static const String _prodBaseUrl = 'https://api.tross.com/api';
+  static const String _prodBaseUrl =
+      'https://tross-api-production.up.railway.app/api';
   static const String _devBackendUrl = 'http://localhost:3001';
-  static const String _prodBackendUrl = 'https://api.tross.com';
+  static const String _prodBackendUrl =
+      'https://tross-api-production.up.railway.app';
 
   static String get baseUrl => isDevelopment ? _devBaseUrl : _prodBaseUrl;
   static String get backendUrl =>
       isDevelopment ? _devBackendUrl : _prodBackendUrl;
+
+  // ============================================================================
+  // FRONTEND CONFIGURATION
+  // ============================================================================
+
+  static const String _devFrontendUrl = 'http://localhost:8080';
+  static const String _prodFrontendUrl =
+      'https://trossapp.vercel.app'; // Update when deployed
+
+  static String get frontendUrl =>
+      isDevelopment ? _devFrontendUrl : _prodFrontendUrl;
+  static String get callbackUrl => '$frontendUrl/callback';
 
   // ============================================================================
   // HEALTH MONITORING ENDPOINTS

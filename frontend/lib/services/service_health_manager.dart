@@ -3,11 +3,12 @@
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../config/app_config.dart';
 
 enum ServiceStatus { healthy, degraded, critical, unknown, offline }
 
 class ServiceHealthManager {
-  static const String _baseUrl = 'http://localhost:3001';
+  static String get _baseUrl => AppConfig.backendUrl;
   static const Duration _timeout = Duration(seconds: 3);
 
   // Service isolation: Default to offline mode

@@ -16,7 +16,7 @@
 /// Usage:
 /// ```dart
 /// DbHealthDashboard.api(
-///   apiBaseUrl: 'http://localhost:3001',
+///   apiBaseUrl: AppConfig.backendUrl,
 ///   authToken: 'your-jwt-token',
 ///   autoRefresh: true,
 /// )

@@ -14,7 +14,7 @@ import 'pkce_helper.dart';
 /// 3. Frontend exchanges code directly with Auth0
 /// 4. Backend only validates tokens
 class Auth0WebService {
-  static const String _redirectUri = 'http://localhost:8080/callback';
+  static String get _redirectUri => AppConfig.callbackUrl;
   static const String _responseType = 'code';
   static const String _scope = 'openid profile email';
   static const String _storageKeyVerifier = 'auth0_code_verifier';
@@ -206,7 +206,7 @@ class Auth0WebService {
 
   /// Logout - redirect to Auth0 logout
   Future<void> logout() async {
-    // Get the current origin (e.g., http://localhost:8080)
+    // Get the current origin from AppConfig
     final origin = web.window.location.origin;
     final returnToUrl = '$origin/login';
 

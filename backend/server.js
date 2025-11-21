@@ -14,6 +14,7 @@ const {
 } = require('./middleware/rate-limit');
 const { requestTimeout, timeoutHandler } = require('./middleware/timeout');
 const { validateEnvironment } = require('./utils/env-validator');
+const { getAllowedOrigins } = require('./config/deployment-adapter');
 require('dotenv').config();
 
 // Environment Validation
@@ -72,10 +73,7 @@ app.use(requestTimeout(TIMEOUTS.REQUEST.DEFAULT_MS));
 app.use(requestLogger);
 app.use(
   cors({
-    origin:
-      process.env.NODE_ENV === 'production'
-        ? ['https://trossapp.com', 'https://app.trossapp.com']
-        : true, // Allow all origins in development for Flutter's random ports
+    origin: getAllowedOrigins(), // Uses ALLOWED_ORIGINS env var with smart defaults
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
