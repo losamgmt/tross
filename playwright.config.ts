@@ -8,7 +8,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : 1, // Use single worker to prevent race conditions
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:3001',
+    baseURL: process.env.BACKEND_URL || 'http://localhost:3001',
     trace: 'on-first-retry',
   },
 

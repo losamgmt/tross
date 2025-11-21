@@ -534,6 +534,76 @@ cd ../frontend && flutter test
 
 ---
 
+## Production Smoke Tests
+
+**Purpose:** Verify production deployment is working end-to-end after each release.
+
+### Manual Smoke Test Checklist
+
+Run these tests against **https://trossapp.vercel.app** after every production deployment:
+
+#### 1. Authentication & Session
+- [ ] Visit https://trossapp.vercel.app
+- [ ] Click "Login" button
+- [ ] Auth0 login page loads
+- [ ] Login with test credentials (or create new user)
+- [ ] Redirects back to app successfully
+- [ ] Health badge shows "Healthy" (green)
+- [ ] User menu shows logged-in state
+
+#### 2. User CRUD Operations
+- [ ] Navigate to Users page
+- [ ] Create new user (email, first_name, last_name, role)
+- [ ] Verify new user appears in list
+- [ ] Edit user details
+- [ ] Verify changes saved
+- [ ] View user details
+- [ ] Delete user (if admin)
+
+#### 3. Role Management
+- [ ] Navigate to Roles page
+- [ ] View role list (5 core roles)
+- [ ] Create new custom role
+- [ ] Verify role appears
+- [ ] Try to delete core role (should fail with permission error)
+- [ ] Verify error handling works
+
+#### 4. Permissions & Security
+- [ ] Try accessing admin-only features as non-admin (should reject)
+- [ ] Verify RBAC enforcing correctly
+- [ ] Check browser console for errors (should be clean except source maps)
+- [ ] Verify no CORS errors
+
+#### 5. Backend Health
+- [ ] Visit https://tross-api-production.up.railway.app/api/health
+- [ ] Should return JSON: `{"status":"ok",...}`
+- [ ] Check database health in response
+
+### Automated E2E Tests (Against Production)
+
+```bash
+# Run E2E tests against production backend
+BACKEND_URL=https://tross-api-production.up.railway.app npm run test:e2e
+
+# Note: Uses dev tokens, not Auth0
+# Good for API testing, not auth flow testing
+```
+
+**Configuration:** See `.env.production.example` for environment setup.
+
+**When to Run:**
+- After every production deployment
+- Before major feature releases
+- Monthly as part of health check
+
+**Expected Results:**
+- All tests pass
+- No console errors (except harmless source map warnings)
+- Health badge green
+- Auth flow working end-to-end
+
+---
+
 ## Next Steps
 
 - **[Development Guide](DEVELOPMENT.md)** - Daily dev workflow

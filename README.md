@@ -8,6 +8,24 @@
 
 ---
 
+## 🚀 Production
+
+**Live Application:**
+- **Frontend:** https://trossapp.vercel.app
+- **Backend API:** https://tross-api-production.up.railway.app
+- **API Docs:** https://tross-api-production.up.railway.app/api-docs
+- **Health Check:** https://tross-api-production.up.railway.app/api/health
+
+**Infrastructure:**
+- Frontend hosting: Vercel (auto-deploy from `main` branch)
+- Backend hosting: Railway (auto-deploy from `main` branch)
+- Database: PostgreSQL on Railway
+- Authentication: Auth0 OAuth2/OIDC
+
+**Monitoring:** See [docs/HEALTH_MONITORING.md](docs/HEALTH_MONITORING.md) for setup
+
+---
+
 ## 🎯 Overview
 
 The Tross App is a modern, full-stack application for efficient work order management with intelligent skills-based matching. Built with Flutter for cross-platform frontend and Node.js/Express for a robust REST API backend.

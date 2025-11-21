@@ -207,9 +207,9 @@ Railway automatically provides `DATABASE_URL` when you provision a PostgreSQL da
 
 **URLs:**
 ```
-Production: https://trossapp-production.up.railway.app
-Health: https://trossapp-production.up.railway.app/api/health
-API Docs: https://trossapp-production.up.railway.app/api-docs
+Production: https://tross-api-production.up.railway.app
+Health: https://tross-api-production.up.railway.app/api/health
+API Docs: https://tross-api-production.up.railway.app/api-docs
 ```
 
 ---

@@ -42,14 +42,14 @@ In Vercel project settings → Environment Variables, add:
 
 ```bash
 # Backend API URL (from Railway deployment)
-BACKEND_URL=https://<your-railway-app>.up.railway.app
-API_URL=https://<your-railway-app>.up.railway.app/api
+BACKEND_URL=https://tross-api-production.up.railway.app
+API_URL=https://tross-api-production.up.railway.app/api
 
 # Auth0 Configuration (must match backend)
-AUTH0_DOMAIN=<your-tenant>.us.auth0.com
+AUTH0_DOMAIN=dev-mglpuahc3cwf66wq.us.auth0.com
 AUTH0_CLIENT_ID=<your-auth0-client-id>
-AUTH0_AUDIENCE=https://api.trossapp.com
-AUTH0_REDIRECT_URI=https://<your-vercel-app>.vercel.app/callback
+AUTH0_AUDIENCE=https://api.trossapp.dev
+AUTH0_REDIRECT_URI=https://trossapp.vercel.app/callback
 
 # Environment
 FLUTTER_ENV=production
@@ -66,22 +66,22 @@ In Auth0 dashboard (https://manage.auth0.com):
 
 **Add Vercel URLs to Allowed Callback URLs:**
 ```
-https://<your-app>.vercel.app/callback
-https://<your-app>-*.vercel.app/callback
+https://trossapp.vercel.app/callback
+https://trossapp-*.vercel.app/callback
 http://localhost:8080/callback
 ```
 
 **Add to Allowed Logout URLs:**
 ```
-https://<your-app>.vercel.app
-https://<your-app>-*.vercel.app
+https://trossapp.vercel.app
+https://trossapp-*.vercel.app
 http://localhost:8080
 ```
 
 **Add to Allowed Web Origins:**
 ```
-https://<your-app>.vercel.app
-https://<your-app>-*.vercel.app
+https://trossapp.vercel.app
+https://trossapp-*.vercel.app
 http://localhost:8080
 ```
 

@@ -278,3 +278,62 @@ railway logs -f
 **Maintained by:** TrossApp Development Team  
 **Last Updated:** 2025-11-21  
 **Review Cycle:** Quarterly or after incidents
+
+---
+
+## Quick Start: UptimeRobot Setup
+
+**Free tier monitoring (5-minute checks, email alerts)**
+
+### 1. Create Account
+
+1. Go to https://uptimerobot.com/signUp
+2. Sign up with email
+3. Verify email address
+
+### 2. Add Backend Monitor
+
+1. Click "Add New Monitor"
+2. Configure:
+   - **Monitor Type:** HTTP(s)
+   - **Friendly Name:** TrossApp API Health
+   - **URL:** `https://tross-api-production.up.railway.app/api/health`
+   - **Monitoring Interval:** 5 minutes
+3. Click "Create Monitor"
+
+### 3. Add Frontend Monitor
+
+1. Click "Add New Monitor" again
+2. Configure:
+   - **Monitor Type:** HTTP(s)
+   - **Friendly Name:** TrossApp Frontend
+   - **URL:** `https://trossapp.vercel.app`
+   - **Monitoring Interval:** 5 minutes
+3. Click "Create Monitor"
+
+### 4. Configure Alerts
+
+1. Go to "My Settings" → "Alert Contacts"
+2. Add your email (auto-added on signup)
+3. Enable "Email" notifications
+4. Save
+
+### 5. Test Alerts (Optional)
+
+1. Go to a monitor
+2. Click "Pause Monitoring"
+3. Wait 5-10 minutes
+4. Should receive "DOWN" alert email
+5. Resume monitoring
+6. Should receive "UP" alert email
+
+### Dashboard
+
+- View all monitors: https://uptimerobot.com/dashboard
+- Mobile app available: iOS/Android
+- Free tier: 50 monitors, 5-minute intervals
+
+**That's it!** You'll get email alerts if either URL goes down.
+
+---
+

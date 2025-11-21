@@ -384,7 +384,7 @@ X-RateLimit-Reset: 1700000000
 
 ## CORS
 
-**Allowed Origins:** `http://localhost:8080` (dev), `https://trossapp.com` (prod)  
+**Allowed Origins:** `http://localhost:8080` (dev), `https://trossapp.vercel.app` (prod)  
 **Allowed Methods:** GET, POST, PUT, DELETE  
 **Allowed Headers:** Content-Type, Authorization  
 **Credentials:** Supported

@@ -333,12 +333,6 @@ router.post(
   '/',
   authenticateToken,
   requirePermission('users', 'create'),
-  (req, res, next) => {
-    console.log('[USERS POST] Reached validator stage');
-    console.log('[USERS POST] Body:', JSON.stringify(req.body, null, 2));
-    console.log('[USERS POST] User:', req.dbUser?.email);
-    next();
-  },
   validateUserCreate,
   async (req, res) => {
     try {
