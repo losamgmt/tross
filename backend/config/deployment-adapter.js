@@ -7,7 +7,7 @@
  * Pattern: All providers must support the same interface, but config formats differ.
  */
 
-const { logger } = require('../logger');
+const { logger } = require('./logger');
 
 /**
  * Required environment variables (platform-agnostic)
