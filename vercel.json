@@ -1,0 +1,6 @@
+{
+  "buildCommand": "cd frontend && ../flutter/bin/flutter build web --release",
+  "devCommand": null,
+  "installCommand": "if cd flutter; then git pull && cd .. ; else git clone https://github.com/flutter/flutter.git; fi && flutter/bin/flutter doctor && cd frontend && ../flutter/bin/flutter pub get",
+  "outputDirectory": "frontend/build/web"
+}
