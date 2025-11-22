@@ -14,6 +14,19 @@ const rateLimit = require('express-rate-limit');
 const { logger } = require('../config/logger');
 
 /**
+ * Get rate limit configuration from environment variables
+ * Defaults: 1000 requests per 15 minutes (professional standard)
+ */
+const RATE_LIMIT_WINDOW_MS = parseInt(
+  process.env.RATE_LIMIT_WINDOW_MS || '900000',
+  10,
+); // 15 minutes
+const RATE_LIMIT_MAX_REQUESTS = parseInt(
+  process.env.RATE_LIMIT_MAX_REQUESTS || '1000',
+  10,
+); // 1000 req/15min
+
+/**
  * Bypass middleware for test environment
  * Returns a no-op middleware that just calls next()
  */
@@ -21,12 +34,13 @@ const bypassLimiter = (req, res, next) => next();
 
 /**
  * General API rate limit
- * 100 requests per 15 minutes per IP
+ * Configurable via RATE_LIMIT_MAX_REQUESTS and RATE_LIMIT_WINDOW_MS
+ * Default: 1000 requests per 15 minutes (professional standard)
  * Protects against general API abuse and DoS attacks
  */
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // 100 requests per window per IP
+  windowMs: RATE_LIMIT_WINDOW_MS,
+  max: RATE_LIMIT_MAX_REQUESTS,
   message: {
     error: 'Too many requests',
     message: 'You have exceeded the rate limit. Please try again later.',

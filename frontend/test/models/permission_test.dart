@@ -51,7 +51,7 @@ void main() {
 
       // Resources without _value use enum name
       expect(ResourceType.users.toString(), 'users');
-      expect(ResourceType.contracts.toString(), 'projects');
+      expect(ResourceType.contracts.toString(), 'contracts');
     });
 
     test('should be comparable', () {
@@ -88,7 +88,7 @@ void main() {
       expect(UserRole.manager.toString(), 'manager');
       expect(UserRole.dispatcher.toString(), 'dispatcher');
       expect(UserRole.technician.toString(), 'technician');
-      expect(UserRole.customer.toString(), 'client');
+      expect(UserRole.customer.toString(), 'customer');
     });
 
     group('fromString()', () {
@@ -97,7 +97,7 @@ void main() {
         expect(UserRole.fromString('manager'), UserRole.manager);
         expect(UserRole.fromString('dispatcher'), UserRole.dispatcher);
         expect(UserRole.fromString('technician'), UserRole.technician);
-        expect(UserRole.fromString('client'), UserRole.customer);
+        expect(UserRole.fromString('customer'), UserRole.customer);
       });
 
       test('should be case-insensitive', () {

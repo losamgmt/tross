@@ -27,7 +27,7 @@ const OPTIONAL_ENV_VARS = {
   PORT: 3001,
   BACKEND_PORT: 3001,
   RATE_LIMIT_WINDOW_MS: 900000, // 15 minutes
-  RATE_LIMIT_MAX_REQUESTS: 100,
+  RATE_LIMIT_MAX_REQUESTS: 1000, // Professional standard (GitHub: 5k/hr, we use 1k/15min)
   REQUEST_TIMEOUT_MS: 30000, // 30 seconds
   DB_POOL_MIN: 2,
   DB_POOL_MAX: 10,

@@ -60,13 +60,8 @@ const HTTP_STATUS = Object.freeze({
 });
 
 // Security Configuration Constants
+// NOTE: Rate limiting configuration moved to backend/middleware/rate-limit.js (uses env vars)
 const SECURITY = Object.freeze({
-  RATE_LIMITING: Object.freeze({
-    WINDOW_MS: 15 * 60 * 1000, // 15 minutes
-    API_MAX_REQUESTS: 50, // API requests per window
-    AUTH_MAX_REQUESTS: 10, // Auth attempts per window
-    DEFAULT_MAX_REQUESTS: 100, // Default requests per window
-  }),
   REQUEST_LIMITS: Object.freeze({
     JSON_BODY_SIZE: '1mb', // Reduced from 10mb - sufficient for all API operations
     URL_ENCODED_SIZE: '1mb', // Reduced from 10mb - prevents DoS via large form submissions

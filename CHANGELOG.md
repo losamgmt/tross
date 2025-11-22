@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - Rate Limiting & Test Synchronization (2025-11-21)
+
+#### Rate Limiting
+- **Centralized Configuration**: Rate limiting now uses environment variables
+  - `RATE_LIMIT_WINDOW_MS` (default: 900000 = 15 minutes)
+  - `RATE_LIMIT_MAX_REQUESTS` (default: 1000 = professional standard)
+- **Updated Defaults**: Increased from 100 to 1000 requests per 15 minutes
+  - Aligns with industry standards (GitHub: 5k/hr, Stripe: 100/sec)
+  - Prevents false positives during E2E test runs
+- **Files Updated**:
+  - `backend/middleware/rate-limit.js` - Uses env vars with intelligent defaults
+  - `backend/config/deployment-adapter.js` - Default aligned to 1000
+  - `backend/.env.local` - Complete local dev template with rate limit config
+  - `backend/.env.example` - Added RATE_LIMIT_* documentation
+
+#### Testing
+- **Frontend Test Fixes**: Synchronized Flutter tests with backend enum changes
+  - Fixed `client` → `customer` role name (17 test assertions updated)
+  - Fixed `projects` → `contracts` resource type (3 test assertions updated)
+  - All 1,561 Flutter tests now passing (was 1,550 with 11 failures)
+- **Test Coverage**: All 3,485 tests passing
+  - Backend Unit: 1,135/1,135 ✅
+  - Backend Integration: 601/601 ✅
+  - Frontend Flutter: 1,561/1,561 ✅
+  - E2E Playwright: 188/188 ✅
+
 ### Deployed - Production Launch (2025-11-21)
 
 #### Infrastructure

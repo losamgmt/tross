@@ -113,7 +113,7 @@ void main() {
         // BUT row-level security limits them to own_record_only
         expect(
           PermissionService.hasPermission(
-            'client',
+            'customer',
             ResourceType.users,
             CrudOperation.read,
           ),
@@ -156,7 +156,7 @@ void main() {
         );
         expect(
           PermissionService.hasPermission(
-            'client',
+            'customer',
             ResourceType.users,
             CrudOperation.delete,
           ),
@@ -240,7 +240,7 @@ void main() {
         );
         expect(
           PermissionService.hasPermission(
-            'client',
+            'customer',
             ResourceType.roles,
             CrudOperation.read,
           ),
@@ -288,7 +288,7 @@ void main() {
         );
         expect(
           PermissionService.hasPermission(
-            'client',
+            'customer',
             ResourceType.workOrders,
             CrudOperation.create,
           ),
@@ -302,7 +302,7 @@ void main() {
           'manager',
           'dispatcher',
           'technician',
-          'client',
+          'customer',
         ]) {
           expect(
             PermissionService.hasPermission(
@@ -354,7 +354,7 @@ void main() {
       test('client cannot update work orders', () {
         expect(
           PermissionService.hasPermission(
-            'client',
+            'customer',
             ResourceType.workOrders,
             CrudOperation.update,
           ),
@@ -400,7 +400,7 @@ void main() {
         );
         expect(
           PermissionService.hasPermission(
-            'client',
+            'customer',
             ResourceType.workOrders,
             CrudOperation.delete,
           ),
@@ -550,7 +550,7 @@ void main() {
 
     test('returns denied result with reason when permission denied', () {
       final result = PermissionService.checkPermission(
-        'client',
+        'customer',
         ResourceType.users,
         CrudOperation.delete,
       );
@@ -597,11 +597,11 @@ void main() {
       expect(PermissionService.hasMinimumRole('admin', 'manager'), true);
       expect(PermissionService.hasMinimumRole('admin', 'dispatcher'), true);
       expect(PermissionService.hasMinimumRole('admin', 'technician'), true);
-      expect(PermissionService.hasMinimumRole('admin', 'client'), true);
+      expect(PermissionService.hasMinimumRole('admin', 'customer'), true);
     });
 
     test('returns false when user role < required role', () {
-      expect(PermissionService.hasMinimumRole('client', 'admin'), false);
+      expect(PermissionService.hasMinimumRole('customer', 'admin'), false);
       expect(PermissionService.hasMinimumRole('technician', 'admin'), false);
       expect(PermissionService.hasMinimumRole('dispatcher', 'admin'), false);
       expect(PermissionService.hasMinimumRole('manager', 'admin'), false);
@@ -686,7 +686,7 @@ void main() {
 
     test('client cannot perform any operations on roles', () {
       final allowed = PermissionService.getAllowedOperations(
-        'client',
+        'customer',
         ResourceType.roles,
       );
       expect(allowed, isEmpty);
@@ -698,7 +698,7 @@ void main() {
         'manager',
         'dispatcher',
         'technician',
-        'client',
+        'customer',
       ]) {
         final allowed = PermissionService.getAllowedOperations(
           role,
@@ -740,7 +740,7 @@ void main() {
         true, // Can read
       );
       expect(
-        PermissionService.canAccessResource('client', ResourceType.workOrders),
+        PermissionService.canAccessResource('customer', ResourceType.workOrders),
         true, // Can read
       );
     });
@@ -855,7 +855,7 @@ void main() {
       );
       expect(
         PermissionService.hasPermission(
-          'client',
+          'customer',
           ResourceType.workOrders,
           CrudOperation.read,
         ),

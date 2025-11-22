@@ -293,7 +293,7 @@ void main() {
             operation.toString(),
           );
           final hasPermission = PermissionService.hasPermission(
-            'client',
+            'customer',
             resource,
             operation,
           );
@@ -412,7 +412,7 @@ void main() {
 
         for (final operation in CrudOperation.values) {
           final hasPermission = PermissionService.hasPermission(
-            'client',
+            'customer',
             resource,
             operation,
           );
@@ -420,7 +420,7 @@ void main() {
           if (!hasPermission) {
             // Found a denied permission
             final result = PermissionService.checkPermission(
-              'client',
+              'customer',
               resource,
               operation,
             );

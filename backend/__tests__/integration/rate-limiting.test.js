@@ -70,7 +70,7 @@ describe('Rate Limiting (P1-6)', () => {
       jest.clearAllMocks();
     });
 
-    test('should enforce 100 requests per 15 minutes limit', async () => {
+    test('should use environment-based rate limit configuration', async () => {
       // Verify the rate limit configuration by reading the source file
       // (Module is cached with test environment, so we check the config directly)
       const rateLimitFile = require('fs').readFileSync(
@@ -78,11 +78,18 @@ describe('Rate Limiting (P1-6)', () => {
         'utf8',
       );
 
-      // API limiter should be configured with 100 requests per 15 minutes
+      // API limiter should use environment variables with professional defaults
       const apiLimiterSection = rateLimitFile.split('const apiLimiter')[1].split('const authLimiter')[0];
       
-      expect(apiLimiterSection).toContain('windowMs: 15 * 60 * 1000');
-      expect(apiLimiterSection).toContain('max: 100');
+      // Should use RATE_LIMIT_WINDOW_MS env var
+      expect(apiLimiterSection).toContain('windowMs: RATE_LIMIT_WINDOW_MS');
+      
+      // Should use RATE_LIMIT_MAX_REQUESTS env var
+      expect(apiLimiterSection).toContain('max: RATE_LIMIT_MAX_REQUESTS');
+      
+      // Verify env var defaults are professional standards (1000 req/15min)
+      expect(rateLimitFile).toContain("process.env.RATE_LIMIT_WINDOW_MS || '900000'");
+      expect(rateLimitFile).toContain("process.env.RATE_LIMIT_MAX_REQUESTS || '1000'");
       
       // Should export actual rate limiter in production (not bypass)
       expect(rateLimitFile).toContain('isTestOrDevEnvironment ? bypassLimiter : apiLimiter');
@@ -276,17 +283,17 @@ describe('Rate Limiting (P1-6)', () => {
   });
 
   describe('Rate Limiter Configuration Validation', () => {
-    test('apiLimiter should have 15-minute window and 100 request limit', async () => {
+    test('apiLimiter should use environment variables for configuration', async () => {
       const rateLimitFile = require('fs').readFileSync(
         require('path').join(__dirname, '../../middleware/rate-limit.js'),
         'utf8',
       );
 
-      // API limiter: 100 requests per 15 minutes
+      // API limiter should use env vars (not hardcoded values)
       const apiLimiterSection = rateLimitFile.split('const apiLimiter')[1].split('const authLimiter')[0];
 
-      expect(apiLimiterSection).toContain('15 * 60 * 1000'); // 15 minutes
-      expect(apiLimiterSection).toContain('max: 100');
+      expect(apiLimiterSection).toContain('windowMs: RATE_LIMIT_WINDOW_MS');
+      expect(apiLimiterSection).toContain('max: RATE_LIMIT_MAX_REQUESTS');
     });
 
     test('authLimiter should have 15-minute window and 5 request limit', async () => {

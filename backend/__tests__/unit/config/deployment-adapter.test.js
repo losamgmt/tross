@@ -490,7 +490,7 @@ describe('Deployment Adapter', () => {
         PORT: 3001,
         BACKEND_PORT: 3001,
         RATE_LIMIT_WINDOW_MS: 900000,
-        RATE_LIMIT_MAX_REQUESTS: 100,
+        RATE_LIMIT_MAX_REQUESTS: 1000, // Professional standard (updated from 100)
         REQUEST_TIMEOUT_MS: 30000,
         DB_POOL_MIN: 2,
         DB_POOL_MAX: 10,
