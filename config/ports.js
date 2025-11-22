@@ -18,12 +18,12 @@ module.exports = {
   // VITE_PORT: 5173,     // ❌ Replaced by Flutter on 8080
   // OLD_BACKEND: 3000,   // ❌ Replaced by 3001
 
-  // URLs for convenience
+  // URLs for convenience (environment-aware for production E2E testing)
   get BACKEND_URL() {
-    return `http://localhost:${this.BACKEND_PORT}`;
+    return process.env.BACKEND_URL || `http://localhost:${this.BACKEND_PORT}`;
   },
   get FRONTEND_URL() {
-    return `http://localhost:${this.FRONTEND_PORT}`;
+    return process.env.FRONTEND_URL || `http://localhost:${this.FRONTEND_PORT}`;
   },
   get BACKEND_API_URL() {
     return `${this.BACKEND_URL}/api`;
