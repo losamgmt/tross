@@ -15,7 +15,7 @@ app.use(express.json());
 app.use('/api/customers', customersRouter);
 
 describe('Customers Routes - Relationships', () => {
-  it('should be a placeholder for future relationship endpoints', () => {
+  test('should be a placeholder for future relationship endpoints', () => {
     // When relationship endpoints are added (e.g., GET /customers/:id/work-orders),
     // tests will be added here following the users.relationships.test.js pattern
     expect(true).toBe(true);

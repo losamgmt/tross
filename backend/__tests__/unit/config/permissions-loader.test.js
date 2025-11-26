@@ -25,14 +25,14 @@ const {
 describe('Permission System - Data-Driven Tests', () => {
   
   describe('Configuration Loading', () => {
-    it('should load permissions from config file', () => {
+    test('should load permissions from config file', () => {
       const config = loadPermissions();
       expect(config).toBeDefined();
       expect(config.roles).toBeDefined();
       expect(config.resources).toBeDefined();
     });
 
-    it('should cache loaded config', () => {
+    test('should cache loaded config', () => {
       const config1 = loadPermissions();
       const config2 = loadPermissions();
       expect(config1).toBe(config2); // Same object reference
@@ -40,19 +40,19 @@ describe('Permission System - Data-Driven Tests', () => {
   });
 
   describe('Role Hierarchy', () => {
-    it('should have at least 5 roles', () => {
+    test('should have at least 5 roles', () => {
       const hierarchy = getRoleHierarchy();
       const roleCount = Object.keys(hierarchy).length;
       expect(roleCount).toBeGreaterThanOrEqual(5);
     });
 
-    it('should have unique priorities', () => {
+    test('should have unique priorities', () => {
       const priorities = Object.values(ROLE_HIERARCHY);
       const uniquePriorities = new Set(priorities);
       expect(uniquePriorities.size).toBe(priorities.length);
     });
 
-    it('should have priorities as positive integers', () => {
+    test('should have priorities as positive integers', () => {
       for (const [role, priority] of Object.entries(ROLE_HIERARCHY)) {
         expect(typeof priority).toBe('number');
         expect(priority).toBeGreaterThan(0);
@@ -60,7 +60,7 @@ describe('Permission System - Data-Driven Tests', () => {
       }
     });
 
-    it('should include standard roles', () => {
+    test('should include standard roles', () => {
       expect(ROLE_HIERARCHY).toHaveProperty('admin');
       expect(ROLE_HIERARCHY).toHaveProperty('manager');
       expect(ROLE_HIERARCHY).toHaveProperty('customer');
@@ -68,7 +68,7 @@ describe('Permission System - Data-Driven Tests', () => {
   });
 
   describe('Permission Matrix', () => {
-    it('should have permissions for core resources', () => {
+    test('should have permissions for core resources', () => {
       const matrix = getPermissionMatrix();
       expect(matrix).toHaveProperty('users');
       expect(matrix).toHaveProperty('roles');
@@ -76,7 +76,7 @@ describe('Permission System - Data-Driven Tests', () => {
       expect(matrix).toHaveProperty('audit_logs');
     });
 
-    it('should have all CRUD operations for each resource', () => {
+    test('should have all CRUD operations for each resource', () => {
       const requiredOps = ['create', 'read', 'update', 'delete'];
       
       for (const [resource, operations] of Object.entries(PERMISSIONS)) {
@@ -86,7 +86,7 @@ describe('Permission System - Data-Driven Tests', () => {
       }
     });
 
-    it('should only use valid role priorities', () => {
+    test('should only use valid role priorities', () => {
       const validPriorities = Object.values(ROLE_HIERARCHY);
       
       for (const [resource, operations] of Object.entries(PERMISSIONS)) {
@@ -98,23 +98,23 @@ describe('Permission System - Data-Driven Tests', () => {
   });
 
   describe('getRolePriority()', () => {
-    it('should return correct priority for valid roles', () => {
+    test('should return correct priority for valid roles', () => {
       expect(getRolePriority('admin')).toBe(ROLE_HIERARCHY.admin);
       expect(getRolePriority('customer')).toBe(ROLE_HIERARCHY.customer);
     });
 
-    it('should be case-insensitive', () => {
+    test('should be case-insensitive', () => {
       const adminPriority = getRolePriority('admin');
       expect(getRolePriority('ADMIN')).toBe(adminPriority);
       expect(getRolePriority('Admin')).toBe(adminPriority);
     });
 
-    it('should return null for unknown roles', () => {
+    test('should return null for unknown roles', () => {
       expect(getRolePriority('superadmin')).toBeNull();
       expect(getRolePriority('unknown')).toBeNull();
     });
 
-    it('should return null for invalid inputs', () => {
+    test('should return null for invalid inputs', () => {
       expect(getRolePriority(null)).toBeNull();
       expect(getRolePriority(undefined)).toBeNull();
       expect(getRolePriority('')).toBeNull();
@@ -123,7 +123,7 @@ describe('Permission System - Data-Driven Tests', () => {
   });
 
   describe('hasPermission()', () => {
-    it('should allow admin all permissions', () => {
+    test('should allow admin all permissions', () => {
       // Admin should be able to do everything
       for (const resource of Object.keys(PERMISSIONS)) {
         expect(hasPermission('admin', resource, 'create')).toBe(true);
@@ -133,7 +133,7 @@ describe('Permission System - Data-Driven Tests', () => {
       }
     });
 
-    it('should enforce role hierarchy (higher roles inherit lower permissions)', () => {
+    test('should enforce role hierarchy (higher roles inherit lower permissions)', () => {
       // For each resource and operation, verify hierarchy
       for (const [resource, operations] of Object.entries(PERMISSIONS)) {
         for (const [operation, minPriority] of Object.entries(operations)) {
@@ -151,7 +151,7 @@ describe('Permission System - Data-Driven Tests', () => {
       }
     });
 
-    it('should be case-insensitive for role names', () => {
+    test('should be case-insensitive for role names', () => {
       const resource = 'users';
       const operation = 'read';
       
@@ -163,20 +163,20 @@ describe('Permission System - Data-Driven Tests', () => {
       expect(result2).toBe(result3);
     });
 
-    it('should return false for unknown roles', () => {
+    test('should return false for unknown roles', () => {
       expect(hasPermission('superadmin', 'users', 'read')).toBe(false);
       expect(hasPermission('unknown', 'users', 'create')).toBe(false);
     });
 
-    it('should return false for unknown resources', () => {
+    test('should return false for unknown resources', () => {
       expect(hasPermission('admin', 'unknown_resource', 'read')).toBe(false);
     });
 
-    it('should return false for unknown operations', () => {
+    test('should return false for unknown operations', () => {
       expect(hasPermission('admin', 'users', 'unknown_op')).toBe(false);
     });
 
-    it('should return false for null/undefined inputs', () => {
+    test('should return false for null/undefined inputs', () => {
       expect(hasPermission(null, 'users', 'read')).toBe(false);
       expect(hasPermission('admin', null, 'read')).toBe(false);
       expect(hasPermission('admin', 'users', null)).toBe(false);
@@ -184,7 +184,7 @@ describe('Permission System - Data-Driven Tests', () => {
   });
 
   describe('hasMinimumRole()', () => {
-    it('should return true when user role >= required role', () => {
+    test('should return true when user role >= required role', () => {
       expect(hasMinimumRole('admin', 'admin')).toBe(true);
       expect(hasMinimumRole('admin', 'manager')).toBe(true);
       expect(hasMinimumRole('admin', 'customer')).toBe(true);
@@ -192,24 +192,24 @@ describe('Permission System - Data-Driven Tests', () => {
       expect(hasMinimumRole('manager', 'customer')).toBe(true);
     });
 
-    it('should return false when user role < required role', () => {
+    test('should return false when user role < required role', () => {
       expect(hasMinimumRole('customer', 'admin')).toBe(false);
       expect(hasMinimumRole('customer', 'manager')).toBe(false);
       expect(hasMinimumRole('manager', 'admin')).toBe(false);
     });
 
-    it('should be case-insensitive', () => {
+    test('should be case-insensitive', () => {
       expect(hasMinimumRole('ADMIN', 'manager')).toBe(true);
       expect(hasMinimumRole('admin', 'MANAGER')).toBe(true);
       expect(hasMinimumRole('Admin', 'Manager')).toBe(true);
     });
 
-    it('should return false for unknown roles', () => {
+    test('should return false for unknown roles', () => {
       expect(hasMinimumRole('superadmin', 'admin')).toBe(false);
       expect(hasMinimumRole('admin', 'superadmin')).toBe(false);
     });
 
-    it('should return false for null/undefined inputs', () => {
+    test('should return false for null/undefined inputs', () => {
       expect(hasMinimumRole(null, 'admin')).toBe(false);
       expect(hasMinimumRole('admin', null)).toBe(false);
       expect(hasMinimumRole(null, null)).toBe(false);
@@ -217,7 +217,7 @@ describe('Permission System - Data-Driven Tests', () => {
   });
 
   describe('getMinimumRole()', () => {
-    it('should return minimum role for each permission', () => {
+    test('should return minimum role for each permission', () => {
       for (const [resource, operations] of Object.entries(PERMISSIONS)) {
         for (const operation of Object.keys(operations)) {
           const minRole = getMinimumRole(resource, operation);
@@ -228,25 +228,25 @@ describe('Permission System - Data-Driven Tests', () => {
       }
     });
 
-    it('should return null for unknown resource/operation', () => {
+    test('should return null for unknown resource/operation', () => {
       expect(getMinimumRole('unknown_resource', 'read')).toBeNull();
       expect(getMinimumRole('users', 'unknown_operation')).toBeNull();
     });
   });
 
   describe('getRowLevelSecurity()', () => {
-    it('should return RLS policy for valid role/resource', () => {
+    test('should return RLS policy for valid role/resource', () => {
       // Should return a policy or null (both are valid)
       const policy = getRowLevelSecurity('client', 'users');
       expect(policy === null || typeof policy === 'string').toBe(true);
     });
 
-    it('should return null for resources without RLS', () => {
+    test('should return null for resources without RLS', () => {
       const policy = getRowLevelSecurity('admin', 'audit_logs');
       expect(policy === null || typeof policy === 'string').toBe(true);
     });
 
-    it('should be case-insensitive for role names', () => {
+    test('should be case-insensitive for role names', () => {
       const policy1 = getRowLevelSecurity('client', 'users');
       const policy2 = getRowLevelSecurity('CLIENT', 'users');
       const policy3 = getRowLevelSecurity('Client', 'users');
@@ -255,32 +255,32 @@ describe('Permission System - Data-Driven Tests', () => {
       expect(policy2).toBe(policy3);
     });
 
-    it('should return null for unknown roles', () => {
+    test('should return null for unknown roles', () => {
       expect(getRowLevelSecurity('superadmin', 'users')).toBeNull();
     });
 
-    it('should return null for unknown resources', () => {
+    test('should return null for unknown resources', () => {
       expect(getRowLevelSecurity('admin', 'unknown_resource')).toBeNull();
     });
 
-    it('should have getRLSRule alias for getRowLevelSecurity', () => {
+    test('should have getRLSRule alias for getRowLevelSecurity', () => {
       expect(getRLSRule).toBe(getRowLevelSecurity);
       expect(getRLSRule('customer', 'customers')).toBe(getRowLevelSecurity('customer', 'customers'));
     });
 
-    it('should return deny_all for technician access to contracts', () => {
+    test('should return deny_all for technician access to contracts', () => {
       // Technicians should have NO access to contracts (explicit deny_all, not null)
       expect(getRowLevelSecurity('technician', 'contracts')).toBe('deny_all');
       expect(getRLSRule('technician', 'contracts')).toBe('deny_all');
     });
 
-    it('should return "assigned_work_orders_only" for technician work_orders', () => {
+    test('should return "assigned_work_orders_only" for technician work_orders', () => {
       // Technicians should only see assigned work orders, not available ones
       expect(getRowLevelSecurity('technician', 'work_orders')).toBe('assigned_work_orders_only');
       expect(getRLSRule('technician', 'work_orders')).toBe('assigned_work_orders_only');
     });
 
-    it('should validate all RLS rules match expected patterns', () => {
+    test('should validate all RLS rules match expected patterns', () => {
       const config = loadPermissions();
       const validPatterns = [
         'own_record_only',
@@ -307,7 +307,7 @@ describe('Permission System - Data-Driven Tests', () => {
   });
 
   describe('Permission Validation', () => {
-    it('should ensure client has explicitly granted permissions only', () => {
+    test('should ensure client has explicitly granted permissions only', () => {
       const clientPriority = ROLE_HIERARCHY.client;
       
       for (const [resource, operations] of Object.entries(PERMISSIONS)) {
@@ -323,7 +323,7 @@ describe('Permission System - Data-Driven Tests', () => {
       }
     });
 
-    it('should ensure no permission gaps (all operations defined)', () => {
+    test('should ensure no permission gaps (all operations defined)', () => {
       const requiredOps = ['create', 'read', 'update', 'delete'];
       
       for (const [resource, operations] of Object.entries(PERMISSIONS)) {
@@ -336,7 +336,7 @@ describe('Permission System - Data-Driven Tests', () => {
   });
 
   describe('Data-Driven Behavior', () => {
-    it('should validate tests work regardless of permission values', () => {
+    test('should validate tests work regardless of permission values', () => {
       // This test verifies the test suite validates STRUCTURE, not VALUES
       // If config changes, tests should still pass
       

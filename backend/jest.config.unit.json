@@ -13,14 +13,31 @@
   "resetMocks": true,
   "restoreMocks": true,
   "collectCoverageFrom": [
-    "**/*.js",
+    "config/**/*.js",
+    "db/**/*.js",
+    "middleware/**/*.js",
+    "routes/**/*.js",
+    "services/**/*.js",
+    "utils/**/*.js",
+    "validators/**/*.js",
     "!**/node_modules/**",
     "!**/__tests__/**",
     "!**/coverage/**",
+    "!**/coverage-unit/**",
+    "!**/coverage-integration/**",
+    "!**/scripts/**",
     "!jest.config*.js",
     "!**/*-old.js",
     "!**/*-backup.js",
     "!**/auth0-setup.json"
+  ],
+  "coveragePathIgnorePatterns": [
+    "/node_modules/",
+    "/coverage/",
+    "/coverage-unit/",
+    "/coverage-integration/",
+    "/scripts/",
+    "/__tests__/"
   ],
   "coverageThreshold": {
     "global": {

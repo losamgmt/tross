@@ -82,15 +82,11 @@ git push origin main
 
 **Alternative: GitHub Codespaces**
 
-Don't want to install Node/Flutter/PostgreSQL locally?
-
-**Use Codespaces (cloud dev environment):**
+Don't want to install Node/Flutter/PostgreSQL locally? Use Codespaces:
 1. Go to your fork
 2. Click "Code" → "Codespaces" → "Create codespace on main"
 3. Wait 2 minutes for setup
 4. Start coding in browser!
-
-See [CODESPACES.md](CODESPACES.md) for full guide.
 
 ---
 
@@ -120,9 +116,9 @@ See [CODESPACES.md](CODESPACES.md) for full guide.
    git checkout pr-PR_NUMBER
    npm install && cd backend && npm install && cd ../frontend && flutter pub get
    ```
-4. **Run E2E tests:**
+4. **Run full test suite:**
    ```bash
-   npm run test:all  # Must pass all 3416+ tests ✅
+   npm run test:all  # All tests must pass ✅
    ```
 5. **Review code:** Check architecture, security, tests
 6. **Approve:** GitHub PR review → "Approve"

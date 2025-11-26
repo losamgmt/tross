@@ -9,6 +9,7 @@ const router = express.Router();
 const db = require('../db/connection');
 const { authenticateToken, requireMinimumRole } = require('../middleware/auth');
 const { logger } = require('../config/logger');
+const ResponseFormatter = require('../utils/response-formatter');
 
 /**
  * @openapi
@@ -108,10 +109,9 @@ router.get('/', async (req, res) => {
     });
   } catch (error) {
     logger.error('Health check failed:', error);
-    res.status(503).json({
+    // Use 503 Service Unavailable for unhealthy status
+    return ResponseFormatter.serviceUnavailable(res, error.message, {
       status: 'unhealthy',
-      timestamp: new Date().toISOString(),
-      error: error.message,
     });
   }
 });
@@ -238,16 +238,12 @@ router.get('/databases', authenticateToken, requireMinimumRole('admin'), async (
       });
     }
 
-    res.json({
+    ResponseFormatter.get(res, {
       databases,
-      timestamp: new Date().toISOString(),
     });
   } catch (error) {
     logger.error('Database health check failed:', error);
-    res.status(500).json({
-      error: 'Failed to retrieve database health',
-      message: error.message,
-    });
+    ResponseFormatter.internalError(res, error);
   }
 });
 

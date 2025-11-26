@@ -17,9 +17,9 @@
 - Audit everything
 
 ### Test-Driven Quality
-- Comprehensive coverage (1675+ tests)
-- Unit → Integration → E2E pyramid
-- Fast feedback loops (<70s full suite)
+- Comprehensive coverage across all layers
+- Unit → Integration → E2E pyramid (properly shaped)
+- Fast feedback loops
 - Tests as executable documentation
 
 ---

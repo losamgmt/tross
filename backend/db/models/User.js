@@ -1,7 +1,10 @@
 // Robust User model with error handling and validation
 const db = require('../connection');
 const { logger } = require('../../config/logger');
+const { MODEL_ERRORS } = require('../../config/constants');
 const { toSafeInteger } = require('../../validators/type-coercion');
+const { deleteWithAuditCascade } = require('../helpers/delete-helper');
+const { buildUpdateClause } = require('../helpers/update-helper');
 const PaginationService = require('../../services/pagination-service');
 const QueryBuilderService = require('../../services/query-builder-service');
 const userMetadata = require('../../config/models/user-metadata');
@@ -173,7 +176,7 @@ class User {
    */
   static async findByAuth0Id(auth0Id) {
     if (!auth0Id) {
-      throw new Error('Auth0 ID is required');
+      throw new Error(MODEL_ERRORS.USER.AUTH0_ID_REQUIRED);
     }
 
     try {
@@ -188,7 +191,7 @@ class User {
         error: error.message,
         auth0Id,
       });
-      throw new Error('Failed to find user');
+      throw new Error(MODEL_ERRORS.USER.RETRIEVAL_FAILED);
     }
   }
 
@@ -220,7 +223,7 @@ class User {
         error: error.message,
         userId: id,
       });
-      throw new Error('Failed to find user');
+      throw new Error(MODEL_ERRORS.USER.RETRIEVAL_FAILED);
     }
   }
 
@@ -240,7 +243,7 @@ class User {
     const { sub: auth0_id, email, given_name, family_name, role } = auth0Data;
 
     if (!auth0_id || !email) {
-      throw new Error('Auth0 ID and email are required');
+      throw new Error(MODEL_ERRORS.USER.AUTH0_ID_AND_EMAIL_REQUIRED);
     }
 
     try {
@@ -271,13 +274,13 @@ class User {
       });
 
       if (error.constraint === 'users_auth0_id_key') {
-        throw new Error('User already exists');
+        throw new Error(MODEL_ERRORS.USER.USER_EXISTS);
       }
       if (error.constraint === 'users_email_key') {
-        throw new Error('Email already exists');
+        throw new Error(MODEL_ERRORS.USER.EMAIL_EXISTS);
       }
 
-      throw new Error('Failed to create user');
+      throw new Error(MODEL_ERRORS.USER.CREATION_FAILED);
     }
   }
 
@@ -285,7 +288,7 @@ class User {
   // Handles account linking: if user exists by email but different auth0_id, links them
   static async findOrCreate(auth0Data) {
     if (!auth0Data?.sub) {
-      throw new Error('Invalid Auth0 data');
+      throw new Error(MODEL_ERRORS.USER.AUTH0_DATA_INVALID);
     }
 
     try {
@@ -337,7 +340,7 @@ class User {
     const sanitizedEmail = email?.trim() || null;
 
     if (!sanitizedEmail) {
-      throw new Error('Email is required');
+      throw new Error(MODEL_ERRORS.USER.EMAIL_REQUIRED);
     }
 
     try {
@@ -375,10 +378,10 @@ class User {
       logger.error('Error creating user', { error: error.message, email });
 
       if (error.constraint === 'users_email_key') {
-        throw new Error('Email already exists');
+        throw new Error(MODEL_ERRORS.USER.EMAIL_EXISTS);
       }
 
-      throw new Error('Failed to create user');
+      throw new Error(MODEL_ERRORS.USER.CREATION_FAILED);
     }
   }
 
@@ -495,7 +498,7 @@ class User {
       };
     } catch (error) {
       logger.error('Error finding all users', { error: error.message });
-      throw new Error('Failed to retrieve users');
+      throw new Error(MODEL_ERRORS.USER.RETRIEVAL_ALL_FAILED);
     }
   }
 
@@ -526,63 +529,48 @@ class User {
     const safeId = toSafeInteger(id, 'userId', { min: 1, allowNull: false });
 
     if (!updates || typeof updates !== 'object') {
-      throw new Error('Valid user ID and updates are required');
+      throw new Error(MODEL_ERRORS.USER.ID_AND_UPDATES_REQUIRED);
     }
 
     const allowedFields = ['email', 'first_name', 'last_name', 'is_active'];
-    const validUpdates = {};
 
-    // Filter only allowed fields
-    Object.keys(updates).forEach((key) => {
-      if (allowedFields.includes(key) && updates[key] !== undefined) {
-        validUpdates[key] = updates[key];
-      }
-    });
+    // Build SET clause using helper
+    const { updates: fields, values, hasUpdates } = buildUpdateClause(updates, allowedFields);
 
-    if (Object.keys(validUpdates).length === 0) {
-      throw new Error('No valid fields to update');
+    if (!hasUpdates) {
+      throw new Error(MODEL_ERRORS.USER.NO_VALID_FIELDS);
     }
 
     // Contract v2.0: No audit fields on entity
     // Audit logging happens via AuditService (handled by caller)
 
     try {
-      const fields = [];
-      const values = [];
-      let paramCount = 1;
-
-      Object.keys(validUpdates).forEach((key) => {
-        fields.push(`${key} = $${paramCount}`);
-        values.push(validUpdates[key]);
-        paramCount++;
-      });
-
-      values.push(id);
+      values.push(safeId);
 
       const query = `
         UPDATE users 
         SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP 
-        WHERE id = $${paramCount} 
+        WHERE id = $${values.length} 
         RETURNING *
       `;
 
       const result = await db.query(query, values);
 
       if (result.rows.length === 0) {
-        throw new Error('User not found');
+        throw new Error(MODEL_ERRORS.USER.NOT_FOUND);
       }
 
       // Fetch full user with role name via JOIN
       const updatedUser = await this.findById(safeId);
 
       if (!updatedUser) {
-        throw new Error('User not found after update');
+        throw new Error(MODEL_ERRORS.USER.NOT_FOUND_AFTER_UPDATE);
       }
 
       // Contract v2.0: Log is_active changes to audit_logs
-      if ('is_active' in validUpdates && context) {
+      if ('is_active' in updates && context) {
         const auditService = require('../../services/audit-service');
-        const action = validUpdates.is_active === false ? 'deactivate' : 'reactivate';
+        const action = updates.is_active === false ? 'deactivate' : 'reactivate';
 
         if (action === 'deactivate') {
           await auditService.logDeactivation(
@@ -608,10 +596,10 @@ class User {
       logger.error('Error updating user', { error: error.message, userId: id });
 
       if (error.constraint === 'users_email_key') {
-        throw new Error('Email already exists');
+        throw new Error(MODEL_ERRORS.USER.EMAIL_EXISTS);
       }
 
-      throw new Error('Failed to update user');
+      throw new Error(MODEL_ERRORS.USER.UPDATE_FAILED);
     }
   }
 
@@ -647,7 +635,7 @@ class User {
       const result = await db.query(query, [safeRoleId, safeUserId]);
 
       if (result.rows.length === 0) {
-        throw new Error('User not found');
+        throw new Error(MODEL_ERRORS.USER.NOT_FOUND);
       }
 
       // Return updated user with role
@@ -692,22 +680,23 @@ class User {
     // TYPE SAFETY: Ensure id is a valid positive integer
     const safeId = toSafeInteger(id, 'userId', { min: 1, allowNull: false });
 
-    try {
-      const query = 'DELETE FROM users WHERE id = $1 RETURNING *';
-      const result = await db.query(query, [safeId]);
+    return deleteWithAuditCascade({
+      tableName: 'users',
+      id: safeId,
+      // Custom audit cascade: Delete BOTH audit logs ABOUT user AND BY user
+      customAuditCascade: async (client, userId) => {
+        // Delete audit logs ABOUT this user (resource_type='user', resource_id=<id>)
+        await client.query(
+          'DELETE FROM audit_logs WHERE resource_type = $1 AND resource_id = $2',
+          ['user', userId],
+        );
 
-      if (result.rows.length === 0) {
-        throw new Error('User not found');
-      }
+        // Delete audit logs BY this user (actions performed by the user)
+        await client.query('DELETE FROM audit_logs WHERE user_id = $1', [userId]);
 
-      return result.rows[0];
-    } catch (error) {
-      logger.error('Error deleting user', {
-        error: error.message,
-        userId: id,
-      });
-      throw error;
-    }
+        logger.debug(`Deleted all audit logs for and by user ${userId}`);
+      },
+    });
   }
 
   /**
@@ -733,7 +722,7 @@ class User {
         error: error.message,
         userId: id,
       });
-      throw new Error('Failed to find user');
+      throw new Error(MODEL_ERRORS.USER.RETRIEVAL_FAILED);
     }
   }
 
@@ -755,7 +744,7 @@ class User {
       return result.rows;
     } catch (error) {
       logger.error('Error getting all users', { error: error.message });
-      throw new Error('Failed to retrieve users');
+      throw new Error(MODEL_ERRORS.USER.RETRIEVAL_ALL_FAILED);
     }
   }
 }

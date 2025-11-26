@@ -12,7 +12,7 @@ describe('Health Endpoints - Integration Tests', () => {
   // No DB cleanup needed - health endpoints are read-only
 
   describe('GET /api/health - Basic Health Check', () => {
-    it('should return 200 and healthy status', async () => {
+    test('should return 200 and healthy status', async () => {
       // Act
       const response = await request(app).get('/api/health');
 
@@ -25,7 +25,7 @@ describe('Health Endpoints - Integration Tests', () => {
       });
     });
 
-    it('should include uptime greater than or equal to 0', async () => {
+    test('should include uptime greater than or equal to 0', async () => {
       // Act
       const response = await request(app).get('/api/health');
 
@@ -33,7 +33,7 @@ describe('Health Endpoints - Integration Tests', () => {
       expect(response.body.uptime).toBeGreaterThanOrEqual(0);
     });
 
-    it('should have valid timestamp', async () => {
+    test('should have valid timestamp', async () => {
       // Act
       const response = await request(app).get('/api/health');
 
@@ -44,7 +44,7 @@ describe('Health Endpoints - Integration Tests', () => {
       expect(timestamp.getTime()).toBeGreaterThan(Date.now() - 5000); // Within 5 seconds
     });
 
-    it('should verify database connectivity', async () => {
+    test('should verify database connectivity', async () => {
       // Act - If this returns 200, DB is connected
       const response = await request(app).get('/api/health');
 
@@ -64,7 +64,7 @@ describe('Health Endpoints - Integration Tests', () => {
       adminToken = admin.token;
     });
 
-    it('should return 200 when database is healthy', async () => {
+    test('should return 200 when database is healthy', async () => {
       // Act
       const response = await request(app)
         .get('/api/health/databases')
@@ -73,13 +73,16 @@ describe('Health Endpoints - Integration Tests', () => {
       // Assert
       expect(response.status).toBe(200);
       expect(response.body).toMatchObject({
-        databases: expect.any(Array),
+        success: true,
+        data: expect.objectContaining({
+          databases: expect.any(Array),
+        }),
         timestamp: expect.any(String),
       });
-      expect(response.body.databases.length).toBeGreaterThan(0);
+      expect(response.body.data.databases.length).toBeGreaterThan(0);
     });
 
-    it('should return 401 without authentication', async () => {
+    test('should return 401 without authentication', async () => {
       // Act
       const response = await request(app).get('/api/health/databases');
 
@@ -87,14 +90,14 @@ describe('Health Endpoints - Integration Tests', () => {
       expect(response.status).toBe(401);
     });
 
-    it('should include database metrics', async () => {
+    test('should include database metrics', async () => {
       // Act
       const response = await request(app)
         .get('/api/health/databases')
         .set('Authorization', `Bearer ${adminToken}`);
 
       // Assert
-      const mainDb = response.body.databases[0];
+      const mainDb = response.body.data.databases[0];
       expect(mainDb).toMatchObject({
         name: expect.any(String),
         status: expect.stringMatching(/^(healthy|degraded|critical)$/),
@@ -105,25 +108,25 @@ describe('Health Endpoints - Integration Tests', () => {
       });
     });
 
-    it('should have fast response time', async () => {
+    test('should have fast response time', async () => {
       // Act
       const response = await request(app)
         .get('/api/health/databases')
         .set('Authorization', `Bearer ${adminToken}`);
 
       // Assert
-      const mainDb = response.body.databases[0];
+      const mainDb = response.body.data.databases[0];
       expect(mainDb.responseTime).toBeLessThan(1000); // Under 1 second
     });
 
-    it('should have reasonable connection usage', async () => {
+    test('should have reasonable connection usage', async () => {
       // Act
       const response = await request(app)
         .get('/api/health/databases')
         .set('Authorization', `Bearer ${adminToken}`);
 
       // Assert
-      const mainDb = response.body.databases[0];
+      const mainDb = response.body.data.databases[0];
       expect(mainDb.connectionCount).toBeGreaterThanOrEqual(0);
       expect(mainDb.maxConnections).toBeGreaterThan(0);
       expect(mainDb.connectionCount).toBeLessThanOrEqual(
@@ -131,14 +134,14 @@ describe('Health Endpoints - Integration Tests', () => {
       );
     });
 
-    it('should determine status based on metrics', async () => {
+    test('should determine status based on metrics', async () => {
       // Act
       const response = await request(app)
         .get('/api/health/databases')
         .set('Authorization', `Bearer ${adminToken}`);
 
       // Assert
-      const mainDb = response.body.databases[0];
+      const mainDb = response.body.data.databases[0];
       expect(['healthy', 'degraded', 'critical']).toContain(mainDb.status);
 
       // If degraded/critical, should have errorMessage
@@ -156,7 +159,7 @@ describe('Health Endpoints - Integration Tests', () => {
       const admin = await createTestUser('admin');
       adminToken = admin.token;
     });
-    it('should handle concurrent health checks', async () => {
+    test('should handle concurrent health checks', async () => {
       // Act - Make 10 concurrent requests
       const requests = Array(10)
         .fill(null)
@@ -171,7 +174,7 @@ describe('Health Endpoints - Integration Tests', () => {
       });
     });
 
-    it('should handle concurrent database health checks', async () => {
+    test('should handle concurrent database health checks', async () => {
       // Act - Make 5 concurrent DB health checks
       const requests = Array(5)
         .fill(null)
@@ -186,10 +189,10 @@ describe('Health Endpoints - Integration Tests', () => {
       // Assert - All should succeed
       responses.forEach((response) => {
         expect(response.status).toBe(200);
-        expect(response.body.databases).toBeInstanceOf(Array);
-        expect(response.body.databases.length).toBeGreaterThan(0);
+        expect(response.body.data.databases).toBeInstanceOf(Array);
+        expect(response.body.data.databases.length).toBeGreaterThan(0);
         expect(['healthy', 'degraded', 'critical']).toContain(
-          response.body.databases[0].status,
+          response.body.data.databases[0].status,
         );
       });
     });
@@ -204,7 +207,7 @@ describe('Health Endpoints - Integration Tests', () => {
       adminToken = admin.token;
     });
 
-    it('basic health check should respond quickly', async () => {
+    test('basic health check should respond quickly', async () => {
       // Arrange
       const start = Date.now();
 
@@ -217,7 +220,7 @@ describe('Health Endpoints - Integration Tests', () => {
       expect(duration).toBeLessThan(500); // Under 500ms
     });
 
-    it('database health check should respond within timeout', async () => {
+    test('database health check should respond within timeout', async () => {
       // Arrange
       const start = Date.now();
 
@@ -234,7 +237,7 @@ describe('Health Endpoints - Integration Tests', () => {
   });
 
   describe('Health Check - Response Format', () => {
-    it('should return proper content-type headers', async () => {
+    test('should return proper content-type headers', async () => {
       // Act
       const response = await request(app).get('/api/health');
 
@@ -242,7 +245,7 @@ describe('Health Endpoints - Integration Tests', () => {
       expect(response.headers['content-type']).toMatch(/application\/json/);
     });
 
-    it('should not expose sensitive information', async () => {
+    test('should not expose sensitive information', async () => {
       // Act
       const response = await request(app).get('/api/health');
 
@@ -254,7 +257,7 @@ describe('Health Endpoints - Integration Tests', () => {
       expect(body).not.toMatch(/token/i);
     });
 
-    it('should include all required fields', async () => {
+    test('should include all required fields', async () => {
       // Act
       const response = await request(app).get('/api/health');
 

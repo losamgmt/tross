@@ -180,6 +180,12 @@ deployment-config.json
 playwright-report/
 test-results/
 e2e-results/
+test-output*.txt
+test-results*.txt
+**/test-output*.txt
+**/integration-test-output.txt
+**/integration-failures.txt
+**/lint-output.txt
 
 # Backend logs
 backend/logs/

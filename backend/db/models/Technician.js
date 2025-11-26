@@ -1,7 +1,10 @@
 // Technician model with Entity Contract v2.0 compliance
 const db = require('../connection');
 const { logger } = require('../../config/logger');
+const { MODEL_ERRORS } = require('../../config/constants');
 const { toSafeInteger } = require('../../validators/type-coercion');
+const { deleteWithAuditCascade } = require('../helpers/delete-helper');
+const { buildUpdateClause } = require('../helpers/update-helper');
 const PaginationService = require('../../services/pagination-service');
 const QueryBuilderService = require('../../services/query-builder-service');
 const technicianMetadata = require('../../config/models/technician-metadata');
@@ -129,20 +132,20 @@ class Technician {
       return result.rows[0];
     } catch (error) {
       logger.error('Error finding technician by ID', { error: error.message, technicianId: safeId });
-      throw new Error('Failed to find technician');
+      throw new Error(MODEL_ERRORS.TECHNICIAN.RETRIEVAL_FAILED);
     }
   }
 
   static async findByLicenseNumber(licenseNumber) {
     if (!licenseNumber) {
-      throw new Error('License number is required');
+      throw new Error(MODEL_ERRORS.TECHNICIAN.LICENSE_NUMBER_REQUIRED);
     }
     try {
       const result = await db.query(this._buildQuery('WHERE t.license_number = $1'), [licenseNumber]);
       return result.rows[0] || null;
     } catch (error) {
-      logger.error('Error finding technician by license', { error: error.message, licenseNumber });
-      throw new Error('Failed to find technician');
+      logger.error('Error finding technician by license', { error: error.message });
+      throw new Error(MODEL_ERRORS.TECHNICIAN.RETRIEVAL_FAILED);
     }
   }
 
@@ -204,14 +207,14 @@ class Technician {
         rlsApplied,
       };
     } catch (error) {
-      logger.error('Error finding all technicians', { error: error.message, options });
-      throw new Error('Failed to retrieve technicians');
+      logger.error('Error retrieving technicians', { error: error.message, filters });
+      throw new Error(MODEL_ERRORS.TECHNICIAN.RETRIEVAL_ALL_FAILED);
     }
   }
 
   static async create(data) {
     if (!data.license_number) {
-      throw new Error('License number is required');
+      throw new Error(MODEL_ERRORS.TECHNICIAN.LICENSE_NUMBER_REQUIRED);
     }
     try {
       const query = `
@@ -240,45 +243,34 @@ class Technician {
         throw constraintError;
       }
       logger.error('Error creating technician', { error: error.message, data });
-      throw new Error('Failed to create technician');
+      throw new Error(MODEL_ERRORS.TECHNICIAN.CREATION_FAILED);
     }
   }
 
   static async update(id, data) {
     const safeId = toSafeInteger(id, 'Technician ID');
     if (Object.keys(data).length === 0) {
-      throw new Error('No fields to update');
+      throw new Error(MODEL_ERRORS.TECHNICIAN.NO_FIELDS_TO_UPDATE);
     }
 
     try {
+      // Build SET clause using helper
       const allowedFields = ['license_number', 'certifications', 'skills', 'hourly_rate', 'status'];
-      const updates = [];
-      const values = [];
-      let paramIndex = 1;
 
-      for (const [key, value] of Object.entries(data)) {
-        if (allowedFields.includes(key)) {
-          if (['certifications', 'skills'].includes(key) && value) {
-            updates.push(`${key} = $${paramIndex}::jsonb`);
-            values.push(JSON.stringify(value));
-          } else {
-            updates.push(`${key} = $${paramIndex}`);
-            values.push(value);
-          }
-          paramIndex++;
-        }
-      }
+      const { updates, values, hasUpdates } = buildUpdateClause(data, allowedFields, {
+        jsonbFields: ['certifications', 'skills'],
+      });
 
-      if (updates.length === 0) {
-        throw new Error('No valid fields to update');
+      if (!hasUpdates) {
+        throw new Error(MODEL_ERRORS.TECHNICIAN.NO_VALID_FIELDS);
       }
 
       values.push(safeId);
-      const query = `UPDATE technicians SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING *`;
+      const query = `UPDATE technicians SET ${updates.join(', ')} WHERE id = $${values.length} RETURNING *`;
       const result = await db.query(query, values);
 
       if (result.rows.length === 0) {
-        throw new Error('Technician not found');
+        throw new Error(MODEL_ERRORS.TECHNICIAN.NOT_FOUND);
       }
       logger.info('Technician updated', { technicianId: safeId });
       return result.rows[0];
@@ -294,53 +286,17 @@ class Technician {
         throw constraintError;
       }
       logger.error('Error updating technician', { error: error.message, technicianId: safeId });
-      throw new Error('Failed to update technician');
-    }
-  }
-
-  static async deactivate(id) {
-    const safeId = toSafeInteger(id, 'Technician ID');
-    try {
-      const result = await db.query('UPDATE technicians SET is_active = false WHERE id = $1 RETURNING *', [safeId]);
-      if (result.rows.length === 0) {
-        throw new Error('Technician not found');
-      }
-      logger.info('Technician deactivated', { technicianId: safeId });
-      return result.rows[0];
-    } catch (error) {
-      logger.error('Error deactivating technician', { error: error.message, technicianId: safeId });
-      throw new Error('Failed to deactivate technician');
-    }
-  }
-
-  static async reactivate(id) {
-    const safeId = toSafeInteger(id, 'Technician ID');
-    try {
-      const result = await db.query('UPDATE technicians SET is_active = true WHERE id = $1 RETURNING *', [safeId]);
-      if (result.rows.length === 0) {
-        throw new Error('Technician not found');
-      }
-      logger.info('Technician reactivated', { technicianId: safeId });
-      return result.rows[0];
-    } catch (error) {
-      logger.error('Error reactivating technician', { error: error.message, technicianId: safeId });
-      throw new Error('Failed to reactivate technician');
+      throw new Error(MODEL_ERRORS.TECHNICIAN.UPDATE_FAILED);
     }
   }
 
   static async delete(id) {
     const safeId = toSafeInteger(id, 'Technician ID');
-    try {
-      const result = await db.query('DELETE FROM technicians WHERE id = $1 RETURNING *', [safeId]);
-      if (result.rows.length === 0) {
-        throw new Error('Technician not found');
-      }
-      logger.warn('Technician permanently deleted', { technicianId: safeId });
-      return result.rows[0];
-    } catch (error) {
-      logger.error('Error deleting technician', { error: error.message, technicianId: safeId });
-      throw new Error('Failed to delete technician');
-    }
+
+    return deleteWithAuditCascade({
+      tableName: 'technicians',
+      id: safeId,
+    });
   }
 }
 

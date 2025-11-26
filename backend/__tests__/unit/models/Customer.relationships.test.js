@@ -13,7 +13,7 @@ jest.mock('../../../db/connection', () => ({
 const Customer = require('../../../db/models/Customer');
 
 describe('Customer Model - Relationships', () => {
-  it('should be a placeholder for future relationship methods', () => {
+  test('should be a placeholder for future relationship methods', () => {
     // When relationship methods are added (e.g., Customer.getWorkOrders()),
     // tests will be added here following the User.relationships.test.js pattern
     expect(Customer).toBeDefined();

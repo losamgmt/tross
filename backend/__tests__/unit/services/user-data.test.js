@@ -24,7 +24,7 @@ describe('UserDataService', () => {
   });
 
   describe('getAllUsers', () => {
-    it('should return test users in config mode', async () => {
+    test('should return test users in config mode', async () => {
       // Arrange
       process.env.USE_TEST_AUTH = 'true';
       process.env.NODE_ENV = 'development';
@@ -41,7 +41,7 @@ describe('UserDataService', () => {
       expect(users[0].is_active).toBe(true);
     });
 
-    it('should query database in production mode', async () => {
+    test('should query database in production mode', async () => {
       // Arrange
       process.env.USE_TEST_AUTH = 'false';
       process.env.NODE_ENV = 'production';
@@ -59,7 +59,7 @@ describe('UserDataService', () => {
   });
 
   describe('getUserByAuth0Id', () => {
-    it('should find test user by auth0_id in config mode', async () => {
+    test('should find test user by auth0_id in config mode', async () => {
       // Arrange
       process.env.USE_TEST_AUTH = 'true';
       process.env.NODE_ENV = 'development';
@@ -76,7 +76,7 @@ describe('UserDataService', () => {
       expect(user.role).toBe(testUser.role);
     });
 
-    it('should return null for unknown auth0_id in config mode', async () => {
+    test('should return null for unknown auth0_id in config mode', async () => {
       // Arrange
       process.env.USE_TEST_AUTH = 'true';
       process.env.NODE_ENV = 'development';
@@ -89,7 +89,7 @@ describe('UserDataService', () => {
       expect(user).toBeNull();
     });
 
-    it('should query database by auth0_id in production mode', async () => {
+    test('should query database by auth0_id in production mode', async () => {
       // Arrange
       process.env.USE_TEST_AUTH = 'false';
       process.env.NODE_ENV = 'production';
@@ -107,7 +107,7 @@ describe('UserDataService', () => {
   });
 
   describe('findOrCreateUser', () => {
-    it('should return existing test user in config mode', async () => {
+    test('should return existing test user in config mode', async () => {
       // Arrange
       process.env.USE_TEST_AUTH = 'true';
       process.env.NODE_ENV = 'development';
@@ -123,7 +123,7 @@ describe('UserDataService', () => {
       expect(user.auth0_id).toBe(testUser.auth0_id);
     });
 
-    it('should call User.findOrCreate in production mode', async () => {
+    test('should call User.findOrCreate in production mode', async () => {
       // Arrange
       process.env.USE_TEST_AUTH = 'false';
       process.env.NODE_ENV = 'production';
@@ -142,7 +142,7 @@ describe('UserDataService', () => {
   });
 
   describe('isConfigMode', () => {
-    it('should return true when USE_TEST_AUTH=true and NODE_ENV=development', () => {
+    test('should return true when USE_TEST_AUTH=true and NODE_ENV=development', () => {
       // Arrange
       process.env.USE_TEST_AUTH = 'true';
       process.env.NODE_ENV = 'development';
@@ -152,7 +152,7 @@ describe('UserDataService', () => {
       expect(service.isConfigMode()).toBe(true);
     });
 
-    it('should return false in production', () => {
+    test('should return false in production', () => {
       // Arrange
       process.env.USE_TEST_AUTH = 'false';
       process.env.NODE_ENV = 'production';
@@ -162,7 +162,7 @@ describe('UserDataService', () => {
       expect(service.isConfigMode()).toBe(false);
     });
 
-    it('should return false when USE_TEST_AUTH=false even in development', () => {
+    test('should return false when USE_TEST_AUTH=false even in development', () => {
       // Arrange
       process.env.USE_TEST_AUTH = 'false';
       process.env.NODE_ENV = 'development';

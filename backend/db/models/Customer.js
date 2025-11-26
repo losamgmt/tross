@@ -1,7 +1,10 @@
 // Customer model with Entity Contract v2.0 compliance
 const db = require('../connection');
 const { logger } = require('../../config/logger');
+const { MODEL_ERRORS } = require('../../config/constants');
 const { toSafeInteger } = require('../../validators/type-coercion');
+const { deleteWithAuditCascade } = require('../helpers/delete-helper');
+const { buildUpdateClause } = require('../helpers/update-helper');
 const PaginationService = require('../../services/pagination-service');
 const QueryBuilderService = require('../../services/query-builder-service');
 const customerMetadata = require('../../config/models/customer-metadata');
@@ -156,7 +159,7 @@ class Customer {
         error: error.message,
         customerId: safeId,
       });
-      throw new Error('Failed to find customer');
+      throw new Error(MODEL_ERRORS.CUSTOMER.RETRIEVAL_FAILED);
     }
   }
 
@@ -168,7 +171,7 @@ class Customer {
    */
   static async findByEmail(email) {
     if (!email) {
-      throw new Error('Email is required');
+      throw new Error(MODEL_ERRORS.CUSTOMER.EMAIL_REQUIRED);
     }
 
     try {
@@ -180,7 +183,7 @@ class Customer {
         error: error.message,
         email,
       });
-      throw new Error('Failed to find customer');
+      throw new Error(MODEL_ERRORS.CUSTOMER.RETRIEVAL_FAILED);
     }
   }
 
@@ -285,7 +288,7 @@ class Customer {
         limit: options.limit,
         search: options.search,
       });
-      throw new Error('Failed to retrieve customers');
+      throw new Error(MODEL_ERRORS.CUSTOMER.RETRIEVAL_ALL_FAILED);
     }
   }
 
@@ -304,7 +307,7 @@ class Customer {
    */
   static async create(data) {
     if (!data.email) {
-      throw new Error('Email is required');
+      throw new Error(MODEL_ERRORS.CUSTOMER.EMAIL_REQUIRED);
     }
 
     try {
@@ -338,7 +341,7 @@ class Customer {
         error: error.message,
         data,
       });
-      throw new Error('Failed to create customer');
+      throw new Error(MODEL_ERRORS.CUSTOMER.CREATION_FAILED);
     }
   }
 
@@ -354,11 +357,11 @@ class Customer {
     const safeId = toSafeInteger(id, 'Customer ID');
 
     if (Object.keys(data).length === 0) {
-      throw new Error('No fields to update');
+      throw new Error(MODEL_ERRORS.CUSTOMER.NO_FIELDS_TO_UPDATE);
     }
 
     try {
-      // Build SET clause dynamically
+      // Build SET clause using helper
       const allowedFields = [
         'email',
         'phone',
@@ -367,132 +370,46 @@ class Customer {
         'service_address',
         'status',
       ];
-      const updates = [];
-      const values = [];
-      let paramIndex = 1;
 
-      for (const [key, value] of Object.entries(data)) {
-        if (allowedFields.includes(key)) {
-          if (key.includes('_address') && value) {
-            updates.push(`${key} = $${paramIndex}::jsonb`);
-            values.push(JSON.stringify(value));
-          } else {
-            updates.push(`${key} = $${paramIndex}`);
-            // Trim string values for email and company_name
-            if ((key === 'email' || key === 'company_name') && typeof value === 'string') {
-              values.push(value.trim());
-            } else {
-              values.push(value);
-            }
-          }
-          paramIndex++;
-        }
-      }
+      const { updates, values, hasUpdates } = buildUpdateClause(data, allowedFields, {
+        jsonbFields: ['billing_address', 'service_address'],
+        trimFields: ['email', 'company_name'],
+      });
 
-      if (updates.length === 0) {
-        throw new Error('No valid fields to update');
+      if (!hasUpdates) {
+        throw new Error(MODEL_ERRORS.CUSTOMER.NO_VALID_FIELDS);
       }
 
       values.push(safeId);
       const query = `
         UPDATE customers
         SET ${updates.join(', ')}
-        WHERE id = $${paramIndex}
+        WHERE id = $${values.length}
         RETURNING *
       `;
 
       const result = await db.query(query, values);
 
       if (result.rows.length === 0) {
-        throw new Error('Customer not found');
+        throw new Error(MODEL_ERRORS.CUSTOMER.NOT_FOUND);
       }
 
       logger.info('Customer updated', { customerId: safeId });
       return result.rows[0];
     } catch (error) {
       if (error.code === '23505') {
-        throw new Error('Customer with this email already exists');
+        throw new Error(MODEL_ERRORS.CUSTOMER.EMAIL_EXISTS);
       }
       logger.error('Error updating customer', {
         error: error.message,
         customerId: safeId,
       });
-      throw new Error('Failed to update customer');
-    }
-  }
-
-  /**
-   * Soft delete customer (set is_active = false)
-   * Entity Contract v2.0: Uses is_active for soft deletes
-   *
-   * @param {number|string} id - Customer ID
-   * @returns {Promise<Object>} Deactivated customer
-   */
-  static async deactivate(id) {
-    const safeId = toSafeInteger(id, 'Customer ID');
-
-    try {
-      const query = `
-        UPDATE customers
-        SET is_active = false
-        WHERE id = $1
-        RETURNING *
-      `;
-
-      const result = await db.query(query, [safeId]);
-
-      if (result.rows.length === 0) {
-        throw new Error('Customer not found');
-      }
-
-      logger.info('Customer deactivated', { customerId: safeId });
-      return result.rows[0];
-    } catch (error) {
-      logger.error('Error deactivating customer', {
-        error: error.message,
-        customerId: safeId,
-      });
-      throw new Error('Failed to deactivate customer');
-    }
-  }
-
-  /**
-   * Reactivate customer (set is_active = true)
-   *
-   * @param {number|string} id - Customer ID
-   * @returns {Promise<Object>} Reactivated customer
-   */
-  static async reactivate(id) {
-    const safeId = toSafeInteger(id, 'Customer ID');
-
-    try {
-      const query = `
-        UPDATE customers
-        SET is_active = true
-        WHERE id = $1
-        RETURNING *
-      `;
-
-      const result = await db.query(query, [safeId]);
-
-      if (result.rows.length === 0) {
-        throw new Error('Customer not found');
-      }
-
-      logger.info('Customer reactivated', { customerId: safeId });
-      return result.rows[0];
-    } catch (error) {
-      logger.error('Error reactivating customer', {
-        error: error.message,
-        customerId: safeId,
-      });
-      throw new Error('Failed to reactivate customer');
+      throw new Error(MODEL_ERRORS.CUSTOMER.UPDATE_FAILED);
     }
   }
 
   /**
    * Hard delete customer (permanent removal)
-   * WARNING: This is irreversible. Use deactivate() instead for soft deletes.
    *
    * @param {number|string} id - Customer ID
    * @returns {Promise<Object>} Deleted customer
@@ -500,28 +417,10 @@ class Customer {
   static async delete(id) {
     const safeId = toSafeInteger(id, 'Customer ID');
 
-    try {
-      const query = `
-        DELETE FROM customers
-        WHERE id = $1
-        RETURNING *
-      `;
-
-      const result = await db.query(query, [safeId]);
-
-      if (result.rows.length === 0) {
-        throw new Error('Customer not found');
-      }
-
-      logger.warn('Customer permanently deleted', { customerId: safeId });
-      return result.rows[0];
-    } catch (error) {
-      logger.error('Error deleting customer', {
-        error: error.message,
-        customerId: safeId,
-      });
-      throw new Error('Failed to delete customer');
-    }
+    return deleteWithAuditCascade({
+      tableName: 'customers',
+      id: safeId,
+    });
   }
 }
 

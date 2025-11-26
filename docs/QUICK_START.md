@@ -92,20 +92,13 @@ flutter run -d chrome
 ## Development Authentication
 
 ### Dev Mode (No Auth0 Required)
-Backend automatically enables dev mode when `AUTH0_DOMAIN` is not configured.
+Backend dev auth is enabled when `NODE_ENV=development`.
 
-**Test Users:** See `backend/config/test-users.js`
-- Admin: `admin@dev.local`
-- Manager: `manager@dev.local`
-- Technician: `tech@dev.local`
-- Customer: `customer@dev.local`
+**Available Roles:** admin, manager, dispatcher, technician, customer
 
-**Login:**
+**Get Dev Token:**
 ```bash
-POST /api/dev-auth/login
-{
-  "email": "admin@dev.local"
-}
+GET /api/dev/token?role=admin
 ```
 
 ### Production Mode (Auth0)

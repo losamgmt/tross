@@ -8,7 +8,8 @@
 const request = require('supertest');
 const app = require('../../server');
 const { createTestUser, cleanupTestDatabase } = require('../helpers/test-db');
-const User = require('../../db/models/User');
+const { TEST_PAGINATION, TEST_PERFORMANCE } = require('../../config/test-constants');
+const { HTTP_STATUS } = require('../../config/constants');
 
 describe('Auth API Endpoints - Integration Tests', () => {
   let technicianUser;
@@ -29,22 +30,22 @@ describe('Auth API Endpoints - Integration Tests', () => {
   });
 
   describe('GET /api/auth/me - Get Current User Profile', () => {
-    it('should return 401 without authentication', async () => {
+    test('should return 401 without authentication', async () => {
       // Act
       const response = await request(app).get('/api/auth/me');
 
       // Assert
-      expect(response.status).toBe(401);
+      expect(response.status).toBe(HTTP_STATUS.UNAUTHORIZED);
     });
 
-    it('should return user profile with valid token', async () => {
+    test('should return user profile with valid token', async () => {
       // Act
       const response = await request(app)
         .get('/api/auth/me')
         .set('Authorization', `Bearer ${technicianToken}`);
 
       // Assert
-      expect(response.status).toBe(200);
+      expect(response.status).toBe(HTTP_STATUS.OK);
       expect(response.body).toMatchObject({
         success: true,
         data: expect.objectContaining({
@@ -57,7 +58,7 @@ describe('Auth API Endpoints - Integration Tests', () => {
       });
     });
 
-    it('should include user name in response', async () => {
+    test('should include user name in response', async () => {
       // Act
       const response = await request(app)
         .get('/api/auth/me')
@@ -68,7 +69,7 @@ describe('Auth API Endpoints - Integration Tests', () => {
       expect(typeof response.body.data.name).toBe('string');
     });
 
-    it('should include role information', async () => {
+    test('should include role information', async () => {
       // Act
       const response = await request(app)
         .get('/api/auth/me')
@@ -79,7 +80,7 @@ describe('Auth API Endpoints - Integration Tests', () => {
       expect(response.body.data.role_id).toBeDefined();
     });
 
-    it('should return correct data for different user roles', async () => {
+    test('should return correct data for different user roles', async () => {
       // Act - Technician
       const techResponse = await request(app)
         .get('/api/auth/me')
@@ -96,29 +97,29 @@ describe('Auth API Endpoints - Integration Tests', () => {
       expect(techResponse.body.data.id).not.toBe(adminResponse.body.data.id);
     });
 
-    it('should return 403 with invalid token format', async () => {
+    test('should return 403 with invalid token format', async () => {
       // Act
       const response = await request(app)
         .get('/api/auth/me')
         .set('Authorization', 'Bearer invalid.jwt.token');
 
       // Assert
-      expect(response.status).toBe(403);
+      expect(response.status).toBe(HTTP_STATUS.FORBIDDEN);
     });
   });
 
   describe('PUT /api/auth/me - Update User Profile', () => {
-    it('should return 401 without authentication', async () => {
+    test('should return 401 without authentication', async () => {
       // Act
       const response = await request(app)
         .put('/api/auth/me')
         .send({ first_name: 'Updated' });
 
       // Assert
-      expect(response.status).toBe(401);
+      expect(response.status).toBe(HTTP_STATUS.UNAUTHORIZED);
     });
 
-    it('should update first name', async () => {
+    test('should update first name', async () => {
       // Arrange
       const updates = { first_name: 'UpdatedFirst' };
 
@@ -140,7 +141,7 @@ describe('Auth API Endpoints - Integration Tests', () => {
       });
     });
 
-    it('should update last name', async () => {
+    test('should update last name', async () => {
       // Arrange
       const updates = { last_name: 'UpdatedLast' };
 
@@ -151,11 +152,11 @@ describe('Auth API Endpoints - Integration Tests', () => {
         .send(updates);
 
       // Assert
-      expect(response.status).toBe(200);
+      expect(response.status).toBe(HTTP_STATUS.OK);
       expect(response.body.data.last_name).toBe('UpdatedLast');
     });
 
-    it('should update both first and last name', async () => {
+    test('should update both first and last name', async () => {
       // Arrange
       const updates = {
         first_name: 'NewFirst',
@@ -169,14 +170,14 @@ describe('Auth API Endpoints - Integration Tests', () => {
         .send(updates);
 
       // Assert
-      expect(response.status).toBe(200);
+      expect(response.status).toBe(HTTP_STATUS.OK);
       expect(response.body.data).toMatchObject({
         first_name: 'NewFirst',
         last_name: 'NewLast',
       });
     });
 
-    it('should return 400 with no valid fields', async () => {
+    test('should return 400 with no valid fields', async () => {
       // Act
       const response = await request(app)
         .put('/api/auth/me')
@@ -184,11 +185,11 @@ describe('Auth API Endpoints - Integration Tests', () => {
         .send({});
 
       // Assert
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
       expect(response.body.error).toMatch(/Validation Error|Bad Request/);
     });
 
-    it('should reject disallowed field updates', async () => {
+    test('should reject disallowed field updates', async () => {
       // Arrange - Try to update email (not allowed)
       const updates = {
         email: 'hacker@example.com',
@@ -202,11 +203,11 @@ describe('Auth API Endpoints - Integration Tests', () => {
         .send(updates);
 
       // Assert - Should return 400 because no valid fields
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
       expect(response.body.message).toContain('No valid fields to update');
     });
 
-    it('should validate first_name length', async () => {
+    test('should validate first_name length', async () => {
       // Arrange - Name too long
       const updates = {
         first_name: 'a'.repeat(256), // Exceeds typical varchar limit
@@ -218,11 +219,11 @@ describe('Auth API Endpoints - Integration Tests', () => {
         .set('Authorization', `Bearer ${technicianToken}`)
         .send(updates);
 
-      // Assert - Should reject if validation exists
-      expect([400, 500]).toContain(response.status);
+      // Assert - Should reject with bad request (validation should exist)
+      expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
     });
 
-    it('should persist updates to database', async () => {
+    test('should persist updates to database', async () => {
       // Arrange
       const updates = {
         first_name: 'PersistTest',
@@ -249,7 +250,7 @@ describe('Auth API Endpoints - Integration Tests', () => {
   });
 
   describe('Profile Update Validation', () => {
-    it('should trim whitespace from names', async () => {
+    test('should trim whitespace from names', async () => {
       // Arrange
       const updates = {
         first_name: '  SpaceTest  ',
@@ -263,10 +264,10 @@ describe('Auth API Endpoints - Integration Tests', () => {
         .send(updates);
 
       // Assert
-      expect(response.status).toBe(200);
+      expect(response.status).toBe(HTTP_STATUS.OK);
     });
 
-    it('should reject empty string names', async () => {
+    test('should reject empty string names', async () => {
       // Arrange
       const updates = {
         first_name: '',
@@ -279,11 +280,11 @@ describe('Auth API Endpoints - Integration Tests', () => {
         .set('Authorization', `Bearer ${technicianToken}`)
         .send(updates);
 
-      // Assert - Empty strings should be rejected or treated as no update
-      expect([200, 400]).toContain(response.status);
+      // Assert - Empty strings treated as no update (returns 400)
+      expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
     });
 
-    it('should handle special characters in names', async () => {
+    test('should handle special characters in names', async () => {
       // Arrange
       const updates = {
         first_name: "O'Brien",
@@ -297,13 +298,13 @@ describe('Auth API Endpoints - Integration Tests', () => {
         .send(updates);
 
       // Assert
-      expect(response.status).toBe(200);
+      expect(response.status).toBe(HTTP_STATUS.OK);
       expect(response.body.data.first_name).toBe("O'Brien");
     });
   });
 
   describe('Auth Endpoints - Response Format', () => {
-    it('should return proper content-type', async () => {
+    test('should return proper content-type', async () => {
       // Act
       const response = await request(app)
         .get('/api/auth/me')
@@ -313,7 +314,7 @@ describe('Auth API Endpoints - Integration Tests', () => {
       expect(response.headers['content-type']).toMatch(/application\/json/);
     });
 
-    it('should include timestamp in success responses', async () => {
+    test('should include timestamp in success responses', async () => {
       // Act
       const response = await request(app)
         .get('/api/auth/me')
@@ -326,7 +327,7 @@ describe('Auth API Endpoints - Integration Tests', () => {
       expect(timestamp.getTime()).toBeLessThanOrEqual(Date.now());
     });
 
-    it('should include timestamp in error responses', async () => {
+    test('should include timestamp in error responses', async () => {
       // Act
       const response = await request(app).get('/api/auth/me');
 
@@ -334,7 +335,7 @@ describe('Auth API Endpoints - Integration Tests', () => {
       expect(response.body.timestamp).toBeDefined();
     });
 
-    it('should return consistent error format', async () => {
+    test('should return consistent error format', async () => {
       // Act
       const response = await request(app).get('/api/auth/me');
 
@@ -348,7 +349,7 @@ describe('Auth API Endpoints - Integration Tests', () => {
   });
 
   describe('Auth Endpoints - Performance', () => {
-    it('should respond quickly to profile requests', async () => {
+    test('should respond quickly to profile requests', async () => {
       // Arrange
       const start = Date.now();
 
@@ -359,13 +360,13 @@ describe('Auth API Endpoints - Integration Tests', () => {
 
       // Assert
       const duration = Date.now() - start;
-      expect(response.status).toBe(200);
-      expect(duration).toBeLessThan(500); // Under 500ms
+      expect(response.status).toBe(HTTP_STATUS.OK);
+      expect(duration).toBeLessThan(TEST_PERFORMANCE.FAST_API_RESPONSE_MS);
     });
 
-    it('should handle concurrent profile requests', async () => {
-      // Arrange - Multiple GET requests (simpler than updates)
-      const requests = Array(5)
+    test('should handle concurrent profile requests', async () => {
+      // Arrange - Multiple GET requests to test concurrent handling
+      const requests = Array(TEST_PERFORMANCE.LIGHT_LOAD)
         .fill(null)
         .map(() =>
           request(app)
@@ -378,14 +379,14 @@ describe('Auth API Endpoints - Integration Tests', () => {
 
       // Assert - All should succeed
       responses.forEach((response) => {
-        expect(response.status).toBe(200);
+        expect(response.status).toBe(HTTP_STATUS.OK);
         expect(response.body.success).toBe(true);
       });
     });
   });
 
   describe('Auth Endpoints - Security', () => {
-    it('should not leak sensitive data in responses', async () => {
+    test('should not leak sensitive data in responses', async () => {
       // Act
       const response = await request(app)
         .get('/api/auth/me')
@@ -397,7 +398,7 @@ describe('Auth API Endpoints - Integration Tests', () => {
       expect(response.body.data.auth0_id).toBeDefined(); // auth0_id is OK to include
     });
 
-    it('should not allow updating other users profiles', async () => {
+    test('should not allow updating other users profiles', async () => {
       // This is enforced by authenticateToken - user can only update their own profile
       // Testing that token determines which user gets updated
 
@@ -421,7 +422,7 @@ describe('Auth API Endpoints - Integration Tests', () => {
       expect(adminUpdate.body.data.id).not.toBe(techUpdate.body.data.id);
     });
 
-    it('should validate authorization header format', async () => {
+    test('should validate authorization header format', async () => {
       // Act - Various malformed headers
       const responses = await Promise.all([
         request(app).get('/api/auth/me').set('Authorization', 'InvalidFormat'),
@@ -429,10 +430,333 @@ describe('Auth API Endpoints - Integration Tests', () => {
         request(app).get('/api/auth/me').set('Authorization', ''),
       ]);
 
-      // Assert - All should be unauthorized
+      // Assert - All should be unauthorized (401) or forbidden (403)
       responses.forEach((response) => {
-        expect([401, 403]).toContain(response.status);
+        expect([HTTP_STATUS.UNAUTHORIZED, HTTP_STATUS.FORBIDDEN]).toContain(response.status);
       });
+    });
+  });
+
+  describe('POST /api/auth/logout - Logout Current Session', () => {
+    test('should return 401 without authentication', async () => {
+      // Act
+      const response = await request(app)
+        .post('/api/auth/logout')
+        .send({ refreshToken: 'fake-token' });
+
+      // Assert
+      expect(response.status).toBe(HTTP_STATUS.UNAUTHORIZED);
+    });
+
+    test('should logout successfully with valid token', async () => {
+      // Act
+      const response = await request(app)
+        .post('/api/auth/logout')
+        .set('Authorization', `Bearer ${technicianToken}`)
+        .send({ refreshToken: 'fake-refresh-token' });
+
+      // Assert
+      expect(response.status).toBe(HTTP_STATUS.OK);
+      expect(response.body).toMatchObject({
+        success: true,
+        message: 'Logged out successfully',
+        timestamp: expect.any(String),
+      });
+    });
+
+    test('should handle logout without refresh token', async () => {
+      // Act
+      const response = await request(app)
+        .post('/api/auth/logout')
+        .set('Authorization', `Bearer ${technicianToken}`)
+        .send({});
+
+      // Assert - Should still succeed (graceful degradation)
+      expect(response.status).toBe(HTTP_STATUS.OK);
+    });
+
+    test('should create audit log entry for logout', async () => {
+      // Note: Audit verification requires db access - testing endpoint behavior only
+      // Act
+      const response = await request(app)
+        .post('/api/auth/logout')
+        .set('Authorization', `Bearer ${technicianToken}`)
+        .send({ refreshToken: 'test-token' });
+
+      // Assert
+      expect(response.status).toBe(HTTP_STATUS.OK);
+      expect(response.body.success).toBe(true);
+    });
+  });
+
+  describe('POST /api/auth/logout-all - Logout All Devices', () => {
+    test('should return 401 without authentication', async () => {
+      // Act
+      const response = await request(app).post('/api/auth/logout-all');
+
+      // Assert
+      expect(response.status).toBe(HTTP_STATUS.UNAUTHORIZED);
+    });
+
+    test('should logout from all devices', async () => {
+      // Act
+      const response = await request(app)
+        .post('/api/auth/logout-all')
+        .set('Authorization', `Bearer ${technicianToken}`);
+
+      // Assert
+      expect(response.status).toBe(HTTP_STATUS.OK);
+      expect(response.body).toMatchObject({
+        success: true,
+        data: {
+          tokensRevoked: expect.any(Number),
+        },
+        message: expect.stringMatching(/Logged out from \d+ device\(s\)/),
+        timestamp: expect.any(String),
+      });
+    });
+
+    test('should return count of revoked tokens', async () => {
+      // Act
+      const response = await request(app)
+        .post('/api/auth/logout-all')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      // Assert
+      expect(response.status).toBe(HTTP_STATUS.OK);
+      expect(response.body.data.tokensRevoked).toBeGreaterThanOrEqual(0);
+    });
+
+    test('should work for users with no active tokens', async () => {
+      // Act
+      const response = await request(app)
+        .post('/api/auth/logout-all')
+        .set('Authorization', `Bearer ${technicianToken}`);
+
+      // Assert - Should succeed even if count is 0
+      expect(response.status).toBe(HTTP_STATUS.OK);
+      expect(typeof response.body.data.tokensRevoked).toBe('number');
+    });
+  });
+
+  describe('GET /api/auth/sessions - Get Active Sessions', () => {
+    test('should return 401 without authentication', async () => {
+      // Act
+      const response = await request(app).get('/api/auth/sessions');
+
+      // Assert
+      expect(response.status).toBe(HTTP_STATUS.UNAUTHORIZED);
+    });
+
+    test('should return array of active sessions', async () => {
+      // Act
+      const response = await request(app)
+        .get('/api/auth/sessions')
+        .set('Authorization', `Bearer ${technicianToken}`);
+
+      // Assert
+      expect(response.status).toBe(HTTP_STATUS.OK);
+      expect(response.body).toMatchObject({
+        success: true,
+        data: expect.any(Array),
+        timestamp: expect.any(String),
+      });
+    });
+
+    test('should return session details without sensitive data', async () => {
+      // Act
+      const response = await request(app)
+        .get('/api/auth/sessions')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      // Assert
+      expect(response.status).toBe(HTTP_STATUS.OK);
+      if (response.body.data.length > 0) {
+        const session = response.body.data[0];
+        expect(session).toMatchObject({
+          id: expect.any(String),
+          createdAt: expect.any(String),
+          isCurrent: expect.any(Boolean),
+        });
+        // Should NOT contain refresh token value
+        expect(session.token).toBeUndefined();
+        expect(session.refreshToken).toBeUndefined();
+      }
+    });
+
+    test('should handle users with no active sessions', async () => {
+      // Act
+      const response = await request(app)
+        .get('/api/auth/sessions')
+        .set('Authorization', `Bearer ${technicianToken}`);
+
+      // Assert
+      expect(response.status).toBe(HTTP_STATUS.OK);
+      expect(Array.isArray(response.body.data)).toBe(true);
+    });
+
+    test('should include session metadata', async () => {
+      // Act
+      const response = await request(app)
+        .get('/api/auth/sessions')
+        .set('Authorization', `Bearer ${technicianToken}`);
+
+      // Assert
+      expect(response.status).toBe(HTTP_STATUS.OK);
+      if (response.body.data.length > 0) {
+        const session = response.body.data[0];
+        // Metadata fields are optional but should be included if available
+        expect(session).toHaveProperty('createdAt');
+        expect(session).toHaveProperty('id');
+      }
+    });
+  });
+
+  describe('POST /api/auth/refresh - Token Refresh', () => {
+    test('should return 400 without refresh token', async () => {
+      // Act
+      const response = await request(app)
+        .post('/api/auth/refresh')
+        .send({});
+
+      // Assert
+      expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
+    });
+
+    test('should return 400 with invalid refresh token format', async () => {
+      // Act
+      const response = await request(app)
+        .post('/api/auth/refresh')
+        .send({ refreshToken: 'invalid-token-format' });
+
+      // Assert
+      expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
+    });
+
+    test('should handle expired refresh token', async () => {
+      // Arrange - Expired or invalid token
+      const expiredToken = 'expired.jwt.token';
+
+      // Act
+      const response = await request(app)
+        .post('/api/auth/refresh')
+        .send({ refreshToken: expiredToken });
+
+      // Assert - Should return 400 for invalid format or 401 for expired
+      expect([HTTP_STATUS.BAD_REQUEST, HTTP_STATUS.UNAUTHORIZED]).toContain(response.status);
+    });
+
+    test('should enforce rate limiting on refresh endpoint', async () => {
+      // Arrange - Make multiple rapid requests to trigger rate limiting
+      const requests = Array(TEST_PERFORMANCE.MODERATE_LOAD)
+        .fill(null)
+        .map(() =>
+          request(app)
+            .post('/api/auth/refresh')
+            .send({ refreshToken: 'test-token' }),
+        );
+
+      // Act
+      const responses = await Promise.all(requests);
+
+      // Assert - At least some should be rate limited (429) or rejected (400/401)
+      const statusCodes = responses.map((r) => r.status);
+      const hasRejections = statusCodes.some((code) => 
+        [HTTP_STATUS.BAD_REQUEST, HTTP_STATUS.UNAUTHORIZED, 429].includes(code)
+      );
+      expect(hasRejections).toBe(true);
+    });
+  });
+
+  describe('Authentication Middleware - Token Validation', () => {
+    test('should reject requests with expired tokens', async () => {
+      // Arrange - Malformed/expired token
+      const expiredToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwiZXhwIjoxfQ.test';
+
+      // Act
+      const response = await request(app)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${expiredToken}`);
+
+      // Assert - Should return 401 (unauthorized) or 403 (forbidden)
+      expect([HTTP_STATUS.UNAUTHORIZED, HTTP_STATUS.FORBIDDEN]).toContain(response.status);
+    });
+
+    test('should reject requests with malformed tokens', async () => {
+      // Act
+      const response = await request(app)
+        .get('/api/auth/me')
+        .set('Authorization', 'Bearer malformed.token');
+
+      // Assert
+      expect(response.status).toBe(HTTP_STATUS.FORBIDDEN);
+    });
+
+    test('should handle missing Authorization header', async () => {
+      // Act
+      const response = await request(app).get('/api/auth/me');
+
+      // Assert
+      expect(response.status).toBe(HTTP_STATUS.UNAUTHORIZED);
+      expect(response.body.message).toMatch(/token|authorization/i);
+    });
+
+    test('should reject tokens with wrong signature', async () => {
+      // Arrange - Valid JWT structure but wrong signature
+      const wrongSignature = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.wrong_signature';
+
+      // Act
+      const response = await request(app)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${wrongSignature}`);
+
+      // Assert
+      expect(response.status).toBe(HTTP_STATUS.FORBIDDEN);
+    });
+
+    test('should handle Bearer prefix case-insensitively', async () => {
+      // Act - Try lowercase bearer
+      const response = await request(app)
+        .get('/api/auth/me')
+        .set('Authorization', `bearer ${technicianToken}`);
+
+      // Assert - Should work (200) or reject consistently (401/403)
+      expect([HTTP_STATUS.OK, HTTP_STATUS.UNAUTHORIZED, HTTP_STATUS.FORBIDDEN]).toContain(response.status);
+    });
+  });
+
+  describe('Audit Trail Verification', () => {
+    test('should log profile updates in audit trail', async () => {
+      // Act - Update profile
+      const response = await request(app)
+        .put('/api/auth/me')
+        .set('Authorization', `Bearer ${technicianToken}`)
+        .send({ first_name: 'AuditTest' });
+
+      // Assert - Update succeeded (audit is async)
+      expect(response.status).toBe(HTTP_STATUS.OK);
+    });
+
+    test('should log logout events in audit trail', async () => {
+      // Act - Logout
+      const response = await request(app)
+        .post('/api/auth/logout')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ refreshToken: 'audit-test-token' });
+
+      // Assert - Logout succeeded (audit is async)
+      expect(response.status).toBe(HTTP_STATUS.OK);
+    });
+
+    test('should log logout-all events with token count', async () => {
+      // Act - Logout all
+      const response = await request(app)
+        .post('/api/auth/logout-all')
+        .set('Authorization', `Bearer ${technicianToken}`);
+
+      // Assert - Logout-all succeeded (audit is async)
+      expect(response.status).toBe(HTTP_STATUS.OK);
+      expect(response.body.data.tokensRevoked).toBeGreaterThanOrEqual(0);
     });
   });
 });

@@ -36,7 +36,7 @@ describe('Row-Level Security Middleware', () => {
   });
 
   describe('enforceRLS(resource)', () => {
-    it('should attach RLS policy to request when policy exists', () => {
+    test('should attach RLS policy to request when policy exists', () => {
       getRLSRule.mockReturnValue('own_record_only');
 
       const middleware = enforceRLS('customers');
@@ -49,7 +49,7 @@ describe('Row-Level Security Middleware', () => {
       expect(res.status).not.toHaveBeenCalled();
     });
 
-    it('should attach null policy when no RLS defined', () => {
+    test('should attach null policy when no RLS defined', () => {
       getRLSRule.mockReturnValue(null);
 
       const middleware = enforceRLS('inventory');
@@ -61,7 +61,7 @@ describe('Row-Level Security Middleware', () => {
       expect(res.status).not.toHaveBeenCalled();
     });
 
-    it('should handle different RLS policies for different resources', () => {
+    test('should handle different RLS policies for different resources', () => {
       getRLSRule.mockReturnValue('assigned_work_orders_only');
 
       const middleware = enforceRLS('work_orders');
@@ -72,7 +72,7 @@ describe('Row-Level Security Middleware', () => {
       expect(next).toHaveBeenCalled();
     });
 
-    it('should reject request when user has no role', () => {
+    test('should reject request when user has no role', () => {
       req.dbUser = { id: 1 }; // No role
 
       const middleware = enforceRLS('customers');
@@ -88,7 +88,7 @@ describe('Row-Level Security Middleware', () => {
       expect(next).not.toHaveBeenCalled();
     });
 
-    it('should reject request when user is missing', () => {
+    test('should reject request when user is missing', () => {
       req.dbUser = null;
 
       const middleware = enforceRLS('customers');
@@ -98,7 +98,7 @@ describe('Row-Level Security Middleware', () => {
       expect(next).not.toHaveBeenCalled();
     });
 
-    it('should call getRLSRule with correct parameters', () => {
+    test('should call getRLSRule with correct parameters', () => {
       getRLSRule.mockReturnValue('own_work_orders_only');
       req.dbUser.role = 'technician';
 
@@ -108,7 +108,7 @@ describe('Row-Level Security Middleware', () => {
       expect(getRLSRule).toHaveBeenCalledWith('technician', 'work_orders');
     });
 
-    it('should handle null policy for roles with no access', () => {
+    test('should handle null policy for roles with no access', () => {
       // Technicians have null access to contracts
       getRLSRule.mockReturnValue(null);
       req.dbUser.role = 'technician';
@@ -121,7 +121,7 @@ describe('Row-Level Security Middleware', () => {
       expect(next).toHaveBeenCalled();
     });
 
-    it('should preserve user ID for filtering', () => {
+    test('should preserve user ID for filtering', () => {
       getRLSRule.mockReturnValue('own_invoices_only');
       req.dbUser = { role: 'customer', id: 42 };
 
@@ -132,7 +132,7 @@ describe('Row-Level Security Middleware', () => {
       expect(next).toHaveBeenCalled();
     });
 
-    it('should handle dispatcher with all_records policy', () => {
+    test('should handle dispatcher with all_records policy', () => {
       getRLSRule.mockReturnValue('all_records');
       req.dbUser.role = 'dispatcher';
 
@@ -152,37 +152,37 @@ describe('Row-Level Security Middleware', () => {
       req.dbUser = { role: 'customer' };
     });
 
-    it('should pass when RLS was applied', () => {
+    test('should pass when RLS was applied', () => {
       const result = { data: [], rlsApplied: true };
       expect(() => validateRLSApplied(req, result)).not.toThrow();
     });
 
-    it('should throw when RLS was not applied', () => {
+    test('should throw when RLS was not applied', () => {
       const result = { data: [] }; // Missing rlsApplied flag
       expect(() => validateRLSApplied(req, result)).toThrow(/RLS validation failed/);
     });
 
-    it('should pass when no RLS enforcement is required', () => {
+    test('should pass when no RLS enforcement is required', () => {
       req.rlsResource = null; // No RLS on this route
       const result = { data: [] }; // No rlsApplied flag
       expect(() => validateRLSApplied(req, result)).not.toThrow();
     });
 
-    it('should pass when RLS policy is null (no filtering required)', () => {
+    test('should pass when RLS policy is null (no filtering required)', () => {
       req.rlsPolicy = null;
       const result = { data: [] }; // No rlsApplied flag
       expect(() => validateRLSApplied(req, result)).not.toThrow();
     });
 
-    it('should throw when result is null', () => {
+    test('should throw when result is null', () => {
       expect(() => validateRLSApplied(req, null)).toThrow(/RLS validation failed/);
     });
 
-    it('should throw when result is undefined', () => {
+    test('should throw when result is undefined', () => {
       expect(() => validateRLSApplied(req, undefined)).toThrow(/RLS validation failed/);
     });
 
-    it('should include error context in exception', () => {
+    test('should include error context in exception', () => {
       const result = { data: [] };
       try {
         validateRLSApplied(req, result);
@@ -194,7 +194,7 @@ describe('Row-Level Security Middleware', () => {
   });
 
   describe('Integration with Role Hierarchy', () => {
-    it('should apply different policies for customer vs dispatcher', () => {
+    test('should apply different policies for customer vs dispatcher', () => {
       // Customer gets own_record_only
       getRLSRule.mockReturnValue('own_record_only');
       req.dbUser = { role: 'customer', id: 1 };
@@ -213,7 +213,7 @@ describe('Row-Level Security Middleware', () => {
       expect(req.rlsPolicy).toBe('all_records');
     });
 
-    it('should handle work_orders with technician role', () => {
+    test('should handle work_orders with technician role', () => {
       getRLSRule.mockReturnValue('assigned_work_orders_only');
       req.dbUser = { role: 'technician', id: 3 };
 
@@ -224,7 +224,7 @@ describe('Row-Level Security Middleware', () => {
       expect(getRLSRule).toHaveBeenCalledWith('technician', 'work_orders');
     });
 
-    it('should handle contracts with technician role (null access)', () => {
+    test('should handle contracts with technician role (null access)', () => {
       getRLSRule.mockReturnValue(null);
       req.dbUser = { role: 'technician', id: 3 };
 
@@ -237,7 +237,7 @@ describe('Row-Level Security Middleware', () => {
   });
 
   describe('Error Response Format', () => {
-    it('should return standardized error structure', () => {
+    test('should return standardized error structure', () => {
       req.dbUser = null;
 
       const middleware = enforceRLS('customers');
@@ -253,7 +253,7 @@ describe('Row-Level Security Middleware', () => {
       );
     });
 
-    it('should include ISO timestamp in error response', () => {
+    test('should include ISO timestamp in error response', () => {
       req.dbUser = { id: 1 }; // No role
 
       const middleware = enforceRLS('customers');

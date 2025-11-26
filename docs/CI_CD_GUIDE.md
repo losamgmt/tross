@@ -7,10 +7,10 @@ Guide to TrossApp's continuous integration and deployment pipeline.
 ## Overview
 
 **What runs automatically:**
-- ✅ Backend tests (1675+ unit + integration tests)
+- ✅ Backend tests (unit + integration)
 - ✅ Linting & format checks
 - ✅ Build verification
-- ❌ E2E tests (run manually pre-merge - see below)
+- ✅ E2E smoke tests
 
 **When it runs:**
 - Every push to `main` or `develop`
@@ -21,7 +21,7 @@ Guide to TrossApp's continuous integration and deployment pipeline.
 
 ## CI Pipeline Stages
 
-### 1. Test Backend (~70 seconds)
+### 1. Test Backend
 
 **What runs:**
 - Unit tests (fast, isolated, mocked dependencies)
@@ -33,7 +33,7 @@ Guide to TrossApp's continuous integration and deployment pipeline.
 - PostgreSQL 15
 - Test database with migrations
 
-**Required to pass:** ✅ All 1675+ tests must pass
+**Required to pass:** ✅ All tests must pass
 
 ### 2. Lint & Format Check (~10 seconds)
 
@@ -55,38 +55,19 @@ Guide to TrossApp's continuous integration and deployment pipeline.
 
 ## E2E Testing Strategy
 
-**E2E tests DO NOT run on PRs** (by design)
+**E2E = Smoke tests only** (stack connectivity, not business logic)
 
-**Why skip E2E in CI?**
-1. **Security:** Fork PRs can't access backend secrets safely
-2. **Cost:** 188 tests × 4 browsers = 752 executions (expensive)
-3. **Speed:** ~5 minutes vs ~70 seconds for backend tests
-4. **Trust boundary:** You review and run locally before merge
+Integration tests provide comprehensive API contract coverage. E2E tests verify the full stack works together.
 
-### Running E2E Tests (Pre-Merge)
-
-**Your workflow before merging ANY PR:**
+### Running Tests Locally
 
 ```bash
-# 1. Checkout the PR branch locally
-git fetch origin pull/123/head:pr-123
-git checkout pr-123
-
-# 2. Run full test suite
+# Full test suite
 npm run test:all
 
-# Expected output:
-# ✅ Backend: 1675/1675 passing
-# ✅ Frontend: 1553/1553 passing  
-# ✅ E2E: 188/188 passing
-
-# 3. If all pass, merge via GitHub UI
-# 4. If any fail, request changes from contributor
+# E2E smoke tests only
+npx playwright test
 ```
-
-**Post-merge verification:**
-- E2E suite runs on `main` after merge (catches regressions)
-- If E2E fails on main → immediate rollback
 
 ---
 
@@ -323,19 +304,6 @@ API Docs: https://tross-api-production.up.railway.app/api-docs
 - Check Vercel dashboard for logs
 - Usually build command or env var issue
 - Can redeploy manually from Vercel UI
-
----
-
-## Next Steps
-
-After CI/CD is fully configured:
-
-1. ✅ Enable branch protection (see setup guide)
-2. ✅ Connect Vercel for PR previews
-3. ✅ Connect Railway for production backend
-4. ✅ Configure Auth0 with production URLs
-5. ✅ Test full workflow with test PR
-6. ✅ Document for collaborators
 
 ---
 

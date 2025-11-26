@@ -1,7 +1,10 @@
 // Inventory model
 const db = require('../connection');
 const { logger } = require('../../config/logger');
+const { MODEL_ERRORS } = require('../../config/constants');
 const { toSafeInteger } = require('../../validators/type-coercion');
+const { deleteWithAuditCascade } = require('../helpers/delete-helper');
+const { buildUpdateClause } = require('../helpers/update-helper');
 const PaginationService = require('../../services/pagination-service');
 const QueryBuilderService = require('../../services/query-builder-service');
 const inventoryMetadata = require('../../config/models/inventory-metadata');
@@ -116,7 +119,7 @@ class Inventory {
       return item;
     } catch (error) {
       logger.error('Error finding inventory item', { error: error.message, inventoryId: safeId });
-      throw new Error('Failed to find inventory item');
+      throw new Error(MODEL_ERRORS.INVENTORY.RETRIEVAL_FAILED);
     }
   }
 
@@ -173,13 +176,13 @@ class Inventory {
       };
     } catch (error) {
       logger.error('Error finding inventory items', { error: error.message });
-      throw new Error('Failed to retrieve inventory items');
+      throw new Error(MODEL_ERRORS.INVENTORY.RETRIEVAL_ALL_FAILED);
     }
   }
 
   static async create(data) {
     if (!data.name || !data.sku) {
-      throw new Error('Name and SKU are required');
+      throw new Error(MODEL_ERRORS.INVENTORY.NAME_AND_SKU_REQUIRED);
     }
     try {
       const query = `
@@ -204,34 +207,25 @@ class Inventory {
         throw preservedError;
       }
 
-      throw new Error('Failed to create inventory item');
+      throw new Error(MODEL_ERRORS.INVENTORY.CREATION_FAILED);
     }
   }
 
   static async update(id, data) {
     const safeId = toSafeInteger(id, 'Inventory ID');
     const allowedFields = ['name', 'sku', 'description', 'quantity', 'reorder_level', 'unit_cost', 'location', 'supplier', 'status'];
-    const updates = [];
-    const values = [];
-    let paramIndex = 1;
 
-    for (const [key, value] of Object.entries(data)) {
-      if (allowedFields.includes(key)) {
-        updates.push(`${key} = $${paramIndex}`);
-        values.push(value);
-        paramIndex++;
-      }
-    }
+    const { updates, values, hasUpdates } = buildUpdateClause(data, allowedFields);
 
-    if (updates.length === 0) {
-      throw new Error('No valid fields to update');
+    if (!hasUpdates) {
+      throw new Error(MODEL_ERRORS.INVENTORY.NO_VALID_FIELDS);
     }
 
     try {
       values.push(safeId);
-      const result = await db.query(`UPDATE inventory SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING *`, values);
+      const result = await db.query(`UPDATE inventory SET ${updates.join(', ')} WHERE id = $${values.length} RETURNING *`, values);
       if (result.rows.length === 0) {
-        throw new Error('Inventory item not found');
+        throw new Error(MODEL_ERRORS.INVENTORY.NOT_FOUND);
       }
       logger.info('Inventory item updated', { inventoryId: safeId });
       return result.rows[0];
@@ -245,38 +239,17 @@ class Inventory {
         throw preservedError;
       }
 
-      throw new Error('Failed to update inventory item');
-    }
-  }
-
-  static async deactivate(id) {
-    const safeId = toSafeInteger(id, 'Inventory ID');
-    try {
-      const result = await db.query('UPDATE inventory SET is_active = false WHERE id = $1 RETURNING *', [safeId]);
-      if (result.rows.length === 0) {
-        throw new Error('Inventory item not found');
-      }
-      logger.info('Inventory item deactivated', { inventoryId: safeId });
-      return result.rows[0];
-    } catch (error) {
-      logger.error('Error deactivating inventory item', { error: error.message });
-      throw new Error('Failed to deactivate inventory item');
+      throw new Error(MODEL_ERRORS.INVENTORY.UPDATE_FAILED);
     }
   }
 
   static async delete(id) {
     const safeId = toSafeInteger(id, 'Inventory ID');
-    try {
-      const result = await db.query('DELETE FROM inventory WHERE id = $1 RETURNING *', [safeId]);
-      if (result.rows.length === 0) {
-        throw new Error('Inventory item not found');
-      }
-      logger.warn('Inventory item permanently deleted', { inventoryId: safeId });
-      return result.rows[0];
-    } catch (error) {
-      logger.error('Error deleting inventory item', { error: error.message });
-      throw new Error('Failed to delete inventory item');
-    }
+
+    return deleteWithAuditCascade({
+      tableName: 'inventory',
+      id: safeId,
+    });
   }
 }
 

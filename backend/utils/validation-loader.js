@@ -11,6 +11,9 @@ const fs = require('fs');
 const path = require('path');
 const Joi = require('joi');
 
+// Validate schema structure on first load (if ajv is available)
+let schemaValidated = false;
+
 // Load validation rules from central config
 const VALIDATION_RULES_PATH = path.join(__dirname, '../../config/validation-rules.json');
 let validationRules = null;
@@ -27,7 +30,21 @@ function loadValidationRules() {
   try {
     const rulesJson = fs.readFileSync(VALIDATION_RULES_PATH, 'utf8');
     validationRules = JSON.parse(rulesJson);
-    console.log(`[ValidationLoader] ✅ Loaded validation rules v${validationRules.version}`);
+
+    // Validate schema structure on first load (skip in test mode for performance)
+    if (!schemaValidated && process.env.NODE_ENV !== 'test') {
+      try {
+        const { validateRulesSchema } = require('./validation-schema-validator');
+        validateRulesSchema();
+        schemaValidated = true;
+      } catch (error) {
+        // If ajv not installed, skip schema validation
+        if (error.code !== 'MODULE_NOT_FOUND') {
+          throw error;
+        }
+      }
+    }
+
     return validationRules;
   } catch (error) {
     console.error('[ValidationLoader] ❌ Failed to load validation rules:', error.message);
@@ -43,6 +60,33 @@ function loadValidationRules() {
  */
 function buildFieldSchema(fieldDef, fieldName) {
   let schema;
+
+  // Handle date type with semantic validation
+  if (fieldDef.type === 'date' || fieldDef.format === 'date') {
+    schema = Joi.date().iso();
+
+    // Apply required/optional for dates
+    if (fieldDef.required) {
+      schema = schema.required();
+    } else {
+      schema = schema.optional();
+    }
+
+    // Apply date-specific error messages
+    if (fieldDef.errorMessages) {
+      const messages = {};
+      if (fieldDef.errorMessages.required) {
+        messages['any.required'] = fieldDef.errorMessages.required;
+      }
+      if (fieldDef.errorMessages.format) {
+        messages['date.format'] = fieldDef.errorMessages.format;
+        messages['date.base'] = fieldDef.errorMessages.format;
+      }
+      schema = schema.messages(messages);
+    }
+
+    return schema;
+  }
 
   // Start with base type
   switch (fieldDef.type) {
@@ -93,6 +137,11 @@ function buildFieldSchema(fieldDef, fieldName) {
 
     if (fieldDef.allowNull) {
       schema = schema.allow(null, '');
+    }
+
+    // Apply enum validation (for string types)
+    if (fieldDef.enum && Array.isArray(fieldDef.enum)) {
+      schema = schema.valid(...fieldDef.enum);
     }
   }
 
@@ -148,6 +197,10 @@ function buildFieldSchema(fieldDef, fieldName) {
       messages['string.pattern.base'] = fieldDef.errorMessages.pattern;
     }
 
+    if (fieldDef.errorMessages.enum) {
+      messages['any.only'] = fieldDef.errorMessages.enum;
+    }
+
     if (fieldDef.errorMessages.type) {
       messages['number.base'] = fieldDef.errorMessages.type;
       messages['boolean.base'] = fieldDef.errorMessages.type;
@@ -183,8 +236,33 @@ function buildCompositeSchema(operationName) {
 
   const schemaFields = {};
 
-  // Context-aware field mapping for role operations
+  // Context-aware field mapping for different operation types
   const isRoleOperation = operationName === 'createRole' || operationName === 'updateRole';
+  const isUserOperation = operationName.toLowerCase().includes('user');
+  const isCustomerOperation = operationName.toLowerCase().includes('customer');
+  const isTechnicianOperation = operationName.toLowerCase().includes('technician');
+  const isWorkOrderOperation = operationName.toLowerCase().includes('workorder') || operationName.toLowerCase().includes('work_order');
+  const isInvoiceOperation = operationName.toLowerCase().includes('invoice');
+  const isContractOperation = operationName.toLowerCase().includes('contract');
+  const isInventoryOperation = operationName.toLowerCase().includes('inventory');
+
+  // Determine context-aware status field
+  let statusField = 'status'; // Default
+  if (isUserOperation) {
+    statusField = 'userStatus';
+  } else if (isCustomerOperation) {
+    statusField = 'customerStatus';
+  } else if (isTechnicianOperation) {
+    statusField = 'technicianStatus';
+  } else if (isWorkOrderOperation) {
+    statusField = 'workOrderStatus';
+  } else if (isInvoiceOperation) {
+    statusField = 'invoiceStatus';
+  } else if (isContractOperation) {
+    statusField = 'contractStatus';
+  } else if (isInventoryOperation) {
+    statusField = 'inventoryStatus';
+  }
 
   // Map field names to their definitions
   const fieldMapping = {
@@ -229,11 +307,13 @@ function buildCompositeSchema(operationName) {
     tax: 'tax',
     sku: 'sku',
     quantity: 'quantity',
-    status: 'status',
+    status: statusField, // Context-aware status mapping
     start_date: 'start_date',
-    startDate: 'start_date',
+    startDate: 'startDate',
     end_date: 'end_date',
-    endDate: 'end_date',
+    endDate: 'endDate',
+    due_date: 'due_date',
+    dueDate: 'dueDate',
     value: 'value',
   };
 

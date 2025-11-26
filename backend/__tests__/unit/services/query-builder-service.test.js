@@ -24,7 +24,7 @@ describe('QueryBuilderService', () => {
   describe('buildSearchClause', () => {
     const searchableFields = ['first_name', 'last_name', 'email'];
     
-    it('should build ILIKE search clause for single field', () => {
+    test('should build ILIKE search clause for single field', () => {
       const result = QueryBuilderService.buildSearchClause('john', ['first_name']);
       
       expect(result.clause).toBe('(first_name ILIKE $1)');
@@ -32,7 +32,7 @@ describe('QueryBuilderService', () => {
       expect(result.paramOffset).toBe(1);
     });
     
-    it('should build ILIKE search clause for multiple fields with OR', () => {
+    test('should build ILIKE search clause for multiple fields with OR', () => {
       const result = QueryBuilderService.buildSearchClause('john', searchableFields);
       
       expect(result.clause).toBe('(first_name ILIKE $1 OR last_name ILIKE $2 OR email ILIKE $3)');
@@ -40,19 +40,19 @@ describe('QueryBuilderService', () => {
       expect(result.paramOffset).toBe(3);
     });
     
-    it('should handle search term with spaces (trimmed)', () => {
+    test('should handle search term with spaces (trimmed)', () => {
       const result = QueryBuilderService.buildSearchClause('  john  ', searchableFields);
       
       expect(result.params).toEqual(['%john%', '%john%', '%john%']);
     });
     
-    it('should handle special characters safely (parameterized)', () => {
+    test('should handle special characters safely (parameterized)', () => {
       const result = QueryBuilderService.buildSearchClause("O'Brien", searchableFields);
       
       expect(result.params).toEqual(["%O'Brien%", "%O'Brien%", "%O'Brien%"]);
     });
     
-    it('should return null clause when search term is empty', () => {
+    test('should return null clause when search term is empty', () => {
       const result = QueryBuilderService.buildSearchClause('', searchableFields);
       
       expect(result.clause).toBeNull();
@@ -60,27 +60,27 @@ describe('QueryBuilderService', () => {
       expect(result.paramOffset).toBe(0);
     });
     
-    it('should return null clause when search term is whitespace only', () => {
+    test('should return null clause when search term is whitespace only', () => {
       const result = QueryBuilderService.buildSearchClause('   ', searchableFields);
       
       expect(result.clause).toBeNull();
       expect(result.params).toEqual([]);
     });
     
-    it('should return null clause when no searchable fields provided', () => {
+    test('should return null clause when no searchable fields provided', () => {
       const result = QueryBuilderService.buildSearchClause('john', []);
       
       expect(result.clause).toBeNull();
       expect(result.params).toEqual([]);
     });
     
-    it('should return null clause when searchTerm is undefined', () => {
+    test('should return null clause when searchTerm is undefined', () => {
       const result = QueryBuilderService.buildSearchClause(undefined, searchableFields);
       
       expect(result.clause).toBeNull();
     });
     
-    it('should return null clause when searchTerm is null', () => {
+    test('should return null clause when searchTerm is null', () => {
       const result = QueryBuilderService.buildSearchClause(null, searchableFields);
       
       expect(result.clause).toBeNull();
@@ -94,7 +94,7 @@ describe('QueryBuilderService', () => {
   describe('buildFilterClause', () => {
     const filterableFields = ['id', 'role_id', 'is_active', 'priority', 'created_at'];
     
-    it('should build exact match filter for single field', () => {
+    test('should build exact match filter for single field', () => {
       const result = QueryBuilderService.buildFilterClause(
         { role_id: '2' },
         filterableFields
@@ -105,7 +105,7 @@ describe('QueryBuilderService', () => {
       expect(result.paramOffset).toBe(1);
     });
     
-    it('should build multiple filters with AND', () => {
+    test('should build multiple filters with AND', () => {
       const result = QueryBuilderService.buildFilterClause(
         { role_id: '2', is_active: 'true' },
         filterableFields
@@ -116,7 +116,7 @@ describe('QueryBuilderService', () => {
       expect(result.paramOffset).toBe(2);
     });
     
-    it('should respect paramOffset for combining clauses', () => {
+    test('should respect paramOffset for combining clauses', () => {
       const result = QueryBuilderService.buildFilterClause(
         { role_id: '2' },
         filterableFields,
@@ -128,7 +128,7 @@ describe('QueryBuilderService', () => {
       expect(result.paramOffset).toBe(4);
     });
     
-    it('should handle greater than operator', () => {
+    test('should handle greater than operator', () => {
       const result = QueryBuilderService.buildFilterClause(
         { priority: { gt: '5' } },
         filterableFields
@@ -138,7 +138,7 @@ describe('QueryBuilderService', () => {
       expect(result.params).toEqual(['5']);
     });
     
-    it('should handle greater than or equal operator', () => {
+    test('should handle greater than or equal operator', () => {
       const result = QueryBuilderService.buildFilterClause(
         { priority: { gte: '5' } },
         filterableFields
@@ -148,7 +148,7 @@ describe('QueryBuilderService', () => {
       expect(result.params).toEqual(['5']);
     });
     
-    it('should handle less than operator', () => {
+    test('should handle less than operator', () => {
       const result = QueryBuilderService.buildFilterClause(
         { priority: { lt: '10' } },
         filterableFields
@@ -158,7 +158,7 @@ describe('QueryBuilderService', () => {
       expect(result.params).toEqual(['10']);
     });
     
-    it('should handle less than or equal operator', () => {
+    test('should handle less than or equal operator', () => {
       const result = QueryBuilderService.buildFilterClause(
         { priority: { lte: '10' } },
         filterableFields
@@ -168,7 +168,7 @@ describe('QueryBuilderService', () => {
       expect(result.params).toEqual(['10']);
     });
     
-    it('should handle not equal operator', () => {
+    test('should handle not equal operator', () => {
       const result = QueryBuilderService.buildFilterClause(
         { is_active: { not: 'false' } },
         filterableFields
@@ -178,7 +178,7 @@ describe('QueryBuilderService', () => {
       expect(result.params).toEqual(['false']);
     });
     
-    it('should handle IN operator with array', () => {
+    test('should handle IN operator with array', () => {
       const result = QueryBuilderService.buildFilterClause(
         { id: { in: ['1', '2', '3'] } },
         filterableFields
@@ -189,7 +189,7 @@ describe('QueryBuilderService', () => {
       expect(result.paramOffset).toBe(3);
     });
     
-    it('should handle IN operator with comma-separated string', () => {
+    test('should handle IN operator with comma-separated string', () => {
       const result = QueryBuilderService.buildFilterClause(
         { id: { in: '1,2,3' } },
         filterableFields
@@ -199,7 +199,7 @@ describe('QueryBuilderService', () => {
       expect(result.params).toEqual(['1', '2', '3']);
     });
     
-    it('should handle multiple operators on same field', () => {
+    test('should handle multiple operators on same field', () => {
       const result = QueryBuilderService.buildFilterClause(
         { priority: { gte: '5', lte: '10' } },
         filterableFields
@@ -210,7 +210,7 @@ describe('QueryBuilderService', () => {
       expect(result.params).toEqual(['5', '10']);
     });
     
-    it('should ignore unauthorized fields (SECURITY)', () => {
+    test('should ignore unauthorized fields (SECURITY)', () => {
       const result = QueryBuilderService.buildFilterClause(
         { role_id: '2', malicious_field: 'DROP TABLE users' },
         ['role_id'] // Only role_id allowed
@@ -221,20 +221,20 @@ describe('QueryBuilderService', () => {
       // malicious_field silently ignored
     });
     
-    it('should return null clause when no filters provided', () => {
+    test('should return null clause when no filters provided', () => {
       const result = QueryBuilderService.buildFilterClause({}, filterableFields);
       
       expect(result.clause).toBeNull();
       expect(result.params).toEqual([]);
     });
     
-    it('should return null clause when filters is undefined', () => {
+    test('should return null clause when filters is undefined', () => {
       const result = QueryBuilderService.buildFilterClause(undefined, filterableFields);
       
       expect(result.clause).toBeNull();
     });
     
-    it('should return null clause when all fields unauthorized', () => {
+    test('should return null clause when all fields unauthorized', () => {
       const result = QueryBuilderService.buildFilterClause(
         { malicious: 'value' },
         ['role_id'] // malicious not in list
@@ -253,7 +253,7 @@ describe('QueryBuilderService', () => {
     const sortableFields = ['id', 'email', 'created_at'];
     const defaultSort = { field: 'created_at', order: 'DESC' };
     
-    it('should build valid sort clause', () => {
+    test('should build valid sort clause', () => {
       const result = QueryBuilderService.buildSortClause(
         'email',
         'ASC',
@@ -264,7 +264,7 @@ describe('QueryBuilderService', () => {
       expect(result).toBe('email ASC');
     });
     
-    it('should handle lowercase sort order', () => {
+    test('should handle lowercase sort order', () => {
       const result = QueryBuilderService.buildSortClause(
         'email',
         'asc',
@@ -275,7 +275,7 @@ describe('QueryBuilderService', () => {
       expect(result).toBe('email ASC');
     });
     
-    it('should handle DESC order', () => {
+    test('should handle DESC order', () => {
       const result = QueryBuilderService.buildSortClause(
         'created_at',
         'DESC',
@@ -286,7 +286,7 @@ describe('QueryBuilderService', () => {
       expect(result).toBe('created_at DESC');
     });
     
-    it('should use default sort when sortBy invalid', () => {
+    test('should use default sort when sortBy invalid', () => {
       const result = QueryBuilderService.buildSortClause(
         'invalid_field',
         'ASC',
@@ -297,7 +297,7 @@ describe('QueryBuilderService', () => {
       expect(result).toBe('created_at DESC'); // Falls back to default
     });
     
-    it('should use default order when sortOrder invalid', () => {
+    test('should use default order when sortOrder invalid', () => {
       const result = QueryBuilderService.buildSortClause(
         'email',
         'INVALID',
@@ -308,7 +308,7 @@ describe('QueryBuilderService', () => {
       expect(result).toBe('email DESC'); // Uses defaultSort.order
     });
     
-    it('should use first sortable field when no default provided', () => {
+    test('should use first sortable field when no default provided', () => {
       const result = QueryBuilderService.buildSortClause(
         'invalid_field',
         'ASC',
@@ -319,7 +319,7 @@ describe('QueryBuilderService', () => {
       expect(result).toBe('id ASC'); // First field in sortableFields
     });
     
-    it('should use id ASC as ultimate fallback', () => {
+    test('should use id ASC as ultimate fallback', () => {
       const result = QueryBuilderService.buildSortClause(
         null,
         null,
@@ -330,7 +330,7 @@ describe('QueryBuilderService', () => {
       expect(result).toBe('id ASC');
     });
     
-    it('should prevent SQL injection in sort field (only whitelisted)', () => {
+    test('should prevent SQL injection in sort field (only whitelisted)', () => {
       const result = QueryBuilderService.buildSortClause(
         'email; DROP TABLE users--',
         'ASC',
@@ -348,7 +348,7 @@ describe('QueryBuilderService', () => {
   // ==========================================================================
   
   describe('combineWhereClauses', () => {
-    it('should combine multiple clauses with AND', () => {
+    test('should combine multiple clauses with AND', () => {
       const result = QueryBuilderService.combineWhereClauses([
         'age > 18',
         'status = active'
@@ -357,7 +357,7 @@ describe('QueryBuilderService', () => {
       expect(result).toBe('age > 18 AND status = active');
     });
     
-    it('should filter out null clauses', () => {
+    test('should filter out null clauses', () => {
       const result = QueryBuilderService.combineWhereClauses([
         'age > 18',
         null,
@@ -367,7 +367,7 @@ describe('QueryBuilderService', () => {
       expect(result).toBe('age > 18 AND status = active');
     });
     
-    it('should filter out empty string clauses', () => {
+    test('should filter out empty string clauses', () => {
       const result = QueryBuilderService.combineWhereClauses([
         'age > 18',
         '',
@@ -377,19 +377,19 @@ describe('QueryBuilderService', () => {
       expect(result).toBe('age > 18 AND status = active');
     });
     
-    it('should return null when no valid clauses', () => {
+    test('should return null when no valid clauses', () => {
       const result = QueryBuilderService.combineWhereClauses([null, '', undefined]);
       
       expect(result).toBeNull();
     });
     
-    it('should return single clause unchanged', () => {
+    test('should return single clause unchanged', () => {
       const result = QueryBuilderService.combineWhereClauses(['age > 18']);
       
       expect(result).toBe('age > 18');
     });
     
-    it('should handle empty array', () => {
+    test('should handle empty array', () => {
       const result = QueryBuilderService.combineWhereClauses([]);
       
       expect(result).toBeNull();
@@ -397,7 +397,7 @@ describe('QueryBuilderService', () => {
   });
   
   describe('combineParams', () => {
-    it('should combine multiple parameter arrays', () => {
+    test('should combine multiple parameter arrays', () => {
       const result = QueryBuilderService.combineParams(
         ['%john%', '%john%'],
         ['2', 'true']
@@ -406,7 +406,7 @@ describe('QueryBuilderService', () => {
       expect(result).toEqual(['%john%', '%john%', '2', 'true']);
     });
     
-    it('should flatten nested arrays', () => {
+    test('should flatten nested arrays', () => {
       const result = QueryBuilderService.combineParams(
         ['a', 'b'],
         ['c', 'd'],
@@ -416,7 +416,7 @@ describe('QueryBuilderService', () => {
       expect(result).toEqual(['a', 'b', 'c', 'd', 'e', 'f']);
     });
     
-    it('should filter out null/undefined values', () => {
+    test('should filter out null/undefined values', () => {
       const result = QueryBuilderService.combineParams(
         ['a', null, 'b'],
         [undefined, 'c']
@@ -425,7 +425,7 @@ describe('QueryBuilderService', () => {
       expect(result).toEqual(['a', 'b', 'c']);
     });
     
-    it('should handle empty arrays', () => {
+    test('should handle empty arrays', () => {
       const result = QueryBuilderService.combineParams([], [], []);
       
       expect(result).toEqual([]);
@@ -444,7 +444,7 @@ describe('QueryBuilderService', () => {
       defaultSort: { field: 'created_at', order: 'DESC' },
     };
     
-    it('should build complete query with search, filters, and sort', () => {
+    test('should build complete query with search, filters, and sort', () => {
       const result = QueryBuilderService.buildQuery(
         {
           search: 'john',
@@ -462,7 +462,7 @@ describe('QueryBuilderService', () => {
       expect(result.orderByClause).toBe('email ASC');
     });
     
-    it('should build query with only search', () => {
+    test('should build query with only search', () => {
       const result = QueryBuilderService.buildQuery(
         { search: 'john' },
         metadata
@@ -473,7 +473,7 @@ describe('QueryBuilderService', () => {
       expect(result.orderByClause).toBe('created_at DESC'); // Default
     });
     
-    it('should build query with only filters', () => {
+    test('should build query with only filters', () => {
       const result = QueryBuilderService.buildQuery(
         { filters: { role_id: '2' } },
         metadata
@@ -484,7 +484,7 @@ describe('QueryBuilderService', () => {
       expect(result.orderByClause).toBe('created_at DESC');
     });
     
-    it('should build query with only sort', () => {
+    test('should build query with only sort', () => {
       const result = QueryBuilderService.buildQuery(
         { sortBy: 'email', sortOrder: 'ASC' },
         metadata
@@ -495,7 +495,7 @@ describe('QueryBuilderService', () => {
       expect(result.orderByClause).toBe('email ASC');
     });
     
-    it('should build query with no options (defaults only)', () => {
+    test('should build query with no options (defaults only)', () => {
       const result = QueryBuilderService.buildQuery({}, metadata);
       
       expect(result.whereClause).toBeNull();
@@ -503,7 +503,7 @@ describe('QueryBuilderService', () => {
       expect(result.orderByClause).toBe('created_at DESC');
     });
     
-    it('should handle complex filters with operators', () => {
+    test('should handle complex filters with operators', () => {
       const result = QueryBuilderService.buildQuery(
         {
           search: 'admin',

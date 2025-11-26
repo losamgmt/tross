@@ -297,7 +297,7 @@ describe("Validator Middleware - Route Protection", () => {
 
         expect(res.json).toHaveBeenCalledWith(
           expect.objectContaining({
-            error: "Validation Error",
+            error: "Bad Request",
             timestamp: expect.any(String),
           }),
         );

@@ -34,13 +34,16 @@ export async function getDevToken(
     throw new Error(`Failed to get dev token for role ${role}: ${response.statusText}`);
   }
   
-  const data = await response.json();
+  const responseData = await response.json();
   
-  if (!data.token) {
+  // Handle ResponseFormatter wrapped response: { success, data: { token, user }, message }
+  const token = responseData.data?.token || responseData.token;
+  
+  if (!token) {
     throw new Error(`No token in response for role ${role}`);
   }
   
-  return data.token;
+  return token;
 }
 
 /**

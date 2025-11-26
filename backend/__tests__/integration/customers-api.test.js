@@ -8,6 +8,8 @@
 const request = require('supertest');
 const app = require('../../server');
 const { createTestUser, cleanupTestDatabase } = require('../helpers/test-db');
+const { TEST_PAGINATION } = require('../../config/test-constants');
+const { HTTP_STATUS } = require('../../config/constants');
 const Customer = require('../../db/models/Customer');
 
 describe('Customers CRUD API - Integration Tests', () => {
@@ -37,7 +39,7 @@ describe('Customers CRUD API - Integration Tests', () => {
   });
 
   describe('GET /api/customers - List Customers', () => {
-    it('should return 401 without authentication', async () => {
+    test('should return 401 without authentication', async () => {
       // Act
       const response = await request(app).get('/api/customers');
 
@@ -45,10 +47,10 @@ describe('Customers CRUD API - Integration Tests', () => {
       expect(response.status).toBe(401);
     });
 
-    it('should allow customer to read customers list (RLS applies)', async () => {
+    test('should allow customer to read customers list (RLS applies)', async () => {
       // Act
       const response = await request(app)
-        .get('/api/customers?page=1&limit=10')
+        .get(`/api/customers?page=${TEST_PAGINATION.DEFAULT_PAGE}&limit=${TEST_PAGINATION.DEFAULT_LIMIT}`)
         .set('Authorization', `Bearer ${customerToken}`);
 
       // Assert - Customer role should be able to read (with RLS filtering)
@@ -66,11 +68,11 @@ describe('Customers CRUD API - Integration Tests', () => {
       }
     });
 
-    it('should return paginated customer list for dispatcher', async () => {
+    test('should return paginated customer list for dispatcher', async () => {
       // Act
       const response = await request(app)
-        .get('/api/customers?page=1&limit=10')
-        .set('Authorization', `Bearer ${dispatcherToken}`);
+        .get(`/api/customers?page=${TEST_PAGINATION.DEFAULT_PAGE}&limit=${TEST_PAGINATION.DEFAULT_LIMIT}`)
+        .set('Authorization', `Bearer ${dispatcherUser.token}`);
 
       // Assert
       expect(response.status).toBe(200);
@@ -87,10 +89,10 @@ describe('Customers CRUD API - Integration Tests', () => {
       });
     });
 
-    it('should include customer data in list', async () => {
+    test('should include customer data in list', async () => {
       // Act
       const response = await request(app)
-        .get('/api/customers?page=1&limit=10')
+        .get(`/api/customers?page=${TEST_PAGINATION.DEFAULT_PAGE}&limit=${TEST_PAGINATION.DEFAULT_LIMIT}`)
         .set('Authorization', `Bearer ${adminToken}`);
 
       // Assert
@@ -108,10 +110,10 @@ describe('Customers CRUD API - Integration Tests', () => {
       }
     });
 
-    it('should support pagination parameters', async () => {
+    test('should support pagination parameters', async () => {
       // Act
       const response = await request(app)
-        .get('/api/customers?page=1&limit=5')
+        .get(`/api/customers?page=${TEST_PAGINATION.DEFAULT_PAGE}&limit=${TEST_PAGINATION.SMALL_LIMIT}`)
         .set('Authorization', `Bearer ${adminToken}`);
 
       // Assert
@@ -123,10 +125,10 @@ describe('Customers CRUD API - Integration Tests', () => {
       expect(response.body.data.length).toBeLessThanOrEqual(5);
     });
 
-    it('should support search parameter', async () => {
+    test('should support search parameter', async () => {
       // Act
       const response = await request(app)
-        .get('/api/customers?page=1&limit=10&search=test')
+        .get(`/api/customers?page=${TEST_PAGINATION.DEFAULT_PAGE}&limit=${TEST_PAGINATION.DEFAULT_LIMIT}&search=test`)
         .set('Authorization', `Bearer ${adminToken}`);
 
       // Assert
@@ -134,10 +136,10 @@ describe('Customers CRUD API - Integration Tests', () => {
       expect(response.body.data).toBeInstanceOf(Array);
     });
 
-    it('should support sorting', async () => {
+    test('should support sorting', async () => {
       // Act
       const response = await request(app)
-        .get('/api/customers?page=1&limit=10&sortBy=email&sortOrder=ASC')
+        .get(`/api/customers?page=${TEST_PAGINATION.DEFAULT_PAGE}&limit=${TEST_PAGINATION.DEFAULT_LIMIT}&sortBy=email&sortOrder=ASC`)
         .set('Authorization', `Bearer ${adminToken}`);
 
       // Assert
@@ -149,10 +151,10 @@ describe('Customers CRUD API - Integration Tests', () => {
       }
     });
 
-    it('should apply RLS filtering for customer role', async () => {
+    test('should apply RLS filtering for customer role', async () => {
       // Act
       const response = await request(app)
-        .get('/api/customers?page=1&limit=100')
+        .get(`/api/customers?page=${TEST_PAGINATION.DEFAULT_PAGE}&limit=${TEST_PAGINATION.LARGE_LIMIT}`)
         .set('Authorization', `Bearer ${customerToken}`);
 
       // Assert
@@ -181,7 +183,7 @@ describe('Customers CRUD API - Integration Tests', () => {
       });
     });
 
-    it('should return 401 without authentication', async () => {
+    test('should return 401 without authentication', async () => {
       // Act
       const response = await request(app).get(`/api/customers/${testCustomer.id}`);
 
@@ -189,7 +191,7 @@ describe('Customers CRUD API - Integration Tests', () => {
       expect(response.status).toBe(401);
     });
 
-    it('should return customer by ID for dispatcher', async () => {
+    test('should return customer by ID for dispatcher', async () => {
       // Act
       const response = await request(app)
         .get(`/api/customers/${testCustomer.id}`)
@@ -207,7 +209,7 @@ describe('Customers CRUD API - Integration Tests', () => {
       });
     });
 
-    it('should return 404 for non-existent customer', async () => {
+    test('should return 404 for non-existent customer', async () => {
       // Act
       const response = await request(app)
         .get('/api/customers/99999')
@@ -218,7 +220,7 @@ describe('Customers CRUD API - Integration Tests', () => {
       expect(response.body.error).toBe('Not Found');
     });
 
-    it('should return 400 for invalid ID format', async () => {
+    test('should return 400 for invalid ID format', async () => {
       // Act
       const response = await request(app)
         .get('/api/customers/invalid')
@@ -237,7 +239,7 @@ describe('Customers CRUD API - Integration Tests', () => {
       testEmail = `customer-${Date.now()}@example.com`;
     });
 
-    it('should return 401 without authentication', async () => {
+    test('should return 401 without authentication', async () => {
       // Act
       const response = await request(app)
         .post('/api/customers')
@@ -247,7 +249,7 @@ describe('Customers CRUD API - Integration Tests', () => {
       expect(response.status).toBe(401);
     });
 
-    it('should return 403 for customer role (dispatcher+ required)', async () => {
+    test('should return 403 for customer role (dispatcher+ required)', async () => {
       // Act
       const response = await request(app)
         .post('/api/customers')
@@ -258,7 +260,7 @@ describe('Customers CRUD API - Integration Tests', () => {
       expect(response.status).toBe(403);
     });
 
-    it('should return 403 for technician role (dispatcher+ required)', async () => {
+    test('should return 403 for technician role (dispatcher+ required)', async () => {
       // Act
       const response = await request(app)
         .post('/api/customers')
@@ -269,7 +271,7 @@ describe('Customers CRUD API - Integration Tests', () => {
       expect(response.status).toBe(403);
     });
 
-    it('should create customer with valid data as dispatcher', async () => {
+    test('should create customer with valid data as dispatcher', async () => {
       // Arrange
       const customerData = {
         email: testEmail,
@@ -280,13 +282,10 @@ describe('Customers CRUD API - Integration Tests', () => {
       // Act
       const response = await request(app)
         .post('/api/customers')
-        .set('Authorization', `Bearer ${dispatcherToken}`)
+        .set('Authorization', `Bearer ${dispatcherUser.token}`)
         .send(customerData);
 
       // Assert
-      if (response.status !== 201) {
-        console.log('CREATE ERROR:', JSON.stringify(response.body, null, 2));
-      }
       expect(response.status).toBe(201);
       expect(response.body).toMatchObject({
         success: true,
@@ -301,7 +300,7 @@ describe('Customers CRUD API - Integration Tests', () => {
       });
     });
 
-    it('should create customer with minimal required data', async () => {
+    test('should create customer with minimal required data', async () => {
       // Arrange
       const customerData = {
         email: testEmail,
@@ -318,7 +317,7 @@ describe('Customers CRUD API - Integration Tests', () => {
       expect(response.body.data.email).toBe(testEmail);
     });
 
-    it('should reject duplicate email', async () => {
+    test('should reject duplicate email', async () => {
       // Arrange - Create customer first
       const duplicateEmail = `duplicate-${Date.now()}@example.com`;
       await request(app)
@@ -337,7 +336,7 @@ describe('Customers CRUD API - Integration Tests', () => {
       expect(response.body.message).toContain('already exists');
     });
 
-    it('should reject invalid email format', async () => {
+    test('should reject invalid email format', async () => {
       // Act
       const response = await request(app)
         .post('/api/customers')
@@ -348,7 +347,7 @@ describe('Customers CRUD API - Integration Tests', () => {
       expect(response.status).toBe(400);
     });
 
-    it('should reject missing required fields', async () => {
+    test('should reject missing required fields', async () => {
       // Act - Missing email
       const response = await request(app)
         .post('/api/customers')
@@ -359,7 +358,7 @@ describe('Customers CRUD API - Integration Tests', () => {
       expect(response.status).toBe(400);
     });
 
-    it('should trim whitespace from email', async () => {
+    test('should trim whitespace from email', async () => {
       // Arrange
       const trimEmail = `trim-${Date.now()}@example.com`;
 
@@ -387,7 +386,7 @@ describe('Customers CRUD API - Integration Tests', () => {
       });
     });
 
-    it('should return 401 without authentication', async () => {
+    test('should return 401 without authentication', async () => {
       // Act
       const response = await request(app)
         .patch(`/api/customers/${testCustomer.id}`)
@@ -397,7 +396,7 @@ describe('Customers CRUD API - Integration Tests', () => {
       expect(response.status).toBe(401);
     });
 
-    it('should update customer with valid data', async () => {
+    test('should update customer with valid data', async () => {
       // Act
       const response = await request(app)
         .patch(`/api/customers/${testCustomer.id}`)
@@ -417,7 +416,7 @@ describe('Customers CRUD API - Integration Tests', () => {
       });
     });
 
-    it('should update multiple fields', async () => {
+    test('should update multiple fields', async () => {
       // Act
       const response = await request(app)
         .patch(`/api/customers/${testCustomer.id}`)
@@ -435,7 +434,7 @@ describe('Customers CRUD API - Integration Tests', () => {
       });
     });
 
-    it('should return 404 for non-existent customer', async () => {
+    test('should return 404 for non-existent customer', async () => {
       // Act
       const response = await request(app)
         .patch('/api/customers/99999')
@@ -446,7 +445,7 @@ describe('Customers CRUD API - Integration Tests', () => {
       expect(response.status).toBe(404);
     });
 
-    it('should return 400 for invalid ID format', async () => {
+    test('should return 400 for invalid ID format', async () => {
       // Act
       const response = await request(app)
         .patch('/api/customers/invalid')
@@ -457,7 +456,7 @@ describe('Customers CRUD API - Integration Tests', () => {
       expect(response.status).toBe(400);
     });
 
-    it('should reject update with no fields', async () => {
+    test('should reject update with no fields', async () => {
       // Act
       const response = await request(app)
         .patch(`/api/customers/${testCustomer.id}`)
@@ -468,7 +467,7 @@ describe('Customers CRUD API - Integration Tests', () => {
       expect(response.status).toBe(400);
     });
 
-    it('should trim whitespace from updated fields', async () => {
+    test('should trim whitespace from updated fields', async () => {
       // Act
       const response = await request(app)
         .patch(`/api/customers/${testCustomer.id}`)
@@ -492,7 +491,7 @@ describe('Customers CRUD API - Integration Tests', () => {
       });
     });
 
-    it('should return 401 without authentication', async () => {
+    test('should return 401 without authentication', async () => {
       // Act
       const response = await request(app).delete(`/api/customers/${testCustomer.id}`);
 
@@ -500,7 +499,7 @@ describe('Customers CRUD API - Integration Tests', () => {
       expect(response.status).toBe(401);
     });
 
-    it('should return 403 for non-manager users (manager+ required)', async () => {
+    test('should return 403 for non-manager users (manager+ required)', async () => {
       // Act
       const response = await request(app)
         .delete(`/api/customers/${testCustomer.id}`)
@@ -510,7 +509,7 @@ describe('Customers CRUD API - Integration Tests', () => {
       expect(response.status).toBe(403);
     });
 
-    it('should soft delete customer as manager', async () => {
+    test('should soft delete customer as manager', async () => {
       // Arrange - Get manager token
       const managerUser = await createTestUser('manager');
 
@@ -532,7 +531,7 @@ describe('Customers CRUD API - Integration Tests', () => {
       // We can verify the delete succeeded by checking the response
     });
 
-    it('should delete customer as admin', async () => {
+    test('should delete customer as admin', async () => {
       // Act
       const response = await request(app)
         .delete(`/api/customers/${testCustomer.id}`)
@@ -542,7 +541,7 @@ describe('Customers CRUD API - Integration Tests', () => {
       expect(response.status).toBe(200);
     });
 
-    it('should return 404 for non-existent customer', async () => {
+    test('should return 404 for non-existent customer', async () => {
       // Act
       const response = await request(app)
         .delete('/api/customers/99999')
@@ -552,7 +551,7 @@ describe('Customers CRUD API - Integration Tests', () => {
       expect(response.status).toBe(404);
     });
 
-    it('should return 400 for invalid ID format', async () => {
+    test('should return 400 for invalid ID format', async () => {
       // Act
       const response = await request(app)
         .delete('/api/customers/invalid')
@@ -564,10 +563,10 @@ describe('Customers CRUD API - Integration Tests', () => {
   });
 
   describe('RLS (Row-Level Security) - Customer Access', () => {
-    it('should apply RLS filtering for customer role on GET list', async () => {
+    test('should apply RLS filtering for customer role on GET list', async () => {
       // Act
       const response = await request(app)
-        .get('/api/customers?page=1&limit=100')
+        .get(`/api/customers?page=${TEST_PAGINATION.DEFAULT_PAGE}&limit=${TEST_PAGINATION.LARGE_LIMIT}`)
         .set('Authorization', `Bearer ${customerToken}`);
 
       // Assert
@@ -575,10 +574,10 @@ describe('Customers CRUD API - Integration Tests', () => {
       expect(response.body.rlsApplied).toBe(true);
     });
 
-    it('should not apply RLS filtering for admin role', async () => {
+    test('should not apply RLS filtering for admin role', async () => {
       // Act
       const response = await request(app)
-        .get('/api/customers?page=1&limit=100')
+        .get(`/api/customers?page=${TEST_PAGINATION.DEFAULT_PAGE}&limit=${TEST_PAGINATION.LARGE_LIMIT}`)
         .set('Authorization', `Bearer ${adminToken}`);
 
       // Assert
@@ -586,16 +585,251 @@ describe('Customers CRUD API - Integration Tests', () => {
       expect(response.body.rlsApplied).toBe(false);
     });
 
-    it('should apply RLS filtering for dispatcher role (all_records policy)', async () => {
+    test('should apply RLS filtering for dispatcher role (all_records policy)', async () => {
       // Act
       const response = await request(app)
-        .get('/api/customers?page=1&limit=100')
+        .get(`/api/customers?page=${TEST_PAGINATION.DEFAULT_PAGE}&limit=${TEST_PAGINATION.LARGE_LIMIT}`)
         .set('Authorization', `Bearer ${dispatcherToken}`);
 
       // Assert
       expect(response.status).toBe(200);
       // Dispatcher has all_records policy, so RLS might be applied but grants full access
       expect(response.body).toHaveProperty('rlsApplied');
+    });
+  });
+
+  describe('Validation Edge Cases - Type Coercion', () => {
+    test('should reject non-numeric customer ID in URL', async () => {
+      // Act
+      const response = await request(app)
+        .get('/api/customers/abc')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      // Assert - Type coercion should reject and return 400
+      expect(response.status).toBe(400);
+      expect(response.body.message).toMatch(/must be a valid integer/i);
+    });
+
+    test('should reject negative customer ID', async () => {
+      // Act
+      const response = await request(app)
+        .get('/api/customers/-5')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      // Assert
+      expect(response.status).toBe(400);
+      expect(response.body.message).toMatch(/must be at least 1/i);
+    });
+
+    test('should reject zero as customer ID', async () => {
+      // Act
+      const response = await request(app)
+        .get('/api/customers/0')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      // Assert
+      expect(response.status).toBe(400);
+      expect(response.body.message).toMatch(/must be at least 1/i);
+    });
+
+    test('should handle integer overflow gracefully', async () => {
+      // Arrange - Number exceeding MAX_SAFE_INTEGER
+      const hugeNumber = '99999999999999999999999';
+
+      // Act
+      const response = await request(app)
+        .get(`/api/customers/${hugeNumber}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      // Assert - Should reject as invalid or handle gracefully
+      expect(response.status).toBe(400);
+    });
+
+    test('should reject decimal numbers as customer ID', async () => {
+      // Act
+      const response = await request(app)
+        .get('/api/customers/5.5')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      // Assert - Should coerce to 5 or reject
+      expect([400, 404]).toContain(response.status);
+    });
+  });
+
+  describe('Validation Edge Cases - Pagination', () => {
+    test('should reject negative page number', async () => {
+      // Act
+      const response = await request(app)
+        .get('/api/customers?page=-1&limit=10')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      // Assert
+      expect(response.status).toBe(400);
+      expect(response.body.message).toMatch(/page/i);
+    });
+
+    test('should reject zero as page number', async () => {
+      // Act
+      const response = await request(app)
+        .get('/api/customers?page=0&limit=10')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      // Assert
+      expect(response.status).toBe(400);
+      expect(response.body.message).toMatch(/page/i);
+    });
+
+    test('should reject limit exceeding maximum', async () => {
+      // Act - Try to request more than max limit (200)
+      const response = await request(app)
+        .get('/api/customers?page=1&limit=999')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      // Assert
+      expect(response.status).toBe(400);
+      expect(response.body.message).toMatch(/limit/i);
+    });
+
+    test('should reject non-numeric pagination params', async () => {
+      // Act
+      const response = await request(app)
+        .get('/api/customers?page=abc&limit=xyz')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      // Assert
+      expect(response.status).toBe(400);
+    });
+  });
+
+  describe('Validation Edge Cases - Body Fields', () => {
+    test('should reject email with invalid format', async () => {
+      // Arrange
+      const invalidCustomer = {
+        email: 'notanemail',
+        name: 'Test Customer',
+        phone: '555-0100',
+      };
+
+      // Act
+      const response = await request(app)
+        .post('/api/customers')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send(invalidCustomer);
+
+      // Assert
+      expect(response.status).toBe(400);
+      expect(response.body.message).toMatch(/email/i);
+    });
+
+    test('should reject empty string for required fields', async () => {
+      // Arrange
+      const invalidCustomer = {
+        email: '',
+        name: '',
+        phone: '555-0100',
+      };
+
+      // Act
+      const response = await request(app)
+        .post('/api/customers')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send(invalidCustomer);
+
+      // Assert
+      expect(response.status).toBe(400);
+    });
+
+    test('should handle null vs undefined for optional fields', async () => {
+      // Arrange - address is optional
+      const customerWithNull = {
+        email: 'null-test@example.com',
+        name: 'Null Test',
+        phone: '555-0100',
+        address: null,
+      };
+
+      // Act
+      const response = await request(app)
+        .post('/api/customers')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send(customerWithNull);
+
+      // Assert - Phone validation should fail first (invalid format)
+      expect(response.status).toBe(400);
+    });
+
+    test('should strip unknown fields from request body', async () => {
+      // Arrange - Include malicious/unknown fields
+      const customerWithExtras = {
+        email: 'strip-test@example.com',
+        name: 'Strip Test',
+        phone: '555-0100',
+        maliciousField: '<script>alert("xss")</script>',
+        isAdmin: true,
+      };
+
+      // Act
+      const response = await request(app)
+        .post('/api/customers')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send(customerWithExtras);
+
+      // Assert - Should succeed but strip unknown fields
+      if (response.status === 201) {
+        expect(response.body.data.maliciousField).toBeUndefined();
+        expect(response.body.data.isAdmin).toBeUndefined();
+      }
+    });
+  });
+
+  describe('Validation Edge Cases - Query Parameters', () => {
+    test('should reject invalid sortBy field', async () => {
+      // Act - Try to sort by field that doesn't exist
+      const response = await request(app)
+        .get('/api/customers?page=1&limit=10&sortBy=malicious_field')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      // Assert - Should reject invalid sort field
+      expect(response.status).toBe(400);
+      expect(response.body.message).toMatch(/sort/i);
+    });
+
+    test('should reject invalid sortOrder value', async () => {
+      // Act
+      const response = await request(app)
+        .get('/api/customers?page=1&limit=10&sortBy=email&sortOrder=INVALID')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      // Assert
+      expect(response.status).toBe(400);
+      expect(response.body.message).toMatch(/order|asc|desc/i);
+    });
+
+    test('should sanitize search input', async () => {
+      // Arrange - Potential XSS/SQL injection in search
+      const maliciousSearch = "<script>alert('xss')</script>";
+
+      // Act
+      const response = await request(app)
+        .get(`/api/customers?page=1&limit=10&search=${encodeURIComponent(maliciousSearch)}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      // Assert - Should not fail (search is sanitized)
+      expect([200, 400]).toContain(response.status);
+    });
+
+    test('should handle very long search queries', async () => {
+      // Arrange - Search string exceeding max length
+      const longSearch = 'a'.repeat(300);
+
+      // Act
+      const response = await request(app)
+        .get(`/api/customers?page=1&limit=10&search=${longSearch}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      // Assert - Should reject if exceeds max length
+      expect(response.status).toBe(400);
+      expect(response.body.message).toMatch(/search|length/i);
     });
   });
 });

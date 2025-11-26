@@ -1,8 +1,6 @@
 # TrossApp Docker Compose - Development Environment
 # Provides PostgreSQL database and Redis cache for local development
 
-version: '3.8'
-
 services:
   # PostgreSQL Database (Standard port 5432)
   postgres:

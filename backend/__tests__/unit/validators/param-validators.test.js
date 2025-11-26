@@ -33,7 +33,7 @@ describe('Param Validators', () => {
   });
 
   describe('validateIdParam', () => {
-    it('should validate valid ID and attach to req.validated', () => {
+    test('should validate valid ID and attach to req.validated', () => {
       // Arrange
       req.params.id = '123';
       const middleware = validateIdParam();
@@ -43,11 +43,10 @@ describe('Param Validators', () => {
 
       // Assert
       expect(req.validated.id).toBe(123);
-      expect(req.validatedId).toBe(123); // Legacy support
       expect(next).toHaveBeenCalled();
     });
 
-    it('should validate custom param name', () => {
+    test('should validate custom param name', () => {
       // Arrange
       req.params.userId = '456';
       const middleware = validateIdParam({ paramName: 'userId' });
@@ -60,7 +59,7 @@ describe('Param Validators', () => {
       expect(next).toHaveBeenCalled();
     });
 
-    it('should reject non-numeric ID', () => {
+    test('should reject non-numeric ID', () => {
       // Arrange
       req.params.id = 'abc';
       const middleware = validateIdParam();
@@ -72,14 +71,16 @@ describe('Param Validators', () => {
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          error: 'Validation Error',
-          field: 'id',
+          error: 'Bad Request',
+          details: expect.arrayContaining([
+            expect.objectContaining({ field: 'id' }),
+          ]),
         }),
       );
       expect(next).not.toHaveBeenCalled();
     });
 
-    it('should reject ID below minimum', () => {
+    test('should reject ID below minimum', () => {
       // Arrange
       req.params.id = '0';
       const middleware = validateIdParam({ min: 1 });
@@ -91,12 +92,12 @@ describe('Param Validators', () => {
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          error: 'Validation Error',
+          error: 'Bad Request',
         }),
       );
     });
 
-    it('should reject ID above maximum', () => {
+    test('should reject ID above maximum', () => {
       // Arrange
       req.params.id = '1000';
       const middleware = validateIdParam({ max: 999 });
@@ -108,12 +109,12 @@ describe('Param Validators', () => {
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          error: 'Validation Error',
+          error: 'Bad Request',
         }),
       );
     });
 
-    it('should coerce string numbers to integers', () => {
+    test('should coerce string numbers to integers', () => {
       // Arrange
       req.params.id = '42';
       const middleware = validateIdParam();
@@ -126,7 +127,7 @@ describe('Param Validators', () => {
       expect(typeof req.validated.id).toBe('number');
     });
 
-    it('should coerce floating point to integer', () => {
+    test('should coerce floating point to integer', () => {
       // Arrange
       req.params.id = '12.5';
       const middleware = validateIdParam();
@@ -139,7 +140,7 @@ describe('Param Validators', () => {
       expect(next).toHaveBeenCalled();
     });
 
-    it('should initialize req.validated if not present', () => {
+    test('should initialize req.validated if not present', () => {
       // Arrange
       delete req.validated;
       req.params.id = '123';
@@ -155,7 +156,7 @@ describe('Param Validators', () => {
   });
 
   describe('validateIdParams', () => {
-    it('should validate multiple ID parameters', () => {
+    test('should validate multiple ID parameters', () => {
       // Arrange
       req.params.userId = '100';
       req.params.roleId = '200';
@@ -170,7 +171,7 @@ describe('Param Validators', () => {
       expect(next).toHaveBeenCalled();
     });
 
-    it('should reject if any parameter is invalid', () => {
+    test('should reject if any parameter is invalid', () => {
       // Arrange
       req.params.userId = '100';
       req.params.roleId = 'invalid';
@@ -183,14 +184,16 @@ describe('Param Validators', () => {
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          error: 'Validation Error',
-          field: 'params',
+          error: 'Bad Request',
+          details: expect.arrayContaining([
+            expect.objectContaining({ field: 'params' }),
+          ]),
         }),
       );
       expect(next).not.toHaveBeenCalled();
     });
 
-    it('should validate single parameter in array', () => {
+    test('should validate single parameter in array', () => {
       // Arrange
       req.params.userId = '300';
       const middleware = validateIdParams(['userId']);
@@ -203,7 +206,7 @@ describe('Param Validators', () => {
       expect(next).toHaveBeenCalled();
     });
 
-    it('should initialize req.validated if not present', () => {
+    test('should initialize req.validated if not present', () => {
       // Arrange
       delete req.validated;
       req.params.userId = '123';
@@ -219,7 +222,7 @@ describe('Param Validators', () => {
   });
 
   describe('validateSlugParam', () => {
-    it('should validate valid slug', () => {
+    test('should validate valid slug', () => {
       // Arrange
       req.params.slug = 'my-awesome-post';
       const middleware = validateSlugParam();
@@ -232,7 +235,7 @@ describe('Param Validators', () => {
       expect(next).toHaveBeenCalled();
     });
 
-    it('should validate slug with numbers', () => {
+    test('should validate slug with numbers', () => {
       // Arrange
       req.params.slug = 'post-123';
       const middleware = validateSlugParam();
@@ -245,7 +248,7 @@ describe('Param Validators', () => {
       expect(next).toHaveBeenCalled();
     });
 
-    it('should validate custom param name', () => {
+    test('should validate custom param name', () => {
       // Arrange
       req.params.category = 'tech-news';
       const middleware = validateSlugParam({ paramName: 'category' });
@@ -258,7 +261,7 @@ describe('Param Validators', () => {
       expect(next).toHaveBeenCalled();
     });
 
-    it('should reject uppercase letters', () => {
+    test('should reject uppercase letters', () => {
       // Arrange
       req.params.slug = 'My-Post';
       const middleware = validateSlugParam();
@@ -275,7 +278,7 @@ describe('Param Validators', () => {
       );
     });
 
-    it('should reject special characters', () => {
+    test('should reject special characters', () => {
       // Arrange
       req.params.slug = 'my@post';
       const middleware = validateSlugParam();
@@ -292,7 +295,7 @@ describe('Param Validators', () => {
       );
     });
 
-    it('should reject empty slug', () => {
+    test('should reject empty slug', () => {
       // Arrange
       req.params.slug = '';
       const middleware = validateSlugParam();
@@ -309,7 +312,7 @@ describe('Param Validators', () => {
       );
     });
 
-    it('should reject slug below minimum length', () => {
+    test('should reject slug below minimum length', () => {
       // Arrange
       req.params.slug = 'ab';
       const middleware = validateSlugParam({ minLength: 3 });
@@ -326,7 +329,7 @@ describe('Param Validators', () => {
       );
     });
 
-    it('should reject slug above maximum length', () => {
+    test('should reject slug above maximum length', () => {
       // Arrange
       req.params.slug = 'a'.repeat(101);
       const middleware = validateSlugParam({ maxLength: 100 });
@@ -343,7 +346,7 @@ describe('Param Validators', () => {
       );
     });
 
-    it('should trim whitespace', () => {
+    test('should trim whitespace', () => {
       // Arrange
       req.params.slug = '  my-slug  ';
       const middleware = validateSlugParam();
@@ -356,7 +359,7 @@ describe('Param Validators', () => {
       expect(next).toHaveBeenCalled();
     });
 
-    it('should reject spaces in slug', () => {
+    test('should reject spaces in slug', () => {
       // Arrange
       req.params.slug = 'my slug';
       const middleware = validateSlugParam();
@@ -368,7 +371,7 @@ describe('Param Validators', () => {
       expect(res.status).toHaveBeenCalledWith(400);
     });
 
-    it('should reject underscores in slug', () => {
+    test('should reject underscores in slug', () => {
       // Arrange
       req.params.slug = 'my_slug';
       const middleware = validateSlugParam();
@@ -380,7 +383,7 @@ describe('Param Validators', () => {
       expect(res.status).toHaveBeenCalledWith(400);
     });
 
-    it('should initialize req.validated if not present', () => {
+    test('should initialize req.validated if not present', () => {
       // Arrange
       delete req.validated;
       req.params.slug = 'test-slug';

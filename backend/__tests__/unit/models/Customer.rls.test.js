@@ -78,7 +78,7 @@ describe('Customer Model - Row-Level Security', () => {
   });
 
   describe('_buildRLSFilter()', () => {
-    it('should return own_record_only filter for customer role', () => {
+    test('should return own_record_only filter for customer role', () => {
       const req = {
         rlsPolicy: 'own_record_only',
         rlsUserId: 42,
@@ -91,7 +91,7 @@ describe('Customer Model - Row-Level Security', () => {
       expect(filter.values).toEqual([42]);
     });
 
-    it('should return all_records filter (no clause) for technician+', () => {
+    test('should return all_records filter (no clause) for technician+', () => {
       const req = {
         rlsPolicy: 'all_records',
         rlsUserId: 10,
@@ -104,7 +104,7 @@ describe('Customer Model - Row-Level Security', () => {
       expect(filter.values).toEqual([]);
     });
 
-    it('should return no filter when req is null', () => {
+    test('should return no filter when req is null', () => {
       const filter = Customer._buildRLSFilter(null);
 
       expect(filter.applied).toBe(false);
@@ -112,7 +112,7 @@ describe('Customer Model - Row-Level Security', () => {
       expect(filter.values).toEqual([]);
     });
 
-    it('should return no filter when rlsPolicy is null', () => {
+    test('should return no filter when rlsPolicy is null', () => {
       const req = {
         rlsPolicy: null,
         rlsUserId: 10,
@@ -125,7 +125,7 @@ describe('Customer Model - Row-Level Security', () => {
       expect(filter.values).toEqual([]);
     });
 
-    it('should return deny-all filter for unknown policy', () => {
+    test('should return deny-all filter for unknown policy', () => {
       const req = {
         rlsPolicy: 'unknown_policy',
         rlsUserId: 10,
@@ -140,7 +140,7 @@ describe('Customer Model - Row-Level Security', () => {
   });
 
   describe('_applyRLSFilter()', () => {
-    it('should combine RLS filter with existing WHERE clause', () => {
+    test('should combine RLS filter with existing WHERE clause', () => {
       const req = {
         rlsPolicy: 'own_record_only',
         rlsUserId: 42,
@@ -153,7 +153,7 @@ describe('Customer Model - Row-Level Security', () => {
       expect(result.rlsApplied).toBe(true);
     });
 
-    it('should handle empty existing WHERE clause', () => {
+    test('should handle empty existing WHERE clause', () => {
       const req = {
         rlsPolicy: 'own_record_only',
         rlsUserId: 42,
@@ -166,7 +166,7 @@ describe('Customer Model - Row-Level Security', () => {
       expect(result.rlsApplied).toBe(true);
     });
 
-    it('should handle all_records policy with existing WHERE', () => {
+    test('should handle all_records policy with existing WHERE', () => {
       const req = {
         rlsPolicy: 'all_records',
         rlsUserId: 10,
@@ -179,7 +179,7 @@ describe('Customer Model - Row-Level Security', () => {
       expect(result.rlsApplied).toBe(false);
     });
 
-    it('should not apply RLS when req is null', () => {
+    test('should not apply RLS when req is null', () => {
       const result = Customer._applyRLSFilter(null, 'c.is_active = $1', [true]);
 
       expect(result.whereClause).toBe('WHERE c.is_active = $1');
@@ -187,7 +187,7 @@ describe('Customer Model - Row-Level Security', () => {
       expect(result.rlsApplied).toBe(false);
     });
 
-    it('should correctly number parameters', () => {
+    test('should correctly number parameters', () => {
       const req = {
         rlsPolicy: 'own_record_only',
         rlsUserId: 42,
@@ -208,7 +208,7 @@ describe('Customer Model - Row-Level Security', () => {
   });
 
   describe('findById() with RLS', () => {
-    it('should apply RLS filter when req provided', async () => {
+    test('should apply RLS filter when req provided', async () => {
       const mockCustomer = {
         id: 42,
         email: 'customer@example.com',
@@ -231,7 +231,7 @@ describe('Customer Model - Row-Level Security', () => {
       expect(customer.rlsApplied).toBe(true);
     });
 
-    it('should not apply RLS when req not provided', async () => {
+    test('should not apply RLS when req not provided', async () => {
       const mockCustomer = {
         id: 42,
         email: 'customer@example.com',
@@ -249,7 +249,7 @@ describe('Customer Model - Row-Level Security', () => {
       expect(customer.rlsApplied).toBeUndefined();
     });
 
-    it('should return null when RLS blocks access', async () => {
+    test('should return null when RLS blocks access', async () => {
       db.query.mockResolvedValue({ rows: [] });
 
       const req = {
@@ -264,7 +264,7 @@ describe('Customer Model - Row-Level Security', () => {
   });
 
   describe('findAll() with RLS', () => {
-    it('should apply RLS filter for customer role', async () => {
+    test('should apply RLS filter for customer role', async () => {
       const mockCustomers = [
         { id: 42, email: 'customer@example.com', is_active: true },
       ];
@@ -286,7 +286,7 @@ describe('Customer Model - Row-Level Security', () => {
       expect(db.query.mock.calls[1][0]).toContain('c.id = $');
     });
 
-    it('should not filter for technician+ (all_records)', async () => {
+    test('should not filter for technician+ (all_records)', async () => {
       const mockCustomers = [
         { id: 1, email: 'customer1@example.com' },
         { id: 2, email: 'customer2@example.com' },
@@ -306,7 +306,7 @@ describe('Customer Model - Row-Level Security', () => {
       expect(result.data.length).toBe(2);
     });
 
-    it('should work without RLS when req not provided', async () => {
+    test('should work without RLS when req not provided', async () => {
       const mockCustomers = [
         { id: 1, email: 'customer1@example.com' },
         { id: 2, email: 'customer2@example.com' },
@@ -320,7 +320,7 @@ describe('Customer Model - Row-Level Security', () => {
       expect(result.rlsApplied).toBe(false);
     });
 
-    it('should combine RLS with search and filters', async () => {
+    test('should combine RLS with search and filters', async () => {
       const mockCustomers = [
         { id: 42, email: 'customer@example.com', status: 'active' },
       ];

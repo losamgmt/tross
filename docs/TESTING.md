@@ -16,18 +16,14 @@ Philosophy, patterns, and best practices for testing TrossApp.
 
 ---
 
-## Test Statistics
+## Test Pyramid Distribution
 
-**Backend:** 1675+ tests across 98 test files  
-**Frontend:** 1553+ Flutter widget/integration tests  
-**E2E:** 188 Playwright tests (4 browsers × 47 scenarios)  
-**Execution Time:** <70 seconds (backend suite, parallelized)  
-**Coverage:** Comprehensive (unit + integration + E2E)
+**Target Ratios:**
+- Unit tests: ~80% (fast, isolated, comprehensive)
+- Integration tests: ~20% (API + DB, contract validation)
+- E2E tests: minimal (smoke tests only, stack connectivity)
 
-**Test Distribution:**
-- Unit tests: ~70% (fast, isolated)
-- Integration tests: ~25% (API + DB)
-- E2E tests: ~5% (critical user flows)
+**Run `npm test` to see current counts.**
 
 ---
 

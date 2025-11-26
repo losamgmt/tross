@@ -1,7 +1,10 @@
 // Contract model
 const db = require('../connection');
 const { logger } = require('../../config/logger');
+const { MODEL_ERRORS } = require('../../config/constants');
 const { toSafeInteger } = require('../../validators/type-coercion');
+const { deleteWithAuditCascade } = require('../helpers/delete-helper');
+const { buildUpdateClause } = require('../helpers/update-helper');
 const PaginationService = require('../../services/pagination-service');
 const QueryBuilderService = require('../../services/query-builder-service');
 const contractMetadata = require('../../config/models/contract-metadata');
@@ -118,7 +121,7 @@ class Contract {
       return result.rows[0] || null;
     } catch (error) {
       logger.error('Error finding contract', { error: error.message, contractId: safeId });
-      throw new Error('Failed to find contract');
+      throw new Error(MODEL_ERRORS.CONTRACT.RETRIEVAL_FAILED);
     }
   }
 
@@ -173,13 +176,13 @@ class Contract {
       };
     } catch (error) {
       logger.error('Error finding contracts', { error: error.message });
-      throw new Error('Failed to retrieve contracts');
+      throw new Error(MODEL_ERRORS.CONTRACT.RETRIEVAL_ALL_FAILED);
     }
   }
 
   static async create(data) {
     if (!data.contract_number || !data.customer_id || !data.start_date) {
-      throw new Error('Contract number, customer_id, and start_date are required');
+      throw new Error(MODEL_ERRORS.CONTRACT.CONTRACT_NUMBER_CUSTOMER_START_DATE_REQUIRED);
     }
     try {
       const query = `
@@ -203,34 +206,25 @@ class Contract {
         throw preservedError;
       }
 
-      throw new Error('Failed to create contract');
+      throw new Error(MODEL_ERRORS.CONTRACT.CREATION_FAILED);
     }
   }
 
   static async update(id, data) {
     const safeId = toSafeInteger(id, 'Contract ID');
     const allowedFields = ['contract_number', 'start_date', 'end_date', 'terms', 'value', 'billing_cycle', 'status'];
-    const updates = [];
-    const values = [];
-    let paramIndex = 1;
 
-    for (const [key, value] of Object.entries(data)) {
-      if (allowedFields.includes(key)) {
-        updates.push(`${key} = $${paramIndex}`);
-        values.push(value);
-        paramIndex++;
-      }
-    }
+    const { updates, values, hasUpdates } = buildUpdateClause(data, allowedFields);
 
-    if (updates.length === 0) {
-      throw new Error('No valid fields to update');
+    if (!hasUpdates) {
+      throw new Error(MODEL_ERRORS.CONTRACT.NO_VALID_FIELDS);
     }
 
     try {
       values.push(safeId);
-      const result = await db.query(`UPDATE contracts SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING *`, values);
+      const result = await db.query(`UPDATE contracts SET ${updates.join(', ')} WHERE id = $${values.length} RETURNING *`, values);
       if (result.rows.length === 0) {
-        throw new Error('Contract not found');
+        throw new Error(MODEL_ERRORS.CONTRACT.NOT_FOUND);
       }
       logger.info('Contract updated', { contractId: safeId });
       return result.rows[0];
@@ -244,38 +238,17 @@ class Contract {
         throw preservedError;
       }
 
-      throw new Error('Failed to update contract');
-    }
-  }
-
-  static async deactivate(id) {
-    const safeId = toSafeInteger(id, 'Contract ID');
-    try {
-      const result = await db.query('UPDATE contracts SET is_active = false WHERE id = $1 RETURNING *', [safeId]);
-      if (result.rows.length === 0) {
-        throw new Error('Contract not found');
-      }
-      logger.info('Contract deactivated', { contractId: safeId });
-      return result.rows[0];
-    } catch (error) {
-      logger.error('Error deactivating contract', { error: error.message });
-      throw new Error('Failed to deactivate contract');
+      throw new Error(MODEL_ERRORS.CONTRACT.UPDATE_FAILED);
     }
   }
 
   static async delete(id) {
     const safeId = toSafeInteger(id, 'Contract ID');
-    try {
-      const result = await db.query('DELETE FROM contracts WHERE id = $1 RETURNING *', [safeId]);
-      if (result.rows.length === 0) {
-        throw new Error('Contract not found');
-      }
-      logger.warn('Contract permanently deleted', { contractId: safeId });
-      return result.rows[0];
-    } catch (error) {
-      logger.error('Error deleting contract', { error: error.message });
-      throw new Error('Failed to delete contract');
-    }
+
+    return deleteWithAuditCascade({
+      tableName: 'contracts',
+      id: safeId,
+    });
   }
 }
 

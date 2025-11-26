@@ -17,7 +17,7 @@ describe('Customer Model - Validation', () => {
   });
 
   describe('Email Validation', () => {
-    it('should reject duplicate email', async () => {
+    test('should reject duplicate email', async () => {
       db.query.mockRejectedValue({
         code: '23505',
         constraint: 'customers_email_key',
@@ -29,7 +29,7 @@ describe('Customer Model - Validation', () => {
       ).rejects.toThrow();
     });
 
-    it('should reject null email', async () => {
+    test('should reject null email', async () => {
       db.query.mockRejectedValue({
         code: '23502',
         message: 'null value in column "email" violates not-null constraint',
@@ -40,7 +40,7 @@ describe('Customer Model - Validation', () => {
   });
 
   describe('Status Validation', () => {
-    it('should accept valid status values', async () => {
+    test('should accept valid status values', async () => {
       const validStatuses = ['pending', 'active', 'suspended'];
 
       for (const status of validStatuses) {
@@ -53,7 +53,7 @@ describe('Customer Model - Validation', () => {
       }
     });
 
-    it('should reject invalid status values', async () => {
+    test('should reject invalid status values', async () => {
       db.query.mockRejectedValue({
         code: '23514',
         message: 'new row for relation "customers" violates check constraint',
@@ -66,7 +66,7 @@ describe('Customer Model - Validation', () => {
   });
 
   describe('Field Constraints', () => {
-    it('should handle missing optional fields', async () => {
+    test('should handle missing optional fields', async () => {
       db.query.mockResolvedValue({
         rows: [{ id: 1, email: 'minimal@test.com', phone: null, company_name: null }],
       });
@@ -77,7 +77,7 @@ describe('Customer Model - Validation', () => {
       expect(result.phone).toBeNull();
     });
 
-    it('should accept JSONB fields for addresses', async () => {
+    test('should accept JSONB fields for addresses', async () => {
       const address = { street: '123 Main St', city: 'Springfield', zip: '12345' };
       db.query.mockResolvedValue({
         rows: [{ id: 1, email: 'test@test.com', billing_address: address }],

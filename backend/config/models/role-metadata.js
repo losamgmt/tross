@@ -113,4 +113,21 @@ module.exports = {
       fields: ['id', 'email', 'first_name', 'last_name'],
     },
   },
+
+  // ============================================================================
+  // FIELD DEFINITIONS (for validation & documentation)
+  // ============================================================================
+
+  fields: {
+    // TIER 1: Universal Entity Contract Fields
+    id: { type: 'integer', readonly: true },
+    name: { type: 'string', required: true, maxLength: 50 },
+    is_active: { type: 'boolean', default: true },
+    created_at: { type: 'timestamp', readonly: true },
+    updated_at: { type: 'timestamp', readonly: true },
+
+    // Entity-specific fields (Roles have no TIER 2 status - they are reference data)
+    description: { type: 'text' },
+    priority: { type: 'integer', required: true, min: 1 },
+  },
 };

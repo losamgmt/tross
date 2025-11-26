@@ -15,10 +15,10 @@ const {
 } = require('../validators');
 const Contract = require('../db/models/Contract');
 const auditService = require('../services/audit-service');
-const { HTTP_STATUS } = require('../config/constants');
 const { getClientIp, getUserAgent } = require('../utils/request-helpers');
 const { logger } = require('../config/logger');
 const contractMetadata = require('../config/models/contract-metadata');
+const ResponseFormatter = require('../utils/response-formatter');
 
 const router = express.Router();
 
@@ -27,15 +27,75 @@ const router = express.Router();
  * /api/contracts:
  *   get:
  *     tags: [Contracts]
- *     summary: Get all contracts
- *     description: Customers see their own contracts. Technicians see contracts for assigned customers. Dispatchers+ see all.
+ *     summary: Get all contracts with search, filters, and sorting
+ *     description: |
+ *       Retrieve a paginated list of contracts. Row-level security applies.
+ *       Customers see their own. Technicians see assigned customers. Dispatchers+ see all.
  *     security:
  *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 200
+ *           default: 50
+ *         description: Number of items per page
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *           maxLength: 255
+ *         description: Search by contract_number (case-insensitive)
+ *       - in: query
+ *         name: customer_id
+ *         schema:
+ *           type: integer
+ *         description: Filter by customer ID
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [draft, active, expired, cancelled]
+ *         description: Filter by contract status
+ *       - in: query
+ *         name: billing_cycle
+ *         schema:
+ *           type: string
+ *           enum: [monthly, quarterly, annually, one_time]
+ *         description: Filter by billing cycle
+ *       - in: query
+ *         name: is_active
+ *         schema:
+ *           type: boolean
+ *         description: Filter by active status
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [id, contract_number, status, value, start_date, end_date, created_at, updated_at]
+ *           default: created_at
+ *         description: Field to sort by
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: DESC
+ *         description: Sort order
  *     responses:
  *       200:
  *         description: Contracts retrieved successfully
  *       403:
- *         description: Forbidden
+ *         description: Forbidden - Insufficient permissions
  */
 router.get(
   '/',
@@ -59,26 +119,39 @@ router.get(
         req,
       });
 
-      res.json({
-        success: true,
-        data: result.data,
-        count: result.data.length,
-        pagination: result.pagination,
-        appliedFilters: result.appliedFilters,
-        rlsApplied: result.rlsApplied,
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.list(res, result);
     } catch (error) {
       logger.error('Error retrieving contracts', { error: error.message });
-      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-        error: 'Internal Server Error',
-        message: 'Failed to retrieve contracts',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );
 
+/**
+ * @openapi
+ * /api/contracts/{id}:
+ *   get:
+ *     tags: [Contracts]
+ *     summary: Get contract by ID
+ *     description: Retrieve a single contract. Row-level security applies.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *         description: Contract ID
+ *     responses:
+ *       200:
+ *         description: Contract retrieved successfully
+ *       403:
+ *         description: Forbidden - Insufficient permissions
+ *       404:
+ *         description: Contract not found
+ */
 router.get(
   '/:id',
   authenticateToken,
@@ -91,28 +164,16 @@ router.get(
       const contract = await Contract.findById(contractId, req);
 
       if (!contract) {
-        return res.status(HTTP_STATUS.NOT_FOUND).json({
-          error: 'Not Found',
-          message: 'Contract not found',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.notFound(res, 'Contract not found');
       }
 
-      res.json({
-        success: true,
-        data: contract,
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.get(res, contract);
     } catch (error) {
       logger.error('Error retrieving contract', {
         error: error.message,
         contractId: req.params.id,
       });
-      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-        error: 'Internal Server Error',
-        message: 'Failed to retrieve contract',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );
@@ -192,36 +253,24 @@ router.post(
         result: 'success',
       });
 
-      res.status(HTTP_STATUS.CREATED).json({
-        success: true,
-        data: newContract,
-        message: 'Contract created successfully',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.created(res, newContract, 'Contract created successfully');
     } catch (error) {
       logger.error('Error creating contract', { error: error.message });
 
       if (error.code === '23505') {
-        return res.status(HTTP_STATUS.CONFLICT).json({
-          error: 'Conflict',
-          message: 'Contract number already exists',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.conflict(res, 'Contract number already exists');
       }
 
       if (error.code === '23514') {
-        return res.status(HTTP_STATUS.BAD_REQUEST).json({
-          error: 'Bad Request',
-          message: 'Invalid field value - check status and other enum fields',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.badRequest(res, 'Invalid field value - check status and other enum fields');
       }
 
-      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-        error: 'Internal Server Error',
-        message: 'Failed to create contract',
-        timestamp: new Date().toISOString(),
-      });
+      // PostgreSQL date/time format errors
+      if (error.code === '22007' || error.code === '22008') {
+        return ResponseFormatter.badRequest(res, 'Invalid date format - use YYYY-MM-DD');
+      }
+
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );
@@ -277,6 +326,7 @@ router.patch(
   '/:id',
   authenticateToken,
   requirePermission('contracts', 'update'),
+  enforceRLS('contracts'),
   validateIdParam(),
   validateContractUpdate,
   async (req, res) => {
@@ -287,11 +337,7 @@ router.patch(
 
       const contract = await Contract.findById(contractId);
       if (!contract) {
-        return res.status(HTTP_STATUS.NOT_FOUND).json({
-          error: 'Not Found',
-          message: 'Contract not found',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.notFound(res, 'Contract not found');
       }
 
       await Contract.update(contractId, req.body);
@@ -309,12 +355,7 @@ router.patch(
         result: 'success',
       });
 
-      res.json({
-        success: true,
-        data: updatedContract,
-        message: 'Contract updated successfully',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.updated(res, updatedContract, 'Contract updated successfully');
     } catch (error) {
       logger.error('Error updating contract', {
         error: error.message,
@@ -322,26 +363,19 @@ router.patch(
       });
 
       if (error.code === '23505') {
-        return res.status(HTTP_STATUS.CONFLICT).json({
-          error: 'Conflict',
-          message: 'Contract number already exists',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.conflict(res, 'Contract number already exists');
       }
 
       if (error.code === '23514') {
-        return res.status(HTTP_STATUS.BAD_REQUEST).json({
-          error: 'Bad Request',
-          message: 'Invalid field value - check status and other enum fields',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.badRequest(res, 'Invalid field value - check status and other enum fields');
       }
 
-      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-        error: 'Internal Server Error',
-        message: 'Failed to update contract',
-        timestamp: new Date().toISOString(),
-      });
+      // PostgreSQL date/time format errors
+      if (error.code === '22007' || error.code === '22008') {
+        return ResponseFormatter.badRequest(res, 'Invalid date format - use YYYY-MM-DD');
+      }
+
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );
@@ -352,7 +386,9 @@ router.patch(
  *   delete:
  *     tags: [Contracts]
  *     summary: Delete contract (manager+ only)
- *     description: Soft delete a contract (sets is_active=false). Manager+ access required.
+ *     description: |
+ *       Permanently delete a contract.
+ *       To deactivate instead, use PATCH with is_active=false.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -361,6 +397,7 @@ router.patch(
  *         required: true
  *         schema:
  *           type: integer
+ *           minimum: 1
  *         description: Contract ID
  *     responses:
  *       200:
@@ -383,11 +420,7 @@ router.delete(
 
       const contract = await Contract.findById(contractId);
       if (!contract) {
-        return res.status(HTTP_STATUS.NOT_FOUND).json({
-          error: 'Not Found',
-          message: 'Contract not found',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.notFound(res, 'Contract not found');
       }
 
       await Contract.delete(contractId);
@@ -403,21 +436,13 @@ router.delete(
         result: 'success',
       });
 
-      res.json({
-        success: true,
-        message: 'Contract deleted successfully',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.deleted(res, 'Contract deleted successfully');
     } catch (error) {
       logger.error('Error deleting contract', {
         error: error.message,
         contractId: req.params.id,
       });
-      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-        error: 'Internal Server Error',
-        message: 'Failed to delete contract',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );

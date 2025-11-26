@@ -39,7 +39,7 @@ Fast local development without Auth0 configuration.
 
 ### How It Works
 1. Pre-configured test users in `backend/config/test-users.js`
-2. Request dev token via `/api/dev-auth/login`
+2. Request dev token via `GET /api/dev/token?role=admin`
 3. Instant JWT generation (no external API calls)
 4. Full RBAC permissions for testing
 
@@ -55,19 +55,19 @@ customer@dev.local   // Customer (own data only)
 
 ### Login Flow
 ```bash
-POST /api/dev-auth/login
-{
-  "email": "admin@dev.local"
-}
+GET /api/dev/token?role=admin
 
 Response:
 {
-  "token": "eyJhbGciOiJIUzI1NiIs...",
-  "user": {
-    "id": null,
-    "email": "admin@dev.local",
-    "role": "admin",
-    "provider": "development"
+  "success": true,
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIs...",
+    "user": {
+      "email": "admin@trossapp.dev",
+      "role": "admin"
+    },
+    "provider": "development",
+    "expires_in": 86400
   }
 }
 ```
@@ -370,9 +370,9 @@ app.use('/api/auth/login', loginLimiter);
 - Ensure Auth0 application is enabled
 
 ### Dev mode not working
-- Check `AppConfig.devAuthEnabled` is true
-- Verify test users exist in `config/test-users.js`
-- Ensure `/api/dev-auth/*` routes are registered
+- Check `NODE_ENV=development`
+- Verify dev routes are registered at `/api/dev/*`
+- Test with: `curl "http://localhost:3001/api/dev/token?role=admin"`
 
 ### Permission denied (403)
 - Check user role in JWT payload

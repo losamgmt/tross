@@ -55,6 +55,15 @@ class ApiClient {
               )
               .timeout(AppConfig.httpTimeout);
           break;
+        case 'PATCH':
+          response = await http
+              .patch(
+                uri,
+                headers: headers,
+                body: body != null ? json.encode(body) : null,
+              )
+              .timeout(AppConfig.httpTimeout);
+          break;
         case 'DELETE':
           response = await http
               .delete(uri, headers: headers)
@@ -252,6 +261,46 @@ class ApiClient {
     }
   }
 
+  /// Convenience method: PATCH request (partial updates)
+  static Future<Map<String, dynamic>> patch(
+    String endpoint, {
+    Map<String, dynamic>? body,
+    String? token,
+  }) async {
+    try {
+      ErrorService.logInfo(
+        '📤 [ApiClient] PATCH request starting',
+        context: {'endpoint': endpoint, 'bodyKeys': body?.keys.toList() ?? []},
+      );
+
+      final authToken = token ?? await _getStoredToken();
+      if (authToken == null) {
+        throw Exception('No authentication token available');
+      }
+
+      final response = await authenticatedRequest(
+        'PATCH',
+        endpoint,
+        token: authToken,
+        body: body,
+      );
+
+      ErrorService.logInfo(
+        '📥 [ApiClient] PATCH response received',
+        context: {'endpoint': endpoint, 'statusCode': response.statusCode},
+      );
+
+      return _parseResponse(response);
+    } catch (e) {
+      ErrorService.logError(
+        '❌ [ApiClient] PATCH request failed',
+        error: e,
+        context: {'endpoint': endpoint},
+      );
+      rethrow;
+    }
+  }
+
   /// Convenience method: DELETE request
   static Future<Map<String, dynamic>> delete(
     String endpoint, {
@@ -423,7 +472,9 @@ class ApiClient {
           .timeout(AppConfig.httpTimeout);
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+        final responseBody = json.decode(response.body);
+        // Unwrap standard response envelope: { success, data: { token, ... } }
+        final data = responseBody['data'] ?? responseBody;
         return data['token'];
       } else {
         ErrorService.logError(

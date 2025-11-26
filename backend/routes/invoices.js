@@ -15,10 +15,10 @@ const {
 } = require('../validators');
 const Invoice = require('../db/models/Invoice');
 const auditService = require('../services/audit-service');
-const { HTTP_STATUS } = require('../config/constants');
 const { getClientIp, getUserAgent } = require('../utils/request-helpers');
 const { logger } = require('../config/logger');
 const invoiceMetadata = require('../config/models/invoice-metadata');
+const ResponseFormatter = require('../utils/response-formatter');
 
 const router = express.Router();
 
@@ -27,15 +27,74 @@ const router = express.Router();
  * /api/invoices:
  *   get:
  *     tags: [Invoices]
- *     summary: Get all invoices
- *     description: Customers see their own invoices only. Dispatchers+ see all. Technicians have no access.
+ *     summary: Get all invoices with search, filters, and sorting
+ *     description: |
+ *       Retrieve a paginated list of invoices. Row-level security applies.
+ *       Customers see their own. Dispatchers+ see all. Technicians have no access.
  *     security:
  *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 200
+ *           default: 50
+ *         description: Number of items per page
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *           maxLength: 255
+ *         description: Search by invoice_number (case-insensitive)
+ *       - in: query
+ *         name: customer_id
+ *         schema:
+ *           type: integer
+ *         description: Filter by customer ID
+ *       - in: query
+ *         name: work_order_id
+ *         schema:
+ *           type: integer
+ *         description: Filter by work order ID
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [draft, sent, paid, overdue, cancelled]
+ *         description: Filter by invoice status
+ *       - in: query
+ *         name: is_active
+ *         schema:
+ *           type: boolean
+ *         description: Filter by active status
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [id, invoice_number, status, amount, total, due_date, paid_at, created_at, updated_at]
+ *           default: created_at
+ *         description: Field to sort by
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: DESC
+ *         description: Sort order
  *     responses:
  *       200:
  *         description: Invoices retrieved successfully
  *       403:
- *         description: Forbidden
+ *         description: Forbidden - Insufficient permissions
  */
 router.get(
   '/',
@@ -59,26 +118,44 @@ router.get(
         req,
       });
 
-      res.json({
-        success: true,
+      return ResponseFormatter.list(res, {
         data: result.data,
-        count: result.data.length,
         pagination: result.pagination,
         appliedFilters: result.appliedFilters,
         rlsApplied: result.rlsApplied,
-        timestamp: new Date().toISOString(),
       });
     } catch (error) {
       logger.error('Error retrieving invoices', { error: error.message });
-      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-        error: 'Internal Server Error',
-        message: 'Failed to retrieve invoices',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );
 
+/**
+ * @openapi
+ * /api/invoices/{id}:
+ *   get:
+ *     tags: [Invoices]
+ *     summary: Get invoice by ID
+ *     description: Retrieve a single invoice. Row-level security applies.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *         description: Invoice ID
+ *     responses:
+ *       200:
+ *         description: Invoice retrieved successfully
+ *       403:
+ *         description: Forbidden - Insufficient permissions
+ *       404:
+ *         description: Invoice not found
+ */
 router.get(
   '/:id',
   authenticateToken,
@@ -91,28 +168,16 @@ router.get(
       const invoice = await Invoice.findById(invoiceId, req);
 
       if (!invoice) {
-        return res.status(HTTP_STATUS.NOT_FOUND).json({
-          error: 'Not Found',
-          message: 'Invoice not found',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.notFound(res, 'Invoice not found');
       }
 
-      res.json({
-        success: true,
-        data: invoice,
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.get(res, invoice);
     } catch (error) {
       logger.error('Error retrieving invoice', {
         error: error.message,
         invoiceId: req.params.id,
       });
-      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-        error: 'Internal Server Error',
-        message: 'Failed to retrieve invoice',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.internalError(res, 'Failed to retrieve invoice');
     }
   },
 );
@@ -198,36 +263,19 @@ router.post(
         result: 'success',
       });
 
-      res.status(HTTP_STATUS.CREATED).json({
-        success: true,
-        data: newInvoice,
-        message: 'Invoice created successfully',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.created(res, newInvoice, 'Invoice created successfully');
     } catch (error) {
       logger.error('Error creating invoice', { error: error.message });
 
       if (error.code === '23505') {
-        return res.status(HTTP_STATUS.CONFLICT).json({
-          error: 'Conflict',
-          message: 'Invoice number already exists',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.conflict(res, 'Invoice number already exists');
       }
 
       if (error.code === '23514') {
-        return res.status(HTTP_STATUS.BAD_REQUEST).json({
-          error: 'Bad Request',
-          message: 'Invalid field value - check status and other enum fields',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.badRequest(res, 'Invalid field value - check status and other enum fields');
       }
 
-      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-        error: 'Internal Server Error',
-        message: 'Failed to create invoice',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.internalError(res, 'Failed to create invoice');
     }
   },
 );
@@ -281,6 +329,7 @@ router.patch(
   '/:id',
   authenticateToken,
   requirePermission('invoices', 'update'),
+  enforceRLS('invoices'),
   validateIdParam(),
   validateInvoiceUpdate,
   async (req, res) => {
@@ -291,11 +340,7 @@ router.patch(
 
       const invoice = await Invoice.findById(invoiceId);
       if (!invoice) {
-        return res.status(HTTP_STATUS.NOT_FOUND).json({
-          error: 'Not Found',
-          message: 'Invoice not found',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.notFound(res, 'Invoice not found');
       }
 
       await Invoice.update(invoiceId, req.body);
@@ -313,12 +358,7 @@ router.patch(
         result: 'success',
       });
 
-      res.json({
-        success: true,
-        data: updatedInvoice,
-        message: 'Invoice updated successfully',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.updated(res, updatedInvoice, 'Invoice updated successfully');
     } catch (error) {
       logger.error('Error updating invoice', {
         error: error.message,
@@ -326,26 +366,14 @@ router.patch(
       });
 
       if (error.code === '23505') {
-        return res.status(HTTP_STATUS.CONFLICT).json({
-          error: 'Conflict',
-          message: 'Invoice number already exists',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.conflict(res, 'Invoice number already exists');
       }
 
       if (error.code === '23514') {
-        return res.status(HTTP_STATUS.BAD_REQUEST).json({
-          error: 'Bad Request',
-          message: 'Invalid field value - check status and other enum fields',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.badRequest(res, 'Invalid field value - check status and other enum fields');
       }
 
-      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-        error: 'Internal Server Error',
-        message: 'Failed to update invoice',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.internalError(res, 'Failed to update invoice');
     }
   },
 );
@@ -356,7 +384,9 @@ router.patch(
  *   delete:
  *     tags: [Invoices]
  *     summary: Delete invoice (manager+ only)
- *     description: Soft delete an invoice (sets is_active=false). Manager+ access required.
+ *     description: |
+ *       Permanently delete an invoice.
+ *       To deactivate instead, use PATCH with is_active=false.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -365,6 +395,7 @@ router.patch(
  *         required: true
  *         schema:
  *           type: integer
+ *           minimum: 1
  *         description: Invoice ID
  *     responses:
  *       200:
@@ -387,11 +418,7 @@ router.delete(
 
       const invoice = await Invoice.findById(invoiceId);
       if (!invoice) {
-        return res.status(HTTP_STATUS.NOT_FOUND).json({
-          error: 'Not Found',
-          message: 'Invoice not found',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.notFound(res, 'Invoice not found');
       }
 
       await Invoice.delete(invoiceId);
@@ -407,21 +434,13 @@ router.delete(
         result: 'success',
       });
 
-      res.json({
-        success: true,
-        message: 'Invoice deleted successfully',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.deleted(res, 'Invoice deleted successfully');
     } catch (error) {
       logger.error('Error deleting invoice', {
         error: error.message,
         invoiceId: req.params.id,
       });
-      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-        error: 'Internal Server Error',
-        message: 'Failed to delete invoice',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.internalError(res, 'Failed to delete invoice');
     }
   },
 );

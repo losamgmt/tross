@@ -106,37 +106,28 @@ npm run dev:frontend   # Frontend on :8080
 
 ## 📚 Documentation
 
-### Core Documentation
-- **[Quick Start](docs/QUICK_START.md)** - Get up and running in 5 minutes
-- **[Architecture](docs/ARCHITECTURE.md)** - Core patterns, decisions, and locked patterns
-- **[Development](docs/DEVELOPMENT.md)** - Daily workflow and code organization (includes fork workflow)
-- **[Testing](docs/TESTING.md)** - Test philosophy and patterns (3416+ tests: 1675 backend, 1553 frontend, 188 E2E)
-- **[Security](docs/SECURITY.md)** - Defense-in-depth architecture
-- **[Authentication](docs/AUTH.md)** - Dual auth (dev + Auth0), RBAC
-- **[API](docs/API.md)** - RESTful patterns and conventions
-- **[Deployment](docs/DEPLOYMENT.md)** - Production deployment and CI/CD
+**Getting Started:**
+- [Quick Start](docs/QUICK_START.md) - Get running in 5 minutes
+- [Development](docs/DEVELOPMENT.md) - Daily workflow, code organization
 
-### Collaboration & Deployment
-- **[Fork Workflow Guide](docs/FORK_WORKFLOW_GUIDE.md)** - Step-by-step guide for collaborators (AI-empowered, non-technical friendly)
-- **[CI/CD Guide](docs/CI_CD_GUIDE.md)** - Complete pipeline, fork workflow, deployment automation
-- **[Railway Deployment](docs/RAILWAY_DEPLOYMENT.md)** - Backend hosting ($10-15/month, PostgreSQL included)
-- **[Vercel Deployment](docs/VERCEL_DEPLOYMENT.md)** - Frontend hosting (free tier, PR previews)
-- **[Branch Protection Setup](docs/GITHUB_BRANCH_PROTECTION.md)** - GitHub UI configuration guide
-- **[Pipeline Quick Guide](docs/PIPELINE_QUICK_GUIDE.md)** - Non-technical overview of development pipeline
-- **[GitHub Codespaces](docs/CODESPACES.md)** - Cloud dev environment for non-technical collaborators
-- **[Contributors Guide](CONTRIBUTORS.md)** - How to contribute, fork workflow, testing requirements
+**Architecture & Design:**
+- [Architecture](docs/ARCHITECTURE.md) - Core patterns and decisions
+- [Security](docs/SECURITY.md) - Defense-in-depth (Auth0 + RBAC + RLS)
+- [Authentication](docs/AUTH.md) - Dual auth strategy
+- [API](docs/API.md) - RESTful conventions
 
-### Production Operations
-- **[Health Monitoring](docs/HEALTH_MONITORING.md)** - Monitoring setup, metrics, alerting, incident response
-- **[Rollback Procedures](docs/ROLLBACK.md)** - Emergency rollback guide for backend, frontend, database
+**Quality & Operations:**
+- [Testing](docs/TESTING.md) - Philosophy, pyramid, patterns
+- [CI/CD](docs/CI_CD_GUIDE.md) - Pipeline and automation
+- [Health Monitoring](docs/HEALTH_MONITORING.md) - Observability
+- [Rollback](docs/ROLLBACK.md) - Emergency procedures
 
-### Reference Documentation
-- **[Database Architecture](docs/architecture/DATABASE_ARCHITECTURE.md)** - Schema design and migrations
-- **[Entity Lifecycle](docs/architecture/ENTITY_LIFECYCLE.md)** - Data flow patterns
-- **[Validation Architecture](docs/architecture/VALIDATION_ARCHITECTURE.md)** - Triple-tier validation
-- **[Environment Variables](backend/ENVIRONMENT_VARIABLES.md)** - Configuration reference
+**Deep Dives:**
+- [Database Architecture](docs/architecture/DATABASE_ARCHITECTURE.md)
+- [Validation Architecture](docs/architecture/VALIDATION_ARCHITECTURE.md)
+- [Architecture Decisions](docs/architecture/decisions/)
 
-> **📖 Full Documentation Index:** [docs/README.md](docs/README.md)
+> **Full Index:** [docs/README.md](docs/README.md)
 
 ---
 

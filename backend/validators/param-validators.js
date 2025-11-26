@@ -7,24 +7,7 @@
  * All validators attach validated values to req.validated = {}
  */
 const { toSafeInteger } = require('./type-coercion');
-const { HTTP_STATUS } = require('../config/constants');
-
-/**
- * Create a standard validation error response
- *
- * @private
- * @param {string} message - Error message
- * @param {string} field - Field that failed validation
- * @returns {Object} Error response object
- */
-function createValidationError(message, field) {
-  return {
-    error: 'Validation Error',
-    message,
-    field,
-    timestamp: new Date().toISOString(),
-  };
-}
+const ResponseFormatter = require('../utils/response-formatter');
 
 /**
  * Validate numeric ID parameter
@@ -55,16 +38,11 @@ function validateIdParam(options = {}) {
       if (!req.validated) {req.validated = {};}
       req.validated[paramName] = validated;
 
-      // LEGACY SUPPORT: Also attach to req.validatedId for backward compatibility
-      if (paramName === 'id') {
-        req.validatedId = validated;
-      }
-
       next();
     } catch (error) {
-      return res
-        .status(HTTP_STATUS.BAD_REQUEST)
-        .json(createValidationError(error.message, paramName));
+      return ResponseFormatter.badRequest(res, error.message, [
+        { field: paramName, message: error.message },
+      ]);
     }
   };
 }
@@ -95,9 +73,9 @@ function validateIdParams(paramNames) {
 
       next();
     } catch (error) {
-      return res
-        .status(HTTP_STATUS.BAD_REQUEST)
-        .json(createValidationError(error.message, 'params'));
+      return ResponseFormatter.badRequest(res, error.message, [
+        { field: 'params', message: error.message },
+      ]);
     }
   };
 }
@@ -123,33 +101,29 @@ function validateSlugParam(options = {}) {
     const value = req.params[paramName];
 
     if (!value || typeof value !== 'string') {
-      return res
-        .status(HTTP_STATUS.BAD_REQUEST)
-        .json(createValidationError(`${paramName} is required`, paramName));
+      return ResponseFormatter.badRequest(
+        res,
+        `${paramName} is required`,
+        [{ field: paramName, message: `${paramName} is required` }],
+      );
     }
 
     const trimmed = value.trim();
 
     if (trimmed.length < minLength || trimmed.length > maxLength) {
-      return res
-        .status(HTTP_STATUS.BAD_REQUEST)
-        .json(
-          createValidationError(
-            `${paramName} must be between ${minLength} and ${maxLength} characters`,
-            paramName,
-          ),
-        );
+      return ResponseFormatter.badRequest(
+        res,
+        `${paramName} must be between ${minLength} and ${maxLength} characters`,
+        [{ field: paramName, message: `${paramName} must be between ${minLength} and ${maxLength} characters` }],
+      );
     }
 
     if (!slugPattern.test(trimmed)) {
-      return res
-        .status(HTTP_STATUS.BAD_REQUEST)
-        .json(
-          createValidationError(
-            `${paramName} must contain only lowercase letters, numbers, and hyphens`,
-            paramName,
-          ),
-        );
+      return ResponseFormatter.badRequest(
+        res,
+        `${paramName} must contain only lowercase letters, numbers, and hyphens`,
+        [{ field: paramName, message: `${paramName} must contain only lowercase letters, numbers, and hyphens` }],
+      );
     }
 
     if (!req.validated) {req.validated = {};}

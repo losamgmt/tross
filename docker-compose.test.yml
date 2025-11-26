@@ -1,8 +1,6 @@
 # TrossApp Test Database - Docker Compose
 # Provides isolated PostgreSQL instance for integration testing
 
-version: '3.8'
-
 services:
   # PostgreSQL Test Database (Separate port 5433)
   # Uses SAME credentials as dev DB (postgres/tross123) for simplicity

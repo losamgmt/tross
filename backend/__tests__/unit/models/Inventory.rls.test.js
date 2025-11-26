@@ -78,7 +78,7 @@ describe('Inventory Model - Row-Level Security', () => {
   });
 
   describe('_buildRLSFilter', () => {
-    it('should return no filtering for null policy (customer role)', () => {
+    test('should return no filtering for null policy (customer role)', () => {
       const req = {
         user: { id: 1, role: 'customer' },
         rlsPolicy: null,
@@ -95,7 +95,7 @@ describe('Inventory Model - Row-Level Security', () => {
       });
     });
 
-    it('should return no filtering for null policy (technician role)', () => {
+    test('should return no filtering for null policy (technician role)', () => {
       const req = {
         user: { id: 2, role: 'technician' },
         rlsPolicy: null,
@@ -112,7 +112,7 @@ describe('Inventory Model - Row-Level Security', () => {
       });
     });
 
-    it('should return no filtering for null policy (dispatcher role)', () => {
+    test('should return no filtering for null policy (dispatcher role)', () => {
       const req = {
         user: { id: 3, role: 'dispatcher' },
         rlsPolicy: null,
@@ -129,7 +129,7 @@ describe('Inventory Model - Row-Level Security', () => {
       });
     });
 
-    it('should return no filtering for null policy (admin role)', () => {
+    test('should return no filtering for null policy (admin role)', () => {
       const req = {
         user: { id: 4, role: 'admin' },
         rlsPolicy: null,
@@ -146,7 +146,7 @@ describe('Inventory Model - Row-Level Security', () => {
       });
     });
 
-    it('should return no filtering when req is null', () => {
+    test('should return no filtering when req is null', () => {
       const result = Inventory._buildRLSFilter(null);
 
       expect(result).toEqual({
@@ -156,7 +156,7 @@ describe('Inventory Model - Row-Level Security', () => {
       });
     });
 
-    it('should return no filtering when req is undefined', () => {
+    test('should return no filtering when req is undefined', () => {
       const result = Inventory._buildRLSFilter(undefined);
 
       expect(result).toEqual({
@@ -168,7 +168,7 @@ describe('Inventory Model - Row-Level Security', () => {
   });
 
   describe('_applyRLSFilter', () => {
-    it('should not modify WHERE clause for null policy', () => {
+    test('should not modify WHERE clause for null policy', () => {
       const req = {
         user: { id: 1, role: 'customer' },
         rlsPolicy: null,
@@ -186,7 +186,7 @@ describe('Inventory Model - Row-Level Security', () => {
       expect(result.applied).toBe(false);
     });
 
-    it('should not modify WHERE clause when no existing WHERE', () => {
+    test('should not modify WHERE clause when no existing WHERE', () => {
       const req = {
         user: { id: 2, role: 'technician' },
         rlsPolicy: null,
@@ -201,7 +201,7 @@ describe('Inventory Model - Row-Level Security', () => {
       expect(result.applied).toBe(false);
     });
 
-    it('should handle req = null without modification', () => {
+    test('should handle req = null without modification', () => {
       const existingWhere = 'WHERE quantity < $1';
       const existingValues = [10];
 
@@ -214,7 +214,7 @@ describe('Inventory Model - Row-Level Security', () => {
   });
 
   describe('findById with RLS', () => {
-    it('should fetch inventory without filtering (null policy)', async () => {
+    test('should fetch inventory without filtering (null policy)', async () => {
       const mockItem = { id: 1, name: 'Widget', sku: 'WID-001', quantity: 50 };
       db.query.mockResolvedValue({ rows: [mockItem] });
 
@@ -240,7 +240,7 @@ describe('Inventory Model - Row-Level Security', () => {
       });
     });
 
-    it('should fetch inventory without req (backward compatibility)', async () => {
+    test('should fetch inventory without req (backward compatibility)', async () => {
       const mockItem = { id: 2, name: 'Gadget', sku: 'GAD-002', quantity: 25 };
       db.query.mockResolvedValue({ rows: [mockItem] });
 
@@ -259,7 +259,7 @@ describe('Inventory Model - Row-Level Security', () => {
       expect(item.rlsApplied).toBeUndefined();
     });
 
-    it('should return null when inventory not found', async () => {
+    test('should return null when inventory not found', async () => {
       db.query.mockResolvedValue({ rows: [] });
 
       const req = {
@@ -276,7 +276,7 @@ describe('Inventory Model - Row-Level Security', () => {
   });
 
   describe('findAll with RLS', () => {
-    it('should fetch all inventory without filtering (null policy)', async () => {
+    test('should fetch all inventory without filtering (null policy)', async () => {
       const mockItems = [
         { id: 1, name: 'Widget', sku: 'WID-001', quantity: 50 },
         { id: 2, name: 'Gadget', sku: 'GAD-002', quantity: 25 },
@@ -298,7 +298,7 @@ describe('Inventory Model - Row-Level Security', () => {
       expect(result.rlsApplied).toBe(false);
     });
 
-    it('should fetch all inventory without req (backward compatibility)', async () => {
+    test('should fetch all inventory without req (backward compatibility)', async () => {
       const mockItems = [
         { id: 1, name: 'Widget', sku: 'WID-001', quantity: 50 },
         { id: 2, name: 'Gadget', sku: 'GAD-002', quantity: 25 },
@@ -313,7 +313,7 @@ describe('Inventory Model - Row-Level Security', () => {
       expect(result.rlsApplied).toBe(false);
     });
 
-    it('should work with search and filters (no RLS interference)', async () => {
+    test('should work with search and filters (no RLS interference)', async () => {
       const mockItems = [{ id: 1, name: 'Widget', sku: 'WID-001', quantity: 50 }];
       db.query
         .mockResolvedValueOnce({ rows: [{ count: '1' }] })
@@ -338,7 +338,7 @@ describe('Inventory Model - Row-Level Security', () => {
   });
 
   describe('Null policy semantics for inventory', () => {
-    it('should confirm null policy means "no filtering" for management resource', () => {
+    test('should confirm null policy means "no filtering" for management resource', () => {
       // Inventory is different from Invoice/Contract:
       // - Invoice/Contract: null policy = deny (WHERE 1=0) for technicians
       // - Inventory: null policy = no-op (no filtering) for all roles

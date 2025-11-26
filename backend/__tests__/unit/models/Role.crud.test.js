@@ -7,10 +7,8 @@
 const Role = require("../../../db/models/Role");
 const db = require("../../../db/connection");
 
-// Mock the database connection
-jest.mock("../../../db/connection", () => ({
-  query: jest.fn(),
-}));
+// Mock the database connection with enhanced mock
+jest.mock("../../../db/connection", () => require("../../mocks").createDBMock());
 
 describe("Role Model - CRUD Operations", () => {
   // Clear all mocks before each test
@@ -24,7 +22,7 @@ describe("Role Model - CRUD Operations", () => {
   });
 
   describe("findAll()", () => {
-    it("should return paginated roles ordered by priority", async () => {
+    test("should return paginated roles ordered by priority", async () => {
       const mockRoles = [
         { id: 1, name: "admin", priority: 5, description: "Full system access", is_active: true, created_at: "2025-01-01" },
         { id: 3, name: "dispatcher", priority: 3, description: "Medium access", is_active: true, created_at: "2025-01-03" },
@@ -49,7 +47,7 @@ describe("Role Model - CRUD Operations", () => {
       expect(db.query).toHaveBeenCalledTimes(2); // count + data
     });
 
-    it("should return empty data array when no roles exist", async () => {
+    test("should return empty data array when no roles exist", async () => {
       db.query
         .mockResolvedValueOnce({ rows: [{ total: 0 }] }) // count query
         .mockResolvedValueOnce({ rows: [] }); // data query
@@ -61,7 +59,7 @@ describe("Role Model - CRUD Operations", () => {
       expect(db.query).toHaveBeenCalledTimes(2);
     });
 
-    it("should handle database errors", async () => {
+    test("should handle database errors", async () => {
       const dbError = new Error("Database connection failed");
       db.query.mockRejectedValue(dbError);
 
@@ -73,7 +71,7 @@ describe("Role Model - CRUD Operations", () => {
   });
 
   describe("findById()", () => {
-    it("should return role by ID", async () => {
+    test("should return role by ID", async () => {
       const mockRole = { id: 1, name: "admin", priority: 5, description: "Full system access", created_at: "2025-01-01" };
       db.query.mockResolvedValue({ rows: [mockRole] });
 
@@ -87,7 +85,7 @@ describe("Role Model - CRUD Operations", () => {
       expect(db.query).toHaveBeenCalledTimes(1);
     });
 
-    it("should return undefined for non-existent role ID", async () => {
+    test("should return undefined for non-existent role ID", async () => {
       db.query.mockResolvedValue({ rows: [] });
 
       const result = await Role.findById(999);
@@ -99,14 +97,14 @@ describe("Role Model - CRUD Operations", () => {
       );
     });
 
-    it("should handle database errors", async () => {
+    test("should handle database errors", async () => {
       const dbError = new Error("Connection timeout");
       db.query.mockRejectedValue(dbError);
 
       await expect(Role.findById(1)).rejects.toThrow("Connection timeout");
     });
 
-    it("should accept string ID (parameterized query handles conversion)", async () => {
+    test("should accept string ID (parameterized query handles conversion)", async () => {
       const mockRole = { id: 1, name: "admin", created_at: "2025-01-01" };
       db.query.mockResolvedValue({ rows: [mockRole] });
 
@@ -122,7 +120,7 @@ describe("Role Model - CRUD Operations", () => {
   });
 
   describe("getByName()", () => {
-    it("should return role by name (case-sensitive query)", async () => {
+    test("should return role by name (case-sensitive query)", async () => {
       const mockRole = { id: 1, name: "admin", priority: 5, description: "Full system access", created_at: "2025-01-01" };
       db.query.mockResolvedValue({ rows: [mockRole] });
 
@@ -135,7 +133,7 @@ describe("Role Model - CRUD Operations", () => {
       );
     });
 
-    it("should return undefined for non-existent role name", async () => {
+    test("should return undefined for non-existent role name", async () => {
       db.query.mockResolvedValue({ rows: [] });
 
       const result = await Role.getByName("nonexistent");
@@ -143,13 +141,13 @@ describe("Role Model - CRUD Operations", () => {
       expect(result).toBeUndefined();
     });
 
-    it("should handle database errors", async () => {
+    test("should handle database errors", async () => {
       db.query.mockRejectedValue(new Error("Query failed"));
 
       await expect(Role.getByName("admin")).rejects.toThrow("Query failed");
     });
 
-    it("should query with exact name provided (no normalization)", async () => {
+    test("should query with exact name provided (no normalization)", async () => {
       const mockRole = { id: 2, name: "customer", created_at: "2025-01-02" };
       db.query.mockResolvedValue({ rows: [mockRole] });
 
@@ -163,7 +161,7 @@ describe("Role Model - CRUD Operations", () => {
   });
 
   describe("create()", () => {
-    it("should create new role with normalized name and default priority", async () => {
+    test("should create new role with normalized name and default priority", async () => {
       const mockCreatedRole = {
         id: 4,
         name: "dispatcher",
@@ -181,7 +179,7 @@ describe("Role Model - CRUD Operations", () => {
       );
     });
 
-    it("should normalize role name to lowercase", async () => {
+    test("should normalize role name to lowercase", async () => {
       const mockCreatedRole = {
         id: 5,
         name: "manager",
@@ -195,7 +193,7 @@ describe("Role Model - CRUD Operations", () => {
       expect(db.query).toHaveBeenCalledWith(expect.any(String), ["manager", 50]);
     });
 
-    it("should trim whitespace from role name", async () => {
+    test("should trim whitespace from role name", async () => {
       const mockCreatedRole = {
         id: 6,
         name: "technician",
@@ -211,7 +209,7 @@ describe("Role Model - CRUD Operations", () => {
   });
 
   describe("update()", () => {
-    it("should update role name successfully", async () => {
+    test("should update role name successfully", async () => {
       const existingRole = {
         id: 4,
         name: "dispatcher",
@@ -244,7 +242,7 @@ describe("Role Model - CRUD Operations", () => {
       );
     });
 
-    it("should normalize updated name to lowercase", async () => {
+    test("should normalize updated name to lowercase", async () => {
       const existingRole = {
         id: 4,
         name: "dispatcher",
@@ -268,7 +266,7 @@ describe("Role Model - CRUD Operations", () => {
       ]);
     });
 
-    it("should trim whitespace from updated name", async () => {
+    test("should trim whitespace from updated name", async () => {
       const existingRole = {
         id: 4,
         name: "dispatcher",
@@ -294,7 +292,7 @@ describe("Role Model - CRUD Operations", () => {
 
     // Contract v2.0: update() no longer auto-manages audit fields
     // Audit logging happens via AuditService (tested separately in deactivate/reactivate methods)
-    it("should update is_active field without audit fields", async () => {
+    test("should update is_active field without audit fields", async () => {
       const existingRole = {
         id: 4,
         name: "dispatcher",
@@ -320,7 +318,7 @@ describe("Role Model - CRUD Operations", () => {
       ]);
     });
 
-    it("should update multiple fields including is_active", async () => {
+    test("should update multiple fields including is_active", async () => {
       const existingRole = {
         id: 4,
         name: "dispatcher",
@@ -361,17 +359,24 @@ describe("Role Model - CRUD Operations", () => {
   });
 
   describe("delete()", () => {
-    it("should delete unprotected role with no assigned users", async () => {
+    test("should delete unprotected role with no assigned users", async () => {
       const roleToDelete = {
         id: 4,
         name: "dispatcher",
         created_at: "2025-01-04",
       };
 
-      db.query
-        .mockResolvedValueOnce({ rows: [roleToDelete] }) // findById
-        .mockResolvedValueOnce({ rows: [{ count: "0" }] }) // Check user count
-        .mockResolvedValueOnce({ rows: [roleToDelete] }); // DELETE
+      const { createMockClient } = require('../../mocks');
+      const mockClient = createMockClient();
+      db.getClient.mockResolvedValue(mockClient);
+
+      mockClient.query
+        .mockResolvedValueOnce({ rows: [] }) // BEGIN
+        .mockResolvedValueOnce({ rows: [roleToDelete] }) // SELECT role
+        .mockResolvedValueOnce({ rows: [{ count: "0" }] }) // SELECT COUNT users
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // DELETE audit_logs
+        .mockResolvedValueOnce({ rows: [roleToDelete], rowCount: 1 }) // DELETE role
+        .mockResolvedValueOnce({ rows: [] }); // COMMIT
 
       const result = await Role.delete(4);
 
@@ -380,17 +385,7 @@ describe("Role Model - CRUD Operations", () => {
         role: roleToDelete,
         affectedUsers: 0,
       });
-      expect(db.query).toHaveBeenCalledTimes(3);
-      expect(db.query).toHaveBeenNthCalledWith(
-        2,
-        "SELECT COUNT(*) as count FROM users WHERE role_id = $1",
-        [4],
-      );
-      expect(db.query).toHaveBeenNthCalledWith(
-        3,
-        "DELETE FROM roles WHERE id = $1 RETURNING *",
-        [4],
-      );
+      expect(mockClient.release).toHaveBeenCalled();
     });
   });
 });

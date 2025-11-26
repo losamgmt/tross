@@ -16,25 +16,25 @@ const {
 
 describe('Rate Limit Middleware', () => {
   describe('Limiter Exports', () => {
-    it('should export apiLimiter as function', () => {
+    test('should export apiLimiter as function', () => {
       expect(typeof apiLimiter).toBe('function');
     });
 
-    it('should export authLimiter as function', () => {
+    test('should export authLimiter as function', () => {
       expect(typeof authLimiter).toBe('function');
     });
 
-    it('should export refreshLimiter as function', () => {
+    test('should export refreshLimiter as function', () => {
       expect(typeof refreshLimiter).toBe('function');
     });
 
-    it('should export passwordResetLimiter as function', () => {
+    test('should export passwordResetLimiter as function', () => {
       expect(typeof passwordResetLimiter).toBe('function');
     });
   });
 
   describe('Test Environment Bypass', () => {
-    it('should bypass apiLimiter in test env', () => {
+    test('should bypass apiLimiter in test env', () => {
       // Arrange
       const req = {};
       const res = {};
@@ -47,7 +47,7 @@ describe('Rate Limit Middleware', () => {
       expect(next).toHaveBeenCalled();
     });
 
-    it('should bypass authLimiter in test env', () => {
+    test('should bypass authLimiter in test env', () => {
       // Arrange
       const req = {};
       const res = {};
@@ -60,7 +60,7 @@ describe('Rate Limit Middleware', () => {
       expect(next).toHaveBeenCalled();
     });
 
-    it('should bypass refreshLimiter in test env', () => {
+    test('should bypass refreshLimiter in test env', () => {
       // Arrange
       const req = {};
       const res = {};
@@ -73,7 +73,7 @@ describe('Rate Limit Middleware', () => {
       expect(next).toHaveBeenCalled();
     });
 
-    it('should bypass passwordResetLimiter in test env', () => {
+    test('should bypass passwordResetLimiter in test env', () => {
       // Arrange
       const req = {};
       const res = {};
@@ -88,7 +88,7 @@ describe('Rate Limit Middleware', () => {
   });
 
   describe('Multiple Calls', () => {
-    it('should allow unlimited calls in test env (no rate limiting)', () => {
+    test('should allow unlimited calls in test env (no rate limiting)', () => {
       // Arrange
       const req = {};
       const res = {};

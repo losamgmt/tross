@@ -11,25 +11,8 @@ const {
   toSafeBoolean,
   toSafePagination,
 } = require('./type-coercion');
-const { HTTP_STATUS } = require('../config/constants');
 const { logValidationFailure } = require('./validation-logger');
-
-/**
- * Create a standard validation error response
- *
- * @private
- * @param {string} message - Error message
- * @param {string} field - Field that failed validation
- * @returns {Object} Error response object
- */
-function createValidationError(message, field) {
-  return {
-    error: 'Validation Error',
-    message,
-    field,
-    timestamp: new Date().toISOString(),
-  };
-}
+const ResponseFormatter = require('../utils/response-formatter');
 
 /**
  * Validate pagination query parameters
@@ -61,9 +44,9 @@ function validatePagination(limits = { defaultLimit: 50, maxLimit: 200 }) {
         context: { url: req.url, method: req.method },
       });
 
-      return res
-        .status(HTTP_STATUS.BAD_REQUEST)
-        .json(createValidationError(error.message, 'pagination'));
+      return ResponseFormatter.badRequest(res, error.message, [
+        { field: 'pagination', message: error.message },
+      ]);
     }
   };
 }
@@ -88,34 +71,28 @@ function validateSearch(options = {}) {
     const search = req.query.search || req.query.q || '';
 
     if (!search && required) {
-      return res
-        .status(HTTP_STATUS.BAD_REQUEST)
-        .json(createValidationError('Search query is required', 'search'));
+      return ResponseFormatter.badRequest(res, 'Search query is required', [
+        { field: 'search', message: 'Search query is required' },
+      ]);
     }
 
     if (search && typeof search === 'string') {
       const trimmed = search.trim();
 
       if (trimmed.length < minLength) {
-        return res
-          .status(HTTP_STATUS.BAD_REQUEST)
-          .json(
-            createValidationError(
-              `Search query must be at least ${minLength} characters`,
-              'search',
-            ),
-          );
+        return ResponseFormatter.badRequest(
+          res,
+          `Search query must be at least ${minLength} characters`,
+          [{ field: 'search', message: `Search query must be at least ${minLength} characters` }],
+        );
       }
 
       if (trimmed.length > maxLength) {
-        return res
-          .status(HTTP_STATUS.BAD_REQUEST)
-          .json(
-            createValidationError(
-              `Search query cannot exceed ${maxLength} characters`,
-              'search',
-            ),
-          );
+        return ResponseFormatter.badRequest(
+          res,
+          `Search query cannot exceed ${maxLength} characters`,
+          [{ field: 'search', message: `Search query cannot exceed ${maxLength} characters` }],
+        );
       }
 
       if (!req.validated) {req.validated = {};}
@@ -168,14 +145,11 @@ function validateSort(
         context: { url: req.url, method: req.method },
       });
 
-      return res
-        .status(HTTP_STATUS.BAD_REQUEST)
-        .json(
-          createValidationError(
-            `sortBy must be one of: ${allowedFields.join(', ')}`,
-            'sortBy',
-          ),
-        );
+      return ResponseFormatter.badRequest(
+        res,
+        `sortBy must be one of: ${allowedFields.join(', ')}`,
+        [{ field: 'sortBy', message: `sortBy must be one of: ${allowedFields.join(', ')}` }],
+      );
     }
 
     // Validate sortOrder
@@ -188,14 +162,11 @@ function validateSort(
         context: { url: req.url, method: req.method },
       });
 
-      return res
-        .status(HTTP_STATUS.BAD_REQUEST)
-        .json(
-          createValidationError(
-            'sortOrder must be "asc" or "desc"',
-            'sortOrder',
-          ),
-        );
+      return ResponseFormatter.badRequest(
+        res,
+        'sortOrder must be "asc" or "desc"',
+        [{ field: 'sortOrder', message: 'sortOrder must be "asc" or "desc"' }],
+      );
     }
 
     if (!req.validated) {req.validated = {};}
@@ -272,9 +243,9 @@ function validateFilters(filterSchema) {
         context: { url: req.url, method: req.method },
       });
 
-      return res
-        .status(HTTP_STATUS.BAD_REQUEST)
-        .json(createValidationError(error.message, 'filters'));
+      return ResponseFormatter.badRequest(res, error.message, [
+        { field: 'filters', message: error.message },
+      ]);
     }
   };
 }
@@ -314,8 +285,10 @@ function validateQuery(metadata) {
       if (search && typeof search === 'string') {
         const trimmed = search.trim();
         if (trimmed.length > 255) {
-          return res.status(HTTP_STATUS.BAD_REQUEST).json(
-            createValidationError('Search query cannot exceed 255 characters', 'search'),
+          return ResponseFormatter.badRequest(
+            res,
+            'Search query cannot exceed 255 characters',
+            [{ field: 'search', message: 'Search query cannot exceed 255 characters' }],
           );
         }
         req.validated.query.search = trimmed.length > 0 ? trimmed : undefined;
@@ -365,17 +338,18 @@ function validateQuery(metadata) {
           context: { url: req.url, method: req.method },
         });
 
-        return res.status(HTTP_STATUS.BAD_REQUEST).json(
-          createValidationError(
-            `sortBy must be one of: ${sortableFields.join(', ')}`,
-            'sortBy',
-          ),
+        return ResponseFormatter.badRequest(
+          res,
+          `sortBy must be one of: ${sortableFields.join(', ')}`,
+          [{ field: 'sortBy', message: `sortBy must be one of: ${sortableFields.join(', ')}` }],
         );
       }
 
       if (sortOrder && !['asc', 'desc', 'ASC', 'DESC'].includes(sortOrder)) {
-        return res.status(HTTP_STATUS.BAD_REQUEST).json(
-          createValidationError('sortOrder must be "asc" or "desc"', 'sortOrder'),
+        return ResponseFormatter.badRequest(
+          res,
+          'sortOrder must be "asc" or "desc"',
+          [{ field: 'sortOrder', message: 'sortOrder must be "asc" or "desc"' }],
         );
       }
 
@@ -392,9 +366,9 @@ function validateQuery(metadata) {
         context: { url: req.url, method: req.method },
       });
 
-      return res.status(HTTP_STATUS.BAD_REQUEST).json(
-        createValidationError(error.message, 'query'),
-      );
+      return ResponseFormatter.badRequest(res, error.message, [
+        { field: 'query', message: error.message },
+      ]);
     }
   };
 }

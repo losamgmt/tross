@@ -150,6 +150,7 @@ const MODEL_ERRORS = Object.freeze({
     NAME_TOO_LONG: 'Role name cannot exceed 50 characters',
     ID_REQUIRED: 'Role ID is required',
     ID_AND_NAME_REQUIRED: 'Role ID and name are required',
+    NO_VALID_FIELDS: 'No valid fields to update',
 
     // Business logic errors
     NAME_EXISTS: 'Role name already exists',
@@ -158,6 +159,7 @@ const MODEL_ERRORS = Object.freeze({
     PROTECTED_DEACTIVATE: 'Cannot deactivate protected role',
     NOT_FOUND: 'Role not found',
     CREATION_FAILED: 'Failed to create role',
+    RETRIEVAL_ALL_FAILED: 'Failed to retrieve roles',
 
     // Delete validation (function for dynamic user count)
     USERS_ASSIGNED: (count) => `Cannot delete role: ${count} user(s) are assigned to this role. Use force=true to proceed and set their role to NULL.`,
@@ -169,13 +171,119 @@ const MODEL_ERRORS = Object.freeze({
     EMAIL_INVALID: 'Invalid email format',
     FIRST_NAME_REQUIRED: 'First name is required',
     LAST_NAME_REQUIRED: 'Last name is required',
+    AUTH0_ID_REQUIRED: 'Auth0 ID is required',
+    AUTH0_ID_AND_EMAIL_REQUIRED: 'Auth0 ID and email are required',
+    AUTH0_DATA_INVALID: 'Invalid Auth0 data',
+    ID_AND_UPDATES_REQUIRED: 'Valid user ID and updates are required',
+    NO_VALID_FIELDS: 'No valid fields to update',
 
     // Business logic errors
     EMAIL_EXISTS: 'Email already exists',
+    USER_EXISTS: 'User already exists',
     NOT_FOUND: 'User not found',
+    NOT_FOUND_AFTER_UPDATE: 'User not found after update',
     CREATION_FAILED: 'Failed to create user',
     UPDATE_FAILED: 'Failed to update user',
     DELETE_FAILED: 'Failed to delete user',
+    RETRIEVAL_FAILED: 'Failed to find user',
+    RETRIEVAL_ALL_FAILED: 'Failed to retrieve users',
+  }),
+
+  CUSTOMER: Object.freeze({
+    // Validation errors
+    EMAIL_REQUIRED: 'Email is required',
+    NO_FIELDS_TO_UPDATE: 'No fields to update',
+    NO_VALID_FIELDS: 'No valid fields to update',
+
+    // Business logic errors
+    EMAIL_EXISTS: 'Customer with this email already exists',
+    NOT_FOUND: 'Customer not found',
+    CREATION_FAILED: 'Failed to create customer',
+    UPDATE_FAILED: 'Failed to update customer',
+    DELETE_FAILED: 'Failed to delete customer',
+    DEACTIVATE_FAILED: 'Failed to deactivate customer',
+    REACTIVATE_FAILED: 'Failed to reactivate customer',
+    RETRIEVAL_FAILED: 'Failed to find customer',
+    RETRIEVAL_ALL_FAILED: 'Failed to retrieve customers',
+    WORK_ORDERS_EXIST: (count) => `Cannot delete customer: ${count} work order(s) exist. Use force=true to cascade delete.`,
+  }),
+
+  TECHNICIAN: Object.freeze({
+    // Validation errors
+    LICENSE_NUMBER_REQUIRED: 'License number is required',
+    NO_FIELDS_TO_UPDATE: 'No fields to update',
+    NO_VALID_FIELDS: 'No valid fields to update',
+
+    // Business logic errors
+    NOT_FOUND: 'Technician not found',
+    CREATION_FAILED: 'Failed to create technician',
+    UPDATE_FAILED: 'Failed to update technician',
+    DELETE_FAILED: 'Failed to delete technician',
+    DEACTIVATE_FAILED: 'Failed to deactivate technician',
+    REACTIVATE_FAILED: 'Failed to reactivate technician',
+    RETRIEVAL_FAILED: 'Failed to find technician',
+    RETRIEVAL_ALL_FAILED: 'Failed to retrieve technicians',
+    WORK_ORDERS_ASSIGNED: (count) => `Cannot delete technician: ${count} work order(s) assigned. Use force=true to cascade delete.`,
+  }),
+
+  WORK_ORDER: Object.freeze({
+    // Validation errors
+    TITLE_AND_CUSTOMER_REQUIRED: 'Title and customer_id are required',
+    NO_VALID_FIELDS: 'No valid fields to update',
+
+    // Business logic errors
+    NOT_FOUND: 'Work order not found',
+    CREATION_FAILED: 'Failed to create work order',
+    UPDATE_FAILED: 'Failed to update work order',
+    DELETE_FAILED: 'Failed to delete work order',
+    DEACTIVATE_FAILED: 'Failed to deactivate work order',
+    RETRIEVAL_FAILED: 'Failed to find work order',
+    RETRIEVAL_ALL_FAILED: 'Failed to retrieve work orders',
+  }),
+
+  INVOICE: Object.freeze({
+    // Validation errors
+    INVOICE_NUMBER_CUSTOMER_AMOUNT_TOTAL_REQUIRED: 'Invoice number, customer_id, amount, and total are required',
+    NO_VALID_FIELDS: 'No valid fields to update',
+
+    // Business logic errors
+    NOT_FOUND: 'Invoice not found',
+    CREATION_FAILED: 'Failed to create invoice',
+    UPDATE_FAILED: 'Failed to update invoice',
+    DELETE_FAILED: 'Failed to delete invoice',
+    DEACTIVATE_FAILED: 'Failed to deactivate invoice',
+    RETRIEVAL_FAILED: 'Failed to find invoice',
+    RETRIEVAL_ALL_FAILED: 'Failed to retrieve invoices',
+  }),
+
+  INVENTORY: Object.freeze({
+    // Validation errors
+    NAME_AND_SKU_REQUIRED: 'Name and SKU are required',
+    NO_VALID_FIELDS: 'No valid fields to update',
+
+    // Business logic errors
+    NOT_FOUND: 'Inventory item not found',
+    CREATION_FAILED: 'Failed to create inventory item',
+    UPDATE_FAILED: 'Failed to update inventory item',
+    DELETE_FAILED: 'Failed to delete inventory item',
+    DEACTIVATE_FAILED: 'Failed to deactivate inventory item',
+    RETRIEVAL_FAILED: 'Failed to find inventory item',
+    RETRIEVAL_ALL_FAILED: 'Failed to retrieve inventory items',
+  }),
+
+  CONTRACT: Object.freeze({
+    // Validation errors
+    CONTRACT_NUMBER_CUSTOMER_START_DATE_REQUIRED: 'Contract number, customer_id, and start_date are required',
+    NO_VALID_FIELDS: 'No valid fields to update',
+
+    // Business logic errors
+    NOT_FOUND: 'Contract not found',
+    CREATION_FAILED: 'Failed to create contract',
+    UPDATE_FAILED: 'Failed to update contract',
+    DELETE_FAILED: 'Failed to delete contract',
+    DEACTIVATE_FAILED: 'Failed to deactivate contract',
+    RETRIEVAL_FAILED: 'Failed to find contract',
+    RETRIEVAL_ALL_FAILED: 'Failed to retrieve contracts',
   }),
 });
 

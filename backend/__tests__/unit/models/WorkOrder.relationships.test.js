@@ -14,7 +14,7 @@ describe('WorkOrder Model - Relationships', () => {
   });
 
   describe('Customer relationship', () => {
-    it('should belong to a customer', async () => {
+    test('should belong to a customer', async () => {
       const mockWorkOrderWithCustomer = {
         id: 1,
         title: 'Repair AC',
@@ -32,7 +32,7 @@ describe('WorkOrder Model - Relationships', () => {
   });
 
   describe('Technician relationship', () => {
-    it('should optionally have an assigned technician', async () => {
+    test('should optionally have an assigned technician', async () => {
       const mockWorkOrderWithTech = {
         id: 1,
         title: 'Repair AC',
@@ -49,7 +49,7 @@ describe('WorkOrder Model - Relationships', () => {
   });
 
   describe('Invoice relationship', () => {
-    it('should optionally have an associated invoice', async () => {
+    test('should optionally have an associated invoice', async () => {
       const mockWorkOrderWithInvoice = {
         id: 1,
         title: 'Repair AC',

@@ -20,6 +20,12 @@ jest.mock("../../config/logger", () => ({
 const { setTestEnv, cleanupTestEnv } = require("../helpers/test-helpers");
 const { DATABASE } = require("../../config/constants");
 const testLogger = require("../../config/test-logger");
+const { transactionMatchers } = require("../mocks");
+
+// Register custom Jest matchers
+if (transactionMatchers) {
+  expect.extend(transactionMatchers);
+}
 
 // Set up test environment variables
 // Uses constants.js for single source of truth

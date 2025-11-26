@@ -18,7 +18,7 @@ describe('Technician Model - CRUD Operations', () => {
   });
 
   describe('findAll()', () => {
-    it('should return paginated technicians', async () => {
+    test('should return paginated technicians', async () => {
       const mockTechnicians = [
         { id: 1, license_number: 'TECH-001', status: 'available', is_active: true },
         { id: 2, license_number: 'TECH-002', status: 'on_job', is_active: true },
@@ -33,7 +33,7 @@ describe('Technician Model - CRUD Operations', () => {
       expect(db.query).toHaveBeenCalledTimes(2);
     });
 
-    it('should handle empty results', async () => {
+    test('should handle empty results', async () => {
       db.query.mockResolvedValueOnce({ rows: [{ count: '0' }] });
       db.query.mockResolvedValueOnce({ rows: [] });
 
@@ -45,7 +45,7 @@ describe('Technician Model - CRUD Operations', () => {
   });
 
   describe('findById()', () => {
-    it('should return technician by ID', async () => {
+    test('should return technician by ID', async () => {
       const mockTechnician = {
         id: 1,
         license_number: 'TECH-001',
@@ -61,7 +61,7 @@ describe('Technician Model - CRUD Operations', () => {
       expect(db.query).toHaveBeenCalledWith(expect.stringContaining('SELECT'), [1]);
     });
 
-    it('should return null for non-existent technician', async () => {
+    test('should return null for non-existent technician', async () => {
       db.query.mockResolvedValue({ rows: [] });
 
       const technician = await Technician.findById(999);
@@ -71,7 +71,7 @@ describe('Technician Model - CRUD Operations', () => {
   });
 
   describe('create()', () => {
-    it('should create a new technician', async () => {
+    test('should create a new technician', async () => {
       const newTechnician = {
         license_number: 'TECH-003',
         hourly_rate: 85.00,
@@ -91,7 +91,7 @@ describe('Technician Model - CRUD Operations', () => {
   });
 
   describe('update()', () => {
-    it('should update a technician', async () => {
+    test('should update a technician', async () => {
       const updateData = { status: 'on_job', hourly_rate: 90.00 };
       const updatedTechnician = { id: 1, license_number: 'TECH-001', ...updateData };
       db.query.mockResolvedValue({ rows: [updatedTechnician] });
@@ -107,23 +107,38 @@ describe('Technician Model - CRUD Operations', () => {
   });
 
   describe('delete()', () => {
-    it('should hard delete a technician', async () => {
-      const deletedTechnician = { id: 1, license_number: 'TECH-001', is_active: false };
-      db.query.mockResolvedValue({ rows: [deletedTechnician] });
+    test('should hard delete a technician', async () => {
+      const deletedTechnician = { id: 1, email: 'tech@example.com' };
+      
+      const { createMockClient } = require('../../mocks');
+      const mockClient = createMockClient();
+      db.getClient.mockResolvedValue(mockClient);
+      
+      mockClient.query
+        .mockResolvedValueOnce({ rows: [] }) // BEGIN
+        .mockResolvedValueOnce({ rows: [deletedTechnician] }) // SELECT technician
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // DELETE audit_logs
+        .mockResolvedValueOnce({ rows: [deletedTechnician], rowCount: 1 }) // DELETE technician
+        .mockResolvedValueOnce({ rows: [] }); // COMMIT
 
       const result = await Technician.delete(1);
 
       expect(result).toEqual(deletedTechnician);
-      expect(db.query).toHaveBeenCalledWith(
-        expect.stringContaining('DELETE FROM technicians'),
-        [1],
-      );
+      expect(mockClient.release).toHaveBeenCalled();
     });
 
-    it('should throw error if technician not found', async () => {
-      db.query.mockResolvedValue({ rows: [] });
+    test('should throw error if technician not found', async () => {
+      const { createMockClient } = require('../../mocks');
+      const mockClient = createMockClient();
+      db.getClient.mockResolvedValue(mockClient);
+      
+      mockClient.query
+        .mockResolvedValueOnce({ rows: [] }) // BEGIN
+        .mockResolvedValueOnce({ rows: [] }) // SELECT technician - not found
+        .mockResolvedValueOnce({ rows: [] }); // ROLLBACK
 
-      await expect(Technician.delete(999)).rejects.toThrow('Failed to delete technician');
+      await expect(Technician.delete(999)).rejects.toThrow('Technician not found');
+      expect(mockClient.release).toHaveBeenCalled();
     });
   });
 });

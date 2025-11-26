@@ -6,6 +6,7 @@
 const express = require('express');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
 const { enforceRLS } = require('../middleware/row-level-security');
+const ResponseFormatter = require('../utils/response-formatter');
 const {
   validateCustomerCreate,
   validateCustomerUpdate,
@@ -15,7 +16,6 @@ const {
 } = require('../validators');
 const Customer = require('../db/models/Customer');
 const auditService = require('../services/audit-service');
-const { HTTP_STATUS } = require('../config/constants');
 const { getClientIp, getUserAgent } = require('../utils/request-helpers');
 const { logger } = require('../config/logger');
 const customerMetadata = require('../config/models/customer-metadata');
@@ -27,8 +27,10 @@ const router = express.Router();
  * /api/customers:
  *   get:
  *     tags: [Customers]
- *     summary: Get all customers
- *     description: Retrieve a paginated list of customers with optional search, filtering, and sorting. Row-level security applies.
+ *     summary: Get all customers with search, filters, and sorting
+ *     description: |
+ *       Retrieve a paginated list of customers. Row-level security applies.
+ *       Customers see only their own record. Dispatchers+ see all.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -36,27 +38,48 @@ const router = express.Router();
  *         name: page
  *         schema:
  *           type: integer
+ *           minimum: 1
  *           default: 1
+ *         description: Page number for pagination
  *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
+ *           minimum: 1
+ *           maximum: 200
  *           default: 50
+ *         description: Number of items per page
  *       - in: query
  *         name: search
  *         schema:
  *           type: string
+ *           maxLength: 255
+ *         description: Search across email, phone, and company_name (case-insensitive)
+ *       - in: query
+ *         name: is_active
+ *         schema:
+ *           type: boolean
+ *         description: Filter by active status
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [pending, active, suspended]
+ *         description: Filter by customer status
  *       - in: query
  *         name: sortBy
  *         schema:
  *           type: string
+ *           enum: [id, email, company_name, is_active, status, created_at, updated_at]
  *           default: created_at
+ *         description: Field to sort by
  *       - in: query
  *         name: sortOrder
  *         schema:
  *           type: string
  *           enum: [asc, desc]
  *           default: DESC
+ *         description: Sort order
  *     responses:
  *       200:
  *         description: Customers retrieved successfully
@@ -85,22 +108,15 @@ router.get(
         req, // Pass request for RLS filtering
       });
 
-      res.json({
-        success: true,
+      return ResponseFormatter.list(res, {
         data: result.data,
-        count: result.data.length,
         pagination: result.pagination,
         appliedFilters: result.appliedFilters,
         rlsApplied: result.rlsApplied,
-        timestamp: new Date().toISOString(),
       });
     } catch (error) {
       logger.error('Error retrieving customers', { error: error.message });
-      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-        error: 'Internal Server Error',
-        message: 'Failed to retrieve customers',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );
@@ -111,6 +127,7 @@ router.get(
  *   get:
  *     tags: [Customers]
  *     summary: Get customer by ID
+ *     description: Retrieve a single customer. Row-level security applies.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -119,13 +136,15 @@ router.get(
  *         required: true
  *         schema:
  *           type: integer
+ *           minimum: 1
+ *         description: Customer ID
  *     responses:
  *       200:
  *         description: Customer retrieved successfully
+ *       403:
+ *         description: Forbidden - Insufficient permissions
  *       404:
  *         description: Customer not found
- *       403:
- *         description: Forbidden
  */
 router.get(
   '/:id',
@@ -139,11 +158,7 @@ router.get(
       const customer = await Customer.findById(customerId, req);
 
       if (!customer) {
-        return res.status(HTTP_STATUS.NOT_FOUND).json({
-          error: 'Not Found',
-          message: 'Customer not found',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.notFound(res, 'Customer not found');
       }
 
       res.json({
@@ -156,11 +171,7 @@ router.get(
         error: error.message,
         customerId: req.params.id,
       });
-      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-        error: 'Internal Server Error',
-        message: 'Failed to retrieve customer',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );
@@ -171,7 +182,9 @@ router.get(
  *   post:
  *     tags: [Customers]
  *     summary: Create new customer (dispatcher+ only)
- *     description: Manually create a customer profile (dispatcher+ only). Customer signup via Auth0 → /api/auth0/callback creates user+profile automatically.
+ *     description: |
+ *       Manually create a customer profile.
+ *       Customer signup via Auth0 creates user+profile automatically.
  *     security:
  *       - BearerAuth: []
  *     requestBody:
@@ -186,15 +199,18 @@ router.get(
  *               email:
  *                 type: string
  *                 format: email
+ *                 maxLength: 255
  *               phone:
  *                 type: string
+ *                 maxLength: 50
  *               company_name:
  *                 type: string
+ *                 maxLength: 255
  *     responses:
  *       201:
  *         description: Customer created successfully
  *       400:
- *         description: Bad Request
+ *         description: Bad Request - Invalid data or duplicate email
  *       403:
  *         description: Forbidden - Dispatcher+ access required
  */
@@ -226,28 +242,19 @@ router.post(
         result: 'success',
       });
 
-      res.status(HTTP_STATUS.CREATED).json({
-        success: true,
-        data: newCustomer,
-        message: 'Customer created successfully',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.created(res, newCustomer, 'Customer created successfully');
     } catch (error) {
       logger.error('Error creating customer', { error: error.message });
 
       if (error.code === '23505') {
-        return res.status(HTTP_STATUS.CONFLICT).json({
-          error: 'Conflict',
-          message: 'Email already exists',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.conflict(res, 'Email already exists');
       }
 
-      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-        error: 'Internal Server Error',
-        message: 'Failed to create customer',
-        timestamp: new Date().toISOString(),
-      });
+      if (error.code === '23514') {
+        return ResponseFormatter.badRequest(res, 'Invalid field value - check status and other enum fields');
+      }
+
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );
@@ -258,7 +265,9 @@ router.post(
  *   patch:
  *     tags: [Customers]
  *     summary: Update customer
- *     description: Customers can update their own profile, dispatcher+ can update any customer.
+ *     description: |
+ *       Customers can update their own profile.
+ *       Dispatchers+ can update any customer.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -267,19 +276,36 @@ router.post(
  *         required: true
  *         schema:
  *           type: integer
+ *           minimum: 1
+ *         description: Customer ID
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               phone:
+ *                 type: string
+ *                 maxLength: 50
+ *               company_name:
+ *                 type: string
+ *                 maxLength: 255
+ *               is_active:
+ *                 type: boolean
+ *               status:
+ *                 type: string
+ *                 enum: [pending, active, suspended]
  *     responses:
  *       200:
  *         description: Customer updated successfully
  *       400:
- *         description: Bad Request
+ *         description: Bad Request - Invalid data
  *       403:
- *         description: Forbidden
+ *         description: Forbidden - Insufficient permissions
  *       404:
  *         description: Customer not found
  */
@@ -299,11 +325,7 @@ router.patch(
       // Check if customer exists (with RLS filtering)
       const customer = await Customer.findById(customerId, req);
       if (!customer) {
-        return res.status(HTTP_STATUS.NOT_FOUND).json({
-          error: 'Not Found',
-          message: 'Customer not found',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.notFound(res, 'Customer not found');
       }
 
       // RLS enforced: customer can update own record, technician+ can update any
@@ -323,22 +345,22 @@ router.patch(
         result: 'success',
       });
 
-      res.json({
-        success: true,
-        data: updatedCustomer,
-        message: 'Customer updated successfully',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.updated(res, updatedCustomer, 'Customer updated successfully');
     } catch (error) {
       logger.error('Error updating customer', {
         error: error.message,
         customerId: req.params.id,
       });
-      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-        error: 'Internal Server Error',
-        message: 'Failed to update customer',
-        timestamp: new Date().toISOString(),
-      });
+
+      if (error.code === '23505') {
+        return ResponseFormatter.conflict(res, 'Email already exists');
+      }
+
+      if (error.code === '23514') {
+        return ResponseFormatter.badRequest(res, 'Invalid field value - check status and other enum fields');
+      }
+
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );
@@ -348,8 +370,10 @@ router.patch(
  * /api/customers/{id}:
  *   delete:
  *     tags: [Customers]
- *     summary: Deactivate customer (manager+ only)
- *     description: Soft delete (deactivate) a customer account. Hard delete is not allowed for customers.
+ *     summary: Delete customer (manager+ only)
+ *     description: |
+ *       Permanently delete a customer record.
+ *       To deactivate instead, use PATCH with is_active=false.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -358,9 +382,11 @@ router.patch(
  *         required: true
  *         schema:
  *           type: integer
+ *           minimum: 1
+ *         description: Customer ID
  *     responses:
  *       200:
- *         description: Customer deactivated successfully
+ *         description: Customer deleted successfully
  *       403:
  *         description: Forbidden - Manager+ access required
  *       404:
@@ -379,18 +405,14 @@ router.delete(
 
       const customer = await Customer.findById(customerId);
       if (!customer) {
-        return res.status(HTTP_STATUS.NOT_FOUND).json({
-          error: 'Not Found',
-          message: 'Customer not found',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.notFound(res, 'Customer not found');
       }
 
-      await Customer.deactivate(customerId);
+      await Customer.delete(customerId);
 
       await auditService.log({
         userId: req.user.userId,
-        action: 'deactivate',
+        action: 'delete',
         resourceType: 'customer',
         resourceId: customerId,
         oldValues: customer,
@@ -399,21 +421,19 @@ router.delete(
         result: 'success',
       });
 
-      res.json({
-        success: true,
-        message: 'Customer deleted successfully',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.deleted(res, 'Customer deleted successfully');
     } catch (error) {
-      logger.error('Error deactivating customer', {
+      logger.error('Error deleting customer', {
         error: error.message,
         customerId: req.params.id,
       });
-      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-        error: 'Internal Server Error',
-        message: 'Failed to deactivate customer',
-        timestamp: new Date().toISOString(),
-      });
+
+      // Handle race condition: customer may have been deleted by another request
+      if (error.message === 'Customer not found') {
+        return ResponseFormatter.notFound(res, 'Customer not found');
+      }
+
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );

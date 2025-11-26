@@ -31,7 +31,7 @@ describe("User Model - Relationships", () => {
   // setRole() - Role Assignment
   // ===========================
   describe("setRole()", () => {
-    it("should set user role successfully", async () => {
+    test("should set user role successfully", async () => {
       // Arrange
       const mockUpdatedUser = { id: 1, role_id: 3 };
       const mockUserWithRole = { id: 1, role_id: 3, role: "manager" };
@@ -51,21 +51,21 @@ describe("User Model - Relationships", () => {
       expect(db.query).toHaveBeenCalledTimes(2); // UPDATE + findById
     });
 
-    it("should throw error when user ID is missing", async () => {
+    test("should throw error when user ID is missing", async () => {
       // Act & Assert - behavior: throws and doesn't query
       await expect(User.setRole(null, 3)).rejects.toThrow();
       await expect(User.setRole(undefined, 3)).rejects.toThrow();
       expect(db.query).not.toHaveBeenCalled();
     });
 
-    it("should throw error when role ID is missing", async () => {
+    test("should throw error when role ID is missing", async () => {
       // Act & Assert - behavior: throws and doesn't query
       await expect(User.setRole(1, null)).rejects.toThrow();
       await expect(User.setRole(1, undefined)).rejects.toThrow();
       expect(db.query).not.toHaveBeenCalled();
     });
 
-    it("should throw error when user not found", async () => {
+    test("should throw error when user not found", async () => {
       // Arrange
       db.query.mockResolvedValue({ rows: [] });
 
@@ -73,7 +73,7 @@ describe("User Model - Relationships", () => {
       await expect(User.setRole(999, 3)).rejects.toThrow("User not found");
     });
 
-    it("should handle database errors", async () => {
+    test("should handle database errors", async () => {
       // Arrange
       db.query.mockRejectedValue(new Error("Database error"));
 
@@ -86,7 +86,7 @@ describe("User Model - Relationships", () => {
   // Role Queries - findById includes role
   // ===========================
   describe("Role Data in Queries", () => {
-    it("should include role name in findById results", async () => {
+    test("should include role name in findById results", async () => {
       // Arrange
       const mockUser = {
         id: 1,
@@ -112,7 +112,7 @@ describe("User Model - Relationships", () => {
       );
     });
 
-    it("should include role name in findByAuth0Id results", async () => {
+    test("should include role name in findByAuth0Id results", async () => {
       // Arrange
       const mockUser = {
         id: 1,
@@ -137,7 +137,7 @@ describe("User Model - Relationships", () => {
       );
     });
 
-    it("should include role name in findAll results", async () => {
+    test("should include role name in findAll results", async () => {
       // Arrange
       const mockUsers = [
         { id: 1, email: "admin@example.com", role_id: 1, role: "admin" },
@@ -169,7 +169,7 @@ describe("User Model - Relationships", () => {
   // Foreign Key Relationships
   // ===========================
   describe("Foreign Key Constraints", () => {
-    it("should handle invalid role_id when creating user", async () => {
+    test("should handle invalid role_id when creating user", async () => {
       // Arrange
       const userData = {
         email: "test@example.com",
@@ -187,7 +187,7 @@ describe("User Model - Relationships", () => {
       );
     });
 
-    it("should handle invalid role_id when setting role", async () => {
+    test("should handle invalid role_id when setting role", async () => {
       // Arrange
       const dbError = new Error("Foreign key violation");
       dbError.constraint = "users_role_id_fkey";
@@ -204,7 +204,7 @@ describe("User Model - Relationships", () => {
   // Role Changes
   // ===========================
   describe("Role Assignment Operations", () => {
-    it("should successfully change user from client to manager", async () => {
+    test("should successfully change user from client to manager", async () => {
       // Arrange
       const mockUpdatedUser = { id: 1, role_id: 3 };
       const mockUserWithRole = { id: 1, role_id: 3, role: "manager" };
@@ -220,7 +220,7 @@ describe("User Model - Relationships", () => {
       expect(user.role).toBe("manager");
     });
 
-    it("should successfully promote user to admin", async () => {
+    test("should successfully promote user to admin", async () => {
       // Arrange
       const mockUpdatedUser = { id: 1, role_id: 1 };
       const mockUserWithRole = { id: 1, role_id: 1, role: "admin" };
@@ -236,7 +236,7 @@ describe("User Model - Relationships", () => {
       expect(user.role).toBe("admin");
     });
 
-    it("should successfully demote user to client", async () => {
+    test("should successfully demote user to client", async () => {
       // Arrange
       const mockUpdatedUser = { id: 5, role_id: 2 };
       const mockUserWithRole = { id: 5, role_id: 2, role: "client" };

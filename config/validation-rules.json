@@ -329,6 +329,62 @@
         "maxLength": "Status cannot exceed 50 characters"
       }
     },
+    "userStatus": {
+      "type": "string",
+      "required": false,
+      "enum": ["pending_activation", "active", "suspended"],
+      "errorMessages": {
+        "enum": "User status must be one of: pending_activation, active, suspended"
+      }
+    },
+    "customerStatus": {
+      "type": "string",
+      "required": false,
+      "enum": ["pending", "active", "suspended"],
+      "errorMessages": {
+        "enum": "Customer status must be one of: pending, active, suspended"
+      }
+    },
+    "technicianStatus": {
+      "type": "string",
+      "required": false,
+      "enum": ["available", "on_job", "off_duty", "suspended"],
+      "errorMessages": {
+        "enum": "Technician status must be one of: available, on_job, off_duty, suspended"
+      }
+    },
+    "workOrderStatus": {
+      "type": "string",
+      "required": false,
+      "enum": ["pending", "assigned", "in_progress", "completed", "cancelled"],
+      "errorMessages": {
+        "enum": "Work order status must be one of: pending, assigned, in_progress, completed, cancelled"
+      }
+    },
+    "invoiceStatus": {
+      "type": "string",
+      "required": false,
+      "enum": ["draft", "sent", "paid", "overdue", "cancelled"],
+      "errorMessages": {
+        "enum": "Invoice status must be one of: draft, sent, paid, overdue, cancelled"
+      }
+    },
+    "contractStatus": {
+      "type": "string",
+      "required": false,
+      "enum": ["draft", "active", "expired", "cancelled"],
+      "errorMessages": {
+        "enum": "Contract status must be one of: draft, active, expired, cancelled"
+      }
+    },
+    "inventoryStatus": {
+      "type": "string",
+      "required": false,
+      "enum": ["in_stock", "low_stock", "out_of_stock", "discontinued"],
+      "errorMessages": {
+        "enum": "Inventory status must be one of: in_stock, low_stock, out_of_stock, discontinued"
+      }
+    },
     "priority": {
       "type": "string",
       "required": false,
@@ -344,6 +400,40 @@
       "trim": true,
       "errorMessages": {
         "maxLength": "Company name cannot exceed 255 characters"
+      }
+    },
+    "startDate": {
+      "type": "date",
+      "format": "date",
+      "required": false,
+      "errorMessages": {
+        "required": "Start date is required",
+        "format": "Start date must be a valid date in ISO format (YYYY-MM-DD)"
+      }
+    },
+    "endDate": {
+      "type": "date",
+      "format": "date",
+      "required": false,
+      "errorMessages": {
+        "required": "End date is required",
+        "format": "End date must be a valid date in ISO format (YYYY-MM-DD)"
+      }
+    },
+    "dueDate": {
+      "type": "date",
+      "format": "date",
+      "required": false,
+      "errorMessages": {
+        "format": "Due date must be a valid date in ISO format (YYYY-MM-DD)"
+      }
+    },
+    "due_date": {
+      "type": "date",
+      "format": "date",
+      "required": false,
+      "errorMessages": {
+        "format": "Due date must be a valid date in ISO format (YYYY-MM-DD)"
       }
     },
     "first_name": {

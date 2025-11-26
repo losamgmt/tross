@@ -10,8 +10,8 @@
  * This ensures frontend and backend use IDENTICAL validation logic.
  */
 const Joi = require('joi');
-const { HTTP_STATUS } = require('../config/constants');
 const { buildCompositeSchema, getValidationMetadata } = require('../utils/validation-loader');
+const ResponseFormatter = require('../utils/response-formatter');
 
 // Load validation metadata on startup
 try {
@@ -34,66 +34,78 @@ const createValidator = (schema) => (req, res, next) => {
   });
 
   if (error) {
-    return res.status(HTTP_STATUS.BAD_REQUEST).json({
-      error: 'Validation Error',
-      message: error.details[0].message,
-      details: error.details.map((d) => ({
-        field: d.path.join('.'),
-        message: d.message,
-      })),
-      timestamp: new Date().toISOString(),
-    });
+    const details = error.details.map((d) => ({
+      field: d.path.join('.'),
+      message: d.message,
+    }));
+
+    return ResponseFormatter.badRequest(res, error.details[0].message, details);
   }
 
   next();
 };
 
 /**
- * User Creation Validation
- * Validates: POST /api/users
- * USES CENTRALIZED SCHEMA from validation-rules.json
+ * Helper function to build UPDATE schemas with consistent validation
+ * DRY principle: Eliminates repeated .min(1).messages() pattern
+ *
+ * @param {string} operationName - Name of update operation (e.g., 'updateUser')
+ * @returns {Joi.Schema} Configured Joi schema for updates
  */
-const validateUserCreate = createValidator(
-  buildCompositeSchema('createUser'),
-);
-
-/**
- * Profile Update Validation (User Updates)
- * Validates: PUT /api/auth/me, PUT /api/users/:id
- * USES CENTRALIZED SCHEMA from validation-rules.json
- */
-const validateProfileUpdate = createValidator(
-  buildCompositeSchema('updateUser').min(1).messages({
+function buildUpdateSchema(operationName) {
+  return buildCompositeSchema(operationName).min(1).messages({
     'object.min': 'At least one field must be provided for update',
-  }),
-);
+  });
+}
 
-/**
+// ============================================================================
+// AUTO-GENERATED RESOURCE VALIDATORS (DRY Factory Pattern)
+// ============================================================================
+// Generates create/update validators for all resources using metadata
+// This eliminates 16+ lines of repetitive validator definitions
 
-/**
- * Role Creation Validation
- * Validates: POST /api/roles
- * USES CENTRALIZED SCHEMA from validation-rules.json
- */
-const validateRoleCreate = createValidator(
-  buildCompositeSchema('createRole'),
-);
+const RESOURCES = ['User', 'Role', 'Customer', 'Technician', 'WorkOrder', 'Invoice', 'Contract', 'Inventory'];
+const resourceValidators = {};
 
-/**
- * Role Update Validation
- * Validates: PUT /api/roles/:id
- * USES CENTRALIZED SCHEMA from validation-rules.json
- */
-const validateRoleUpdate = createValidator(
-  buildCompositeSchema('updateRole').min(1).messages({
-    'object.min': 'At least one field must be provided for update',
-  }),
-);
+RESOURCES.forEach(resource => {
+  // Generate CREATE validator (e.g., validateUserCreate)
+  resourceValidators[`validate${resource}Create`] = createValidator(
+    buildCompositeSchema(`create${resource}`),
+  );
 
-/**
- * Role Assignment Validation
- * Validates: PUT /api/users/:id/role
- */
+  // Generate UPDATE validator (e.g., validateUserUpdate)
+  resourceValidators[`validate${resource}Update`] = createValidator(
+    buildUpdateSchema(`update${resource}`),
+  );
+});
+
+// Extract individual validators for readability
+const {
+  validateUserCreate,
+  validateUserUpdate,
+  validateRoleCreate,
+  validateRoleUpdate,
+  validateCustomerCreate,
+  validateCustomerUpdate,
+  validateTechnicianCreate,
+  validateTechnicianUpdate,
+  validateWorkOrderCreate,
+  validateWorkOrderUpdate,
+  validateInvoiceCreate,
+  validateInvoiceUpdate,
+  validateContractCreate,
+  validateContractUpdate,
+  validateInventoryCreate,
+  validateInventoryUpdate,
+} = resourceValidators;
+
+// Alias for User update (used in profile endpoints)
+const validateProfileUpdate = validateUserUpdate;
+
+// ============================================================================
+// SPECIAL-CASE VALIDATORS (Not auto-generated)
+// ============================================================================
+// These validators have custom business logic beyond simple create/update
 const validateRoleAssignment = createValidator(
   Joi.object({
     role_id: Joi.number().integer().positive().required().messages({
@@ -164,128 +176,9 @@ const validateRefreshToken = createValidator(
   }),
 );
 
-/**
- * Customer Creation Validation
- * Validates: POST /api/customers
- * USES CENTRALIZED SCHEMA from validation-rules.json
- */
-const validateCustomerCreate = createValidator(
-  buildCompositeSchema('createCustomer'),
-);
-
-/**
- * Customer Update Validation
- * Validates: PATCH /api/customers/:id
- * USES CENTRALIZED SCHEMA from validation-rules.json
- */
-const validateCustomerUpdate = createValidator(
-  buildCompositeSchema('updateCustomer').min(1).messages({
-    'object.min': 'At least one field must be provided for update',
-  }),
-);
-
-/**
- * Technician Creation Validation
- * Validates: POST /api/technicians
- * USES CENTRALIZED SCHEMA from validation-rules.json
- */
-const validateTechnicianCreate = createValidator(
-  buildCompositeSchema('createTechnician'),
-);
-
-/**
- * Technician Update Validation
- * Validates: PATCH /api/technicians/:id
- * USES CENTRALIZED SCHEMA from validation-rules.json
- */
-const validateTechnicianUpdate = createValidator(
-  buildCompositeSchema('updateTechnician').min(1).messages({
-    'object.min': 'At least one field must be provided for update',
-  }),
-);
-
-/**
- * Work Order Creation Validation
- * Validates: POST /api/work_orders
- * USES CENTRALIZED SCHEMA from validation-rules.json
- */
-const validateWorkOrderCreate = createValidator(
-  buildCompositeSchema('createWorkOrder'),
-);
-
-/**
- * Work Order Update Validation
- * Validates: PATCH /api/work_orders/:id
- * USES CENTRALIZED SCHEMA from validation-rules.json
- */
-const validateWorkOrderUpdate = createValidator(
-  buildCompositeSchema('updateWorkOrder').min(1).messages({
-    'object.min': 'At least one field must be provided for update',
-  }),
-);
-
-/**
- * Invoice Creation Validation
- * Validates: POST /api/invoices
- * USES CENTRALIZED SCHEMA from validation-rules.json
- */
-const validateInvoiceCreate = createValidator(
-  buildCompositeSchema('createInvoice'),
-);
-
-/**
- * Invoice Update Validation
- * Validates: PATCH /api/invoices/:id
- * USES CENTRALIZED SCHEMA from validation-rules.json
- */
-const validateInvoiceUpdate = createValidator(
-  buildCompositeSchema('updateInvoice').min(1).messages({
-    'object.min': 'At least one field must be provided for update',
-  }),
-);
-
-/**
- * Contract Creation Validation
- * Validates: POST /api/contracts
- * USES CENTRALIZED SCHEMA from validation-rules.json
- */
-const validateContractCreate = createValidator(
-  buildCompositeSchema('createContract'),
-);
-
-/**
- * Contract Update Validation
- * Validates: PATCH /api/contracts/:id
- * USES CENTRALIZED SCHEMA from validation-rules.json
- */
-const validateContractUpdate = createValidator(
-  buildCompositeSchema('updateContract').min(1).messages({
-    'object.min': 'At least one field must be provided for update',
-  }),
-);
-
-/**
- * Inventory Creation Validation
- * Validates: POST /api/inventory
- * USES CENTRALIZED SCHEMA from validation-rules.json
- */
-const validateInventoryCreate = createValidator(
-  buildCompositeSchema('createInventory'),
-);
-
-/**
- * Inventory Update Validation
- * Validates: PATCH /api/inventory/:id
- * USES CENTRALIZED SCHEMA from validation-rules.json
- */
-const validateInventoryUpdate = createValidator(
-  buildCompositeSchema('updateInventory').min(1).messages({
-    'object.min': 'At least one field must be provided for update',
-  }),
-);
-
 module.exports = {
   validateUserCreate,
+  validateUserUpdate,
   validateProfileUpdate,
   validateRoleAssignment,
   validateRoleCreate,

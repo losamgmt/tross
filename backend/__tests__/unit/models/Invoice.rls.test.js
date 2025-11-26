@@ -85,38 +85,38 @@ describe('Invoice Model - RLS Tests', () => {
   });
 
   describe('_buildRLSFilter()', () => {
-    it('should return no filter when req is null', () => {
+    test('should return no filter when req is null', () => {
       const result = Invoice._buildRLSFilter(null);
       expect(result).toEqual({ clause: '', values: [], applied: false });
     });
 
-    it('should return no filter when rlsPolicy is missing', () => {
+    test('should return no filter when rlsPolicy is missing', () => {
       const req = { rlsUserId: 99 };
       const result = Invoice._buildRLSFilter(req);
       expect(result).toEqual({ clause: '', values: [], applied: false });
     });
 
-    it('should return security failsafe (1=0) for null policy (technician)', () => {
+    test('should return security failsafe (1=0) for null policy (technician)', () => {
       const req = { rlsPolicy: null, rlsUserId: 42 };
       const result = Invoice._buildRLSFilter(req);
       expect(result.clause).toBe('1=0');
       expect(result.applied).toBe(true);
     });
 
-    it('should return security failsafe (1=0) for unknown policy', () => {
+    test('should return security failsafe (1=0) for unknown policy', () => {
       const req = { rlsPolicy: 'unknown_policy', rlsUserId: 42 };
       const result = Invoice._buildRLSFilter(req);
       expect(result.clause).toBe('1=0');
       expect(result.applied).toBe(true);
     });
 
-    it('should return no filter for all_records policy', () => {
+    test('should return no filter for all_records policy', () => {
       const req = { rlsPolicy: 'all_records', rlsUserId: 5 };
       const result = Invoice._buildRLSFilter(req);
       expect(result).toEqual({ clause: '', values: [], applied: true });
     });
 
-    it('should return customer filter for own_invoices_only policy', () => {
+    test('should return customer filter for own_invoices_only policy', () => {
       const req = { rlsPolicy: 'own_invoices_only', rlsUserId: 99 };
       const result = Invoice._buildRLSFilter(req);
       expect(result.clause).toBe('i.customer_id = $1');
@@ -124,7 +124,7 @@ describe('Invoice Model - RLS Tests', () => {
       expect(result.applied).toBe(true);
     });
 
-    it('should return security failsafe when userId missing for own_invoices_only', () => {
+    test('should return security failsafe when userId missing for own_invoices_only', () => {
       const req = { rlsPolicy: 'own_invoices_only' };
       const result = Invoice._buildRLSFilter(req);
       expect(result.clause).toBe('1=0');
@@ -133,7 +133,7 @@ describe('Invoice Model - RLS Tests', () => {
   });
 
   describe('_applyRLSFilter()', () => {
-    it('should return existing WHERE unchanged when no RLS policy', () => {
+    test('should return existing WHERE unchanged when no RLS policy', () => {
       const req = null;
       const result = Invoice._applyRLSFilter(req, 'i.status = $1', ['paid']);
       expect(result.whereClause).toBe('WHERE i.status = $1');
@@ -141,7 +141,7 @@ describe('Invoice Model - RLS Tests', () => {
       expect(result.rlsApplied).toBe(false);
     });
 
-    it('should return existing WHERE unchanged for all_records policy', () => {
+    test('should return existing WHERE unchanged for all_records policy', () => {
       const req = { rlsPolicy: 'all_records', rlsUserId: 5 };
       const result = Invoice._applyRLSFilter(req, 'WHERE i.status = $1', ['paid']);
       expect(result.whereClause).toBe('WHERE i.status = $1');
@@ -149,7 +149,7 @@ describe('Invoice Model - RLS Tests', () => {
       expect(result.rlsApplied).toBe(true);
     });
 
-    it('should add customer RLS filter when no existing WHERE clause', () => {
+    test('should add customer RLS filter when no existing WHERE clause', () => {
       const req = { rlsPolicy: 'own_invoices_only', rlsUserId: 99 };
       const result = Invoice._applyRLSFilter(req, '', []);
       expect(result.whereClause).toBe('WHERE i.customer_id = $1');
@@ -157,7 +157,7 @@ describe('Invoice Model - RLS Tests', () => {
       expect(result.rlsApplied).toBe(true);
     });
 
-    it('should add null policy failsafe (1=0) when no existing WHERE clause', () => {
+    test('should add null policy failsafe (1=0) when no existing WHERE clause', () => {
       const req = { rlsPolicy: null, rlsUserId: 42 };
       const result = Invoice._applyRLSFilter(req, '', []);
       expect(result.whereClause).toBe('WHERE 1=0');
@@ -165,7 +165,7 @@ describe('Invoice Model - RLS Tests', () => {
       expect(result.rlsApplied).toBe(true);
     });
 
-    it('should combine customer RLS with existing WHERE clause', () => {
+    test('should combine customer RLS with existing WHERE clause', () => {
       const req = { rlsPolicy: 'own_invoices_only', rlsUserId: 99 };
       const result = Invoice._applyRLSFilter(req, 'WHERE i.status = $1', ['paid']);
       expect(result.whereClause).toBe('WHERE i.status = $1 AND i.customer_id = $2');
@@ -173,7 +173,7 @@ describe('Invoice Model - RLS Tests', () => {
       expect(result.rlsApplied).toBe(true);
     });
 
-    it('should combine null policy failsafe with existing WHERE clause', () => {
+    test('should combine null policy failsafe with existing WHERE clause', () => {
       const req = { rlsPolicy: null, rlsUserId: 42 };
       const result = Invoice._applyRLSFilter(req, 'WHERE i.status = $1', ['paid']);
       expect(result.whereClause).toBe('WHERE i.status = $1 AND 1=0');
@@ -181,7 +181,7 @@ describe('Invoice Model - RLS Tests', () => {
       expect(result.rlsApplied).toBe(true);
     });
 
-    it('should adjust parameter placeholders correctly', () => {
+    test('should adjust parameter placeholders correctly', () => {
       const req = { rlsPolicy: 'own_invoices_only', rlsUserId: 99 };
       const result = Invoice._applyRLSFilter(req, 'i.is_active = $1 AND i.status = $2', [true, 'sent']);
       expect(result.whereClause).toBe('WHERE i.is_active = $1 AND i.status = $2 AND i.customer_id = $3');
@@ -191,7 +191,7 @@ describe('Invoice Model - RLS Tests', () => {
   });
 
   describe('findById() with RLS', () => {
-    it('should work without RLS context', async () => {
+    test('should work without RLS context', async () => {
       const mockInvoice = { id: 1, invoice_number: 'INV-001', customer_id: 99 };
       db.query.mockResolvedValueOnce({ rows: [mockInvoice] });
 
@@ -204,7 +204,7 @@ describe('Invoice Model - RLS Tests', () => {
       );
     });
 
-    it('should apply all_records RLS policy (no filtering)', async () => {
+    test('should apply all_records RLS policy (no filtering)', async () => {
       const mockInvoice = { id: 1, invoice_number: 'INV-001', customer_id: 99 };
       db.query.mockResolvedValueOnce({ rows: [mockInvoice] });
 
@@ -218,7 +218,7 @@ describe('Invoice Model - RLS Tests', () => {
       );
     });
 
-    it('should apply own_invoices_only RLS policy (customer)', async () => {
+    test('should apply own_invoices_only RLS policy (customer)', async () => {
       const mockInvoice = { id: 1, invoice_number: 'INV-001', customer_id: 99 };
       db.query.mockResolvedValueOnce({ rows: [mockInvoice] });
 
@@ -232,7 +232,7 @@ describe('Invoice Model - RLS Tests', () => {
       );
     });
 
-    it('should apply null policy (technician - no access)', async () => {
+    test('should apply null policy (technician - no access)', async () => {
       db.query.mockResolvedValueOnce({ rows: [] });
 
       const req = { rlsPolicy: null, rlsUserId: 42 };
@@ -245,7 +245,7 @@ describe('Invoice Model - RLS Tests', () => {
       );
     });
 
-    it('should return null when customer RLS blocks access', async () => {
+    test('should return null when customer RLS blocks access', async () => {
       db.query.mockResolvedValueOnce({ rows: [] });
 
       const req = { rlsPolicy: 'own_invoices_only', rlsUserId: 999 };
@@ -256,7 +256,7 @@ describe('Invoice Model - RLS Tests', () => {
   });
 
   describe('findAll() with RLS', () => {
-    it('should work without RLS context', async () => {
+    test('should work without RLS context', async () => {
       const mockInvoices = [
         { id: 1, invoice_number: 'INV-001', customer_id: 99 },
         { id: 2, invoice_number: 'INV-002', customer_id: 100 },
@@ -270,7 +270,7 @@ describe('Invoice Model - RLS Tests', () => {
       expect(result.rlsApplied).toBe(false);
     });
 
-    it('should apply all_records RLS policy (no filtering)', async () => {
+    test('should apply all_records RLS policy (no filtering)', async () => {
       const mockInvoices = [
         { id: 1, invoice_number: 'INV-001', customer_id: 99 },
         { id: 2, invoice_number: 'INV-002', customer_id: 100 },
@@ -285,7 +285,7 @@ describe('Invoice Model - RLS Tests', () => {
       expect(result.rlsApplied).toBe(true);
     });
 
-    it('should apply own_invoices_only RLS policy (customer)', async () => {
+    test('should apply own_invoices_only RLS policy (customer)', async () => {
       const mockInvoices = [{ id: 1, invoice_number: 'INV-001', customer_id: 99 }];
       db.query.mockResolvedValueOnce({ rows: [{ count: '1' }] });
       db.query.mockResolvedValueOnce({ rows: mockInvoices });
@@ -300,7 +300,7 @@ describe('Invoice Model - RLS Tests', () => {
       expect(countQuery).toContain('i.customer_id = $');
     });
 
-    it('should apply null policy (technician - no access)', async () => {
+    test('should apply null policy (technician - no access)', async () => {
       db.query.mockResolvedValueOnce({ rows: [{ count: '0' }] });
       db.query.mockResolvedValueOnce({ rows: [] });
 
@@ -314,7 +314,7 @@ describe('Invoice Model - RLS Tests', () => {
       expect(countQuery).toContain('1=0');
     });
 
-    it('should combine customer RLS with search and filters', async () => {
+    test('should combine customer RLS with search and filters', async () => {
       const mockInvoices = [{ id: 1, invoice_number: 'INV-001', customer_id: 99, status: 'paid' }];
       db.query.mockResolvedValueOnce({ rows: [{ count: '1' }] });
       db.query.mockResolvedValueOnce({ rows: mockInvoices });
@@ -343,7 +343,7 @@ describe('Invoice Model - RLS Tests', () => {
       expect(countQuery).toContain('AND');
     });
 
-    it('should combine null policy with filters (technician blocked)', async () => {
+    test('should combine null policy with filters (technician blocked)', async () => {
       db.query.mockResolvedValueOnce({ rows: [{ count: '0' }] });
       db.query.mockResolvedValueOnce({ rows: [] });
 

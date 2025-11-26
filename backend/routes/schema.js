@@ -11,6 +11,7 @@ const express = require('express');
 const router = express.Router();
 const SchemaIntrospectionService = require('../services/schema-introspection');
 const { authenticateToken } = require('../middleware/auth');
+const ResponseFormatter = require('../utils/response-formatter');
 
 /**
  * @openapi
@@ -47,17 +48,12 @@ router.get('/', authenticateToken, async (req, res) => {
   try {
     const tables = await SchemaIntrospectionService.getAllTables();
 
-    res.json({
-      success: true,
+    return ResponseFormatter.list(res, {
       data: tables,
-      timestamp: new Date().toISOString(),
+      message: 'Tables retrieved successfully',
     });
   } catch (error) {
-    res.status(500).json({
-      error: 'Schema Introspection Error',
-      message: error.message,
-      timestamp: new Date().toISOString(),
-    });
+    return ResponseFormatter.internalError(res, error);
   }
 });
 
@@ -122,26 +118,16 @@ router.get('/:tableName', authenticateToken, async (req, res) => {
 
     const schema = await SchemaIntrospectionService.getTableSchema(tableName);
 
-    res.json({
-      success: true,
-      data: schema,
-      timestamp: new Date().toISOString(),
+    return ResponseFormatter.get(res, schema, {
+      message: 'Table schema retrieved successfully',
     });
   } catch (error) {
     // Check if table doesn't exist
     if (error.message.includes('does not exist')) {
-      return res.status(404).json({
-        error: 'Not Found',
-        message: `Table '${req.params.tableName}' does not exist`,
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.notFound(res, `Table '${req.params.tableName}' does not exist`);
     }
 
-    res.status(500).json({
-      error: 'Schema Introspection Error',
-      message: error.message,
-      timestamp: new Date().toISOString(),
-    });
+    return ResponseFormatter.internalError(res, error);
   }
 });
 
@@ -199,11 +185,7 @@ router.get(
       const columnInfo = schema.columns.find((c) => c.name === column);
 
       if (!columnInfo || !columnInfo.foreignKey) {
-        return res.status(400).json({
-          error: 'Invalid Request',
-          message: `Column '${column}' is not a foreign key`,
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.badRequest(res, `Column '${column}' is not a foreign key`);
       }
 
       // Get options from the referenced table
@@ -211,17 +193,12 @@ router.get(
         columnInfo.foreignKey.table,
       );
 
-      res.json({
-        success: true,
+      return ResponseFormatter.list(res, {
         data: options,
-        timestamp: new Date().toISOString(),
+        message: 'Foreign key options retrieved successfully',
       });
     } catch (error) {
-      res.status(500).json({
-        error: 'Schema Options Error',
-        message: error.message,
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );

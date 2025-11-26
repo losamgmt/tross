@@ -13,7 +13,7 @@ describe('WorkOrder Model - CRUD Operations', () => {
   });
 
   describe('findAll()', () => {
-    it('should return paginated work orders', async () => {
+    test('should return paginated work orders', async () => {
       const mockResult = {
         data: [
           { id: 1, title: 'Repair AC', status: 'pending', customer_id: 10 },
@@ -30,7 +30,7 @@ describe('WorkOrder Model - CRUD Operations', () => {
       expect(WorkOrder.findAll).toHaveBeenCalled();
     });
 
-    it('should return empty array when no work orders exist', async () => {
+    test('should return empty array when no work orders exist', async () => {
       WorkOrder.findAll.mockResolvedValue({
         data: [],
         pagination: { page: 1, limit: 50, totalRecords: 0, totalPages: 0 },
@@ -43,7 +43,7 @@ describe('WorkOrder Model - CRUD Operations', () => {
   });
 
   describe('findById()', () => {
-    it('should return work order by ID', async () => {
+    test('should return work order by ID', async () => {
       const mockWorkOrder = { id: 1, title: 'Repair AC', status: 'pending' };
       WorkOrder.findById.mockResolvedValue(mockWorkOrder);
 
@@ -53,7 +53,7 @@ describe('WorkOrder Model - CRUD Operations', () => {
       expect(WorkOrder.findById).toHaveBeenCalledWith(1);
     });
 
-    it('should return null for non-existent work order', async () => {
+    test('should return null for non-existent work order', async () => {
       WorkOrder.findById.mockResolvedValue(null);
 
       const result = await WorkOrder.findById(999);
@@ -63,7 +63,7 @@ describe('WorkOrder Model - CRUD Operations', () => {
   });
 
   describe('create()', () => {
-    it('should create a new work order', async () => {
+    test('should create a new work order', async () => {
       const newWorkOrder = { title: 'Fix Plumbing', customer_id: 10, priority: 'high' };
       const createdWorkOrder = { id: 3, ...newWorkOrder, status: 'pending' };
 
@@ -77,7 +77,7 @@ describe('WorkOrder Model - CRUD Operations', () => {
   });
 
   describe('update()', () => {
-    it('should update an existing work order', async () => {
+    test('should update an existing work order', async () => {
       const updateData = { status: 'completed' };
       const updatedWorkOrder = { id: 1, title: 'Repair AC', status: 'completed' };
 
@@ -90,7 +90,7 @@ describe('WorkOrder Model - CRUD Operations', () => {
   });
 
   describe('delete()', () => {
-    it('should soft delete a work order', async () => {
+    test('should soft delete a work order', async () => {
       const deletedWorkOrder = { id: 1, title: 'Repair AC', is_active: false };
 
       WorkOrder.delete.mockResolvedValue(deletedWorkOrder);

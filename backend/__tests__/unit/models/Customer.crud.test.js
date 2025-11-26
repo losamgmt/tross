@@ -4,11 +4,8 @@
  * Methods: findAll, findById, create, update, delete
  */
 
-// Mock database BEFORE requiring Customer model
-jest.mock('../../../db/connection', () => ({
-  query: jest.fn(),
-  getClient: jest.fn(),
-}));
+// Mock database BEFORE requiring Customer model - use enhanced mock
+jest.mock('../../../db/connection', () => require('../../mocks').createDBMock());
 
 const Customer = require('../../../db/models/Customer');
 const db = require('../../../db/connection');
@@ -19,7 +16,7 @@ describe('Customer Model - CRUD Operations', () => {
   });
 
   describe('findAll()', () => {
-    it('should return paginated customers', async () => {
+    test('should return paginated customers', async () => {
       const mockCustomers = [
         { id: 1, email: 'customer1@test.com', company_name: 'ACME Corp', is_active: true },
         { id: 2, email: 'customer2@test.com', company_name: 'Beta LLC', is_active: true },
@@ -34,7 +31,7 @@ describe('Customer Model - CRUD Operations', () => {
       expect(db.query).toHaveBeenCalledTimes(2);
     });
 
-    it('should handle empty results', async () => {
+    test('should handle empty results', async () => {
       db.query.mockResolvedValueOnce({ rows: [{ count: '0' }] });
       db.query.mockResolvedValueOnce({ rows: [] });
 
@@ -46,7 +43,7 @@ describe('Customer Model - CRUD Operations', () => {
   });
 
   describe('findById()', () => {
-    it('should return customer by ID', async () => {
+    test('should return customer by ID', async () => {
       const mockCustomer = {
         id: 1,
         email: 'customer@test.com',
@@ -61,7 +58,7 @@ describe('Customer Model - CRUD Operations', () => {
       expect(db.query).toHaveBeenCalledWith(expect.stringContaining('SELECT'), [1]);
     });
 
-    it('should return null for non-existent customer', async () => {
+    test('should return null for non-existent customer', async () => {
       db.query.mockResolvedValue({ rows: [] });
 
       const customer = await Customer.findById(999);
@@ -71,7 +68,7 @@ describe('Customer Model - CRUD Operations', () => {
   });
 
   describe('create()', () => {
-    it('should create a new customer', async () => {
+    test('should create a new customer', async () => {
       const newCustomer = {
         email: 'new@test.com',
         company_name: 'New Corp',
@@ -91,7 +88,7 @@ describe('Customer Model - CRUD Operations', () => {
   });
 
   describe('update()', () => {
-    it('should update a customer', async () => {
+    test('should update a customer', async () => {
       const updateData = { company_name: 'Updated Corp' };
       const updatedCustomer = { id: 1, email: 'test@test.com', ...updateData };
       db.query.mockResolvedValue({ rows: [updatedCustomer] });
@@ -107,23 +104,38 @@ describe('Customer Model - CRUD Operations', () => {
   });
 
   describe('delete()', () => {
-    it('should hard delete a customer', async () => {
+    test('should hard delete a customer', async () => {
       const deletedCustomer = { id: 1, email: 'deleted@example.com', is_active: false };
-      db.query.mockResolvedValue({ rows: [deletedCustomer] });
+      
+      const { createMockClient } = require('../../mocks');
+      const mockClient = createMockClient();
+      db.getClient.mockResolvedValue(mockClient);
+      
+      mockClient.query
+        .mockResolvedValueOnce({ rows: [] }) // BEGIN
+        .mockResolvedValueOnce({ rows: [deletedCustomer] }) // SELECT customer
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // DELETE audit_logs
+        .mockResolvedValueOnce({ rows: [deletedCustomer], rowCount: 1 }) // DELETE customer
+        .mockResolvedValueOnce({ rows: [] }); // COMMIT
 
       const result = await Customer.delete(1);
 
       expect(result).toEqual(deletedCustomer);
-      expect(db.query).toHaveBeenCalledWith(
-        expect.stringContaining('DELETE FROM customers'),
-        [1],
-      );
+      expect(mockClient.release).toHaveBeenCalled();
     });
 
-    it('should throw error if customer not found', async () => {
-      db.query.mockResolvedValue({ rows: [] });
+    test('should throw error if customer not found', async () => {
+      const { createMockClient } = require('../../mocks');
+      const mockClient = createMockClient();
+      db.getClient.mockResolvedValue(mockClient);
+      
+      mockClient.query
+        .mockResolvedValueOnce({ rows: [] }) // BEGIN
+        .mockResolvedValueOnce({ rows: [] }) // SELECT customer - not found
+        .mockResolvedValueOnce({ rows: [] }); // ROLLBACK
 
-      await expect(Customer.delete(999)).rejects.toThrow('Failed to delete customer');
+      await expect(Customer.delete(999)).rejects.toThrow('Customer not found');
+      expect(mockClient.release).toHaveBeenCalled();
     });
   });
 });

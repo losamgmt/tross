@@ -1,7 +1,10 @@
 // Invoice model
 const db = require('../connection');
 const { logger } = require('../../config/logger');
+const { MODEL_ERRORS } = require('../../config/constants');
 const { toSafeInteger } = require('../../validators/type-coercion');
+const { deleteWithAuditCascade } = require('../helpers/delete-helper');
+const { buildUpdateClause } = require('../helpers/update-helper');
 const PaginationService = require('../../services/pagination-service');
 const QueryBuilderService = require('../../services/query-builder-service');
 const invoiceMetadata = require('../../config/models/invoice-metadata');
@@ -125,7 +128,7 @@ class Invoice {
       return result.rows[0];
     } catch (error) {
       logger.error('Error finding invoice', { error: error.message, invoiceId: safeId });
-      throw new Error('Failed to find invoice');
+      throw new Error(MODEL_ERRORS.INVOICE.RETRIEVAL_FAILED);
     }
   }
 
@@ -184,13 +187,13 @@ class Invoice {
       };
     } catch (error) {
       logger.error('Error finding invoices', { error: error.message });
-      throw new Error('Failed to retrieve invoices');
+      throw new Error(MODEL_ERRORS.INVOICE.RETRIEVAL_ALL_FAILED);
     }
   }
 
   static async create(data) {
     if (!data.invoice_number || !data.customer_id || !data.amount || !data.total) {
-      throw new Error('Invoice number, customer_id, amount, and total are required');
+      throw new Error(MODEL_ERRORS.INVOICE.INVOICE_NUMBER_CUSTOMER_AMOUNT_TOTAL_REQUIRED);
     }
     try {
       const query = `
@@ -214,34 +217,25 @@ class Invoice {
         throw preservedError;
       }
 
-      throw new Error('Failed to create invoice');
+      throw new Error(MODEL_ERRORS.INVOICE.CREATION_FAILED);
     }
   }
 
   static async update(id, data) {
     const safeId = toSafeInteger(id, 'Invoice ID');
     const allowedFields = ['invoice_number', 'work_order_id', 'amount', 'tax', 'total', 'due_date', 'paid_at', 'status'];
-    const updates = [];
-    const values = [];
-    let paramIndex = 1;
 
-    for (const [key, value] of Object.entries(data)) {
-      if (allowedFields.includes(key)) {
-        updates.push(`${key} = $${paramIndex}`);
-        values.push(value);
-        paramIndex++;
-      }
-    }
+    const { updates, values, hasUpdates } = buildUpdateClause(data, allowedFields);
 
-    if (updates.length === 0) {
-      throw new Error('No valid fields to update');
+    if (!hasUpdates) {
+      throw new Error(MODEL_ERRORS.INVOICE.NO_VALID_FIELDS);
     }
 
     try {
       values.push(safeId);
-      const result = await db.query(`UPDATE invoices SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING *`, values);
+      const result = await db.query(`UPDATE invoices SET ${updates.join(', ')} WHERE id = $${values.length} RETURNING *`, values);
       if (result.rows.length === 0) {
-        throw new Error('Invoice not found');
+        throw new Error(MODEL_ERRORS.INVOICE.NOT_FOUND);
       }
       logger.info('Invoice updated', { invoiceId: safeId });
       return result.rows[0];
@@ -255,38 +249,17 @@ class Invoice {
         throw preservedError;
       }
 
-      throw new Error('Failed to update invoice');
-    }
-  }
-
-  static async deactivate(id) {
-    const safeId = toSafeInteger(id, 'Invoice ID');
-    try {
-      const result = await db.query('UPDATE invoices SET is_active = false WHERE id = $1 RETURNING *', [safeId]);
-      if (result.rows.length === 0) {
-        throw new Error('Invoice not found');
-      }
-      logger.info('Invoice deactivated', { invoiceId: safeId });
-      return result.rows[0];
-    } catch (error) {
-      logger.error('Error deactivating invoice', { error: error.message });
-      throw new Error('Failed to deactivate invoice');
+      throw new Error(MODEL_ERRORS.INVOICE.UPDATE_FAILED);
     }
   }
 
   static async delete(id) {
     const safeId = toSafeInteger(id, 'Invoice ID');
-    try {
-      const result = await db.query('DELETE FROM invoices WHERE id = $1 RETURNING *', [safeId]);
-      if (result.rows.length === 0) {
-        throw new Error('Invoice not found');
-      }
-      logger.warn('Invoice permanently deleted', { invoiceId: safeId });
-      return result.rows[0];
-    } catch (error) {
-      logger.error('Error deleting invoice', { error: error.message });
-      throw new Error('Failed to delete invoice');
-    }
+
+    return deleteWithAuditCascade({
+      tableName: 'invoices',
+      id: safeId,
+    });
   }
 }
 
