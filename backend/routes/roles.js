@@ -11,9 +11,9 @@ const {
   validateQuery, // NEW: Metadata-driven query validation
 } = require('../validators'); // Now from validators/ instead of middleware/
 const auditService = require('../services/audit-service');
-const { HTTP_STATUS } = require('../config/constants');
 const { getClientIp, getUserAgent } = require('../utils/request-helpers');
 const { logger } = require('../config/logger');
+const ResponseFormatter = require('../utils/response-formatter');
 const roleMetadata = require('../config/models/role-metadata'); // NEW: Role metadata
 
 /**
@@ -135,22 +135,15 @@ router.get(
         req,
       });
 
-      res.json({
-        success: true,
+      return ResponseFormatter.list(res, {
         data: result.data,
-        count: result.data.length,
         pagination: result.pagination,
-        appliedFilters: result.appliedFilters, // NEW: Show what filters were applied
+        appliedFilters: result.appliedFilters,
         rlsApplied: result.rlsApplied,
-        timestamp: new Date().toISOString(),
       });
     } catch (error) {
       logger.error('Error fetching roles', { error: error.message });
-      res.status(500).json({
-        success: false,
-        error: 'Failed to fetch roles',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.internalError(res, error);
     }
   });
 
@@ -200,28 +193,16 @@ router.get(
       const role = await Role.findById(roleId, req);
 
       if (!role) {
-        return res.status(404).json({
-          success: false,
-          error: 'Role not found',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.notFound(res, 'Role not found');
       }
 
-      res.json({
-        success: true,
-        data: role,
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.get(res, role);
     } catch (error) {
       logger.error('Error fetching role', {
         error: error.message,
         roleId: req.validated.id,
       });
-      res.status(500).json({
-        success: false,
-        error: 'Failed to fetch role',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.internalError(res, error);
     }
   });
 
@@ -302,23 +283,16 @@ router.get(
 
       const result = await Role.getUsersByRole(roleId, { page, limit });
 
-      res.json({
-        success: true,
+      return ResponseFormatter.list(res, {
         data: result.users,
-        count: result.users.length,
         pagination: result.pagination,
-        timestamp: new Date().toISOString(),
       });
     } catch (error) {
       logger.error('Error fetching users by role', {
         error: error.message,
         roleId: req.validated.id,
       });
-      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-        success: false,
-        error: 'Failed to fetch users by role',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );
@@ -382,12 +356,7 @@ router.post(
 
       // Check if role name already exists
       if (!name) {
-        return res.status(HTTP_STATUS.BAD_REQUEST).json({
-          success: false,
-          error: 'Bad Request',
-          message: 'Role name is required',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.badRequest(res, 'Role name is required');
       }
 
       // Create role with optional priority
@@ -410,33 +379,19 @@ router.post(
         userAgent: getUserAgent(req),
       });
 
-      res.status(HTTP_STATUS.CREATED).json({
-        success: true,
-        data: newRole,
-        message: 'Role created successfully',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.created(res, newRole, 'Role created successfully');
     } catch (error) {
       logger.error('Error creating role', {
         error: error.message,
         roleName: req.body.name,
       });
 
-      if (error.message === 'Role name already exists') {
-        return res.status(HTTP_STATUS.CONFLICT).json({
-          success: false,
-          error: 'Conflict',
-          message: error.message,
-          timestamp: new Date().toISOString(),
-        });
+      // Handle duplicate key violations (code from DB, message from model)
+      if (error.code === '23505' || error.message === 'Role name already exists') {
+        return ResponseFormatter.conflict(res, 'Role name already exists');
       }
 
-      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-        success: false,
-        error: 'Internal Server Error',
-        message: 'Failed to create role',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );
@@ -570,18 +525,13 @@ router.put(
   validateRoleUpdate,
   async (req, res) => {
     try {
-      const roleId = req.validatedId; // From validateIdParam middleware
+      const roleId = req.validated.id; // From validateIdParam middleware
       const { name, description, permissions, is_active, priority } = req.body;
 
       // Get old role for audit
       const oldRole = await Role.findById(roleId, req);
       if (!oldRole) {
-        return res.status(HTTP_STATUS.NOT_FOUND).json({
-          success: false,
-          error: 'Role not found',
-          message: 'Role not found',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.notFound(res, 'Role not found');
       }
 
       // Build updates object
@@ -630,12 +580,7 @@ router.put(
         userAgent: getUserAgent(req),
       });
 
-      res.json({
-        success: true,
-        data: updatedRole,
-        message: 'Role updated successfully',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.updated(res, updatedRole, 'Role updated successfully');
     } catch (error) {
       logger.error('Error updating role', {
         error: error.message,
@@ -643,38 +588,19 @@ router.put(
       });
 
       if (error.message === 'Cannot modify protected role') {
-        return res.status(HTTP_STATUS.BAD_REQUEST).json({
-          success: false,
-          error: 'Bad Request',
-          message: error.message,
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.badRequest(res, error.message);
       }
 
-      if (error.message === 'Role name already exists') {
-        return res.status(HTTP_STATUS.CONFLICT).json({
-          success: false,
-          error: 'Conflict',
-          message: error.message,
-          timestamp: new Date().toISOString(),
-        });
+      // Handle duplicate key violations (code from DB, message from model)
+      if (error.code === '23505' || error.message === 'Role name already exists') {
+        return ResponseFormatter.conflict(res, 'Role name already exists');
       }
 
       if (error.message === 'Role not found') {
-        return res.status(HTTP_STATUS.NOT_FOUND).json({
-          success: false,
-          error: 'Role not found',
-          message: error.message,
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.notFound(res, error.message);
       }
 
-      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-        success: false,
-        error: 'Internal Server Error',
-        message: 'Failed to update role',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );
@@ -742,11 +668,7 @@ router.delete(
         userAgent: getUserAgent(req),
       });
 
-      res.json({
-        success: true,
-        message: 'Role deleted successfully',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.deleted(res, 'Role deleted successfully');
     } catch (error) {
       logger.error('Error deleting role', {
         error: error.message,
@@ -757,29 +679,14 @@ router.delete(
         error.message === 'Cannot delete protected role' ||
         error.message.startsWith('Cannot delete role:')
       ) {
-        return res.status(HTTP_STATUS.BAD_REQUEST).json({
-          success: false,
-          error: 'Bad Request',
-          message: error.message,
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.badRequest(res, error.message);
       }
 
       if (error.message === 'Role not found') {
-        return res.status(HTTP_STATUS.NOT_FOUND).json({
-          success: false,
-          error: 'Role not found',
-          message: error.message,
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.notFound(res, error.message);
       }
 
-      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-        success: false,
-        error: 'Internal Server Error',
-        message: 'Failed to delete role',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );

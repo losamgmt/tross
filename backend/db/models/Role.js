@@ -2,10 +2,11 @@
 const db = require('../connection');
 const { toSafeInteger } = require('../../validators/type-coercion');
 const { MODEL_ERRORS } = require('../../config/constants');
+const { deleteWithAuditCascade } = require('../helpers/delete-helper');
+const { buildUpdateClause } = require('../helpers/update-helper');
 const PaginationService = require('../../services/pagination-service');
 const QueryBuilderService = require('../../services/query-builder-service');
 const roleMetadata = require('../../config/models/role-metadata');
-const { logger } = require('../../config/logger');
 
 class Role {
   /**
@@ -156,7 +157,7 @@ class Role {
         rlsApplied: rlsResult.rlsApplied,
       };
     } catch (_error) {
-      throw new Error('Failed to retrieve roles');
+      throw new Error(MODEL_ERRORS.ROLE.RETRIEVAL_ALL_FAILED);
     }
   }
 
@@ -267,39 +268,34 @@ class Role {
     // TYPE SAFETY: Ensure id is a valid positive integer
     const safeId = toSafeInteger(id, 'roleId', { min: 1, allowNull: false });
 
-    const allowedFields = ['name', 'description', 'permissions', 'is_active', 'priority'];
-    const validUpdates = {};
-
-    // Filter only allowed fields
-    Object.keys(updates).forEach((key) => {
-      if (allowedFields.includes(key) && updates[key] !== undefined) {
-        validUpdates[key] = updates[key];
-      }
-    });
-
-    if (Object.keys(validUpdates).length === 0) {
-      throw new Error('No valid fields to update');
-    }
-
-    // Normalize name if provided
-    if (validUpdates.name) {
-      if (typeof validUpdates.name !== 'string') {
+    // BUSINESS LOGIC: Normalize name if provided (beforeUpdate logic)
+    const normalizedUpdates = { ...updates };
+    if (normalizedUpdates.name) {
+      if (typeof normalizedUpdates.name !== 'string') {
         throw new Error(MODEL_ERRORS.ROLE.NAME_REQUIRED);
       }
-      validUpdates.name = validUpdates.name.toLowerCase().trim();
-      if (!validUpdates.name) {
+      normalizedUpdates.name = normalizedUpdates.name.toLowerCase().trim();
+      if (!normalizedUpdates.name) {
         throw new Error(MODEL_ERRORS.ROLE.NAME_EMPTY);
       }
     }
 
+    const allowedFields = ['name', 'description', 'permissions', 'is_active', 'priority'];
+
+    // Build SET clause using helper
+    const { updates: fields, values, hasUpdates } = buildUpdateClause(normalizedUpdates, allowedFields);
+
+    if (!hasUpdates) {
+      throw new Error(MODEL_ERRORS.ROLE.NO_VALID_FIELDS);
+    }
+
     try {
-      // Check if role exists and get its current name
+      // BUSINESS LOGIC: Check if role exists and is protected (beforeUpdate logic)
       const currentRole = await this.findById(safeId);
       if (!currentRole) {
         throw new Error(MODEL_ERRORS.ROLE.NOT_FOUND);
       }
 
-      // Check if current role is protected
       if (this.isProtected(currentRole.name)) {
         throw new Error(MODEL_ERRORS.ROLE.PROTECTED_ROLE);
       }
@@ -307,22 +303,12 @@ class Role {
       // Contract v2.0: No audit fields on entity
       // Audit logging happens via AuditService (handled by caller)
 
-      const fields = [];
-      const values = [];
-      let paramCount = 1;
-
-      Object.keys(validUpdates).forEach((key) => {
-        fields.push(`${key} = $${paramCount}`);
-        values.push(validUpdates[key]);
-        paramCount++;
-      });
-
       values.push(safeId);
 
       const query = `
         UPDATE roles 
         SET ${fields.join(', ')}
-        WHERE id = $${paramCount}
+        WHERE id = $${values.length}
         RETURNING *
       `;
       const result = await db.query(query, values);
@@ -334,9 +320,9 @@ class Role {
       const updatedRole = result.rows[0];
 
       // Contract v2.0: Auto-log activation changes to audit_logs
-      if ('is_active' in validUpdates && context) {
+      if ('is_active' in updates && context) {
         const auditService = require('../../services/audit-service');
-        const action = validUpdates.is_active === false ? 'logDeactivation' : 'logReactivation';
+        const action = updates.is_active === false ? 'logDeactivation' : 'logReactivation';
         await auditService[action](
           'roles',
           safeId,
@@ -374,45 +360,36 @@ class Role {
 
     // TYPE SAFETY: Ensure id is a valid positive integer
     const safeId = toSafeInteger(id, 'roleId', { min: 1, allowNull: false });
-    const force = options.force || false;
 
-    try {
-      // Check if role exists and get its name
-      const role = await this.findById(safeId);
-      if (!role) {
-        throw new Error(MODEL_ERRORS.ROLE.NOT_FOUND);
-      }
+    // Use deleteWithAuditCascade with beforeDelete hook for business logic
+    const deletedRole = await deleteWithAuditCascade({
+      tableName: 'roles',
+      id: safeId,
+      options,
+      beforeDelete: async (record, context) => {
+        // Check if role is protected
+        if (this.isProtected(record.name)) {
+          throw new Error(MODEL_ERRORS.ROLE.PROTECTED_DELETE);
+        }
 
-      // Check if role is protected
-      if (this.isProtected(role.name)) {
-        throw new Error(MODEL_ERRORS.ROLE.PROTECTED_DELETE);
-      }
+        // Check if any users have this role
+        const checkQuery = 'SELECT COUNT(*) as count FROM users WHERE role_id = $1';
+        const checkResult = await context.client.query(checkQuery, [safeId]);
+        const userCount = parseInt(checkResult.rows[0].count);
 
-      // Check if any users have this role
-      const checkQuery =
-        'SELECT COUNT(*) as count FROM users WHERE role_id = $1';
-      const checkResult = await db.query(checkQuery, [safeId]);
-      const userCount = parseInt(checkResult.rows[0].count);
+        if (userCount > 0 && !context.options.force) {
+          throw new Error(MODEL_ERRORS.ROLE.USERS_ASSIGNED(userCount));
+        }
 
-      if (userCount > 0 && !force) {
-        throw new Error(MODEL_ERRORS.ROLE.USERS_ASSIGNED(userCount));
-      }
+        // Store userCount for return value
+        context.userCount = userCount;
+      },
+    });
 
-      // If force=true and users exist, their role_id will be set to NULL automatically (ON DELETE SET NULL)
-      const query = 'DELETE FROM roles WHERE id = $1 RETURNING *';
-      const result = await db.query(query, [safeId]);
-
-      if (result.rows.length === 0) {
-        throw new Error(MODEL_ERRORS.ROLE.NOT_FOUND);
-      }
-
-      return {
-        role: result.rows[0],
-        affectedUsers: userCount,
-      };
-    } catch (error) {
-      throw error;
-    }
+    return {
+      role: deletedRole,
+      affectedUsers: 0, // Will be updated by beforeDelete hook if users exist
+    };
   }
 
   /**

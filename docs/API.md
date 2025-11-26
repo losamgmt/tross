@@ -149,8 +149,9 @@ GET /api/work_orders?status=pending&assigned_to=123&created_after=2025-01-01
 
 **All endpoints require authentication except:**
 - `GET /api/health`
-- `POST /api/dev-auth/login` (dev mode)
+- `GET /api/dev/token` (dev mode)
 - `POST /api/auth0/callback` (Auth0 callback)
+- `POST /api/auth0/validate` (Auth0 PKCE validation)
 
 ### Bearer Token
 ```http
@@ -161,18 +162,18 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 **Dev Mode:**
 ```bash
-POST /api/dev-auth/login
-{
-  "email": "admin@dev.local"
-}
+GET /api/dev/token?role=admin
+
+# Available roles: admin, manager, dispatcher, technician, customer
 ```
 
-**Production (Auth0):**
+**Production (Auth0 PKCE):**
 ```bash
-# Redirect user to:
-GET /api/auth0/login
-
-# After Auth0 login, user redirected back with token
+# Frontend handles PKCE flow:
+# 1. Redirect to Auth0 with code_challenge
+# 2. Auth0 returns code to /callback
+# 3. Exchange code for tokens
+# 4. Validate with backend: POST /api/auth0/validate
 ```
 
 ---
@@ -219,12 +220,20 @@ POST /api/users
 }
 ```
 
-**Update User**
+**Update User** (Partial update)
 ```http
-PUT /api/users/:id
+PATCH /api/users/:id
 {
   "first_name": "Jane",
   "last_name": "Smith"
+}
+```
+
+**Assign Role** (Admin only)
+```http
+PUT /api/users/:id/role
+{
+  "role_id": 2
 }
 ```
 
@@ -385,7 +394,7 @@ X-RateLimit-Reset: 1700000000
 ## CORS
 
 **Allowed Origins:** `http://localhost:8080` (dev), `https://trossapp.vercel.app` (prod)  
-**Allowed Methods:** GET, POST, PUT, DELETE  
+**Allowed Methods:** GET, POST, PUT, PATCH, DELETE  
 **Allowed Headers:** Content-Type, Authorization  
 **Credentials:** Supported
 
@@ -448,11 +457,9 @@ Import OpenAPI spec into Postman:
 
 ### cURL Examples
 
-**Get token:**
+**Get dev token:**
 ```bash
-curl -X POST http://localhost:3001/api/dev-auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"admin@dev.local"}'
+curl "http://localhost:3001/api/dev/token?role=admin"
 ```
 
 **List customers:**

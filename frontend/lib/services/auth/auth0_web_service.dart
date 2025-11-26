@@ -188,7 +188,9 @@ class Auth0WebService {
       );
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+        final responseBody = json.decode(response.body);
+        // Unwrap standard response envelope: { success, data, timestamp }
+        final data = responseBody['data'] ?? responseBody;
         ErrorService.logInfo('Backend validation successful');
         return data;
       } else {

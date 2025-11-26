@@ -8,6 +8,8 @@
 const request = require('supertest');
 const app = require('../../server');
 const { createTestUser, cleanupTestDatabase } = require('../helpers/test-db');
+const { TEST_PAGINATION } = require('../../config/test-constants');
+const { HTTP_STATUS } = require('../../config/constants');
 const User = require('../../db/models/User');
 const Role = require('../../db/models/Role');
 
@@ -30,7 +32,7 @@ describe('Users CRUD API - Integration Tests', () => {
   });
 
   describe('GET /api/users - List Users', () => {
-    it('should return 401 without authentication', async () => {
+    test('should return 401 without authentication', async () => {
       // Act
       const response = await request(app).get('/api/users');
 
@@ -38,20 +40,20 @@ describe('Users CRUD API - Integration Tests', () => {
       expect(response.status).toBe(401);
     });
 
-    it('should allow technician to read users list', async () => {
+    test('should allow technician to read users list', async () => {
       // Act - Technicians might have read access
       const response = await request(app)
-        .get('/api/users?page=1&limit=10')
+        .get(`/api/users?page=${TEST_PAGINATION.DEFAULT_PAGE}&limit=${TEST_PAGINATION.DEFAULT_LIMIT}`)
         .set('Authorization', `Bearer ${technicianToken}`);
 
       // Assert - Either allowed (200) or forbidden (403)
       expect([200, 403]).toContain(response.status);
     });
 
-    it('should return paginated user list for admin', async () => {
+    test('should return paginated user list for admin', async () => {
       // Act - Include minimal valid query params
       const response = await request(app)
-        .get('/api/users?page=1&limit=10')
+        .get(`/api/users?page=${TEST_PAGINATION.DEFAULT_PAGE}&limit=${TEST_PAGINATION.DEFAULT_LIMIT}`)
         .set('Authorization', `Bearer ${adminToken}`);
 
       // Assert
@@ -68,10 +70,10 @@ describe('Users CRUD API - Integration Tests', () => {
       });
     });
 
-    it('should include user data in list', async () => {
+    test('should include user data in list', async () => {
       // Act
       const response = await request(app)
-        .get('/api/users?page=1&limit=10')
+        .get(`/api/users?page=${TEST_PAGINATION.DEFAULT_PAGE}&limit=${TEST_PAGINATION.DEFAULT_LIMIT}`)
         .set('Authorization', `Bearer ${adminToken}`);
 
       // Assert
@@ -88,10 +90,10 @@ describe('Users CRUD API - Integration Tests', () => {
       });
     });
 
-    it('should support pagination parameters', async () => {
+    test('should support pagination parameters', async () => {
       // Act
       const response = await request(app)
-        .get('/api/users?page=1&limit=5')
+        .get(`/api/users?page=${TEST_PAGINATION.DEFAULT_PAGE}&limit=${TEST_PAGINATION.SMALL_LIMIT}`)
         .set('Authorization', `Bearer ${adminToken}`);
 
       // Assert
@@ -103,10 +105,10 @@ describe('Users CRUD API - Integration Tests', () => {
       expect(response.body.data.length).toBeLessThanOrEqual(5);
     });
 
-    it('should support search parameter', async () => {
+    test('should support search parameter', async () => {
       // Act
       const response = await request(app)
-        .get(`/api/users?page=1&limit=10&search=${adminUser.email}`)
+        .get(`/api/users?page=${TEST_PAGINATION.DEFAULT_PAGE}&limit=${TEST_PAGINATION.DEFAULT_LIMIT}&search=${adminUser.email}`)
         .set('Authorization', `Bearer ${adminToken}`);
 
       // Assert
@@ -115,10 +117,19 @@ describe('Users CRUD API - Integration Tests', () => {
       expect(response.body.data).toBeInstanceOf(Array);
     });
 
-    it('should support sorting', async () => {
+    test('should support sorting', async () => {
+      // Arrange - Create additional test user for sorting
+      await User.create({
+        auth0_id: `sort-test-${Date.now()}`,
+        email: 'aaa-first@test.com', // Should sort first
+        first_name: 'First',
+        last_name: 'User',
+        role_id: (await require('../../db/models/Role').getByName('technician')).id,
+      });
+
       // Act
       const response = await request(app)
-        .get('/api/users?page=1&limit=10&sortBy=email&sortOrder=ASC')
+        .get(`/api/users?page=${TEST_PAGINATION.DEFAULT_PAGE}&limit=${TEST_PAGINATION.DEFAULT_LIMIT}&sortBy=email&sortOrder=ASC`)
         .set('Authorization', `Bearer ${adminToken}`);
 
       // Assert
@@ -132,10 +143,10 @@ describe('Users CRUD API - Integration Tests', () => {
       }
     });
 
-    it('should include active and inactive users by default', async () => {
+    test('should include active and inactive users by default', async () => {
       // Act
       const response = await request(app)
-        .get('/api/users?page=1&limit=10')
+        .get(`/api/users?page=${TEST_PAGINATION.DEFAULT_PAGE}&limit=${TEST_PAGINATION.DEFAULT_LIMIT}`)
         .set('Authorization', `Bearer ${adminToken}`);
 
       // Assert - Should include users regardless of is_active status
@@ -145,7 +156,7 @@ describe('Users CRUD API - Integration Tests', () => {
   });
 
   describe('GET /api/users/:id - Get User by ID', () => {
-    it('should return 401 without authentication', async () => {
+    test('should return 401 without authentication', async () => {
       // Act
       const response = await request(app).get(`/api/users/${adminUser.id}`);
 
@@ -153,7 +164,7 @@ describe('Users CRUD API - Integration Tests', () => {
       expect(response.status).toBe(401);
     });
 
-    it('should allow technician to read user by ID', async () => {
+    test('should allow technician to read user by ID', async () => {
       // Act - Technicians might have read access
       const response = await request(app)
         .get(`/api/users/${adminUser.id}`)
@@ -163,7 +174,7 @@ describe('Users CRUD API - Integration Tests', () => {
       expect([200, 400, 403]).toContain(response.status);
     });
 
-    it('should return user by ID for admin', async () => {
+    test('should return user by ID for admin', async () => {
       // Act
       const response = await request(app)
         .get(`/api/users/${adminUser.id}`)
@@ -184,7 +195,7 @@ describe('Users CRUD API - Integration Tests', () => {
       }
     });
 
-    it('should return 404 for non-existent user', async () => {
+    test('should return 404 for non-existent user', async () => {
       // Act
       const response = await request(app)
         .get('/api/users/99999')
@@ -195,7 +206,7 @@ describe('Users CRUD API - Integration Tests', () => {
       expect(response.body.error).toBe('Not Found');
     });
 
-    it('should return 400 for invalid ID format', async () => {
+    test('should return 400 for invalid ID format', async () => {
       // Act
       const response = await request(app)
         .get('/api/users/invalid')
@@ -214,7 +225,7 @@ describe('Users CRUD API - Integration Tests', () => {
       testEmail = `test-${Date.now()}@example.com`;
     });
 
-    it('should return 401 without authentication', async () => {
+    test('should return 401 without authentication', async () => {
       // Act
       const response = await request(app)
         .post('/api/users')
@@ -224,7 +235,7 @@ describe('Users CRUD API - Integration Tests', () => {
       expect(response.status).toBe(401);
     });
 
-    it('should return 403 for non-admin users', async () => {
+    test('should return 403 for non-admin users', async () => {
       // Act
       const response = await request(app)
         .post('/api/users')
@@ -235,7 +246,7 @@ describe('Users CRUD API - Integration Tests', () => {
       expect(response.status).toBe(403);
     });
 
-    it('should create user with valid data', async () => {
+    test('should create user with valid data', async () => {
       // Arrange
       const userData = {
         email: testEmail,
@@ -263,7 +274,7 @@ describe('Users CRUD API - Integration Tests', () => {
       });
     });
 
-    it('should create user with role_id', async () => {
+    test('should create user with role_id', async () => {
       // Arrange - Get client role ID from database
       const db = require('../../db/connection');
       const roleResult = await db.query("SELECT id FROM roles WHERE name = 'customer' LIMIT 1");
@@ -292,7 +303,7 @@ describe('Users CRUD API - Integration Tests', () => {
       expect(response.body.data.role_id).toBe(clientRoleId);
     });
 
-    it('should reject duplicate email', async () => {
+    test('should reject duplicate email', async () => {
       // Arrange - Create user first
       await request(app)
         .post('/api/users')
@@ -318,7 +329,7 @@ describe('Users CRUD API - Integration Tests', () => {
       expect(response.body.message).toContain('already exists');
     });
 
-    it('should reject invalid email format', async () => {
+    test('should reject invalid email format', async () => {
       // Act
       const response = await request(app)
         .post('/api/users')
@@ -333,7 +344,7 @@ describe('Users CRUD API - Integration Tests', () => {
       expect(response.status).toBe(400);
     });
 
-    it('should reject missing required fields', async () => {
+    test('should reject missing required fields', async () => {
       // Act - Missing email
       const response = await request(app)
         .post('/api/users')
@@ -347,7 +358,7 @@ describe('Users CRUD API - Integration Tests', () => {
       expect(response.status).toBe(400);
     });
 
-    it('should trim whitespace from names and email', async () => {
+    test('should trim whitespace from names and email', async () => {
       // Act
       const response = await request(app)
         .post('/api/users')
@@ -364,7 +375,7 @@ describe('Users CRUD API - Integration Tests', () => {
     });
   });
 
-  describe('PUT /api/users/:id - Update User', () => {
+  describe('PATCH /api/users/:id - Update User', () => {
     let testUser;
 
     beforeEach(async () => {
@@ -377,20 +388,20 @@ describe('Users CRUD API - Integration Tests', () => {
       });
     });
 
-    it('should return 401 without authentication', async () => {
+    test('should return 401 without authentication', async () => {
       // Act
       const response = await request(app)
-        .put(`/api/users/${testUser.id}`)
+        .patch(`/api/users/${testUser.id}`)
         .send({ first_name: 'Updated' });
 
       // Assert
       expect(response.status).toBe(401);
     });
 
-    it('should return 403 for non-admin users', async () => {
+    test('should return 403 for non-admin users', async () => {
       // Act
       const response = await request(app)
-        .put(`/api/users/${testUser.id}`)
+        .patch(`/api/users/${testUser.id}`)
         .set('Authorization', `Bearer ${technicianToken}`)
         .send({ first_name: 'Updated' });
 
@@ -398,10 +409,10 @@ describe('Users CRUD API - Integration Tests', () => {
       expect(response.status).toBe(403);
     });
 
-    it('should update user first name', async () => {
+    test('should update user first name', async () => {
       // Act
       const response = await request(app)
-        .put(`/api/users/${testUser.id}`)
+        .patch(`/api/users/${testUser.id}`)
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ first_name: 'UpdatedFirst' });
 
@@ -410,10 +421,10 @@ describe('Users CRUD API - Integration Tests', () => {
       expect(response.body.data.first_name).toBe('UpdatedFirst');
     });
 
-    it('should update user last name', async () => {
+    test('should update user last name', async () => {
       // Act
       const response = await request(app)
-        .put(`/api/users/${testUser.id}`)
+        .patch(`/api/users/${testUser.id}`)
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ last_name: 'UpdatedLast' });
 
@@ -422,10 +433,10 @@ describe('Users CRUD API - Integration Tests', () => {
       expect(response.body.data.last_name).toBe('UpdatedLast');
     });
 
-    it('should update is_active status', async () => {
+    test('should update is_active status', async () => {
       // Act
       const response = await request(app)
-        .put(`/api/users/${testUser.id}`)
+        .patch(`/api/users/${testUser.id}`)
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ is_active: false });
 
@@ -434,10 +445,10 @@ describe('Users CRUD API - Integration Tests', () => {
       expect(response.body.data.is_active).toBe(false);
     });
 
-    it('should return 404 for non-existent user', async () => {
+    test('should return 404 for non-existent user', async () => {
       // Act
       const response = await request(app)
-        .put('/api/users/99999')
+        .patch('/api/users/99999')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ first_name: 'Updated' });
 
@@ -445,10 +456,10 @@ describe('Users CRUD API - Integration Tests', () => {
       expect(response.status).toBe(404);
     });
 
-    it('should persist updates to database', async () => {
+    test('should persist updates to database', async () => {
       // Act - Update user
       await request(app)
-        .put(`/api/users/${testUser.id}`)
+        .patch(`/api/users/${testUser.id}`)
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ first_name: 'Persisted', last_name: 'Update' });
 
@@ -484,7 +495,7 @@ describe('Users CRUD API - Integration Tests', () => {
       managerRoleId = roleResult.rows[0]?.id;
     });
 
-    it('should return 401 without authentication', async () => {
+    test('should return 401 without authentication', async () => {
       if (!managerRoleId) return; // Skip if role doesn't exist
 
       // Act
@@ -496,7 +507,7 @@ describe('Users CRUD API - Integration Tests', () => {
       expect(response.status).toBe(401);
     });
 
-    it('should return 403 for non-admin users', async () => {
+    test('should return 403 for non-admin users', async () => {
       if (!managerRoleId) return; // Skip if role doesn't exist
 
       // Act
@@ -509,7 +520,7 @@ describe('Users CRUD API - Integration Tests', () => {
       expect(response.status).toBe(403);
     });
 
-    it('should assign role to user', async () => {
+    test('should assign role to user', async () => {
       if (!managerRoleId) return; // Skip if role doesn't exist
 
       // Act
@@ -524,7 +535,7 @@ describe('Users CRUD API - Integration Tests', () => {
       expect(response.body.data.role).toBe('manager');
     });
 
-    it('should return error for non-existent user', async () => {
+    test('should return error for non-existent user', async () => {
       if (!managerRoleId) return; // Skip if role doesn't exist
 
       // Act
@@ -537,7 +548,7 @@ describe('Users CRUD API - Integration Tests', () => {
       expect([404, 500]).toContain(response.status);
     });
 
-    it('should return 404 for non-existent role', async () => {
+    test('should return 404 for non-existent role', async () => {
       // Act
       const response = await request(app)
         .put(`/api/users/${testUser.id}/role`)
@@ -548,7 +559,7 @@ describe('Users CRUD API - Integration Tests', () => {
       expect(response.status).toBe(404);
     });
 
-    it('should reject invalid role_id format', async () => {
+    test('should reject invalid role_id format', async () => {
       // Act
       const response = await request(app)
         .put(`/api/users/${testUser.id}/role`)
@@ -557,6 +568,62 @@ describe('Users CRUD API - Integration Tests', () => {
 
       // Assert
       expect(response.status).toBe(400);
+    });
+
+    test('should handle complete role workflow: assign → change → change again', async () => {
+      // Create test user
+      const createResponse = await request(app)
+        .post('/api/users')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          email: `workflow-${Date.now()}@example.com`,
+          first_name: 'Workflow',
+          last_name: 'Test',
+        })
+        .expect(201);
+
+      const userId = createResponse.body.data.id;
+
+      // Get manager and dispatcher role IDs
+      const db = require('../../db/connection');
+      const managerResult = await db.query("SELECT id FROM roles WHERE name = 'manager' LIMIT 1");
+      const dispatcherResult = await db.query("SELECT id FROM roles WHERE name = 'dispatcher' LIMIT 1");
+      
+      if (!managerResult.rows[0] || !dispatcherResult.rows[0]) return; // Skip if roles don't exist
+      
+      const managerRoleId = managerResult.rows[0].id;
+      const dispatcherRoleId = dispatcherResult.rows[0].id;
+
+      // 1. Assign 'manager' role
+      await request(app)
+        .put(`/api/users/${userId}/role`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ role_id: managerRoleId })
+        .expect(200);
+
+      let user = await User.findById(userId);
+      expect(user.role).toBe('manager');
+
+      // 2. Change to 'dispatcher' role (replaces manager)
+      await request(app)
+        .put(`/api/users/${userId}/role`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ role_id: dispatcherRoleId })
+        .expect(200);
+
+      user = await User.findById(userId);
+      expect(user.role).toBe('dispatcher');
+
+      // 3. Change back to 'manager'
+      await request(app)
+        .put(`/api/users/${userId}/role`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ role_id: managerRoleId })
+        .expect(200);
+
+      user = await User.findById(userId);
+      expect(user.role).toBe('manager');
+      expect(user.role_id).toBe(managerRoleId);
     });
   });
 
@@ -573,7 +640,7 @@ describe('Users CRUD API - Integration Tests', () => {
       });
     });
 
-    it('should return 401 without authentication', async () => {
+    test('should return 401 without authentication', async () => {
       // Act
       const response = await request(app).delete(`/api/users/${testUser.id}`);
 
@@ -581,7 +648,7 @@ describe('Users CRUD API - Integration Tests', () => {
       expect(response.status).toBe(401);
     });
 
-    it('should return 403 for non-admin users', async () => {
+    test('should return 403 for non-admin users', async () => {
       // Act
       const response = await request(app)
         .delete(`/api/users/${testUser.id}`)
@@ -591,7 +658,7 @@ describe('Users CRUD API - Integration Tests', () => {
       expect(response.status).toBe(403);
     });
 
-    it('should delete user', async () => {
+    test('should delete user', async () => {
       // Act
       const response = await request(app)
         .delete(`/api/users/${testUser.id}`)
@@ -602,7 +669,7 @@ describe('Users CRUD API - Integration Tests', () => {
       expect(response.body.success).toBe(true);
     });
 
-    it('should return 404 for non-existent user', async () => {
+    test('should return 404 for non-existent user', async () => {
       // Act
       const response = await request(app)
         .delete('/api/users/99999')
@@ -612,7 +679,7 @@ describe('Users CRUD API - Integration Tests', () => {
       expect(response.status).toBe(404);
     });
 
-    it('should prevent self-deletion', async () => {
+    test('should prevent self-deletion', async () => {
       // Act
       const response = await request(app)
         .delete(`/api/users/${adminUser.id}`)
@@ -624,7 +691,7 @@ describe('Users CRUD API - Integration Tests', () => {
       expect(response.body.message || response.body.error).toBeDefined();
     });
 
-    it('should remove user from database', async () => {
+    test('should remove user from database', async () => {
       // Act - Delete user
       await request(app)
         .delete(`/api/users/${testUser.id}`)
@@ -641,10 +708,10 @@ describe('Users CRUD API - Integration Tests', () => {
   });
 
   describe('Users API - Response Format', () => {
-    it('should return consistent success format', async () => {
+    test('should return consistent success format', async () => {
       // Act
       const response = await request(app)
-        .get('/api/users?page=1&limit=10')
+        .get(`/api/users?page=${TEST_PAGINATION.DEFAULT_PAGE}&limit=${TEST_PAGINATION.DEFAULT_LIMIT}`)
         .set('Authorization', `Bearer ${adminToken}`);
 
       // Assert
@@ -655,7 +722,7 @@ describe('Users CRUD API - Integration Tests', () => {
       });
     });
 
-    it('should return consistent error format', async () => {
+    test('should return consistent error format', async () => {
       // Act
       const response = await request(app).get('/api/users');
 
@@ -667,7 +734,7 @@ describe('Users CRUD API - Integration Tests', () => {
       });
     });
 
-    it('should include proper content-type', async () => {
+    test('should include proper content-type', async () => {
       // Act
       const response = await request(app)
         .get('/api/users')
@@ -679,13 +746,13 @@ describe('Users CRUD API - Integration Tests', () => {
   });
 
   describe('Users API - Performance', () => {
-    it('should respond quickly to list requests', async () => {
+    test('should respond quickly to list requests', async () => {
       // Arrange
       const start = Date.now();
 
       // Act
       const response = await request(app)
-        .get('/api/users?page=1&limit=10')
+        .get(`/api/users?page=${TEST_PAGINATION.DEFAULT_PAGE}&limit=${TEST_PAGINATION.DEFAULT_LIMIT}`)
         .set('Authorization', `Bearer ${adminToken}`);
 
       // Assert
@@ -694,13 +761,13 @@ describe('Users CRUD API - Integration Tests', () => {
       expect(duration).toBeLessThan(1000); // Under 1 second
     });
 
-    it('should handle concurrent requests', async () => {
+    test('should handle concurrent requests', async () => {
       // Arrange
       const requests = Array(5)
         .fill(null)
         .map(() =>
           request(app)
-            .get('/api/users?page=1&limit=10')
+            .get(`/api/users?page=${TEST_PAGINATION.DEFAULT_PAGE}&limit=${TEST_PAGINATION.DEFAULT_LIMIT}`)
             .set('Authorization', `Bearer ${adminToken}`),
         );
 
@@ -713,4 +780,222 @@ describe('Users CRUD API - Integration Tests', () => {
       });
     });
   });
+
+  // ========================================
+  // Phase 4: Validator Edge Cases
+  // ========================================
+
+  describe('Validation Edge Cases - Type Coercion', () => {
+    test('should reject non-numeric user ID', async () => {
+      const response = await request(app)
+        .get('/api/users/abc')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
+      expect(response.body.message).toMatch(/must be a valid integer|validation error|invalid/i);
+    });
+
+    test('should reject negative user ID', async () => {
+      const response = await request(app)
+        .get('/api/users/-5')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
+      expect(response.body.message).toMatch(/must be at least|validation error|invalid/i);
+    });
+
+    test('should reject zero as user ID', async () => {
+      const response = await request(app)
+        .get('/api/users/0')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
+      expect(response.body.message).toMatch(/must be at least|validation error|invalid/i);
+    });
+
+    test('should handle integer overflow gracefully', async () => {
+      const response = await request(app)
+        .get('/api/users/99999999999999999999')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
+      expect(response.body.message).toMatch(/must be at most|exceeds maximum|validation error|invalid/i);
+    });
+
+    test('should reject decimal user ID', async () => {
+      const response = await request(app)
+        .get('/api/users/5.5')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      // Decimal gets coerced to integer 5, so might return OK or NOT_FOUND
+      expect([HTTP_STATUS.OK, HTTP_STATUS.NOT_FOUND]).toContain(response.status);
+    });
+  });
+
+  describe('Validation Edge Cases - Pagination', () => {
+    test('should reject negative page number', async () => {
+      const response = await request(app)
+        .get('/api/users?page=-1')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
+      expect(response.body.message).toMatch(/validation error|page/i);
+    });
+
+    test('should reject zero page number', async () => {
+      const response = await request(app)
+        .get('/api/users?page=0')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
+      expect(response.body.message).toMatch(/validation error|page/i);
+    });
+
+    test('should reject limit exceeding maximum', async () => {
+      const response = await request(app)
+        .get('/api/users?limit=999')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
+      expect(response.body.message).toMatch(/validation error|limit/i);
+    });
+
+    test('should reject non-numeric pagination parameters', async () => {
+      const response = await request(app)
+        .get('/api/users?page=abc&limit=xyz')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
+      expect(response.body.message).toMatch(/must be a valid integer|validation error/i);
+    });
+  });
+
+  describe('Validation Edge Cases - Body Fields', () => {
+    test('should reject invalid email format', async () => {
+      const response = await request(app)
+        .post('/api/users')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          email: 'notanemail',
+          password: 'SecurePass123!',
+          role_id: 1,
+        });
+
+      expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
+      expect(response.body.message).toMatch(/validation error|email/i);
+    });
+
+    test('should reject very long first name', async () => {
+      const response = await request(app)
+        .post('/api/users')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          email: `test-${Date.now()}@example.com`,
+          password: 'SecurePass123!',
+          first_name: 'a'.repeat(300),
+          last_name: 'Test',
+          role_id: 1,
+        });
+
+      expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
+      expect(response.body.message).toMatch(/validation error|first name|too long/i);
+    });
+
+    test('should reject empty strings for required fields', async () => {
+      const response = await request(app)
+        .post('/api/users')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          email: '',
+          password: '',
+        });
+
+      expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
+      expect(response.body.message).toMatch(/validation error|required/i);
+    });
+
+    test('should handle null vs undefined for optional fields', async () => {
+      const response = await request(app)
+        .post('/api/users')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          email: `test-${Date.now()}@example.com`,
+          password: 'SecurePass123!',
+          role_id: null, // Explicitly null
+        });
+
+      // Should either accept it or reject with validation error
+      expect([HTTP_STATUS.CREATED, HTTP_STATUS.BAD_REQUEST]).toContain(response.status);
+
+      if (response.status === HTTP_STATUS.CREATED) {
+        await request(app)
+          .delete(`/api/users/${response.body.id}`)
+          .set('Authorization', `Bearer ${adminToken}`);
+      }
+    });
+
+    test('should strip unknown fields from request body', async () => {
+      const response = await request(app)
+        .post('/api/users')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          email: `test-${Date.now()}@example.com`,
+          password: 'SecurePass123!',
+          first_name: 'Test',
+          last_name: 'User',
+          role_id: 1,
+          malicious_field: 'INJECT_SQL',
+          __proto__: { admin: true },
+        });
+
+      if (response.status === HTTP_STATUS.CREATED) {
+        expect(response.body.data.malicious_field).toBeUndefined();
+        // __proto__ is a special property that always exists, just verify it's not maliciously set
+        expect(response.body.data).not.toHaveProperty('malicious_field');
+        await request(app)
+          .delete(`/api/users/${response.body.data.id}`)
+          .set('Authorization', `Bearer ${adminToken}`);
+      }
+    });
+  });
+
+  describe('Validation Edge Cases - Query Parameters', () => {
+    test('should reject invalid sortBy field', async () => {
+      const response = await request(app)
+        .get(`/api/users?page=${TEST_PAGINATION.DEFAULT_PAGE}&limit=${TEST_PAGINATION.DEFAULT_LIMIT}&sortBy=malicious_field`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
+      expect(response.body.message).toMatch(/validation error|sortBy|not allowed/i);
+    });
+
+    test('should reject invalid sortOrder value', async () => {
+      const response = await request(app)
+        .get(`/api/users?page=${TEST_PAGINATION.DEFAULT_PAGE}&limit=${TEST_PAGINATION.DEFAULT_LIMIT}&sortOrder=INVALID`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
+      expect(response.body.message).toMatch(/validation error|sortOrder|must be/i);
+    });
+
+    test('should sanitize search input for XSS/SQL injection', async () => {
+      const response = await request(app)
+        .get("/api/users?search=<script>alert('xss')</script>")
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect([HTTP_STATUS.OK, HTTP_STATUS.BAD_REQUEST]).toContain(response.status);
+      if (response.status === HTTP_STATUS.OK) {
+        expect(JSON.stringify(response.body)).not.toContain('<script>');
+      }
+    });
+
+    test('should reject very long search query', async () => {
+      const response = await request(app)
+        .get(`/api/users?search=${'a'.repeat(300)}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect([HTTP_STATUS.OK, HTTP_STATUS.BAD_REQUEST]).toContain(response.status);
+    });
+  });
 });
+

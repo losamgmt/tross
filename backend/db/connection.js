@@ -9,6 +9,28 @@ require('dotenv').config();
 // Determine which database configuration to use based on environment
 const isTest = process.env.NODE_ENV === 'test';
 const isDevelopment = process.env.NODE_ENV === 'development';
+const useRailwayDB = process.env.DB_ENV === 'railway';
+
+// Railway database configuration (for testing against production DB)
+const railwayDbConfig = {
+  user: process.env.RAILWAY_DB_USER,
+  host: process.env.RAILWAY_DB_HOST,
+  database: process.env.RAILWAY_DB_NAME,
+  password: process.env.RAILWAY_DB_PASSWORD,
+  port: parseInt(process.env.RAILWAY_DB_PORT),
+  ssl: {
+    rejectUnauthorized: false, // Railway uses self-signed certs
+  },
+
+  // Production-like pool configuration
+  max: DATABASE.DEV.POOL.MAX,
+  min: DATABASE.DEV.POOL.MIN,
+  idleTimeoutMillis: TIMEOUTS.DATABASE.IDLE_TIMEOUT_MS,
+  connectionTimeoutMillis: TIMEOUTS.DATABASE.CONNECTION_TIMEOUT_MS,
+  statement_timeout: TIMEOUTS.DATABASE.STATEMENT_TIMEOUT_MS,
+  query_timeout: TIMEOUTS.DATABASE.QUERY_TIMEOUT_MS,
+  application_name: 'trossapp_dev_railway_test',
+};
 
 // Test database configuration (port 5433, separate from default on 5432)
 // Uses constants.js for single source of truth
@@ -39,35 +61,41 @@ const adapterConfig = getDatabaseConfig();
 const defaultDbConfig =
   typeof adapterConfig === 'string'
     ? {
-        // DATABASE_URL format - add pool and timeout config
-        connectionString: adapterConfig,
-        max: DATABASE.DEV.POOL.MAX,
-        min: DATABASE.DEV.POOL.MIN,
-        idleTimeoutMillis: TIMEOUTS.DATABASE.IDLE_TIMEOUT_MS,
-        connectionTimeoutMillis: TIMEOUTS.DATABASE.CONNECTION_TIMEOUT_MS,
-        statement_timeout: TIMEOUTS.DATABASE.STATEMENT_TIMEOUT_MS,
-        query_timeout: TIMEOUTS.DATABASE.QUERY_TIMEOUT_MS,
-        application_name: 'trossapp_backend',
-      }
+      // DATABASE_URL format - add pool and timeout config
+      connectionString: adapterConfig,
+      max: DATABASE.DEV.POOL.MAX,
+      min: DATABASE.DEV.POOL.MIN,
+      idleTimeoutMillis: TIMEOUTS.DATABASE.IDLE_TIMEOUT_MS,
+      connectionTimeoutMillis: TIMEOUTS.DATABASE.CONNECTION_TIMEOUT_MS,
+      statement_timeout: TIMEOUTS.DATABASE.STATEMENT_TIMEOUT_MS,
+      query_timeout: TIMEOUTS.DATABASE.QUERY_TIMEOUT_MS,
+      application_name: 'trossapp_backend',
+    }
     : {
-        // Individual vars format - merge with pool and timeout config
-        ...adapterConfig,
-        max: DATABASE.DEV.POOL.MAX,
-        min: DATABASE.DEV.POOL.MIN,
-        idleTimeoutMillis: TIMEOUTS.DATABASE.IDLE_TIMEOUT_MS,
-        connectionTimeoutMillis: TIMEOUTS.DATABASE.CONNECTION_TIMEOUT_MS,
-        statement_timeout: TIMEOUTS.DATABASE.STATEMENT_TIMEOUT_MS,
-        query_timeout: TIMEOUTS.DATABASE.QUERY_TIMEOUT_MS,
-        application_name: 'trossapp_backend',
-      };
+      // Individual vars format - merge with pool and timeout config
+      ...adapterConfig,
+      max: DATABASE.DEV.POOL.MAX,
+      min: DATABASE.DEV.POOL.MIN,
+      idleTimeoutMillis: TIMEOUTS.DATABASE.IDLE_TIMEOUT_MS,
+      connectionTimeoutMillis: TIMEOUTS.DATABASE.CONNECTION_TIMEOUT_MS,
+      statement_timeout: TIMEOUTS.DATABASE.STATEMENT_TIMEOUT_MS,
+      query_timeout: TIMEOUTS.DATABASE.QUERY_TIMEOUT_MS,
+      application_name: 'trossapp_backend',
+    };
 
 // Create connection pool with appropriate configuration
-const poolConfig = isTest ? testDbConfig : defaultDbConfig;
+const poolConfig = isTest ? testDbConfig : (useRailwayDB ? railwayDbConfig : defaultDbConfig);
 const pool = new Pool(poolConfig);
 
 // Log which database we're connecting to (environment + database name)
 if (isTest) {
   logger.info('🧪 Using TEST database', {
+    host: poolConfig.host,
+    port: poolConfig.port,
+    database: poolConfig.database,
+  });
+} else if (useRailwayDB) {
+  logger.warn('🚂 Using RAILWAY PRODUCTION database (READ-ONLY TESTING)', {
     host: poolConfig.host,
     port: poolConfig.port,
     database: poolConfig.database,

@@ -19,7 +19,7 @@ jest.mock('../../../db/connection');
 
 describe('SchemaIntrospectionService - Business Logic', () => {
   describe('getTableSchema', () => {
-    it('should return enriched schema with all metadata', async () => {
+    test('should return enriched schema with all metadata', async () => {
       // Arrange - Mock minimal DB responses
       db.query.mockResolvedValueOnce({
         // Columns
@@ -104,7 +104,7 @@ describe('SchemaIntrospectionService - Business Logic', () => {
   });
 
   describe('getAllTables', () => {
-    it('should return all public schema tables with display names', async () => {
+    test('should return all public schema tables with display names', async () => {
       // Arrange
       db.query.mockResolvedValueOnce({
         rows: [
@@ -127,7 +127,7 @@ describe('SchemaIntrospectionService - Business Logic', () => {
   });
 
   describe('Type Mapping Logic', () => {
-    it('should map PostgreSQL numeric types correctly', async () => {
+    test('should map PostgreSQL numeric types correctly', async () => {
       // Arrange
       db.query.mockResolvedValueOnce({
         rows: [
@@ -181,7 +181,7 @@ describe('SchemaIntrospectionService - Business Logic', () => {
       });
     });
 
-    it('should map PostgreSQL text types correctly', async () => {
+    test('should map PostgreSQL text types correctly', async () => {
       // Arrange
       db.query.mockResolvedValueOnce({
         rows: [
@@ -214,7 +214,7 @@ describe('SchemaIntrospectionService - Business Logic', () => {
       });
     });
 
-    it('should map PostgreSQL boolean correctly', async () => {
+    test('should map PostgreSQL boolean correctly', async () => {
       // Arrange
       db.query.mockResolvedValueOnce({
         rows: [
@@ -249,7 +249,7 @@ describe('SchemaIntrospectionService - Business Logic', () => {
   });
 
   describe('UI Type Inference Logic', () => {
-    it('should infer email input for email columns', async () => {
+    test('should infer email input for email columns', async () => {
       // Arrange
       db.query.mockResolvedValueOnce({
         rows: [
@@ -279,7 +279,7 @@ describe('SchemaIntrospectionService - Business Logic', () => {
       expect(result.columns[0].uiType).toBe('email');
     });
 
-    it('should infer url input for url columns', async () => {
+    test('should infer url input for url columns', async () => {
       // Arrange
       db.query.mockResolvedValueOnce({
         rows: [
@@ -309,7 +309,7 @@ describe('SchemaIntrospectionService - Business Logic', () => {
       expect(result.columns[0].uiType).toBe('url');
     });
 
-    it('should infer tel input for phone columns', async () => {
+    test('should infer tel input for phone columns', async () => {
       // Arrange
       db.query.mockResolvedValueOnce({
         rows: [
@@ -339,7 +339,7 @@ describe('SchemaIntrospectionService - Business Logic', () => {
       expect(result.columns[0].uiType).toBe('tel');
     });
 
-    it('should infer select dropdown for foreign keys', async () => {
+    test('should infer select dropdown for foreign keys', async () => {
       // Arrange
       db.query.mockResolvedValueOnce({
         rows: [
@@ -391,7 +391,7 @@ describe('SchemaIntrospectionService - Business Logic', () => {
   });
 
   describe('Label Generation Logic', () => {
-    it('should convert snake_case to Title Case', async () => {
+    test('should convert snake_case to Title Case', async () => {
       // Arrange
       db.query.mockResolvedValueOnce({
         rows: [
@@ -421,7 +421,7 @@ describe('SchemaIntrospectionService - Business Logic', () => {
       expect(result.columns[0].label).toBe('First Name');
     });
 
-    it('should use special labels for known fields', async () => {
+    test('should use special labels for known fields', async () => {
       // Arrange
       db.query.mockResolvedValueOnce({
         rows: [
@@ -453,7 +453,7 @@ describe('SchemaIntrospectionService - Business Logic', () => {
   });
 
   describe('Readonly Field Logic', () => {
-    it('should mark system fields as readonly', async () => {
+    test('should mark system fields as readonly', async () => {
       // Arrange
       db.query.mockResolvedValueOnce({
         rows: [
@@ -507,7 +507,7 @@ describe('SchemaIntrospectionService - Business Logic', () => {
       expect(result.columns[2].readonly).toBe(true); // updated_at
     });
 
-    it('should mark user fields as editable', async () => {
+    test('should mark user fields as editable', async () => {
       // Arrange
       db.query.mockResolvedValueOnce({
         rows: [
@@ -539,7 +539,7 @@ describe('SchemaIntrospectionService - Business Logic', () => {
   });
 
   describe('Searchable Field Logic', () => {
-    it('should mark text fields as searchable', async () => {
+    test('should mark text fields as searchable', async () => {
       // Arrange
       db.query.mockResolvedValueOnce({
         rows: [
@@ -581,7 +581,7 @@ describe('SchemaIntrospectionService - Business Logic', () => {
       expect(result.columns[1].searchable).toBe(true); // text
     });
 
-    it('should not mark id and timestamp fields as searchable', async () => {
+    test('should not mark id and timestamp fields as searchable', async () => {
       // Arrange
       db.query.mockResolvedValueOnce({
         rows: [
@@ -625,7 +625,7 @@ describe('SchemaIntrospectionService - Business Logic', () => {
   });
 
   describe('getForeignKeyOptions', () => {
-    it('should return foreign key dropdown options', async () => {
+    test('should return foreign key dropdown options', async () => {
       // Arrange - Mock getTableSchema call
       db.query
         .mockResolvedValueOnce({

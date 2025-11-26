@@ -85,31 +85,31 @@ describe('WorkOrder Model - RLS Tests', () => {
   });
 
   describe('_buildRLSFilter()', () => {
-    it('should return no filter when req is null', () => {
+    test('should return no filter when req is null', () => {
       const result = WorkOrder._buildRLSFilter(null);
       expect(result).toEqual({ clause: '', values: [], applied: false });
     });
 
-    it('should return no filter when rlsPolicy is missing', () => {
+    test('should return no filter when rlsPolicy is missing', () => {
       const req = { rlsUserId: 42 };
       const result = WorkOrder._buildRLSFilter(req);
       expect(result).toEqual({ clause: '', values: [], applied: false });
     });
 
-    it('should return security failsafe (1=0) for unknown policy', () => {
+    test('should return security failsafe (1=0) for unknown policy', () => {
       const req = { rlsPolicy: 'unknown_policy', rlsUserId: 42 };
       const result = WorkOrder._buildRLSFilter(req);
       expect(result.clause).toBe('1=0');
       expect(result.applied).toBe(true);
     });
 
-    it('should return no filter for all_records policy', () => {
+    test('should return no filter for all_records policy', () => {
       const req = { rlsPolicy: 'all_records', rlsUserId: 42 };
       const result = WorkOrder._buildRLSFilter(req);
       expect(result).toEqual({ clause: '', values: [], applied: true });
     });
 
-    it('should return customer filter for own_work_orders_only policy', () => {
+    test('should return customer filter for own_work_orders_only policy', () => {
       const req = { rlsPolicy: 'own_work_orders_only', rlsUserId: 99 };
       const result = WorkOrder._buildRLSFilter(req);
       expect(result.clause).toBe('wo.customer_id = $1');
@@ -117,7 +117,7 @@ describe('WorkOrder Model - RLS Tests', () => {
       expect(result.applied).toBe(true);
     });
 
-    it('should return technician filter for assigned_work_orders_only policy', () => {
+    test('should return technician filter for assigned_work_orders_only policy', () => {
       const req = { rlsPolicy: 'assigned_work_orders_only', rlsUserId: 42 };
       const result = WorkOrder._buildRLSFilter(req);
       expect(result.clause).toBe('wo.assigned_technician_id = $1');
@@ -125,14 +125,14 @@ describe('WorkOrder Model - RLS Tests', () => {
       expect(result.applied).toBe(true);
     });
 
-    it('should return security failsafe when userId missing for own_work_orders_only', () => {
+    test('should return security failsafe when userId missing for own_work_orders_only', () => {
       const req = { rlsPolicy: 'own_work_orders_only' };
       const result = WorkOrder._buildRLSFilter(req);
       expect(result.clause).toBe('1=0');
       expect(result.applied).toBe(true);
     });
 
-    it('should return security failsafe when userId missing for assigned_work_orders_only', () => {
+    test('should return security failsafe when userId missing for assigned_work_orders_only', () => {
       const req = { rlsPolicy: 'assigned_work_orders_only' };
       const result = WorkOrder._buildRLSFilter(req);
       expect(result.clause).toBe('1=0');
@@ -141,7 +141,7 @@ describe('WorkOrder Model - RLS Tests', () => {
   });
 
   describe('_applyRLSFilter()', () => {
-    it('should return existing WHERE unchanged when no RLS policy', () => {
+    test('should return existing WHERE unchanged when no RLS policy', () => {
       const req = null;
       const result = WorkOrder._applyRLSFilter(req, 'wo.status = $1', ['pending']);
       expect(result.whereClause).toBe('WHERE wo.status = $1');
@@ -149,7 +149,7 @@ describe('WorkOrder Model - RLS Tests', () => {
       expect(result.rlsApplied).toBe(false);
     });
 
-    it('should return existing WHERE unchanged for all_records policy', () => {
+    test('should return existing WHERE unchanged for all_records policy', () => {
       const req = { rlsPolicy: 'all_records', rlsUserId: 42 };
       const result = WorkOrder._applyRLSFilter(req, 'WHERE wo.status = $1', ['pending']);
       expect(result.whereClause).toBe('WHERE wo.status = $1');
@@ -157,7 +157,7 @@ describe('WorkOrder Model - RLS Tests', () => {
       expect(result.rlsApplied).toBe(true);
     });
 
-    it('should add customer RLS filter when no existing WHERE clause', () => {
+    test('should add customer RLS filter when no existing WHERE clause', () => {
       const req = { rlsPolicy: 'own_work_orders_only', rlsUserId: 99 };
       const result = WorkOrder._applyRLSFilter(req, '', []);
       expect(result.whereClause).toBe('WHERE wo.customer_id = $1');
@@ -165,7 +165,7 @@ describe('WorkOrder Model - RLS Tests', () => {
       expect(result.rlsApplied).toBe(true);
     });
 
-    it('should add technician RLS filter when no existing WHERE clause', () => {
+    test('should add technician RLS filter when no existing WHERE clause', () => {
       const req = { rlsPolicy: 'assigned_work_orders_only', rlsUserId: 42 };
       const result = WorkOrder._applyRLSFilter(req, '', []);
       expect(result.whereClause).toBe('WHERE wo.assigned_technician_id = $1');
@@ -173,7 +173,7 @@ describe('WorkOrder Model - RLS Tests', () => {
       expect(result.rlsApplied).toBe(true);
     });
 
-    it('should combine customer RLS with existing WHERE clause', () => {
+    test('should combine customer RLS with existing WHERE clause', () => {
       const req = { rlsPolicy: 'own_work_orders_only', rlsUserId: 99 };
       const result = WorkOrder._applyRLSFilter(req, 'WHERE wo.status = $1', ['pending']);
       expect(result.whereClause).toBe('WHERE wo.status = $1 AND wo.customer_id = $2');
@@ -181,7 +181,7 @@ describe('WorkOrder Model - RLS Tests', () => {
       expect(result.rlsApplied).toBe(true);
     });
 
-    it('should combine technician RLS with existing WHERE clause', () => {
+    test('should combine technician RLS with existing WHERE clause', () => {
       const req = { rlsPolicy: 'assigned_work_orders_only', rlsUserId: 42 };
       const result = WorkOrder._applyRLSFilter(req, 'WHERE wo.priority = $1', ['high']);
       expect(result.whereClause).toBe('WHERE wo.priority = $1 AND wo.assigned_technician_id = $2');
@@ -189,7 +189,7 @@ describe('WorkOrder Model - RLS Tests', () => {
       expect(result.rlsApplied).toBe(true);
     });
 
-    it('should adjust parameter placeholders correctly', () => {
+    test('should adjust parameter placeholders correctly', () => {
       const req = { rlsPolicy: 'own_work_orders_only', rlsUserId: 99 };
       const result = WorkOrder._applyRLSFilter(req, 'wo.is_active = $1 AND wo.status = $2', [true, 'pending']);
       expect(result.whereClause).toBe('WHERE wo.is_active = $1 AND wo.status = $2 AND wo.customer_id = $3');
@@ -197,7 +197,7 @@ describe('WorkOrder Model - RLS Tests', () => {
       expect(result.rlsApplied).toBe(true);
     });
 
-    it('should handle security failsafe (1=0) clause', () => {
+    test('should handle security failsafe (1=0) clause', () => {
       const req = { rlsPolicy: 'unknown_policy', rlsUserId: 42 };
       const result = WorkOrder._applyRLSFilter(req, 'wo.status = $1', ['pending']);
       expect(result.whereClause).toBe('WHERE wo.status = $1 AND 1=0');
@@ -207,7 +207,7 @@ describe('WorkOrder Model - RLS Tests', () => {
   });
 
   describe('findById() with RLS', () => {
-    it('should work without RLS context', async () => {
+    test('should work without RLS context', async () => {
       const mockWorkOrder = { id: 1, title: 'Fix HVAC', customer_id: 99, assigned_technician_id: 42 };
       db.query.mockResolvedValueOnce({ rows: [mockWorkOrder] });
 
@@ -220,7 +220,7 @@ describe('WorkOrder Model - RLS Tests', () => {
       );
     });
 
-    it('should apply all_records RLS policy (no filtering)', async () => {
+    test('should apply all_records RLS policy (no filtering)', async () => {
       const mockWorkOrder = { id: 1, title: 'Fix HVAC', customer_id: 99, assigned_technician_id: 42 };
       db.query.mockResolvedValueOnce({ rows: [mockWorkOrder] });
 
@@ -234,7 +234,7 @@ describe('WorkOrder Model - RLS Tests', () => {
       );
     });
 
-    it('should apply own_work_orders_only RLS policy (customer)', async () => {
+    test('should apply own_work_orders_only RLS policy (customer)', async () => {
       const mockWorkOrder = { id: 1, title: 'Fix HVAC', customer_id: 99, assigned_technician_id: 42 };
       db.query.mockResolvedValueOnce({ rows: [mockWorkOrder] });
 
@@ -248,7 +248,7 @@ describe('WorkOrder Model - RLS Tests', () => {
       );
     });
 
-    it('should apply assigned_work_orders_only RLS policy (technician)', async () => {
+    test('should apply assigned_work_orders_only RLS policy (technician)', async () => {
       const mockWorkOrder = { id: 1, title: 'Fix HVAC', customer_id: 99, assigned_technician_id: 42 };
       db.query.mockResolvedValueOnce({ rows: [mockWorkOrder] });
 
@@ -262,7 +262,7 @@ describe('WorkOrder Model - RLS Tests', () => {
       );
     });
 
-    it('should return null when customer RLS blocks access', async () => {
+    test('should return null when customer RLS blocks access', async () => {
       db.query.mockResolvedValueOnce({ rows: [] });
 
       const req = { rlsPolicy: 'own_work_orders_only', rlsUserId: 999 };
@@ -271,7 +271,7 @@ describe('WorkOrder Model - RLS Tests', () => {
       expect(result).toBeNull();
     });
 
-    it('should return null when technician RLS blocks access', async () => {
+    test('should return null when technician RLS blocks access', async () => {
       db.query.mockResolvedValueOnce({ rows: [] });
 
       const req = { rlsPolicy: 'assigned_work_orders_only', rlsUserId: 888 };
@@ -282,7 +282,7 @@ describe('WorkOrder Model - RLS Tests', () => {
   });
 
   describe('findAll() with RLS', () => {
-    it('should work without RLS context', async () => {
+    test('should work without RLS context', async () => {
       const mockWorkOrders = [
         { id: 1, title: 'Fix HVAC', customer_id: 99 },
         { id: 2, title: 'Install AC', customer_id: 100 },
@@ -296,7 +296,7 @@ describe('WorkOrder Model - RLS Tests', () => {
       expect(result.rlsApplied).toBe(false);
     });
 
-    it('should apply all_records RLS policy (no filtering)', async () => {
+    test('should apply all_records RLS policy (no filtering)', async () => {
       const mockWorkOrders = [
         { id: 1, title: 'Fix HVAC', customer_id: 99 },
         { id: 2, title: 'Install AC', customer_id: 100 },
@@ -311,7 +311,7 @@ describe('WorkOrder Model - RLS Tests', () => {
       expect(result.rlsApplied).toBe(true);
     });
 
-    it('should apply own_work_orders_only RLS policy (customer)', async () => {
+    test('should apply own_work_orders_only RLS policy (customer)', async () => {
       const mockWorkOrders = [{ id: 1, title: 'Fix HVAC', customer_id: 99 }];
       db.query.mockResolvedValueOnce({ rows: [{ count: '1' }] });
       db.query.mockResolvedValueOnce({ rows: mockWorkOrders });
@@ -326,7 +326,7 @@ describe('WorkOrder Model - RLS Tests', () => {
       expect(countQuery).toContain('wo.customer_id = $');
     });
 
-    it('should apply assigned_work_orders_only RLS policy (technician)', async () => {
+    test('should apply assigned_work_orders_only RLS policy (technician)', async () => {
       const mockWorkOrders = [{ id: 1, title: 'Fix HVAC', assigned_technician_id: 42 }];
       db.query.mockResolvedValueOnce({ rows: [{ count: '1' }] });
       db.query.mockResolvedValueOnce({ rows: mockWorkOrders });
@@ -341,7 +341,7 @@ describe('WorkOrder Model - RLS Tests', () => {
       expect(countQuery).toContain('wo.assigned_technician_id = $');
     });
 
-    it('should combine customer RLS with search and filters', async () => {
+    test('should combine customer RLS with search and filters', async () => {
       const mockWorkOrders = [{ id: 1, title: 'Fix HVAC', customer_id: 99, status: 'pending' }];
       db.query.mockResolvedValueOnce({ rows: [{ count: '1' }] });
       db.query.mockResolvedValueOnce({ rows: mockWorkOrders });
@@ -370,7 +370,7 @@ describe('WorkOrder Model - RLS Tests', () => {
       expect(countQuery).toContain('AND');
     });
 
-    it('should combine technician RLS with search and filters', async () => {
+    test('should combine technician RLS with search and filters', async () => {
       const mockWorkOrders = [{ id: 1, title: 'Install AC', assigned_technician_id: 42, priority: 'high' }];
       db.query.mockResolvedValueOnce({ rows: [{ count: '1' }] });
       db.query.mockResolvedValueOnce({ rows: mockWorkOrders });

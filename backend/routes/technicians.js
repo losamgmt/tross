@@ -6,6 +6,7 @@
 const express = require('express');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
 const { enforceRLS } = require('../middleware/row-level-security');
+const ResponseFormatter = require('../utils/response-formatter');
 const { hasMinimumRole } = require('../config/permissions-loader');
 const {
   validateTechnicianCreate,
@@ -16,7 +17,6 @@ const {
 } = require('../validators');
 const Technician = require('../db/models/Technician');
 const auditService = require('../services/audit-service');
-const { HTTP_STATUS } = require('../config/constants');
 const { getClientIp, getUserAgent } = require('../utils/request-helpers');
 const { logger } = require('../config/logger');
 const technicianMetadata = require('../config/models/technician-metadata');
@@ -55,8 +55,11 @@ function sanitizeTechnicianData(technician, userRole) {
  * /api/technicians:
  *   get:
  *     tags: [Technicians]
- *     summary: Get all technicians
- *     description: Retrieve a paginated list of technicians. Customers see limited info (field-level filtering applies).
+ *     summary: Get all technicians with search, filters, and sorting
+ *     description: |
+ *       Retrieve a paginated list of technicians.
+ *       Customers see limited info (field-level filtering applies).
+ *       Technicians+ see full profile.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -64,32 +67,53 @@ function sanitizeTechnicianData(technician, userRole) {
  *         name: page
  *         schema:
  *           type: integer
+ *           minimum: 1
  *           default: 1
+ *         description: Page number for pagination
  *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
+ *           minimum: 1
+ *           maximum: 200
  *           default: 50
+ *         description: Number of items per page
  *       - in: query
  *         name: search
  *         schema:
  *           type: string
+ *           maxLength: 255
+ *         description: Search by license_number (case-insensitive)
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [available, on_job, off_duty, suspended]
+ *         description: Filter by technician status
+ *       - in: query
+ *         name: is_active
+ *         schema:
+ *           type: boolean
+ *         description: Filter by active status
  *       - in: query
  *         name: sortBy
  *         schema:
  *           type: string
+ *           enum: [id, license_number, is_active, status, hourly_rate, created_at, updated_at]
  *           default: created_at
+ *         description: Field to sort by
  *       - in: query
  *         name: sortOrder
  *         schema:
  *           type: string
  *           enum: [asc, desc]
  *           default: DESC
+ *         description: Sort order
  *     responses:
  *       200:
  *         description: Technicians retrieved successfully
  *       403:
- *         description: Forbidden
+ *         description: Forbidden - Insufficient permissions
  */
 router.get(
   '/',
@@ -118,22 +142,15 @@ router.get(
         sanitizeTechnicianData(tech, req.dbUser.role),
       );
 
-      res.json({
-        success: true,
+      return ResponseFormatter.list(res, {
         data: sanitizedData,
-        count: sanitizedData.length,
         pagination: result.pagination,
         appliedFilters: result.appliedFilters,
         rlsApplied: result.rlsApplied,
-        timestamp: new Date().toISOString(),
       });
     } catch (error) {
       logger.error('Error retrieving technicians', { error: error.message });
-      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-        error: 'Internal Server Error',
-        message: 'Failed to retrieve technicians',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );
@@ -144,6 +161,9 @@ router.get(
  *   get:
  *     tags: [Technicians]
  *     summary: Get technician by ID
+ *     description: |
+ *       Retrieve a single technician.
+ *       Customers see limited fields. Technicians+ see full profile.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -152,13 +172,15 @@ router.get(
  *         required: true
  *         schema:
  *           type: integer
+ *           minimum: 1
+ *         description: Technician ID
  *     responses:
  *       200:
  *         description: Technician retrieved successfully
+ *       403:
+ *         description: Forbidden - Insufficient permissions
  *       404:
  *         description: Technician not found
- *       403:
- *         description: Forbidden
  */
 router.get(
   '/:id',
@@ -172,11 +194,7 @@ router.get(
       const technician = await Technician.findById(technicianId, req);
 
       if (!technician) {
-        return res.status(HTTP_STATUS.NOT_FOUND).json({
-          error: 'Not Found',
-          message: 'Technician not found',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.notFound(res, 'Technician not found');
       }
 
       // Apply field-level filtering
@@ -185,21 +203,13 @@ router.get(
         req.dbUser.role,
       );
 
-      res.json({
-        success: true,
-        data: sanitizedData,
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.get(res, sanitizedData);
     } catch (error) {
       logger.error('Error retrieving technician', {
         error: error.message,
         technicianId: req.params.id,
       });
-      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-        error: 'Internal Server Error',
-        message: 'Failed to retrieve technician',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );
@@ -224,17 +234,24 @@ router.get(
  *             properties:
  *               license_number:
  *                 type: string
+ *                 maxLength: 100
  *               hourly_rate:
  *                 type: number
+ *                 format: decimal
+ *                 minimum: 0
  *               status:
  *                 type: string
+ *                 enum: [available, on_job, off_duty, suspended]
+ *                 default: available
  *     responses:
  *       201:
  *         description: Technician created successfully
  *       400:
- *         description: Bad Request
+ *         description: Bad Request - Invalid data or duplicate license
  *       403:
  *         description: Forbidden - Manager+ access required
+ *       409:
+ *         description: Conflict - License number already exists
  */
 router.post(
   '/',
@@ -264,36 +281,19 @@ router.post(
         result: 'success',
       });
 
-      res.status(HTTP_STATUS.CREATED).json({
-        success: true,
-        data: newTechnician,
-        message: 'Technician created successfully',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.created(res, newTechnician, 'Technician created successfully');
     } catch (error) {
       logger.error('Error creating technician', { error: error.message });
 
       if (error.code === '23505') {
-        return res.status(HTTP_STATUS.CONFLICT).json({
-          error: 'Conflict',
-          message: 'License number already exists',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.conflict(res, 'License number already exists');
       }
 
       if (error.code === '23514') {
-        return res.status(HTTP_STATUS.BAD_REQUEST).json({
-          error: 'Bad Request',
-          message: 'Invalid status value. Must be one of: available, on_job, off_duty, suspended',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.badRequest(res, 'Invalid status value. Must be one of: available, on_job, off_duty, suspended');
       }
 
-      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-        error: 'Internal Server Error',
-        message: 'Failed to create technician',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );
@@ -304,7 +304,9 @@ router.post(
  *   patch:
  *     tags: [Technicians]
  *     summary: Update technician
- *     description: Technicians can update their own profile, manager+ can update any technician.
+ *     description: |
+ *       Technicians can update their own profile.
+ *       Managers+ can update any technician.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -313,19 +315,37 @@ router.post(
  *         required: true
  *         schema:
  *           type: integer
+ *           minimum: 1
+ *         description: Technician ID
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             properties:
+ *               license_number:
+ *                 type: string
+ *                 maxLength: 100
+ *               hourly_rate:
+ *                 type: number
+ *                 format: decimal
+ *               status:
+ *                 type: string
+ *                 enum: [available, on_job, off_duty, suspended]
+ *               is_active:
+ *                 type: boolean
+ *               certifications:
+ *                 type: object
+ *               skills:
+ *                 type: object
  *     responses:
  *       200:
  *         description: Technician updated successfully
  *       400:
- *         description: Bad Request
+ *         description: Bad Request - Invalid data
  *       403:
- *         description: Forbidden
+ *         description: Forbidden - Insufficient permissions
  *       404:
  *         description: Technician not found
  */
@@ -333,6 +353,7 @@ router.patch(
   '/:id',
   authenticateToken,
   requirePermission('technicians', 'update'),
+  enforceRLS('technicians'),
   validateIdParam(),
   validateTechnicianUpdate,
   async (req, res) => {
@@ -343,11 +364,7 @@ router.patch(
 
       const technician = await Technician.findById(technicianId);
       if (!technician) {
-        return res.status(HTTP_STATUS.NOT_FOUND).json({
-          error: 'Not Found',
-          message: 'Technician not found',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.notFound(res, 'Technician not found');
       }
 
       // Authorization: Technicians can update own profile, manager+ can update any profile
@@ -355,11 +372,7 @@ router.patch(
       const isManagerPlus = req.dbUser && hasMinimumRole(req.dbUser.role, 'manager');
 
       if (!isSelfUpdate && !isManagerPlus) {
-        return res.status(HTTP_STATUS.FORBIDDEN).json({
-          error: 'Forbidden',
-          message: 'You can only update your own technician profile. Manager role required to update others.',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.forbidden(res, 'You can only update your own technician profile. Manager role required to update others.');
       }
 
       await Technician.update(technicianId, req.body);
@@ -377,31 +390,22 @@ router.patch(
         result: 'success',
       });
 
-      res.json({
-        success: true,
-        data: updatedTechnician,
-        message: 'Technician updated successfully',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.updated(res, updatedTechnician, 'Technician updated successfully');
     } catch (error) {
       logger.error('Error updating technician', {
         error: error.message,
         technicianId: req.params.id,
       });
 
-      if (error.code === '23514') {
-        return res.status(HTTP_STATUS.BAD_REQUEST).json({
-          error: 'Bad Request',
-          message: 'Invalid status value. Must be one of: available, on_job, off_duty, suspended',
-          timestamp: new Date().toISOString(),
-        });
+      if (error.code === '23505') {
+        return ResponseFormatter.conflict(res, 'License number already exists');
       }
 
-      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-        error: 'Internal Server Error',
-        message: 'Failed to update technician',
-        timestamp: new Date().toISOString(),
-      });
+      if (error.code === '23514') {
+        return ResponseFormatter.badRequest(res, 'Invalid status value. Must be one of: available, on_job, off_duty, suspended');
+      }
+
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );
@@ -411,8 +415,10 @@ router.patch(
  * /api/technicians/{id}:
  *   delete:
  *     tags: [Technicians]
- *     summary: Deactivate technician (manager+ only)
- *     description: Soft delete (deactivate) a technician account.
+ *     summary: Delete technician (manager+ only)
+ *     description: |
+ *       Permanently delete a technician record.
+ *       To deactivate instead, use PATCH with is_active=false.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -421,9 +427,11 @@ router.patch(
  *         required: true
  *         schema:
  *           type: integer
+ *           minimum: 1
+ *         description: Technician ID
  *     responses:
  *       200:
- *         description: Technician deactivated successfully
+ *         description: Technician deleted successfully
  *       403:
  *         description: Forbidden - Manager+ access required
  *       404:
@@ -442,18 +450,14 @@ router.delete(
 
       const technician = await Technician.findById(technicianId);
       if (!technician) {
-        return res.status(HTTP_STATUS.NOT_FOUND).json({
-          error: 'Not Found',
-          message: 'Technician not found',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.notFound(res, 'Technician not found');
       }
 
-      await Technician.deactivate(technicianId);
+      await Technician.delete(technicianId);
 
       await auditService.log({
         userId: req.user.userId,
-        action: 'deactivate',
+        action: 'delete',
         resourceType: 'technician',
         resourceId: technicianId,
         oldValues: technician,
@@ -462,21 +466,13 @@ router.delete(
         result: 'success',
       });
 
-      res.json({
-        success: true,
-        message: 'Technician deleted successfully',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.deleted(res, 'Technician deleted successfully');
     } catch (error) {
-      logger.error('Error deactivating technician', {
+      logger.error('Error deleting technician', {
         error: error.message,
         technicianId: req.params.id,
       });
-      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-        error: 'Internal Server Error',
-        message: 'Failed to deactivate technician',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );

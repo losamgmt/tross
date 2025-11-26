@@ -211,7 +211,8 @@ class UserService {
 
       debugPrint('🔍 [UserService] Updating user $userId with: $body');
 
-      final response = await ApiClient.put('/users/$userId', body: body);
+      // Backend uses PATCH for partial user updates
+      final response = await ApiClient.patch('/users/$userId', body: body);
 
       debugPrint('✅ [UserService] Update response received: ${response.keys}');
 

@@ -85,7 +85,7 @@ describe('Role Model - Row-Level Security', () => {
   });
 
   describe('_buildRLSFilter', () => {
-    it('should return no filtering for null policy (customer role)', () => {
+    test('should return no filtering for null policy (customer role)', () => {
       const req = {
         user: { id: 1, role: 'customer' },
         rlsPolicy: null,
@@ -102,7 +102,7 @@ describe('Role Model - Row-Level Security', () => {
       });
     });
 
-    it('should return no filtering for null policy (technician role)', () => {
+    test('should return no filtering for null policy (technician role)', () => {
       const req = {
         user: { id: 2, role: 'technician' },
         rlsPolicy: null,
@@ -119,7 +119,7 @@ describe('Role Model - Row-Level Security', () => {
       });
     });
 
-    it('should return no filtering for null policy (dispatcher role)', () => {
+    test('should return no filtering for null policy (dispatcher role)', () => {
       const req = {
         user: { id: 3, role: 'dispatcher' },
         rlsPolicy: null,
@@ -136,7 +136,7 @@ describe('Role Model - Row-Level Security', () => {
       });
     });
 
-    it('should return no filtering for null policy (admin role)', () => {
+    test('should return no filtering for null policy (admin role)', () => {
       const req = {
         user: { id: 4, role: 'admin' },
         rlsPolicy: null,
@@ -153,7 +153,7 @@ describe('Role Model - Row-Level Security', () => {
       });
     });
 
-    it('should return no filtering when req is null', () => {
+    test('should return no filtering when req is null', () => {
       const result = Role._buildRLSFilter(null);
 
       expect(result).toEqual({
@@ -163,7 +163,7 @@ describe('Role Model - Row-Level Security', () => {
       });
     });
 
-    it('should return no filtering when req is undefined', () => {
+    test('should return no filtering when req is undefined', () => {
       const result = Role._buildRLSFilter(undefined);
 
       expect(result).toEqual({
@@ -175,7 +175,7 @@ describe('Role Model - Row-Level Security', () => {
   });
 
   describe('_applyRLSFilter', () => {
-    it('should not modify WHERE clause for null policy', () => {
+    test('should not modify WHERE clause for null policy', () => {
       const req = {
         user: { id: 1, role: 'customer' },
         rlsPolicy: null,
@@ -193,7 +193,7 @@ describe('Role Model - Row-Level Security', () => {
       expect(result.rlsApplied).toBe(false);
     });
 
-    it('should not modify WHERE clause when no existing WHERE', () => {
+    test('should not modify WHERE clause when no existing WHERE', () => {
       const req = {
         user: { id: 2, role: 'technician' },
         rlsPolicy: null,
@@ -208,7 +208,7 @@ describe('Role Model - Row-Level Security', () => {
       expect(result.rlsApplied).toBe(false);
     });
 
-    it('should handle req = null without modification', () => {
+    test('should handle req = null without modification', () => {
       const existingWhere = 'WHERE priority > $1';
       const existingValues = [50];
 
@@ -221,7 +221,7 @@ describe('Role Model - Row-Level Security', () => {
   });
 
   describe('findById with RLS', () => {
-    it('should fetch role without filtering (null policy)', async () => {
+    test('should fetch role without filtering (null policy)', async () => {
       const mockRole = { id: 1, name: 'customer', priority: 10 };
       db.query.mockResolvedValue({ rows: [mockRole] });
 
@@ -246,7 +246,7 @@ describe('Role Model - Row-Level Security', () => {
       });
     });
 
-    it('should fetch role without req (backward compatibility)', async () => {
+    test('should fetch role without req (backward compatibility)', async () => {
       const mockRole = { id: 2, name: 'technician', priority: 20 };
       db.query.mockResolvedValue({ rows: [mockRole] });
 
@@ -264,7 +264,7 @@ describe('Role Model - Row-Level Security', () => {
       });
     });
 
-    it('should return undefined when role not found', async () => {
+    test('should return undefined when role not found', async () => {
       db.query.mockResolvedValue({ rows: [] });
 
       const req = {
@@ -281,7 +281,7 @@ describe('Role Model - Row-Level Security', () => {
   });
 
   describe('findAll with RLS', () => {
-    it('should fetch all roles without filtering (null policy)', async () => {
+    test('should fetch all roles without filtering (null policy)', async () => {
       const mockRoles = [
         { id: 1, name: 'customer', priority: 10 },
         { id: 2, name: 'technician', priority: 20 },
@@ -304,7 +304,7 @@ describe('Role Model - Row-Level Security', () => {
       expect(result.pagination.total).toBe(2);
     });
 
-    it('should fetch all roles without req (backward compatibility)', async () => {
+    test('should fetch all roles without req (backward compatibility)', async () => {
       const mockRoles = [
         { id: 1, name: 'customer', priority: 10 },
         { id: 2, name: 'technician', priority: 20 },
@@ -320,7 +320,7 @@ describe('Role Model - Row-Level Security', () => {
       expect(result.pagination.total).toBe(2);
     });
 
-    it('should work with search and filters (no RLS interference)', async () => {
+    test('should work with search and filters (no RLS interference)', async () => {
       const mockRoles = [{ id: 1, name: 'customer', priority: 10 }];
       db.query
         .mockResolvedValueOnce({ rows: [{ total: '1' }] })
@@ -347,7 +347,7 @@ describe('Role Model - Row-Level Security', () => {
   });
 
   describe('Null policy semantics', () => {
-    it('should confirm null policy means "no filtering" not "deny all"', () => {
+    test('should confirm null policy means "no filtering" not "deny all"', () => {
       // This test documents the important distinction:
       // - Invoice/Contract: null policy = deny (WHERE 1=0)
       // - Roles/Inventory: null policy = no-op (no filtering)

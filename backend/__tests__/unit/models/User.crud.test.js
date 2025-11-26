@@ -10,8 +10,8 @@
  * - User.relationships.test.js - Role relationships and foreign keys
  */
 
-// Mock database BEFORE requiring User model
-jest.mock("../../../db/connection");
+// Mock database BEFORE requiring User model - use enhanced mock
+jest.mock("../../../db/connection", () => require("../../mocks").createDBMock());
 jest.mock("../../../db/models/Role");
 
 const User = require("../../../db/models/User");
@@ -31,7 +31,7 @@ describe("User Model - CRUD Operations", () => {
   // READ: findByAuth0Id()
   // ===========================
   describe("findByAuth0Id()", () => {
-    it("should find user by Auth0 ID with role", async () => {
+    test("should find user by Auth0 ID with role", async () => {
       // Arrange
       const mockUser = {
         id: 1,
@@ -57,7 +57,7 @@ describe("User Model - CRUD Operations", () => {
       expect(db.query).toHaveBeenCalledTimes(1);
     });
 
-    it("should return null when user not found", async () => {
+    test("should return null when user not found", async () => {
       // Arrange
       db.query.mockResolvedValue({ rows: [] });
 
@@ -73,7 +73,7 @@ describe("User Model - CRUD Operations", () => {
   // READ: findById()
   // ===========================
   describe("findById()", () => {
-    it("should find user by ID with role", async () => {
+    test("should find user by ID with role", async () => {
       // Arrange
       const mockUser = {
         id: 1,
@@ -98,7 +98,7 @@ describe("User Model - CRUD Operations", () => {
       expect(db.query).toHaveBeenCalledTimes(1);
     });
 
-    it("should return null when user not found", async () => {
+    test("should return null when user not found", async () => {
       // Arrange
       db.query.mockResolvedValue({ rows: [] });
 
@@ -114,7 +114,7 @@ describe("User Model - CRUD Operations", () => {
   // READ: findAll() - Paginated
   // ===========================
   describe("findAll()", () => {
-    it("should return paginated users with roles", async () => {
+    test("should return paginated users with roles", async () => {
       // Arrange
       const mockUsers = [
         { id: 1, email: "admin@example.com", role: "admin" },
@@ -146,7 +146,7 @@ describe("User Model - CRUD Operations", () => {
       );
     });
 
-    it("should return empty data array when no users exist", async () => {
+    test("should return empty data array when no users exist", async () => {
       // Arrange
       db.query
         .mockResolvedValueOnce({ rows: [{ total: 0 }] }) // count query
@@ -166,7 +166,7 @@ describe("User Model - CRUD Operations", () => {
   // CREATE: createFromAuth0()
   // ===========================
   describe("createFromAuth0()", () => {
-    it("should create user from Auth0 data with default customer role", async () => {
+    test("should create user from Auth0 data with default customer role", async () => {
       // Arrange
       const auth0Data = {
         sub: "auth0|123456",
@@ -195,7 +195,7 @@ describe("User Model - CRUD Operations", () => {
       );
     });
 
-    it("should create user with specified role from token", async () => {
+    test("should create user with specified role from token", async () => {
       // Arrange
       const auth0Data = {
         sub: "auth0|admin123",
@@ -221,7 +221,7 @@ describe("User Model - CRUD Operations", () => {
       );
     });
 
-    it("should handle missing optional fields (names)", async () => {
+    test("should handle missing optional fields (names)", async () => {
       // Arrange
       const auth0Data = {
         sub: "auth0|minimal",
@@ -252,7 +252,7 @@ describe("User Model - CRUD Operations", () => {
   // CREATE: findOrCreate()
   // ===========================
   describe("findOrCreate()", () => {
-    it("should return existing user when found", async () => {
+    test("should return existing user when found", async () => {
       // Arrange
       const auth0Data = {
         sub: "auth0|existing",
@@ -273,7 +273,7 @@ describe("User Model - CRUD Operations", () => {
       expect(db.query).toHaveBeenCalledTimes(1); // Only findByAuth0Id
     });
 
-    it("should create new user when not found", async () => {
+    test("should create new user when not found", async () => {
       // Arrange
       const auth0Data = {
         sub: "auth0|new",
@@ -307,7 +307,7 @@ describe("User Model - CRUD Operations", () => {
   // CREATE: create() (manual user creation)
   // ===========================
   describe("create()", () => {
-    it("should create user with specified role_id", async () => {
+    test("should create user with specified role_id", async () => {
       // Arrange
       const userData = {
         email: "manual@example.com",
@@ -333,7 +333,7 @@ describe("User Model - CRUD Operations", () => {
       );
     });
 
-    it("should default to customer role when role_id not provided", async () => {
+    test("should default to customer role when role_id not provided", async () => {
       // Arrange
       const userData = {
         email: "defaultrole@example.com",
@@ -362,7 +362,7 @@ describe("User Model - CRUD Operations", () => {
       );
     });
 
-    it("should handle missing optional fields", async () => {
+    test("should handle missing optional fields", async () => {
       // Arrange
       const userData = { email: "minimal@example.com", role_id: 2 };
       const mockCreatedUser = {
@@ -394,7 +394,7 @@ describe("User Model - CRUD Operations", () => {
   // UPDATE: update()
   // ===========================
   describe("update()", () => {
-    it("should update user with valid fields", async () => {
+    test("should update user with valid fields", async () => {
       // Arrange
       const updates = {
         email: "updated@example.com",
@@ -422,7 +422,7 @@ describe("User Model - CRUD Operations", () => {
       );
     });
 
-    it("should update only provided fields", async () => {
+    test("should update only provided fields", async () => {
       // Arrange
       const updates = { first_name: "NewFirst" };
       const mockUpdatedUser = { id: 1, first_name: "NewFirst" };
@@ -439,7 +439,7 @@ describe("User Model - CRUD Operations", () => {
       );
     });
 
-    it("should filter out non-allowed fields", async () => {
+    test("should filter out non-allowed fields", async () => {
       // Arrange
       const updates = {
         email: "valid@example.com",
@@ -466,7 +466,7 @@ describe("User Model - CRUD Operations", () => {
       );
     });
 
-    it("should ignore undefined values", async () => {
+    test("should ignore undefined values", async () => {
       // Arrange
       const updates = {
         email: "test@example.com",
@@ -488,7 +488,7 @@ describe("User Model - CRUD Operations", () => {
 
     // Contract v2.0: update() no longer auto-manages audit fields
     // Audit logging happens via AuditService (tested separately in deactivate/reactivate methods)
-    it("should update is_active field without audit fields", async () => {
+    test("should update is_active field without audit fields", async () => {
       // Arrange
       const updates = { is_active: false };
       const mockUpdatedUser = {
@@ -511,7 +511,7 @@ describe("User Model - CRUD Operations", () => {
       );
     });
 
-    it("should update fields normally", async () => {
+    test("should update fields normally", async () => {
       // Arrange
       const updates = { first_name: "Changed" };
       const mockUpdatedUser = { id: 5, first_name: "Changed" };
@@ -533,36 +533,44 @@ describe("User Model - CRUD Operations", () => {
   // DELETE: delete()
   // ===========================
   describe("delete()", () => {
-    it("should permanently delete user from database", async () => {
-      // Arrange
+    test("should permanently delete user from database", async () => {
       const mockDeletedUser = { id: 1, email: "deleted@example.com" };
-      db.query.mockResolvedValue({ rows: [mockDeletedUser] });
+      
+      // Create fresh client for this test
+      const { createMockClient } = require("../../mocks");
+      const mockClient = createMockClient();
+      db.getClient.mockResolvedValue(mockClient);
+      
+      mockClient.query
+        .mockResolvedValueOnce({ rows: [] }) // BEGIN
+        .mockResolvedValueOnce({ rows: [mockDeletedUser] }) // SELECT user
+        .mockResolvedValueOnce({ rows: [] }) // DELETE audit_logs WHERE resource_type='user' AND resource_id=1
+        .mockResolvedValueOnce({ rows: [] }) // DELETE audit_logs WHERE user_id=1
+        .mockResolvedValueOnce({ rows: [mockDeletedUser] }) // DELETE user
+        .mockResolvedValueOnce({ rows: [] }); // COMMIT
 
-      // Act
       const user = await User.delete(1);
 
-      // Assert: DELETE = permanent removal
       expect(user).toEqual(mockDeletedUser);
-      expect(db.query).toHaveBeenCalledWith(
-        expect.stringContaining("DELETE FROM users"),
-        [1],
-      );
-      expect(db.query).not.toHaveBeenCalledWith(
-        expect.stringContaining("UPDATE"),
-        expect.anything(),
-      );
+      expect(mockClient.query).toHaveBeenCalledWith('BEGIN');
+      expect(mockClient.query).toHaveBeenCalledWith('COMMIT');
+      expect(mockClient.release).toHaveBeenCalledTimes(1);
     });
 
-    it("should throw error when user not found", async () => {
-      // Arrange
-      db.query.mockResolvedValue({ rows: [] });
+    test("should throw error when user not found", async () => {
+      // Create fresh client for this test
+      const { createMockClient } = require("../../mocks");
+      const mockClient = createMockClient();
+      db.getClient.mockResolvedValue(mockClient);
+      
+      mockClient.query
+        .mockResolvedValueOnce({ rows: [] }) // BEGIN
+        .mockResolvedValueOnce({ rows: [] }) // SELECT user (not found)
+        .mockResolvedValueOnce({ rows: [] }); // ROLLBACK
 
-      // Act & Assert
       await expect(User.delete(999)).rejects.toThrow("User not found");
-      expect(db.query).toHaveBeenCalledWith(
-        expect.stringContaining("DELETE FROM users"),
-        [999],
-      );
+      expect(mockClient.query).toHaveBeenCalledWith('ROLLBACK');
+      expect(mockClient.release).toHaveBeenCalledTimes(1);
     });
   });
 });

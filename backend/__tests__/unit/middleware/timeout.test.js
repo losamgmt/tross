@@ -54,7 +54,7 @@ describe('Timeout Middleware', () => {
   });
 
   describe('requestTimeout', () => {
-    it('should set timeout tracking on request', () => {
+    test('should set timeout tracking on request', () => {
       // Arrange
       const middleware = requestTimeout(5000);
 
@@ -67,7 +67,7 @@ describe('Timeout Middleware', () => {
       expect(next).toHaveBeenCalled();
     });
 
-    it('should trigger timeout after configured duration', () => {
+    test('should trigger timeout after configured duration', () => {
       // Arrange
       const middleware = requestTimeout(1000);
       middleware(req, res, next);
@@ -86,7 +86,7 @@ describe('Timeout Middleware', () => {
       );
     });
 
-    it('should log timeout with context', () => {
+    test('should log timeout with context', () => {
       // Arrange
       req.user = { id: 123 };
       const middleware = requestTimeout(1000);
@@ -107,7 +107,7 @@ describe('Timeout Middleware', () => {
       );
     });
 
-    it('should not send response if headers already sent', () => {
+    test('should not send response if headers already sent', () => {
       // Arrange
       res.headersSent = true;
       const middleware = requestTimeout(1000);
@@ -121,7 +121,7 @@ describe('Timeout Middleware', () => {
       expect(res.json).not.toHaveBeenCalled();
     });
 
-    it('should call custom onTimeout handler', () => {
+    test('should call custom onTimeout handler', () => {
       // Arrange
       const onTimeout = jest.fn();
       const middleware = requestTimeout(1000, { onTimeout });
@@ -135,7 +135,7 @@ describe('Timeout Middleware', () => {
       expect(onTimeout).toHaveBeenCalledWith(req, res);
     });
 
-    it('should clear timeout when response finishes', () => {
+    test('should clear timeout when response finishes', () => {
       // Arrange
       const middleware = requestTimeout(5000);
       let finishCallback;
@@ -153,7 +153,7 @@ describe('Timeout Middleware', () => {
       expect(res.status).not.toHaveBeenCalled();
     });
 
-    it('should log very slow requests', () => {
+    test('should log very slow requests', () => {
       // Arrange
       const middleware = requestTimeout(30000);
       let finishCallback;
@@ -176,7 +176,7 @@ describe('Timeout Middleware', () => {
       );
     });
 
-    it('should log slow requests', () => {
+    test('should log slow requests', () => {
       // Arrange
       const middleware = requestTimeout(30000);
       let finishCallback;
@@ -199,7 +199,7 @@ describe('Timeout Middleware', () => {
       );
     });
 
-    it('should skip if request already timed out', () => {
+    test('should skip if request already timed out', () => {
       // Arrange
       req.timedout = true;
       const middleware = requestTimeout(5000);
@@ -212,7 +212,7 @@ describe('Timeout Middleware', () => {
       expect(next).toHaveBeenCalled();
     });
 
-    it('should handle custom timeout handler errors gracefully', () => {
+    test('should handle custom timeout handler errors gracefully', () => {
       // Arrange
       const onTimeout = jest.fn(() => {
         throw new Error('Handler error');
@@ -233,7 +233,7 @@ describe('Timeout Middleware', () => {
   });
 
   describe('timeoutHandler', () => {
-    it('should pass through if request not timed out', () => {
+    test('should pass through if request not timed out', () => {
       // Arrange
       req.timedout = false;
 
@@ -245,7 +245,7 @@ describe('Timeout Middleware', () => {
       expect(res.status).not.toHaveBeenCalled();
     });
 
-    it('should send timeout response if not already sent', () => {
+    test('should send timeout response if not already sent', () => {
       // Arrange
       req.timedout = true;
       req.startTime = Date.now() - 5000;
@@ -265,7 +265,7 @@ describe('Timeout Middleware', () => {
       expect(next).not.toHaveBeenCalled();
     });
 
-    it('should not send response if headers already sent', () => {
+    test('should not send response if headers already sent', () => {
       // Arrange
       req.timedout = true;
       res.headersSent = true;
@@ -281,7 +281,7 @@ describe('Timeout Middleware', () => {
 
   describe('Helper Functions', () => {
     describe('quickTimeout', () => {
-      it('should create 5 second timeout middleware', () => {
+      test('should create 5 second timeout middleware', () => {
         // Act
         const middleware = quickTimeout();
         middleware(req, res, next);
@@ -292,7 +292,7 @@ describe('Timeout Middleware', () => {
     });
 
     describe('longTimeout', () => {
-      it('should create 90 second timeout middleware', () => {
+      test('should create 90 second timeout middleware', () => {
         // Act
         const middleware = longTimeout();
         middleware(req, res, next);
@@ -303,7 +303,7 @@ describe('Timeout Middleware', () => {
     });
 
     describe('getRequestDuration', () => {
-      it('should return duration since request start', () => {
+      test('should return duration since request start', () => {
         // Arrange
         req.startTime = Date.now() - 2000;
 
@@ -315,7 +315,7 @@ describe('Timeout Middleware', () => {
         expect(duration).toBeLessThan(2100);
       });
 
-      it('should return 0 if no startTime', () => {
+      test('should return 0 if no startTime', () => {
         // Act
         const duration = getRequestDuration(req);
 
@@ -325,7 +325,7 @@ describe('Timeout Middleware', () => {
     });
 
     describe('isTimeoutImminent', () => {
-      it('should return true when timeout approaching', () => {
+      test('should return true when timeout approaching', () => {
         // Arrange
         req.startTime = Date.now() - 4500;
         req.timeoutMs = 5000;
@@ -337,7 +337,7 @@ describe('Timeout Middleware', () => {
         expect(result).toBe(true);
       });
 
-      it('should return false when plenty of time remaining', () => {
+      test('should return false when plenty of time remaining', () => {
         // Arrange
         req.startTime = Date.now() - 1000;
         req.timeoutMs = 5000;
@@ -349,7 +349,7 @@ describe('Timeout Middleware', () => {
         expect(result).toBe(false);
       });
 
-      it('should return false if no timeout configured', () => {
+      test('should return false if no timeout configured', () => {
         // Act
         const result = isTimeoutImminent(req);
 
@@ -359,7 +359,7 @@ describe('Timeout Middleware', () => {
     });
 
     describe('getRemainingTime', () => {
-      it('should return remaining milliseconds', () => {
+      test('should return remaining milliseconds', () => {
         // Arrange
         req.startTime = Date.now() - 2000;
         req.timeoutMs = 5000;
@@ -372,7 +372,7 @@ describe('Timeout Middleware', () => {
         expect(remaining).toBeLessThanOrEqual(3000);
       });
 
-      it('should return 0 if timeout exceeded', () => {
+      test('should return 0 if timeout exceeded', () => {
         // Arrange
         req.startTime = Date.now() - 6000;
         req.timeoutMs = 5000;
@@ -384,7 +384,7 @@ describe('Timeout Middleware', () => {
         expect(remaining).toBe(0);
       });
 
-      it('should return Infinity if no timeout configured', () => {
+      test('should return Infinity if no timeout configured', () => {
         // Act
         const remaining = getRemainingTime(req);
 

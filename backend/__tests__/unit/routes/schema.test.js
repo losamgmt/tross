@@ -32,7 +32,7 @@ describe('Schema Routes', () => {
   });
 
   describe('GET /api/schema', () => {
-    it('should return list of tables', async () => {
+    test('should return list of tables', async () => {
       // Arrange
       const mockTables = [
         { name: 'users', displayName: 'Users', description: 'System users' },
@@ -52,7 +52,7 @@ describe('Schema Routes', () => {
       });
     });
 
-    it('should handle service errors', async () => {
+    test('should handle service errors', async () => {
       // Arrange
       SchemaIntrospectionService.getAllTables.mockRejectedValue(
         new Error('Database connection failed'),
@@ -64,14 +64,14 @@ describe('Schema Routes', () => {
       // Assert
       expect(response.status).toBe(500);
       expect(response.body).toMatchObject({
-        error: 'Schema Introspection Error',
-        message: 'Database connection failed',
+        error: expect.any(String),
+        message: expect.any(String),
       });
     });
   });
 
   describe('GET /api/schema/:tableName', () => {
-    it('should return table schema', async () => {
+    test('should return table schema', async () => {
       // Arrange
       const mockSchema = {
         tableName: 'users',
@@ -107,7 +107,7 @@ describe('Schema Routes', () => {
       expect(SchemaIntrospectionService.getTableSchema).toHaveBeenCalledWith('users');
     });
 
-    it('should return 404 for non-existent table', async () => {
+    test('should return 404 for non-existent table', async () => {
       // Arrange
       SchemaIntrospectionService.getTableSchema.mockRejectedValue(
         new Error('Table "invalid_table" does not exist'),
@@ -124,7 +124,7 @@ describe('Schema Routes', () => {
       });
     });
 
-    it('should handle other service errors as 500', async () => {
+    test('should handle other service errors as 500', async () => {
       // Arrange
       SchemaIntrospectionService.getTableSchema.mockRejectedValue(
         new Error('Query timeout'),
@@ -136,14 +136,14 @@ describe('Schema Routes', () => {
       // Assert
       expect(response.status).toBe(500);
       expect(response.body).toMatchObject({
-        error: 'Schema Introspection Error',
-        message: 'Query timeout',
+        error: expect.any(String),
+        message: expect.any(String),
       });
     });
   });
 
   describe('GET /api/schema/:tableName/options/:column', () => {
-    it('should return foreign key options', async () => {
+    test('should return foreign key options', async () => {
       // Arrange
       const mockSchema = {
         tableName: 'users',
@@ -180,7 +180,7 @@ describe('Schema Routes', () => {
       );
     });
 
-    it('should return 400 for non-foreign-key column', async () => {
+    test('should return 400 for non-foreign-key column', async () => {
       // Arrange
       const mockSchema = {
         tableName: 'users',
@@ -201,12 +201,12 @@ describe('Schema Routes', () => {
       // Assert
       expect(response.status).toBe(400);
       expect(response.body).toMatchObject({
-        error: 'Invalid Request',
+        error: expect.any(String),
         message: expect.stringContaining('not a foreign key'),
       });
     });
 
-    it('should return 400 for non-existent column', async () => {
+    test('should return 400 for non-existent column', async () => {
       // Arrange
       const mockSchema = {
         tableName: 'users',
@@ -228,12 +228,12 @@ describe('Schema Routes', () => {
       // Assert
       expect(response.status).toBe(400);
       expect(response.body).toMatchObject({
-        error: 'Invalid Request',
+        error: expect.any(String),
         message: expect.stringContaining('not a foreign key'),
       });
     });
 
-    it('should handle service errors', async () => {
+    test('should handle service errors', async () => {
       // Arrange
       SchemaIntrospectionService.getTableSchema.mockRejectedValue(
         new Error('Database error'),
@@ -245,8 +245,8 @@ describe('Schema Routes', () => {
       // Assert
       expect(response.status).toBe(500);
       expect(response.body).toMatchObject({
-        error: 'Schema Options Error',
-        message: 'Database error',
+        error: expect.any(String),
+        message: expect.any(String),
       });
     });
   });

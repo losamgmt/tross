@@ -31,7 +31,7 @@ describe("User Model - Validation", () => {
   // findByAuth0Id() validation
   // ===========================
   describe("findByAuth0Id() - Validation", () => {
-    it("should throw error when Auth0 ID is missing", async () => {
+    test("should throw error when Auth0 ID is missing", async () => {
       // Act & Assert
       await expect(User.findByAuth0Id(null)).rejects.toThrow(
         "Auth0 ID is required",
@@ -45,7 +45,7 @@ describe("User Model - Validation", () => {
       expect(db.query).not.toHaveBeenCalled();
     });
 
-    it("should handle database errors gracefully", async () => {
+    test("should handle database errors gracefully", async () => {
       // Arrange
       db.query.mockRejectedValue(new Error("Database connection failed"));
 
@@ -60,7 +60,7 @@ describe("User Model - Validation", () => {
   // findById() validation
   // ===========================
   describe("findById() - Validation", () => {
-    it("should throw error when ID is missing", async () => {
+    test("should throw error when ID is missing", async () => {
       // Act & Assert - verify it THROWS, don't care about exact message
       await expect(User.findById(null)).rejects.toThrow();
       await expect(User.findById(undefined)).rejects.toThrow();
@@ -68,7 +68,7 @@ describe("User Model - Validation", () => {
       expect(db.query).not.toHaveBeenCalled();
     });
 
-    it("should handle database errors gracefully", async () => {
+    test("should handle database errors gracefully", async () => {
       // Arrange
       db.query.mockRejectedValue(new Error("Database error"));
 
@@ -81,7 +81,7 @@ describe("User Model - Validation", () => {
   // findAll() validation
   // ===========================
   describe("findAll() - Error Handling", () => {
-    it("should handle database errors gracefully", async () => {
+    test("should handle database errors gracefully", async () => {
       // Arrange
       db.query.mockRejectedValue(new Error("Connection lost"));
 
@@ -94,7 +94,7 @@ describe("User Model - Validation", () => {
   // createFromAuth0() validation
   // ===========================
   describe("createFromAuth0() - Validation", () => {
-    it("should throw error when Auth0 ID is missing", async () => {
+    test("should throw error when Auth0 ID is missing", async () => {
       // Arrange
       const invalidData = { email: "test@example.com" };
 
@@ -105,7 +105,7 @@ describe("User Model - Validation", () => {
       expect(db.query).not.toHaveBeenCalled();
     });
 
-    it("should throw error when email is missing", async () => {
+    test("should throw error when email is missing", async () => {
       // Arrange
       const invalidData = { sub: "auth0|123" };
 
@@ -116,7 +116,7 @@ describe("User Model - Validation", () => {
       expect(db.query).not.toHaveBeenCalled();
     });
 
-    it("should handle duplicate Auth0 ID constraint violation", async () => {
+    test("should handle duplicate Auth0 ID constraint violation", async () => {
       // Arrange
       const auth0Data = {
         sub: "auth0|existing",
@@ -132,7 +132,7 @@ describe("User Model - Validation", () => {
       );
     });
 
-    it("should handle duplicate email constraint violation", async () => {
+    test("should handle duplicate email constraint violation", async () => {
       // Arrange
       const auth0Data = {
         sub: "auth0|new",
@@ -148,7 +148,7 @@ describe("User Model - Validation", () => {
       );
     });
 
-    it("should handle generic database errors", async () => {
+    test("should handle generic database errors", async () => {
       // Arrange
       const auth0Data = {
         sub: "auth0|test",
@@ -167,7 +167,7 @@ describe("User Model - Validation", () => {
   // findOrCreate() validation
   // ===========================
   describe("findOrCreate() - Validation", () => {
-    it("should throw error when auth0Data is missing", async () => {
+    test("should throw error when auth0Data is missing", async () => {
       // Act & Assert
       await expect(User.findOrCreate(null)).rejects.toThrow(
         "Invalid Auth0 data",
@@ -179,7 +179,7 @@ describe("User Model - Validation", () => {
       expect(db.query).not.toHaveBeenCalled();
     });
 
-    it("should propagate errors from findByAuth0Id", async () => {
+    test("should propagate errors from findByAuth0Id", async () => {
       // Arrange
       const auth0Data = { sub: "auth0|test", email: "test@example.com" };
       db.query.mockRejectedValue(new Error("Database error"));
@@ -191,7 +191,7 @@ describe("User Model - Validation", () => {
       );
     });
 
-    it("should propagate errors from createFromAuth0", async () => {
+    test("should propagate errors from createFromAuth0", async () => {
       // Arrange
       const auth0Data = { sub: "auth0|test", email: "test@example.com" };
       const dbError = new Error("Database error");
@@ -211,7 +211,7 @@ describe("User Model - Validation", () => {
   // create() validation
   // ===========================
   describe("create() - Validation", () => {
-    it("should throw error when email is missing", async () => {
+    test("should throw error when email is missing", async () => {
       // Arrange
       const userData = { first_name: "No", last_name: "Email" };
 
@@ -220,7 +220,7 @@ describe("User Model - Validation", () => {
       expect(db.query).not.toHaveBeenCalled();
     });
 
-    it("should handle duplicate email constraint violation", async () => {
+    test("should handle duplicate email constraint violation", async () => {
       // Arrange
       const userData = { email: "duplicate@example.com", role_id: 2 };
       const dbError = new Error("Duplicate key");
@@ -233,7 +233,7 @@ describe("User Model - Validation", () => {
       );
     });
 
-    it("should handle generic database errors", async () => {
+    test("should handle generic database errors", async () => {
       // Arrange
       const userData = { email: "error@example.com", role_id: 2 };
       db.query.mockRejectedValue(new Error("Database error"));
@@ -249,7 +249,7 @@ describe("User Model - Validation", () => {
   // update() validation
   // ===========================
   describe("update() - Validation", () => {
-    it("should throw error when user ID is missing", async () => {
+    test("should throw error when user ID is missing", async () => {
       // Act & Assert - behavior: throws and doesn't query
       await expect(
         User.update(null, { email: "test@example.com" }),
@@ -260,7 +260,7 @@ describe("User Model - Validation", () => {
       expect(db.query).not.toHaveBeenCalled();
     });
 
-    it("should throw error when updates is missing or invalid", async () => {
+    test("should throw error when updates is missing or invalid", async () => {
       // Act & Assert - behavior: throws and doesn't query
       await expect(User.update(1, null)).rejects.toThrow();
       await expect(User.update(1, undefined)).rejects.toThrow();
@@ -268,7 +268,7 @@ describe("User Model - Validation", () => {
       expect(db.query).not.toHaveBeenCalled();
     });
 
-    it("should throw error when no valid fields to update", async () => {
+    test("should throw error when no valid fields to update", async () => {
       // Act & Assert
       await expect(User.update(1, {})).rejects.toThrow(
         "No valid fields to update",
@@ -282,7 +282,7 @@ describe("User Model - Validation", () => {
       expect(db.query).not.toHaveBeenCalled();
     });
 
-    it("should throw error when user not found", async () => {
+    test("should throw error when user not found", async () => {
       // Arrange
       const updates = { email: "test@example.com" };
       db.query.mockResolvedValue({ rows: [] });
@@ -294,7 +294,7 @@ describe("User Model - Validation", () => {
       );
     });
 
-    it("should handle duplicate email constraint violation", async () => {
+    test("should handle duplicate email constraint violation", async () => {
       // Arrange
       const updates = { email: "duplicate@example.com" };
       const dbError = new Error("Duplicate key");
@@ -307,7 +307,7 @@ describe("User Model - Validation", () => {
       );
     });
 
-    it("should handle generic database errors", async () => {
+    test("should handle generic database errors", async () => {
       // Arrange
       const updates = { email: "test@example.com" };
       db.query.mockRejectedValue(new Error("Database error"));
@@ -323,27 +323,44 @@ describe("User Model - Validation", () => {
   // delete() validation
   // ===========================
   describe("delete() - Validation", () => {
-    it("should throw error when user ID is missing", async () => {
+    test("should throw error when user ID is missing", async () => {
       // Act & Assert - behavior: throws and doesn't query
       await expect(User.delete(null)).rejects.toThrow();
       await expect(User.delete(undefined)).rejects.toThrow();
       expect(db.query).not.toHaveBeenCalled();
     });
 
-    it("should throw error when user not found", async () => {
+    test("should throw error when user not found", async () => {
       // Arrange
-      db.query.mockResolvedValue({ rows: [] });
+      const mockClient = {
+        query: jest.fn()
+          .mockResolvedValueOnce({ rows: [] }) // BEGIN
+          .mockResolvedValueOnce({ rows: [] }) // DELETE audit_logs WHERE resource_type='user' AND resource_id=999
+          .mockResolvedValueOnce({ rows: [] }) // DELETE audit_logs WHERE user_id=999
+          .mockResolvedValueOnce({ rows: [] }) // DELETE user - not found
+          .mockResolvedValueOnce({ rows: [] }), // ROLLBACK
+        release: jest.fn(),
+      };
+      db.getClient = jest.fn().mockResolvedValue(mockClient);
 
       // Act & Assert
       await expect(User.delete(999)).rejects.toThrow("User not found");
+      expect(mockClient.release).toHaveBeenCalled();
     });
 
-    it("should handle database errors during deletion", async () => {
+    test("should handle database errors during deletion", async () => {
       // Arrange
-      db.query.mockRejectedValue(new Error("Database error"));
+      const mockClient = {
+        query: jest.fn()
+          .mockResolvedValueOnce({ rows: [] }) // BEGIN
+          .mockRejectedValueOnce(new Error("Database error")), // First DELETE - error
+        release: jest.fn(),
+      };
+      db.getClient = jest.fn().mockResolvedValue(mockClient);
 
       // Act & Assert
       await expect(User.delete(1)).rejects.toThrow("Database error");
+      expect(mockClient.release).toHaveBeenCalled();
     });
   });
 });

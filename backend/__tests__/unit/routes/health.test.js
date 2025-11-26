@@ -128,7 +128,7 @@ describe('Health Routes', () => {
   });
 
   describe('GET /api/health', () => {
-    it('should return healthy status when DB is connected', async () => {
+    test('should return healthy status when DB is connected', async () => {
       testLog('TEST START: healthy status test');
       try {
         // Arrange
@@ -155,7 +155,7 @@ describe('Health Routes', () => {
       }
     }, 3000);
 
-    it('should return unhealthy status when DB connection fails', async () => {
+    test('should return unhealthy status when DB connection fails', async () => {
       testLog('TEST START: unhealthy status test');
       try {
         // Arrange
@@ -171,9 +171,11 @@ describe('Health Routes', () => {
         // Assert
         expect(response.status).toBe(503);
         expect(response.body).toMatchObject({
+          success: false,
+          error: 'Service Unavailable',
+          message: 'Connection refused',
           status: 'unhealthy',
           timestamp: expect.any(String),
-          error: 'Connection refused',
         });
         testLog('TEST END: unhealthy status test - PASSED');
       } catch (error) {
@@ -182,7 +184,7 @@ describe('Health Routes', () => {
       }
     }, 3000);
 
-    it('should return valid timestamp in ISO format', async () => {
+    test('should return valid timestamp in ISO format', async () => {
       testLog('TEST START: timestamp format test');
       try {
         // Arrange
@@ -201,7 +203,7 @@ describe('Health Routes', () => {
       }
     }, 3000);
 
-    it('should return positive uptime', async () => {
+    test('should return positive uptime', async () => {
       testLog('TEST START: uptime test');
       try {
         // Arrange
@@ -223,7 +225,7 @@ describe('Health Routes', () => {
   // Re-enabling tests one by one with proper logging and timeouts
   describe('GET /api/health/databases', () => {
     // TEST 7: Simplest - just timestamp validation ✅ PASSED
-    it('should include timestamp in response', async () => {
+    test('should include timestamp in response', async () => {
       testLog('TEST START: timestamp in databases response test');
       try {
         // Arrange
@@ -251,7 +253,7 @@ describe('Health Routes', () => {
     }, 3000);
 
     // TEST 8: Missing pool options - graceful fallback ✅ PASSED
-    it('should handle missing pool options gracefully', async () => {
+    test('should handle missing pool options gracefully', async () => {
       testLog('TEST START: missing pool options test');
       try {
         // Arrange
@@ -269,7 +271,7 @@ describe('Health Routes', () => {
 
         // Assert
         expect(response.status).toBe(200);
-        expect(response.body.databases[0]).toMatchObject({
+        expect(response.body.data.databases[0]).toMatchObject({
           status: expect.any(String),
           maxConnections: 10, // Default fallback
         });
@@ -281,7 +283,7 @@ describe('Health Routes', () => {
     }, 3000);
 
     // TEST 1: Basic success path - fast DB, low connections
-    it('should return healthy status for fast DB with low connection usage', async () => {
+    test('should return healthy status for fast DB with low connection usage', async () => {
       testLog('TEST START: healthy status for fast DB test');
       try {
         // Arrange
@@ -299,8 +301,8 @@ describe('Health Routes', () => {
 
         // Assert
         expect(response.status).toBe(200);
-        expect(response.body.databases).toHaveLength(1);
-        expect(response.body.databases[0]).toMatchObject({
+        expect(response.body.data.databases).toHaveLength(1);
+        expect(response.body.data.databases[0]).toMatchObject({
           name: 'PostgreSQL (Main)',
           status: expect.stringMatching(/healthy|degraded/), // Accept any non-critical
           responseTime: expect.any(Number),
@@ -315,7 +317,7 @@ describe('Health Routes', () => {
     }, 3000);
 
     // TEST 4: High connection usage (80-95%) - degraded status
-    it('should return degraded status for high connection usage (80-95%)', async () => {
+    test('should return degraded status for high connection usage (80-95%)', async () => {
       testLog('TEST START: high connection usage test');
       try {
         // Arrange
@@ -332,8 +334,8 @@ describe('Health Routes', () => {
         testLog('ACT: Response received, status:', response.status);
 
         // Assert
-        expect(response.body.databases[0].status).toBe('degraded');
-        expect(response.body.databases[0].errorMessage).toContain('High connection usage: 9/10');
+        expect(response.body.data.databases[0].status).toBe('degraded');
+        expect(response.body.data.databases[0].errorMessage).toContain('High connection usage: 9/10');
         testLog('TEST END: high connection usage test - PASSED');
       } catch (error) {
         testLog('TEST ERROR:', error.message);
@@ -342,7 +344,7 @@ describe('Health Routes', () => {
     }, 3000);
 
     // TEST 5: Very high connection usage (>95%) - critical status
-    it('should return critical status for very high connection usage (>95%)', async () => {
+    test('should return critical status for very high connection usage (>95%)', async () => {
       testLog('TEST START: very high connection usage test');
       try {
         // Arrange
@@ -359,8 +361,8 @@ describe('Health Routes', () => {
         testLog('ACT: Response received, status:', response.status);
 
         // Assert
-        expect(response.body.databases[0].status).toBe('critical');
-        expect(response.body.databases[0].errorMessage).toContain('High connection usage: 10/10');
+        expect(response.body.data.databases[0].status).toBe('critical');
+        expect(response.body.data.databases[0].errorMessage).toContain('High connection usage: 10/10');
         testLog('TEST END: very high connection usage test - PASSED');
       } catch (error) {
         testLog('TEST ERROR:', error.message);
@@ -369,7 +371,7 @@ describe('Health Routes', () => {
     }, 3000);
 
     // TEST 6: DB query failure - critical status with error
-    it('should return critical status when DB query fails', async () => {
+    test('should return critical status when DB query fails', async () => {
       testLog('TEST START: DB query failure test');
       try {
         // Arrange
@@ -388,7 +390,7 @@ describe('Health Routes', () => {
 
         // Assert
         expect(response.status).toBe(200);
-        expect(response.body.databases[0]).toMatchObject({
+        expect(response.body.data.databases[0]).toMatchObject({
           status: 'critical',
           errorMessage: 'Database connection timeout',
         });
@@ -400,7 +402,7 @@ describe('Health Routes', () => {
     }, 3000);
 
     // TEST 2: Slow DB (100-500ms) - degraded status (WITH TIMING DELAY)
-    it('should return degraded status for slow DB (100-500ms)', async () => {
+    test('should return degraded status for slow DB (100-500ms)', async () => {
       testLog('TEST START: slow DB test');
       try {
         // Arrange - simulate slow response with delayed mock
@@ -417,8 +419,8 @@ describe('Health Routes', () => {
         testLog('ACT: Response received, status:', response.status);
 
         // Assert
-        expect(response.body.databases[0].status).toBe('degraded');
-        expect(response.body.databases[0].responseTime).toBeGreaterThan(100);
+        expect(response.body.data.databases[0].status).toBe('degraded');
+        expect(response.body.data.databases[0].responseTime).toBeGreaterThan(100);
         testLog('TEST END: slow DB test - PASSED');
       } catch (error) {
         testLog('TEST ERROR:', error.message);
@@ -427,7 +429,7 @@ describe('Health Routes', () => {
     }, 5000); // Higher timeout for delayed test
 
     // TEST 3: Very slow DB (>500ms) - critical status (WITH TIMING DELAY)
-    it('should return critical status for very slow DB (>500ms)', async () => {
+    test('should return critical status for very slow DB (>500ms)', async () => {
       testLog('TEST START: very slow DB test');
       try {
         // Arrange - simulate very slow response
@@ -444,8 +446,8 @@ describe('Health Routes', () => {
         testLog('ACT: Response received, status:', response.status);
 
         // Assert
-        expect(response.body.databases[0].status).toBe('critical');
-        expect(response.body.databases[0].responseTime).toBeGreaterThan(500);
+        expect(response.body.data.databases[0].status).toBe('critical');
+        expect(response.body.data.databases[0].responseTime).toBeGreaterThan(500);
         testLog('TEST END: very slow DB test - PASSED');
       } catch (error) {
         testLog('TEST ERROR:', error.message);

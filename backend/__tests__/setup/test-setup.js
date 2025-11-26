@@ -36,10 +36,16 @@ const {
   resetAuditServiceMocks,
   resetPaginationServiceMocks,
   resetLoggerMocks,
+  transactionMatchers,
 } = require('../mocks');
 
 // Re-export all fixtures for convenience
 const fixtures = require('../fixtures');
+
+// Register custom Jest matchers globally
+if (transactionMatchers) {
+  expect.extend(transactionMatchers);
+}
 
 /**
  * Setup all mocks for a test suite

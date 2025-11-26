@@ -7,10 +7,10 @@
 const express = require('express');
 const _crypto = require('crypto');
 const _User = require('../db/models/User');
+const ResponseFormatter = require('../utils/response-formatter');
 const Auth0Strategy = require('../services/auth/Auth0Strategy');
 const tokenService = require('../services/token-service');
 const auditService = require('../services/audit-service');
-const { HTTP_STATUS } = require('../config/constants');
 const { logger } = require('../config/logger');
 const { refreshLimiter } = require('../middleware/rate-limit');
 const {
@@ -113,12 +113,14 @@ router.post('/callback', validateAuthCallback, async (req, res) => {
     });
 
     // Return tokens and user info to client
-    res.json({
-      access_token: tokens.accessToken,
-      refresh_token: tokens.refreshToken,
-      user: authResult.user,
-      provider: 'auth0',
-    });
+    res.json(
+      ResponseFormatter.get({
+        access_token: tokens.accessToken,
+        refresh_token: tokens.refreshToken,
+        user: authResult.user,
+        provider: 'auth0',
+      }),
+    );
   } catch (error) {
     logger.error('🔐 Auth0 callback failed', {
       error: error.message,
@@ -139,10 +141,7 @@ router.post('/callback', validateAuthCallback, async (req, res) => {
       errorMessage: error.message,
     });
 
-    res.status(401).json({
-      error: 'Authentication failed',
-      message: error.message,
-    });
+    return ResponseFormatter.unauthorized(res, error.message);
   }
 });
 
@@ -207,7 +206,7 @@ router.post('/validate', validateAuth0Token, async (req, res) => {
       email: result.user.email,
     });
 
-    res.json({
+    return ResponseFormatter.get(res, {
       token: result.token,
       app_token: result.token,
       user: result.user,
@@ -218,10 +217,7 @@ router.post('/validate', validateAuth0Token, async (req, res) => {
       error: error.message,
     });
 
-    res.status(HTTP_STATUS.UNAUTHORIZED).json({
-      error: 'Token validation failed',
-      message: error.message,
-    });
+    return ResponseFormatter.unauthorized(res, error.message);
   }
 });
 
@@ -271,17 +267,16 @@ router.post('/refresh', refreshLimiter, validateAuth0Refresh, async (req, res) =
 
     const result = await auth0Strategy.refreshToken(refresh_token);
 
-    res.json({
-      access_token: result.token,
-      expires_in: result.expires_in,
-    });
+    res.json(
+      ResponseFormatter.get({
+        access_token: result.token,
+        expires_in: result.expires_in,
+      }),
+    );
   } catch (error) {
     logger.error('Token refresh failed', { error: error.message });
 
-    res.status(HTTP_STATUS.UNAUTHORIZED).json({
-      error: 'Token refresh failed',
-      message: error.message,
-    });
+    return ResponseFormatter.unauthorized(res, error.message);
   }
 });
 
@@ -318,18 +313,16 @@ router.get('/logout', async (req, res) => {
   try {
     const result = await auth0Strategy.logout();
 
-    res.json({
-      success: true,
-      logout_url: result.logoutUrl,
-      message: 'Redirect to logout_url to complete Auth0 logout',
-    });
+    res.json(
+      ResponseFormatter.success(
+        { logout_url: result.logoutUrl },
+        'Redirect to logout_url to complete Auth0 logout',
+      ),
+    );
   } catch (error) {
     logger.error('Logout failed', { error: error.message });
 
-    res.status(HTTP_STATUS.SERVER_ERROR).json({
-      error: 'Logout failed',
-      message: error.message,
-    });
+    return ResponseFormatter.internalError(res, error);
   }
 });
 

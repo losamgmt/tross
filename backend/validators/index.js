@@ -44,6 +44,7 @@ const {
 // Export body validators (request payload validation)
 const {
   validateUserCreate,
+  validateUserUpdate,
   validateProfileUpdate,
   validateRoleAssignment,
   validateRoleCreate,
@@ -90,6 +91,7 @@ module.exports = {
 
   // Body Validators (from existing middleware)
   validateUserCreate,
+  validateUserUpdate,
   validateProfileUpdate,
   validateRoleAssignment,
   validateRoleCreate,

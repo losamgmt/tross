@@ -74,7 +74,7 @@ app.use(requestLogger);
 app.use(
   cors({
     origin: getAllowedOrigins(), // Uses ALLOWED_ORIGINS env var with smart defaults
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
     maxAge: 86400, // 24 hours preflight cache
@@ -250,6 +250,10 @@ if (process.env.NODE_ENV !== 'test') {
     try {
       const db = require('./db/connection');
       await db.testConnection();
+
+      // Validate enum synchronization between Joi and PostgreSQL
+      const { validateEnumSync } = require('./utils/validation-sync-checker');
+      await validateEnumSync(db);
     } catch (_error) {
       logger.error(
         '⚠️ Database connection failed on startup. Server will continue but DB-dependent features will be unavailable.',

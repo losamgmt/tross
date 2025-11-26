@@ -17,7 +17,7 @@ describe('Technician Model - Validation', () => {
   });
 
   describe('License Number Validation', () => {
-    it('should reject duplicate license_number', async () => {
+    test('should reject duplicate license_number', async () => {
       db.query.mockRejectedValue({
         code: '23505',
         constraint: 'technicians_license_number_key',
@@ -29,7 +29,7 @@ describe('Technician Model - Validation', () => {
       ).rejects.toThrow();
     });
 
-    it('should reject null license_number', async () => {
+    test('should reject null license_number', async () => {
       db.query.mockRejectedValue({
         code: '23502',
         message: 'null value in column "license_number" violates not-null constraint',
@@ -40,7 +40,7 @@ describe('Technician Model - Validation', () => {
   });
 
   describe('Status Validation', () => {
-    it('should accept valid status values', async () => {
+    test('should accept valid status values', async () => {
       const validStatuses = ['available', 'on_job', 'off_duty', 'suspended'];
 
       for (const status of validStatuses) {
@@ -53,7 +53,7 @@ describe('Technician Model - Validation', () => {
       }
     });
 
-    it('should reject invalid status values', async () => {
+    test('should reject invalid status values', async () => {
       db.query.mockRejectedValue({
         code: '23514',
         message: 'new row for relation "technicians" violates check constraint',
@@ -66,7 +66,7 @@ describe('Technician Model - Validation', () => {
   });
 
   describe('Field Constraints', () => {
-    it('should handle missing optional fields', async () => {
+    test('should handle missing optional fields', async () => {
       db.query.mockResolvedValue({
         rows: [{ id: 1, license_number: 'TECH-001', skills: null, certifications: null }],
       });
@@ -77,7 +77,7 @@ describe('Technician Model - Validation', () => {
       expect(result.skills).toBeNull();
     });
 
-    it('should accept JSONB fields for skills and certifications', async () => {
+    test('should accept JSONB fields for skills and certifications', async () => {
       const skills = ['plumbing', 'electrical', 'hvac'];
       const certifications = [
         { name: 'Master Plumber', issued_by: 'State Board', expires_at: '2026-12-31' },
@@ -96,7 +96,7 @@ describe('Technician Model - Validation', () => {
       expect(result.certifications).toEqual(certifications);
     });
 
-    it('should accept decimal hourly_rate', async () => {
+    test('should accept decimal hourly_rate', async () => {
       db.query.mockResolvedValue({
         rows: [{ id: 1, license_number: 'TECH-001', hourly_rate: 85.50 }],
       });

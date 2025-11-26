@@ -112,4 +112,30 @@ module.exports = {
       fields: ['id', 'name', 'description', 'priority'],
     },
   },
+
+  // ============================================================================
+  // FIELD DEFINITIONS (for validation & documentation)
+  // ============================================================================
+
+  fields: {
+    // TIER 1: Universal Entity Contract Fields
+    id: { type: 'integer', readonly: true },
+    email: { type: 'string', required: true, maxLength: 255 },
+    is_active: { type: 'boolean', default: true },
+    created_at: { type: 'timestamp', readonly: true },
+    updated_at: { type: 'timestamp', readonly: true },
+
+    // TIER 2: Entity-Specific Lifecycle Field
+    status: {
+      type: 'enum',
+      values: ['pending_activation', 'active', 'suspended'],
+      default: 'active',
+    },
+
+    // Entity-specific fields
+    auth0_id: { type: 'string', maxLength: 255 },
+    first_name: { type: 'string', maxLength: 100 },
+    last_name: { type: 'string', maxLength: 100 },
+    role_id: { type: 'integer' },
+  },
 };

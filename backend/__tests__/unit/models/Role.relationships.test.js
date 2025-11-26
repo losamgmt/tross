@@ -24,7 +24,7 @@ describe("Role Model - Relationships", () => {
   });
 
   describe("getUsersByRole()", () => {
-    it("should return all active users for a role with pagination", async () => {
+    test("should return all active users for a role with pagination", async () => {
       const mockUsers = [
         {
           id: 1,
@@ -73,7 +73,7 @@ describe("Role Model - Relationships", () => {
       );
     });
 
-    it("should return empty array when no users have the role", async () => {
+    test("should return empty array when no users have the role", async () => {
       db.query
         .mockResolvedValueOnce({ rows: [{ total: "0" }] }) // count query
         .mockResolvedValueOnce({ rows: [] }); // data query
@@ -91,7 +91,7 @@ describe("Role Model - Relationships", () => {
       });
     });
 
-    it("should order users by first_name and last_name", async () => {
+    test("should order users by first_name and last_name", async () => {
       const mockUsers = [
         { id: 1, first_name: "Alice", last_name: "Anderson" },
         { id: 2, first_name: "Bob", last_name: "Brown" },
@@ -110,7 +110,7 @@ describe("Role Model - Relationships", () => {
       );
     });
 
-    it("should only return active users", async () => {
+    test("should only return active users", async () => {
       db.query
         .mockResolvedValueOnce({ rows: [{ total: "0" }] })
         .mockResolvedValueOnce({ rows: [] });
@@ -129,14 +129,14 @@ describe("Role Model - Relationships", () => {
       );
     });
 
-    it("should handle database errors", async () => {
+    test("should handle database errors", async () => {
       const dbError = new Error("Query failed");
       db.query.mockRejectedValue(dbError);
 
       await expect(Role.getUsersByRole(4)).rejects.toThrow("Query failed");
     });
 
-    it("should accept string role ID and pagination options", async () => {
+    test("should accept string role ID and pagination options", async () => {
       db.query
         .mockResolvedValueOnce({ rows: [{ total: "0" }] })
         .mockResolvedValueOnce({ rows: [] });

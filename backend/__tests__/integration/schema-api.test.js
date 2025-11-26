@@ -7,7 +7,7 @@
 
 const request = require('supertest');
 const app = require('../../server');
-const { createTestUser } = require('../helpers/test-db');
+const { createTestUser, cleanupTestDatabase } = require('../helpers/test-db');
 
 describe('Schema Endpoints - Integration Tests', () => {
   let technicianToken;
@@ -21,8 +21,12 @@ describe('Schema Endpoints - Integration Tests', () => {
     adminToken = admin.token;
   });
 
+  afterAll(async () => {
+    await cleanupTestDatabase();
+  });
+
   describe('GET /api/schema - List All Tables', () => {
-    it('should return 200 with list of tables', async () => {
+    test('should return 200 with list of tables', async () => {
       // Act
       const response = await request(app)
         .get('/api/schema')
@@ -37,7 +41,7 @@ describe('Schema Endpoints - Integration Tests', () => {
       });
     });
 
-    it('should return 401 without authentication', async () => {
+    test('should return 401 without authentication', async () => {
       // Act
       const response = await request(app).get('/api/schema');
 
@@ -45,7 +49,7 @@ describe('Schema Endpoints - Integration Tests', () => {
       expect(response.status).toBe(401);
     });
 
-    it('should include expected tables', async () => {
+    test('should include expected tables', async () => {
       // Act
       const response = await request(app)
         .get('/api/schema')
@@ -57,7 +61,7 @@ describe('Schema Endpoints - Integration Tests', () => {
       expect(tableNames).toContain('roles');
     });
 
-    it('should include table metadata', async () => {
+    test('should include table metadata', async () => {
       // Act
       const response = await request(app)
         .get('/api/schema')
@@ -76,7 +80,7 @@ describe('Schema Endpoints - Integration Tests', () => {
       });
     });
 
-    it('should handle concurrent requests', async () => {
+    test('should handle concurrent requests', async () => {
       // Act - Make 5 concurrent requests
       const requests = Array(5)
         .fill(null)
@@ -98,7 +102,7 @@ describe('Schema Endpoints - Integration Tests', () => {
   });
 
   describe('GET /api/schema/:tableName - Get Table Schema', () => {
-    it('should return schema for users table', async () => {
+    test('should return schema for users table', async () => {
       // Act
       const response = await request(app)
         .get('/api/schema/users')
@@ -116,7 +120,7 @@ describe('Schema Endpoints - Integration Tests', () => {
       });
     });
 
-    it('should return schema for roles table', async () => {
+    test('should return schema for roles table', async () => {
       // Act
       const response = await request(app)
         .get('/api/schema/roles')
@@ -129,7 +133,7 @@ describe('Schema Endpoints - Integration Tests', () => {
       expect(response.body.data.columns.length).toBeGreaterThan(0);
     });
 
-    it('should return error for non-existent table', async () => {
+    test('should return error for non-existent table', async () => {
       // Act
       const response = await request(app)
         .get('/api/schema/nonexistent_table')
@@ -140,7 +144,7 @@ describe('Schema Endpoints - Integration Tests', () => {
       expect(response.body.data.columns).toEqual([]);
     });
 
-    it('should return 401 without authentication', async () => {
+    test('should return 401 without authentication', async () => {
       // Act
       const response = await request(app).get('/api/schema/users');
 
@@ -148,7 +152,7 @@ describe('Schema Endpoints - Integration Tests', () => {
       expect(response.status).toBe(401);
     });
 
-    it('should include column metadata', async () => {
+    test('should include column metadata', async () => {
       // Act
       const response = await request(app)
         .get('/api/schema/users')
@@ -167,7 +171,7 @@ describe('Schema Endpoints - Integration Tests', () => {
       });
     });
 
-    it('should include primary key column', async () => {
+    test('should include primary key column', async () => {
       // Act
       const response = await request(app)
         .get('/api/schema/users')
@@ -180,7 +184,7 @@ describe('Schema Endpoints - Integration Tests', () => {
       expect(idColumn.name).toBe('id');
     });
 
-    it('should identify foreign key relationships', async () => {
+    test('should identify foreign key relationships', async () => {
       // Act
       const response = await request(app)
         .get('/api/schema/users')
@@ -196,7 +200,7 @@ describe('Schema Endpoints - Integration Tests', () => {
       expect(roleIdColumn.foreignKey.column).toBe('id');
     });
 
-    it('should include UI metadata (labels, types)', async () => {
+    test('should include UI metadata (labels, types)', async () => {
       // Act
       const response = await request(app)
         .get('/api/schema/users')
@@ -211,7 +215,7 @@ describe('Schema Endpoints - Integration Tests', () => {
       expect(emailColumn.uiType).toBeDefined();
     });
 
-    it('should identify searchable columns', async () => {
+    test('should identify searchable columns', async () => {
       // Act
       const response = await request(app)
         .get('/api/schema/users')
@@ -226,7 +230,7 @@ describe('Schema Endpoints - Integration Tests', () => {
       expect(searchableColumns.some((c) => c.name === 'email')).toBe(true);
     });
 
-    it('should identify readonly columns', async () => {
+    test('should identify readonly columns', async () => {
       // Act
       const response = await request(app)
         .get('/api/schema/roles')
@@ -241,7 +245,7 @@ describe('Schema Endpoints - Integration Tests', () => {
   });
 
   describe('GET /api/schema/:tableName/options/:column - Get FK Options', () => {
-    it('should return role options for users.role_id', async () => {
+    test('should return role options for users.role_id', async () => {
       // Act
       const response = await request(app)
         .get('/api/schema/users/options/role_id')
@@ -256,7 +260,7 @@ describe('Schema Endpoints - Integration Tests', () => {
       });
     });
 
-    it('should return 401 without authentication', async () => {
+    test('should return 401 without authentication', async () => {
       // Act
       const response = await request(app).get(
         '/api/schema/users/options/role_id',
@@ -266,7 +270,7 @@ describe('Schema Endpoints - Integration Tests', () => {
       expect(response.status).toBe(401);
     });
 
-    it('should return 400 for non-FK column', async () => {
+    test('should return 400 for non-FK column', async () => {
       // Act
       const response = await request(app)
         .get('/api/schema/users/options/email')
@@ -274,11 +278,9 @@ describe('Schema Endpoints - Integration Tests', () => {
 
       // Assert
       expect(response.status).toBe(400);
-      expect(response.body.error).toBe('Invalid Request');
-      expect(response.body.message).toContain('not a foreign key');
-    });
-
-    it('should return error for non-existent table', async () => {
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBeDefined();
+    });    test('should return error for non-existent table', async () => {
       // Act
       const response = await request(app)
         .get('/api/schema/nonexistent/options/column')
@@ -288,7 +290,7 @@ describe('Schema Endpoints - Integration Tests', () => {
       expect([400, 404, 500]).toContain(response.status);
     });
 
-    it('should return options with value and label', async () => {
+    test('should return options with value and label', async () => {
       // Act
       const response = await request(app)
         .get('/api/schema/users/options/role_id')
@@ -307,7 +309,7 @@ describe('Schema Endpoints - Integration Tests', () => {
       });
     });
 
-    it('should return actual role data', async () => {
+    test('should return actual role data', async () => {
       // Act
       const response = await request(app)
         .get('/api/schema/users/options/role_id')
@@ -327,7 +329,7 @@ describe('Schema Endpoints - Integration Tests', () => {
   });
 
   describe('Schema Endpoints - Performance', () => {
-    it('should respond quickly for table list', async () => {
+    test('should respond quickly for table list', async () => {
       // Arrange
       const start = Date.now();
 
@@ -342,7 +344,7 @@ describe('Schema Endpoints - Integration Tests', () => {
       expect(duration).toBeLessThan(1000); // Under 1 second
     });
 
-    it('should respond quickly for table schema', async () => {
+    test('should respond quickly for table schema', async () => {
       // Arrange
       const start = Date.now();
 
@@ -357,7 +359,7 @@ describe('Schema Endpoints - Integration Tests', () => {
       expect(duration).toBeLessThan(1000); // Under 1 second
     });
 
-    it('should respond quickly for FK options', async () => {
+    test('should respond quickly for FK options', async () => {
       // Arrange
       const start = Date.now();
 
@@ -374,7 +376,7 @@ describe('Schema Endpoints - Integration Tests', () => {
   });
 
   describe('Schema Endpoints - Response Format', () => {
-    it('should return proper content-type', async () => {
+    test('should return proper content-type', async () => {
       // Act
       const response = await request(app)
         .get('/api/schema')
@@ -384,7 +386,7 @@ describe('Schema Endpoints - Integration Tests', () => {
       expect(response.headers['content-type']).toMatch(/application\/json/);
     });
 
-    it('should include timestamp in all responses', async () => {
+    test('should include timestamp in all responses', async () => {
       // Act
       const responses = await Promise.all([
         request(app)

@@ -1,13 +1,37 @@
 /**
  * Invoice Model Metadata
+ *
+ * SRP: ONLY defines Invoice table structure and query capabilities
+ * Used by QueryBuilderService to generate dynamic queries
+ *
+ * SINGLE SOURCE OF TRUTH for Invoice model query capabilities
  */
 
 module.exports = {
+  // Table name in database
   tableName: 'invoices',
+
+  // Primary key
   primaryKey: 'id',
 
+  // ============================================================================
+  // SEARCH CONFIGURATION (Text Search with ILIKE)
+  // ============================================================================
+
+  /**
+   * Fields that support text search (ILIKE %term%)
+   * These are concatenated with OR for full-text search
+   */
   searchableFields: ['invoice_number'],
 
+  // ============================================================================
+  // FILTER CONFIGURATION (Exact Match & Operators)
+  // ============================================================================
+
+  /**
+   * Fields that can be used in WHERE clauses
+   * Supports: exact match, gt, gte, lt, lte, in, not
+   */
   filterableFields: [
     'id',
     'invoice_number',
@@ -21,6 +45,13 @@ module.exports = {
     'updated_at',
   ],
 
+  // ============================================================================
+  // SORT CONFIGURATION
+  // ============================================================================
+
+  /**
+   * Fields that can be used in ORDER BY clauses
+   */
   sortableFields: [
     'id',
     'invoice_number',
@@ -33,22 +64,34 @@ module.exports = {
     'updated_at',
   ],
 
+  /**
+   * Default sort when no sortBy specified
+   */
   defaultSort: {
     field: 'created_at',
     order: 'DESC',
   },
 
+  // ============================================================================
+  // FIELD DEFINITIONS (for validation & documentation)
+  // ============================================================================
+
   fields: {
+    // TIER 1: Universal Entity Contract Fields
     id: { type: 'integer', readonly: true },
     invoice_number: { type: 'string', required: true, maxLength: 100 },
     is_active: { type: 'boolean', default: true },
     created_at: { type: 'timestamp', readonly: true },
     updated_at: { type: 'timestamp', readonly: true },
+
+    // TIER 2: Entity-Specific Lifecycle Field
     status: {
       type: 'enum',
       values: ['draft', 'sent', 'paid', 'overdue', 'cancelled'],
       default: 'draft',
     },
+
+    // Entity-specific fields
     work_order_id: { type: 'integer' },
     customer_id: { type: 'integer', required: true },
     amount: { type: 'decimal', required: true },

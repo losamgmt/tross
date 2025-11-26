@@ -9,6 +9,7 @@ const DevAuthStrategy = require('../services/auth/DevAuthStrategy');
 const _User = require('../db/models/User');
 const { HTTP_STATUS } = require('../config/constants');
 const { logger } = require('../config/logger');
+const ResponseFormatter = require('../utils/response-formatter');
 
 const router = express.Router();
 
@@ -82,12 +83,12 @@ router.get('/token', async (req, res) => {
     // Validate role (must be one of the 5 defined roles)
     const validRoles = ['admin', 'manager', 'dispatcher', 'technician', 'customer'];
     if (!validRoles.includes(requestedRole)) {
-      return res.status(HTTP_STATUS.BAD_REQUEST).json({
-        success: false,
-        error: 'Invalid role',
-        message: `Role must be one of: ${validRoles.join(', ')}`,
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.error(
+        res,
+        'Invalid role',
+        `Role must be one of: ${validRoles.join(', ')}`,
+        HTTP_STATUS.BAD_REQUEST,
+      );
     }
 
     // Use dev strategy directly - always works regardless of AUTH_MODE
@@ -97,27 +98,31 @@ router.get('/token', async (req, res) => {
 
     logger.info(`🔧 Dev auth: Generated token for ${user.email} (${user.role})`);
 
-    res.json({
+    return res.status(HTTP_STATUS.OK).json({
       success: true,
-      token,
-      user: {
-        auth0_id: user.auth0_id,
-        email: user.email,
-        name: user.first_name + ' ' + user.last_name,
-        role: user.role,
+      data: {
+        token,
+        user: {
+          auth0_id: user.auth0_id,
+          email: user.email,
+          name: user.first_name + ' ' + user.last_name,
+          role: user.role,
+        },
+        provider: 'development',
+        expires_in: 86400,
+        instructions: 'Use this token in Authorization header: Bearer <token>',
       },
-      provider: 'development',
-      expires_in: 86400, // 24 hours (dev tokens are long-lived for convenience)
-      instructions: 'Use this token in Authorization header: Bearer <token>',
+      message: 'Test token generated successfully',
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
     logger.error('Failed to generate test token:', error);
-    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-      error: 'Failed to generate test token',
-      message: error.message,
-      timestamp: new Date().toISOString(),
-    });
+    return ResponseFormatter.error(
+      res,
+      'Failed to generate test token',
+      error.message,
+      HTTP_STATUS.INTERNAL_SERVER_ERROR,
+    );
   }
 });
 
@@ -159,17 +164,20 @@ router.get('/token', async (req, res) => {
  *                   type: string
  */
 router.get('/status', (req, res) => {
-  res.json({
-    dev_auth_enabled: true,
-    provider: 'development',
-    message: 'Dev auth always available (independent of AUTH_MODE)',
-    supported_roles: ['admin', 'manager', 'dispatcher', 'technician', 'customer'],
-    available_endpoints: [
-      'GET /api/dev/token?role=<role> - Get test token for any role (admin, manager, dispatcher, technician, customer)',
-      'GET /api/dev/status - This endpoint',
-    ],
-    note: 'Dev auth works alongside Auth0 - use for testing and internal users',
-  });
+  return ResponseFormatter.success(
+    res,
+    {
+      dev_auth_enabled: true,
+      provider: 'development',
+      supported_roles: ['admin', 'manager', 'dispatcher', 'technician', 'customer'],
+      available_endpoints: [
+        'GET /api/dev/token?role=<role> - Get test token for any role (admin, manager, dispatcher, technician, customer)',
+        'GET /api/dev/status - This endpoint',
+      ],
+      note: 'Dev auth works alongside Auth0 - use for testing and internal users',
+    },
+    'Dev auth always available (independent of AUTH_MODE)',
+  );
 });
 
 module.exports = router;

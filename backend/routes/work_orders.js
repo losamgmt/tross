@@ -15,10 +15,10 @@ const {
 } = require('../validators');
 const WorkOrder = require('../db/models/WorkOrder');
 const auditService = require('../services/audit-service');
-const { HTTP_STATUS } = require('../config/constants');
 const { getClientIp, getUserAgent } = require('../utils/request-helpers');
 const { logger } = require('../config/logger');
 const workOrderMetadata = require('../config/models/work-order-metadata');
+const ResponseFormatter = require('../utils/response-formatter');
 
 const router = express.Router();
 
@@ -27,8 +27,10 @@ const router = express.Router();
  * /api/work_orders:
  *   get:
  *     tags: [Work Orders]
- *     summary: Get all work orders
- *     description: Retrieve a paginated list of work orders. Row-level security applies based on role.
+ *     summary: Get all work orders with search, filters, and sorting
+ *     description: |
+ *       Retrieve a paginated list of work orders. Row-level security applies.
+ *       Customers see their own. Technicians see assigned. Dispatchers+ see all.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -36,32 +38,69 @@ const router = express.Router();
  *         name: page
  *         schema:
  *           type: integer
+ *           minimum: 1
  *           default: 1
+ *         description: Page number for pagination
  *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
+ *           minimum: 1
+ *           maximum: 200
  *           default: 50
+ *         description: Number of items per page
  *       - in: query
  *         name: search
  *         schema:
  *           type: string
+ *           maxLength: 255
+ *         description: Search across title and description (case-insensitive)
+ *       - in: query
+ *         name: customer_id
+ *         schema:
+ *           type: integer
+ *         description: Filter by customer ID
+ *       - in: query
+ *         name: assigned_technician_id
+ *         schema:
+ *           type: integer
+ *         description: Filter by assigned technician ID
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [pending, assigned, in_progress, completed, cancelled]
+ *         description: Filter by work order status
+ *       - in: query
+ *         name: priority
+ *         schema:
+ *           type: string
+ *           enum: [low, normal, high, urgent]
+ *         description: Filter by priority
+ *       - in: query
+ *         name: is_active
+ *         schema:
+ *           type: boolean
+ *         description: Filter by active status
  *       - in: query
  *         name: sortBy
  *         schema:
  *           type: string
+ *           enum: [id, title, priority, status, scheduled_start, scheduled_end, completed_at, created_at, updated_at]
  *           default: created_at
+ *         description: Field to sort by
  *       - in: query
  *         name: sortOrder
  *         schema:
  *           type: string
  *           enum: [asc, desc]
  *           default: DESC
+ *         description: Sort order
  *     responses:
  *       200:
  *         description: Work orders retrieved successfully
  *       403:
- *         description: Forbidden
+ *         description: Forbidden - Insufficient permissions
  */
 router.get(
   '/',
@@ -85,22 +124,15 @@ router.get(
         req,
       });
 
-      res.json({
-        success: true,
+      return ResponseFormatter.list(res, {
         data: result.data,
-        count: result.data.length,
         pagination: result.pagination,
         appliedFilters: result.appliedFilters,
         rlsApplied: result.rlsApplied,
-        timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      logger.error('Error retrieving work orders', { error: error.message });
-      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-        error: 'Internal Server Error',
-        message: 'Failed to retrieve work orders',
-        timestamp: new Date().toISOString(),
-      });
+      logger.error('Error deleting work order', { error: error.message, id });
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );
@@ -111,6 +143,7 @@ router.get(
  *   get:
  *     tags: [Work Orders]
  *     summary: Get work order by ID
+ *     description: Retrieve a single work order. Row-level security applies.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -119,13 +152,15 @@ router.get(
  *         required: true
  *         schema:
  *           type: integer
+ *           minimum: 1
+ *         description: Work order ID
  *     responses:
  *       200:
  *         description: Work order retrieved successfully
+ *       403:
+ *         description: Forbidden - Insufficient permissions
  *       404:
  *         description: Work order not found
- *       403:
- *         description: Forbidden
  */
 router.get(
   '/:id',
@@ -139,28 +174,16 @@ router.get(
       const workOrder = await WorkOrder.findById(workOrderId, req);
 
       if (!workOrder) {
-        return res.status(HTTP_STATUS.NOT_FOUND).json({
-          error: 'Not Found',
-          message: 'Work order not found',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.notFound(res, 'Work order not found');
       }
 
-      res.json({
-        success: true,
-        data: workOrder,
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.get(res, workOrder);
     } catch (error) {
       logger.error('Error retrieving work order', {
         error: error.message,
         workOrderId: req.params.id,
       });
-      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-        error: 'Internal Server Error',
-        message: 'Failed to retrieve work order',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.internalError(res, 'Failed to retrieve work order', error);
     }
   },
 );
@@ -171,7 +194,9 @@ router.get(
  *   post:
  *     tags: [Work Orders]
  *     summary: Create new work order
- *     description: Customers can create their own work orders (self-service). Dispatchers can create for any customer.
+ *     description: |
+ *       Customers can create their own work orders (self-service).
+ *       Dispatchers+ can create for any customer.
  *     security:
  *       - BearerAuth: []
  *     requestBody:
@@ -186,22 +211,30 @@ router.get(
  *             properties:
  *               title:
  *                 type: string
+ *                 maxLength: 255
  *               description:
  *                 type: string
  *               customer_id:
  *                 type: integer
+ *                 minimum: 1
  *               assigned_technician_id:
  *                 type: integer
+ *                 minimum: 1
  *               priority:
  *                 type: string
  *                 enum: [low, normal, high, urgent]
+ *                 default: normal
+ *               status:
+ *                 type: string
+ *                 enum: [pending, assigned, in_progress, completed, cancelled]
+ *                 default: pending
  *     responses:
  *       201:
  *         description: Work order created successfully
  *       400:
- *         description: Bad Request
+ *         description: Bad Request - Invalid data
  *       403:
- *         description: Forbidden
+ *         description: Forbidden - Insufficient permissions
  */
 router.post(
   '/',
@@ -219,11 +252,7 @@ router.post(
         // For customers, enforce customer_id matches their user profile
         // This prevents customers from creating work orders for other customers
         if (customer_id && customer_id !== req.dbUser.id) {
-          return res.status(HTTP_STATUS.FORBIDDEN).json({
-            error: 'Forbidden',
-            message: 'Customers can only create work orders for their own account.',
-            timestamp: new Date().toISOString(),
-          });
+          return ResponseFormatter.forbidden(res, 'Customers can only create work orders for their own account.');
         }
       }
 
@@ -247,36 +276,19 @@ router.post(
         result: 'success',
       });
 
-      res.status(HTTP_STATUS.CREATED).json({
-        success: true,
-        data: newWorkOrder,
-        message: 'Work order created successfully',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.created(res, newWorkOrder, 'Work order created successfully');
     } catch (error) {
       logger.error('Error creating work order', { error: error.message });
 
       if (error.code === '23505') {
-        return res.status(HTTP_STATUS.CONFLICT).json({
-          error: 'Conflict',
-          message: 'Work order with this identifier already exists',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.conflict(res, 'Work order with this identifier already exists');
       }
 
       if (error.code === '23514') {
-        return res.status(HTTP_STATUS.BAD_REQUEST).json({
-          error: 'Bad Request',
-          message: 'Invalid field value - check status, priority and other enum fields',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.badRequest(res, 'Invalid field value - check status, priority and other enum fields');
       }
 
-      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-        error: 'Internal Server Error',
-        message: 'Failed to create work order',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.internalError(res, 'Failed to create work order', error);
     }
   },
 );
@@ -287,7 +299,10 @@ router.post(
  *   patch:
  *     tags: [Work Orders]
  *     summary: Update work order
- *     description: Customers can update/cancel their own work orders. Technicians can update assigned work orders. Dispatchers can update any.
+ *     description: |
+ *       Customers can update/cancel their own work orders.
+ *       Technicians can update assigned work orders.
+ *       Dispatchers+ can update any.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -296,19 +311,37 @@ router.post(
  *         required: true
  *         schema:
  *           type: integer
+ *           minimum: 1
+ *         description: Work order ID
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 maxLength: 255
+ *               description:
+ *                 type: string
+ *               assigned_technician_id:
+ *                 type: integer
+ *               priority:
+ *                 type: string
+ *                 enum: [low, normal, high, urgent]
+ *               status:
+ *                 type: string
+ *                 enum: [pending, assigned, in_progress, completed, cancelled]
+ *               is_active:
+ *                 type: boolean
  *     responses:
  *       200:
  *         description: Work order updated successfully
  *       400:
- *         description: Bad Request
+ *         description: Bad Request - Invalid data
  *       403:
- *         description: Forbidden
+ *         description: Forbidden - Insufficient permissions
  *       404:
  *         description: Work order not found
  */
@@ -316,6 +349,7 @@ router.patch(
   '/:id',
   authenticateToken,
   requirePermission('work_orders', 'update'),
+  enforceRLS('work_orders'),
   validateIdParam(),
   validateWorkOrderUpdate,
   async (req, res) => {
@@ -326,32 +360,20 @@ router.patch(
 
       const workOrder = await WorkOrder.findById(workOrderId);
       if (!workOrder) {
-        return res.status(HTTP_STATUS.NOT_FOUND).json({
-          error: 'Not Found',
-          message: 'Work order not found',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.notFound(res, 'Work order not found');
       }
 
       // Row-level security: Ensure user has access to update this work order
       // Customer role: can only update their own work orders
       if (req.dbUser && req.dbUser.role === 'customer') {
         if (workOrder.customer_id !== req.dbUser.id) {
-          return res.status(HTTP_STATUS.FORBIDDEN).json({
-            error: 'Forbidden',
-            message: 'You can only update your own work orders.',
-            timestamp: new Date().toISOString(),
-          });
+          return ResponseFormatter.forbidden(res, 'You can only update your own work orders.');
         }
       }
       // Technician role: can only update assigned work orders
       if (req.dbUser && req.dbUser.role === 'technician') {
         if (workOrder.assigned_technician_id !== req.dbUser.id) {
-          return res.status(HTTP_STATUS.FORBIDDEN).json({
-            error: 'Forbidden',
-            message: 'You can only update work orders assigned to you.',
-            timestamp: new Date().toISOString(),
-          });
+          return ResponseFormatter.forbidden(res, 'You can only update work orders assigned to you.');
         }
       }
 
@@ -370,12 +392,7 @@ router.patch(
         result: 'success',
       });
 
-      res.json({
-        success: true,
-        data: updatedWorkOrder,
-        message: 'Work order updated successfully',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.updated(res, updatedWorkOrder, 'Work order updated successfully');
     } catch (error) {
       logger.error('Error updating work order', {
         error: error.message,
@@ -383,26 +400,14 @@ router.patch(
       });
 
       if (error.code === '23505') {
-        return res.status(HTTP_STATUS.CONFLICT).json({
-          error: 'Conflict',
-          message: 'Work order with this identifier already exists',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.conflict(res, 'Work order with this identifier already exists');
       }
 
       if (error.code === '23514') {
-        return res.status(HTTP_STATUS.BAD_REQUEST).json({
-          error: 'Bad Request',
-          message: 'Invalid field value - check status, priority and other enum fields',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.badRequest(res, 'Invalid field value - check status, priority and other enum fields');
       }
 
-      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-        error: 'Internal Server Error',
-        message: 'Failed to update work order',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.internalError(res, 'Failed to update work order', error);
     }
   },
 );
@@ -413,7 +418,10 @@ router.patch(
  *   delete:
  *     tags: [Work Orders]
  *     summary: Delete work order (manager+ only)
- *     description: Hard delete a work order. Customers can only cancel (status change), not delete.
+ *     description: |
+ *       Permanently delete a work order.
+ *       Customers can only cancel (status change), not delete.
+ *       To deactivate instead, use PATCH with is_active=false.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -422,6 +430,8 @@ router.patch(
  *         required: true
  *         schema:
  *           type: integer
+ *           minimum: 1
+ *         description: Work order ID
  *     responses:
  *       200:
  *         description: Work order deleted successfully
@@ -443,11 +453,7 @@ router.delete(
 
       const workOrder = await WorkOrder.findById(workOrderId);
       if (!workOrder) {
-        return res.status(HTTP_STATUS.NOT_FOUND).json({
-          error: 'Not Found',
-          message: 'Work order not found',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.notFound(res, 'Work order not found');
       }
 
       await WorkOrder.delete(workOrderId);
@@ -463,21 +469,13 @@ router.delete(
         result: 'success',
       });
 
-      res.json({
-        success: true,
-        message: 'Work order deleted successfully',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.deleted(res, 'Work order deleted successfully');
     } catch (error) {
       logger.error('Error deleting work order', {
         error: error.message,
         workOrderId: req.params.id,
       });
-      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-        error: 'Internal Server Error',
-        message: 'Failed to delete work order',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.internalError(res, 'Failed to delete work order', error);
     }
   },
 );

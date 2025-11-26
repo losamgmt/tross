@@ -9,6 +9,7 @@
     "test:integration": "jest --config jest.config.integration.json",
     "test:all": "jest",
     "dev": "node server.js",
+    "dev:railway": "cross-env DB_ENV=railway node server.js",
     "start": "node server.js",
     "health": "node scripts/test-db-connection.js",
     "build": "echo 'Backend build: copying files and preparing for production'",

@@ -84,31 +84,31 @@ describe('User Model - RLS Tests', () => {
   });
 
   describe('_buildRLSFilter()', () => {
-    it('should return no filter when req is null', () => {
+    test('should return no filter when req is null', () => {
       const result = User._buildRLSFilter(null);
       expect(result).toEqual({ clause: '', values: [], applied: false });
     });
 
-    it('should return no filter when rlsPolicy is missing', () => {
+    test('should return no filter when rlsPolicy is missing', () => {
       const req = { rlsUserId: 99 };
       const result = User._buildRLSFilter(req);
       expect(result).toEqual({ clause: '', values: [], applied: false });
     });
 
-    it('should return security failsafe (1=0) for unknown policy', () => {
+    test('should return security failsafe (1=0) for unknown policy', () => {
       const req = { rlsPolicy: 'unknown_policy', rlsUserId: 42 };
       const result = User._buildRLSFilter(req);
       expect(result.clause).toBe('1=0');
       expect(result.applied).toBe(true);
     });
 
-    it('should return no filter for all_records policy', () => {
+    test('should return no filter for all_records policy', () => {
       const req = { rlsPolicy: 'all_records', rlsUserId: 5 };
       const result = User._buildRLSFilter(req);
       expect(result).toEqual({ clause: '', values: [], applied: true });
     });
 
-    it('should return user filter for own_record_only policy', () => {
+    test('should return user filter for own_record_only policy', () => {
       const req = { rlsPolicy: 'own_record_only', rlsUserId: 99 };
       const result = User._buildRLSFilter(req);
       expect(result.clause).toBe('u.id = $1');
@@ -116,7 +116,7 @@ describe('User Model - RLS Tests', () => {
       expect(result.applied).toBe(true);
     });
 
-    it('should return security failsafe when userId missing for own_record_only', () => {
+    test('should return security failsafe when userId missing for own_record_only', () => {
       const req = { rlsPolicy: 'own_record_only' };
       const result = User._buildRLSFilter(req);
       expect(result.clause).toBe('1=0');
@@ -125,7 +125,7 @@ describe('User Model - RLS Tests', () => {
   });
 
   describe('_applyRLSFilter()', () => {
-    it('should return existing WHERE unchanged when no RLS policy', () => {
+    test('should return existing WHERE unchanged when no RLS policy', () => {
       const req = null;
       const result = User._applyRLSFilter(req, 'u.is_active = $1', [true]);
       expect(result.whereClause).toBe('u.is_active = $1');
@@ -133,7 +133,7 @@ describe('User Model - RLS Tests', () => {
       expect(result.rlsApplied).toBe(false);
     });
 
-    it('should return existing WHERE unchanged for all_records policy', () => {
+    test('should return existing WHERE unchanged for all_records policy', () => {
       const req = { rlsPolicy: 'all_records', rlsUserId: 5 };
       const result = User._applyRLSFilter(req, 'WHERE u.is_active = $1', [true]);
       expect(result.whereClause).toBe('WHERE u.is_active = $1');
@@ -141,7 +141,7 @@ describe('User Model - RLS Tests', () => {
       expect(result.rlsApplied).toBe(true);
     });
 
-    it('should add user RLS filter when no existing WHERE clause', () => {
+    test('should add user RLS filter when no existing WHERE clause', () => {
       const req = { rlsPolicy: 'own_record_only', rlsUserId: 99 };
       const result = User._applyRLSFilter(req, '', []);
       expect(result.whereClause).toBe('WHERE u.id = $1');
@@ -149,7 +149,7 @@ describe('User Model - RLS Tests', () => {
       expect(result.rlsApplied).toBe(true);
     });
 
-    it('should combine user RLS with existing WHERE clause', () => {
+    test('should combine user RLS with existing WHERE clause', () => {
       const req = { rlsPolicy: 'own_record_only', rlsUserId: 99 };
       const result = User._applyRLSFilter(req, 'WHERE u.is_active = $1', [true]);
       expect(result.whereClause).toBe('WHERE u.is_active = $1 AND u.id = $2');
@@ -157,7 +157,7 @@ describe('User Model - RLS Tests', () => {
       expect(result.rlsApplied).toBe(true);
     });
 
-    it('should adjust parameter placeholders correctly', () => {
+    test('should adjust parameter placeholders correctly', () => {
       const req = { rlsPolicy: 'own_record_only', rlsUserId: 99 };
       const result = User._applyRLSFilter(req, 'u.is_active = $1 AND u.role_id = $2', [true, 2]);
       expect(result.whereClause).toBe('WHERE u.is_active = $1 AND u.role_id = $2 AND u.id = $3');
@@ -167,7 +167,7 @@ describe('User Model - RLS Tests', () => {
   });
 
   describe('findById() with RLS', () => {
-    it('should work without RLS context', async () => {
+    test('should work without RLS context', async () => {
       const mockUser = { id: 1, email: 'user@example.com', role: 'customer' };
       db.query.mockResolvedValueOnce({ rows: [mockUser] });
 
@@ -180,7 +180,7 @@ describe('User Model - RLS Tests', () => {
       );
     });
 
-    it('should apply all_records RLS policy (no filtering)', async () => {
+    test('should apply all_records RLS policy (no filtering)', async () => {
       const mockUser = { id: 1, email: 'user@example.com', role: 'customer' };
       db.query.mockResolvedValueOnce({ rows: [mockUser] });
 
@@ -194,7 +194,7 @@ describe('User Model - RLS Tests', () => {
       );
     });
 
-    it('should apply own_record_only RLS policy (customer)', async () => {
+    test('should apply own_record_only RLS policy (customer)', async () => {
       const mockUser = { id: 99, email: 'customer@example.com', role: 'customer' };
       db.query.mockResolvedValueOnce({ rows: [mockUser] });
 
@@ -208,7 +208,7 @@ describe('User Model - RLS Tests', () => {
       );
     });
 
-    it('should return null when customer RLS blocks access', async () => {
+    test('should return null when customer RLS blocks access', async () => {
       db.query.mockResolvedValueOnce({ rows: [] });
 
       const req = { rlsPolicy: 'own_record_only', rlsUserId: 999 };
@@ -219,7 +219,7 @@ describe('User Model - RLS Tests', () => {
   });
 
   describe('findAll() with RLS', () => {
-    it('should work without RLS context', async () => {
+    test('should work without RLS context', async () => {
       const mockUsers = [
         { id: 1, email: 'user1@example.com', role: 'customer' },
         { id: 2, email: 'user2@example.com', role: 'technician' },
@@ -233,7 +233,7 @@ describe('User Model - RLS Tests', () => {
       expect(result.rlsApplied).toBe(false);
     });
 
-    it('should apply all_records RLS policy (no filtering)', async () => {
+    test('should apply all_records RLS policy (no filtering)', async () => {
       const mockUsers = [
         { id: 1, email: 'user1@example.com', role: 'customer' },
         { id: 2, email: 'user2@example.com', role: 'technician' },
@@ -248,7 +248,7 @@ describe('User Model - RLS Tests', () => {
       expect(result.rlsApplied).toBe(true);
     });
 
-    it('should apply own_record_only RLS policy (customer)', async () => {
+    test('should apply own_record_only RLS policy (customer)', async () => {
       const mockUsers = [{ id: 99, email: 'customer@example.com', role: 'customer' }];
       db.query.mockResolvedValueOnce({ rows: [{ total: '1' }] });
       db.query.mockResolvedValueOnce({ rows: mockUsers });
@@ -264,7 +264,7 @@ describe('User Model - RLS Tests', () => {
       expect(countQuery).toContain('u.id = $');
     });
 
-    it('should combine customer RLS with filters', async () => {
+    test('should combine customer RLS with filters', async () => {
       const mockUsers = [{ id: 99, email: 'customer@example.com', role: 'customer', is_active: true }];
       db.query.mockResolvedValueOnce({ rows: [{ total: '1' }] });
       db.query.mockResolvedValueOnce({ rows: mockUsers });

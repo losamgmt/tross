@@ -6,6 +6,7 @@
 const express = require('express');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
 const { enforceRLS } = require('../middleware/row-level-security');
+const ResponseFormatter = require('../utils/response-formatter');
 const {
   validateInventoryCreate,
   validateInventoryUpdate,
@@ -15,7 +16,6 @@ const {
 } = require('../validators');
 const Inventory = require('../db/models/Inventory');
 const auditService = require('../services/audit-service');
-const { HTTP_STATUS } = require('../config/constants');
 const { getClientIp, getUserAgent } = require('../utils/request-helpers');
 const { logger } = require('../config/logger');
 const inventoryMetadata = require('../config/models/inventory-metadata');
@@ -27,10 +27,57 @@ const router = express.Router();
  * /api/inventory:
  *   get:
  *     tags: [Inventory]
- *     summary: Get all inventory items
+ *     summary: Get all inventory items with search, filters, and sorting
  *     description: Technicians and above can view all inventory. No row-level security.
  *     security:
  *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 200
+ *           default: 50
+ *         description: Number of items per page
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *           maxLength: 255
+ *         description: Search across name, sku, and description (case-insensitive)
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [in_stock, low_stock, out_of_stock, discontinued]
+ *         description: Filter by inventory status
+ *       - in: query
+ *         name: is_active
+ *         schema:
+ *           type: boolean
+ *         description: Filter by active status
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [id, name, sku, status, quantity, unit_cost, created_at, updated_at]
+ *           default: created_at
+ *         description: Field to sort by
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: DESC
+ *         description: Sort order
  *     responses:
  *       200:
  *         description: Inventory retrieved successfully
@@ -59,26 +106,44 @@ router.get(
         req,
       });
 
-      res.json({
-        success: true,
+      return ResponseFormatter.list(res, {
         data: result.data,
-        count: result.data.length,
         pagination: result.pagination,
         appliedFilters: result.appliedFilters,
         rlsApplied: result.rlsApplied,
-        timestamp: new Date().toISOString(),
       });
     } catch (error) {
       logger.error('Error retrieving inventory', { error: error.message });
-      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-        error: 'Internal Server Error',
-        message: 'Failed to retrieve inventory',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.internalError(res, 'Failed to retrieve inventory');
     }
   },
 );
 
+/**
+ * @openapi
+ * /api/inventory/{id}:
+ *   get:
+ *     tags: [Inventory]
+ *     summary: Get inventory item by ID
+ *     description: Retrieve a single inventory item. Technician+ access required.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *         description: Inventory item ID
+ *     responses:
+ *       200:
+ *         description: Inventory item retrieved successfully
+ *       403:
+ *         description: Forbidden - Technician+ access required
+ *       404:
+ *         description: Inventory item not found
+ */
 router.get(
   '/:id',
   authenticateToken,
@@ -91,28 +156,16 @@ router.get(
       const inventory = await Inventory.findById(inventoryId, req);
 
       if (!inventory) {
-        return res.status(HTTP_STATUS.NOT_FOUND).json({
-          error: 'Not Found',
-          message: 'Inventory item not found',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.notFound(res, 'Inventory item not found');
       }
 
-      res.json({
-        success: true,
-        data: inventory,
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.get(res, inventory);
     } catch (error) {
       logger.error('Error retrieving inventory item', {
         error: error.message,
         inventoryId: req.params.id,
       });
-      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-        error: 'Internal Server Error',
-        message: 'Failed to retrieve inventory item',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.internalError(res, 'Failed to retrieve inventory item');
     }
   },
 );
@@ -187,36 +240,20 @@ router.post(
         result: 'success',
       });
 
-      res.status(HTTP_STATUS.CREATED).json({
-        success: true,
-        data: newInventory,
-        message: 'Inventory item created successfully',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.created(res, newInventory, 'Inventory item created successfully');
     } catch (error) {
-      logger.error('Error creating inventory item', { error: error.message });
+      logger.error('Error creating inventory item', { error: error.message, code: error.code });
 
+      // Handle unique constraint violation (duplicate SKU)
       if (error.code === '23505') {
-        return res.status(HTTP_STATUS.CONFLICT).json({
-          error: 'Conflict',
-          message: 'SKU already exists',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.conflict(res, 'SKU already exists');
       }
 
       if (error.code === '23514') {
-        return res.status(HTTP_STATUS.BAD_REQUEST).json({
-          error: 'Bad Request',
-          message: 'Invalid field value - check status and other enum fields',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.badRequest(res, 'Invalid field value - check status and other enum fields');
       }
 
-      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-        error: 'Internal Server Error',
-        message: 'Failed to create inventory item',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.internalError(res, 'Failed to create inventory item');
     }
   },
 );
@@ -270,6 +307,7 @@ router.patch(
   '/:id',
   authenticateToken,
   requirePermission('inventory', 'update'),
+  enforceRLS('inventory'),
   validateIdParam(),
   validateInventoryUpdate,
   async (req, res) => {
@@ -280,11 +318,7 @@ router.patch(
 
       const inventory = await Inventory.findById(inventoryId);
       if (!inventory) {
-        return res.status(HTTP_STATUS.NOT_FOUND).json({
-          error: 'Not Found',
-          message: 'Inventory item not found',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.notFound(res, 'Inventory item not found');
       }
 
       await Inventory.update(inventoryId, req.body);
@@ -302,12 +336,7 @@ router.patch(
         result: 'success',
       });
 
-      res.json({
-        success: true,
-        data: updatedInventory,
-        message: 'Inventory item updated successfully',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.updated(res, updatedInventory, 'Inventory item updated successfully');
     } catch (error) {
       logger.error('Error updating inventory item', {
         error: error.message,
@@ -315,26 +344,14 @@ router.patch(
       });
 
       if (error.code === '23505') {
-        return res.status(HTTP_STATUS.CONFLICT).json({
-          error: 'Conflict',
-          message: 'SKU already exists',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.conflict(res, 'SKU already exists');
       }
 
       if (error.code === '23514') {
-        return res.status(HTTP_STATUS.BAD_REQUEST).json({
-          error: 'Bad Request',
-          message: 'Invalid field value - check status and other enum fields',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.badRequest(res, 'Invalid field value - check status and other enum fields');
       }
 
-      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-        error: 'Internal Server Error',
-        message: 'Failed to update inventory item',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.internalError(res, 'Failed to update inventory item');
     }
   },
 );
@@ -345,7 +362,9 @@ router.patch(
  *   delete:
  *     tags: [Inventory]
  *     summary: Delete inventory item (manager+ only)
- *     description: Soft delete an inventory item (sets is_active=false). Manager+ access required.
+ *     description: |
+ *       Permanently delete an inventory item.
+ *       To deactivate instead, use PATCH with is_active=false.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -354,6 +373,7 @@ router.patch(
  *         required: true
  *         schema:
  *           type: integer
+ *           minimum: 1
  *         description: Inventory item ID
  *     responses:
  *       200:
@@ -376,11 +396,7 @@ router.delete(
 
       const inventory = await Inventory.findById(inventoryId);
       if (!inventory) {
-        return res.status(HTTP_STATUS.NOT_FOUND).json({
-          error: 'Not Found',
-          message: 'Inventory item not found',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.notFound(res, 'Inventory item not found');
       }
 
       await Inventory.delete(inventoryId);
@@ -396,21 +412,13 @@ router.delete(
         result: 'success',
       });
 
-      res.json({
-        success: true,
-        message: 'Inventory item deleted successfully',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.deleted(res, 'Inventory item deleted successfully');
     } catch (error) {
       logger.error('Error deleting inventory item', {
         error: error.message,
         inventoryId: req.params.id,
       });
-      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-        error: 'Internal Server Error',
-        message: 'Failed to delete inventory item',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.internalError(res, 'Failed to delete inventory item');
     }
   },
 );

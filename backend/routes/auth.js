@@ -2,13 +2,13 @@
 const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
 const { refreshLimiter } = require('../middleware/rate-limit');
+const ResponseFormatter = require('../utils/response-formatter');
 const User = require('../db/models/User');
 const _Role = require('../db/models/Role');
 const _userDataService = require('../services/user-data');
 const _crypto = require('crypto');
 const tokenService = require('../services/token-service');
 const auditService = require('../services/audit-service');
-const { HTTP_STATUS } = require('../config/constants');
 const {
   validateProfileUpdate,
   validateRefreshToken,
@@ -70,21 +70,13 @@ router.get('/me', authenticateToken, async (req, res) => {
       name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'User',
     };
 
-    res.json({
-      success: true,
-      data: formattedUser,
-      timestamp: new Date().toISOString(),
-    });
+    return ResponseFormatter.get(res, formattedUser);
   } catch (error) {
     logger.error('Error getting user profile', {
       error: error.message,
       userId: req.user?.userId,
     });
-    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-      error: 'Internal Server Error',
-      message: 'Failed to get user profile',
-      timestamp: new Date().toISOString(),
-    });
+    return ResponseFormatter.internalError(res, error);
   }
 });
 
@@ -142,11 +134,7 @@ router.put(
     try {
       const dbUser = await User.findByAuth0Id(req.user.sub);
       if (!dbUser) {
-        return res.status(HTTP_STATUS.NOT_FOUND).json({
-          error: 'User not found',
-          message: 'User profile not found',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.notFound(res, `User not found for Auth0 ID: ${req.user.sub}`);
       }
 
       // Only allow updating certain fields
@@ -160,32 +148,19 @@ router.put(
       });
 
       if (Object.keys(updates).length === 0) {
-        return res.status(400).json({
-          error: 'Bad Request',
-          message: 'No valid fields to update',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.badRequest(res, 'No valid fields to update');
       }
 
       await User.update(dbUser.id, updates);
       const updatedUser = await User.findByAuth0Id(req.user.sub);
 
-      res.json({
-        success: true,
-        data: updatedUser,
-        message: 'Profile updated successfully',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.updated(res, updatedUser, 'Profile updated successfully');
     } catch (error) {
       logger.error('Error updating user profile', {
         error: error.message,
         userId: req.user?.userId,
       });
-      res.status(500).json({
-        error: 'Internal Server Error',
-        message: 'Failed to update user profile',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );
@@ -262,11 +237,7 @@ router.post(
         userAgent,
       });
 
-      res.json({
-        success: true,
-        data: tokens,
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.get(res, tokens);
     } catch (error) {
       logger.error('Error refreshing token', {
         error: error.message,
@@ -274,17 +245,11 @@ router.post(
       });
 
       // Return appropriate error based on failure reason
-      const status = error.message.includes('expired')
-        ? HTTP_STATUS.UNAUTHORIZED
-        : HTTP_STATUS.BAD_REQUEST;
-
-      res.status(status).json({
-        error: error.message.includes('expired')
-          ? 'Token Expired'
-          : 'Invalid Token',
-        message: error.message,
-        timestamp: new Date().toISOString(),
-      });
+      if (error.message.includes('expired')) {
+        return ResponseFormatter.unauthorized(res, 'Token expired');
+      } else {
+        return ResponseFormatter.badRequest(res, error.message);
+      }
     }
   });
 
@@ -338,22 +303,14 @@ router.post('/logout', authenticateToken, async (req, res) => {
       userAgent,
     });
 
-    res.json({
-      success: true,
-      message: 'Logged out successfully',
-      timestamp: new Date().toISOString(),
-    });
+    return ResponseFormatter.deleted(res, 'Logged out successfully');
   } catch (error) {
     logger.error('Error during logout', {
       error: error.message,
       userId: req.user?.userId || req.user?.sub,
       tokenId: req.user?.tokenId,
     });
-    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-      error: 'Internal Server Error',
-      message: 'Failed to logout',
-      timestamp: new Date().toISOString(),
-    });
+    return ResponseFormatter.internalError(res, error);
   }
 });
 
@@ -409,22 +366,13 @@ router.post('/logout-all', authenticateToken, async (req, res) => {
       result: 'success',
     });
 
-    res.json({
-      success: true,
-      message: `Logged out from ${count} device(s)`,
-      data: { tokensRevoked: count },
-      timestamp: new Date().toISOString(),
-    });
+    return ResponseFormatter.updated(res, { tokensRevoked: count }, `Logged out from ${count} device(s)`);
   } catch (error) {
     logger.error('Error during logout-all', {
       error: error.message,
       userId: req.user?.userId,
     });
-    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-      error: 'Internal Server Error',
-      message: 'Failed to logout from all devices',
-      timestamp: new Date().toISOString(),
-    });
+    return ResponseFormatter.internalError(res, error);
   }
 });
 
@@ -472,21 +420,13 @@ router.get('/sessions', authenticateToken, async (req, res) => {
       isCurrent: false, // Frontend can determine this by comparing creation time
     }));
 
-    res.json({
-      success: true,
-      data: sessions,
-      timestamp: new Date().toISOString(),
-    });
+    return ResponseFormatter.get(res, sessions);
   } catch (error) {
     logger.error('Error getting sessions', {
       error: error.message,
       userId: req.user?.userId,
     });
-    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-      error: 'Internal Server Error',
-      message: 'Failed to get active sessions',
-      timestamp: new Date().toISOString(),
-    });
+    return ResponseFormatter.internalError(res, error);
   }
 });
 

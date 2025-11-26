@@ -21,7 +21,7 @@ describe('Validation Logger', () => {
   });
 
   describe('logValidationFailure', () => {
-    it('should log validation failure at warning level', () => {
+    test('should log validation failure at warning level', () => {
       // Arrange
       const params = {
         validator: 'toSafeInteger',
@@ -50,7 +50,7 @@ describe('Validation Logger', () => {
       );
     });
 
-    it('should stringify object values', () => {
+    test('should stringify object values', () => {
       // Arrange
       const params = {
         validator: 'test',
@@ -72,7 +72,7 @@ describe('Validation Logger', () => {
       );
     });
 
-    it('should work without context', () => {
+    test('should work without context', () => {
       // Arrange
       const params = {
         validator: 'test',
@@ -96,7 +96,7 @@ describe('Validation Logger', () => {
       process.env.NODE_ENV = originalEnv;
     });
 
-    it('should log type coercion in development', () => {
+    test('should log type coercion in development', () => {
       // Arrange
       process.env.NODE_ENV = 'development';
       const params = {
@@ -126,7 +126,7 @@ describe('Validation Logger', () => {
       );
     });
 
-    it('should not log in production', () => {
+    test('should not log in production', () => {
       // Arrange
       process.env.NODE_ENV = 'production';
       const params = {
@@ -145,7 +145,7 @@ describe('Validation Logger', () => {
       expect(logger.info).not.toHaveBeenCalled();
     });
 
-    it('should not log in test env', () => {
+    test('should not log in test env', () => {
       // Arrange
       process.env.NODE_ENV = 'test';
       const params = {
@@ -164,7 +164,7 @@ describe('Validation Logger', () => {
       expect(logger.info).not.toHaveBeenCalled();
     });
 
-    it('should stringify object values', () => {
+    test('should stringify object values', () => {
       // Arrange
       process.env.NODE_ENV = 'development';
       const params = {
@@ -191,7 +191,7 @@ describe('Validation Logger', () => {
   });
 
   describe('logValidationSuccess', () => {
-    it('should log success at debug level', () => {
+    test('should log success at debug level', () => {
       // Arrange
       const params = {
         validator: 'toSafeInteger',

@@ -8,6 +8,7 @@
 const request = require('supertest');
 const app = require('../../server');
 const { createTestUser, cleanupTestDatabase } = require('../helpers/test-db');
+const { TEST_PAGINATION } = require('../../config/test-constants');
 const Role = require('../../db/models/Role');
 
 describe('Roles CRUD API - Integration Tests', () => {
@@ -29,22 +30,22 @@ describe('Roles CRUD API - Integration Tests', () => {
   });
 
   describe('GET /api/roles - List Roles', () => {
-    it('should return 401 without authentication', async () => {
+    test('should return 401 without authentication', async () => {
       const response = await request(app).get('/api/roles');
       expect(response.status).toBe(401);
     });
 
-    it('should allow authenticated users to read roles', async () => {
+    test('should allow authenticated users to read roles', async () => {
       const response = await request(app)
-        .get('/api/roles?page=1&limit=10')
+        .get(`/api/roles?page=${TEST_PAGINATION.DEFAULT_PAGE}&limit=${TEST_PAGINATION.DEFAULT_LIMIT}`)
         .set('Authorization', `Bearer ${technicianToken}`);
 
       expect([200, 403]).toContain(response.status);
     });
 
-    it('should return paginated role list', async () => {
+    test('should return paginated role list', async () => {
       const response = await request(app)
-        .get('/api/roles?page=1&limit=10')
+        .get(`/api/roles?page=${TEST_PAGINATION.DEFAULT_PAGE}&limit=${TEST_PAGINATION.DEFAULT_LIMIT}`)
         .set('Authorization', `Bearer ${adminToken}`);
 
       expect(response.status).toBe(200);
@@ -60,9 +61,9 @@ describe('Roles CRUD API - Integration Tests', () => {
       });
     });
 
-    it('should include role data in list', async () => {
+    test('should include role data in list', async () => {
       const response = await request(app)
-        .get('/api/roles?page=1&limit=10')
+        .get(`/api/roles?page=${TEST_PAGINATION.DEFAULT_PAGE}&limit=${TEST_PAGINATION.DEFAULT_LIMIT}`)
         .set('Authorization', `Bearer ${adminToken}`);
 
       const roles = response.body.data;
@@ -76,7 +77,7 @@ describe('Roles CRUD API - Integration Tests', () => {
       });
     });
 
-    it('should support pagination parameters', async () => {
+    test('should support pagination parameters', async () => {
       const response = await request(app)
         .get('/api/roles?page=1&limit=3')
         .set('Authorization', `Bearer ${adminToken}`);
@@ -89,9 +90,9 @@ describe('Roles CRUD API - Integration Tests', () => {
       expect(response.body.data.length).toBeLessThanOrEqual(3);
     });
 
-    it('should support sorting', async () => {
+    test('should support sorting', async () => {
       const response = await request(app)
-        .get('/api/roles?page=1&limit=10&sortBy=name&sortOrder=ASC')
+        .get(`/api/roles?page=${TEST_PAGINATION.DEFAULT_PAGE}&limit=${TEST_PAGINATION.DEFAULT_LIMIT}&sortBy=name&sortOrder=ASC`)
         .set('Authorization', `Bearer ${adminToken}`);
 
       expect(response.status).toBe(200);
@@ -104,12 +105,12 @@ describe('Roles CRUD API - Integration Tests', () => {
   });
 
   describe('GET /api/roles/:id - Get Role by ID', () => {
-    it('should return 401 without authentication', async () => {
+    test('should return 401 without authentication', async () => {
       const response = await request(app).get('/api/roles/1');
       expect(response.status).toBe(401);
     });
 
-    it('should return role by ID', async () => {
+    test('should return role by ID', async () => {
       // Get a valid role ID first
       const listResponse = await request(app)
         .get('/api/roles?page=1&limit=1')
@@ -136,7 +137,7 @@ describe('Roles CRUD API - Integration Tests', () => {
       }
     });
 
-    it('should return 404 for non-existent role', async () => {
+    test('should return 404 for non-existent role', async () => {
       const response = await request(app)
         .get('/api/roles/99999')
         .set('Authorization', `Bearer ${adminToken}`);
@@ -144,7 +145,7 @@ describe('Roles CRUD API - Integration Tests', () => {
       expect([400, 404]).toContain(response.status);
     });
 
-    it('should return 400 for invalid ID format', async () => {
+    test('should return 400 for invalid ID format', async () => {
       const response = await request(app)
         .get('/api/roles/invalid')
         .set('Authorization', `Bearer ${adminToken}`);
@@ -154,12 +155,12 @@ describe('Roles CRUD API - Integration Tests', () => {
   });
 
   describe('GET /api/roles/:id/users - Get Users by Role', () => {
-    it('should return 401 without authentication', async () => {
+    test('should return 401 without authentication', async () => {
       const response = await request(app).get('/api/roles/1/users');
       expect(response.status).toBe(401);
     });
 
-    it('should return users for a role', async () => {
+    test('should return users for a role', async () => {
       // Get a valid role ID
       const listResponse = await request(app)
         .get('/api/roles?page=1&limit=1')
@@ -169,7 +170,7 @@ describe('Roles CRUD API - Integration Tests', () => {
 
       const roleId = listResponse.body.data[0].id;
       const response = await request(app)
-        .get(`/api/roles/${roleId}/users?page=1&limit=10`)
+        .get(`/api/roles/${roleId}/users?page=${TEST_PAGINATION.DEFAULT_PAGE}&limit=${TEST_PAGINATION.DEFAULT_LIMIT}`)
         .set('Authorization', `Bearer ${adminToken}`);
 
       expect([200, 400]).toContain(response.status);
@@ -191,7 +192,7 @@ describe('Roles CRUD API - Integration Tests', () => {
       testRoleName = `test-role-${Date.now()}`;
     });
 
-    it('should return 401 without authentication', async () => {
+    test('should return 401 without authentication', async () => {
       const response = await request(app)
         .post('/api/roles')
         .send({ name: testRoleName, priority: 50 });
@@ -199,7 +200,7 @@ describe('Roles CRUD API - Integration Tests', () => {
       expect(response.status).toBe(401);
     });
 
-    it('should return 403 for non-admin users', async () => {
+    test('should return 403 for non-admin users', async () => {
       const response = await request(app)
         .post('/api/roles')
         .set('Authorization', `Bearer ${technicianToken}`)
@@ -208,7 +209,7 @@ describe('Roles CRUD API - Integration Tests', () => {
       expect(response.status).toBe(403);
     });
 
-    it('should create role with valid data', async () => {
+    test('should create role with valid data', async () => {
       const roleData = {
         name: testRoleName,
         priority: 50,
@@ -232,7 +233,7 @@ describe('Roles CRUD API - Integration Tests', () => {
       });
     });
 
-    it('should reject duplicate role name', async () => {
+    test('should reject duplicate role name', async () => {
       // Create role first
       await request(app)
         .post('/api/roles')
@@ -254,7 +255,7 @@ describe('Roles CRUD API - Integration Tests', () => {
       expect([400, 409]).toContain(response.status);
     });
 
-    it('should reject missing required fields', async () => {
+    test('should reject missing required fields', async () => {
       const response = await request(app)
         .post('/api/roles')
         .set('Authorization', `Bearer ${adminToken}`)
@@ -265,7 +266,7 @@ describe('Roles CRUD API - Integration Tests', () => {
       expect(response.status).toBe(400);
     });
 
-    it('should validate priority range', async () => {
+    test('should validate priority range', async () => {
       const response = await request(app)
         .post('/api/roles')
         .set('Authorization', `Bearer ${adminToken}`)
@@ -287,7 +288,7 @@ describe('Roles CRUD API - Integration Tests', () => {
       testRole = await Role.create(name, 50);
     });
 
-    it('should return 401 without authentication', async () => {
+    test('should return 401 without authentication', async () => {
       const response = await request(app)
         .put(`/api/roles/${testRole.id}`)
         .send({ description: 'Updated' });
@@ -295,7 +296,7 @@ describe('Roles CRUD API - Integration Tests', () => {
       expect(response.status).toBe(401);
     });
 
-    it('should return 403 for non-admin users', async () => {
+    test('should return 403 for non-admin users', async () => {
       const response = await request(app)
         .put(`/api/roles/${testRole.id}`)
         .set('Authorization', `Bearer ${technicianToken}`)
@@ -304,7 +305,7 @@ describe('Roles CRUD API - Integration Tests', () => {
       expect(response.status).toBe(403);
     });
 
-    it('should update role description', async () => {
+    test('should update role description', async () => {
       const response = await request(app)
         .put(`/api/roles/${testRole.id}`)
         .set('Authorization', `Bearer ${adminToken}`)
@@ -314,7 +315,7 @@ describe('Roles CRUD API - Integration Tests', () => {
       expect(response.body.data.description).toBe('Updated description');
     });
 
-    it('should update role priority', async () => {
+    test('should update role priority', async () => {
       const response = await request(app)
         .put(`/api/roles/${testRole.id}`)
         .set('Authorization', `Bearer ${adminToken}`)
@@ -324,7 +325,7 @@ describe('Roles CRUD API - Integration Tests', () => {
       expect(response.body.data.priority).toBe(75);
     });
 
-    it('should return 404 for non-existent role', async () => {
+    test('should return 404 for non-existent role', async () => {
       const response = await request(app)
         .put('/api/roles/99999')
         .set('Authorization', `Bearer ${adminToken}`)
@@ -333,7 +334,7 @@ describe('Roles CRUD API - Integration Tests', () => {
       expect([400, 404]).toContain(response.status);
     });
 
-    it('should persist updates to database', async () => {
+    test('should persist updates to database', async () => {
       // Update role
       await request(app)
         .put(`/api/roles/${testRole.id}`)
@@ -363,12 +364,12 @@ describe('Roles CRUD API - Integration Tests', () => {
       testRole = await Role.create(name, 50);
     });
 
-    it('should return 401 without authentication', async () => {
+    test('should return 401 without authentication', async () => {
       const response = await request(app).delete(`/api/roles/${testRole.id}`);
       expect(response.status).toBe(401);
     });
 
-    it('should return 403 for non-admin users', async () => {
+    test('should return 403 for non-admin users', async () => {
       const response = await request(app)
         .delete(`/api/roles/${testRole.id}`)
         .set('Authorization', `Bearer ${technicianToken}`);
@@ -376,7 +377,7 @@ describe('Roles CRUD API - Integration Tests', () => {
       expect(response.status).toBe(403);
     });
 
-    it('should delete role', async () => {
+    test('should delete role', async () => {
       const response = await request(app)
         .delete(`/api/roles/${testRole.id}`)
         .set('Authorization', `Bearer ${adminToken}`);
@@ -385,7 +386,7 @@ describe('Roles CRUD API - Integration Tests', () => {
       expect(response.body.success).toBe(true);
     });
 
-    it('should return 404 for non-existent role', async () => {
+    test('should return 404 for non-existent role', async () => {
       const response = await request(app)
         .delete('/api/roles/99999')
         .set('Authorization', `Bearer ${adminToken}`);
@@ -393,7 +394,7 @@ describe('Roles CRUD API - Integration Tests', () => {
       expect([400, 404]).toContain(response.status);
     });
 
-    it('should remove role from database', async () => {
+    test('should remove role from database', async () => {
       // Delete role
       await request(app)
         .delete(`/api/roles/${testRole.id}`)
@@ -409,9 +410,9 @@ describe('Roles CRUD API - Integration Tests', () => {
   });
 
   describe('Roles API - Response Format', () => {
-    it('should return consistent success format', async () => {
+    test('should return consistent success format', async () => {
       const response = await request(app)
-        .get('/api/roles?page=1&limit=10')
+        .get(`/api/roles?page=${TEST_PAGINATION.DEFAULT_PAGE}&limit=${TEST_PAGINATION.DEFAULT_LIMIT}`)
         .set('Authorization', `Bearer ${adminToken}`);
 
       expect(response.body).toMatchObject({
@@ -421,7 +422,7 @@ describe('Roles CRUD API - Integration Tests', () => {
       });
     });
 
-    it('should return consistent error format', async () => {
+    test('should return consistent error format', async () => {
       const response = await request(app).get('/api/roles');
 
       expect(response.body).toMatchObject({
@@ -431,9 +432,9 @@ describe('Roles CRUD API - Integration Tests', () => {
       });
     });
 
-    it('should include proper content-type', async () => {
+    test('should include proper content-type', async () => {
       const response = await request(app)
-        .get('/api/roles?page=1&limit=10')
+        .get(`/api/roles?page=${TEST_PAGINATION.DEFAULT_PAGE}&limit=${TEST_PAGINATION.DEFAULT_LIMIT}`)
         .set('Authorization', `Bearer ${adminToken}`);
 
       expect(response.headers['content-type']).toMatch(/application\/json/);
@@ -441,11 +442,11 @@ describe('Roles CRUD API - Integration Tests', () => {
   });
 
   describe('Roles API - Performance', () => {
-    it('should respond quickly to list requests', async () => {
+    test('should respond quickly to list requests', async () => {
       const start = Date.now();
 
       const response = await request(app)
-        .get('/api/roles?page=1&limit=10')
+        .get(`/api/roles?page=${TEST_PAGINATION.DEFAULT_PAGE}&limit=${TEST_PAGINATION.DEFAULT_LIMIT}`)
         .set('Authorization', `Bearer ${adminToken}`);
 
       const duration = Date.now() - start;
@@ -453,12 +454,12 @@ describe('Roles CRUD API - Integration Tests', () => {
       expect(duration).toBeLessThan(1000);
     });
 
-    it('should handle concurrent requests', async () => {
+    test('should handle concurrent requests', async () => {
       const requests = Array(5)
         .fill(null)
         .map(() =>
           request(app)
-            .get('/api/roles?page=1&limit=10')
+            .get(`/api/roles?page=${TEST_PAGINATION.DEFAULT_PAGE}&limit=${TEST_PAGINATION.DEFAULT_LIMIT}`)
             .set('Authorization', `Bearer ${adminToken}`),
         );
 
@@ -467,6 +468,109 @@ describe('Roles CRUD API - Integration Tests', () => {
       responses.forEach((response) => {
         expect(response.status).toBe(200);
       });
+    });
+  });
+
+  describe('Audit Logging for Role CRUD', () => {
+    test('should log role creation in audit_logs', async () => {
+      const uniqueRoleName = `test-role-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+      const response = await request(app)
+        .post('/api/roles')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ name: uniqueRoleName });
+
+      const roleId = response.body.data.id;
+      const db = require('../../db/connection');
+
+      // Get authenticated user from token
+      const jwt = require('jsonwebtoken');
+      const decoded = jwt.verify(adminToken, process.env.JWT_SECRET || 'dev-secret-key');
+      const User = require('../../db/models/User');
+      const authenticatedUser = await User.findByAuth0Id(decoded.sub);
+
+      const auditResult = await db.query(
+        `SELECT * FROM audit_logs 
+         WHERE action = 'role_create' 
+         AND resource_id = $1 
+         AND user_id = $2
+         ORDER BY created_at DESC LIMIT 1`,
+        [roleId, authenticatedUser.id]
+      );
+
+      expect(auditResult.rows.length).toBe(1);
+      expect(auditResult.rows[0].resource_type).toBe('role');
+      expect(auditResult.rows[0].result).toBe('success');
+    });
+
+    test('should log role updates in audit_logs', async () => {
+      const createRoleName = `test-role-${Date.now()}-create`;
+      const updatedRoleName = `test-role-${Date.now()}-update`;
+
+      const createResponse = await request(app)
+        .post('/api/roles')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ name: createRoleName });
+
+      const roleId = createResponse.body.data.id;
+
+      await request(app)
+        .put(`/api/roles/${roleId}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ name: updatedRoleName });
+
+      const db = require('../../db/connection');
+      const jwt = require('jsonwebtoken');
+      const decoded = jwt.verify(adminToken, process.env.JWT_SECRET || 'dev-secret-key');
+      const User = require('../../db/models/User');
+      const authenticatedUser = await User.findByAuth0Id(decoded.sub);
+
+      const auditResult = await db.query(
+        `SELECT * FROM audit_logs 
+         WHERE action = 'role_update' 
+         AND resource_id = $1 
+         AND user_id = $2
+         ORDER BY created_at DESC LIMIT 1`,
+        [roleId, authenticatedUser.id]
+      );
+
+      expect(auditResult.rows.length).toBe(1);
+      expect(auditResult.rows[0].old_values).toBeDefined();
+      const newValues = JSON.stringify(auditResult.rows[0].new_values);
+      expect(newValues).toContain(updatedRoleName);
+    });
+
+    test('should log role deletion in audit_logs', async () => {
+      const deleteRoleName = `test-role-${Date.now()}-delete`;
+
+      const createResponse = await request(app)
+        .post('/api/roles')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ name: deleteRoleName });
+
+      const roleId = createResponse.body.data.id;
+
+      await request(app)
+        .delete(`/api/roles/${roleId}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      const db = require('../../db/connection');
+      const jwt = require('jsonwebtoken');
+      const decoded = jwt.verify(adminToken, process.env.JWT_SECRET || 'dev-secret-key');
+      const User = require('../../db/models/User');
+      const authenticatedUser = await User.findByAuth0Id(decoded.sub);
+
+      const auditResult = await db.query(
+        `SELECT * FROM audit_logs 
+         WHERE action = 'role_delete' 
+         AND resource_id = $1 
+         AND user_id = $2
+         ORDER BY created_at DESC LIMIT 1`,
+        [roleId, authenticatedUser.id]
+      );
+
+      expect(auditResult.rows.length).toBe(1);
+      expect(auditResult.rows[0].result).toBe('success');
     });
   });
 });

@@ -234,6 +234,18 @@ const TEST_DATABASE = Object.freeze({
 });
 
 // ============================================================================
+// TEST PAGINATION
+// ============================================================================
+// Pagination constants matching backend defaults (from pagination-service.js)
+// Use in tests instead of magic numbers: page=1&limit=10
+const TEST_PAGINATION = Object.freeze({
+  DEFAULT_PAGE: 1,
+  DEFAULT_LIMIT: 50, // Matches PaginationService.DEFAULTS.LIMIT
+  SMALL_LIMIT: 5, // For testing pagination with multiple pages
+  LARGE_LIMIT: 200, // Max limit (matches PaginationService.DEFAULTS.MAX_LIMIT)
+});
+
+// ============================================================================
 // TEST TIMEOUTS
 // ============================================================================
 // Timeouts for async operations in tests
@@ -242,6 +254,21 @@ const TEST_TIMEOUTS = Object.freeze({
   API_REQUEST: 3000, // 3 seconds for API calls
   CLEANUP: 2000, // 2 seconds for cleanup operations
   DEFAULT: 10000, // 10 seconds default Jest timeout
+});
+
+// ============================================================================
+// TEST PERFORMANCE
+// ============================================================================
+// Performance benchmarks and concurrency levels for tests
+const TEST_PERFORMANCE = Object.freeze({
+  // Expected response times (milliseconds)
+  FAST_API_RESPONSE_MS: 500, // Fast endpoints should respond under 500ms
+  SLOW_API_RESPONSE_MS: 1000, // Slow queries/complex operations under 1s
+
+  // Concurrency levels for load testing
+  LIGHT_LOAD: 5, // Light concurrent requests
+  MODERATE_LOAD: 10, // Moderate concurrent requests
+  HEAVY_LOAD: 20, // Heavy load for rate limit testing
 });
 
 // ============================================================================
@@ -255,5 +282,7 @@ module.exports = Object.freeze({
   TEST_AUDIT,
   TEST_ERROR_MESSAGES,
   TEST_DATABASE,
+  TEST_PAGINATION,
   TEST_TIMEOUTS,
+  TEST_PERFORMANCE,
 });

@@ -6,7 +6,7 @@
 const request = require("supertest");
 const express = require("express");
 const jwt = require("jsonwebtoken");
-const { authenticateToken, requireMinimumRole } = require("../../middleware/auth");
+const { authenticateToken, requireMinimumRole, requirePermission } = require("../../middleware/auth");
 const AppConfig = require("../../config/app-config");
 const { mockUserDataServiceFindOrCreateUser } = require("../mocks/services.mock");
 
@@ -42,6 +42,16 @@ describe("Authentication Middleware - Security", () => {
     // Test endpoint that requires admin role
     app.get("/api/admin", authenticateToken, requireMinimumRole("admin"), (req, res) => {
       res.json({ success: true, message: "Admin access granted" });
+    });
+
+    // Test endpoint that requires specific permission
+    app.get("/api/users", authenticateToken, requirePermission("users", "read"), (req, res) => {
+      res.json({ success: true, message: "Users read access granted" });
+    });
+
+    // Test endpoint that requires create permission
+    app.post("/api/users", authenticateToken, requirePermission("users", "create"), (req, res) => {
+      res.json({ success: true, message: "Users create access granted" });
     });
   });
 
@@ -295,6 +305,93 @@ describe("Authentication Middleware - Security", () => {
       expect(response.body.error).toBe("Forbidden");
       // Test behavior: verify it rejects, not exact error message
       expect(response.body.message).toBeDefined();
+    });
+  });
+
+  describe("Permission-Based Access Control", () => {
+    test("should allow access when user has required permission", async () => {
+      // Admin has users:read permission
+      const token = jwt.sign(
+        {
+          sub: "dev|admin001",
+          email: "admin@trossapp.dev",
+          role: "admin",
+          provider: "development",
+        },
+        JWT_SECRET,
+        { expiresIn: "1h" },
+      );
+
+      const response = await request(app)
+        .get("/api/users")
+        .set("Authorization", `Bearer ${token}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+    });
+
+    test("should deny access when user lacks permission", async () => {
+      // Customer does not have users:read permission
+      const token = jwt.sign(
+        {
+          sub: "dev|customer001",
+          email: "customer@trossapp.dev",
+          role: "customer",
+          provider: "development",
+        },
+        JWT_SECRET,
+        { expiresIn: "1h" },
+      );
+
+      const response = await request(app)
+        .get("/api/users")
+        .set("Authorization", `Bearer ${token}`);
+
+      expect(response.status).toBe(403);
+      expect(response.body.error).toBe("Forbidden");
+    });
+
+    test("should check create permission correctly", async () => {
+      // Admin (using valid test user credentials) should have users:create permission
+      const token = jwt.sign(
+        {
+          sub: "dev|admin001",
+          email: "admin@trossapp.dev", // Must match test-users.js
+          role: "admin",
+          provider: "development",
+        },
+        JWT_SECRET,
+        { expiresIn: "1h" },
+      );
+
+      const response = await request(app)
+        .post("/api/users")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ name: "test" });
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+    });
+
+    test("should reject user with no role", async () => {
+      // Token without a role
+      const token = jwt.sign(
+        {
+          sub: "dev|norole001",
+          email: "norole@trossapp.dev",
+          provider: "development",
+          // no role field
+        },
+        JWT_SECRET,
+        { expiresIn: "1h" },
+      );
+
+      const response = await request(app)
+        .get("/api/users")
+        .set("Authorization", `Bearer ${token}`);
+
+      expect(response.status).toBe(403);
+      expect(response.body.error).toBe("Forbidden");
     });
   });
 

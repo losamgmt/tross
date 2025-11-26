@@ -17,9 +17,9 @@ const {
 const User = require('../db/models/User');
 const Role = require('../db/models/Role');
 const auditService = require('../services/audit-service');
-const { HTTP_STATUS } = require('../config/constants');
 const { getClientIp, getUserAgent } = require('../utils/request-helpers');
 const { logger } = require('../config/logger');
+const ResponseFormatter = require('../utils/response-formatter');
 const userMetadata = require('../config/models/user-metadata'); // NEW: User metadata
 
 const router = express.Router();
@@ -59,6 +59,7 @@ function __sanitizeUserList(users) {
  *     description: |
  *       Retrieve a paginated list of users with optional search, filtering, and sorting.
  *       All query parameters are optional and can be combined.
+ *       Admin view includes inactive users by default.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -82,19 +83,17 @@ function __sanitizeUserList(users) {
  *         schema:
  *           type: string
  *           maxLength: 255
- *         description: |
- *           Search across first_name, last_name, and email (case-insensitive).
- *           Example: ?search=john matches "John Doe", "john@example.com"
+ *         description: Search across first_name, last_name, and email (case-insensitive)
  *       - in: query
  *         name: role_id
  *         schema:
  *           type: integer
- *         description: Filter by role ID (e.g., role_id=2)
+ *         description: Filter by role ID
  *       - in: query
  *         name: is_active
  *         schema:
  *           type: boolean
- *         description: Filter by active status (e.g., is_active=true)
+ *         description: Filter by active status
  *       - in: query
  *         name: sortBy
  *         schema:
@@ -106,79 +105,12 @@ function __sanitizeUserList(users) {
  *         name: sortOrder
  *         schema:
  *           type: string
- *           enum: [asc, desc, ASC, DESC]
+ *           enum: [asc, desc]
  *           default: DESC
- *         description: Sort order (ascending or descending)
+ *         description: Sort order
  *     responses:
  *       200:
  *         description: Users retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: array
- *                   items:
- *                     type: object
- *                 count:
- *                   type: integer
- *                   example: 25
- *                 pagination:
- *                   type: object
- *                   properties:
- *                     page:
- *                       type: integer
- *                     limit:
- *                       type: integer
- *                     total:
- *                       type: integer
- *                     totalPages:
- *                       type: integer
- *                     hasNext:
- *                       type: boolean
- *                     hasPrev:
- *                       type: boolean
- *                 appliedFilters:
- *                   type: object
- *                   description: Shows which filters were applied
- *                 timestamp:
- *                   type: string
- *                   format: date-time
- *             examples:
- *               basic:
- *                 summary: Basic pagination
- *                 value:
- *                   success: true
- *                   data: []
- *                   count: 0
- *                   pagination:
- *                     page: 1
- *                     limit: 50
- *                     total: 0
- *                     totalPages: 0
- *                     hasNext: false
- *                     hasPrev: false
- *                   appliedFilters:
- *                     search: null
- *                     filters: { is_active: true }
- *                     sortBy: created_at
- *                     sortOrder: DESC
- *                   timestamp: "2024-01-01T00:00:00.000Z"
- *               withSearch:
- *                 summary: Search with filters
- *                 value:
- *                   success: true
- *                   data: []
- *                   count: 0
- *                   appliedFilters:
- *                     search: "john"
- *                     filters: { role_id: 2, is_active: true }
- *                     sortBy: email
- *                     sortOrder: ASC
  *       400:
  *         description: Invalid query parameters
  *       403:
@@ -213,22 +145,15 @@ router.get(
         req,
       });
 
-      res.json({
-        success: true,
+      return ResponseFormatter.list(res, {
         data: result.data,
-        count: result.data.length,
         pagination: result.pagination,
-        appliedFilters: result.appliedFilters, // NEW: Show what filters were applied
+        appliedFilters: result.appliedFilters,
         rlsApplied: result.rlsApplied,
-        timestamp: new Date().toISOString(),
       });
     } catch (error) {
       logger.error('Error retrieving users', { error: error.message });
-      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-        error: 'Internal Server Error',
-        message: 'Failed to retrieve users',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );
@@ -268,28 +193,16 @@ router.get(
       const user = await User.findById(userId, req);
 
       if (!user) {
-        return res.status(HTTP_STATUS.NOT_FOUND).json({
-          error: 'Not Found',
-          message: 'User not found',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.notFound(res, 'User not found');
       }
 
-      res.json({
-        success: true,
-        data: user,
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.get(res, user);
     } catch (error) {
       logger.error('Error retrieving user', {
         error: error.message,
         userId: req.params.id,
       });
-      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-        error: 'Internal Server Error',
-        message: 'Failed to retrieve user',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );
@@ -357,31 +270,19 @@ router.post(
         userAgent: getUserAgent(req),
       });
 
-      res.status(HTTP_STATUS.CREATED).json({
-        success: true,
-        data: newUser,
-        message: 'User created successfully',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.created(res, newUser, 'User created successfully');
     } catch (error) {
       logger.error('Error creating user', {
         error: error.message,
         email: req.body.email,
       });
 
-      if (error.message === 'Email already exists') {
-        return res.status(HTTP_STATUS.CONFLICT).json({
-          error: 'Conflict',
-          message: error.message,
-          timestamp: new Date().toISOString(),
-        });
+      // Handle duplicate key violations (code from DB, message from model)
+      if (error.code === '23505' || error.message === 'Email already exists') {
+        return ResponseFormatter.conflict(res, 'Email already exists');
       }
 
-      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-        error: 'Internal Server Error',
-        message: 'Failed to create user',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );
@@ -389,17 +290,12 @@ router.post(
 /**
  * @openapi
  * /api/users/{id}:
- *   put:
+ *   patch:
  *     tags: [Users]
  *     summary: Update user (admin only)
  *     description: |
  *       Update user information including profile fields and activation status.
- *
- *       **Activation Status Management (Contract v2.0):**
- *       - Setting `is_active: false` deactivates the user
- *       - Setting `is_active: true` reactivates the user
- *       - Deactivated users cannot authenticate
- *       - Audit trail tracked in audit_logs table (who/when)
+ *       Setting is_active to false deactivates the user (cannot authenticate).
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -419,86 +315,41 @@ router.post(
  *               email:
  *                 type: string
  *                 format: email
- *                 description: User email address
- *                 example: user@example.com
  *               first_name:
  *                 type: string
- *                 description: User first name
- *                 example: John
+ *                 maxLength: 100
  *               last_name:
  *                 type: string
- *                 description: User last name
- *                 example: Doe
+ *                 maxLength: 100
  *               is_active:
  *                 type: boolean
- *                 description: User activation status. False = deactivated (cannot login)
- *                 example: true
- *           examples:
- *             updateProfile:
- *               summary: Update profile information
- *               value:
- *                 email: john.doe@example.com
- *                 first_name: John
- *                 last_name: Doe
- *             deactivateUser:
- *               summary: Deactivate a user
- *               value:
- *                 is_active: false
- *             reactivateUser:
- *               summary: Reactivate a user
- *               value:
- *                 is_active: true
+ *                 description: Set false to deactivate user
  *     responses:
  *       200:
  *         description: User updated successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   type: object
- *                   properties:
- *                     id:
- *                       type: integer
- *                     email:
- *                       type: string
- *                     first_name:
- *                       type: string
- *                     last_name:
- *                       type: string
- *                     is_active:
- *                       type: boolean
- *                 message:
- *                   type: string
- *       404:
- *         description: User not found
- *       403:
- *         description: Forbidden - Admin access required
  *       400:
  *         description: Bad request - Invalid input
+ *       403:
+ *         description: Forbidden - Admin access required
+ *       404:
+ *         description: User not found
  */
-router.put(
+router.patch(
   '/:id',
   authenticateToken,
   requirePermission('users', 'update'),
+  enforceRLS('users'),
   validateIdParam(),
   validateProfileUpdate,
   async (req, res) => {
     try {
-      const userId = req.validatedId; // From validateIdParam middleware
+      const userId = req.validated.id; // From validateIdParam middleware
       const { email, first_name, last_name, is_active } = req.body;
 
       // Verify user exists
       const existingUser = await User.findById(userId, req);
       if (!existingUser) {
-        return res.status(HTTP_STATUS.NOT_FOUND).json({
-          error: 'Not Found',
-          message: 'User not found',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.notFound(res, 'User not found');
       }
 
       // Update user
@@ -520,32 +371,29 @@ router.put(
         userAgent: getUserAgent(req),
       });
 
-      res.json({
-        success: true,
-        data: updatedUser,
-        message: 'User updated successfully',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.updated(res, updatedUser, 'User updated successfully');
     } catch (error) {
       logger.error('Error updating user', {
         error: error.message,
         userId: req.params.id,
       });
 
-      // Return 400 for validation errors
-      if (error.message === 'No valid fields to update') {
-        return res.status(HTTP_STATUS.BAD_REQUEST).json({
-          error: 'Bad Request',
-          message: error.message,
-          timestamp: new Date().toISOString(),
-        });
+      // Handle duplicate key violations
+      if (error.code === '23505' || error.message === 'Email already exists') {
+        return ResponseFormatter.conflict(res, 'Email already exists');
       }
 
-      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-        error: 'Internal Server Error',
-        message: 'Failed to update user',
-        timestamp: new Date().toISOString(),
-      });
+      // Handle check constraint violations
+      if (error.code === '23514') {
+        return ResponseFormatter.badRequest(res, 'Invalid field value - check status and other enum fields');
+      }
+
+      // Return 400 for validation errors
+      if (error.message === 'No valid fields to update') {
+        return ResponseFormatter.badRequest(res, error.message);
+      }
+
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );
@@ -592,27 +440,19 @@ router.put(
   validateRoleAssignment,
   async (req, res) => {
     try {
-      const userId = req.validatedId; // From validateIdParam middleware
+      const userId = req.validated.id; // From validateIdParam middleware
       const { role_id } = req.body;
 
       // Validate role_id is a number
       const roleIdNum = parseInt(role_id);
       if (isNaN(roleIdNum)) {
-        return res.status(400).json({
-          error: 'Bad Request',
-          message: 'role_id must be a number',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.badRequest(res, 'role_id must be a number');
       }
 
       // Verify role exists
       const role = await Role.findById(roleIdNum, req);
       if (!role) {
-        return res.status(404).json({
-          error: 'Role Not Found',
-          message: `Role with ID ${role_id} not found`,
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.notFound(res, `Role with ID ${role_id} not found`);
       }
 
       // KISS: setRole REPLACES user's role (one role per user)
@@ -622,11 +462,7 @@ router.put(
       const updatedUser = await User.findById(userId, req);
 
       if (!updatedUser) {
-        return res.status(404).json({
-          error: 'User Not Found',
-          message: 'User not found after role assignment',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.notFound(res, 'User not found after role assignment');
       }
 
       // Log the role assignment
@@ -640,12 +476,7 @@ router.put(
         userAgent: getUserAgent(req),
       });
 
-      res.json({
-        success: true,
-        data: updatedUser,
-        message: `Role '${role.name}' assigned successfully`,
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.updated(res, updatedUser, `Role '${role.name}' assigned successfully`);
     } catch (error) {
       logger.error('Error assigning role', {
         error: error.message,
@@ -653,11 +484,7 @@ router.put(
         roleId: req.body.role_id,
       });
 
-      res.status(500).json({
-        error: 'Internal Server Error',
-        message: 'Failed to assign role',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );
@@ -696,21 +523,13 @@ router.delete(
 
       // Prevent self-deletion
       if (req.dbUser.id === userId) {
-        return res.status(HTTP_STATUS.BAD_REQUEST).json({
-          error: 'Bad Request',
-          message: 'Cannot delete your own account',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.badRequest(res, 'Cannot delete your own account');
       }
 
       // Verify user exists
       const user = await User.findById(userId, req);
       if (!user) {
-        return res.status(HTTP_STATUS.NOT_FOUND).json({
-          error: 'Not Found',
-          message: 'User not found',
-          timestamp: new Date().toISOString(),
-        });
+        return ResponseFormatter.notFound(res, 'User not found');
       }
 
       // Delete user permanently (DELETE = permanent removal)
@@ -732,21 +551,13 @@ router.delete(
         userAgent: getUserAgent(req),
       });
 
-      res.json({
-        success: true,
-        message: 'User deleted successfully',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.deleted(res, 'User deleted successfully');
     } catch (error) {
       logger.error('Error deleting user', {
         error: error.message,
         userId: req.params.id,
       });
-      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-        error: 'Internal Server Error',
-        message: 'Failed to delete user',
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );
