@@ -1,5 +1,8 @@
 /**
  * Auth0 Authentication Service
+ * 
+ * @deprecated Use Auth0Strategy.js instead - this file is kept for reference only
+ * TODO: Remove this file after confirming Auth0Strategy works in production
  */
 const jwt = require('jsonwebtoken');
 const jwksClient = require('jwks-rsa');
@@ -8,6 +11,9 @@ const { AuthenticationClient, ManagementClient } = require('auth0');
 const { logger } = require('../config/logger');
 const { UserDataService } = require('./user-data');
 const auth0Config = require('../config/auth0');
+
+// JWT Secret - must be consistent with middleware/auth.js
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key';
 
 class Auth0Auth {
   constructor() {
@@ -141,7 +147,7 @@ class Auth0Auth {
           provider: 'auth0',
           auth0Id: validatedUserInfo.sub,
         },
-        process.env.JWT_SECRET,
+        JWT_SECRET, // Use module constant for consistency
         { expiresIn: '24h' },
       );
       logger.info('Auth0 authentication successful', {

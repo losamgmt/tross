@@ -14,6 +14,10 @@ const { UserDataService } = require('../user-data');
 const auth0Config = require('../../config/auth0');
 const { toSafeString, toSafeEmail } = require('../../validators');
 
+// JWT Secret - MUST be set in production (validated by env-validator.js on startup)
+// Fallback only exists for local development convenience
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key';
+
 class Auth0Strategy extends AuthStrategy {
   constructor() {
     super();
@@ -291,7 +295,7 @@ class Auth0Strategy extends AuthStrategy {
         provider: 'auth0',
         userId: localUser.id, // Database ID
       },
-      process.env.JWT_SECRET,
+      JWT_SECRET, // Use module constant for consistency with middleware
       { expiresIn: '24h' },
     );
   }
