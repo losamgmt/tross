@@ -1,0 +1,174 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:tross_app/widgets/atoms/display/text_field_display.dart';
+
+void main() {
+  group('TextFieldDisplay', () {
+    testWidgets('renders with label and value', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(body: TextFieldDisplay(value: 'user@example.com')),
+        ),
+      );
+
+      expect(find.text('user@example.com'), findsOneWidget);
+    });
+
+    testWidgets('displays empty text when value is null', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(home: Scaffold(body: TextFieldDisplay(value: null))),
+      );
+
+      expect(find.text('--'), findsOneWidget);
+    });
+
+    testWidgets('displays empty text when value is empty string', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(body: TextFieldDisplay(value: '')),
+        ),
+      );
+
+      expect(find.text('--'), findsOneWidget);
+    });
+
+    testWidgets('uses custom empty text when provided', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(body: TextFieldDisplay(value: null, emptyText: 'N/A')),
+        ),
+      );
+
+      expect(find.text('N/A'), findsOneWidget);
+    });
+
+    testWidgets('displays icon when provided', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TextFieldDisplay(
+              value: 'test@example.com',
+              icon: Icons.email,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byIcon(Icons.email), findsOneWidget);
+    });
+
+    testWidgets('hides icon when not provided', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(body: TextFieldDisplay(value: 'John Doe')),
+        ),
+      );
+
+      expect(find.byType(Icon), findsNothing);
+    });
+
+    testWidgets('applies custom value style when provided', (tester) async {
+      const customStyle = TextStyle(
+        color: Colors.green,
+        fontWeight: FontWeight.bold,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TextFieldDisplay(value: 'Active', valueStyle: customStyle),
+          ),
+        ),
+      );
+
+      final textWidget = tester.widget<Text>(find.text('Active'));
+      expect(textWidget.style?.color, Colors.green);
+      expect(textWidget.style?.fontWeight, FontWeight.bold);
+    });
+
+    testWidgets('handles long text values', (tester) async {
+      const longValue =
+          'This is a very long text value that should wrap '
+          'to multiple lines when displayed in the field';
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(body: TextFieldDisplay(value: longValue)),
+        ),
+      );
+
+      expect(find.text(longValue), findsOneWidget);
+    });
+
+    testWidgets('handles special characters', (tester) async {
+      const specialValue = 'Test & <value> with "quotes" and symbols!@#\$%';
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(body: TextFieldDisplay(value: specialValue)),
+        ),
+      );
+
+      expect(find.text(specialValue), findsOneWidget);
+    });
+
+    testWidgets('handles newlines in text', (tester) async {
+      const multilineValue = 'Line 1\nLine 2\nLine 3';
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(body: TextFieldDisplay(value: multilineValue)),
+        ),
+      );
+
+      expect(find.text(multilineValue), findsOneWidget);
+    });
+
+    testWidgets('handles whitespace-only values as empty', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(body: TextFieldDisplay(value: '   ')),
+        ),
+      );
+
+      // Whitespace-only string is still considered a value
+      expect(find.text('   '), findsOneWidget);
+    });
+
+    testWidgets('updates when value changes', (tester) async {
+      String? value = 'Initial';
+
+      await tester.pumpWidget(
+        StatefulBuilder(
+          builder: (context, setState) {
+            return MaterialApp(
+              home: Scaffold(
+                body: Column(
+                  children: [
+                    TextFieldDisplay(value: value),
+                    ElevatedButton(
+                      onPressed: () {
+                        setState(() => value = 'Updated');
+                      },
+                      child: const Text('Update'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      );
+
+      expect(find.text('Initial'), findsOneWidget);
+
+      await tester.tap(find.text('Update'));
+      await tester.pump();
+
+      expect(find.text('Updated'), findsOneWidget);
+      expect(find.text('Initial'), findsNothing);
+    });
+  });
+}

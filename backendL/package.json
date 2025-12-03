@@ -1,0 +1,51 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "TrossApp Backend API - Node.js REST API server",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest",
+    "test:unit": "jest --config jest.config.unit.json",
+    "test:integration": "jest --config jest.config.integration.json",
+    "test:all": "jest",
+    "dev": "node server.js",
+    "start": "node server.js",
+    "health": "node scripts/test-db-connection.js",
+    "build": "echo 'Backend build: copying files and preparing for production'",
+    "test:watch": "jest --watch",
+    "test:watch:unit": "jest --watch --config jest.config.unit.json",
+    "test:watch:integration": "jest --watch --config jest.config.integration.json",
+    "test:coverage": "jest --coverage --config jest.config.integration.json",
+    "test:coverage:unit": "jest --coverage --config jest.config.unit.json",
+    "seed:admin": "node scripts/seed-admin-user.js",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "auth0": "^4.32.0",
+    "axios": "^1.12.2",
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "express-mongo-sanitize": "^2.2.0",
+    "express-rate-limit": "^8.1.0",
+    "helmet": "^8.1.0",
+    "joi": "^18.0.1",
+    "jsonwebtoken": "^9.0.2",
+    "jwks-rsa": "^3.2.0",
+    "pg": "^8.16.3",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
+    "uuid": "^13.0.0",
+    "winston": "^3.18.3"
+  },
+  "devDependencies": {
+    "jest": "^30.2.0",
+    "supertest": "^7.1.4"
+  }
+}

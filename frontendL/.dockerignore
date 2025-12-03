@@ -1,0 +1,14 @@
+# Frontend Docker ignore
+.dart_tool/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+.DS_Store
+.vscode
+.git
+README.md
+Dockerfile
+.dockerignore

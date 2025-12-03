@@ -1,0 +1,370 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:tross_app/widgets/atoms/inputs/number_input.dart';
+
+void main() {
+  group('NumberInput', () {
+    testWidgets('renders with label and value', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(body: NumberInput(value: 25, onChanged: (_) {})),
+        ),
+      );
+
+      expect(find.text('Age'), findsOneWidget);
+      expect(find.text('25'), findsOneWidget);
+    });
+
+    testWidgets('shows required indicator when required is true', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(body: NumberInput(value: null, onChanged: (_) {})),
+        ),
+      );
+
+      expect(find.text('Count'), findsOneWidget);
+      expect(find.text('*'), findsOneWidget);
+    });
+
+    testWidgets('calls onChanged when text is entered', (tester) async {
+      num? changedValue;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: NumberInput(
+              value: null,
+              onChanged: (value) => changedValue = value,
+            ),
+          ),
+        ),
+      );
+
+      await tester.enterText(find.byType(TextField), '99.99');
+      expect(changedValue, 99.99);
+    });
+
+    testWidgets('handles integer input', (tester) async {
+      num? changedValue;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: NumberInput(
+              value: null,
+              onChanged: (value) => changedValue = value,
+              isInteger: true,
+            ),
+          ),
+        ),
+      );
+
+      await tester.enterText(find.byType(TextField), '42');
+      expect(changedValue, 42);
+    });
+
+    testWidgets('shows step buttons by default', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(body: NumberInput(value: 5, onChanged: (_) {})),
+        ),
+      );
+
+      expect(find.byIcon(Icons.arrow_drop_up), findsOneWidget);
+      expect(find.byIcon(Icons.arrow_drop_down), findsOneWidget);
+    });
+
+    testWidgets('increments value when up arrow clicked', (tester) async {
+      num? currentValue = 5;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: NumberInput(
+              value: currentValue,
+              onChanged: (value) => currentValue = value,
+              isInteger: true,
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byIcon(Icons.arrow_drop_up));
+      expect(currentValue, 6);
+    });
+
+    testWidgets('decrements value when down arrow clicked', (tester) async {
+      num? currentValue = 5;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: NumberInput(
+              value: currentValue,
+              onChanged: (value) => currentValue = value,
+              isInteger: true,
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byIcon(Icons.arrow_drop_down));
+      expect(currentValue, 4);
+    });
+
+    testWidgets('respects minimum value constraint', (tester) async {
+      num? currentValue = 0;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: NumberInput(
+              value: currentValue,
+              onChanged: (value) => currentValue = value,
+              min: 0,
+              isInteger: true,
+            ),
+          ),
+        ),
+      );
+
+      // Try to decrement below minimum
+      await tester.tap(find.byIcon(Icons.arrow_drop_down));
+      expect(currentValue, 0); // Should not go below 0
+    });
+
+    testWidgets('respects maximum value constraint', (tester) async {
+      num? currentValue = 10;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: NumberInput(
+              value: currentValue,
+              onChanged: (value) => currentValue = value,
+              max: 10,
+              isInteger: true,
+            ),
+          ),
+        ),
+      );
+
+      // Try to increment above maximum
+      await tester.tap(find.byIcon(Icons.arrow_drop_up));
+      expect(currentValue, 10); // Should not go above 10
+    });
+
+    testWidgets('uses custom step value', (tester) async {
+      num? currentValue = 0;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: NumberInput(
+              value: currentValue,
+              onChanged: (value) => currentValue = value,
+              step: 0.5,
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byIcon(Icons.arrow_drop_up));
+      expect(currentValue, 0.5);
+    });
+
+    testWidgets('hides step buttons when showStepButtons is false', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: NumberInput(
+              value: 5,
+              onChanged: (_) {},
+              showStepButtons: false,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byIcon(Icons.arrow_drop_up), findsNothing);
+      expect(find.byIcon(Icons.arrow_drop_down), findsNothing);
+    });
+
+    testWidgets('displays error text when provided', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: NumberInput(
+              value: -5,
+              onChanged: (_) {},
+              errorText: 'Age must be positive',
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Age must be positive'), findsOneWidget);
+    });
+
+    testWidgets('displays helper text when provided', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: NumberInput(
+              value: null,
+              onChanged: (_) {},
+              helperText: 'Enter a number between 1 and 100',
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Enter a number between 1 and 100'), findsOneWidget);
+    });
+
+    testWidgets('shows placeholder text', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: NumberInput(
+              value: null,
+              onChanged: (_) {},
+              placeholder: 'Enter your age',
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Enter your age'), findsOneWidget);
+    });
+
+    testWidgets('disables input when enabled is false', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: NumberInput(value: 5, onChanged: (_) {}, enabled: false),
+          ),
+        ),
+      );
+
+      final textField = tester.widget<TextField>(find.byType(TextField));
+      expect(textField.enabled, false);
+    });
+
+    testWidgets('hides step buttons when disabled', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: NumberInput(value: 5, onChanged: (_) {}, enabled: false),
+          ),
+        ),
+      );
+
+      expect(find.byIcon(Icons.arrow_drop_up), findsNothing);
+      expect(find.byIcon(Icons.arrow_drop_down), findsNothing);
+    });
+
+    testWidgets('shows prefix icon when provided', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: NumberInput(
+              value: null,
+              onChanged: (_) {},
+              prefixIcon: Icons.attach_money,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byIcon(Icons.attach_money), findsOneWidget);
+    });
+
+    testWidgets('shows suffix icon when provided', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: NumberInput(
+              value: null,
+              onChanged: (_) {},
+              suffixIcon: Icons.percent,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byIcon(Icons.percent), findsOneWidget);
+    });
+
+    testWidgets('updates value when changed externally', (tester) async {
+      num? value = 10;
+
+      await tester.pumpWidget(
+        StatefulBuilder(
+          builder: (context, setState) {
+            return MaterialApp(
+              home: Scaffold(
+                body: Column(
+                  children: [
+                    NumberInput(
+                      value: value,
+                      onChanged: (newValue) {
+                        setState(() => value = newValue);
+                      },
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        setState(() => value = 25);
+                      },
+                      child: const Text('Set to 25'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      );
+
+      expect(find.text('10'), findsOneWidget);
+
+      await tester.tap(find.text('Set to 25'));
+      await tester.pump();
+
+      expect(find.text('25'), findsOneWidget);
+    });
+
+    testWidgets('handles null value', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(body: NumberInput(value: null, onChanged: (_) {})),
+        ),
+      );
+
+      final textField = tester.widget<TextField>(find.byType(TextField));
+      expect(textField.controller?.text, '');
+    });
+
+    testWidgets('sets value to null when text is cleared', (tester) async {
+      num? changedValue = 5;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: NumberInput(
+              value: 5,
+              onChanged: (value) => changedValue = value,
+            ),
+          ),
+        ),
+      );
+
+      await tester.enterText(find.byType(TextField), '');
+      expect(changedValue, null);
+    });
+  });
+}

@@ -1,0 +1,356 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:tross_app/widgets/atoms/display/boolean_field_display.dart';
+
+void main() {
+  group('BooleanFieldDisplay', () {
+    testWidgets('renders with label and true value', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BooleanFieldDisplay(value: true),
+          ),
+        ),
+      );
+
+      expect(find.text('Active'), findsOneWidget);
+      expect(find.text('Yes'), findsOneWidget);
+    });
+
+    testWidgets('renders with false value', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BooleanFieldDisplay(value: false),
+          ),
+        ),
+      );
+
+      expect(find.text('Active'), findsOneWidget);
+      expect(find.text('No'), findsOneWidget);
+    });
+
+    testWidgets('renders with null value', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BooleanFieldDisplay(value: null),
+          ),
+        ),
+      );
+
+      expect(find.text('Optional'), findsOneWidget);
+      expect(find.text('--'), findsOneWidget);
+    });
+
+    testWidgets('uses custom true label', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BooleanFieldDisplay(
+              value: true,
+              trueLabel: 'Verified',
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Verified'), findsOneWidget);
+    });
+
+    testWidgets('uses custom false label', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BooleanFieldDisplay(
+              value: false,
+              falseLabel: 'Not Verified',
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Not Verified'), findsOneWidget);
+    });
+
+    testWidgets('uses custom null label', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BooleanFieldDisplay(
+              value: null,
+              nullLabel: 'Unknown',
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Unknown'), findsOneWidget);
+    });
+
+    testWidgets('shows check icon for true by default', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BooleanFieldDisplay(value: true),
+          ),
+        ),
+      );
+
+      expect(find.byIcon(Icons.check_circle), findsOneWidget);
+    });
+
+    testWidgets('shows cancel icon for false by default', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BooleanFieldDisplay(value: false),
+          ),
+        ),
+      );
+
+      expect(find.byIcon(Icons.cancel), findsOneWidget);
+    });
+
+    testWidgets('shows help icon for null by default', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BooleanFieldDisplay(value: null),
+          ),
+        ),
+      );
+
+      expect(find.byIcon(Icons.help_outline), findsOneWidget);
+    });
+
+    testWidgets('uses custom true icon', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BooleanFieldDisplay(
+              value: true,
+              trueIcon: Icons.thumb_up,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byIcon(Icons.thumb_up), findsOneWidget);
+    });
+
+    testWidgets('uses custom false icon', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BooleanFieldDisplay(
+              value: false,
+              falseIcon: Icons.thumb_down,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byIcon(Icons.thumb_down), findsOneWidget);
+    });
+
+    testWidgets('hides icon when showIcon is false', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BooleanFieldDisplay(
+              value: true,
+              showIcon: false,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(Icon), findsNothing);
+    });
+
+    testWidgets('applies green color for true by default', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BooleanFieldDisplay(value: true),
+          ),
+        ),
+      );
+
+      final icon = tester.widget<Icon>(find.byIcon(Icons.check_circle));
+      expect(icon.color, Colors.green);
+    });
+
+    testWidgets('applies grey color for false by default', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BooleanFieldDisplay(value: false),
+          ),
+        ),
+      );
+
+      final icon = tester.widget<Icon>(find.byIcon(Icons.cancel));
+      expect(icon.color, Colors.grey);
+    });
+
+    testWidgets('uses custom true color', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BooleanFieldDisplay(
+              value: true,
+              trueColor: Colors.blue,
+            ),
+          ),
+        ),
+      );
+
+      final icon = tester.widget<Icon>(find.byIcon(Icons.check_circle));
+      expect(icon.color, Colors.blue);
+    });
+
+    testWidgets('uses custom false color', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BooleanFieldDisplay(
+              value: false,
+              falseColor: Colors.red,
+            ),
+          ),
+        ),
+      );
+
+      final icon = tester.widget<Icon>(find.byIcon(Icons.cancel));
+      expect(icon.color, Colors.red);
+    });
+
+    testWidgets('uses custom null color', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BooleanFieldDisplay(
+              value: null,
+              nullColor: Colors.orange,
+            ),
+          ),
+        ),
+      );
+
+      final icon = tester.widget<Icon>(find.byIcon(Icons.help_outline));
+      expect(icon.color, Colors.orange);
+    });
+
+    testWidgets('applies custom value style', (tester) async {
+      const customStyle = TextStyle(fontSize: 18, fontWeight: FontWeight.bold);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BooleanFieldDisplay(
+              value: true,
+              valueStyle: customStyle,
+            ),
+          ),
+        ),
+      );
+
+      final textWidget = tester.widget<Text>(find.text('Yes'));
+      expect(textWidget.style?.fontSize, 18);
+      expect(textWidget.style?.fontWeight, FontWeight.bold);
+    });
+
+    testWidgets('updates when value changes from false to true', (
+      tester,
+    ) async {
+      bool? value = false;
+
+      await tester.pumpWidget(
+        StatefulBuilder(
+          builder: (context, setState) {
+            return MaterialApp(
+              home: Scaffold(
+                body: Column(
+                  children: [
+                    BooleanFieldDisplay(value: value),
+                    ElevatedButton(
+                      onPressed: () {
+                        setState(() => value = true);
+                      },
+                      child: const Text('Activate'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      );
+
+      expect(find.text('No'), findsOneWidget);
+      expect(find.byIcon(Icons.cancel), findsOneWidget);
+
+      await tester.tap(find.text('Activate'));
+      await tester.pump();
+
+      expect(find.text('Yes'), findsOneWidget);
+      expect(find.byIcon(Icons.check_circle), findsOneWidget);
+    });
+
+    testWidgets('updates when value changes to null', (tester) async {
+      bool? value = true;
+
+      await tester.pumpWidget(
+        StatefulBuilder(
+          builder: (context, setState) {
+            return MaterialApp(
+              home: Scaffold(
+                body: Column(
+                  children: [
+                    BooleanFieldDisplay(value: value),
+                    ElevatedButton(
+                      onPressed: () {
+                        setState(() => value = null);
+                      },
+                      child: const Text('Clear'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      );
+
+      expect(find.text('Yes'), findsOneWidget);
+
+      await tester.tap(find.text('Clear'));
+      await tester.pump();
+
+      expect(find.text('--'), findsOneWidget);
+    });
+
+    testWidgets('combines custom labels, colors, and icons', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BooleanFieldDisplay(
+              value: true,
+              trueLabel: 'Premium Member',
+              trueColor: Colors.purple,
+              trueIcon: Icons.star,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Premium Member'), findsOneWidget);
+      expect(find.byIcon(Icons.star), findsOneWidget);
+
+      final icon = tester.widget<Icon>(find.byIcon(Icons.star));
+      expect(icon.color, Colors.purple);
+    });
+  });
+}

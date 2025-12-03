@@ -1,0 +1,34 @@
+config:
+  target: 'http://localhost:3001'
+  phases:
+    - duration: 60
+      arrivalRate: 10
+  processor: "./load-test-functions.js"
+
+scenarios:
+  - name: "API Health Check Load Test"
+    weight: 40
+    flow:
+      - get:
+          url: "/api/health"
+          expect:
+            - statusCode: 200
+            - hasProperty: "status"
+
+  - name: "Hello World Endpoint Load Test"
+    weight: 60
+    flow:
+      - get:
+          url: "/api/hello"
+          expect:
+            - statusCode: 200
+            - hasProperty: "message"
+      - think: 1
+
+  - name: "404 Handling Load Test"
+    weight: 10
+    flow:
+      - get:
+          url: "/api/nonexistent"
+          expect:
+            - statusCode: 404

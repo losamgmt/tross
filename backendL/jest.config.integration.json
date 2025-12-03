@@ -1,0 +1,28 @@
+{
+  "testEnvironment": "node",
+  "displayName": "Integration Tests",
+  "testMatch": ["**/__tests__/integration/**/*.test.js"],
+  "testPathIgnorePatterns": [
+    "/node_modules/",
+    "/__tests__/fixtures/",
+    "/__tests__/helpers/",
+    "/__tests__/setup/"
+  ],
+  "setupFilesAfterEnv": ["<rootDir>/__tests__/setup/jest.integration.setup.js"],
+  "globalTeardown": "<rootDir>/__tests__/setup/jest.integration.teardown.js",
+  "collectCoverageFrom": [
+    "**/*.js",
+    "!**/node_modules/**",
+    "!**/__tests__/**",
+    "!**/coverage/**",
+    "!jest.config*.js",
+    "!**/*-old.js",
+    "!**/*-backup.js",
+    "!**/auth0-setup.json"
+  ],
+  "coverageReporters": ["text", "lcov", "html"],
+  "testTimeout": 10000,
+  "verbose": true,
+  "maxWorkers": 1,
+  "forceExit": true
+}
