@@ -1,0 +1,241 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "1.0.0",
+  "description": "Centralized validation rules for TrossApp - shared across frontend and backend",
+  "lastUpdated": "2025-11-10",
+  "policy": {
+    "email": {
+      "tldValidation": "permissive",
+      "description": "Accept any TLD format - no fascist restrictions! 🚀"
+    }
+  },
+  "fields": {
+    "email": {
+      "type": "string",
+      "format": "email",
+      "required": true,
+      "maxLength": 255,
+      "tldRestriction": false,
+      "trim": true,
+      "lowercase": true,
+      "pattern": "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z0-9]+$",
+      "errorMessages": {
+        "required": "Email is required",
+        "format": "Email must be a valid email address",
+        "maxLength": "Email cannot exceed 255 characters"
+      },
+      "examples": {
+        "valid": [
+          "user@example.com",
+          "laura@jane.grace",
+          "admin@my.cool.site",
+          "test+tag@domain.xyz"
+        ],
+        "invalid": [
+          "notanemail",
+          "@domain.com",
+          "user@",
+          "user @domain.com"
+        ]
+      }
+    },
+    "firstName": {
+      "type": "string",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 100,
+      "trim": true,
+      "pattern": "^[a-zA-Z\\s'-]+$",
+      "errorMessages": {
+        "required": "First name is required",
+        "minLength": "First name cannot be empty",
+        "maxLength": "First name cannot exceed 100 characters",
+        "pattern": "First name can only contain letters, spaces, hyphens, and apostrophes"
+      },
+      "examples": {
+        "valid": ["John", "Mary-Anne", "O'Brien", "Laura Jane"],
+        "invalid": ["J0hn", "Mary@", "", "   "]
+      }
+    },
+    "lastName": {
+      "type": "string",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 100,
+      "trim": true,
+      "pattern": "^[a-zA-Z\\s'-]+$",
+      "errorMessages": {
+        "required": "Last name is required",
+        "minLength": "Last name cannot be empty",
+        "maxLength": "Last name cannot exceed 100 characters",
+        "pattern": "Last name can only contain letters, spaces, hyphens, and apostrophes"
+      },
+      "examples": {
+        "valid": ["Smith", "Van Der Berg", "O'Malley", "Grace"],
+        "invalid": ["Sm1th", "Smith!", "", "   "]
+      }
+    },
+    "roleId": {
+      "type": "integer",
+      "required": false,
+      "min": 1,
+      "max": 2147483647,
+      "errorMessages": {
+        "type": "Role ID must be a number",
+        "min": "Role ID must be positive",
+        "max": "Role ID exceeds maximum value"
+      },
+      "examples": {
+        "valid": [1, 5, 100],
+        "invalid": [0, -1, 2147483648, "abc"]
+      }
+    },
+    "isActive": {
+      "type": "boolean",
+      "required": false,
+      "errorMessages": {
+        "type": "is_active must be true or false"
+      },
+      "examples": {
+        "valid": [true, false],
+        "invalid": ["yes", "no", 1, 0, "active"]
+      }
+    },
+    "roleName": {
+      "type": "string",
+      "required": true,
+      "minLength": 2,
+      "maxLength": 100,
+      "trim": true,
+      "pattern": "^[a-zA-Z0-9\\s_-]+$",
+      "errorMessages": {
+        "required": "Role name is required",
+        "minLength": "Role name must be at least 2 characters",
+        "maxLength": "Role name cannot exceed 100 characters",
+        "pattern": "Role name can only contain letters, numbers, spaces, underscores, and hyphens"
+      },
+      "examples": {
+        "valid": ["admin", "project_manager", "client", "super-admin"],
+        "invalid": ["a", "role!", "", "   "]
+      }
+    },
+    "rolePriority": {
+      "type": "integer",
+      "required": false,
+      "min": 1,
+      "max": 100,
+      "default": 50,
+      "errorMessages": {
+        "type": "Priority must be a number",
+        "min": "Priority must be at least 1",
+        "max": "Priority cannot exceed 100"
+      },
+      "examples": {
+        "valid": [1, 50, 100],
+        "invalid": [0, -1, 101, "high"]
+      }
+    },
+    "roleDescription": {
+      "type": "string",
+      "required": false,
+      "maxLength": 500,
+      "trim": true,
+      "allowNull": true,
+      "errorMessages": {
+        "maxLength": "Description cannot exceed 500 characters"
+      },
+      "examples": {
+        "valid": [
+          "System administrator with full access",
+          "Client with limited project access",
+          null
+        ],
+        "invalid": [""]
+      }
+    },
+    "password": {
+      "type": "string",
+      "required": true,
+      "minLength": 8,
+      "maxLength": 128,
+      "pattern": "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]+$",
+      "errorMessages": {
+        "required": "Password is required",
+        "minLength": "Password must be at least 8 characters",
+        "maxLength": "Password cannot exceed 128 characters",
+        "pattern": "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"
+      },
+      "examples": {
+        "valid": ["SecureP@ss123", "MyP@ssw0rd!"],
+        "invalid": ["short", "nouppercaseornumber", "NoSpecialChar123"]
+      }
+    },
+    "phone": {
+      "type": "string",
+      "required": false,
+      "pattern": "^\\+?[1-9]\\d{1,14}$",
+      "trim": true,
+      "errorMessages": {
+        "pattern": "Phone number must be in international format (E.164)"
+      },
+      "examples": {
+        "valid": ["+14155552671", "+442071838750", "14155552671"],
+        "invalid": ["123", "not-a-phone", "+1234567890123456"]
+      }
+    },
+    "url": {
+      "type": "string",
+      "required": false,
+      "maxLength": 2048,
+      "pattern": "^https?:\\/\\/(www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b([-a-zA-Z0-9()@:%_\\+.~#?&//=]*)$",
+      "errorMessages": {
+        "pattern": "Must be a valid URL starting with http:// or https://",
+        "maxLength": "URL cannot exceed 2048 characters"
+      },
+      "examples": {
+        "valid": [
+          "https://example.com",
+          "http://my-site.co.uk/path?query=value"
+        ],
+        "invalid": ["not-a-url", "ftp://example.com", "example.com"]
+      }
+    }
+  },
+  "compositeValidations": {
+    "createUser": {
+      "requiredFields": ["email", "first_name", "last_name"],
+      "optionalFields": ["role_id"],
+      "description": "Validation rules for creating a new user"
+    },
+    "updateUser": {
+      "requiredFields": [],
+      "optionalFields": ["email", "first_name", "last_name", "role_id", "is_active"],
+      "description": "Validation rules for updating an existing user (all fields optional)"
+    },
+    "createRole": {
+      "requiredFields": ["name"],
+      "optionalFields": ["priority", "description"],
+      "description": "Validation rules for creating a new role"
+    },
+    "updateRole": {
+      "requiredFields": [],
+      "optionalFields": ["name", "priority", "description", "is_active"],
+      "description": "Validation rules for updating an existing role"
+    }
+  },
+  "metadata": {
+    "maintainer": "TrossApp Team",
+    "documentation": "docs/VALIDATION_ARCHITECTURE.md",
+    "changelog": [
+      {
+        "version": "1.0.0",
+        "date": "2025-11-10",
+        "changes": [
+          "Initial centralized validation schema",
+          "Permissive email TLD validation policy",
+          "Complete field definitions for users and roles"
+        ]
+      }
+    ]
+  }
+}

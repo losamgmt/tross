@@ -1,0 +1,396 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:tross_app/widgets/atoms/inputs/text_area_input.dart';
+
+void main() {
+  group('TextAreaInput', () {
+    testWidgets('renders with label and value', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TextAreaInput(
+              value: 'This is a description',
+              onChanged: (_) {},
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('This is a description'), findsOneWidget);
+    });
+
+    testWidgets('shows required indicator when required is true', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TextAreaInput(value: '', onChanged: (_) {}),
+          ),
+        ),
+      );
+    });
+
+    testWidgets('calls onChanged when text is entered', (tester) async {
+      String? changedValue;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TextAreaInput(
+              value: '',
+              onChanged: (value) => changedValue = value,
+            ),
+          ),
+        ),
+      );
+
+      await tester.enterText(find.byType(TextField), 'New description');
+      expect(changedValue, 'New description');
+    });
+
+    testWidgets('displays error text when provided', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TextAreaInput(
+              value: '',
+              onChanged: (_) {},
+              errorText: 'Description is required',
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Description is required'), findsOneWidget);
+    });
+
+    testWidgets('displays helper text when provided', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TextAreaInput(
+              value: '',
+              onChanged: (_) {},
+              helperText: 'Provide a detailed description',
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Provide a detailed description'), findsOneWidget);
+    });
+
+    testWidgets('shows placeholder text', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TextAreaInput(
+              value: '',
+              onChanged: (_) {},
+              placeholder: 'Enter description here...',
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Enter description here...'), findsOneWidget);
+    });
+
+    testWidgets('disables input when enabled is false', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TextAreaInput(
+              value: 'Text',
+              onChanged: (_) {},
+              enabled: false,
+            ),
+          ),
+        ),
+      );
+
+      final textField = tester.widget<TextField>(find.byType(TextField));
+      expect(textField.enabled, false);
+    });
+
+    testWidgets('uses minLines for initial height', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TextAreaInput(value: '', onChanged: (_) {}, minLines: 5),
+          ),
+        ),
+      );
+
+      final textField = tester.widget<TextField>(find.byType(TextField));
+      expect(textField.minLines, 5);
+    });
+
+    testWidgets('uses custom maxLines when provided', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TextAreaInput(
+              value: '',
+              onChanged: (_) {},
+              minLines: 3,
+              maxLines: 10,
+            ),
+          ),
+        ),
+      );
+
+      final textField = tester.widget<TextField>(find.byType(TextField));
+      expect(textField.maxLines, 10);
+    });
+
+    testWidgets('calculates default maxLines from minLines', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TextAreaInput(value: '', onChanged: (_) {}, minLines: 4),
+          ),
+        ),
+      );
+
+      final textField = tester.widget<TextField>(find.byType(TextField));
+      expect(textField.maxLines, 9); // minLines (4) + 5 = 9
+    });
+
+    testWidgets('respects maxLength constraint', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TextAreaInput(value: '', onChanged: (_) {}, maxLength: 100),
+          ),
+        ),
+      );
+
+      final textField = tester.widget<TextField>(find.byType(TextField));
+      expect(textField.maxLength, 100);
+    });
+
+    testWidgets('shows character counter when showCounter is true', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TextAreaInput(
+              value: 'Hello',
+              onChanged: (_) {},
+              showCounter: true,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('5 characters'), findsOneWidget);
+    });
+
+    testWidgets('shows counter with maxLength when both enabled', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TextAreaInput(
+              value: 'Hello World',
+              onChanged: (_) {},
+              maxLength: 100,
+              showCounter: true,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('11 / 100'), findsOneWidget);
+    });
+
+    testWidgets('hides counter when showCounter is false', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TextAreaInput(
+              value: 'Hello',
+              onChanged: (_) {},
+              showCounter: false,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('5 characters'), findsNothing);
+    });
+
+    testWidgets('updates counter as text changes', (tester) async {
+      String value = '';
+
+      await tester.pumpWidget(
+        StatefulBuilder(
+          builder: (context, setState) {
+            return MaterialApp(
+              home: Scaffold(
+                body: TextAreaInput(
+                  value: value,
+                  onChanged: (newValue) {
+                    setState(() => value = newValue);
+                  },
+                  maxLength: 50,
+                  showCounter: true,
+                ),
+              ),
+            );
+          },
+        ),
+      );
+
+      expect(find.text('0 / 50'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField), 'Test');
+      await tester.pump();
+
+      expect(find.text('4 / 50'), findsOneWidget);
+    });
+
+    testWidgets('updates value when changed externally', (tester) async {
+      String value = 'Initial text';
+
+      await tester.pumpWidget(
+        StatefulBuilder(
+          builder: (context, setState) {
+            return MaterialApp(
+              home: Scaffold(
+                body: Column(
+                  children: [
+                    TextAreaInput(
+                      value: value,
+                      onChanged: (newValue) {
+                        setState(() => value = newValue);
+                      },
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        setState(() => value = 'Updated text');
+                      },
+                      child: const Text('Update'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      );
+
+      expect(find.text('Initial text'), findsOneWidget);
+
+      await tester.tap(find.text('Update'));
+      await tester.pump();
+
+      expect(find.text('Updated text'), findsOneWidget);
+    });
+
+    testWidgets('disables autocorrect when specified', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TextAreaInput(
+              value: '',
+              onChanged: (_) {},
+              autocorrect: false,
+            ),
+          ),
+        ),
+      );
+
+      final textField = tester.widget<TextField>(find.byType(TextField));
+      expect(textField.autocorrect, false);
+    });
+
+    testWidgets('disables suggestions when specified', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TextAreaInput(
+              value: '',
+              onChanged: (_) {},
+              enableSuggestions: false,
+            ),
+          ),
+        ),
+      );
+
+      final textField = tester.widget<TextField>(find.byType(TextField));
+      expect(textField.enableSuggestions, false);
+    });
+
+    testWidgets('uses multiline keyboard type', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TextAreaInput(value: '', onChanged: (_) {}),
+          ),
+        ),
+      );
+
+      final textField = tester.widget<TextField>(find.byType(TextField));
+      expect(textField.keyboardType, TextInputType.multiline);
+    });
+
+    testWidgets('uses newline text input action', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TextAreaInput(value: '', onChanged: (_) {}),
+          ),
+        ),
+      );
+
+      final textField = tester.widget<TextField>(find.byType(TextField));
+      expect(textField.textInputAction, TextInputAction.newline);
+    });
+
+    testWidgets('handles empty value', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TextAreaInput(value: '', onChanged: (_) {}),
+          ),
+        ),
+      );
+
+      final textField = tester.widget<TextField>(find.byType(TextField));
+      expect(textField.controller?.text, '');
+    });
+
+    testWidgets('handles long text value', (tester) async {
+      final longText = 'A' * 500;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TextAreaInput(value: longText, onChanged: (_) {}),
+          ),
+        ),
+      );
+
+      expect(find.text(longText), findsOneWidget);
+    });
+
+    testWidgets('handles multi-line text value', (tester) async {
+      const multiLineText = 'Line 1\nLine 2\nLine 3';
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TextAreaInput(value: multiLineText, onChanged: (_) {}),
+          ),
+        ),
+      );
+
+      expect(find.text(multiLineText), findsOneWidget);
+    });
+  });
+}

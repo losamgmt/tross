@@ -1,0 +1,8 @@
+# OneDrive exclusion markers for Flutter project
+# Place these empty files to tell OneDrive not to sync build artifacts
+
+# Build output directories
+build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies

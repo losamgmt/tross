@@ -1,0 +1,270 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://trossapp.com/schemas/permissions.json",
+  "title": "TrossApp Permission Configuration",
+  "description": "Single source of truth for role-based access control (RBAC). Used by both backend and frontend to ensure permission parity.",
+  "version": "1.0.0",
+  "lastModified": "2025-11-04",
+  
+  "roles": {
+    "admin": {
+      "priority": 5,
+      "description": "Full system access - can manage users, roles, and all resources"
+    },
+    "manager": {
+      "priority": 4,
+      "description": "Manages operations - can view roles, manage work orders"
+    },
+    "dispatcher": {
+      "priority": 3,
+      "description": "Creates and assigns work orders"
+    },
+    "technician": {
+      "priority": 2,
+      "description": "Executes work orders, can view user list"
+    },
+    "client": {
+      "priority": 1,
+      "description": "Basic access - can view own data and work orders"
+    }
+  },
+
+  "resources": {
+    "users": {
+      "description": "User accounts and profiles",
+      "rowLevelSecurity": {
+        "client": "own_record_only",
+        "technician": "all_records",
+        "dispatcher": "all_records",
+        "manager": "all_records",
+        "admin": "all_records"
+      },
+      "permissions": {
+        "create": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "Only admins can create new user accounts"
+        },
+        "read": {
+          "minimumRole": "client",
+          "minimumPriority": 1,
+          "description": "Everyone can read users (row-level security applies)"
+        },
+        "update": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "Only admins can update user accounts"
+        },
+        "delete": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "Only admins can delete user accounts"
+        }
+      }
+    },
+
+    "roles": {
+      "description": "User roles and permissions",
+      "rowLevelSecurity": null,
+      "permissions": {
+        "create": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "Only admins can create roles"
+        },
+        "read": {
+          "minimumRole": "client",
+          "minimumPriority": 1,
+          "description": "Everyone can view roles (needed for UI dropdowns and role awareness)"
+        },
+        "update": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "Only admins can modify roles"
+        },
+        "delete": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "Only admins can delete roles"
+        }
+      }
+    },
+
+    "work_orders": {
+      "description": "Service requests and work tickets",
+      "rowLevelSecurity": {
+        "client": "assigned_only",
+        "technician": "assigned_or_available",
+        "dispatcher": "all_records",
+        "manager": "all_records",
+        "admin": "all_records"
+      },
+      "permissions": {
+        "create": {
+          "minimumRole": "dispatcher",
+          "minimumPriority": 3,
+          "description": "Dispatchers and above can create work orders"
+        },
+        "read": {
+          "minimumRole": "client",
+          "minimumPriority": 1,
+          "description": "Everyone can read work orders (row-level security applies)"
+        },
+        "update": {
+          "minimumRole": "technician",
+          "minimumPriority": 2,
+          "description": "Technicians and above can update work orders"
+        },
+        "delete": {
+          "minimumRole": "manager",
+          "minimumPriority": 4,
+          "description": "Managers and above can delete work orders"
+        }
+      }
+    },
+
+    "audit_logs": {
+      "description": "System audit trail and security events",
+      "rowLevelSecurity": null,
+      "permissions": {
+        "create": {
+          "minimumRole": "client",
+          "minimumPriority": 1,
+          "description": "System automatically creates audit logs for all users"
+        },
+        "read": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "Only admins can view audit logs"
+        },
+        "update": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "Audit logs are immutable (admin override only)"
+        },
+        "delete": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "Only admins can delete old audit logs"
+        }
+      }
+    },
+
+    "projects": {
+      "description": "[FUTURE] Project management (not yet implemented)",
+      "rowLevelSecurity": null,
+      "permissions": {
+        "create": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "Placeholder - admin only until implemented"
+        },
+        "read": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "Placeholder - admin only until implemented"
+        },
+        "update": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "Placeholder - admin only until implemented"
+        },
+        "delete": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "Placeholder - admin only until implemented"
+        }
+      }
+    },
+
+    "tasks": {
+      "description": "[FUTURE] Task management (not yet implemented)",
+      "rowLevelSecurity": null,
+      "permissions": {
+        "create": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "Placeholder - admin only until implemented"
+        },
+        "read": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "Placeholder - admin only until implemented"
+        },
+        "update": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "Placeholder - admin only until implemented"
+        },
+        "delete": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "Placeholder - admin only until implemented"
+        }
+      }
+    },
+
+    "invoices": {
+      "description": "[FUTURE] Invoice management (not yet implemented)",
+      "rowLevelSecurity": null,
+      "permissions": {
+        "create": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "Placeholder - admin only until implemented"
+        },
+        "read": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "Placeholder - admin only until implemented"
+        },
+        "update": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "Placeholder - admin only until implemented"
+        },
+        "delete": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "Placeholder - admin only until implemented"
+        }
+      }
+    },
+
+    "documents": {
+      "description": "[FUTURE] Document management (not yet implemented)",
+      "rowLevelSecurity": null,
+      "permissions": {
+        "create": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "Placeholder - admin only until implemented"
+        },
+        "read": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "Placeholder - admin only until implemented"
+        },
+        "update": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "Placeholder - admin only until implemented"
+        },
+        "delete": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "Placeholder - admin only until implemented"
+        }
+      }
+    }
+  },
+
+  "_comments": {
+    "usage": "This file is the single source of truth for permissions. Both backend and frontend load this file dynamically.",
+    "rowLevelSecurity": "Defines what records a role can see. Frontend uses this for UI, backend enforces in queries.",
+    "minimumPriority": "Due to hierarchy, all roles with priority >= minimumPriority inherit the permission.",
+    "testing": "Tests are data-driven - they validate structure and parity, not hardcoded values.",
+    "deployment": "Changing this file does NOT require code deployment, only config reload.",
+    "validation": "Backend validates this schema on startup. Invalid config prevents server start."
+  }
+}

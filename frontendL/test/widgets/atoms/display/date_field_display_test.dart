@@ -1,0 +1,199 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:tross_app/widgets/atoms/display/date_field_display.dart';
+
+void main() {
+  group('DateFieldDisplay', () {
+    testWidgets('renders with label and formatted date', (tester) async {
+      final testDate = DateTime(2024, 1, 15);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(body: DateFieldDisplay(value: testDate)),
+        ),
+      );
+
+      expect(find.text('Jan 15, 2024'), findsOneWidget);
+    });
+
+    testWidgets('displays empty text when value is null', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(home: Scaffold(body: DateFieldDisplay(value: null))),
+      );
+
+      expect(find.text('--'), findsOneWidget);
+    });
+
+    testWidgets('uses custom empty text when provided', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: DateFieldDisplay(value: null, emptyText: 'Not set'),
+          ),
+        ),
+      );
+
+      expect(find.text('Not set'), findsOneWidget);
+    });
+
+    testWidgets('displays icon when provided', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: DateFieldDisplay(
+              value: DateTime(2024, 3, 1),
+              icon: Icons.calendar_today,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byIcon(Icons.calendar_today), findsOneWidget);
+    });
+
+    testWidgets('applies custom value style', (tester) async {
+      const customStyle = TextStyle(
+        color: Colors.blue,
+        fontStyle: FontStyle.italic,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: DateFieldDisplay(
+              value: DateTime(2024, 6, 1),
+              valueStyle: customStyle,
+            ),
+          ),
+        ),
+      );
+
+      final textWidget = tester.widget<Text>(find.text('Jun 1, 2024'));
+      expect(textWidget.style?.color, Colors.blue);
+      expect(textWidget.style?.fontStyle, FontStyle.italic);
+    });
+
+    testWidgets('formats all months correctly', (tester) async {
+      final dates = [
+        (DateTime(2024, 1, 1), 'Jan 1, 2024'),
+        (DateTime(2024, 2, 14), 'Feb 14, 2024'),
+        (DateTime(2024, 3, 31), 'Mar 31, 2024'),
+        (DateTime(2024, 4, 15), 'Apr 15, 2024'),
+        (DateTime(2024, 5, 1), 'May 1, 2024'),
+        (DateTime(2024, 6, 30), 'Jun 30, 2024'),
+        (DateTime(2024, 7, 4), 'Jul 4, 2024'),
+        (DateTime(2024, 8, 15), 'Aug 15, 2024'),
+        (DateTime(2024, 9, 1), 'Sep 1, 2024'),
+        (DateTime(2024, 10, 31), 'Oct 31, 2024'),
+        (DateTime(2024, 11, 11), 'Nov 11, 2024'),
+        (DateTime(2024, 12, 25), 'Dec 25, 2024'),
+      ];
+
+      for (final (date, expected) in dates) {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(body: DateFieldDisplay(value: date)),
+          ),
+        );
+
+        expect(
+          find.text(expected),
+          findsOneWidget,
+          reason: 'Failed to format $date correctly',
+        );
+
+        // Clean up for next iteration
+        await tester.pumpWidget(Container());
+      }
+    });
+
+    testWidgets('handles different years', (tester) async {
+      final dates = [
+        (DateTime(2000, 1, 1), 'Jan 1, 2000'),
+        (DateTime(2010, 6, 15), 'Jun 15, 2010'),
+        (DateTime(2020, 12, 31), 'Dec 31, 2020'),
+        (DateTime(2025, 3, 10), 'Mar 10, 2025'),
+        (DateTime(1990, 7, 20), 'Jul 20, 1990'),
+      ];
+
+      for (final (date, expected) in dates) {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(body: DateFieldDisplay(value: date)),
+          ),
+        );
+
+        expect(find.text(expected), findsOneWidget);
+        await tester.pumpWidget(Container());
+      }
+    });
+
+    testWidgets('updates when value changes', (tester) async {
+      DateTime? value = DateTime(2024, 1, 1);
+
+      await tester.pumpWidget(
+        StatefulBuilder(
+          builder: (context, setState) {
+            return MaterialApp(
+              home: Scaffold(
+                body: Column(
+                  children: [
+                    DateFieldDisplay(value: value),
+                    ElevatedButton(
+                      onPressed: () {
+                        setState(() => value = DateTime(2024, 12, 25));
+                      },
+                      child: const Text('Update'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      );
+
+      expect(find.text('Jan 1, 2024'), findsOneWidget);
+
+      await tester.tap(find.text('Update'));
+      await tester.pump();
+
+      expect(find.text('Dec 25, 2024'), findsOneWidget);
+      expect(find.text('Jan 1, 2024'), findsNothing);
+    });
+
+    testWidgets('updates from value to null', (tester) async {
+      DateTime? value = DateTime(2024, 5, 1);
+
+      await tester.pumpWidget(
+        StatefulBuilder(
+          builder: (context, setState) {
+            return MaterialApp(
+              home: Scaffold(
+                body: Column(
+                  children: [
+                    DateFieldDisplay(value: value),
+                    ElevatedButton(
+                      onPressed: () {
+                        setState(() => value = null);
+                      },
+                      child: const Text('Clear'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      );
+
+      expect(find.text('May 1, 2024'), findsOneWidget);
+
+      await tester.tap(find.text('Clear'));
+      await tester.pump();
+
+      expect(find.text('--'), findsOneWidget);
+      expect(find.text('May 1, 2024'), findsNothing);
+    });
+  });
+}
