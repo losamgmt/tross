@@ -62,6 +62,7 @@ async function getDbCheckConstraints(pool) {
  * Map validation-rules.json field names to database table.column names
  */
 const FIELD_TO_DB_MAPPING = {
+  roleStatus: 'roles.status',
   userStatus: 'users.status',
   customerStatus: 'customers.status',
   technicianStatus: 'technicians.status',

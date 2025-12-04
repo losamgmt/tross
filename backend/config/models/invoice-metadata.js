@@ -3,8 +3,9 @@
  *
  * SRP: ONLY defines Invoice table structure and query capabilities
  * Used by QueryBuilderService to generate dynamic queries
+ * Used by GenericEntityService for CRUD operations
  *
- * SINGLE SOURCE OF TRUTH for Invoice model query capabilities
+ * SINGLE SOURCE OF TRUTH for Invoice model query and CRUD capabilities
  */
 
 module.exports = {
@@ -13,6 +14,43 @@ module.exports = {
 
   // Primary key
   primaryKey: 'id',
+
+  // ============================================================================
+  // IDENTITY CONFIGURATION (Entity Contract v2.0)
+  // ============================================================================
+
+  /**
+   * The human-readable identifier field (not the PK)
+   * Used for: Display names, search results, logging
+   */
+  identityField: 'invoice_number',
+
+  /**
+   * RLS resource name for permission checks
+   * Maps to permissions.json resource names
+   */
+  rlsResource: 'invoices',
+
+  // ============================================================================
+  // CRUD CONFIGURATION (for GenericEntityService)
+  // ============================================================================
+
+  /**
+   * Fields required when creating a new entity
+   */
+  requiredFields: ['invoice_number', 'customer_id', 'amount', 'total'],
+
+  /**
+   * Fields that can be set during CREATE
+   * Excludes: id, created_at, updated_at (system-managed)
+   */
+  createableFields: ['invoice_number', 'customer_id', 'work_order_id', 'amount', 'tax', 'total', 'due_date', 'status'],
+
+  /**
+   * Fields that can be modified during UPDATE
+   * Excludes: id, invoice_number (immutable), created_at
+   */
+  updateableFields: ['amount', 'tax', 'total', 'due_date', 'paid_at', 'status', 'is_active'],
 
   // ============================================================================
   // SEARCH CONFIGURATION (Text Search with ILIKE)

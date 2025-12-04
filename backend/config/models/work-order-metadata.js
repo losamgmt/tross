@@ -3,8 +3,9 @@
  *
  * SRP: ONLY defines Work Order table structure and query capabilities
  * Used by QueryBuilderService to generate dynamic queries
+ * Used by GenericEntityService for CRUD operations
  *
- * SINGLE SOURCE OF TRUTH for Work Order model query capabilities
+ * SINGLE SOURCE OF TRUTH for Work Order model query and CRUD capabilities
  */
 
 module.exports = {
@@ -13,6 +14,43 @@ module.exports = {
 
   // Primary key
   primaryKey: 'id',
+
+  // ============================================================================
+  // IDENTITY CONFIGURATION (Entity Contract v2.0)
+  // ============================================================================
+
+  /**
+   * The human-readable identifier field (not the PK)
+   * Used for: Display names, search results, logging
+   */
+  identityField: 'title',
+
+  /**
+   * RLS resource name for permission checks
+   * Maps to permissions.json resource names
+   */
+  rlsResource: 'work_orders',
+
+  // ============================================================================
+  // CRUD CONFIGURATION (for GenericEntityService)
+  // ============================================================================
+
+  /**
+   * Fields required when creating a new entity
+   */
+  requiredFields: ['title', 'customer_id'],
+
+  /**
+   * Fields that can be set during CREATE
+   * Excludes: id, created_at, updated_at (system-managed)
+   */
+  createableFields: ['title', 'description', 'priority', 'customer_id', 'assigned_technician_id', 'scheduled_start', 'scheduled_end', 'status'],
+
+  /**
+   * Fields that can be modified during UPDATE
+   * Excludes: id, created_at
+   */
+  updateableFields: ['title', 'description', 'priority', 'assigned_technician_id', 'scheduled_start', 'scheduled_end', 'completed_at', 'status', 'is_active'],
 
   // ============================================================================
   // SEARCH CONFIGURATION (Text Search with ILIKE)

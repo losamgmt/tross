@@ -3,8 +3,9 @@
  *
  * SRP: ONLY defines User table structure and query capabilities
  * Used by QueryBuilderService to generate dynamic queries
+ * Used by GenericEntityService for CRUD operations
  *
- * SINGLE SOURCE OF TRUTH for User model query capabilities
+ * SINGLE SOURCE OF TRUTH for User model query and CRUD capabilities
  */
 
 module.exports = {
@@ -13,6 +14,43 @@ module.exports = {
 
   // Primary key
   primaryKey: 'id',
+
+  // ============================================================================
+  // IDENTITY CONFIGURATION (Entity Contract v2.0)
+  // ============================================================================
+
+  /**
+   * The human-readable identifier field (not the PK)
+   * Used for: Display names, search results, logging
+   */
+  identityField: 'email',
+
+  /**
+   * RLS resource name for permission checks
+   * Maps to permissions.json resource names
+   */
+  rlsResource: 'users',
+
+  // ============================================================================
+  // CRUD CONFIGURATION (for GenericEntityService)
+  // ============================================================================
+
+  /**
+   * Fields required when creating a new entity
+   */
+  requiredFields: ['email', 'first_name', 'last_name'],
+
+  /**
+   * Fields that can be set during CREATE
+   * Excludes: id, created_at, updated_at (system-managed)
+   */
+  createableFields: ['email', 'auth0_id', 'first_name', 'last_name', 'role_id', 'status'],
+
+  /**
+   * Fields that can be modified during UPDATE
+   * Excludes: id, email (immutable), auth0_id (immutable), created_at
+   */
+  updateableFields: ['first_name', 'last_name', 'role_id', 'status', 'is_active'],
 
   // ============================================================================
   // SEARCH CONFIGURATION (Text Search with ILIKE)
@@ -111,6 +149,22 @@ module.exports = {
       table: 'roles',
       fields: ['id', 'name', 'description', 'priority'],
     },
+    // Multi-profile support: User can have BOTH customer AND technician profiles
+    // These are independent of role_id (RBAC) - they link to profile data
+    customerProfile: {
+      type: 'belongsTo',
+      foreignKey: 'customer_profile_id',
+      table: 'customers',
+      fields: ['id', 'email', 'company_name', 'status'],
+      description: 'Optional customer profile (service recipient data)',
+    },
+    technicianProfile: {
+      type: 'belongsTo',
+      foreignKey: 'technician_profile_id',
+      table: 'technicians',
+      fields: ['id', 'license_number', 'status'],
+      description: 'Optional technician profile (worker certification data)',
+    },
   },
 
   // ============================================================================
@@ -133,9 +187,21 @@ module.exports = {
     },
 
     // Entity-specific fields
-    auth0_id: { type: 'string', maxLength: 255 },
+    auth0_id: { type: 'string', maxLength: 255, readonly: true },
     first_name: { type: 'string', maxLength: 100 },
     last_name: { type: 'string', maxLength: 100 },
     role_id: { type: 'integer' },
+
+    // Multi-profile FKs (readonly - managed via profile creation flows)
+    customer_profile_id: {
+      type: 'integer',
+      readonly: true,
+      description: 'FK to customers table - set when user becomes a customer',
+    },
+    technician_profile_id: {
+      type: 'integer',
+      readonly: true,
+      description: 'FK to technicians table - set when user becomes a technician',
+    },
   },
 };

@@ -329,6 +329,14 @@
         "maxLength": "Status cannot exceed 50 characters"
       }
     },
+    "roleStatus": {
+      "type": "string",
+      "required": false,
+      "enum": ["active", "disabled"],
+      "errorMessages": {
+        "enum": "Role status must be one of: active, disabled"
+      }
+    },
     "userStatus": {
       "type": "string",
       "required": false,
@@ -615,12 +623,12 @@
     },
     "createRole": {
       "requiredFields": ["name"],
-      "optionalFields": ["priority", "description"],
+      "optionalFields": ["priority", "description", "status"],
       "description": "Validation rules for creating a new role"
     },
     "updateRole": {
       "requiredFields": [],
-      "optionalFields": ["name", "priority", "description", "is_active"],
+      "optionalFields": ["name", "priority", "description", "status", "is_active"],
       "description": "Validation rules for updating an existing role"
     },
     "createCustomer": {

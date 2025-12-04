@@ -1,6 +1,6 @@
 /**
  * Auth0 Authentication Service
- * 
+ *
  * @deprecated Use Auth0Strategy.js instead - this file is kept for reference only
  * TODO: Remove this file after confirming Auth0Strategy works in production
  */

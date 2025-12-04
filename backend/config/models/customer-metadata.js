@@ -3,8 +3,9 @@
  *
  * SRP: ONLY defines Customer table structure and query capabilities
  * Used by QueryBuilderService to generate dynamic queries
+ * Used by GenericEntityService for CRUD operations
  *
- * SINGLE SOURCE OF TRUTH for Customer model query capabilities
+ * SINGLE SOURCE OF TRUTH for Customer model query and CRUD capabilities
  */
 
 module.exports = {
@@ -13,6 +14,43 @@ module.exports = {
 
   // Primary key
   primaryKey: 'id',
+
+  // ============================================================================
+  // IDENTITY CONFIGURATION (Entity Contract v2.0)
+  // ============================================================================
+
+  /**
+   * The human-readable identifier field (not the PK)
+   * Used for: Display names, search results, logging
+   */
+  identityField: 'email',
+
+  /**
+   * RLS resource name for permission checks
+   * Maps to permissions.json resource names
+   */
+  rlsResource: 'customers',
+
+  // ============================================================================
+  // CRUD CONFIGURATION (for GenericEntityService)
+  // ============================================================================
+
+  /**
+   * Fields required when creating a new entity
+   */
+  requiredFields: ['email'],
+
+  /**
+   * Fields that can be set during CREATE
+   * Excludes: id, created_at, updated_at (system-managed)
+   */
+  createableFields: ['email', 'phone', 'company_name', 'billing_address', 'service_address', 'status'],
+
+  /**
+   * Fields that can be modified during UPDATE
+   * Excludes: id, created_at
+   */
+  updateableFields: ['email', 'phone', 'company_name', 'billing_address', 'service_address', 'status', 'is_active'],
 
   // ============================================================================
   // SEARCH CONFIGURATION (Text Search with ILIKE)

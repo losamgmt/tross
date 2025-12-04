@@ -37,10 +37,11 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- ROLES TABLE
 -- ============================================================================
 -- Business entity: System roles for RBAC
--- Contract compliance: ✓ FULL
+-- Contract compliance: ✓ FULL (TIER 1 + TIER 2)
 --
 -- Identity field: name
 -- Soft deletes: is_active
+-- Lifecycle: status (active, disabled)
 -- Audit: audit_logs table (created_by/updated_by removed)
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS roles (
@@ -51,22 +52,29 @@ CREATE TABLE IF NOT EXISTS roles (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     
+    -- TIER 2: Lifecycle status
+    status VARCHAR(20) DEFAULT 'active' NOT NULL CHECK (status IN ('active', 'disabled')),
+    
     -- Entity-specific fields
     description TEXT,
     priority INTEGER NOT NULL CHECK (priority > 0)
 );
 
+-- Performance index on status for filtered queries
+CREATE INDEX IF NOT EXISTS idx_roles_status ON roles(status);
+
 -- Insert the 5 core roles (idempotent)
 -- Hierarchy: admin(5) > manager(4) > dispatcher(3) > technician(2) > customer(1)
-INSERT INTO roles (name, description, priority) VALUES 
-('admin', 'Full system access and user management', 5),
-('manager', 'Full data access, manages work orders and technicians', 4),  
-('dispatcher', 'Medium access, assigns and schedules work orders', 3),
-('technician', 'Limited access, updates assigned work orders', 2),
-('customer', 'Basic access, submits and tracks service requests', 1)
+INSERT INTO roles (name, description, priority, status) VALUES 
+('admin', 'Full system access and user management', 5, 'active'),
+('manager', 'Full data access, manages work orders and technicians', 4, 'active'),  
+('dispatcher', 'Medium access, assigns and schedules work orders', 3, 'active'),
+('technician', 'Limited access, updates assigned work orders', 2, 'active'),
+('customer', 'Basic access, submits and tracks service requests', 1, 'active')
 ON CONFLICT (name) DO UPDATE SET 
     description = EXCLUDED.description,
-    priority = EXCLUDED.priority;
+    priority = EXCLUDED.priority,
+    status = EXCLUDED.status;
 
 -- ============================================================================
 -- USERS TABLE

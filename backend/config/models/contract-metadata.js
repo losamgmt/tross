@@ -3,8 +3,9 @@
  *
  * SRP: ONLY defines Contract table structure and query capabilities
  * Used by QueryBuilderService to generate dynamic queries
+ * Used by GenericEntityService for CRUD operations
  *
- * SINGLE SOURCE OF TRUTH for Contract model query capabilities
+ * SINGLE SOURCE OF TRUTH for Contract model query and CRUD capabilities
  */
 
 module.exports = {
@@ -13,6 +14,43 @@ module.exports = {
 
   // Primary key
   primaryKey: 'id',
+
+  // ============================================================================
+  // IDENTITY CONFIGURATION (Entity Contract v2.0)
+  // ============================================================================
+
+  /**
+   * The human-readable identifier field (not the PK)
+   * Used for: Display names, search results, logging
+   */
+  identityField: 'contract_number',
+
+  /**
+   * RLS resource name for permission checks
+   * Maps to permissions.json resource names
+   */
+  rlsResource: 'contracts',
+
+  // ============================================================================
+  // CRUD CONFIGURATION (for GenericEntityService)
+  // ============================================================================
+
+  /**
+   * Fields required when creating a new entity
+   */
+  requiredFields: ['contract_number', 'customer_id', 'start_date'],
+
+  /**
+   * Fields that can be set during CREATE
+   * Excludes: id, created_at, updated_at (system-managed)
+   */
+  createableFields: ['contract_number', 'customer_id', 'start_date', 'end_date', 'terms', 'value', 'billing_cycle', 'status'],
+
+  /**
+   * Fields that can be modified during UPDATE
+   * Excludes: id, contract_number (immutable), created_at
+   */
+  updateableFields: ['start_date', 'end_date', 'terms', 'value', 'billing_cycle', 'status', 'is_active'],
 
   // ============================================================================
   // SEARCH CONFIGURATION (Text Search with ILIKE)

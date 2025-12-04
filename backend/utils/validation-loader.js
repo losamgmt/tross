@@ -248,7 +248,9 @@ function buildCompositeSchema(operationName) {
 
   // Determine context-aware status field
   let statusField = 'status'; // Default
-  if (isUserOperation) {
+  if (isRoleOperation) {
+    statusField = 'roleStatus';
+  } else if (isUserOperation) {
     statusField = 'userStatus';
   } else if (isCustomerOperation) {
     statusField = 'customerStatus';
