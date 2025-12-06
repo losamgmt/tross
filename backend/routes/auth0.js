@@ -11,6 +11,7 @@ const ResponseFormatter = require('../utils/response-formatter');
 const Auth0Strategy = require('../services/auth/Auth0Strategy');
 const tokenService = require('../services/token-service');
 const auditService = require('../services/audit-service');
+const { AuditActions, ResourceTypes, AuditResults } = require('../services/audit-constants');
 const { logger } = require('../config/logger');
 const { refreshLimiter } = require('../middleware/rate-limit');
 const {
@@ -106,8 +107,8 @@ router.post('/callback', validateAuthCallback, async (req, res) => {
     // Log successful login
     await auditService.log({
       userId: authResult.user.id,
-      action: 'login',
-      resourceType: 'auth',
+      action: AuditActions.LOGIN,
+      resourceType: ResourceTypes.AUTH,
       ipAddress,
       userAgent,
     });
@@ -132,12 +133,12 @@ router.post('/callback', validateAuthCallback, async (req, res) => {
     const userAgent = req.headers['user-agent'];
     await auditService.log({
       userId: null,
-      action: 'login_failed',
-      resourceType: 'auth',
+      action: AuditActions.LOGIN_FAILED,
+      resourceType: ResourceTypes.AUTH,
       newValues: { email: req.body.email || 'unknown', reason: error.message },
       ipAddress,
       userAgent,
-      result: 'failure',
+      result: AuditResults.FAILURE,
       errorMessage: error.message,
     });
 

@@ -54,8 +54,8 @@ class UserFieldConfigs {
       auth0Id: '', // Will be assigned on first Auth0 login
       firstName: '',
       lastName: '',
-      roleId: 5, // Default to client role
-      role: 'client',
+      roleId: 5, // Default to customer role
+      role: 'customer',
       isActive: true,
       status: 'pending_activation', // New user awaiting first login
       createdAt: DateTime.now(),

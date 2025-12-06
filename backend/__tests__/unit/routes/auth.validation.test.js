@@ -5,11 +5,15 @@
  * Uses centralized setup from route-test-setup.js (DRY architecture).
  *
  * Test Coverage: Error handling, validation, edge cases
+ * 
+ * NOTE: PUT /api/auth/me now uses GenericEntityService.findByField
+ * instead of User.findByAuth0Id
  */
 
 const request = require("supertest");
 const authRoutes = require("../../../routes/auth");
 const User = require("../../../db/models/User");
+const GenericEntityService = require("../../../services/generic-entity-service");
 const tokenService = require("../../../services/token-service");
 const auditService = require("../../../services/audit-service");
 const { authenticateToken } = require("../../../middleware/auth");
@@ -28,6 +32,7 @@ jest.mock("../../../db/models/Role");
 jest.mock("../../../services/user-data");
 jest.mock("../../../services/token-service");
 jest.mock("../../../services/audit-service");
+jest.mock("../../../services/generic-entity-service");
 jest.mock("../../../middleware/auth");
 jest.mock("../../../utils/request-helpers");
 jest.mock("jsonwebtoken");
@@ -81,6 +86,9 @@ describe("routes/auth.js - Validation & Error Handling", () => {
       };
       next();
     });
+
+    // Reset GenericEntityService mock
+    GenericEntityService.findByField = jest.fn();
   });
 
   afterEach(() => {
@@ -115,8 +123,8 @@ describe("routes/auth.js - Validation & Error Handling", () => {
   // ===========================
   describe("PUT /api/auth/me - Validation", () => {
     test("should return 404 when user not found", async () => {
-      // Arrange
-      User.findByAuth0Id.mockResolvedValue(null);
+      // Arrange - use GenericEntityService.findByField
+      GenericEntityService.findByField.mockResolvedValue(null);
 
       // Act
       const response = await request(app)
@@ -131,8 +139,8 @@ describe("routes/auth.js - Validation & Error Handling", () => {
     });
 
     test("should return 400 when no valid fields to update", async () => {
-      // Arrange
-      User.findByAuth0Id.mockResolvedValue({
+      // Arrange - use GenericEntityService.findByField
+      GenericEntityService.findByField.mockResolvedValue({
         id: 1,
         auth0_id: "auth0|123",
       });
@@ -148,8 +156,8 @@ describe("routes/auth.js - Validation & Error Handling", () => {
     });
 
     test("should handle update errors gracefully", async () => {
-      // Arrange
-      User.findByAuth0Id.mockResolvedValue({
+      // Arrange - use GenericEntityService.findByField
+      GenericEntityService.findByField.mockResolvedValue({
         id: 1,
         auth0_id: "auth0|123",
       });

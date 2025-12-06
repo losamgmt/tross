@@ -119,12 +119,14 @@ describe('Users CRUD API - Integration Tests', () => {
 
     test('should support sorting', async () => {
       // Arrange - Create additional test user for sorting
+      const GenericEntityService = require('../../services/generic-entity-service');
+      const technicianRole = await GenericEntityService.findByField('role', 'name', 'technician');
       await User.create({
         auth0_id: `sort-test-${Date.now()}`,
         email: 'aaa-first@test.com', // Should sort first
         first_name: 'First',
         last_name: 'User',
-        role_id: (await require('../../db/models/Role').getByName('technician')).id,
+        role_id: technicianRole.id,
       });
 
       // Act

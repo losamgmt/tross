@@ -201,7 +201,7 @@ class _ServiceAgreementSettingsScreenState
                               onChanged: (value) {
                                 setState(() => _enableAutoVisitCreation = value);
                               },
-                              activeColor: AppColors.success,
+                              activeThumbColor: AppColors.success,
                             ),
                             SizedBox(height: spacing.md),
                             Text(
@@ -475,7 +475,7 @@ class _ServiceAgreementSettingsScreenState
                                   ],
                                 ),
                               );
-                            }).toList(),
+                            }),
 
                             // Total percentage
                             Padding(

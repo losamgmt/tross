@@ -269,57 +269,9 @@ class AuditService {
   // ============================================================================
   // CONTRACT V2.0 CONVENIENCE METHODS
   // ============================================================================
-  // These methods replace the deprecated deactivated_by/deactivated_at fields.
   // In contract v2.0, audit data lives ONLY in audit_logs table (SRP compliance).
   // Entity tables store pure data; audit_logs stores who/when/what.
-
-  /**
-   * Log a deactivation action
-   * Replaces: Setting deactivated_at/deactivated_by fields on entity
-   *
-   * @param {string} resourceType - Table name ('users', 'roles', etc.)
-   * @param {number} resourceId - Record ID
-   * @param {number|string|null} userId - User who performed deactivation
-   * @param {string} ipAddress - Client IP (optional)
-   * @param {string} userAgent - Client user agent (optional)
-   * @returns {Promise<void>}
-   */
-  async logDeactivation(resourceType, resourceId, userId, ipAddress = null, userAgent = null) {
-    await this.log({
-      userId,
-      action: `${resourceType.toUpperCase()}_DEACTIVATE`,
-      resourceType,
-      resourceId,
-      oldValues: { is_active: true },
-      newValues: { is_active: false },
-      ipAddress,
-      userAgent,
-    });
-  }
-
-  /**
-   * Log a reactivation action
-   * Replaces: Clearing deactivated_at/deactivated_by fields on entity
-   *
-   * @param {string} resourceType - Table name ('users', 'roles', etc.)
-   * @param {number} resourceId - Record ID
-   * @param {number|string|null} userId - User who performed reactivation
-   * @param {string} ipAddress - Client IP (optional)
-   * @param {string} userAgent - Client user agent (optional)
-   * @returns {Promise<void>}
-   */
-  async logReactivation(resourceType, resourceId, userId, ipAddress = null, userAgent = null) {
-    await this.log({
-      userId,
-      action: `${resourceType.toUpperCase()}_REACTIVATE`,
-      resourceType,
-      resourceId,
-      oldValues: { is_active: false },
-      newValues: { is_active: true },
-      ipAddress,
-      userAgent,
-    });
-  }
+  // DESIGN DECISION: Deactivate/Reactivate are UPDATE operations - no special methods.
 
   /**
    * Get who created a record
@@ -389,18 +341,22 @@ class AuditService {
    * Get who deactivated a record (if currently inactive)
    * Replaces: deactivated_by/deactivated_at fields
    *
+   * Looks for UPDATE actions where new_values contains is_active: false
+   *
    * @param {string} resourceType - Table name
    * @param {number} resourceId - Record ID
    * @returns {Promise<{user_id: number|null, deactivated_at: Date}|null>}
    */
   async getDeactivator(resourceType, resourceId) {
     try {
+      // Find the most recent UPDATE that set is_active to false
       const result = await db(
         `SELECT user_id, created_at as deactivated_at
          FROM audit_logs
          WHERE resource_type = $1
            AND resource_id = $2
-           AND action LIKE '%DEACTIVATE'
+           AND action LIKE '%UPDATE'
+           AND new_values::jsonb @> '{"is_active": false}'
          ORDER BY created_at DESC
          LIMIT 1`,
         [resourceType, resourceId],
@@ -413,7 +369,8 @@ class AuditService {
            FROM audit_logs
            WHERE resource_type = $1
              AND resource_id = $2
-             AND action LIKE '%REACTIVATE'
+             AND action LIKE '%UPDATE'
+             AND new_values::jsonb @> '{"is_active": true}'
              AND created_at > $3
            LIMIT 1`,
           [resourceType, resourceId, result.rows[0].deactivated_at],

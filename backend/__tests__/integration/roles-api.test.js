@@ -486,8 +486,8 @@ describe('Roles CRUD API - Integration Tests', () => {
       // Get authenticated user from token
       const jwt = require('jsonwebtoken');
       const decoded = jwt.verify(adminToken, process.env.JWT_SECRET || 'dev-secret-key');
-      const User = require('../../db/models/User');
-      const authenticatedUser = await User.findByAuth0Id(decoded.sub);
+      const GenericEntityService = require('../../services/generic-entity-service');
+      const authenticatedUser = await GenericEntityService.findByField('user', 'auth0_id', decoded.sub);
 
       const auditResult = await db.query(
         `SELECT * FROM audit_logs 
@@ -522,8 +522,8 @@ describe('Roles CRUD API - Integration Tests', () => {
       const db = require('../../db/connection');
       const jwt = require('jsonwebtoken');
       const decoded = jwt.verify(adminToken, process.env.JWT_SECRET || 'dev-secret-key');
-      const User = require('../../db/models/User');
-      const authenticatedUser = await User.findByAuth0Id(decoded.sub);
+      const GenericEntityService = require('../../services/generic-entity-service');
+      const authenticatedUser = await GenericEntityService.findByField('user', 'auth0_id', decoded.sub);
 
       const auditResult = await db.query(
         `SELECT * FROM audit_logs 
@@ -557,8 +557,8 @@ describe('Roles CRUD API - Integration Tests', () => {
       const db = require('../../db/connection');
       const jwt = require('jsonwebtoken');
       const decoded = jwt.verify(adminToken, process.env.JWT_SECRET || 'dev-secret-key');
-      const User = require('../../db/models/User');
-      const authenticatedUser = await User.findByAuth0Id(decoded.sub);
+      const GenericEntityService = require('../../services/generic-entity-service');
+      const authenticatedUser = await GenericEntityService.findByField('user', 'auth0_id', decoded.sub);
 
       const auditResult = await db.query(
         `SELECT * FROM audit_logs 

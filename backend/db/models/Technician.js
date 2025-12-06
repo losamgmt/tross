@@ -136,18 +136,7 @@ class Technician {
     }
   }
 
-  static async findByLicenseNumber(licenseNumber) {
-    if (!licenseNumber) {
-      throw new Error(MODEL_ERRORS.TECHNICIAN.LICENSE_NUMBER_REQUIRED);
-    }
-    try {
-      const result = await db.query(this._buildQuery('WHERE t.license_number = $1'), [licenseNumber]);
-      return result.rows[0] || null;
-    } catch (error) {
-      logger.error('Error finding technician by license', { error: error.message });
-      throw new Error(MODEL_ERRORS.TECHNICIAN.RETRIEVAL_FAILED);
-    }
-  }
+  // NOTE: findByLicenseNumber has been removed - use GenericEntityService.findByField('technician', 'license_number', value)
 
   static async findAll(options = {}) {
     try {

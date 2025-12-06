@@ -9,12 +9,14 @@ const _userDataService = require('../services/user-data');
 const _crypto = require('crypto');
 const tokenService = require('../services/token-service');
 const auditService = require('../services/audit-service');
+const { AuditActions, ResourceTypes, AuditResults } = require('../services/audit-constants');
 const {
   validateProfileUpdate,
   validateRefreshToken,
 } = require('../validators/body-validators');
 const { logger } = require('../config/logger');
 const { getClientIp, getUserAgent } = require('../utils/request-helpers');
+const GenericEntityService = require('../services/generic-entity-service');
 
 const router = express.Router();
 
@@ -132,7 +134,8 @@ router.put(
   validateProfileUpdate,
   async (req, res) => {
     try {
-      const dbUser = await User.findByAuth0Id(req.user.sub);
+      // Use GenericEntityService instead of User.findByAuth0Id
+      const dbUser = await GenericEntityService.findByField('user', 'auth0_id', req.user.sub);
       if (!dbUser) {
         return ResponseFormatter.notFound(res, `User not found for Auth0 ID: ${req.user.sub}`);
       }
@@ -152,7 +155,7 @@ router.put(
       }
 
       await User.update(dbUser.id, updates);
-      const updatedUser = await User.findByAuth0Id(req.user.sub);
+      const updatedUser = await GenericEntityService.findByField('user', 'auth0_id', req.user.sub);
 
       return ResponseFormatter.updated(res, updatedUser, 'Profile updated successfully');
     } catch (error) {
@@ -231,8 +234,8 @@ router.post(
       const decoded = require('jsonwebtoken').decode(refreshToken);
       await auditService.log({
         userId: decoded.userId,
-        action: 'token_refresh',
-        resourceType: 'auth',
+        action: AuditActions.TOKEN_REFRESH,
+        resourceType: ResourceTypes.AUTH,
         ipAddress,
         userAgent,
       });
@@ -297,8 +300,8 @@ router.post('/logout', authenticateToken, async (req, res) => {
     // Log the logout
     await auditService.log({
       userId, // Now handles null safely for dev users
-      action: 'logout',
-      resourceType: 'auth',
+      action: AuditActions.LOGOUT,
+      resourceType: ResourceTypes.AUTH,
       ipAddress,
       userAgent,
     });
@@ -358,12 +361,12 @@ router.post('/logout-all', authenticateToken, async (req, res) => {
 
     await auditService.log({
       userId: req.user.userId,
-      action: 'logout_all_devices',
-      resourceType: 'auth',
+      action: AuditActions.LOGOUT_ALL_DEVICES,
+      resourceType: ResourceTypes.AUTH,
       newValues: { tokensRevoked: count },
       ipAddress,
       userAgent,
-      result: 'success',
+      result: AuditResults.SUCCESS,
     });
 
     return ResponseFormatter.updated(res, { tokensRevoked: count }, `Logged out from ${count} device(s)`);

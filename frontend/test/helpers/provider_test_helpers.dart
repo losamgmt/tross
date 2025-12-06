@@ -87,7 +87,7 @@ class MockUserData {
       'id': id,
       'name': name,
       'email': email,
-      'role': 'client',
+      'role': 'customer',
       'is_active': isActive,
       'permissions': ['routes:read'], // Minimal permissions
     };
@@ -202,7 +202,7 @@ class PermissionTestScenarios {
     'manager',
     'dispatcher',
     'technician',
-    'client',
+    'customer',
   ];
 
   /// Test scenario: Admin can do everything

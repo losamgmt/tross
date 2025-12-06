@@ -17,6 +17,7 @@ const {
 } = require('../validators');
 const Technician = require('../db/models/Technician');
 const auditService = require('../services/audit-service');
+const { AuditActions, ResourceTypes, AuditResults } = require('../services/audit-constants');
 const { getClientIp, getUserAgent } = require('../utils/request-helpers');
 const { logger } = require('../config/logger');
 const technicianMetadata = require('../config/models/technician-metadata');
@@ -272,13 +273,13 @@ router.post(
 
       await auditService.log({
         userId: req.user.userId,
-        action: 'create',
-        resourceType: 'technician',
+        action: AuditActions.TECHNICIAN_CREATE,
+        resourceType: ResourceTypes.TECHNICIAN,
         resourceId: newTechnician.id,
         newValues: { license_number, hourly_rate, status },
         ipAddress,
         userAgent,
-        result: 'success',
+        result: AuditResults.SUCCESS,
       });
 
       return ResponseFormatter.created(res, newTechnician, 'Technician created successfully');
@@ -380,14 +381,14 @@ router.patch(
 
       await auditService.log({
         userId: req.user.userId,
-        action: 'update',
-        resourceType: 'technician',
+        action: AuditActions.TECHNICIAN_UPDATE,
+        resourceType: ResourceTypes.TECHNICIAN,
         resourceId: technicianId,
         oldValues: technician,
         newValues: updatedTechnician,
         ipAddress,
         userAgent,
-        result: 'success',
+        result: AuditResults.SUCCESS,
       });
 
       return ResponseFormatter.updated(res, updatedTechnician, 'Technician updated successfully');
@@ -457,13 +458,13 @@ router.delete(
 
       await auditService.log({
         userId: req.user.userId,
-        action: 'delete',
-        resourceType: 'technician',
+        action: AuditActions.TECHNICIAN_DELETE,
+        resourceType: ResourceTypes.TECHNICIAN,
         resourceId: technicianId,
         oldValues: technician,
         ipAddress,
         userAgent,
-        result: 'success',
+        result: AuditResults.SUCCESS,
       });
 
       return ResponseFormatter.deleted(res, 'Technician deleted successfully');

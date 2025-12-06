@@ -24,7 +24,7 @@ const Map<String, int> roleHierarchy = {
   'manager': 4,
   'dispatcher': 3,
   'technician': 2,
-  'client': 1,
+  'customer': 1,
 };
 
 /// Permission Operations

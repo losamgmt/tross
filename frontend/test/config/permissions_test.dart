@@ -16,7 +16,7 @@ void main() {
         expect(roleHierarchy.containsKey('manager'), true);
         expect(roleHierarchy.containsKey('dispatcher'), true);
         expect(roleHierarchy.containsKey('technician'), true);
-        expect(roleHierarchy.containsKey('client'), true);
+        expect(roleHierarchy.containsKey('customer'), true);
       });
 
       test('should have correct priority values', () {
@@ -24,7 +24,7 @@ void main() {
         expect(roleHierarchy['manager'], 4);
         expect(roleHierarchy['dispatcher'], 3);
         expect(roleHierarchy['technician'], 2);
-        expect(roleHierarchy['client'], 1);
+        expect(roleHierarchy['customer'], 1);
       });
 
       test('should have unique priority values', () {
@@ -43,7 +43,7 @@ void main() {
         final minPriority = roleHierarchy.values.reduce(
           (a, b) => a < b ? a : b,
         );
-        expect(minPriority, roleHierarchy['client']);
+        expect(minPriority, roleHierarchy['customer']);
       });
     });
 
@@ -110,7 +110,7 @@ void main() {
         expect(getRolePriority('manager'), 4);
         expect(getRolePriority('dispatcher'), 3);
         expect(getRolePriority('technician'), 2);
-        expect(getRolePriority('client'), 1);
+        expect(getRolePriority('customer'), 1);
       });
 
       test('should be case-insensitive', () {
@@ -230,20 +230,20 @@ void main() {
 
       group('client role', () {
         test('should only have read on work_orders', () {
-          expect(hasPermission('client', 'work_orders', 'read'), true);
-          expect(hasPermission('client', 'work_orders', 'create'), false);
-          expect(hasPermission('client', 'work_orders', 'update'), false);
-          expect(hasPermission('client', 'work_orders', 'delete'), false);
+          expect(hasPermission('customer', 'work_orders', 'read'), true);
+          expect(hasPermission('customer', 'work_orders', 'create'), false);
+          expect(hasPermission('customer', 'work_orders', 'update'), false);
+          expect(hasPermission('customer', 'work_orders', 'delete'), false);
         });
 
         test('should have create on audit_logs (automatic)', () {
-          expect(hasPermission('client', 'audit_logs', 'create'), true);
+          expect(hasPermission('customer', 'audit_logs', 'create'), true);
         });
 
         test('should NOT have any other permissions', () {
-          expect(hasPermission('client', 'users', 'read'), false);
-          expect(hasPermission('client', 'roles', 'read'), false);
-          expect(hasPermission('client', 'audit_logs', 'read'), false);
+          expect(hasPermission('customer', 'users', 'read'), false);
+          expect(hasPermission('customer', 'roles', 'read'), false);
+          expect(hasPermission('customer', 'audit_logs', 'read'), false);
         });
       });
 
@@ -287,7 +287,7 @@ void main() {
       group('permission inheritance validation', () {
         test('higher roles should have all lower role permissions', () {
           // If client can read work_orders, everyone should be able to
-          expect(hasPermission('client', 'work_orders', 'read'), true);
+          expect(hasPermission('customer', 'work_orders', 'read'), true);
           expect(hasPermission('technician', 'work_orders', 'read'), true);
           expect(hasPermission('dispatcher', 'work_orders', 'read'), true);
           expect(hasPermission('manager', 'work_orders', 'read'), true);
@@ -300,32 +300,32 @@ void main() {
       test('should return true when roles are equal', () {
         expect(hasMinimumRole('admin', 'admin'), true);
         expect(hasMinimumRole('manager', 'manager'), true);
-        expect(hasMinimumRole('client', 'client'), true);
+        expect(hasMinimumRole('customer', 'customer'), true);
       });
 
       test('should return true when user role exceeds required', () {
         expect(hasMinimumRole('admin', 'manager'), true);
         expect(hasMinimumRole('admin', 'dispatcher'), true);
         expect(hasMinimumRole('admin', 'technician'), true);
-        expect(hasMinimumRole('admin', 'client'), true);
+        expect(hasMinimumRole('admin', 'customer'), true);
 
         expect(hasMinimumRole('manager', 'dispatcher'), true);
         expect(hasMinimumRole('manager', 'technician'), true);
-        expect(hasMinimumRole('manager', 'client'), true);
+        expect(hasMinimumRole('manager', 'customer'), true);
       });
 
       test('should return false when user role is below required', () {
-        expect(hasMinimumRole('client', 'admin'), false);
+        expect(hasMinimumRole('customer', 'admin'), false);
         expect(hasMinimumRole('technician', 'admin'), false);
         expect(hasMinimumRole('dispatcher', 'admin'), false);
         expect(hasMinimumRole('manager', 'admin'), false);
 
-        expect(hasMinimumRole('client', 'manager'), false);
+        expect(hasMinimumRole('customer', 'manager'), false);
         expect(hasMinimumRole('technician', 'manager'), false);
       });
 
       test('should return false for unknown user role', () {
-        expect(hasMinimumRole('unknown', 'client'), false);
+        expect(hasMinimumRole('unknown', 'customer'), false);
       });
 
       test('should return false for unknown required role', () {
@@ -333,7 +333,7 @@ void main() {
       });
 
       test('should return false for null user role', () {
-        expect(hasMinimumRole(null, 'client'), false);
+        expect(hasMinimumRole(null, 'customer'), false);
       });
 
       test('should return false for null required role', () {
@@ -363,7 +363,7 @@ void main() {
       });
 
       test('should return minimal permissions for client', () {
-        final perms = getRolePermissions('client');
+        final perms = getRolePermissions('customer');
         expect(perms['work_orders'], ['read']);
         expect(perms['audit_logs'], ['create']);
         expect(perms.containsKey('users'), false);
@@ -385,14 +385,14 @@ void main() {
       test('canPerform should work correctly', () {
         expect(PermissionService.canPerform('admin', 'users', 'delete'), true);
         expect(
-          PermissionService.canPerform('client', 'users', 'delete'),
+          PermissionService.canPerform('customer', 'users', 'delete'),
           false,
         );
       });
 
       test('meetsMinimumRole should work correctly', () {
         expect(PermissionService.meetsMinimumRole('admin', 'manager'), true);
-        expect(PermissionService.meetsMinimumRole('client', 'admin'), false);
+        expect(PermissionService.meetsMinimumRole('customer', 'admin'), false);
       });
 
       test('isAdmin should identify admins', () {
@@ -418,7 +418,7 @@ void main() {
       test('isTechnician should check technician or above', () {
         expect(PermissionService.isTechnician('admin'), true);
         expect(PermissionService.isTechnician('technician'), true);
-        expect(PermissionService.isTechnician('client'), false);
+        expect(PermissionService.isTechnician('customer'), false);
       });
 
       test('getPermissionsFor should return role permissions', () {
@@ -428,7 +428,7 @@ void main() {
 
       test('getPriority should return role priority', () {
         expect(PermissionService.getPriority('admin'), 5);
-        expect(PermissionService.getPriority('client'), 1);
+        expect(PermissionService.getPriority('customer'), 1);
         expect(PermissionService.getPriority('unknown'), null);
       });
     });

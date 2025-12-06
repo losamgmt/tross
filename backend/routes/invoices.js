@@ -15,6 +15,7 @@ const {
 } = require('../validators');
 const Invoice = require('../db/models/Invoice');
 const auditService = require('../services/audit-service');
+const { AuditActions, ResourceTypes, AuditResults } = require('../services/audit-constants');
 const { getClientIp, getUserAgent } = require('../utils/request-helpers');
 const { logger } = require('../config/logger');
 const invoiceMetadata = require('../config/models/invoice-metadata');
@@ -254,13 +255,13 @@ router.post(
 
       await auditService.log({
         userId: req.user.userId,
-        action: 'create',
-        resourceType: 'invoice',
+        action: AuditActions.INVOICE_CREATE,
+        resourceType: ResourceTypes.INVOICE,
         resourceId: newInvoice.id,
         newValues: { invoice_number, customer_id, amount, total },
         ipAddress,
         userAgent,
-        result: 'success',
+        result: AuditResults.SUCCESS,
       });
 
       return ResponseFormatter.created(res, newInvoice, 'Invoice created successfully');
@@ -348,14 +349,14 @@ router.patch(
 
       await auditService.log({
         userId: req.user.userId,
-        action: 'update',
-        resourceType: 'invoice',
+        action: AuditActions.INVOICE_UPDATE,
+        resourceType: ResourceTypes.INVOICE,
         resourceId: invoiceId,
         oldValues: invoice,
         newValues: updatedInvoice,
         ipAddress,
         userAgent,
-        result: 'success',
+        result: AuditResults.SUCCESS,
       });
 
       return ResponseFormatter.updated(res, updatedInvoice, 'Invoice updated successfully');
@@ -425,13 +426,13 @@ router.delete(
 
       await auditService.log({
         userId: req.user.userId,
-        action: 'delete',
-        resourceType: 'invoice',
+        action: AuditActions.INVOICE_DELETE,
+        resourceType: ResourceTypes.INVOICE,
         resourceId: invoiceId,
         oldValues: invoice,
         ipAddress,
         userAgent,
-        result: 'success',
+        result: AuditResults.SUCCESS,
       });
 
       return ResponseFormatter.deleted(res, 'Invoice deleted successfully');

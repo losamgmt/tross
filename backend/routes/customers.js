@@ -16,6 +16,7 @@ const {
 } = require('../validators');
 const Customer = require('../db/models/Customer');
 const auditService = require('../services/audit-service');
+const { AuditActions, ResourceTypes, AuditResults } = require('../services/audit-constants');
 const { getClientIp, getUserAgent } = require('../utils/request-helpers');
 const { logger } = require('../config/logger');
 const customerMetadata = require('../config/models/customer-metadata');
@@ -233,13 +234,13 @@ router.post(
 
       await auditService.log({
         userId: req.user.userId,
-        action: 'create',
-        resourceType: 'customer',
+        action: AuditActions.CUSTOMER_CREATE,
+        resourceType: ResourceTypes.CUSTOMER,
         resourceId: newCustomer.id,
         newValues: { email, phone, company_name },
         ipAddress,
         userAgent,
-        result: 'success',
+        result: AuditResults.SUCCESS,
       });
 
       return ResponseFormatter.created(res, newCustomer, 'Customer created successfully');
@@ -335,14 +336,14 @@ router.patch(
 
       await auditService.log({
         userId: req.user.userId,
-        action: 'update',
-        resourceType: 'customer',
+        action: AuditActions.CUSTOMER_UPDATE,
+        resourceType: ResourceTypes.CUSTOMER,
         resourceId: customerId,
         oldValues: customer,
         newValues: updatedCustomer,
         ipAddress,
         userAgent,
-        result: 'success',
+        result: AuditResults.SUCCESS,
       });
 
       return ResponseFormatter.updated(res, updatedCustomer, 'Customer updated successfully');
@@ -412,13 +413,13 @@ router.delete(
 
       await auditService.log({
         userId: req.user.userId,
-        action: 'delete',
-        resourceType: 'customer',
+        action: AuditActions.CUSTOMER_DELETE,
+        resourceType: ResourceTypes.CUSTOMER,
         resourceId: customerId,
         oldValues: customer,
         ipAddress,
         userAgent,
-        result: 'success',
+        result: AuditResults.SUCCESS,
       });
 
       return ResponseFormatter.deleted(res, 'Customer deleted successfully');

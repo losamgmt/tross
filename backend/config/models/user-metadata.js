@@ -16,6 +16,17 @@ module.exports = {
   primaryKey: 'id',
 
   // ============================================================================
+  // AUTH0 CONFIGURATION
+  // ============================================================================
+
+  /**
+   * Default role name for new users created via Auth0 SSO
+   * Used when JWT token doesn't include a role claim
+   * CONFIGURABLE - no hardcoding in User model!
+   */
+  defaultRoleName: 'customer',
+
+  // ============================================================================
   // IDENTITY CONFIGURATION (Entity Contract v2.0)
   // ============================================================================
 
@@ -30,6 +41,21 @@ module.exports = {
    * Maps to permissions.json resource names
    */
   rlsResource: 'users',
+
+  // ============================================================================
+  // OUTPUT FILTERING (for API responses)
+  // ============================================================================
+
+  /**
+   * Fields that should NEVER be returned in API responses
+   * These are filtered out by output-filter-helper in addition to
+   * the global ALWAYS_SENSITIVE list.
+   *
+   * NOTE: auth0_id is already in ALWAYS_SENSITIVE, but listed here
+   * for clarity that it's the only sensitive field on users.
+   * We use Auth0 for auth - we do NOT store passwords.
+   */
+  sensitiveFields: ['auth0_id'],
 
   // ============================================================================
   // CRUD CONFIGURATION (for GenericEntityService)
@@ -51,6 +77,31 @@ module.exports = {
    * Excludes: id, email (immutable), auth0_id (immutable), created_at
    */
   updateableFields: ['first_name', 'last_name', 'role_id', 'status', 'is_active'],
+
+  // ============================================================================
+  // DELETE CONFIGURATION (for GenericEntityService.delete)
+  // ============================================================================
+
+  /**
+   * Dependent records that must be cascade-deleted before this entity
+   * Only for relationships NOT handled by database ON DELETE CASCADE/SET NULL
+   *
+   * Note: refresh_tokens has ON DELETE CASCADE (DB handles it)
+   * For audit_logs: Two cascades needed:
+   *   1. Logs ABOUT this user (polymorphic: resource_type='users')
+   *   2. Logs BY this user (simple FK: user_id)
+   */
+  dependents: [
+    {
+      table: 'audit_logs',
+      foreignKey: 'resource_id',
+      polymorphicType: { column: 'resource_type', value: 'users' },
+    },
+    {
+      table: 'audit_logs',
+      foreignKey: 'user_id',
+    },
+  ],
 
   // ============================================================================
   // SEARCH CONFIGURATION (Text Search with ILIKE)
@@ -137,6 +188,13 @@ module.exports = {
   // ============================================================================
   // RELATIONSHIPS (for JOIN queries)
   // ============================================================================
+
+  /**
+   * Relationships to JOIN by default in all queries (findById, findAll, findByField)
+   * These are included automatically without needing to specify 'include' option
+   * Use this for relationships that are almost always needed (like role for user)
+   */
+  defaultIncludes: ['role'],
 
   /**
    * Foreign key relationships

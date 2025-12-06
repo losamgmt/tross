@@ -279,7 +279,7 @@ class _EquipmentAssetsScreenState extends State<EquipmentAssetsScreen> {
                       ),
                       SizedBox(height: context.spacing.xs),
                       DropdownButtonFormField<String>(
-                        value: _selectedStatus,
+                        initialValue: _selectedStatus,
                         decoration: InputDecoration(
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(4),
@@ -321,7 +321,7 @@ class _EquipmentAssetsScreenState extends State<EquipmentAssetsScreen> {
                       ),
                       SizedBox(height: context.spacing.xs),
                       DropdownButtonFormField<String>(
-                        value: _selectedCondition,
+                        initialValue: _selectedCondition,
                         decoration: InputDecoration(
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(4),
@@ -357,7 +357,7 @@ class _EquipmentAssetsScreenState extends State<EquipmentAssetsScreen> {
               child: SingleChildScrollView(
                 child: DataTable(
                   columnSpacing: 20,
-                  headingRowColor: MaterialStateProperty.all(AppColors.backgroundLight),
+                  headingRowColor: WidgetStateProperty.all(AppColors.backgroundLight),
                   columns: const [
                     DataColumn(label: Text('Asset #', style: TextStyle(fontWeight: FontWeight.w600))),
                     DataColumn(label: Text('Name', style: TextStyle(fontWeight: FontWeight.w600))),
@@ -531,7 +531,7 @@ class _EquipmentAssetsScreenState extends State<EquipmentAssetsScreen> {
             label,
             style: TextStyle(
               fontSize: 13,
-              color: textColor.withOpacity(0.8),
+              color: textColor.withValues(alpha: 0.8),
             ),
           ),
           SizedBox(height: context.spacing.xs),

@@ -450,7 +450,7 @@ class ApiClient {
       'manager',
       'dispatcher',
       'technician',
-      'client',
+      'customer',
     ];
     if (!validRoles.contains(role)) {
       ErrorService.logError(

@@ -8,6 +8,8 @@ const { buildUpdateClause } = require('../helpers/update-helper');
 const PaginationService = require('../../services/pagination-service');
 const QueryBuilderService = require('../../services/query-builder-service');
 const userMetadata = require('../../config/models/user-metadata');
+const { mapAuth0ToUser, validateAuth0Data } = require('../../utils/auth0-mapper');
+const GenericEntityService = require('../../services/generic-entity-service');
 
 class User {
   // ============================================================================
@@ -167,33 +169,7 @@ class User {
   // PUBLIC METHODS
   // ============================================================================
 
-  /**
-   * Find user by Auth0 ID with role
-   * KISS: Direct JOIN with users.role_id (many-to-one relationship)
-   *
-   * @param {string} auth0Id - Auth0 user ID (e.g., "auth0|123" or "dev|tech001")
-   * @returns {Promise<Object|null>} User object with role or null if not found
-   */
-  static async findByAuth0Id(auth0Id) {
-    if (!auth0Id) {
-      throw new Error(MODEL_ERRORS.USER.AUTH0_ID_REQUIRED);
-    }
-
-    try {
-      const query = this._buildUserWithRoleQuery('WHERE u.auth0_id = $1');
-      const result = await db.query(query, [auth0Id]);
-      const user = result.rows[0] || null;
-
-      // Validate and enrich user data before returning
-      return user ? this._validateUserData(user, { isApiResponse: false }) : null;
-    } catch (error) {
-      logger.error('Error finding user by Auth0 ID', {
-        error: error.message,
-        auth0Id,
-      });
-      throw new Error(MODEL_ERRORS.USER.RETRIEVAL_FAILED);
-    }
-  }
+  // NOTE: findByAuth0Id has been removed - use GenericEntityService.findByField('user', 'auth0_id', value)
 
   /**
    * Find user by ID with role
@@ -229,7 +205,7 @@ class User {
 
   /**
    * Create user from Auth0 data
-   * KISS: Direct role_id foreign key (many-to-one relationship)
+   * SRP: Uses auth0-mapper for field mapping, GenericEntityService for role lookup
    *
    * @param {Object} auth0Data - Auth0 user data
    * @param {string} auth0Data.sub - Auth0 user ID
@@ -240,37 +216,31 @@ class User {
    * @returns {Promise<Object>} Created user object
    */
   static async createFromAuth0(auth0Data) {
-    const { sub: auth0_id, email, given_name, family_name, role } = auth0Data;
-
-    if (!auth0_id || !email) {
-      throw new Error(MODEL_ERRORS.USER.AUTH0_ID_AND_EMAIL_REQUIRED);
-    }
+    // SRP: Delegate field mapping to auth0-mapper
+    validateAuth0Data(auth0Data);
+    const mappedData = mapAuth0ToUser(auth0Data);
 
     try {
-      // Use role from JWT token (signed by Auth0)
-      // SECURITY: Role is in JWT custom claims added by Auth0 Action
-      // Falls back to 'customer' only if JWT is missing role (shouldn't happen after Action is deployed)
-      const userRole = role || 'customer';
-
       // Single INSERT with role_id - no transaction needed (KISS)
+      // SRP: Role name from mapper (configurable default, not hardcoded)
       const userQuery = `
         INSERT INTO users (auth0_id, email, first_name, last_name, role_id) 
         VALUES ($1, $2, $3, $4, (SELECT id FROM roles WHERE name = $5))
         RETURNING *
       `;
       const userResult = await db.query(userQuery, [
-        auth0_id,
-        email,
-        given_name || '',
-        family_name || '',
-        userRole,
+        mappedData.auth0_id,
+        mappedData.email,
+        mappedData.first_name,
+        mappedData.last_name,
+        mappedData.roleName,
       ]);
 
       return userResult.rows[0];
     } catch (error) {
       logger.error('Error creating user from Auth0', {
         error: error.message,
-        email,
+        email: mappedData.email,
       });
 
       if (error.constraint === 'users_auth0_id_key') {
@@ -284,24 +254,27 @@ class User {
     }
   }
 
-  // Find or create user from Auth0 token
-  // Handles account linking: if user exists by email but different auth0_id, links them
+  /**
+   * Find or create user from Auth0 token
+   * Handles account linking: if user exists by email but different auth0_id, links them
+   * SRP: Uses GenericEntityService for lookups, auth0-mapper for validation
+   *
+   * @param {Object} auth0Data - Auth0 token payload
+   * @returns {Promise<Object>} User object with role
+   */
   static async findOrCreate(auth0Data) {
-    if (!auth0Data?.sub) {
-      throw new Error(MODEL_ERRORS.USER.AUTH0_DATA_INVALID);
-    }
+    // SRP: Validate using mapper
+    validateAuth0Data(auth0Data);
 
     try {
-      // First, try to find by Auth0 ID
-      let user = await this.findByAuth0Id(auth0Data.sub);
+      // First, try to find by Auth0 ID using GenericEntityService
+      let user = await GenericEntityService.findByField('user', 'auth0_id', auth0Data.sub);
 
       if (!user && auth0Data.email) {
         // Check if user exists by email (might have been created manually or with different Auth0 connection)
-        const emailCheckQuery =
-          'SELECT id FROM users WHERE email = $1 AND is_active = true';
-        const emailResult = await db.query(emailCheckQuery, [auth0Data.email]);
+        const existingUser = await GenericEntityService.findByField('user', 'email', auth0Data.email);
 
-        if (emailResult.rows.length > 0) {
+        if (existingUser && existingUser.is_active) {
           // User exists with this email - update their auth0_id to link accounts
           await db.query(
             'UPDATE users SET auth0_id = $1, updated_at = CURRENT_TIMESTAMP WHERE email = $2',
@@ -309,7 +282,7 @@ class User {
           );
 
           // Now find the user by their newly linked auth0_id
-          user = await this.findByAuth0Id(auth0Data.sub);
+          user = await GenericEntityService.findByField('user', 'auth0_id', auth0Data.sub);
         }
       }
 
@@ -317,7 +290,7 @@ class User {
       if (!user) {
         user = await this.createFromAuth0(auth0Data);
         // Fetch with role after creation
-        user = await this.findByAuth0Id(auth0Data.sub);
+        user = await GenericEntityService.findByField('user', 'auth0_id', auth0Data.sub);
       }
 
       return user;
@@ -344,12 +317,16 @@ class User {
     }
 
     try {
-      // Assign role if provided, otherwise use customer role
+      // Assign role if provided, otherwise use configurable default role
       let assignedRoleId = role_id;
       if (!assignedRoleId) {
-        const Role = require('./Role');
-        const customerRole = await Role.getByName('customer');
-        assignedRoleId = customerRole.id;
+        // SRP: Use GenericEntityService + configurable default from metadata
+        const defaultRoleName = userMetadata.defaultRoleName || 'customer';
+        const defaultRole = await GenericEntityService.findByField('role', 'name', defaultRoleName);
+        if (!defaultRole) {
+          throw new Error(`Default role '${defaultRoleName}' not found`);
+        }
+        assignedRoleId = defaultRole.id;
       }
 
       // Determine initial status:
@@ -524,7 +501,7 @@ class User {
    * @returns {Promise<Object>} Updated user object
    * @throws {Error} If id is invalid or no valid fields to update
    */
-  static async update(id, updates, context = null) {
+  static async update(id, updates, _context = null) {
     // TYPE SAFETY: Ensure id is a valid positive integer
     const safeId = toSafeInteger(id, 'userId', { min: 1, allowNull: false });
 
@@ -532,7 +509,8 @@ class User {
       throw new Error(MODEL_ERRORS.USER.ID_AND_UPDATES_REQUIRED);
     }
 
-    const allowedFields = ['email', 'first_name', 'last_name', 'is_active'];
+    // role_id included for PUT /api/users/:id/role endpoint
+    const allowedFields = ['email', 'first_name', 'last_name', 'is_active', 'role_id'];
 
     // Build SET clause using helper
     const { updates: fields, values, hasUpdates } = buildUpdateClause(updates, allowedFields);
@@ -567,29 +545,9 @@ class User {
         throw new Error(MODEL_ERRORS.USER.NOT_FOUND_AFTER_UPDATE);
       }
 
-      // Contract v2.0: Log is_active changes to audit_logs
-      if ('is_active' in updates && context) {
-        const auditService = require('../../services/audit-service');
-        const action = updates.is_active === false ? 'deactivate' : 'reactivate';
-
-        if (action === 'deactivate') {
-          await auditService.logDeactivation(
-            'users',
-            safeId,
-            context.userId,
-            context.ipAddress,
-            context.userAgent,
-          );
-        } else {
-          await auditService.logReactivation(
-            'users',
-            safeId,
-            context.userId,
-            context.ipAddress,
-            context.userAgent,
-          );
-        }
-      }
+      // Contract v2.0: Updates (including is_active changes) are logged via audit trail
+      // Deactivation is just an update with is_active=false - no special handling needed
+      // The audit log will capture oldValues/newValues including is_active changes
 
       return updatedUser;
     } catch (error) {
@@ -603,70 +561,8 @@ class User {
     }
   }
 
-  /**
-   * Set user's role (REPLACES existing role - ONE role per user)
-   * KISS: Direct update of users.role_id (many-to-one relationship)
-   *
-   * TYPE SAFE: Validates both userId and roleId are positive integers
-   *
-   * @param {number|string} userId - User ID (will be coerced to integer)
-   * @param {number|string} roleId - Role ID (will be coerced to integer)
-   * @returns {Promise<Object>} Updated user object
-   * @throws {Error} If userId or roleId are invalid
-   */
-  static async setRole(userId, roleId) {
-    // TYPE SAFETY: Ensure both IDs are valid positive integers
-    const safeUserId = toSafeInteger(userId, 'userId', {
-      min: 1,
-      allowNull: false,
-    });
-    const safeRoleId = toSafeInteger(roleId, 'roleId', {
-      min: 1,
-      allowNull: false,
-    });
+  // NOTE: setRole has been removed - use User.update(userId, { role_id: roleId }) or GenericEntityService.update('user', userId, { role_id: roleId })
 
-    try {
-      const query = `
-        UPDATE users 
-        SET role_id = $1, updated_at = CURRENT_TIMESTAMP 
-        WHERE id = $2 
-        RETURNING *
-      `;
-      const result = await db.query(query, [safeRoleId, safeUserId]);
-
-      if (result.rows.length === 0) {
-        throw new Error(MODEL_ERRORS.USER.NOT_FOUND);
-      }
-
-      // Return updated user with role
-      return await this.findById(userId);
-    } catch (error) {
-      logger.error('Error setting user role', {
-        error: error.message,
-        userId,
-        roleId,
-      });
-      throw error;
-    }
-  }
-
-  /**
-   * Delete user (soft delete by default, hard delete optional)
-   * KISS: No CASCADE needed for user_roles (doesn't exist)
-   *
-   * TYPE SAFE: Validates id is a positive integer
-   *
-   * @param {number|string} id - User ID (will be coerced to integer)
-   * @param {boolean} [hardDelete=false] - True for permanent deletion, false for soft delete
-   * Contract v2.0: Generic delete (soft by default, hard optional)
-   * Soft delete just calls update({ is_active: false })
-   *
-   * @param {number|string} id - User ID (will be coerced to integer)
-   * @param {boolean} [hardDelete=false] - True for permanent deletion, false for soft delete
-   * @param {Object} context - Optional context for audit logging
-   * @returns {Promise<Object>} Deleted/deactivated user object
-   * @throws {Error} If id is invalid or user not found
-   */
   /**
    * Delete user permanently from database
    * DELETE = permanent removal. Period.
@@ -699,54 +595,8 @@ class User {
     });
   }
 
-  /**
-   * Find user by ID including inactive users (admin function)
-   * Same as findById but doesn't filter by is_active
-   *
-   * TYPE SAFE: Validates id is a positive integer
-   *
-   * @param {number|string} id - User ID (will be coerced to integer)
-   * @returns {Promise<Object|null>} User object with role or null if not found
-   * @throws {Error} If id is not a valid positive integer
-   */
-  static async findByIdIncludingInactive(id) {
-    // TYPE SAFETY: Ensure id is a valid positive integer
-    const safeId = toSafeInteger(id, 'userId', { min: 1, allowNull: false });
-
-    try {
-      const query = this._buildUserWithRoleQuery('WHERE u.id = $1');
-      const result = await db.query(query, [safeId]);
-      return result.rows[0] || null;
-    } catch (error) {
-      logger.error('Error finding user by ID (including inactive)', {
-        error: error.message,
-        userId: id,
-      });
-      throw new Error(MODEL_ERRORS.USER.RETRIEVAL_FAILED);
-    }
-  }
-
-  /**
-   * Get all users including inactive (admin function)
-   * KISS: Direct JOIN with users.role_id (many-to-one relationship)
-   *
-   * @param {boolean} [includeInactive=false] - Include deactivated users
-   * @returns {Promise<Array>} Array of user objects with roles
-   */
-  static async getAllIncludingInactive(includeInactive = false) {
-    try {
-      const whereClause = includeInactive ? '' : 'WHERE u.is_active = true';
-      const query = this._buildUserWithRoleQuery(
-        whereClause,
-        'ORDER BY u.created_at DESC',
-      );
-      const result = await db.query(query);
-      return result.rows;
-    } catch (error) {
-      logger.error('Error getting all users', { error: error.message });
-      throw new Error(MODEL_ERRORS.USER.RETRIEVAL_ALL_FAILED);
-    }
-  }
+  // NOTE: findByIdIncludingInactive has been removed - use findById or GenericEntityService.findById with includeInactive option
+  // NOTE: getAllIncludingInactive has been removed - use findAll({ includeInactive: true }) or GenericEntityService.findAll('user', { includeInactive: true })
 }
 
 module.exports = User;

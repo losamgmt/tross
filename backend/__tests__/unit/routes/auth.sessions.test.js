@@ -11,6 +11,7 @@ const request = require("supertest");
 const authRoutes = require("../../../routes/auth");
 const tokenService = require("../../../services/token-service");
 const auditService = require("../../../services/audit-service");
+const { AuditActions, ResourceTypes, AuditResults } = require("../../../services/audit-constants");
 const { authenticateToken } = require("../../../middleware/auth");
 const { validateProfileUpdate } = require("../../../validators");
 const { getClientIp, getUserAgent } = require("../../../utils/request-helpers");
@@ -119,8 +120,8 @@ describe("routes/auth.js - Session Management", () => {
       expect(auditService.log).toHaveBeenCalledWith(
         expect.objectContaining({
           userId: 1,
-          action: "token_refresh",
-          resourceType: "auth",
+          action: AuditActions.TOKEN_REFRESH,
+          resourceType: ResourceTypes.AUTH,
         })
       );
     });
@@ -172,8 +173,8 @@ describe("routes/auth.js - Session Management", () => {
       expect(auditService.log).toHaveBeenCalledWith(
         expect.objectContaining({
           userId: 1,
-          action: "logout",
-          resourceType: "auth",
+          action: AuditActions.LOGOUT,
+          resourceType: ResourceTypes.AUTH,
         })
       );
     });
@@ -230,10 +231,10 @@ describe("routes/auth.js - Session Management", () => {
       expect(auditService.log).toHaveBeenCalledWith(
         expect.objectContaining({
           userId: 1,
-          action: "logout_all_devices",
-          resourceType: "auth",
+          action: AuditActions.LOGOUT_ALL_DEVICES,
+          resourceType: ResourceTypes.AUTH,
           newValues: { tokensRevoked: 3 },
-          result: "success",
+          result: AuditResults.SUCCESS,
         })
       );
     });

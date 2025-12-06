@@ -244,7 +244,7 @@ class _FormsSettingsScreenState extends State<FormsSettingsScreen>
                   SizedBox(
                     width: 200,
                     child: DropdownButtonFormField<String>(
-                      value: 'Standard View',
+                      initialValue: 'Standard View',
                       decoration: InputDecoration(
                         contentPadding: EdgeInsets.symmetric(
                           horizontal: context.spacing.md,
@@ -283,7 +283,7 @@ class _FormsSettingsScreenState extends State<FormsSettingsScreen>
             child: SingleChildScrollView(
               child: DataTable(
                 columnSpacing: 40,
-                headingRowColor: MaterialStateProperty.all(
+                headingRowColor: WidgetStateProperty.all(
                   AppColors.backgroundLight,
                 ),
                 columns: const [

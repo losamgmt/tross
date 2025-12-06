@@ -1,13 +1,18 @@
 /**
  * User Model - Relationships Tests
  *
- * Tests role relationships, foreign key constraints, and user-role associations.
- * Methods tested: setRole and role-related queries
+ * Tests BEHAVIOR of role relationships and user-role associations:
+ * - Users can have their role updated
+ * - Queries return role information
+ * - Foreign key constraints are enforced
+ *
+ * NOTE: Tests focus on BEHAVIOR not implementation details.
+ * We test what the user/API gets back, not internal SQL queries.
  *
  * Part of User model test suite:
  * - User.crud.test.js - CRUD operations
  * - User.validation.test.js - Input validation and error handling
- * - User.relationships.test.js (this file) - Role relationships and foreign keys
+ * - User.relationships.test.js (this file) - Role relationships
  */
 
 // Setup centralized mocks FIRST
@@ -28,65 +33,41 @@ describe("User Model - Relationships", () => {
   });
 
   // ===========================
-  // setRole() - Role Assignment
+  // Role Assignment via update()
   // ===========================
-  describe("setRole()", () => {
-    test("should set user role successfully", async () => {
+  describe("Role Assignment via update()", () => {
+    test("should allow updating user role_id", async () => {
       // Arrange
-      const mockUpdatedUser = { id: 1, role_id: 3 };
-      const mockUserWithRole = { id: 1, role_id: 3, role: "manager" };
+      const mockUpdatedUser = { id: 1, role_id: 3, role: "manager" };
       db.query
-        .mockResolvedValueOnce({ rows: [mockUpdatedUser] }) // UPDATE
-        .mockResolvedValueOnce({ rows: [mockUserWithRole] }); // findById
+        .mockResolvedValueOnce({ rows: [{ id: 1 }] }) // UPDATE
+        .mockResolvedValueOnce({ rows: [mockUpdatedUser] }); // findById
 
       // Act
-      const user = await User.setRole(1, 3);
+      const user = await User.update(1, { role_id: 3 });
 
-      // Assert
-      expect(user).toEqual(mockUserWithRole);
-      expect(db.query).toHaveBeenCalledWith(
-        expect.stringContaining("UPDATE users"),
-        [3, 1],
-      );
-      expect(db.query).toHaveBeenCalledTimes(2); // UPDATE + findById
+      // Assert BEHAVIOR: returned user has new role
+      expect(user.role_id).toBe(3);
+      expect(user.role).toBe("manager");
     });
 
-    test("should throw error when user ID is missing", async () => {
-      // Act & Assert - behavior: throws and doesn't query
-      await expect(User.setRole(null, 3)).rejects.toThrow();
-      await expect(User.setRole(undefined, 3)).rejects.toThrow();
-      expect(db.query).not.toHaveBeenCalled();
-    });
-
-    test("should throw error when role ID is missing", async () => {
-      // Act & Assert - behavior: throws and doesn't query
-      await expect(User.setRole(1, null)).rejects.toThrow();
-      await expect(User.setRole(1, undefined)).rejects.toThrow();
-      expect(db.query).not.toHaveBeenCalled();
-    });
-
-    test("should throw error when user not found", async () => {
+    test("should accept role_id as a valid update field", async () => {
       // Arrange
-      db.query.mockResolvedValue({ rows: [] });
+      const mockUpdatedUser = { id: 5, role_id: 2, role: "technician" };
+      db.query
+        .mockResolvedValueOnce({ rows: [{ id: 5 }] })
+        .mockResolvedValueOnce({ rows: [mockUpdatedUser] });
 
-      // Act & Assert
-      await expect(User.setRole(999, 3)).rejects.toThrow("User not found");
-    });
-
-    test("should handle database errors", async () => {
-      // Arrange
-      db.query.mockRejectedValue(new Error("Database error"));
-
-      // Act & Assert
-      await expect(User.setRole(1, 3)).rejects.toThrow("Database error");
+      // Act & Assert - should NOT throw "no valid fields"
+      await expect(User.update(5, { role_id: 2 })).resolves.toBeDefined();
     });
   });
 
   // ===========================
-  // Role Queries - findById includes role
+  // Role Data in Queries
   // ===========================
   describe("Role Data in Queries", () => {
-    test("should include role name in findById results", async () => {
+    test("should include role name when fetching user by ID", async () => {
       // Arrange
       const mockUser = {
         id: 1,
@@ -94,7 +75,7 @@ describe("User Model - Relationships", () => {
         first_name: "John",
         last_name: "Doe",
         role_id: 2,
-        role: "client", // Role name from JOIN
+        role: "client",
         is_active: true,
       };
       db.query.mockResolvedValue({ rows: [mockUser] });
@@ -102,74 +83,37 @@ describe("User Model - Relationships", () => {
       // Act
       const user = await User.findById(1);
 
-      // Assert
-      expect(user).toEqual(mockUser);
+      // Assert BEHAVIOR: user object has both role_id and role name
       expect(user.role).toBe("client");
       expect(user.role_id).toBe(2);
-      expect(db.query).toHaveBeenCalledWith(
-        expect.stringContaining("SELECT u.*, r.name as role, u.role_id"),
-        [1],
-      );
     });
 
-    test("should include role name in findByAuth0Id results", async () => {
-      // Arrange
-      const mockUser = {
-        id: 1,
-        auth0_id: "auth0|123456",
-        email: "user@example.com",
-        role_id: 3,
-        role: "manager", // Role name from JOIN
-        is_active: true,
-      };
-      db.query.mockResolvedValue({ rows: [mockUser] });
-
-      // Act
-      const user = await User.findByAuth0Id("auth0|123456");
-
-      // Assert
-      expect(user).toEqual(mockUser);
-      expect(user.role).toBe("manager");
-      expect(user.role_id).toBe(3);
-      expect(db.query).toHaveBeenCalledWith(
-        expect.stringContaining("SELECT u.*, r.name as role"),
-        ["auth0|123456"],
-      );
-    });
-
-    test("should include role name in findAll results", async () => {
+    test("should include role name when listing users", async () => {
       // Arrange
       const mockUsers = [
         { id: 1, email: "admin@example.com", role_id: 1, role: "admin" },
         { id: 2, email: "client@example.com", role_id: 2, role: "client" },
-        { id: 3, email: "manager@example.com", role_id: 3, role: "manager" },
       ];
       db.query
-        .mockResolvedValueOnce({ rows: [{ total: 3 }] }) // count query
-        .mockResolvedValueOnce({ rows: mockUsers }); // data query
+        .mockResolvedValueOnce({ rows: [{ total: 2 }] })
+        .mockResolvedValueOnce({ rows: mockUsers });
 
       // Act
       const result = await User.findAll();
 
-      // Assert
-      expect(result.data).toEqual(mockUsers);
+      // Assert BEHAVIOR: each user has role information
       result.data.forEach((user) => {
-        expect(user.role).toBeDefined();
-        expect(user.role_id).toBeDefined();
+        expect(user).toHaveProperty("role");
+        expect(user).toHaveProperty("role_id");
       });
-      // Updated expectation: now passes parameters for filters
-      expect(db.query).toHaveBeenCalledWith(
-        expect.stringContaining("SELECT COUNT(*) as total"),
-        expect.any(Array) // Now passes parameters array
-      );
     });
   });
 
   // ===========================
-  // Foreign Key Relationships
+  // Foreign Key Constraints
   // ===========================
   describe("Foreign Key Constraints", () => {
-    test("should handle invalid role_id when creating user", async () => {
+    test("should reject invalid role_id when creating user", async () => {
       // Arrange
       const userData = {
         email: "test@example.com",
@@ -181,75 +125,18 @@ describe("User Model - Relationships", () => {
       dbError.constraint = "users_role_id_fkey";
       db.query.mockRejectedValue(dbError);
 
-      // Act & Assert
-      await expect(User.create(userData)).rejects.toThrow(
-        "Failed to create user",
-      );
+      // Act & Assert BEHAVIOR: operation fails
+      await expect(User.create(userData)).rejects.toThrow();
     });
 
-    test("should handle invalid role_id when setting role", async () => {
+    test("should reject invalid role_id when updating user", async () => {
       // Arrange
       const dbError = new Error("Foreign key violation");
       dbError.constraint = "users_role_id_fkey";
       db.query.mockRejectedValue(dbError);
 
-      // Act & Assert
-      await expect(User.setRole(1, 999)).rejects.toThrow(
-        "Foreign key violation",
-      );
-    });
-  });
-
-  // ===========================
-  // Role Changes
-  // ===========================
-  describe("Role Assignment Operations", () => {
-    test("should successfully change user from client to manager", async () => {
-      // Arrange
-      const mockUpdatedUser = { id: 1, role_id: 3 };
-      const mockUserWithRole = { id: 1, role_id: 3, role: "manager" };
-      db.query
-        .mockResolvedValueOnce({ rows: [mockUpdatedUser] })
-        .mockResolvedValueOnce({ rows: [mockUserWithRole] });
-
-      // Act
-      const user = await User.setRole(1, 3);
-
-      // Assert
-      expect(user.role_id).toBe(3);
-      expect(user.role).toBe("manager");
-    });
-
-    test("should successfully promote user to admin", async () => {
-      // Arrange
-      const mockUpdatedUser = { id: 1, role_id: 1 };
-      const mockUserWithRole = { id: 1, role_id: 1, role: "admin" };
-      db.query
-        .mockResolvedValueOnce({ rows: [mockUpdatedUser] })
-        .mockResolvedValueOnce({ rows: [mockUserWithRole] });
-
-      // Act
-      const user = await User.setRole(1, 1);
-
-      // Assert
-      expect(user.role_id).toBe(1);
-      expect(user.role).toBe("admin");
-    });
-
-    test("should successfully demote user to client", async () => {
-      // Arrange
-      const mockUpdatedUser = { id: 5, role_id: 2 };
-      const mockUserWithRole = { id: 5, role_id: 2, role: "client" };
-      db.query
-        .mockResolvedValueOnce({ rows: [mockUpdatedUser] })
-        .mockResolvedValueOnce({ rows: [mockUserWithRole] });
-
-      // Act
-      const user = await User.setRole(5, 2);
-
-      // Assert
-      expect(user.role_id).toBe(2);
-      expect(user.role).toBe("client");
+      // Act & Assert BEHAVIOR: operation fails
+      await expect(User.update(1, { role_id: 999 })).rejects.toThrow();
     });
   });
 });

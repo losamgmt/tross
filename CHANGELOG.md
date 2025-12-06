@@ -7,6 +7,64 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Strangler-Fig Phase 3D: GenericEntityService (2025-12-05)
+
+#### New Backend Infrastructure
+- **GenericEntityService**: Metadata-driven CRUD service replacing legacy model methods
+  - `findById()`, `findAll()`, `create()`, `update()`, `delete()` - core CRUD
+  - `findByField()` - replaces special-case methods (findByEmail, findByAuth0Id, etc.)
+  - `count()` - replaces Role.getUserCount() and similar methods
+  - `batch()` - transactional multi-operation support
+  - Full RLS (Row-Level Security) integration via metadata
+  - Output filtering for sensitive fields (auth0_id stripped automatically)
+  - Audit logging integration (non-blocking)
+  - System role protection (admin, manager, dispatcher, technician, customer)
+
+- **Helper Modules** (SRP extraction):
+  - `db/helpers/audit-helper.js` - Bridges GenericEntityService with audit-service
+  - `db/helpers/cascade-helper.js` - Metadata-driven cascade delete
+  - `db/helpers/output-filter-helper.js` - Sensitive field stripping
+  - `db/helpers/rls-filter-helper.js` - RLS WHERE clause building
+
+- **Supporting Utilities**:
+  - `utils/auth0-mapper.js` - Auth0 token → local user schema mapping
+  - `utils/validation-schema-builder.js` - Joi schema generation from metadata
+  - `middleware/generic-entity.js` - Entity extraction and validation middleware
+
+- **Entity Metadata Enhancements**:
+  - Added `defaultRoleName` to user-metadata.js
+  - Added `defaultIncludes` for automatic JOINs (e.g., user → role)
+  - Added `relationships` configuration for belongsTo/hasMany
+  - All 8 entities have complete metadata: user, role, customer, technician, workOrder, invoice, contract, inventory
+
+- **Database Migration**:
+  - `010_add_system_role_protection.sql` - Trigger-based protection for system roles
+
+#### Legacy Model Cleanup
+- Removed 9 special-case methods from legacy models (strangler-fig pattern):
+  - User: findByEmail, findByAuth0Id, createFromAuth0
+  - Customer: findByEmail
+  - Technician: findByLicenseNumber
+  - Role: getByName, getUserCount, findByPriority, getAllWithUserCounts
+
+#### Frontend Fixes
+- Fixed Auth0 login flow: profile validation now allows null auth0_id (backend strips for security)
+- Fixed role display: GenericEntityService.findByField now JOINs role table automatically
+- Standardized role name: 'customer' (was inconsistently 'client' in some places)
+- Updated all test files to use 'customer' role name (51 assertions updated)
+
+#### Test Coverage
+- **3,952 tests passing**:
+  - Backend Unit: 1,679 ✅
+  - Backend Integration: 702 ✅
+  - Frontend Flutter: 1,561 ✅
+  - E2E Playwright: 10 ✅
+
+#### Strangler-Fig Status
+- **Phase 3D Complete**: GenericEntityService fully functional
+- **Next Phase**: Route swap (change routes to use GenericEntityService instead of legacy models)
+- All manual smoke tests passing: Auth0 login, dev login, full CRUD on users/roles
+
 ### Fixed - Rate Limiting & Test Synchronization (2025-11-21)
 
 #### Rate Limiting

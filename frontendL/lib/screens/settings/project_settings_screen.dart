@@ -93,7 +93,7 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
             Container(
               padding: spacing.paddingLG,
               decoration: BoxDecoration(
-                color: AppColors.surfaceLight.withOpacity(0.5),
+                color: AppColors.surfaceLight.withValues(alpha: 0.5),
               ),
               child: Text(
                 'General',
@@ -175,7 +175,7 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
                                   ],
                                 ),
                               );
-                            }).toList(),
+                            }),
                             SizedBox(height: spacing.md),
                             OutlinedButton.icon(
                               onPressed: () {
@@ -255,7 +255,7 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
                                     SizedBox(width: spacing.md),
                                     Expanded(
                                       child: DropdownButtonFormField<String>(
-                                        value: type['type'],
+                                        initialValue: type['type'],
                                         decoration: InputDecoration(
                                           contentPadding: const EdgeInsets.symmetric(
                                             horizontal: 12,
@@ -281,7 +281,7 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
                                   ],
                                 ),
                               );
-                            }).toList(),
+                            }),
                             SizedBox(height: spacing.md),
                             OutlinedButton.icon(
                               onPressed: () {
@@ -381,7 +381,7 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
                                   ],
                                 ),
                               );
-                            }).toList(),
+                            }),
                             SizedBox(height: spacing.md),
                             OutlinedButton.icon(
                               onPressed: () {
@@ -449,7 +449,7 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
                                   onChanged: (value) {
                                     setState(() => _jobByJobBasis = value);
                                   },
-                                  activeColor: AppColors.brandPrimary,
+                                  activeThumbColor: AppColors.brandPrimary,
                                 ),
                               ],
                             ),
@@ -529,7 +529,7 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
                                   ],
                                 ),
                               );
-                            }).toList(),
+                            }),
                           ],
                         ),
                       ),

@@ -53,6 +53,26 @@ module.exports = {
   updateableFields: ['email', 'phone', 'company_name', 'billing_address', 'service_address', 'status', 'is_active'],
 
   // ============================================================================
+  // DELETE CONFIGURATION (for GenericEntityService.delete)
+  // ============================================================================
+
+  /**
+   * Dependent records that must be cascade-deleted before this entity
+   * Only for relationships NOT handled by database ON DELETE CASCADE/SET NULL
+   *
+   * Note: work_orders, invoices, contracts have ON DELETE RESTRICT
+   *       (deletion blocked if dependents exist - business rule, not cascade)
+   * For audit_logs: polymorphic FK via resource_type + resource_id
+   */
+  dependents: [
+    {
+      table: 'audit_logs',
+      foreignKey: 'resource_id',
+      polymorphicType: { column: 'resource_type', value: 'customers' },
+    },
+  ],
+
+  // ============================================================================
   // SEARCH CONFIGURATION (Text Search with ILIKE)
   // ============================================================================
 

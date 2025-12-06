@@ -53,6 +53,58 @@ module.exports = {
   updateableFields: ['description', 'priority', 'status', 'is_active'],
 
   // ============================================================================
+  // DELETE CONFIGURATION (for GenericEntityService.delete)
+  // ============================================================================
+
+  /**
+   * Dependent records that must be cascade-deleted before this entity
+   * Only for relationships NOT handled by database ON DELETE CASCADE/SET NULL
+   *
+   * For audit_logs: polymorphic FK via resource_type + resource_id
+   */
+  dependents: [
+    {
+      table: 'audit_logs',
+      foreignKey: 'resource_id',
+      polymorphicType: { column: 'resource_type', value: 'roles' },
+    },
+  ],
+
+  // ============================================================================
+  // SYSTEM PROTECTION (Multi-Level Security)
+  // ============================================================================
+
+  /**
+   * System-protected values that cannot be deleted or have critical fields modified.
+   * This is the SINGLE SOURCE OF TRUTH for protection rules.
+   *
+   * Enforcement layers (defense in depth):
+   *   1. Route layer: Fast-fail for UX (check before calling service)
+   *   2. Service layer: GenericEntityService checks before DB operations
+   *   3. Database layer: Trigger + is_system_role column (last line of defense)
+   *
+   * Protected roles are fundamental to the RBAC system and must not be
+   * accidentally deleted or have their hierarchy (priority) changed.
+   */
+  systemProtected: {
+    /**
+     * Values of identityField ('name') that are protected
+     */
+    values: ['admin', 'manager', 'dispatcher', 'technician', 'customer'],
+
+    /**
+     * Fields that cannot be modified on protected records
+     * Even if the field is in updateableFields, these are blocked for protected values
+     */
+    immutableFields: ['name', 'priority'],
+
+    /**
+     * Whether protected values can be deleted
+     */
+    preventDelete: true,
+  },
+
+  // ============================================================================
   // SEARCH CONFIGURATION (Text Search with ILIKE)
   // ============================================================================
 

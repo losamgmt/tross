@@ -15,6 +15,7 @@ const {
 } = require('../validators');
 const Contract = require('../db/models/Contract');
 const auditService = require('../services/audit-service');
+const { AuditActions, ResourceTypes, AuditResults } = require('../services/audit-constants');
 const { getClientIp, getUserAgent } = require('../utils/request-helpers');
 const { logger } = require('../config/logger');
 const contractMetadata = require('../config/models/contract-metadata');
@@ -244,13 +245,13 @@ router.post(
 
       await auditService.log({
         userId: req.user.userId,
-        action: 'create',
-        resourceType: 'contract',
+        action: AuditActions.CONTRACT_CREATE,
+        resourceType: ResourceTypes.CONTRACT,
         resourceId: newContract.id,
         newValues: { contract_number, customer_id, value },
         ipAddress,
         userAgent,
-        result: 'success',
+        result: AuditResults.SUCCESS,
       });
 
       return ResponseFormatter.created(res, newContract, 'Contract created successfully');
@@ -345,14 +346,14 @@ router.patch(
 
       await auditService.log({
         userId: req.user.userId,
-        action: 'update',
-        resourceType: 'contract',
+        action: AuditActions.CONTRACT_UPDATE,
+        resourceType: ResourceTypes.CONTRACT,
         resourceId: contractId,
         oldValues: contract,
         newValues: updatedContract,
         ipAddress,
         userAgent,
-        result: 'success',
+        result: AuditResults.SUCCESS,
       });
 
       return ResponseFormatter.updated(res, updatedContract, 'Contract updated successfully');
@@ -427,13 +428,13 @@ router.delete(
 
       await auditService.log({
         userId: req.user.userId,
-        action: 'delete',
-        resourceType: 'contract',
+        action: AuditActions.CONTRACT_DELETE,
+        resourceType: ResourceTypes.CONTRACT,
         resourceId: contractId,
         oldValues: contract,
         ipAddress,
         userAgent,
-        result: 'success',
+        result: AuditResults.SUCCESS,
       });
 
       return ResponseFormatter.deleted(res, 'Contract deleted successfully');

@@ -48,7 +48,7 @@ void main() {
         expect(roles, contains('technician'));
         expect(roles, contains('manager'));
         expect(roles, contains('dispatcher'));
-        expect(roles, contains('client'));
+        expect(roles, contains('customer'));
         expect(roles.length, 5);
       });
     });
