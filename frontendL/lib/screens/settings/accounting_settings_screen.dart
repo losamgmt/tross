@@ -20,11 +20,11 @@ class _AccountingSettingsScreenState extends State<AccountingSettingsScreen>
 
   // Credit Hold Settings
   String _creditWarningOption = 'percentage';
-  String _creditLimitPercentage = '80';
+  final String _creditLimitPercentage = '80';
   bool _triggerCreditLimitExceeded = true;
   bool _triggerMinimumOverdue = false;
-  String _minimumOverdueAmount = '';
-  String _gracePeriodDays = '0';
+  final String _minimumOverdueAmount = '';
+  final String _gracePeriodDays = '0';
   bool _createQuotes = false;
   bool _createJobs = false;
   bool _createMaintenance = true;
@@ -659,7 +659,7 @@ class _AccountingSettingsScreenState extends State<AccountingSettingsScreen>
             Switch(
               value: value,
               onChanged: onChanged,
-              activeColor: AppColors.success,
+              activeThumbColor: AppColors.success,
             ),
           ],
         ),
@@ -721,7 +721,7 @@ class _AccountingSettingsScreenState extends State<AccountingSettingsScreen>
               scrollDirection: Axis.horizontal,
               child: DataTable(
                 columnSpacing: 60,
-                headingRowColor: MaterialStateProperty.all(
+                headingRowColor: WidgetStateProperty.all(
                   AppColors.backgroundLight,
                 ),
                 columns: const [
@@ -869,7 +869,7 @@ class _AccountingSettingsScreenState extends State<AccountingSettingsScreen>
               scrollDirection: Axis.horizontal,
               child: DataTable(
                 columnSpacing: 200,
-                headingRowColor: MaterialStateProperty.all(
+                headingRowColor: WidgetStateProperty.all(
                   AppColors.backgroundLight,
                 ),
                 columns: const [

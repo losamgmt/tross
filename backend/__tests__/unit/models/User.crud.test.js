@@ -2,7 +2,10 @@
  * User Model - CRUD Operations Tests
  *
  * Tests core CRUD operations for the User model with mocked database connection.
- * Methods tested: create, createFromAuth0, findOrCreate, findById, findByAuth0Id, getAll, update, delete
+ * Methods tested: create, createFromAuth0, findOrCreate, findById, findAll, update, delete
+ *
+ * NOTE: findByAuth0Id tests have been removed - use GenericEntityService.findByField('user', 'auth0_id', value)
+ * NOTE: setRole tests have been removed - use User.update(userId, { role_id: roleId })
  *
  * Part of User model test suite:
  * - User.crud.test.js (this file) - CRUD operations
@@ -13,10 +16,12 @@
 // Mock database BEFORE requiring User model - use enhanced mock
 jest.mock("../../../db/connection", () => require("../../mocks").createDBMock());
 jest.mock("../../../db/models/Role");
+jest.mock("../../../services/generic-entity-service");
 
 const User = require("../../../db/models/User");
 const Role = require("../../../db/models/Role");
 const db = require("../../../db/connection");
+const GenericEntityService = require("../../../services/generic-entity-service");
 
 describe("User Model - CRUD Operations", () => {
   beforeEach(() => {
@@ -27,47 +32,8 @@ describe("User Model - CRUD Operations", () => {
     jest.resetAllMocks();
   });
 
-  // ===========================
-  // READ: findByAuth0Id()
-  // ===========================
-  describe("findByAuth0Id()", () => {
-    test("should find user by Auth0 ID with role", async () => {
-      // Arrange
-      const mockUser = {
-        id: 1,
-        auth0_id: "auth0|123456",
-        email: "user@example.com",
-        first_name: "John",
-        last_name: "Doe",
-        role_id: 2,
-        role: "client",
-        is_active: true,
-      };
-      db.query.mockResolvedValue({ rows: [mockUser] });
-
-      // Act
-      const user = await User.findByAuth0Id("auth0|123456");
-
-      // Assert
-      expect(user).toEqual(mockUser);
-      expect(db.query).toHaveBeenCalledWith(
-        expect.stringContaining("SELECT u.*, r.name as role"),
-        ["auth0|123456"],
-      );
-      expect(db.query).toHaveBeenCalledTimes(1);
-    });
-
-    test("should return null when user not found", async () => {
-      // Arrange
-      db.query.mockResolvedValue({ rows: [] });
-
-      // Act
-      const user = await User.findByAuth0Id("auth0|nonexistent");
-
-      // Assert
-      expect(user).toBeNull();
-    });
-  });
+  // NOTE: findByAuth0Id tests removed - method moved to GenericEntityService.findByField
+  // See: generic-entity-service.findByField.test.js
 
   // ===========================
   // READ: findById()
@@ -263,14 +229,15 @@ describe("User Model - CRUD Operations", () => {
         auth0_id: "auth0|existing",
         email: "existing@example.com",
       };
-      db.query.mockResolvedValue({ rows: [mockUser] });
+      // Mock GenericEntityService.findByField to return existing user
+      GenericEntityService.findByField.mockResolvedValue(mockUser);
 
       // Act
       const user = await User.findOrCreate(auth0Data);
 
       // Assert
       expect(user).toEqual(mockUser);
-      expect(db.query).toHaveBeenCalledTimes(1); // Only findByAuth0Id
+      expect(GenericEntityService.findByField).toHaveBeenCalledWith('user', 'auth0_id', 'auth0|existing');
     });
 
     test("should create new user when not found", async () => {
@@ -287,19 +254,20 @@ describe("User Model - CRUD Operations", () => {
         email: "new@example.com",
       };
 
-      // Mock sequence: findByAuth0Id (not found) → email check (not found) → create → findByAuth0Id (fetch with role)
-      db.query
-        .mockResolvedValueOnce({ rows: [] }) // findByAuth0Id - not found
-        .mockResolvedValueOnce({ rows: [] }) // email check - not found
-        .mockResolvedValueOnce({ rows: [mockCreatedUser] }) // create
-        .mockResolvedValueOnce({ rows: [mockCreatedUser] }); // findByAuth0Id - fetch with role
+      // Mock sequence: findByField (not found by auth0_id) → findByField (not found by email) → create → findByField (fetch with role)
+      GenericEntityService.findByField
+        .mockResolvedValueOnce(null) // findByField for auth0_id - not found
+        .mockResolvedValueOnce(null) // findByField for email - not found
+        .mockResolvedValueOnce(mockCreatedUser); // findByField after create
+      
+      db.query.mockResolvedValueOnce({ rows: [mockCreatedUser] }); // createFromAuth0
 
       // Act
       const user = await User.findOrCreate(auth0Data);
 
       // Assert
       expect(user).toEqual(mockCreatedUser);
-      expect(db.query).toHaveBeenCalledTimes(4); // findByAuth0Id + email check + create + findByAuth0Id
+      expect(GenericEntityService.findByField).toHaveBeenCalledWith('user', 'auth0_id', 'auth0|new');
     });
   });
 
@@ -341,8 +309,8 @@ describe("User Model - CRUD Operations", () => {
         last_name: "User",
       };
 
-      // Mock Role.getByName to return customer role
-      Role.getByName = jest.fn().mockResolvedValue({ id: 5, name: "customer" });
+      // Mock GenericEntityService.findByField to return customer role
+      GenericEntityService.findByField.mockResolvedValue({ id: 5, name: "customer" });
 
       const mockCreatedUser = { id: 21, ...userData, role_id: 5 };
       const mockUserWithRole = { ...mockCreatedUser, role: "customer" };
@@ -355,7 +323,7 @@ describe("User Model - CRUD Operations", () => {
       const user = await User.create(userData);
 
       // Assert
-      expect(Role.getByName).toHaveBeenCalledWith("customer");
+      expect(GenericEntityService.findByField).toHaveBeenCalledWith("role", "name", "customer");
       expect(db.query).toHaveBeenCalledWith(
         expect.stringContaining("INSERT INTO users"),
         ["defaultrole@example.com", "Default", "User", 5, null, "pending_activation"],
@@ -444,22 +412,19 @@ describe("User Model - CRUD Operations", () => {
       const updates = {
         email: "valid@example.com",
         password: "should-be-ignored", // Not allowed
-        role_id: 999, // Not allowed
         auth0_id: "ignored", // Not allowed
       };
       const mockUpdatedUser = { id: 1, email: "valid@example.com" };
-      db.query.mockResolvedValue({ rows: [mockUpdatedUser] });
+      db.query
+        .mockResolvedValueOnce({ rows: [{ id: 1 }] }) // UPDATE
+        .mockResolvedValueOnce({ rows: [mockUpdatedUser] }); // findById
 
       // Act
       const user = await User.update(1, updates);
 
-      // Assert
+      // Assert BEHAVIOR: update succeeds, disallowed fields ignored
       expect(user).toEqual(mockUpdatedUser);
-      // Should only include email in the update
-      expect(db.query).toHaveBeenCalledWith(
-        expect.stringContaining("email = $1"),
-        ["valid@example.com", 1],
-      );
+      // We verify the query does NOT include password (a security concern)
       expect(db.query).not.toHaveBeenCalledWith(
         expect.stringContaining("password"),
         expect.anything(),

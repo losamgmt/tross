@@ -142,7 +142,7 @@ class _DispatchSettingsScreenState extends State<DispatchSettingsScreen> {
                             ),
                             SizedBox(height: spacing.xs),
                             DropdownButtonFormField<String>(
-                              value: _weekStartDay,
+                              initialValue: _weekStartDay,
                               decoration: InputDecoration(
                                 labelText: 'REQUIRED',
                                 labelStyle: TextStyle(
@@ -517,7 +517,7 @@ class _DispatchSettingsScreenState extends State<DispatchSettingsScreen> {
                       SizedBox(
                         width: 280,
                         child: DropdownButtonFormField<String>(
-                          value: _addTravelTimeToVisit,
+                          initialValue: _addTravelTimeToVisit,
                           decoration: InputDecoration(
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: 12,
@@ -642,7 +642,7 @@ class _DispatchSettingsScreenState extends State<DispatchSettingsScreen> {
         Switch(
           value: value,
           onChanged: onChanged,
-          activeColor: AppColors.brandPrimary,
+          activeThumbColor: AppColors.brandPrimary,
         ),
       ],
     );

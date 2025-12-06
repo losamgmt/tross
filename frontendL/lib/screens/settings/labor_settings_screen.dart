@@ -518,7 +518,7 @@ class _LaborSettingsScreenState extends State<LaborSettingsScreen>
                                 vertical: 2,
                               ),
                               decoration: BoxDecoration(
-                                color: AppColors.brandPrimary.withOpacity(0.1),
+                                color: AppColors.brandPrimary.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
@@ -709,7 +709,7 @@ class _LaborSettingsScreenState extends State<LaborSettingsScreen>
                       modifier['isActive'] = value;
                     });
                   },
-                  activeColor: AppColors.success,
+                  activeThumbColor: AppColors.success,
                 ),
                 Text(
                   modifier['isActive'] ? 'Active' : 'Inactive',
@@ -837,7 +837,7 @@ class _LaborSettingsScreenState extends State<LaborSettingsScreen>
                       ],
                     ),
                   );
-                }).toList(),
+                }),
               ],
             ),
           ),
@@ -872,7 +872,7 @@ class _LaborSettingsScreenState extends State<LaborSettingsScreen>
                 onChanged: (value) {
                   setState(() => _mapPayrollToBilling = value);
                 },
-                activeColor: AppColors.success,
+                activeThumbColor: AppColors.success,
               ),
             ],
           ),
@@ -937,7 +937,7 @@ class _LaborSettingsScreenState extends State<LaborSettingsScreen>
                       Expanded(
                         flex: 2,
                         child: DropdownButtonFormField<String>(
-                          value: hourType['mapsTo'],
+                          initialValue: hourType['mapsTo'],
                           decoration: InputDecoration(
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: 12,
@@ -1113,7 +1113,7 @@ class _LaborSettingsScreenState extends State<LaborSettingsScreen>
                       ],
                     ),
                   );
-                }).toList(),
+                }),
               ],
             ),
           ),
@@ -1245,26 +1245,6 @@ class _LaborSettingsScreenState extends State<LaborSettingsScreen>
     );
   }
 
-  Widget _buildPlaceholderTab(String title) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.construction, size: 64, color: AppColors.textSecondary),
-          const SizedBox(height: 16),
-          Text(
-            '$title Coming Soon',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w500,
-              color: AppColors.textSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildSectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
@@ -1315,7 +1295,7 @@ class _LaborSettingsScreenState extends State<LaborSettingsScreen>
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: AppColors.brandPrimary,
+            activeThumbColor: AppColors.brandPrimary,
           ),
         ],
       ),
@@ -1346,7 +1326,7 @@ class _LaborSettingsScreenState extends State<LaborSettingsScreen>
           Expanded(
             flex: 3,
             child: DropdownButtonFormField<String>(
-              value: value,
+              initialValue: value,
               decoration: InputDecoration(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 border: OutlineInputBorder(

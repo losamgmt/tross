@@ -73,9 +73,9 @@ class RoleService {
     ),
     Role(
       id: 5,
-      name: 'client',
+      name: 'customer',
       priority: 1,
-      description: 'Client - Customer access',
+      description: 'Customer - Customer access',
       createdAt: DateTime.parse('2025-01-01T00:00:00.000Z'),
       updatedAt: DateTime.parse('2025-01-01T00:00:00.000Z'),
       isActive: true,

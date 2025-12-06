@@ -395,7 +395,9 @@ describe('Auth API Endpoints - Integration Tests', () => {
       // Assert - Should NOT contain sensitive fields
       expect(response.body.data.password).toBeUndefined();
       expect(response.body.data.password_hash).toBeUndefined();
-      expect(response.body.data.auth0_id).toBeDefined(); // auth0_id is OK to include
+      // auth0_id is filtered out by output-filter-helper (ALWAYS_SENSITIVE)
+      // This is intentional - auth0_id is an external system ID, not useful to clients
+      expect(response.body.data.auth0_id).toBeUndefined();
     });
 
     test('should not allow updating other users profiles', async () => {

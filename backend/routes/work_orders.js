@@ -15,6 +15,7 @@ const {
 } = require('../validators');
 const WorkOrder = require('../db/models/WorkOrder');
 const auditService = require('../services/audit-service');
+const { AuditActions, ResourceTypes, AuditResults } = require('../services/audit-constants');
 const { getClientIp, getUserAgent } = require('../utils/request-helpers');
 const { logger } = require('../config/logger');
 const workOrderMetadata = require('../config/models/work-order-metadata');
@@ -267,13 +268,13 @@ router.post(
 
       await auditService.log({
         userId: req.user.userId,
-        action: 'create',
-        resourceType: 'work_order',
+        action: AuditActions.WORK_ORDER_CREATE,
+        resourceType: ResourceTypes.WORK_ORDER,
         resourceId: newWorkOrder.id,
         newValues: { title, customer_id, priority },
         ipAddress,
         userAgent,
-        result: 'success',
+        result: AuditResults.SUCCESS,
       });
 
       return ResponseFormatter.created(res, newWorkOrder, 'Work order created successfully');
@@ -382,14 +383,14 @@ router.patch(
 
       await auditService.log({
         userId: req.user.userId,
-        action: 'update',
-        resourceType: 'work_order',
+        action: AuditActions.WORK_ORDER_UPDATE,
+        resourceType: ResourceTypes.WORK_ORDER,
         resourceId: workOrderId,
         oldValues: workOrder,
         newValues: updatedWorkOrder,
         ipAddress,
         userAgent,
-        result: 'success',
+        result: AuditResults.SUCCESS,
       });
 
       return ResponseFormatter.updated(res, updatedWorkOrder, 'Work order updated successfully');
@@ -460,13 +461,13 @@ router.delete(
 
       await auditService.log({
         userId: req.user.userId,
-        action: 'delete',
-        resourceType: 'work_order',
+        action: AuditActions.WORK_ORDER_DELETE,
+        resourceType: ResourceTypes.WORK_ORDER,
         resourceId: workOrderId,
         oldValues: workOrder,
         ipAddress,
         userAgent,
-        result: 'success',
+        result: AuditResults.SUCCESS,
       });
 
       return ResponseFormatter.deleted(res, 'Work order deleted successfully');

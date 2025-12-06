@@ -17,6 +17,7 @@ const {
 const User = require('../db/models/User');
 const Role = require('../db/models/Role');
 const auditService = require('../services/audit-service');
+const { AuditActions, ResourceTypes } = require('../services/audit-constants');
 const { getClientIp, getUserAgent } = require('../utils/request-helpers');
 const { logger } = require('../config/logger');
 const ResponseFormatter = require('../utils/response-formatter');
@@ -262,8 +263,8 @@ router.post(
       // Log user creation
       await auditService.log({
         userId: req.dbUser.id,
-        action: 'user_create',
-        resourceType: 'user',
+        action: AuditActions.USER_CREATE,
+        resourceType: ResourceTypes.USER,
         resourceId: newUser.id,
         newValues: { email, first_name, last_name, role_id },
         ipAddress: getClientIp(req),
@@ -363,8 +364,8 @@ router.patch(
       // Log user update
       await auditService.log({
         userId: req.dbUser.id,
-        action: 'user_update',
-        resourceType: 'user',
+        action: AuditActions.USER_UPDATE,
+        resourceType: ResourceTypes.USER,
         resourceId: userId,
         newValues: { email, first_name, last_name, is_active },
         ipAddress: getClientIp(req),
@@ -455,8 +456,8 @@ router.put(
         return ResponseFormatter.notFound(res, `Role with ID ${role_id} not found`);
       }
 
-      // KISS: setRole REPLACES user's role (one role per user)
-      await User.setRole(userId, role_id);
+      // Use generic update for role assignment (setRole was removed)
+      await User.update(userId, { role_id: roleIdNum });
 
       // Fetch updated user with role name via JOIN
       const updatedUser = await User.findById(userId, req);
@@ -468,8 +469,8 @@ router.put(
       // Log the role assignment
       await auditService.log({
         userId: req.dbUser.id,
-        action: 'role_assign',
-        resourceType: 'user',
+        action: AuditActions.ROLE_ASSIGN,
+        resourceType: ResourceTypes.USER,
         resourceId: userId,
         newValues: { role_id, role_name: role.name },
         ipAddress: getClientIp(req),
@@ -539,8 +540,8 @@ router.delete(
       // Log user deletion
       await auditService.log({
         userId: req.dbUser.id,
-        action: 'user_delete',
-        resourceType: 'user',
+        action: AuditActions.USER_DELETE,
+        resourceType: ResourceTypes.USER,
         resourceId: userId,
         oldValues: {
           email: user.email,

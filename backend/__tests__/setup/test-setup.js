@@ -131,8 +131,10 @@ function setupModuleMocks() {
     logDelete: jest.fn(),
     logAuth: jest.fn(),
     logError: jest.fn(),
-    logDeactivation: jest.fn(),
-    logReactivation: jest.fn(),
+    getCreator: jest.fn(),
+    getLastEditor: jest.fn(),
+    getDeactivator: jest.fn(),
+    getHistory: jest.fn(),
   }));
 }
 

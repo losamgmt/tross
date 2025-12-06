@@ -141,12 +141,12 @@ void main() {
         }
 
         // Act
-        final result = await authProvider.loginWithTestToken(role: 'client');
+        final result = await authProvider.loginWithTestToken(role: 'customer');
 
         // Assert
         expect(result, true);
         expect(authProvider.isAuthenticated, true);
-        expect(authProvider.userRole, 'client');
+        expect(authProvider.userRole, 'customer');
       });
 
       test('should clear error on successful login', () async {

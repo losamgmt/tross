@@ -11,10 +11,12 @@ const {
   validateQuery, // NEW: Metadata-driven query validation
 } = require('../validators'); // Now from validators/ instead of middleware/
 const auditService = require('../services/audit-service');
+const { AuditActions, ResourceTypes } = require('../services/audit-constants');
 const { getClientIp, getUserAgent } = require('../utils/request-helpers');
 const { logger } = require('../config/logger');
 const ResponseFormatter = require('../utils/response-formatter');
 const roleMetadata = require('../config/models/role-metadata'); // NEW: Role metadata
+const GenericEntityService = require('../services/generic-entity-service');
 
 /**
  * @openapi
@@ -281,10 +283,15 @@ router.get(
       const roleId = req.validated.id; // From validateIdParam middleware
       const { page, limit } = req.validated.pagination; // From validatePagination middleware
 
-      const result = await Role.getUsersByRole(roleId, { page, limit });
+      // Use GenericEntityService instead of Role.getUsersByRole
+      const result = await GenericEntityService.findAll('user', {
+        filters: { role_id: roleId },
+        page,
+        limit,
+      });
 
       return ResponseFormatter.list(res, {
-        data: result.users,
+        data: result.data,
         pagination: result.pagination,
       });
     } catch (error) {
@@ -371,8 +378,8 @@ router.post(
       // Log the creation
       await auditService.log({
         userId: req.dbUser.id,
-        action: 'role_create',
-        resourceType: 'role',
+        action: AuditActions.ROLE_CREATE,
+        resourceType: ResourceTypes.ROLE,
         resourceId: newRole.id,
         newValues: { name: newRole.name, priority: newRole.priority, description: newRole.description },
         ipAddress: getClientIp(req),
@@ -571,8 +578,8 @@ router.put(
 
       await auditService.log({
         userId: req.dbUser.id,
-        action: 'role_update',
-        resourceType: 'role',
+        action: AuditActions.ROLE_UPDATE,
+        resourceType: ResourceTypes.ROLE,
         resourceId: roleId,
         oldValues,
         newValues,
@@ -660,8 +667,8 @@ router.delete(
       // Log the deletion
       await auditService.log({
         userId: req.dbUser.id,
-        action: 'role_delete',
-        resourceType: 'role',
+        action: AuditActions.ROLE_DELETE,
+        resourceType: ResourceTypes.ROLE,
         resourceId: roleId,
         oldValues: { name: deletedRole.name },
         ipAddress: getClientIp(req),

@@ -34,7 +34,7 @@ class RoleConfig {
     'technician': (BadgeStyle.technician, Icons.build),
     'manager': (BadgeStyle.manager, Icons.supervisor_account),
     'dispatcher': (BadgeStyle.dispatcher, Icons.support_agent),
-    'client': (BadgeStyle.client, Icons.person),
+    'customer': (BadgeStyle.customer, Icons.person),
   };
 
   /// Get all valid role names

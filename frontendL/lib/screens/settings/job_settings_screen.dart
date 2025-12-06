@@ -132,7 +132,7 @@ class _JobSettingsScreenState extends State<JobSettingsScreen> {
               Switch(
                 value: value,
                 onChanged: onChanged,
-                activeColor: AppColors.success,
+                activeThumbColor: AppColors.success,
               ),
             ],
           ),

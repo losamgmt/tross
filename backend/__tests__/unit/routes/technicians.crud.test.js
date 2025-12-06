@@ -51,6 +51,7 @@ jest.mock('../../../validators', () => ({
 const request = require('supertest');
 const Technician = require('../../../db/models/Technician');
 const auditService = require('../../../services/audit-service');
+const { AuditActions, ResourceTypes, AuditResults } = require('../../../services/audit-constants');
 const { getClientIp, getUserAgent } = require('../../../utils/request-helpers');
 const { authenticateToken, requirePermission } = require('../../../middleware/auth');
 const { enforceRLS } = require('../../../middleware/row-level-security');
@@ -207,10 +208,10 @@ describe('routes/technicians.js - CRUD Operations', () => {
       expect(auditService.log).toHaveBeenCalledWith(
         expect.objectContaining({
           userId: 1,
-          action: 'create',
-          resourceType: 'technician',
+          action: AuditActions.TECHNICIAN_CREATE,
+          resourceType: ResourceTypes.TECHNICIAN,
           resourceId: 3,
-          result: 'success',
+          result: AuditResults.SUCCESS,
         })
       );
     });
@@ -274,13 +275,13 @@ describe('routes/technicians.js - CRUD Operations', () => {
       expect(Technician.delete).toHaveBeenCalledWith(1);
       expect(auditService.log).toHaveBeenCalledWith({
         userId: 1,
-        action: 'delete',
-        resourceType: 'technician',
+        action: AuditActions.TECHNICIAN_DELETE,
+        resourceType: ResourceTypes.TECHNICIAN,
         resourceId: 1,
         oldValues: expect.any(Object),
         ipAddress: '127.0.0.1',
         userAgent: 'Jest Test Agent',
-        result: 'success',
+        result: AuditResults.SUCCESS,
       });
     });
 

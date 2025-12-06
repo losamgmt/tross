@@ -10,6 +10,7 @@
 const request = require("supertest");
 const Role = require("../../../db/models/Role");
 const auditService = require("../../../services/audit-service");
+const { AuditActions, ResourceTypes } = require("../../../services/audit-constants");
 const { authenticateToken, requirePermission } = require("../../../middleware/auth");
 const {
   validateRoleCreate,
@@ -251,8 +252,8 @@ describe("routes/roles.js - CRUD Operations", () => {
       expect(auditService.log).toHaveBeenCalledWith(
         expect.objectContaining({
           userId: 1,
-          action: "role_create",
-          resourceType: "role",
+          action: AuditActions.ROLE_CREATE,
+          resourceType: ResourceTypes.ROLE,
           resourceId: mockCreatedRole.id,
         })
       );
@@ -316,8 +317,8 @@ describe("routes/roles.js - CRUD Operations", () => {
       expect(auditService.log).toHaveBeenCalledWith(
         expect.objectContaining({
           userId: 1,
-          action: "role_update",
-          resourceType: "role",
+          action: AuditActions.ROLE_UPDATE,
+          resourceType: ResourceTypes.ROLE,
           resourceId: 3,
         })
       );
@@ -377,8 +378,8 @@ describe("routes/roles.js - CRUD Operations", () => {
       expect(auditService.log).toHaveBeenCalledWith(
         expect.objectContaining({
           userId: 1,
-          action: "role_delete",
-          resourceType: "role",
+          action: AuditActions.ROLE_DELETE,
+          resourceType: ResourceTypes.ROLE,
           resourceId: 5,
         })
       );

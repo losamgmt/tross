@@ -119,46 +119,8 @@ describe("Role Model - CRUD Operations", () => {
     });
   });
 
-  describe("getByName()", () => {
-    test("should return role by name (case-sensitive query)", async () => {
-      const mockRole = { id: 1, name: "admin", priority: 5, description: "Full system access", created_at: "2025-01-01" };
-      db.query.mockResolvedValue({ rows: [mockRole] });
-
-      const result = await Role.getByName("admin");
-
-      expect(result).toEqual(mockRole);
-      expect(db.query).toHaveBeenCalledWith(
-        "SELECT * FROM roles WHERE name = $1",
-        ["admin"],
-      );
-    });
-
-    test("should return undefined for non-existent role name", async () => {
-      db.query.mockResolvedValue({ rows: [] });
-
-      const result = await Role.getByName("nonexistent");
-
-      expect(result).toBeUndefined();
-    });
-
-    test("should handle database errors", async () => {
-      db.query.mockRejectedValue(new Error("Query failed"));
-
-      await expect(Role.getByName("admin")).rejects.toThrow("Query failed");
-    });
-
-    test("should query with exact name provided (no normalization)", async () => {
-      const mockRole = { id: 2, name: "customer", created_at: "2025-01-02" };
-      db.query.mockResolvedValue({ rows: [mockRole] });
-
-      await Role.getByName("CUSTOMER");
-
-      expect(db.query).toHaveBeenCalledWith(
-        expect.any(String),
-        ["CUSTOMER"], // Not normalized in getByName
-      );
-    });
-  });
+  // NOTE: getByName tests removed - method moved to GenericEntityService.findByField('role', 'name', value)
+  // See: generic-entity-service.findByField.test.js
 
   describe("create()", () => {
     test("should create new role with normalized name and default priority", async () => {

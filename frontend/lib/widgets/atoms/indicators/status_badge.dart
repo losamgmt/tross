@@ -15,7 +15,7 @@ enum BadgeStyle {
   technician,
   manager,
   dispatcher,
-  client,
+  customer,
   success,
   warning,
   error,
@@ -128,7 +128,7 @@ class StatusBadge extends StatelessWidget {
           border: AppColors.warning,
           text: AppColors.warningDark,
         );
-      case BadgeStyle.client:
+      case BadgeStyle.customer:
         return _BadgeColors(
           background: AppColors.withOpacity(AppColors.success, 0.1),
           border: AppColors.success,

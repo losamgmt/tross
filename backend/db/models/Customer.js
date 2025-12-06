@@ -163,29 +163,7 @@ class Customer {
     }
   }
 
-  /**
-   * Find customer by email
-   *
-   * @param {string} email - Customer email
-   * @returns {Promise<Object|null>} Customer object or null if not found
-   */
-  static async findByEmail(email) {
-    if (!email) {
-      throw new Error(MODEL_ERRORS.CUSTOMER.EMAIL_REQUIRED);
-    }
-
-    try {
-      const query = this._buildQuery('WHERE c.email = $1');
-      const result = await db.query(query, [email]);
-      return result.rows[0] || null;
-    } catch (error) {
-      logger.error('Error finding customer by email', {
-        error: error.message,
-        email,
-      });
-      throw new Error(MODEL_ERRORS.CUSTOMER.RETRIEVAL_FAILED);
-    }
-  }
+  // NOTE: findByEmail has been removed - use GenericEntityService.findByField('customer', 'email', value)
 
   /**
    * Find all customers with pagination, search, filters, and sorting

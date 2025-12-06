@@ -191,7 +191,7 @@ LIMITATION ON LIABILITY AND DAMAGES: We assume no liability for the cost of repa
         Container(
           width: 250,
           decoration: BoxDecoration(
-            color: AppColors.surfaceLight.withOpacity(0.3),
+            color: AppColors.surfaceLight.withValues(alpha: 0.3),
             border: Border(
               right: BorderSide(color: AppColors.border),
             ),
@@ -252,7 +252,7 @@ LIMITATION ON LIABILITY AND DAMAGES: We assume no liability for the cost of repa
                         padding: spacing.paddingMD,
                         decoration: BoxDecoration(
                           color: isSelected
-                              ? AppColors.success.withOpacity(0.1)
+                              ? AppColors.success.withValues(alpha: 0.1)
                               : Colors.transparent,
                           border: Border(
                             left: BorderSide(
@@ -349,7 +349,7 @@ LIMITATION ON LIABILITY AND DAMAGES: We assume no liability for the cost of repa
                     onChanged: (value) {
                       setState(() => _isCompanyDefault = value);
                     },
-                    activeColor: AppColors.success,
+                    activeThumbColor: AppColors.success,
                   ),
                 ],
               ),
@@ -406,7 +406,7 @@ LIMITATION ON LIABILITY AND DAMAGES: We assume no liability for the cost of repa
                 onChanged: (value) {
                   setState(() => _assignedTo = value);
                 },
-                activeColor: AppColors.brandPrimary,
+                activeThumbColor: AppColors.brandPrimary,
               ),
             ],
           ),
@@ -502,9 +502,9 @@ LIMITATION ON LIABILITY AND DAMAGES: We assume no liability for the cost of repa
           Container(
             padding: spacing.paddingMD,
             decoration: BoxDecoration(
-              color: AppColors.brandPrimary.withOpacity(0.1),
+              color: AppColors.brandPrimary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: AppColors.brandPrimary.withOpacity(0.3)),
+              border: Border.all(color: AppColors.brandPrimary.withValues(alpha: 0.3)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

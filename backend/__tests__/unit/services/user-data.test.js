@@ -4,13 +4,18 @@
  * Tests user data service (config vs database mode)
  *
  * KISS: Simple test/dev user handling
+ * 
+ * NOTE: Now uses GenericEntityService.findByField and findAll
+ * instead of User.findByAuth0Id
  */
 
 const { UserDataService } = require('../../../services/user-data');
 const { TEST_USERS } = require('../../../config/test-users');
 const User = require('../../../db/models/User');
+const GenericEntityService = require('../../../services/generic-entity-service');
 
 jest.mock('../../../db/models/User');
+jest.mock('../../../services/generic-entity-service');
 
 describe('UserDataService', () => {
   const originalEnv = { ...process.env };
@@ -47,13 +52,13 @@ describe('UserDataService', () => {
       process.env.NODE_ENV = 'production';
       const service = new (require('../../../services/user-data').UserDataService.constructor)();
       const mockUsers = [{ id: 1, email: 'test@example.com' }];
-      User.findAll.mockResolvedValue({ data: mockUsers });
+      GenericEntityService.findAll.mockResolvedValue({ data: mockUsers });
 
       // Act
       const users = await service.getAllUsers();
 
       // Assert
-      expect(User.findAll).toHaveBeenCalledWith({ includeInactive: false });
+      expect(GenericEntityService.findAll).toHaveBeenCalledWith('user', { includeInactive: false });
       expect(users).toEqual(mockUsers);
     });
   });
@@ -95,13 +100,13 @@ describe('UserDataService', () => {
       process.env.NODE_ENV = 'production';
       const service = new (require('../../../services/user-data').UserDataService.constructor)();
       const mockUser = { id: 1, auth0_id: 'auth0|123', email: 'test@example.com' };
-      User.findByAuth0Id.mockResolvedValue(mockUser);
+      GenericEntityService.findByField.mockResolvedValue(mockUser);
 
       // Act
       const user = await service.getUserByAuth0Id('auth0|123');
 
       // Assert
-      expect(User.findByAuth0Id).toHaveBeenCalledWith('auth0|123');
+      expect(GenericEntityService.findByField).toHaveBeenCalledWith('user', 'auth0_id', 'auth0|123');
       expect(user).toEqual(mockUser);
     });
   });

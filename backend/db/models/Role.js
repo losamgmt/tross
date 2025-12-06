@@ -193,12 +193,7 @@ class Role {
     return role;
   }
 
-  // Get role by name
-  static async getByName(name) {
-    const query = 'SELECT * FROM roles WHERE name = $1';
-    const result = await db.query(query, [name]);
-    return result.rows[0];
-  }
+  // NOTE: getByName has been removed - use GenericEntityService.findByField('role', 'name', value)
 
   // Check if role is protected (cannot be modified/deleted)
   static isProtected(roleName) {
@@ -259,7 +254,7 @@ class Role {
    * @returns {Promise<Object>} Updated role object
    * @throws {Error} If id is invalid, role not found, or role is protected
    */
-  static async update(id, updates, context = null) {
+  static async update(id, updates, _context = null) {
     // BUSINESS LOGIC VALIDATION: Check both parameters first
     if (!id || !updates || typeof updates !== 'object') {
       throw new Error(MODEL_ERRORS.ROLE.ID_AND_NAME_REQUIRED);
@@ -319,18 +314,9 @@ class Role {
 
       const updatedRole = result.rows[0];
 
-      // Contract v2.0: Auto-log activation changes to audit_logs
-      if ('is_active' in updates && context) {
-        const auditService = require('../../services/audit-service');
-        const action = updates.is_active === false ? 'logDeactivation' : 'logReactivation';
-        await auditService[action](
-          'roles',
-          safeId,
-          context.userId,
-          context.ipAddress,
-          context.userAgent,
-        );
-      }
+      // Contract v2.0: Auto-log updates to audit_logs
+      // Deactivation is just an update with is_active=false - no special handling needed
+      // The audit log will capture oldValues/newValues including is_active changes
 
       return updatedRole;
     } catch (error) {
@@ -392,93 +378,8 @@ class Role {
     };
   }
 
-  /**
-   * Get count of users assigned to a role (for deletion warning)
-   *
-   * TYPE SAFE: Validates roleId is a positive integer
-   *
-   * @param {number|string} roleId - Role ID (will be coerced to integer)
-   * @returns {Promise<number>} Count of users with this role
-   * @throws {Error} If roleId is not a valid positive integer
-   */
-  static async getUserCount(roleId) {
-    // TYPE SAFETY: Ensure roleId is a valid positive integer
-    const safeRoleId = toSafeInteger(roleId, 'roleId', {
-      min: 1,
-      allowNull: false,
-    });
-
-    const query = 'SELECT COUNT(*) as count FROM users WHERE role_id = $1';
-    const result = await db.query(query, [safeRoleId]);
-    return parseInt(result.rows[0].count);
-  }
-
-  /**
-   * Get users by role (uses users.role_id FK)
-   *
-   * TYPE SAFE: Validates roleId is a positive integer
-   *
-   * @param {number|string} roleId - Role ID (will be coerced to integer)
-   * @param {Object} options - Pagination options
-   * @param {number} options.page - Page number (default: 1)
-   * @param {number} options.limit - Items per page (default: 10)
-   * @returns {Promise<Object>} Object with users array and pagination metadata
-   * @throws {Error} If roleId is not a valid positive integer
-   */
-  static async getUsersByRole(roleId, options = {}) {
-    // TYPE SAFETY: Ensure roleId is a valid positive integer
-    const safeRoleId = toSafeInteger(roleId, 'roleId', {
-      min: 1,
-      allowNull: false,
-    });
-
-    const page = toSafeInteger(options.page || 1, 'page', {
-      min: 1,
-      allowNull: false,
-    });
-    const limit = toSafeInteger(options.limit || 10, 'limit', {
-      min: 1,
-      max: 200,
-      allowNull: false,
-    });
-
-    const offset = (page - 1) * limit;
-
-    // Get total count for pagination metadata
-    const countQuery = `
-      SELECT COUNT(*) as total
-      FROM users u
-      WHERE u.role_id = $1 AND u.is_active = true
-    `;
-    const countResult = await db.query(countQuery, [safeRoleId]);
-    const total = parseInt(countResult.rows[0].total);
-
-    // Get paginated users
-    const query = `
-      SELECT 
-        u.id, 
-        u.email, 
-        u.first_name, 
-        u.last_name, 
-        u.is_active,
-        u.created_at
-      FROM users u
-      WHERE u.role_id = $1 AND u.is_active = true
-      ORDER BY u.first_name, u.last_name
-      LIMIT $2 OFFSET $3
-    `;
-    const result = await db.query(query, [safeRoleId, limit, offset]);
-
-    return {
-      users: result.rows,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
-    };
-  }
+  // NOTE: getUserCount has been removed - use GenericEntityService.count('user', { role_id: roleId })
+  // NOTE: getUsersByRole has been removed - use GenericEntityService.findAll('user', { filters: { role_id: roleId } })
 }
 
 module.exports = Role;

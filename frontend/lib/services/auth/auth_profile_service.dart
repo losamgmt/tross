@@ -72,9 +72,12 @@ class AuthProfileService {
           allowNull: true, // Dev users have null IDs
         ),
         'email': Validators.toSafeEmail(rawProfile['email'], 'profile.email'),
+        // auth0_id is intentionally stripped by backend for security
+        // Frontend doesn't need it - only backend uses it for Auth0 lookups
         'auth0_id': Validators.toSafeString(
           rawProfile['auth0_id'],
           'profile.auth0_id',
+          allowNull: true, // Backend strips this field for security
         ),
         'first_name': Validators.toSafeString(
           rawProfile['first_name'],

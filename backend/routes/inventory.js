@@ -16,6 +16,7 @@ const {
 } = require('../validators');
 const Inventory = require('../db/models/Inventory');
 const auditService = require('../services/audit-service');
+const { AuditActions, ResourceTypes, AuditResults } = require('../services/audit-constants');
 const { getClientIp, getUserAgent } = require('../utils/request-helpers');
 const { logger } = require('../config/logger');
 const inventoryMetadata = require('../config/models/inventory-metadata');
@@ -231,13 +232,13 @@ router.post(
 
       await auditService.log({
         userId: req.user.userId,
-        action: 'create',
-        resourceType: 'inventory',
+        action: AuditActions.INVENTORY_CREATE,
+        resourceType: ResourceTypes.INVENTORY,
         resourceId: newInventory.id,
         newValues: { name, sku, quantity },
         ipAddress,
         userAgent,
-        result: 'success',
+        result: AuditResults.SUCCESS,
       });
 
       return ResponseFormatter.created(res, newInventory, 'Inventory item created successfully');
@@ -326,14 +327,14 @@ router.patch(
 
       await auditService.log({
         userId: req.user.userId,
-        action: 'update',
-        resourceType: 'inventory',
+        action: AuditActions.INVENTORY_UPDATE,
+        resourceType: ResourceTypes.INVENTORY,
         resourceId: inventoryId,
         oldValues: inventory,
         newValues: updatedInventory,
         ipAddress,
         userAgent,
-        result: 'success',
+        result: AuditResults.SUCCESS,
       });
 
       return ResponseFormatter.updated(res, updatedInventory, 'Inventory item updated successfully');
@@ -403,13 +404,13 @@ router.delete(
 
       await auditService.log({
         userId: req.user.userId,
-        action: 'delete',
-        resourceType: 'inventory',
+        action: AuditActions.INVENTORY_DELETE,
+        resourceType: ResourceTypes.INVENTORY,
         resourceId: inventoryId,
         oldValues: inventory,
         ipAddress,
         userAgent,
-        result: 'success',
+        result: AuditResults.SUCCESS,
       });
 
       return ResponseFormatter.deleted(res, 'Inventory item deleted successfully');

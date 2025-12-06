@@ -247,10 +247,10 @@ class _InvoiceSettingsScreenState extends State<InvoiceSettingsScreen> {
                   vertical: 2,
                 ),
                 decoration: BoxDecoration(
-                  color: AppColors.brandPrimary.withOpacity(0.1),
+                  color: AppColors.brandPrimary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
                   border: Border.all(
-                    color: AppColors.brandPrimary.withOpacity(0.3),
+                    color: AppColors.brandPrimary.withValues(alpha: 0.3),
                     width: 1,
                   ),
                 ),
@@ -305,7 +305,7 @@ class _InvoiceSettingsScreenState extends State<InvoiceSettingsScreen> {
                   _includeAssets = value;
                 });
               },
-              activeColor: AppColors.success,
+              activeThumbColor: AppColors.success,
             ),
           ],
         ),

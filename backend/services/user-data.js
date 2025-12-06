@@ -1,5 +1,6 @@
 // User Data Service - Handles both config-based and database-based user data
 const { TEST_USERS } = require('../config/test-users');
+const GenericEntityService = require('./generic-entity-service');
 
 class UserDataService {
   constructor() {
@@ -23,9 +24,8 @@ class UserDataService {
         name: `${user.first_name} ${user.last_name}`, // Add formatted name
       }));
     } else {
-      // Use database
-      const User = require('../db/models/User');
-      const result = await User.findAll({ includeInactive: false });
+      // Use database via GenericEntityService
+      const result = await GenericEntityService.findAll('user', { includeInactive: false });
       return result.data; // Extract data array from paginated response
     }
   }
@@ -52,9 +52,8 @@ class UserDataService {
       }
       return null;
     } else {
-      // Use database
-      const User = require('../db/models/User');
-      return User.findByAuth0Id(auth0Id);
+      // Use GenericEntityService instead of User.findByAuth0Id
+      return GenericEntityService.findByField('user', 'auth0_id', auth0Id);
     }
   }
 
@@ -64,7 +63,7 @@ class UserDataService {
       // Just return the user from config (don't store anywhere)
       return this.getUserByAuth0Id(auth0Data.sub);
     } else {
-      // Use database
+      // Use database - User.findOrCreate still exists for Auth0-specific logic
       const User = require('../db/models/User');
       return User.findOrCreate(auth0Data);
     }

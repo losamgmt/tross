@@ -59,12 +59,12 @@ class _MobileSettingsScreenState extends State<MobileSettingsScreen>
 
   // Procurement Settings
   bool _packingSlipImagesVisitsProjects = false;
-  bool _requireReceiptLineItemsFieldOrders = true;
+  final bool _requireReceiptLineItemsFieldOrders = true;
   bool _allowFieldOrdersFutureVisits = false;
 
   // Self-Service Scheduling
   bool _enableSelfScheduleVisits = false;
-  bool _displayUnassignedJobs = true;
+  final bool _displayUnassignedJobs = true;
 
   @override
   void initState() {
@@ -269,7 +269,7 @@ class _MobileSettingsScreenState extends State<MobileSettingsScreen>
                           _visitReportFields[entry.key]!['required'] = value;
                         });
                       },
-                      activeColor: AppColors.success,
+                      activeThumbColor: AppColors.success,
                     ),
                   ),
                   SizedBox(
@@ -281,13 +281,13 @@ class _MobileSettingsScreenState extends State<MobileSettingsScreen>
                           _visitReportFields[entry.key]!['allowBypass'] = value;
                         });
                       },
-                      activeColor: AppColors.success,
+                      activeThumbColor: AppColors.success,
                     ),
                   ),
                 ],
               ),
             );
-          }).toList(),
+          }),
 
           SizedBox(height: spacing.xxl),
 
@@ -447,7 +447,7 @@ class _MobileSettingsScreenState extends State<MobileSettingsScreen>
                           () => _packingSlipImagesVisitsProjects = value,
                         );
                       },
-                      activeColor: AppColors.success,
+                      activeThumbColor: AppColors.success,
                     ),
                   ],
                 ),
@@ -538,7 +538,7 @@ class _MobileSettingsScreenState extends State<MobileSettingsScreen>
                   onChanged: (value) {
                     setState(() => _allowFieldOrdersFutureVisits = value);
                   },
-                  activeColor: AppColors.success,
+                  activeThumbColor: AppColors.success,
                 ),
               ],
             ),
@@ -592,7 +592,7 @@ class _MobileSettingsScreenState extends State<MobileSettingsScreen>
                       onChanged: (value) {
                         setState(() => _enableSelfScheduleVisits = value);
                       },
-                      activeColor: AppColors.success,
+                      activeThumbColor: AppColors.success,
                     ),
                   ],
                 ),

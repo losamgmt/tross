@@ -254,7 +254,8 @@ class AuthProvider extends ChangeNotifier {
   Future<bool> handleAuth0Callback() async {
     _setLoading(true);
     _clearError();
-    _isRedirecting = false; // Clear redirect flag when callback starts
+    // Keep isRedirecting true until we know the outcome
+    // This prevents AuthStateListener from redirecting during token exchange
 
     try {
       final success = await _authService.handleAuth0Callback();
@@ -262,6 +263,7 @@ class AuthProvider extends ChangeNotifier {
       if (success) {
         _user = _authService.user;
         _isAuthenticated = true;
+        _isRedirecting = false; // Clear AFTER success
         ErrorService.logInfo(
           'Auth0 callback handled successfully',
           context: {'role': _user?['role'], 'email': _user?['email']},
@@ -269,10 +271,12 @@ class AuthProvider extends ChangeNotifier {
         notifyListeners();
         return true;
       } else {
+        _isRedirecting = false; // Clear on failure too
         _setError('Auth0 login failed during callback.');
         return false;
       }
     } catch (e) {
+      _isRedirecting = false; // Clear on error
       _setError('Callback error: ${ErrorService.getUserFriendlyMessage(e)}');
       ErrorService.logError('Auth0 callback failed', error: e);
       return false;

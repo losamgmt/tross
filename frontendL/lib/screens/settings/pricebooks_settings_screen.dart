@@ -11,7 +11,6 @@ import 'package:flutter/material.dart';
 import '../../config/app_spacing.dart';
 import '../../config/app_colors.dart';
 import '../../widgets/organisms/organisms.dart';
-import '../../widgets/molecules/cards/page_header.dart';
 
 class PricebooksSettingsScreen extends StatefulWidget {
   const PricebooksSettingsScreen({super.key});
@@ -230,7 +229,7 @@ class _PricebooksSettingsScreenState extends State<PricebooksSettingsScreen>
             scrollDirection: Axis.horizontal,
             child: SingleChildScrollView(
               child: DataTable(
-                headingRowColor: MaterialStateProperty.all(
+                headingRowColor: WidgetStateProperty.all(
                   AppColors.surfaceLight,
                 ),
                 columns: [
@@ -327,8 +326,8 @@ class _PricebooksSettingsScreenState extends State<PricebooksSettingsScreen>
                           ),
                           decoration: BoxDecoration(
                             color: pricebook['status'] == 'Active'
-                                ? AppColors.success.withOpacity(0.1)
-                                : AppColors.error.withOpacity(0.1),
+                                ? AppColors.success.withValues(alpha: 0.1)
+                                : AppColors.error.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(

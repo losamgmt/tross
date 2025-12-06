@@ -77,7 +77,7 @@ void main() {
 
     testWidgets('hides child when user lacks permission', (tester) async {
       final mockAuth = MockAuthProvider(
-        role: 'client',
+        role: 'customer',
         permissions: {'${ResourceType.users}_${CrudOperation.delete}': false},
       );
 
@@ -103,7 +103,7 @@ void main() {
       tester,
     ) async {
       final mockAuth = MockAuthProvider(
-        role: 'client',
+        role: 'customer',
         permissions: {'${ResourceType.users}_${CrudOperation.delete}': false},
       );
 
@@ -131,7 +131,7 @@ void main() {
       tester,
     ) async {
       final mockAuth = MockAuthProvider(
-        role: 'client',
+        role: 'customer',
         permissions: {'${ResourceType.users}_${CrudOperation.delete}': false},
       );
 
@@ -202,7 +202,7 @@ void main() {
     });
 
     testWidgets('hides child when custom check returns false', (tester) async {
-      final mockAuth = MockAuthProvider(role: 'client');
+      final mockAuth = MockAuthProvider(role: 'customer');
 
       await tester.pumpWidget(
         MaterialApp(
@@ -222,7 +222,7 @@ void main() {
     });
 
     testWidgets('shows fallback when check fails', (tester) async {
-      final mockAuth = MockAuthProvider(role: 'client');
+      final mockAuth = MockAuthProvider(role: 'customer');
 
       await tester.pumpWidget(
         MaterialApp(
@@ -253,7 +253,7 @@ void main() {
             child: Scaffold(
               body: PermissionGuardCustom(
                 check: (auth) =>
-                    auth.isAuthenticated && auth.userRole != 'client',
+                    auth.isAuthenticated && auth.userRole != 'customer',
                 child: const Text('Advanced Features'),
               ),
             ),
@@ -297,7 +297,7 @@ void main() {
 
     testWidgets('hides child when user lacks any permission', (tester) async {
       final mockAuth = MockAuthProvider(
-        role: 'client',
+        role: 'customer',
         permissions: {
           '${ResourceType.users}_${CrudOperation.read}': false,
           '${ResourceType.roles}_${CrudOperation.read}': false,
@@ -356,7 +356,7 @@ void main() {
 
     testWidgets('shows fallback when any permission missing', (tester) async {
       final mockAuth = MockAuthProvider(
-        role: 'client',
+        role: 'customer',
         permissions: {
           '${ResourceType.users}_${CrudOperation.read}': false,
           '${ResourceType.roles}_${CrudOperation.read}': false,
@@ -386,7 +386,7 @@ void main() {
     });
 
     testWidgets('works with empty permissions list', (tester) async {
-      final mockAuth = MockAuthProvider(role: 'client');
+      final mockAuth = MockAuthProvider(role: 'customer');
 
       await tester.pumpWidget(
         MaterialApp(
@@ -430,7 +430,7 @@ void main() {
     testWidgets('hides child when user does not meet requirement', (
       tester,
     ) async {
-      final mockAuth = MockAuthProvider(role: 'client');
+      final mockAuth = MockAuthProvider(role: 'customer');
 
       await tester.pumpWidget(
         MaterialApp(
@@ -450,7 +450,7 @@ void main() {
     });
 
     testWidgets('shows fallback when requirement not met', (tester) async {
-      final mockAuth = MockAuthProvider(role: 'client');
+      final mockAuth = MockAuthProvider(role: 'customer');
 
       await tester.pumpWidget(
         MaterialApp(
@@ -527,7 +527,7 @@ void main() {
 
     testWidgets('nested guards short-circuit on first failure', (tester) async {
       final mockAuth = MockAuthProvider(
-        role: 'client',
+        role: 'customer',
         permissions: {
           '${ResourceType.users}_${CrudOperation.delete}': false, // FAILS HERE
           '${ResourceType.roles}_${CrudOperation.delete}': false,
@@ -588,7 +588,7 @@ void main() {
 
       // Now test with client
       final clientAuth = MockAuthProvider(
-        role: 'client',
+        role: 'customer',
         permissions: {'${ResourceType.users}_${CrudOperation.delete}': false},
       );
 
