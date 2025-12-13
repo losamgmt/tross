@@ -7,8 +7,8 @@
 library;
 
 import 'dart:convert';
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/services.dart';
+import '../services/error_service.dart';
 
 /// Centralized validation rules loaded from JSON config
 class ValidationRules {
@@ -37,10 +37,12 @@ class ValidationRules {
 
       final version = _rules!['version'];
       final policy = _rules!['policy'];
-      debugPrint('[ValidationRules] ✅ Loaded validation rules v$version');
-      debugPrint('[ValidationRules] 🎯 Policy: $policy');
+      ErrorService.logInfo(
+        '[ValidationRules] Loaded',
+        context: {'version': version, 'policy': policy},
+      );
     } catch (e) {
-      debugPrint('[ValidationRules] ❌ Failed to load validation rules: $e');
+      ErrorService.logError('[ValidationRules] Failed to load', error: e);
       throw Exception('Cannot load validation rules from assets');
     }
   }

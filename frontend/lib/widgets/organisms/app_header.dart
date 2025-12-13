@@ -1,7 +1,13 @@
 /// AppHeader - Organism for main application navigation bar
 ///
 /// Shared header across all authenticated pages
-/// Composes: LogoButton, UserAvatar, UserInfoHeader (atoms)
+/// Composes: AppButton (for logo), UserAvatar, UserInfoHeader (molecules)
+///
+/// **PROP-DRIVEN WITH OPTIONAL PROVIDER FALLBACK:**
+/// - If userName/userEmail/user provided: uses props (pure, testable)
+/// - If not provided: falls back to AuthProvider context (convenient)
+///
+/// GENERIC: Menu items are fully configurable via menuItems parameter.
 library;
 
 import 'package:flutter/material.dart';
@@ -11,33 +17,121 @@ import '../../config/app_colors.dart';
 import '../../config/constants.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/auth/auth_profile_service.dart';
-import '../../services/navigation_coordinator.dart';
-import '../atoms/buttons/logo_button.dart';
-import '../atoms/avatars/user_avatar.dart';
-import '../atoms/user_info/user_info_header.dart';
+import '../atoms/buttons/app_button.dart';
+import '../molecules/user_avatar.dart';
+import '../molecules/user_info_header.dart';
 import '../../core/routing/app_routes.dart';
+
+/// Menu item configuration for AppHeader
+class AppHeaderMenuItem {
+  final String id;
+  final String label;
+  final IconData icon;
+  final String? route;
+  final bool Function(Map<String, dynamic>? user)? visibleWhen;
+  final Future<void> Function(BuildContext context, AuthProvider auth)? onTap;
+
+  const AppHeaderMenuItem({
+    required this.id,
+    required this.label,
+    required this.icon,
+    this.route,
+    this.visibleWhen,
+    this.onTap,
+  });
+
+  /// Standard settings menu item
+  static const settings = AppHeaderMenuItem(
+    id: 'settings',
+    label: 'Settings',
+    icon: Icons.settings,
+    route: AppRoutes.settings,
+  );
+
+  /// Standard admin menu item (visible to admins only)
+  static final admin = AppHeaderMenuItem(
+    id: 'admin',
+    label: 'Admin Dashboard',
+    icon: Icons.admin_panel_settings,
+    route: AppRoutes.admin,
+    visibleWhen: (user) => AuthProfileService.isAdmin(user),
+  );
+
+  /// Standard logout menu item
+  static const logout = AppHeaderMenuItem(
+    id: 'logout',
+    label: AppConstants.logoutButton,
+    icon: Icons.logout,
+  );
+
+  /// Default menu items for standard app
+  static List<AppHeaderMenuItem> get defaultItems => [settings, admin, logout];
+}
 
 class AppHeader extends StatelessWidget implements PreferredSizeWidget {
   final String pageTitle;
+  final List<AppHeaderMenuItem>? menuItems;
+  final VoidCallback? onLogoPressed;
 
-  const AppHeader({super.key, required this.pageTitle});
+  // Optional prop-driven user data (falls back to AuthProvider if not provided)
+  final String? userName;
+  final String? userEmail;
+  final String? userRole;
+  final Map<String, dynamic>? user;
+
+  // Optional prop-driven callbacks (falls back to defaults if not provided)
+  final void Function(String route)? onNavigate;
+  final Future<void> Function()? onLogout;
+
+  const AppHeader({
+    super.key,
+    required this.pageTitle,
+    this.menuItems,
+    this.onLogoPressed,
+    this.userName,
+    this.userEmail,
+    this.userRole,
+    this.user,
+    this.onNavigate,
+    this.onLogout,
+  });
 
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 
+  List<AppHeaderMenuItem> get _effectiveMenuItems =>
+      menuItems ?? AppHeaderMenuItem.defaultItems;
+
   @override
   Widget build(BuildContext context) {
+    // Use props if provided, otherwise fall back to AuthProvider
     final authProvider = Provider.of<AuthProvider>(context);
-    final isAdmin = AuthProfileService.isAdmin(authProvider.user);
+    final effectiveUserName = userName ?? authProvider.userName;
+    final effectiveUserEmail = userEmail ?? authProvider.userEmail;
+    final effectiveUserRole = userRole ?? authProvider.userRole;
+    final effectiveUser = user ?? authProvider.user;
+
     final theme = Theme.of(context);
     final spacing = context.spacing;
+
+    void navigateTo(String route) {
+      if (onNavigate != null) {
+        onNavigate!(route);
+      } else {
+        Navigator.of(context).pushNamed(route);
+      }
+    }
 
     return AppBar(
       backgroundColor: AppColors.brandPrimary,
       foregroundColor: AppColors.white,
       elevation: 2,
-      leading: LogoButton(
-        onPressed: () => NavigationCoordinator.navigateTo(context, '/'),
+      leading: AppButton(
+        icon: Icons.home,
+        label: 'Tross',
+        tooltip: 'Home',
+        style: AppButtonStyle.ghost,
+        onPressed: onLogoPressed ?? () => navigateTo('/'),
       ),
       leadingWidth: 120,
       title: Text(
@@ -56,13 +150,23 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
             offset: Offset(0, spacing.xxl * 1.75),
             tooltip: 'User Menu',
             icon: UserAvatar(
-              name: authProvider.userName,
-              email: authProvider.userEmail,
+              name: effectiveUserName,
+              email: effectiveUserEmail,
             ),
-            itemBuilder: (context) =>
-                _buildMenuItems(context, authProvider, isAdmin),
-            onSelected: (value) =>
-                _handleMenuSelection(context, value, authProvider),
+            itemBuilder: (context) => _buildMenuItems(
+              context,
+              effectiveUserName: effectiveUserName,
+              effectiveUserEmail: effectiveUserEmail,
+              effectiveUserRole: effectiveUserRole,
+              user: effectiveUser,
+            ),
+            onSelected: (value) => _handleMenuSelection(
+              context,
+              value,
+              authProvider: authProvider,
+              navigateTo: navigateTo,
+              user: effectiveUser,
+            ),
           ),
         ),
       ],
@@ -70,94 +174,107 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
   }
 
   List<PopupMenuEntry<String>> _buildMenuItems(
-    BuildContext context,
-    AuthProvider authProvider,
-    bool isAdmin,
-  ) {
-    return [
-      // Profile header (clickable - links to settings)
+    BuildContext context, {
+    required String effectiveUserName,
+    required String effectiveUserEmail,
+    required String effectiveUserRole,
+    required Map<String, dynamic>? user,
+  }) {
+    final items = <PopupMenuEntry<String>>[];
+
+    // Profile header (always first)
+    items.add(
       PopupMenuItem<String>(
         value: AppConstants.menuProfile,
         padding: EdgeInsets.zero,
         child: UserInfoHeader(
-          userName: authProvider.userName,
-          userEmail: authProvider.userEmail,
-          userRole: authProvider.userRole,
+          userName: effectiveUserName,
+          userEmail: effectiveUserEmail,
+          userRole: effectiveUserRole,
         ),
       ),
-      const PopupMenuDivider(),
+    );
+    items.add(const PopupMenuDivider());
 
-      // Settings option
-      const PopupMenuItem<String>(
-        value: AppConstants.menuSettings,
-        child: ListTile(
-          leading: Icon(Icons.settings, size: 20),
-          title: Text('Settings'),
-          contentPadding: EdgeInsets.symmetric(horizontal: AppSpacingConst.md),
-          dense: true,
-        ),
-      ),
+    // Build menu items from config
+    bool needsDividerBeforeLogout = false;
+    for (final menuItem in _effectiveMenuItems) {
+      // Check visibility
+      if (menuItem.visibleWhen != null && !menuItem.visibleWhen!(user)) {
+        continue;
+      }
 
-      // Admin option (only for admins)
-      if (isAdmin)
-        const PopupMenuItem<String>(
-          value: AppConstants.menuAdmin,
+      // Add divider before logout
+      if (menuItem.id == 'logout' && needsDividerBeforeLogout) {
+        items.add(const PopupMenuDivider());
+      }
+
+      items.add(
+        PopupMenuItem<String>(
+          value: menuItem.id,
           child: ListTile(
-            leading: Icon(Icons.admin_panel_settings, size: 20),
-            title: Text('Admin Dashboard'),
-            contentPadding: EdgeInsets.symmetric(
+            leading: Icon(menuItem.icon, size: 20),
+            title: Text(menuItem.label),
+            contentPadding: const EdgeInsets.symmetric(
               horizontal: AppSpacingConst.md,
             ),
             dense: true,
           ),
         ),
+      );
 
-      const PopupMenuDivider(),
+      if (menuItem.id != 'logout') {
+        needsDividerBeforeLogout = true;
+      }
+    }
 
-      // Logout option
-      const PopupMenuItem<String>(
-        value: AppConstants.logout,
-        child: ListTile(
-          leading: Icon(Icons.logout, size: 20),
-          title: Text(AppConstants.logoutButton),
-          contentPadding: EdgeInsets.symmetric(horizontal: AppSpacingConst.md),
-          dense: true,
-        ),
-      ),
-    ];
+    return items;
   }
 
   void _handleMenuSelection(
     BuildContext context,
-    String value,
-    AuthProvider authProvider,
-  ) async {
-    switch (value) {
-      case AppConstants.menuProfile:
-      case AppConstants.menuSettings:
-        NavigationCoordinator.navigateTo(context, AppRoutes.settings);
-        break;
-      case AppConstants.menuAdmin:
-        NavigationCoordinator.navigateTo(context, AppRoutes.admin);
-        break;
-      case AppConstants.logout:
-        // Don't pop the menu - just logout immediately
-        // The menu will disappear when we navigate to login
-        // This avoids "deactivated widget" exceptions from the popup menu
+    String value, {
+    required AuthProvider authProvider,
+    required void Function(String route) navigateTo,
+    required Map<String, dynamic>? user,
+  }) async {
+    // Handle profile click
+    if (value == AppConstants.menuProfile) {
+      navigateTo(AppRoutes.settings);
+      return;
+    }
 
+    // Find the menu item
+    final menuItem = _effectiveMenuItems.firstWhere(
+      (item) => item.id == value,
+      orElse: () => AppHeaderMenuItem.settings,
+    );
+
+    // Custom handler
+    if (menuItem.onTap != null) {
+      await menuItem.onTap!(context, authProvider);
+      return;
+    }
+
+    // Handle logout specially
+    if (value == 'logout') {
+      if (onLogout != null) {
+        await onLogout!();
+      } else {
         await authProvider.logout();
+      }
+      await Future.delayed(const Duration(milliseconds: 2));
+      if (context.mounted) {
+        Navigator.of(
+          context,
+        ).pushNamedAndRemoveUntil(AppRoutes.login, (route) => false);
+      }
+      return;
+    }
 
-        // Allow popup menu to finish disposal before navigation
-        // This prevents "Looking up a deactivated widget's ancestor" errors
-        // from the popup menu trying to access theme during disposal
-        // Using 2ms delay to ensure menu cleanup completes
-        await Future.delayed(const Duration(milliseconds: 2));
-
-        // Navigate to login immediately (works for both Auth0 and dev auth)
-        if (context.mounted) {
-          NavigationCoordinator.navigateAndRemoveAll(context, AppRoutes.login);
-        }
-        break;
+    // Navigate to route
+    if (menuItem.route != null && context.mounted) {
+      navigateTo(menuItem.route!);
     }
   }
 }

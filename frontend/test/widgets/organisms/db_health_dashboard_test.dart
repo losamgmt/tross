@@ -16,8 +16,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tross_app/widgets/organisms/dashboards/db_health_dashboard.dart';
 import 'package:tross_app/models/database_health.dart';
-import 'package:tross_app/widgets/atoms/indicators/connection_status_badge.dart';
+import 'package:tross_app/widgets/atoms/indicators/app_badge.dart';
 import 'package:tross_app/services/database_health_service.dart';
+
+/// Fixed test timestamp - avoids DateTime.now() non-determinism
+const _testTimestamp = '2025-01-15T10:30:00.000Z';
 
 /// Fake service for testing - returns canned data
 class FakeDatabaseHealthService implements DatabaseHealthService {
@@ -42,10 +45,10 @@ class FakeDatabaseHealthService implements DatabaseHealthService {
           responseTime: 50,
           connectionCount: 10,
           maxConnections: 100,
-          lastChecked: DateTime.now().toIso8601String(),
+          lastChecked: _testTimestamp,
         ),
       ],
-      timestamp: DateTime.now().toIso8601String(),
+      timestamp: _testTimestamp,
     );
   }
 
@@ -119,7 +122,7 @@ void main() {
                 responseTime: 50,
                 connectionCount: 10,
                 maxConnections: 100,
-                lastChecked: DateTime.now().toIso8601String(),
+                lastChecked: _testTimestamp,
               ),
               DatabaseHealth(
                 name: 'replica',
@@ -127,10 +130,10 @@ void main() {
                 responseTime: 250,
                 connectionCount: 80,
                 maxConnections: 100,
-                lastChecked: DateTime.now().toIso8601String(),
+                lastChecked: _testTimestamp,
               ),
             ],
-            timestamp: DateTime.now().toIso8601String(),
+            timestamp: _testTimestamp,
           ),
         );
 
@@ -159,7 +162,7 @@ void main() {
         await tester.pump();
 
         // Should show status badge
-        expect(find.byType(ConnectionStatusBadge), findsWidgets);
+        expect(find.byType(AppBadge), findsWidgets);
       });
 
       testWidgets('displays database count', (tester) async {
@@ -172,7 +175,7 @@ void main() {
                 responseTime: 50,
                 connectionCount: 10,
                 maxConnections: 100,
-                lastChecked: DateTime.now().toIso8601String(),
+                lastChecked: _testTimestamp,
               ),
               DatabaseHealth(
                 name: 'db2',
@@ -180,10 +183,10 @@ void main() {
                 responseTime: 60,
                 connectionCount: 15,
                 maxConnections: 100,
-                lastChecked: DateTime.now().toIso8601String(),
+                lastChecked: _testTimestamp,
               ),
             ],
-            timestamp: DateTime.now().toIso8601String(),
+            timestamp: _testTimestamp,
           ),
         );
 
@@ -297,7 +300,7 @@ void main() {
         final service = FakeDatabaseHealthService(
           response: DatabasesHealthResponse(
             databases: [],
-            timestamp: DateTime.now().toIso8601String(),
+            timestamp: _testTimestamp,
           ),
         );
 
@@ -317,7 +320,7 @@ void main() {
         final service = FakeDatabaseHealthService(
           response: DatabasesHealthResponse(
             databases: [],
-            timestamp: DateTime.now().toIso8601String(),
+            timestamp: _testTimestamp,
           ),
         );
 
@@ -439,7 +442,7 @@ void main() {
     });
 
     group('Overall Status Logic', () {
-      testWidgets('shows "All Systems Operational" when all healthy', (
+      testWidgets('shows success badge when all databases healthy', (
         tester,
       ) async {
         final service = FakeDatabaseHealthService(
@@ -451,10 +454,10 @@ void main() {
                 responseTime: 50,
                 connectionCount: 10,
                 maxConnections: 100,
-                lastChecked: DateTime.now().toIso8601String(),
+                lastChecked: _testTimestamp,
               ),
             ],
-            timestamp: DateTime.now().toIso8601String(),
+            timestamp: _testTimestamp,
           ),
         );
 
@@ -466,10 +469,14 @@ void main() {
 
         await tester.pump();
 
-        expect(find.textContaining('Operational'), findsOneWidget);
+        // Verify: badge shows success style for healthy status
+        final badge = tester.widget<AppBadge>(find.byType(AppBadge).first);
+        expect(badge.style, BadgeStyle.success);
       });
 
-      testWidgets('shows "System Degraded" when any degraded', (tester) async {
+      testWidgets('shows warning badge when any database degraded', (
+        tester,
+      ) async {
         final service = FakeDatabaseHealthService(
           response: DatabasesHealthResponse(
             databases: [
@@ -479,7 +486,7 @@ void main() {
                 responseTime: 50,
                 connectionCount: 10,
                 maxConnections: 100,
-                lastChecked: DateTime.now().toIso8601String(),
+                lastChecked: _testTimestamp,
               ),
               DatabaseHealth(
                 name: 'db2',
@@ -487,10 +494,10 @@ void main() {
                 responseTime: 250,
                 connectionCount: 10,
                 maxConnections: 100,
-                lastChecked: DateTime.now().toIso8601String(),
+                lastChecked: _testTimestamp,
               ),
             ],
-            timestamp: DateTime.now().toIso8601String(),
+            timestamp: _testTimestamp,
           ),
         );
 
@@ -502,10 +509,14 @@ void main() {
 
         await tester.pump();
 
-        expect(find.textContaining('Degraded'), findsOneWidget);
+        // Verify: badge shows warning style for degraded status
+        final badge = tester.widget<AppBadge>(find.byType(AppBadge).first);
+        expect(badge.style, BadgeStyle.warning);
       });
 
-      testWidgets('shows "System Critical" when any critical', (tester) async {
+      testWidgets('shows error badge when any database critical', (
+        tester,
+      ) async {
         final service = FakeDatabaseHealthService(
           response: DatabasesHealthResponse(
             databases: [
@@ -515,10 +526,10 @@ void main() {
                 responseTime: 800,
                 connectionCount: 10,
                 maxConnections: 100,
-                lastChecked: DateTime.now().toIso8601String(),
+                lastChecked: _testTimestamp,
               ),
             ],
-            timestamp: DateTime.now().toIso8601String(),
+            timestamp: _testTimestamp,
           ),
         );
 
@@ -530,7 +541,9 @@ void main() {
 
         await tester.pump();
 
-        expect(find.textContaining('Critical'), findsOneWidget);
+        // Verify: badge shows error style for critical status
+        final badge = tester.widget<AppBadge>(find.byType(AppBadge).first);
+        expect(badge.style, BadgeStyle.error);
       });
     });
   });

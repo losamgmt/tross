@@ -34,7 +34,7 @@ Reusable methods for common widget testing operations:
 
 ```dart
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/test/helpers/test_helpers.dart';
+import '../../helpers/helpers.dart';  // Barrel file for all helpers
 
 testWidgets('example test', (tester) async {
   // Pump a widget with MaterialApp wrapper
@@ -54,7 +54,8 @@ testWidgets('example test', (tester) async {
 Test doubles for services that normally require platform code:
 
 ```dart
-import 'package:tross_app/test/mocks/mock_services.dart';
+import '../../mocks/mock_services.dart';
+import '../../mocks/mock_api_client.dart';
 
 // Mock secure storage
 final storage = MockSecureStorage();
@@ -66,10 +67,9 @@ final connectivity = MockConnectivityService();
 connectivity.simulateDisconnect();
 expect(connectivity.isConnected, false);
 
-// Mock HTTP client
-final http = MockHttpClient();
-http.registerResponse('/api/users', statusCode: 200, body: {'users': []});
-final response = http.getResponse('/api/users');
+// Mock API client
+final apiClient = MockApiClient();
+apiClient.setResponse('/api/users', response: {'users': []});
 ```
 
 ### 3. Test Fixtures (`fixtures/test_data.dart`)
@@ -77,35 +77,28 @@ final response = http.getResponse('/api/users');
 Builders for consistent test data:
 
 ```dart
-import 'package:tross_app/test/fixtures/test_data.dart';
+import '../../fixtures/test_data.dart';
 
-// Simple test data
+// Simple test data - uses TestData static methods
 final user = TestData.user(email: 'test@example.com');
 final users = TestData.userList(count: 5);
 final response = TestData.apiResponse(data: users);
-
-// Builder pattern for complex data
-final admin = UserBuilder()
-  .withEmail('admin@example.com')
-  .withRole('admin')
-  .active()
-  .build();
 ```
 
-### 4. Test Helpers (`helpers/test_helpers.dart`)
+### 4. Test Helpers (`helpers/helpers.dart`)
 
-Centralized barrel file + constants and matchers:
+Centralized barrel file + config and matchers:
 
 ```dart
-import 'package:tross_app/test/helpers/test_helpers.dart';
+import '../../helpers/helpers.dart';  // All helpers in one import
 
-// All helpers in one import
+// Usage
 await tester.pumpTestWidget(MyWidget());
 final mockStorage = MockSecureStorage();
 final testUser = TestData.user();
 
-// Test constants
-await Future.delayed(TestConstants.shortDelay);
+// Test config
+const delay = TestConfig.animationDuration;
 
 // Custom matchers
 expect(result, TestMatchers.isNotEmptyString);
@@ -118,7 +111,7 @@ expect(result, TestMatchers.isNotEmptyString);
 **✅ DO:**
 ```dart
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/test/helpers/test_helpers.dart';
+import '../../helpers/helpers.dart';  // Barrel file
 
 void main() {
   group('MyWidget Tests', () {
@@ -213,18 +206,16 @@ testWidgets('atom renders correctly', (tester) async {
 
 ```dart
 testWidgets('organism uses mock service', (tester) async {
-  final mockHttp = MockHttpClient();
-  mockHttp.registerResponse('/api/data', 
-    statusCode: 200, 
-    body: TestData.apiResponse(data: [])
+  final mockClient = MockApiClient();
+  mockClient.setResponse('/api/data', 
+    response: {'data': []},
   );
   
   await tester.pumpTestWidget(
-    MyOrganism(httpClient: mockHttp),
+    MyOrganism(apiClient: mockClient),
   );
   
   await tester.pumpAndSettle();
-  expect(mockHttp.requestsTo('/api/data'), hasLength(1));
 });
 ```
 
@@ -233,21 +224,22 @@ testWidgets('organism uses mock service', (tester) async {
 ```dart
 testWidgets('handles async data loading', (tester) async {
   await tester.pumpTestWidget(
-    AsyncDataProvider<String>(
+    FutureBuilder<String>(
       future: Future.delayed(
-        TestConstants.shortDelay,
+        TestConfig.animationDuration,
         () => 'Loaded',
       ),
-      builder: (context, data) => Text(data),
+      builder: (context, snapshot) => 
+        snapshot.hasData ? Text(snapshot.data!) : CircularProgressIndicator(),
     ),
   );
   
-  // Initial state
-  expect(find.byType(LoadingIndicator), findsOneWidget);
+  // Initial state - loading
+  expect(find.byType(CircularProgressIndicator), findsOneWidget);
   
   // After data loads
   await tester.pumpAndSettle();
-  expect(tester.findText('Loaded'), findsOneWidget);
+  expect(find.text('Loaded'), findsOneWidget);
 });
 ```
 
@@ -284,11 +276,11 @@ If you have existing tests that use platform dependencies:
 
 ## 📚 Best Practices
 
-1. **One import for all helpers**: `import 'package:tross_app/test/helpers/test_helpers.dart';`
-2. **Use builders for complex data**: `UserBuilder().withRole('admin').build()`
+1. **One import for all helpers**: `import '../../helpers/helpers.dart';`
+2. **Use TestData for test fixtures**: `TestData.user(email: 'admin@example.com')`
 3. **Mock at the boundary**: Mock services, not internal logic
 4. **Test behavior, not implementation**: Focus on what users see/do
-5. **Keep tests fast**: Use `TestConstants.shortDelay` instead of long waits
+5. **Keep tests fast**: Use `TestConfig.animationDuration` for consistent timing
 6. **Clean up resources**: Dispose controllers, close streams in `tearDown`
 
 ## 🎯 Goals Achieved

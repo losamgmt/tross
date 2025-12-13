@@ -1,31 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:tross_app/config/app_spacing.dart';
+import 'package:tross_app/widgets/atoms/display/field_display.dart';
 import 'package:tross_app/widgets/molecules/forms/field_config.dart';
-import 'package:tross_app/widgets/atoms/atoms.dart';
 
 /// Generic detail field display widget
 ///
 /// **SOLE RESPONSIBILITY:** Compose label + display atom for read-only fields
 /// - Handles label rendering + spacing
-/// - Delegates value rendering to appropriate display atom
-/// - Automatically selects correct atom based on field type
+/// - Delegates value rendering to FieldDisplay atom
+/// - Automatically maps FieldType to DisplayType
 ///
 /// Type parameters:
 /// - T: The model type (e.g., User, Role)
 /// - V: The field value type (e.g., String, int, bool)
-///
-/// Usage:
-/// ```dart
-/// DetailFieldDisplay<User, String>(
-///   config: FieldConfig<User, String>(
-///     fieldType: FieldType.text,
-///     label: 'Email',
-///     getValue: (user) => user.email,
-///     setValue: (user, value) => user.copyWith(email: value as String?),
-///   ),
-///   value: currentUser,
-/// )
-/// ```
 class DetailFieldDisplay<T, V> extends StatelessWidget {
   final FieldConfig<T, V> config;
   final T value;
@@ -37,33 +24,26 @@ class DetailFieldDisplay<T, V> extends StatelessWidget {
   });
 
   Widget _buildDisplayAtom(V? fieldValue) {
-    switch (config.fieldType) {
-      case FieldType.text:
-      case FieldType.textArea:
-        return TextFieldDisplay(
-          value: fieldValue as String?,
-          icon: config.icon,
-        );
+    // Map FieldType to DisplayType
+    final displayType = switch (config.fieldType) {
+      FieldType.text ||
+      FieldType.textArea ||
+      FieldType.asyncSelect => DisplayType.text,
+      FieldType.number => DisplayType.number,
+      FieldType.date => DisplayType.date,
+      FieldType.time => DisplayType.time,
+      FieldType.boolean => DisplayType.boolean,
+      FieldType.select => DisplayType.select,
+    };
 
-      case FieldType.number:
-        return NumberFieldDisplay(value: fieldValue as num?, icon: config.icon);
-
-      case FieldType.date:
-        return DateFieldDisplay(
-          value: fieldValue as DateTime?,
-          icon: config.icon,
-        );
-
-      case FieldType.boolean:
-        return BooleanFieldDisplay(value: fieldValue as bool?);
-
-      case FieldType.select:
-        return SelectFieldDisplay<V>(
-          value: fieldValue,
-          displayText: config.displayText ?? (v) => v.toString(),
-          icon: config.icon,
-        );
-    }
+    return FieldDisplay(
+      value: fieldValue,
+      type: displayType,
+      icon: config.icon,
+      displayText: config.displayText != null
+          ? (v) => config.displayText!(v as V)
+          : null,
+    );
   }
 
   @override

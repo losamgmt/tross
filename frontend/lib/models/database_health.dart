@@ -8,12 +8,11 @@
 library;
 
 import '../utils/validators.dart';
+import '../widgets/atoms/indicators/app_badge.dart';
 
 /// Health/Connection status states
 ///
 /// Used for database health monitoring and any service health checks.
-/// Moved from connection_status_badge.dart for proper separation of concerns
-/// (model layer should not depend on widget layer).
 enum HealthStatus {
   /// Service is fully operational
   healthy,
@@ -26,6 +25,25 @@ enum HealthStatus {
 
   /// Status is unknown (loading, not yet checked)
   unknown,
+}
+
+/// Extension for semantic badge styling - the enum knows its own meaning
+extension HealthStatusSemantic on HealthStatus {
+  /// Get the semantic badge style for this health status
+  BadgeStyle get badgeStyle => switch (this) {
+    HealthStatus.healthy => BadgeStyle.success,
+    HealthStatus.degraded => BadgeStyle.warning,
+    HealthStatus.critical => BadgeStyle.error,
+    HealthStatus.unknown => BadgeStyle.neutral,
+  };
+
+  /// Get human-readable label
+  String get label => switch (this) {
+    HealthStatus.healthy => 'Healthy',
+    HealthStatus.degraded => 'Degraded',
+    HealthStatus.critical => 'Critical',
+    HealthStatus.unknown => 'Unknown',
+  };
 }
 
 /// Individual database health information

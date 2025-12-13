@@ -4,10 +4,10 @@
 /// - Show success messages
 /// - Show error messages
 /// - Show info messages
-/// - Use atomic SnackBar components
+/// - Use AppSnackbar atom with SnackbarStyle
 ///
 /// This is a SERVICE - coordinates UI behavior, doesn't create widgets
-/// Uses ScaffoldMessenger API + atomic SnackBar components
+/// Uses ScaffoldMessenger API + AppSnackbar atom
 library;
 
 import 'package:flutter/material.dart';
@@ -15,8 +15,8 @@ import '../widgets/atoms/atoms.dart';
 
 /// Service for showing user notifications
 ///
-/// Provides centralized notification coordination using atomic SnackBar components.
-/// All methods delegate to ScaffoldMessenger API with typed SnackBar atoms.
+/// Provides centralized notification coordination using AppSnackbar atom.
+/// All methods delegate to ScaffoldMessenger API with styled snackbars.
 class NotificationService {
   // Private constructor - this is a static utility class
   NotificationService._();
@@ -25,56 +25,35 @@ class NotificationService {
   ///
   /// Displays a green SnackBar with success message.
   /// Auto-dismisses after 2 seconds.
-  ///
-  /// Example:
-  /// ```dart
-  /// NotificationService.showSuccess(context, 'User updated successfully');
-  /// ```
   static void showSuccess(BuildContext context, String message) {
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SuccessSnackBar(message: message));
+    ).showSnackBar(AppSnackbar(message: message, style: SnackbarStyle.success));
   }
 
   /// Show error notification
   ///
   /// Displays a red SnackBar with error message.
   /// Auto-dismisses after 4 seconds (longer for errors).
-  ///
-  /// Example:
-  /// ```dart
-  /// NotificationService.showError(context, 'Failed to update user');
-  /// ```
   static void showError(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(ErrorSnackBar(message: message));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(AppSnackbar(message: message, style: SnackbarStyle.error));
   }
 
   /// Show info notification
   ///
-  /// Displays a theme-based SnackBar with info message.
+  /// Displays a blue SnackBar with info message.
   /// Auto-dismisses after 3 seconds.
-  ///
-  /// Example:
-  /// ```dart
-  /// NotificationService.showInfo(context, 'Settings saved');
-  /// ```
   static void showInfo(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(InfoSnackBar(message: message));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(AppSnackbar(message: message, style: SnackbarStyle.info));
   }
 
   /// Show error notification with action
   ///
   /// Displays a red SnackBar with error message and action button.
-  ///
-  /// Example:
-  /// ```dart
-  /// NotificationService.showErrorWithAction(
-  ///   context,
-  ///   'Failed to save',
-  ///   actionLabel: 'Retry',
-  ///   onAction: () => saveAgain(),
-  /// );
-  /// ```
   static void showErrorWithAction(
     BuildContext context,
     String message, {
@@ -82,8 +61,9 @@ class NotificationService {
     required VoidCallback onAction,
   }) {
     ScaffoldMessenger.of(context).showSnackBar(
-      ErrorSnackBar(
+      AppSnackbar(
         message: message,
+        style: SnackbarStyle.error,
         action: SnackBarAction(
           label: actionLabel,
           textColor: Colors.white,

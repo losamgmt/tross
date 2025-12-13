@@ -80,18 +80,30 @@ Cross-platform frontend for TrossApp built with Flutter, featuring:
 
 ```
 frontend/lib/
-├── config/              # Theme, colors, spacing, constants
+├── config/              # Theme, colors, spacing, borders, typography
 ├── core/                # Routing, navigation guards
-├── models/              # Data models with defensive validation
+├── models/              # Data models (permission, database_health)
 ├── providers/           # State management (AuthProvider, AppProvider)
-├── screens/             # Page-level widgets
-├── services/            # API client, auth, user/role services
+├── screens/             # Page-level widgets (home, login, admin/, settings/)
+├── services/            # API client, auth/, entity services, permissions
 ├── utils/               # Validators, form helpers
 └── widgets/
-    ├── atoms/           # Buttons, icons, typography
-    ├── molecules/       # Cards, search bars, table components
-    ├── organisms/       # Data tables, headers, error displays
-    └── helpers/         # AsyncDataWidget, etc.
+    ├── atoms/           # Buttons, inputs, typography, indicators
+    │   ├── buttons/     # AppButton
+    │   ├── display/     # Display atoms
+    │   ├── indicators/  # Loading, status indicators
+    │   ├── inputs/      # Text inputs, toggles
+    │   └── typography/  # Text styles
+    ├── molecules/       # Cards, menus, feedback, pagination
+    │   ├── cards/       # StatCard, ErrorCard, DashboardCard
+    │   ├── feedback/    # InfoBanner, notifications
+    │   ├── menus/       # DropdownMenu
+    │   └── pagination/  # Pagination controls
+    ├── organisms/       # Data tables, navigation, forms
+    │   ├── navigation/  # AppSidebar, AppFooter, NavMenuItem
+    │   ├── forms/       # FormField, generic forms
+    │   └── tables/      # DataTable components
+    └── forms/           # Form-related helpers
 ```
 
 ### Data Flow Example
@@ -180,7 +192,12 @@ flutter build ios --release
 ## 🧪 Testing
 
 ```bash
-# Run all tests
+# Run all tests (from project root - recommended)
+npm run test:frontend              # Smart test runner with retries
+npm run test:frontend:failures     # Show only failures (clean output)
+npm run test:frontend:coverage     # Run with coverage percentage
+
+# Or directly with Flutter
 flutter test --reporter=compact
 
 # Run with coverage visualization
@@ -192,7 +209,7 @@ open coverage/html/index.html
 flutter test test/providers/          # State management tests
 flutter test test/services/           # API client tests
 flutter test test/widgets/            # Widget tests
-flutter test test/e2e/                # End-to-end tests
+flutter test test/integration/        # Integration tests
 ```
 
 **Testing Philosophy:**
@@ -234,14 +251,9 @@ For production Auth0:
 
 1. Set up Auth0 application at https://auth0.com
 2. Configure callback URLs
-3. Update `lib/config/auth0_config.dart`:
+3. Update `lib/services/auth/auth0_config.dart` (or environment variables)
 
-```dart
-static const String domain = 'your-tenant.auth0.com';
-static const String clientId = 'your-client-id';
-```
-
-See `docs/AUTH0_INTEGRATION.md` for full setup.
+See `docs/AUTH.md` for full setup.
 
 ---
 
@@ -255,15 +267,17 @@ See `docs/AUTH0_INTEGRATION.md` for full setup.
 **API Layer:**
 
 - `services/api_client.dart` - HTTP client with auto token refresh
-- `services/user_service.dart` - User CRUD operations
-- `services/role_service.dart` - Role management
-- `services/auth/` - Auth0 platform services (web, iOS, Android)
+- `services/generic_entity_service.dart` - Generic CRUD for all entities
+- `services/permission_service.dart` - Permission checking and RBAC
+- `services/auth/` - Auth services (AuthService, Auth0 platform adapters)
+- `services/error_service.dart` - Centralized error logging
+- `services/navigation_coordinator.dart` - Navigation state management
 
 **Models:**
 
-- `models/user_model.dart` - User entity with defensive validation
-- `models/role_model.dart` - Role entity with defensive validation
-- All models include `fromJson()` with `Validators.toSafe*()` functions
+- `models/permission.dart` - Permission model for RBAC
+- `models/database_health.dart` - Database health status model
+- Entity data uses backend metadata-driven approach (no frontend models per entity)
 
 **Widgets:**
 

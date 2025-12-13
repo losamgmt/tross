@@ -1,0 +1,19 @@
+# Flutter Test Configuration
+# This file configures how `flutter test` behaves project-wide
+
+# Timeout for individual tests (default is 30s)
+timeout: 30s
+
+# Retry flaky tests once before failing
+retry: 1
+
+# Tags for selective test running
+# Run slow tests: flutter test --tags slow
+# Skip slow tests: flutter test --exclude-tags slow
+tags:
+  slow:
+    timeout: 2x
+  integration:
+    timeout: 2x
+  e2e:
+    timeout: 3x

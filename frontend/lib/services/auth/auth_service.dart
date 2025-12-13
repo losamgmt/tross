@@ -11,6 +11,7 @@ import '../error_service.dart';
 class AuthService {
   String? _token;
   Map<String, dynamic>? _user;
+  String? _provider; // Stored auth provider (auth0, development)
 
   final Auth0PlatformService _auth0Service = Auth0PlatformService();
   final AuthTokenService _tokenService = AuthTokenService();
@@ -27,11 +28,20 @@ class AuthService {
   // Getters
   String? get token => _token;
   Map<String, dynamic>? get user => _user;
+  String? get provider => _provider;
   bool get isAuthenticated => _token != null;
 
   // Strategy Detection Helpers
   /// Determine which auth strategy is currently in use
   String get authStrategy {
+    // Use stored provider first (most reliable)
+    if (_provider == AppConstants.authProviderAuth0) {
+      return AppConstants.authProviderAuth0;
+    }
+    if (_provider == AppConstants.authProviderDevelopment) {
+      return AppConstants.authProviderDevelopment;
+    }
+    // Fallback to user data (legacy support)
     if (_user == null) return AppConstants.authProviderUnknown;
     final provider = _user!['provider'];
     if (provider == AppConstants.authProviderAuth0) {
@@ -58,7 +68,23 @@ class AuthService {
       if (storedData != null) {
         _token = storedData['token'];
         _user = storedData['user'];
-        ErrorService.logInfo('Auth state restored from local storage');
+        _provider = storedData['provider'];
+        ErrorService.logInfo(
+          'Auth state restored from local storage (provider: $_provider)',
+        );
+
+        // Validate the stored token with backend on startup
+        if (_token != null) {
+          final isValid = await validateStoredToken();
+          if (!isValid) {
+            ErrorService.logInfo(
+              'Stored token failed validation - clearing auth state',
+            );
+            await _clearAuthState();
+          } else {
+            ErrorService.logInfo('Stored token validated successfully');
+          }
+        }
       } else {
         ErrorService.logInfo('No stored auth data found');
       }
@@ -169,12 +195,14 @@ class AuthService {
       final profile = await _profileService.getUserProfile(_token!);
       if (profile != null) {
         _user = profile;
+        _provider = AppConstants.authProviderAuth0;
 
         // Store authentication data
         await _tokenService.storeAuthData(
           token: _token!,
           user: _user!,
           refreshToken: credentials.refreshToken,
+          provider: AppConstants.authProviderAuth0,
         );
 
         ErrorService.logInfo('Auth0 login completed successfully');
@@ -246,10 +274,15 @@ class AuthService {
         if (profile != null) {
           ErrorService.logInfo('Profile valid, storing user');
           _user = profile;
+          _provider = AppConstants.authProviderDevelopment;
 
           // Store for development
           ErrorService.logInfo('Storing auth data');
-          await _tokenService.storeAuthData(token: _token!, user: _user!);
+          await _tokenService.storeAuthData(
+            token: _token!,
+            user: _user!,
+            provider: AppConstants.authProviderDevelopment,
+          );
 
           ErrorService.logInfo(
             'Test login successful',
@@ -356,7 +389,12 @@ class AuthService {
       // Step 2: Call provider-specific logout using strategy detection
       if (isAuth0User) {
         // Auth0 logout - triggers browser redirect (NEVER returns on web!)
-        // Don't await or clear state - browser is navigating away
+        // MUST clear local storage BEFORE redirect, otherwise the old token
+        // will still be there when the page reloads and auto-login will occur
+        ErrorService.logInfo(
+          '🔑 AUTH SERVICE: Auth0 logout - clearing local state first...',
+        );
+        await _clearAuthState();
         ErrorService.logInfo(
           '🔑 AUTH SERVICE: Auth0 logout - redirecting to Auth0...',
         );
@@ -470,6 +508,7 @@ class AuthService {
     ErrorService.logInfo('Clearing auth state');
     _token = null;
     _user = null;
+    _provider = null;
     await _tokenService.clearAuthData();
     ErrorService.logInfo('Auth state cleared');
   }

@@ -9,7 +9,6 @@
 library;
 
 import 'package:flutter/material.dart';
-import '../config/role_config.dart';
 import '../widgets/atoms/atoms.dart';
 import '../widgets/organisms/fields/editable_field.dart';
 
@@ -35,10 +34,9 @@ class TableCellBuilders {
     return DataValue.timestamp(timestamp);
   }
 
-  /// Build a role badge cell using RoleConfig
+  /// Build a role badge cell - all roles use neutral style (KISS)
   static Widget roleBadgeCell(String roleName) {
-    final config = RoleConfig.getBadgeConfig(roleName);
-    return StatusBadge(label: roleName, style: config.$1, icon: config.$2);
+    return AppBadge(label: roleName, style: BadgeStyle.neutral);
   }
 
   /// Build a generic status badge cell
@@ -48,12 +46,7 @@ class TableCellBuilders {
     IconData? icon,
     bool compact = false,
   }) {
-    return StatusBadge(
-      label: label,
-      style: style,
-      icon: icon,
-      compact: compact,
-    );
+    return AppBadge(label: label, style: style, icon: icon, compact: compact);
   }
 
   /// Build a boolean badge cell (yes/no, true/false, etc.)
@@ -67,7 +60,7 @@ class TableCellBuilders {
     IconData? falseIcon,
     bool compact = false,
   }) {
-    return StatusBadge(
+    return AppBadge(
       label: value ? trueLabel : falseLabel,
       style: value ? trueStyle : falseStyle,
       icon: value ? trueIcon : falseIcon,
@@ -100,12 +93,15 @@ class TableCellBuilders {
     required String fieldName,
     required String trueAction,
     required String falseAction,
+    String trueLabel = 'Active',
+    String falseLabel = 'Inactive',
     bool compact = true,
   }) {
     return EditableField<T, bool>(
       value: value,
-      displayWidget: BooleanBadge.activeInactive(
-        value: value,
+      displayWidget: AppBadge(
+        label: value ? trueLabel : falseLabel,
+        style: value ? BadgeStyle.success : BadgeStyle.neutral,
         compact: compact,
       ),
       editWidget: (val, onChange) => BooleanToggle.activeInactive(

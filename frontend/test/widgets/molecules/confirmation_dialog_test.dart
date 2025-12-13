@@ -6,7 +6,6 @@
 /// - Confirm callback is called
 /// - Cancel callback is called
 /// - Dialog pops with correct value
-/// - Factory methods work correctly
 /// - Dangerous action styling
 library;
 
@@ -207,188 +206,6 @@ void main() {
       });
     });
 
-    group('Factory: deactivate', () {
-      testWidgets('creates dialog with deactivate title', (tester) async {
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Scaffold(
-              body: ConfirmationDialog.deactivate(
-                entityType: 'user',
-                entityName: 'John Doe',
-                onConfirm: () {},
-              ),
-            ),
-          ),
-        );
-
-        expect(find.text('Deactivate user?'), findsOneWidget);
-      });
-
-      testWidgets('creates dialog with deactivate message', (tester) async {
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Scaffold(
-              body: ConfirmationDialog.deactivate(
-                entityType: 'user',
-                entityName: 'John Doe',
-                onConfirm: () {},
-              ),
-            ),
-          ),
-        );
-
-        expect(
-          find.textContaining(
-            'Are you sure you want to deactivate "John Doe"?',
-          ),
-          findsOneWidget,
-        );
-        expect(
-          find.textContaining('no longer be able to access'),
-          findsOneWidget,
-        );
-      });
-
-      testWidgets('uses "Deactivate" button label', (tester) async {
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Scaffold(
-              body: ConfirmationDialog.deactivate(
-                entityType: 'user',
-                entityName: 'John Doe',
-                onConfirm: () {},
-              ),
-            ),
-          ),
-        );
-
-        expect(find.text('Deactivate'), findsOneWidget);
-        expect(find.text('Cancel'), findsOneWidget);
-      });
-
-      testWidgets('marks as dangerous action', (tester) async {
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Scaffold(
-              body: ConfirmationDialog.deactivate(
-                entityType: 'user',
-                entityName: 'John Doe',
-                onConfirm: () {},
-              ),
-            ),
-          ),
-        );
-
-        // Find the confirm button
-        final confirmButton = tester.widget<ElevatedButton>(
-          find.widgetWithText(ElevatedButton, 'Deactivate'),
-        );
-
-        // Should have error color for dangerous action
-        expect(confirmButton.style, isNotNull);
-      });
-
-      testWidgets('works with different entity types', (tester) async {
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Scaffold(
-              body: Column(
-                children: [
-                  ConfirmationDialog.deactivate(
-                    entityType: 'role',
-                    entityName: 'Manager',
-                    onConfirm: () {},
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-
-        expect(find.text('Deactivate role?'), findsOneWidget);
-        expect(find.textContaining('"Manager"'), findsOneWidget);
-      });
-    });
-
-    group('Factory: reactivate', () {
-      testWidgets('creates dialog with reactivate title', (tester) async {
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Scaffold(
-              body: ConfirmationDialog.reactivate(
-                entityType: 'user',
-                entityName: 'Jane Smith',
-                onConfirm: () {},
-              ),
-            ),
-          ),
-        );
-
-        expect(find.text('Reactivate user?'), findsOneWidget);
-      });
-
-      testWidgets('creates dialog with reactivate message', (tester) async {
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Scaffold(
-              body: ConfirmationDialog.reactivate(
-                entityType: 'user',
-                entityName: 'Jane Smith',
-                onConfirm: () {},
-              ),
-            ),
-          ),
-        );
-
-        expect(
-          find.textContaining(
-            'Are you sure you want to reactivate "Jane Smith"?',
-          ),
-          findsOneWidget,
-        );
-        expect(find.textContaining('will regain access'), findsOneWidget);
-      });
-
-      testWidgets('uses "Reactivate" button label', (tester) async {
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Scaffold(
-              body: ConfirmationDialog.reactivate(
-                entityType: 'user',
-                entityName: 'Jane Smith',
-                onConfirm: () {},
-              ),
-            ),
-          ),
-        );
-
-        expect(find.text('Reactivate'), findsOneWidget);
-        expect(find.text('Cancel'), findsOneWidget);
-      });
-
-      testWidgets('is NOT marked as dangerous action', (tester) async {
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Scaffold(
-              body: ConfirmationDialog.reactivate(
-                entityType: 'user',
-                entityName: 'Jane Smith',
-                onConfirm: () {},
-              ),
-            ),
-          ),
-        );
-
-        // Find the confirm button
-        final confirmButton = tester.widget<ElevatedButton>(
-          find.widgetWithText(ElevatedButton, 'Reactivate'),
-        );
-
-        // Should have primary color (not error)
-        expect(confirmButton.style, isNotNull);
-      });
-    });
-
     group('Edge Cases', () {
       testWidgets('handles long messages', (tester) async {
         const longMessage =
@@ -415,9 +232,11 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
-              body: ConfirmationDialog.deactivate(
-                entityType: 'user',
-                entityName: "O'Brien-Smith",
+              body: ConfirmationDialog(
+                title: 'Deactivate User?',
+                message: "Are you sure you want to deactivate O'Brien-Smith?",
+                confirmLabel: 'Deactivate',
+                isDangerous: true,
                 onConfirm: () {},
               ),
             ),

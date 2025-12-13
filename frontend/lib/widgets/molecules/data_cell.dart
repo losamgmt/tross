@@ -2,8 +2,6 @@
 ///
 /// Wraps data values with consistent padding and styling
 /// Supports alignment, overflow handling, and custom content
-///
-/// Composes: DataValue, DataLabel atoms
 library;
 
 import 'package:flutter/material.dart';

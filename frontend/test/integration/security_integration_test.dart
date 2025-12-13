@@ -59,13 +59,21 @@ void main() {
       }
     });
 
-    testWidgets('DevModeBanner should only appear in development', (
+    testWidgets('DevModeBanner should only appear when show is true', (
       tester,
     ) async {
       // LAYER 1 TEST: DevModeBanner visibility
 
       await tester.pumpWidget(
-        const MaterialApp(home: Scaffold(body: DevModeBanner())),
+        MaterialApp(
+          home: Scaffold(
+            body: DevModeBanner(
+              title: 'Development Environment',
+              message: 'Test mode enabled',
+              show: AppConfig.devAuthEnabled,
+            ),
+          ),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -77,11 +85,11 @@ void main() {
           reason: 'Dev mode should render banner container',
         );
       } else {
-        // In production, banner returns SizedBox.shrink()
+        // When show is false, banner returns SizedBox.shrink()
         expect(
           find.byType(DevModeBanner),
           findsOneWidget,
-          reason: 'Widget exists but renders nothing in production',
+          reason: 'Widget exists but renders nothing when show is false',
         );
       }
     });
@@ -92,7 +100,14 @@ void main() {
       // LAYER 1 TEST: Environment indicator accuracy
 
       await tester.pumpWidget(
-        const MaterialApp(home: Scaffold(body: DevModeIndicator())),
+        MaterialApp(
+          home: Scaffold(
+            body: DevModeIndicator(
+              environmentName: AppConfig.environmentName,
+              isDevelopment: AppConfig.devAuthEnabled,
+            ),
+          ),
+        ),
       );
       await tester.pumpAndSettle();
 

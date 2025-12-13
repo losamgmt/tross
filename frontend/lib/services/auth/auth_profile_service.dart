@@ -155,8 +155,9 @@ class AuthProfileService {
       // VALIDATE: Input updates before sending to API
       final validatedUpdates = _validateProfileUpdates(updates);
 
+      // Backend uses PATCH for partial profile updates
       final response = await ApiClient.authenticatedRequest(
-        'PUT',
+        'PATCH',
         ApiEndpoints.authMe,
         token: token,
         body: validatedUpdates,

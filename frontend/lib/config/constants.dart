@@ -27,6 +27,13 @@ class AppConstants {
       'Using test tokens for local development. Production will use Auth0.';
   static const String devModeWarning = 'This is a development environment.';
 
+  // Dev Login Card
+  static const String devLoginCardTitle = 'Developer Login';
+  static const String devLoginCardDescription =
+      'For testing and development only';
+  static const String devLoginButton = 'Dev Login';
+  static const String devLoginRoleHint = 'Choose a role to test with';
+
   // Authentication
   static const String loginButtonTest = 'Login as Technician';
   static const String loginButtonAdmin = 'Login as Admin';
@@ -42,7 +49,8 @@ class AppConstants {
   static const String adminLoginFailed =
       'Admin login failed. Please try again.';
 
-  // Navigation
+  // Navigation - DEPRECATED: Use AppRoutes instead
+  @Deprecated('Use AppRoutes.home instead')
   static const String homeRoute = '/home';
 
   // User Interface

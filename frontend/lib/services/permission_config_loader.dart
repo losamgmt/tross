@@ -11,9 +11,9 @@
 library;
 
 import 'dart:convert';
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/services.dart' show rootBundle;
 import '../utils/helpers/string_helper.dart';
+import 'error_service.dart';
 
 /// Permission Configuration Model
 class PermissionConfig {
@@ -207,13 +207,18 @@ class PermissionConfigLoader {
       _cached = config;
       _loadedAt = DateTime.now();
 
-      debugPrint('[Permissions] ✅ Loaded permission config v${config.version}');
-      debugPrint('[Permissions] 📊 Roles: ${config.roles.length}');
-      debugPrint('[Permissions] 📊 Resources: ${config.resources.length}');
+      ErrorService.logInfo(
+        '[Permissions] Loaded config',
+        context: {
+          'version': config.version,
+          'roles': config.roles.length,
+          'resources': config.resources.length,
+        },
+      );
 
       return config;
     } catch (e) {
-      debugPrint('[Permissions] ❌ Failed to load permissions: $e');
+      ErrorService.logError('[Permissions] Failed to load', error: e);
       rethrow;
     }
   }
@@ -267,7 +272,7 @@ class PermissionConfigLoader {
       }
     }
 
-    debugPrint('[Permissions] ✅ Configuration validation passed');
+    ErrorService.logInfo('[Permissions] Configuration validation passed');
   }
 
   /// Clear cache (useful for testing)

@@ -52,11 +52,13 @@ class Operations {
 /// - users.read: 2 (technician) → Technicians and above can read users
 ///
 /// IMPORTANT: Due to hierarchy, if a role has permission, all higher roles do too.
+///
+/// SYNC NOTE: This MUST match config/permissions.json - run sync script if changed.
 const Map<String, Map<String, int>> permissions = {
   // User Management
   'users': {
     'create': 5, // admin - Only admins create users
-    'read': 2, // technician - Technicians+ can view users
+    'read': 1, // customer - Everyone can read (RLS applies)
     'update': 5, // admin - Only admins update users
     'delete': 5, // admin - Only admins delete users
   },
@@ -64,24 +66,64 @@ const Map<String, Map<String, int>> permissions = {
   // Role Management
   'roles': {
     'create': 5, // admin - Only admins create roles
-    'read': 4, // manager - Managers+ can view roles
+    'read': 1, // customer - Everyone can view roles
     'update': 5, // admin - Only admins update roles
     'delete': 5, // admin - Only admins delete roles
   },
 
-  // Work Orders (placeholder for future implementation)
+  // Customer Management
+  'customers': {
+    'create': 3, // dispatcher - Dispatchers+ create customers
+    'read': 1, // customer - Everyone can read (RLS applies)
+    'update': 1, // customer - Customers can update own, dispatcher+ any
+    'delete': 4, // manager - Managers+ can delete
+  },
+
+  // Technician Management
+  'technicians': {
+    'create': 4, // manager - Managers+ create technicians
+    'read': 1, // customer - Everyone can read (for assigned tech)
+    'update': 2, // technician - Technicians update own, manager+ any
+    'delete': 4, // manager - Managers+ can delete
+  },
+
+  // Work Orders
   'work_orders': {
-    'create': 3, // dispatcher - Dispatchers+ can create work orders
-    'read': 1, // client - Everyone can read work orders
-    'update': 2, // technician - Technicians+ can update work orders
-    'delete': 4, // manager - Managers+ can delete work orders
+    'create': 1, // customer - Customers can create own work orders
+    'read': 1, // customer - Everyone can read (RLS applies)
+    'update': 1, // customer - Customers update own, tech+ assigned
+    'delete': 4, // manager - Managers+ can delete
+  },
+
+  // Contracts
+  'contracts': {
+    'create': 4, // manager - Managers+ create contracts
+    'read': 1, // customer - Customers see own (RLS applies)
+    'update': 4, // manager - Managers+ update contracts
+    'delete': 4, // manager - Managers+ delete contracts
+  },
+
+  // Invoices
+  'invoices': {
+    'create': 3, // dispatcher - Dispatchers+ create invoices
+    'read': 1, // customer - Customers see own (RLS applies)
+    'update': 3, // dispatcher - Dispatchers+ update invoices
+    'delete': 4, // manager - Managers+ delete invoices
+  },
+
+  // Inventory
+  'inventory': {
+    'create': 3, // dispatcher - Dispatchers+ add inventory
+    'read': 2, // technician - Technicians+ view inventory
+    'update': 2, // technician - Technicians+ update (mark used)
+    'delete': 4, // manager - Managers+ delete inventory
   },
 
   // Audit Logs
   'audit_logs': {
-    'create': 1, // client - Everyone creates audit logs (automatic)
+    'create': 1, // customer - Everyone creates audit logs (automatic)
     'read': 5, // admin - Only admins view audit logs
-    'update': 5, // admin - Audit logs are immutable (but admin override)
+    'update': 5, // admin - Audit logs are immutable (admin override)
     'delete': 5, // admin - Only admins delete old audit logs
   },
 };

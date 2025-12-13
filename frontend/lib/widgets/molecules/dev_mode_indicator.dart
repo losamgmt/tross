@@ -1,154 +1,168 @@
 /// DevModeIndicator - Molecule component for displaying environment status
 ///
 /// Shows the current environment (Development/Production) with appropriate
-/// styling and visibility based on configuration.
+/// styling and visibility based on props (not config).
 ///
-/// Atomic Design: Molecule (uses StatusBadge atom + Icon atom)
-/// Material 3 Design with Tross branding
+/// Atomic Design: Molecule (uses Badge atom)
 library;
 
 import 'package:flutter/material.dart';
-import '../../config/app_config.dart';
 import '../../config/app_spacing.dart';
-import '../atoms/indicators/status_badge.dart';
+import '../atoms/indicators/app_badge.dart';
 
 /// A visual indicator showing the current runtime environment
 ///
 /// Features:
-/// - Shows "Development" or "Production" badge
-/// - Warning color in development mode
-/// - Automatically hidden in production (configurable)
-/// - Includes icon for quick visual recognition
-/// - Uses centralized AppConfig for environment detection
+/// - Shows environment badge with icon
+/// - Badge style based on isDevelopment prop
+/// - Visibility controlled by props
 ///
 /// Usage:
 /// ```dart
-/// DevModeIndicator() // Simple, uses defaults
-/// DevModeIndicator(alwaysShow: true) // Force show in prod (for admin)
-/// DevModeIndicator(compact: true) // Smaller size
+/// // Simple usage
+/// DevModeIndicator(
+///   environmentName: 'Development',
+///   isDevelopment: true,
+/// )
+///
+/// // With visibility control
+/// DevModeIndicator(
+///   environmentName: AppConfig.environmentName,
+///   isDevelopment: AppConfig.devAuthEnabled,
+///   show: !AppConfig.useProdBackend || alwaysShow,
+/// )
 /// ```
 class DevModeIndicator extends StatelessWidget {
-  /// Whether to show the indicator even in production
-  /// Default: false (hidden in production)
-  final bool alwaysShow;
+  /// Name to display in badge (e.g., "Development", "Production")
+  final String environmentName;
+
+  /// Whether this is a development environment (affects badge style)
+  final bool isDevelopment;
+
+  /// Whether to show the indicator (default: true)
+  final bool show;
 
   /// Use compact styling (smaller text, tighter padding)
   final bool compact;
 
-  /// Optional callback when tapped (e.g., show environment details)
+  /// Optional callback when tapped
   final VoidCallback? onTap;
 
   const DevModeIndicator({
     super.key,
-    this.alwaysShow = false,
+    required this.environmentName,
+    required this.isDevelopment,
+    this.show = true,
     this.compact = false,
     this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    // Hide in production unless alwaysShow is true
-    if (AppConfig.useProdBackend && !alwaysShow) {
+    if (!show) {
       return const SizedBox.shrink();
     }
 
     final spacing = context.spacing;
 
-    // Get environment details
-    final envName = AppConfig.environmentName;
-    final isDev = AppConfig.devAuthEnabled;
-
     // Choose badge style and icon based on environment
-    final badgeStyle = isDev ? BadgeStyle.warning : BadgeStyle.success;
-    final icon = isDev ? Icons.code : Icons.verified_user;
+    final badgeStyle = isDevelopment ? BadgeStyle.warning : BadgeStyle.success;
+    final icon = isDevelopment ? Icons.code : Icons.verified_user;
 
-    final badge = StatusBadge(
-      label: envName,
+    final badge = AppBadge(
+      label: environmentName,
       style: badgeStyle,
       icon: icon,
       compact: compact,
     );
 
-    // If no tap handler, just return the badge
     if (onTap == null) {
       return badge;
     }
 
-    // Wrap in InkWell for tap handling
     return InkWell(onTap: onTap, borderRadius: spacing.radiusSM, child: badge);
   }
 }
 
-/// Extended version with tooltip and additional info
-///
-/// Shows environment details on hover/tap:
-/// - Environment name
-/// - Dev auth status
-/// - API endpoint
-/// - Build info
+/// Extended version with tooltip
 class DevModeIndicatorWithTooltip extends StatelessWidget {
-  final bool alwaysShow;
+  /// Name to display in badge
+  final String environmentName;
+
+  /// Whether this is a development environment
+  final bool isDevelopment;
+
+  /// Whether to show the indicator
+  final bool show;
+
+  /// Use compact styling
   final bool compact;
+
+  /// Tooltip message to display on hover
+  final String tooltipMessage;
 
   const DevModeIndicatorWithTooltip({
     super.key,
-    this.alwaysShow = false,
+    required this.environmentName,
+    required this.isDevelopment,
+    required this.tooltipMessage,
+    this.show = true,
     this.compact = false,
   });
 
-  String _buildTooltipMessage() {
-    final lines = <String>[
-      'Environment: ${AppConfig.environmentName}',
-      'Dev Auth: ${AppConfig.devAuthEnabled ? 'Enabled' : 'Disabled'}',
-      'API: ${AppConfig.baseUrl}',
-      'Version: ${AppConfig.version}',
-    ];
-    return lines.join('\n');
-  }
-
   @override
   Widget build(BuildContext context) {
-    // Hide in production unless alwaysShow is true
-    if (AppConfig.useProdBackend && !alwaysShow) {
+    if (!show) {
       return const SizedBox.shrink();
     }
 
     return Tooltip(
-      message: _buildTooltipMessage(),
+      message: tooltipMessage,
       preferBelow: true,
-      child: DevModeIndicator(alwaysShow: alwaysShow, compact: compact),
+      child: DevModeIndicator(
+        environmentName: environmentName,
+        isDevelopment: isDevelopment,
+        show: show,
+        compact: compact,
+      ),
     );
   }
 }
 
 /// Banner version for prominent display (e.g., top of login page)
-///
-/// Full-width banner with icon, text, and optional action button
 class DevModeBanner extends StatelessWidget {
-  final String? message;
+  /// Title to display (e.g., "Development Environment")
+  final String title;
+
+  /// Message to display below title
+  final String message;
+
+  /// Whether to show the banner
+  final bool show;
+
+  /// Optional action button callback
   final VoidCallback? onActionPressed;
+
+  /// Optional action button label
   final String? actionLabel;
 
   const DevModeBanner({
     super.key,
-    this.message,
+    required this.title,
+    required this.message,
+    this.show = true,
     this.onActionPressed,
     this.actionLabel,
   });
 
   @override
   Widget build(BuildContext context) {
-    // Hide in production
-    if (AppConfig.useProdBackend) {
+    if (!show) {
       return const SizedBox.shrink();
     }
 
     final spacing = context.spacing;
     final theme = Theme.of(context);
-
-    // Default message if not provided
-    final displayMessage =
-        message ?? 'Development Mode - Test authentication available below';
 
     return Container(
       width: double.infinity,
@@ -175,7 +189,7 @@ class DevModeBanner extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'Development Environment',
+                  title,
                   style: theme.textTheme.titleSmall?.copyWith(
                     color: theme.colorScheme.error,
                     fontWeight: FontWeight.bold,
@@ -183,7 +197,7 @@ class DevModeBanner extends StatelessWidget {
                 ),
                 SizedBox(height: spacing.xs),
                 Text(
-                  displayMessage,
+                  message,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                   ),

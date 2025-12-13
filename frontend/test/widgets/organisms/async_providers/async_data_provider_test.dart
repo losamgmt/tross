@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tross_app/widgets/organisms/async_data_provider.dart';
 import '../../../helpers/test_helpers.dart';
 import 'package:tross_app/widgets/atoms/indicators/loading_indicator.dart';
-import 'package:tross_app/widgets/molecules/error_card.dart';
+import 'package:tross_app/widgets/molecules/cards/error_card.dart';
 
 void main() {
   group('AsyncDataProvider Organism Tests', () {

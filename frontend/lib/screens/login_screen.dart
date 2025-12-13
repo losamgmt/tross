@@ -4,8 +4,8 @@
 /// - LoginHeader molecule (branding)
 /// - ProductionLoginCard molecule (Auth0)
 /// - DevLoginCard organism (dev auth with role state, conditional)
-/// - ConnectionStatusBadge atom (backend health)
-/// - AppFooter molecule (copyright)
+/// - Badge atom (backend health)
+/// - AppFooter organism (copyright)
 ///
 /// Business logic: Handled via callbacks to AuthProvider
 library;
@@ -17,13 +17,22 @@ import '../providers/auth_provider.dart';
 import '../config/app_config.dart';
 import '../config/constants.dart';
 import '../config/app_spacing.dart';
+import '../core/routing/app_routes.dart';
 import '../services/error_service.dart';
 import '../services/notification_service.dart';
-import '../services/role_service.dart';
 import '../widgets/molecules/login_header.dart';
-import '../widgets/molecules/cards/production_login_card.dart';
+import '../widgets/organisms/login/production_login_card.dart';
 import '../widgets/organisms/login/dev_login_card.dart';
 import '../widgets/atoms/atoms.dart';
+
+/// Dev roles for login screen - matches backend test-users.js
+const _devRoleNames = [
+  'admin',
+  'manager',
+  'dispatcher',
+  'technician',
+  'client',
+];
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -68,9 +77,7 @@ class LoginScreen extends StatelessWidget {
                             // Use hardcoded dev roles (no auth required)
                             // Matches backend test-users.js roles
                             DevLoginCard(
-                              availableRoles: RoleService.getAllForDevMode()
-                                  .map((role) => role.name)
-                                  .toList(),
+                              availableRoles: _devRoleNames,
                               onDevLogin: (role) =>
                                   _handleDevLogin(context, role: role),
                             ),
@@ -79,16 +86,38 @@ class LoginScreen extends StatelessWidget {
                           spacing.gapXXXL,
 
                           // Backend health status
-                          ConnectionStatusBadge.connection(
-                            isConnected: appProvider.isBackendHealthy,
+                          AppBadge(
+                            label: appProvider.isBackendHealthy
+                                ? 'Connected'
+                                : 'Disconnected',
+                            style: appProvider.isBackendHealthy
+                                ? BadgeStyle.success
+                                : BadgeStyle.error,
                           ),
 
                           spacing.gapXL,
 
-                          // Footer
-                          const AppFooter(
-                            copyright: AppConstants.appCopyright,
-                            description: AppConstants.appDescription,
+                          // Simple footer (inline - login screen is constrained)
+                          Column(
+                            children: [
+                              Text(
+                                AppConstants.appDescription,
+                                style: Theme.of(context).textTheme.bodySmall,
+                                textAlign: TextAlign.center,
+                              ),
+                              SizedBox(height: spacing.sm),
+                              Text(
+                                AppConstants.appCopyright,
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withValues(alpha: 0.6),
+                                    ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -131,9 +160,9 @@ class LoginScreen extends StatelessWidget {
       if (success) {
         ErrorService.logInfo(
           'Login successful - navigating to home',
-          context: {'route': AppConstants.homeRoute},
+          context: {'route': AppRoutes.home},
         );
-        Navigator.of(context).pushReplacementNamed(AppConstants.homeRoute);
+        Navigator.of(context).pushReplacementNamed(AppRoutes.home);
       } else {
         ErrorService.logWarning(
           '[Expected in tests] Login failed - showing error to user',

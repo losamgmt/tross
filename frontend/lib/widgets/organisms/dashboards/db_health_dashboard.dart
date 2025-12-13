@@ -28,15 +28,14 @@ import 'package:http/http.dart' as http;
 import '../../../models/database_health.dart';
 import '../../../services/database_health_service.dart';
 import '../../../config/constants.dart';
-import '../../../utils/helpers/status_helper.dart';
-import '../../molecules/dashboard_card.dart';
-import '../../molecules/health_status_box.dart';
-import '../../molecules/cards/database_health_card.dart';
+import '../../molecules/cards/dashboard_card.dart';
+import '../../molecules/layout/refreshable_section.dart';
+import 'cards/database_health_card.dart';
 import '../../molecules/empty_state.dart';
-import '../../atoms/indicators/connection_status_badge.dart';
+import '../../atoms/indicators/app_badge.dart';
 import '../../atoms/indicators/loading_indicator.dart';
 import '../../helpers/refreshable_data_widget.dart';
-import '../../molecules/error_card.dart';
+import '../../molecules/cards/error_card.dart';
 import '../../molecules/buttons/button_group.dart';
 
 /// Organism component for displaying database health dashboard
@@ -124,14 +123,15 @@ class DbHealthDashboard extends StatelessWidget {
               width: 300,
               minWidth: 220,
               maxWidth: 340,
-              child: HealthStatusBox(
+              child: RefreshableSection(
+                title: 'Database Health',
                 onRefresh: onManualRefresh,
                 subtitle:
                     '${databases.length} ${databases.length == 1 ? 'database' : 'databases'}',
                 isRefreshing: isRefreshing,
-                child: ConnectionStatusBadge(
-                  status: overallStatus,
-                  label: StatusHelper.getHealthStatusLabel(overallStatus),
+                child: AppBadge(
+                  label: overallStatus.label,
+                  style: overallStatus.badgeStyle,
                 ),
               ),
             ),

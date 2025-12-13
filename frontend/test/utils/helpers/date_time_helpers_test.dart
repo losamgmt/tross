@@ -6,49 +6,112 @@ import 'package:tross_app/utils/helpers/date_time_helpers.dart';
 
 void main() {
   group('DateTimeHelpers.formatRelativeTime', () {
+    // Fixed reference time for deterministic tests
+    final referenceTime = DateTime(2025, 6, 15, 12, 0, 0);
+
     test('formats seconds for times < 1 minute ago', () {
-      final timestamp = DateTime.now().subtract(const Duration(seconds: 30));
-      expect(DateTimeHelpers.formatRelativeTime(timestamp), '30s ago');
+      final timestamp = referenceTime.subtract(const Duration(seconds: 30));
+      expect(
+        DateTimeHelpers.formatRelativeTime(
+          timestamp,
+          referenceTime: referenceTime,
+        ),
+        '30s ago',
+      );
     });
 
     test('formats minutes for times < 1 hour ago', () {
-      final timestamp = DateTime.now().subtract(const Duration(minutes: 45));
-      expect(DateTimeHelpers.formatRelativeTime(timestamp), '45m ago');
+      final timestamp = referenceTime.subtract(const Duration(minutes: 45));
+      expect(
+        DateTimeHelpers.formatRelativeTime(
+          timestamp,
+          referenceTime: referenceTime,
+        ),
+        '45m ago',
+      );
     });
 
     test('formats hours for times < 1 day ago', () {
-      final timestamp = DateTime.now().subtract(const Duration(hours: 12));
-      expect(DateTimeHelpers.formatRelativeTime(timestamp), '12h ago');
+      final timestamp = referenceTime.subtract(const Duration(hours: 12));
+      expect(
+        DateTimeHelpers.formatRelativeTime(
+          timestamp,
+          referenceTime: referenceTime,
+        ),
+        '12h ago',
+      );
     });
 
     test('formats days for times >= 1 day ago', () {
-      final timestamp = DateTime.now().subtract(const Duration(days: 7));
-      expect(DateTimeHelpers.formatRelativeTime(timestamp), '7d ago');
+      final timestamp = referenceTime.subtract(const Duration(days: 7));
+      expect(
+        DateTimeHelpers.formatRelativeTime(
+          timestamp,
+          referenceTime: referenceTime,
+        ),
+        '7d ago',
+      );
     });
 
     test('handles just now (0 seconds)', () {
-      final timestamp = DateTime.now();
-      expect(DateTimeHelpers.formatRelativeTime(timestamp), '0s ago');
+      expect(
+        DateTimeHelpers.formatRelativeTime(
+          referenceTime,
+          referenceTime: referenceTime,
+        ),
+        '0s ago',
+      );
     });
 
     test('handles exactly 1 minute (59 seconds shows as 0m)', () {
-      final timestamp = DateTime.now().subtract(const Duration(seconds: 59));
-      expect(DateTimeHelpers.formatRelativeTime(timestamp), '59s ago');
+      final timestamp = referenceTime.subtract(const Duration(seconds: 59));
+      expect(
+        DateTimeHelpers.formatRelativeTime(
+          timestamp,
+          referenceTime: referenceTime,
+        ),
+        '59s ago',
+      );
     });
 
     test('handles exactly 1 hour (59 minutes)', () {
-      final timestamp = DateTime.now().subtract(const Duration(minutes: 59));
-      expect(DateTimeHelpers.formatRelativeTime(timestamp), '59m ago');
+      final timestamp = referenceTime.subtract(const Duration(minutes: 59));
+      expect(
+        DateTimeHelpers.formatRelativeTime(
+          timestamp,
+          referenceTime: referenceTime,
+        ),
+        '59m ago',
+      );
     });
 
     test('handles exactly 1 day (23 hours)', () {
-      final timestamp = DateTime.now().subtract(const Duration(hours: 23));
-      expect(DateTimeHelpers.formatRelativeTime(timestamp), '23h ago');
+      final timestamp = referenceTime.subtract(const Duration(hours: 23));
+      expect(
+        DateTimeHelpers.formatRelativeTime(
+          timestamp,
+          referenceTime: referenceTime,
+        ),
+        '23h ago',
+      );
     });
 
     test('handles very old dates (30+ days)', () {
-      final timestamp = DateTime.now().subtract(const Duration(days: 365));
-      expect(DateTimeHelpers.formatRelativeTime(timestamp), '365d ago');
+      final timestamp = referenceTime.subtract(const Duration(days: 365));
+      expect(
+        DateTimeHelpers.formatRelativeTime(
+          timestamp,
+          referenceTime: referenceTime,
+        ),
+        '365d ago',
+      );
+    });
+
+    test('works without referenceTime (uses DateTime.now)', () {
+      // This test verifies backward compatibility
+      final timestamp = DateTime.now().subtract(const Duration(seconds: 5));
+      final result = DateTimeHelpers.formatRelativeTime(timestamp);
+      expect(result, matches(RegExp(r'^\d+s ago$')));
     });
   });
 

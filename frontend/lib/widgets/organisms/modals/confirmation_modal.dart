@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:tross_app/widgets/organisms/modals/generic_modal.dart';
-import 'package:tross_app/services/navigation_coordinator.dart';
 import 'package:tross_app/config/app_spacing.dart';
 
 /// ConfirmationModal - Organism for confirmation dialogs via PURE COMPOSITION
 ///
 /// **SOLE RESPONSIBILITY:** Compose GenericModal for Yes/No confirmations
+/// **PURE:** No service dependencies - uses standard Navigator.pop()
 ///
 /// Architecture:
 /// - NO implementation, ONLY composition
@@ -83,18 +83,14 @@ class ConfirmationModal extends StatelessWidget {
       actions: [
         // Cancel button
         TextButton(
-          onPressed:
-              onCancel ??
-              () => NavigationCoordinator.pop(context, result: false),
+          onPressed: onCancel ?? () => Navigator.of(context).pop(false),
           child: Text(cancelText),
         ),
 
         // Confirm button (danger style if isDanger)
         if (isDanger)
           FilledButton(
-            onPressed:
-                onConfirm ??
-                () => NavigationCoordinator.pop(context, result: true),
+            onPressed: onConfirm ?? () => Navigator.of(context).pop(true),
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
@@ -102,9 +98,7 @@ class ConfirmationModal extends StatelessWidget {
           )
         else
           FilledButton(
-            onPressed:
-                onConfirm ??
-                () => NavigationCoordinator.pop(context, result: true),
+            onPressed: onConfirm ?? () => Navigator.of(context).pop(true),
             child: Text(confirmText),
           ),
       ],

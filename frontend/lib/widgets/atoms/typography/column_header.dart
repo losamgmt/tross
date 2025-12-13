@@ -1,4 +1,7 @@
 /// ColumnHeader - Atom component for table column headers
+///
+/// Designed to work within table cells with any constraint.
+/// Text will ellipsis if space is limited.
 library;
 
 import 'package:flutter/material.dart';
@@ -29,51 +32,51 @@ class ColumnHeader extends StatelessWidget {
     final theme = Theme.of(context);
     final spacing = context.spacing;
 
-    Widget content = Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Flexible(
-          child: Text(
-            label,
-            style: theme.textTheme.labelLarge?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: theme.colorScheme.onSurface,
-              letterSpacing: 0.5,
-            ),
-            textAlign: textAlign,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-        if (sortable) ...[
-          SizedBox(width: spacing.xxs),
-          _SortIcon(direction: sortDirection),
-        ],
-      ],
+    final isRightAligned =
+        textAlign == TextAlign.right || textAlign == TextAlign.end;
+
+    final textWidget = Text(
+      label,
+      style: theme.textTheme.labelLarge?.copyWith(
+        fontWeight: FontWeight.w700,
+        color: theme.colorScheme.onSurface,
+        letterSpacing: 0.5,
+      ),
+      textAlign: textAlign,
+      overflow: TextOverflow.ellipsis,
+      maxLines: 1,
     );
 
-    if (textAlign == TextAlign.right || textAlign == TextAlign.end) {
-      content = Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (sortable) ...[
-            _SortIcon(direction: sortDirection),
+    final sortIcon = sortable ? _SortIcon(direction: sortDirection) : null;
+
+    // Content layout - sized to content, text clips via ellipsis
+    Widget content;
+    if (sortIcon != null) {
+      if (isRightAligned) {
+        content = Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            sortIcon,
             SizedBox(width: spacing.xxs),
+            Flexible(child: textWidget),
           ],
-          Flexible(
-            child: Text(
-              label,
-              style: theme.textTheme.labelLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: theme.colorScheme.onSurface,
-                letterSpacing: 0.5,
-              ),
-              textAlign: textAlign,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      );
+        );
+      } else {
+        content = Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(child: textWidget),
+            SizedBox(width: spacing.xxs),
+            sortIcon,
+          ],
+        );
+      }
+    } else {
+      content = textWidget;
     }
+
+    // No ClipRect needed - text uses ellipsis, Row uses MainAxisSize.min
 
     if (!sortable || onSort == null) {
       return Container(

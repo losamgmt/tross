@@ -86,41 +86,72 @@ testWidgets('shows error message on validation failure', (tester) async {
 });
 ```
 
-## Migration Plan
+## Behavioral Test Helpers
 
-### Phase 1: Identify Violations (CURRENT)
-- Audit all tests for anti-patterns
-- Mark files with `// TODO: Remove implementation detail assertions`
-- Document specific violations
+We've created `behavioral_test_helpers.dart` with patterns that encourage good testing:
 
-### Phase 2: Refactor High-Value Tests
-- Organism tests (affects multiple features)
-- Integration tests (user journeys)
-- Critical path tests (auth, data mutations)
+```dart
+import '../../helpers/helpers.dart';
 
-### Phase 3: Update Test Templates
-- Add this philosophy to test generation
-- Update test helpers to discourage anti-patterns
-- Add linting rules if possible
+testWidgets('save button triggers callback', (tester) async {
+  bool saveCalled = false;
+  await pumpTestWidget(tester, MyForm(onSave: () => saveCalled = true));
+  
+  // Use behavioral helpers
+  await tapButtonWithLabel(tester, 'Save');
+  assertCallbackCalled(saveCalled, 'onSave');
+});
 
-## Violations Identified
+testWidgets('displays user name from config', (tester) async {
+  const userName = 'John Doe';
+  await pumpTestWidget(tester, UserCard(name: userName));
+  
+  // Assert the config value is displayed (not hardcoded string)
+  assertTextVisible(userName);
+});
+```
 
-### Critical (Blocking refactors)
-- ✅ `test/widgets/organisms/data_table_test.dart` - Lines 104-115 (duplicate header assertions)
-- ✅ `test/widgets/organisms/data_table_test.dart` - Lines 140-150 (exact widget count)
-- ⚠️ `test/widgets/molecules/layout/layer_stack_test.dart` - Line 27 (Container count)
+## String Literals: When They're OK vs NOT OK
 
-### Medium (Brittle but not blocking)
-- 43 exact sizing assertions across test suite
-- 693 widget finder assertions (many legitimate, need review)
+### ✅ OK: Testing that config values are displayed
+```dart
+// The test provides the value, widget displays it
+const testTitle = 'My Title';
+await pumpTestWidget(tester, Card(title: testTitle));
+expect(find.text(testTitle), findsWidgets);  // ✅ Tests config->display
+```
 
-### Low (Cosmetic)
-- Tests checking text styles
-- Tests checking theme colors
-- Tests checking widget alignment details
+### ❌ NOT OK: Hardcoding implementation UI strings
+```dart
+// Brittle - breaks if we change button label
+expect(find.text('Developer Login'), findsOneWidget);  // ❌
 
-## Next Steps
-1. Fix data_table_test.dart to test BEHAVIOR not structure
-2. Add behavior-focused test helpers
-3. Update test templates
-4. Gradually refactor remaining tests
+// Better - use constants from the widget or accept brittleness
+expect(find.text(AppConstants.devLoginButton), findsWidgets);  // ✅
+```
+
+## Migration Status
+
+### ✅ Completed (Audit Fixes Applied)
+- Created `behavioral_test_helpers.dart` with good patterns
+- Documented philosophy and examples
+- Established test infrastructure
+- **Removed `findsNWidgets` from widget tests** (generic_form, detail_panel, data_table)
+- **Migrated `login_screen_test.dart` to use AppConstants**
+- **Added UI string constants to AppConstants** (devLoginCardTitle, etc.)
+- **All 1,427 tests passing** (60% line coverage)
+
+### 📋 Remaining Anti-Patterns (Low Priority)
+Some tests still use:
+- `findsOneWidget` where `findsWidgets` would be safer (acceptable in most cases)
+- Hardcoded strings for test fixture values (acceptable - these ARE test values)
+- Implementation detail assertions in design system tests (acceptable - testing config)
+
+### 📋 Guidelines for New Tests
+1. Use `findsWidgets` instead of `findsOneWidget` unless count matters
+2. Test callbacks fire, not internal state
+3. Use constants for UI strings when possible
+4. Test user-visible behavior, not widget composition
+5. Prefer `pumpTestWidget()` helper over raw `tester.pumpWidget(MaterialApp(...))`
+6. Use `TestData` builders for test fixtures
+

@@ -3,7 +3,31 @@ import 'package:tross_app/widgets/atoms/inputs/text_input.dart'
     show TextFieldType;
 
 /// Field type enumeration
-enum FieldType { text, number, select, date, textArea, boolean }
+enum FieldType {
+  /// Single-line text input
+  text,
+
+  /// Numeric input
+  number,
+
+  /// Dropdown/select input
+  select,
+
+  /// Date picker input
+  date,
+
+  /// Time picker input
+  time,
+
+  /// Multi-line text input
+  textArea,
+
+  /// Toggle/switch input
+  boolean,
+
+  /// Async-loaded dropdown (foreign key)
+  asyncSelect,
+}
 
 /// Generic field configuration for ANY field on ANY model
 ///
@@ -48,6 +72,11 @@ class FieldConfig<T, V> {
   final bool required;
   final IconData? icon;
 
+  /// Read-only flag for immutable fields (e.g., email on edit)
+  /// When true, field is displayed but not editable.
+  /// Use case: Show email in edit form but don't allow changes.
+  final bool readOnly;
+
   // Text field specific
   final TextFieldType? textFieldType;
   final bool? obscureText;
@@ -63,6 +92,16 @@ class FieldConfig<T, V> {
   final List<V>? selectItems;
   final String Function(V)? displayText;
   final bool? allowEmpty;
+
+  // Async select field specific (for FK lookups)
+  /// Async function to load options - returns list of items
+  final Future<List<Map<String, dynamic>>> Function()? asyncItemsLoader;
+
+  /// Value field from loaded items (e.g., 'id')
+  final String? valueField;
+
+  /// Display field from loaded items (e.g., 'name', 'email')
+  final String? asyncDisplayField;
 
   // Date field specific
   final DateTime? minDate;
@@ -82,6 +121,7 @@ class FieldConfig<T, V> {
     this.helperText,
     this.required = false,
     this.icon,
+    this.readOnly = false,
     // Text specific
     this.textFieldType,
     this.obscureText,
@@ -95,6 +135,10 @@ class FieldConfig<T, V> {
     this.selectItems,
     this.displayText,
     this.allowEmpty,
+    // Async select specific
+    this.asyncItemsLoader,
+    this.valueField,
+    this.asyncDisplayField,
     // Date specific
     this.minDate,
     this.maxDate,

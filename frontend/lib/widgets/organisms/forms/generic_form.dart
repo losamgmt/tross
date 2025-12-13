@@ -1,8 +1,8 @@
-import 'package:flutter/foundation.dart' show debugPrint;
-import 'package:flutter/material.dart' hide debugPrint;
+import 'package:flutter/material.dart';
 import 'package:tross_app/widgets/molecules/forms/field_config.dart';
 import 'package:tross_app/widgets/organisms/forms/form_field.dart';
 import 'package:tross_app/config/app_spacing.dart';
+import 'package:tross_app/services/error_service.dart';
 
 /// Generic form organism that manages multiple fields based on config
 ///
@@ -84,15 +84,25 @@ class GenericFormState<T> extends State<GenericForm<T>> {
       final field = widget.fields[i];
       if (field.validator != null) {
         final value = field.getValue(_currentValue);
-        debugPrint('[VALIDATION] Field $i: ${field.label} = "$value"');
         final error = field.validator!(value);
-        debugPrint('[VALIDATION] Error: $error');
+        ErrorService.logInfo(
+          '[VALIDATION] Field validated',
+          context: {
+            'index': i,
+            'label': field.label,
+            'value': value?.toString() ?? 'null',
+            'error': error,
+          },
+        );
         _fieldErrors[i] = error;
         if (error != null) allValid = false;
       }
     }
     setState(() {}); // Trigger rebuild to show errors
-    debugPrint('[VALIDATION] All valid: $allValid');
+    ErrorService.logInfo(
+      '[VALIDATION] Validation complete',
+      context: {'allValid': allValid},
+    );
     return allValid;
   }
 

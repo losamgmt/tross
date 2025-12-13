@@ -1,25 +1,37 @@
 /// ConfirmationDialog - Reusable confirmation dialog molecule
 ///
-/// SINGLE RESPONSIBILITY: Display message with confirm/cancel actions
+/// **SOLE RESPONSIBILITY:** Display message with confirm/cancel actions
+/// **GENERIC:** No domain-specific factories - routes build specific dialogs
 ///
 /// Features:
 /// - Customizable title and message
 /// - Customizable button labels
 /// - Dangerous action styling (red confirm button)
-/// - Factory methods for common use cases
-///
-/// TESTABLE: Widget tests verify title, message, button labels, and callbacks
 ///
 /// Usage:
 /// ```dart
+/// // Generic confirmation
 /// final confirmed = await showDialog<bool>(
 ///   context: context,
-///   builder: (context) => ConfirmationDialog.deactivate(
-///     entityType: 'user',
-///     entityName: 'John Doe',
+///   builder: (context) => ConfirmationDialog(
+///     title: 'Delete Item?',
+///     message: 'This action cannot be undone.',
+///     confirmLabel: 'Delete',
+///     isDangerous: true,
 ///     onConfirm: () {},
 ///   ),
 /// );
+///
+/// // Route-level factory (keep domain logic in routes)
+/// ConfirmationDialog buildDeactivateDialog(String type, String name, VoidCallback onConfirm) {
+///   return ConfirmationDialog(
+///     title: 'Deactivate $type?',
+///     message: 'Are you sure you want to deactivate "$name"?',
+///     confirmLabel: 'Deactivate',
+///     isDangerous: true,
+///     onConfirm: onConfirm,
+///   );
+/// }
 /// ```
 library;
 
@@ -44,50 +56,6 @@ class ConfirmationDialog extends StatelessWidget {
     this.cancelLabel = 'Cancel',
     this.isDangerous = false,
   });
-
-  /// Factory for deactivation confirmation
-  ///
-  /// Shows warning message about losing access
-  factory ConfirmationDialog.deactivate({
-    required String entityType,
-    required String entityName,
-    required VoidCallback onConfirm,
-    VoidCallback? onCancel,
-  }) {
-    return ConfirmationDialog(
-      title: 'Deactivate $entityType?',
-      message:
-          'Are you sure you want to deactivate "$entityName"? '
-          'They will no longer be able to access the system.',
-      confirmLabel: 'Deactivate',
-      cancelLabel: 'Cancel',
-      onConfirm: onConfirm,
-      onCancel: onCancel,
-      isDangerous: true,
-    );
-  }
-
-  /// Factory for reactivation confirmation
-  ///
-  /// Shows informative message about regaining access
-  factory ConfirmationDialog.reactivate({
-    required String entityType,
-    required String entityName,
-    required VoidCallback onConfirm,
-    VoidCallback? onCancel,
-  }) {
-    return ConfirmationDialog(
-      title: 'Reactivate $entityType?',
-      message:
-          'Are you sure you want to reactivate "$entityName"? '
-          'They will regain access to the system.',
-      confirmLabel: 'Reactivate',
-      cancelLabel: 'Cancel',
-      onConfirm: onConfirm,
-      onCancel: onCancel,
-      isDangerous: false,
-    );
-  }
 
   @override
   Widget build(BuildContext context) {

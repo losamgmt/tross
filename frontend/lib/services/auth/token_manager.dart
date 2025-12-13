@@ -19,12 +19,14 @@ class TokenManager {
   static const String _tokenKey = 'auth_token';
   static const String _userKey = 'auth_user';
   static const String _refreshTokenKey = 'refresh_token';
+  static const String _providerKey = 'auth_provider';
 
   /// Store authentication data securely
   static Future<void> storeAuthData({
     required String token,
     required Map<String, dynamic> user,
     String? refreshToken,
+    String? provider,
   }) async {
     try {
       await _secureStorage.write(key: _tokenKey, value: token);
@@ -34,7 +36,14 @@ class TokenManager {
         await _secureStorage.write(key: _refreshTokenKey, value: refreshToken);
       }
 
-      ErrorService.logInfo('Auth data stored securely');
+      if (provider != null) {
+        await _secureStorage.write(key: _providerKey, value: provider);
+      }
+
+      ErrorService.logInfo(
+        'Auth data stored securely',
+        context: {'provider': provider},
+      );
     } catch (e) {
       ErrorService.logError('Failed to store auth data', error: e);
       rethrow;
@@ -47,12 +56,14 @@ class TokenManager {
       final token = await _secureStorage.read(key: _tokenKey);
       final userJson = await _secureStorage.read(key: _userKey);
       final refreshToken = await _secureStorage.read(key: _refreshTokenKey);
+      final provider = await _secureStorage.read(key: _providerKey);
 
       if (token != null && userJson != null) {
         return {
           'token': token,
           'user': json.decode(userJson),
           'refreshToken': refreshToken,
+          'provider': provider,
         };
       }
 
@@ -69,6 +80,7 @@ class TokenManager {
       await _secureStorage.delete(key: _tokenKey);
       await _secureStorage.delete(key: _userKey);
       await _secureStorage.delete(key: _refreshTokenKey);
+      await _secureStorage.delete(key: _providerKey);
 
       ErrorService.logInfo('Auth data cleared');
     } catch (e) {

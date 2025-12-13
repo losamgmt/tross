@@ -84,7 +84,7 @@ void main() {
           ),
         );
 
-        expect(find.byType(StatusBadge), findsOneWidget);
+        expect(find.byType(AppBadge), findsOneWidget);
         expect(find.text('admin'), findsOneWidget);
       });
 
@@ -97,7 +97,7 @@ void main() {
           ),
         );
 
-        expect(find.byType(StatusBadge), findsOneWidget);
+        expect(find.byType(AppBadge), findsOneWidget);
         expect(find.text('unknown_role'), findsOneWidget);
       });
     });
@@ -117,7 +117,7 @@ void main() {
           ),
         );
 
-        expect(find.byType(StatusBadge), findsOneWidget);
+        expect(find.byType(AppBadge), findsOneWidget);
         expect(find.text('Active'), findsOneWidget);
       });
     });
@@ -140,7 +140,7 @@ void main() {
           ),
         );
 
-        expect(find.byType(StatusBadge), findsOneWidget);
+        expect(find.byType(AppBadge), findsOneWidget);
         expect(find.text('Yes'), findsOneWidget);
         expect(find.byIcon(Icons.check), findsOneWidget);
       });
@@ -162,7 +162,7 @@ void main() {
           ),
         );
 
-        expect(find.byType(StatusBadge), findsOneWidget);
+        expect(find.byType(AppBadge), findsOneWidget);
         expect(find.text('No'), findsOneWidget);
         expect(find.byIcon(Icons.close), findsOneWidget);
       });

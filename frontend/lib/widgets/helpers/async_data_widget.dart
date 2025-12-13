@@ -3,7 +3,7 @@
 
 import 'package:flutter/material.dart';
 import '../../config/app_spacing.dart';
-import '../molecules/error_card.dart';
+import '../molecules/cards/error_card.dart';
 import '../molecules/buttons/button_group.dart';
 
 /// AsyncDataWidget - Idiomatic Flutter async data loading

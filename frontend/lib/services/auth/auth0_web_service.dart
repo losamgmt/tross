@@ -146,10 +146,13 @@ class Auth0WebService {
           throw Exception('Backend token validation failed');
         }
 
+        // Return backend's tokens (not Auth0's) for proper session management
+        // Backend's refresh_token is stored in DB and can be revoked server-side
         return {
           'access_token': tokens['access_token'],
           'id_token': tokens['id_token'],
-          'refresh_token': tokens['refresh_token'],
+          'refresh_token':
+              userProfile['refresh_token'], // Backend's refresh token!
           'app_token': userProfile['app_token'],
           'user': userProfile['user'],
         };
@@ -210,7 +213,9 @@ class Auth0WebService {
   Future<void> logout() async {
     // Get the current origin from AppConfig
     final origin = web.window.location.origin;
-    final returnToUrl = '$origin/login';
+    // Return to root '/' so AuthWrapper handles the loading/routing properly
+    // (instead of '/login' which renders immediately without initialization)
+    final returnToUrl = origin;
 
     final params = {
       'client_id': AppConfig.auth0ClientId,

@@ -109,6 +109,8 @@ class _GenericFormFieldState<T, V> extends State<GenericFormField<T, V>> {
   Widget _buildInputAtom(V? fieldValue) {
     switch (widget.config.fieldType) {
       case FieldType.text:
+        // Combine form-level enabled with field-level readOnly
+        final isEditable = widget.enabled && !widget.config.readOnly;
         return TextInput(
           value: fieldValue as String? ?? '',
           onChanged: _handleChange,
@@ -116,13 +118,16 @@ class _GenericFormFieldState<T, V> extends State<GenericFormField<T, V>> {
           obscureText: widget.config.obscureText ?? false,
           maxLength: widget.config.maxLength,
           placeholder: widget.config.placeholder,
-          helperText: widget.config.helperText,
+          helperText: widget.config.readOnly
+              ? '${widget.config.helperText ?? ''} (Read-only)'.trim()
+              : widget.config.helperText,
           errorText: _errorText,
-          enabled: widget.enabled,
+          enabled: isEditable,
           prefixIcon: widget.config.icon,
         );
 
       case FieldType.number:
+        final isNumberEditable = widget.enabled && !widget.config.readOnly;
         return NumberInput(
           value: fieldValue as num?,
           onChanged: _handleChange,
@@ -131,13 +136,16 @@ class _GenericFormFieldState<T, V> extends State<GenericFormField<T, V>> {
           max: widget.config.maxValue,
           step: widget.config.step,
           placeholder: widget.config.placeholder,
-          helperText: widget.config.helperText,
+          helperText: widget.config.readOnly
+              ? '${widget.config.helperText ?? ''} (Read-only)'.trim()
+              : widget.config.helperText,
           errorText: _errorText,
-          enabled: widget.enabled,
+          enabled: isNumberEditable,
           prefixIcon: widget.config.icon,
         );
 
       case FieldType.select:
+        final isSelectEditable = widget.enabled && !widget.config.readOnly;
         return SelectInput<V>(
           value: fieldValue,
           items: widget.config.selectItems ?? [],
@@ -145,26 +153,46 @@ class _GenericFormFieldState<T, V> extends State<GenericFormField<T, V>> {
           onChanged: _handleChange,
           allowEmpty: widget.config.allowEmpty ?? false,
           placeholder: widget.config.placeholder,
-          helperText: widget.config.helperText,
+          helperText: widget.config.readOnly
+              ? '${widget.config.helperText ?? ''} (Read-only)'.trim()
+              : widget.config.helperText,
           errorText: _errorText,
-          enabled: widget.enabled,
+          enabled: isSelectEditable,
           prefixIcon: widget.config.icon,
         );
 
       case FieldType.date:
+        final isDateEditable = widget.enabled && !widget.config.readOnly;
         return DateInput(
           value: fieldValue as DateTime?,
           onChanged: _handleChange,
           minDate: widget.config.minDate,
           maxDate: widget.config.maxDate,
           placeholder: widget.config.placeholder,
-          helperText: widget.config.helperText,
+          helperText: widget.config.readOnly
+              ? '${widget.config.helperText ?? ''} (Read-only)'.trim()
+              : widget.config.helperText,
           errorText: _errorText,
-          enabled: widget.enabled,
+          enabled: isDateEditable,
+          prefixIcon: widget.config.icon,
+        );
+
+      case FieldType.time:
+        final isTimeEditable = widget.enabled && !widget.config.readOnly;
+        return TimeInput(
+          value: fieldValue as TimeOfDay?,
+          onChanged: _handleChange,
+          placeholder: widget.config.placeholder,
+          helperText: widget.config.readOnly
+              ? '${widget.config.helperText ?? ''} (Read-only)'.trim()
+              : widget.config.helperText,
+          errorText: _errorText,
+          enabled: isTimeEditable,
           prefixIcon: widget.config.icon,
         );
 
       case FieldType.textArea:
+        final isTextAreaEditable = widget.enabled && !widget.config.readOnly;
         return TextAreaInput(
           value: fieldValue as String? ?? '',
           onChanged: _handleChange,
@@ -172,31 +200,48 @@ class _GenericFormFieldState<T, V> extends State<GenericFormField<T, V>> {
           maxLines: widget.config.maxLines,
           maxLength: widget.config.maxLength,
           placeholder: widget.config.placeholder,
-          helperText: widget.config.helperText,
+          helperText: widget.config.readOnly
+              ? '${widget.config.helperText ?? ''} (Read-only)'.trim()
+              : widget.config.helperText,
           errorText: _errorText,
-          enabled: widget.enabled,
+          enabled: isTextAreaEditable,
+        );
+
+      case FieldType.asyncSelect:
+        final isAsyncSelectEditable = widget.enabled && !widget.config.readOnly;
+        return _AsyncSelectField<T, V>(
+          config: widget.config,
+          value: fieldValue,
+          onChanged: _handleChange,
+          errorText: _errorText,
+          enabled: isAsyncSelectEditable,
         );
 
       case FieldType.boolean:
         // Boolean is special - toggle doesn't need label wrapper
         // (already handled above in main Column)
+        final isBoolEditable = widget.enabled && !widget.config.readOnly;
         return Builder(
           builder: (context) {
             final spacing = context.spacing;
+            final helperTextWithReadOnly = widget.config.readOnly
+                ? '${widget.config.helperText ?? ''} (Read-only)'.trim()
+                : widget.config.helperText;
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 BooleanToggle(
                   value: fieldValue as bool? ?? false,
-                  onToggle: widget.enabled
+                  onToggle: isBoolEditable
                       ? () => _handleChange(!(fieldValue as bool? ?? false))
                       : null,
                 ),
-                if (widget.config.helperText != null) ...[
+                if (helperTextWithReadOnly != null &&
+                    helperTextWithReadOnly.isNotEmpty) ...[
                   SizedBox(height: spacing.xxs),
                   Text(
-                    widget.config.helperText!,
+                    helperTextWithReadOnly,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(
                         context,
@@ -218,5 +263,127 @@ class _GenericFormFieldState<T, V> extends State<GenericFormField<T, V>> {
           },
         );
     }
+  }
+}
+
+/// Async select field for loading options from API (e.g., FK lookups)
+class _AsyncSelectField<T, V> extends StatefulWidget {
+  final FieldConfig<T, V> config;
+  final V? value;
+  final ValueChanged<dynamic> onChanged;
+  final String? errorText;
+  final bool enabled;
+
+  const _AsyncSelectField({
+    required this.config,
+    required this.value,
+    required this.onChanged,
+    required this.enabled,
+    this.errorText,
+  });
+
+  @override
+  State<_AsyncSelectField<T, V>> createState() =>
+      _AsyncSelectFieldState<T, V>();
+}
+
+class _AsyncSelectFieldState<T, V> extends State<_AsyncSelectField<T, V>> {
+  List<Map<String, dynamic>> _items = [];
+  bool _isLoading = true;
+  String? _loadError;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadItems();
+  }
+
+  Future<void> _loadItems() async {
+    if (widget.config.asyncItemsLoader == null) {
+      setState(() {
+        _isLoading = false;
+        _loadError = 'No items loader configured';
+      });
+      return;
+    }
+
+    try {
+      final items = await widget.config.asyncItemsLoader!();
+      if (mounted) {
+        setState(() {
+          _items = items;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _loadError = 'Failed to load options';
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final spacing = context.spacing;
+
+    if (_isLoading) {
+      return Container(
+        padding: EdgeInsets.symmetric(vertical: spacing.sm),
+        child: const Row(
+          children: [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            SizedBox(width: 8),
+            Text('Loading options...'),
+          ],
+        ),
+      );
+    }
+
+    if (_loadError != null) {
+      return Text(
+        _loadError!,
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.error,
+        ),
+      );
+    }
+
+    final valueField = widget.config.valueField ?? 'id';
+    final displayField = widget.config.asyncDisplayField ?? 'name';
+
+    // Convert items to select format
+    final selectItems = <int>[];
+    final displayMap = <int, String>{};
+
+    for (final item in _items) {
+      final id = item[valueField] as int?;
+      if (id != null) {
+        selectItems.add(id);
+        displayMap[id] = item[displayField]?.toString() ?? 'ID: $id';
+      }
+    }
+
+    return SelectInput<int>(
+      value: widget.value as int?,
+      items: selectItems,
+      displayText: (id) => displayMap[id] ?? 'ID: $id',
+      onChanged: widget.onChanged,
+      allowEmpty: widget.config.allowEmpty ?? !widget.config.required,
+      placeholder: widget.config.placeholder ?? 'Select ${widget.config.label}',
+      helperText: widget.config.readOnly
+          ? '${widget.config.helperText ?? ''} (Read-only)'.trim()
+          : widget.config.helperText,
+      errorText: widget.errorText,
+      enabled: widget.enabled,
+      prefixIcon: widget.config.icon,
+    );
   }
 }

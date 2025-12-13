@@ -1,16 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:tross_app/widgets/atoms/atoms.dart';
 import 'package:tross_app/config/app_spacing.dart';
-import 'package:tross_app/services/navigation_coordinator.dart';
+import 'package:tross_app/config/constants.dart';
 
 /// GenericModal - Organism for modal dialogs via PURE COMPOSITION
 ///
-/// **SOLE RESPONSIBILITY:** Compose atoms into modal layout structure
-///
-/// Architecture:
-/// - NO implementation, ONLY composition
-/// - Reuses: ScrollableContainer, SectionDivider, ActionRow atoms
-/// - Tests composition, NOT implementation details
+/// **SOLE RESPONSIBILITY:** Compose widgets into modal layout structure
+/// **PURE:** No service dependencies - uses standard Navigator.pop()
 ///
 /// Usage:
 /// ```dart
@@ -78,32 +73,45 @@ class GenericModal extends StatelessWidget {
                     if (showCloseButton)
                       IconButton(
                         icon: const Icon(Icons.close),
-                        onPressed:
-                            onClose ?? () => NavigationCoordinator.pop(context),
+                        onPressed: onClose ?? () => Navigator.of(context).pop(),
                         tooltip: 'Close',
                       ),
                   ],
                 ),
               ),
-              const SectionDivider(),
+              const Divider(height: 1),
             ],
 
-            // Content: Scrollable container (atom composition)
+            // Content: Scrollable
             Flexible(
-              child: ScrollableContainer.vertical(
-                child: Padding(
-                  padding: padding ?? EdgeInsets.all(spacing.md),
-                  child: content,
+              child: Scrollbar(
+                thumbVisibility: true,
+                trackVisibility: true,
+                thickness: StyleConstants.scrollbarThickness,
+                radius: Radius.circular(StyleConstants.scrollbarRadius),
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: padding ?? EdgeInsets.all(spacing.md),
+                    child: content,
+                  ),
                 ),
               ),
             ),
 
-            // Actions: Right-aligned row (atom composition)
+            // Actions: Right-aligned row
             if (actions != null && actions!.isNotEmpty) ...[
-              const SectionDivider(),
+              const Divider(height: 1),
               Padding(
                 padding: EdgeInsets.all(spacing.md),
-                child: ActionRow(actions: actions!),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    for (int i = 0; i < actions!.length; i++) ...[
+                      actions![i],
+                      if (i < actions!.length - 1) const SizedBox(width: 8),
+                    ],
+                  ],
+                ),
               ),
             ],
           ],

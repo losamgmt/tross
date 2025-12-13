@@ -76,9 +76,18 @@ class SelectInput<T> extends StatelessWidget {
     final spacing = context.spacing;
     final theme = Theme.of(context);
 
+    // Ensure value is valid: must be in items or null
+    // Null is allowed when: allowEmpty is true, OR placeholder is set (to show hint)
+    // This prevents the Flutter dropdown assertion error
+    final bool canBeNull = allowEmpty || placeholder != null;
+    final effectiveValue = (value != null && items.contains(value))
+        ? value
+        : (canBeNull ? null : (items.isNotEmpty ? items.first : null));
+
     // Pure input rendering: Just the DropdownButtonFormField
     return DropdownButtonFormField<T>(
-      initialValue: value,
+      // Use initialValue (not deprecated 'value') with validated effectiveValue
+      initialValue: effectiveValue,
       items: [
         // Optional empty item
         if (allowEmpty)

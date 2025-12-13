@@ -3,13 +3,14 @@
 /// Consistent styling for data values in tables and detail views
 /// Supports different emphasis levels and optional copying
 ///
+/// **PURE ATOM:** No service dependencies. Uses SnackBar for copy feedback.
+///
 /// Material 3 Design with TrossApp branding
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../config/app_spacing.dart';
-import '../../../services/notification_service.dart';
 import '../../../utils/helpers/helpers.dart';
 
 enum ValueEmphasis { primary, secondary, tertiary }
@@ -138,6 +139,13 @@ class DataValue extends StatelessWidget {
 
   void _copyToClipboard(BuildContext context) {
     Clipboard.setData(ClipboardData(text: text));
-    NotificationService.showInfo(context, 'Copied: $text');
+    // Pure atom uses simple SnackBar, no service dependency
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Copied: $text'),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 }

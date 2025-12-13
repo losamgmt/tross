@@ -26,7 +26,7 @@ library;
 
 import 'package:flutter/material.dart';
 import '../../config/app_spacing.dart';
-import '../molecules/error_card.dart';
+import '../molecules/cards/error_card.dart';
 import '../atoms/indicators/loading_indicator.dart';
 
 /// Generic stream data provider organism

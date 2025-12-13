@@ -1,4 +1,5 @@
 // API Client - Handles authenticated requests to backend
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
@@ -10,6 +11,9 @@ import 'auth/token_manager.dart';
 class ApiClient {
   // Token refresh callback - set by AuthService
   static Future<String?> Function()? onTokenRefreshNeeded;
+
+  // Token refresh mutex - prevents concurrent refresh attempts
+  static Completer<String?>? _refreshCompleter;
 
   /// Make authenticated request to backend with auto token refresh on 401
   static Future<http.Response> authenticatedRequest(
@@ -74,13 +78,15 @@ class ApiClient {
       }
 
       // Auto token refresh on 401 Unauthorized
+      // Uses mutex to prevent concurrent refresh attempts
       if (response.statusCode == 401 &&
           !isRetry &&
           onTokenRefreshNeeded != null) {
         ErrorService.logInfo('Received 401 - attempting token refresh');
 
         try {
-          final newToken = await onTokenRefreshNeeded!();
+          // Use mutex pattern: if refresh is in progress, wait for it
+          final newToken = await _refreshTokenWithMutex();
 
           if (newToken != null) {
             ErrorService.logInfo(
@@ -111,6 +117,29 @@ class ApiClient {
         context: {'method': method, 'endpoint': endpoint},
       );
       rethrow;
+    }
+  }
+
+  /// Refresh token with mutex - prevents concurrent refresh attempts
+  /// If a refresh is already in progress, waits for it instead of starting a new one
+  static Future<String?> _refreshTokenWithMutex() async {
+    // If refresh is already in progress, wait for it
+    if (_refreshCompleter != null) {
+      ErrorService.logInfo('Token refresh already in progress - waiting');
+      return _refreshCompleter!.future;
+    }
+
+    // Start a new refresh
+    _refreshCompleter = Completer<String?>();
+    try {
+      final newToken = await onTokenRefreshNeeded!();
+      _refreshCompleter!.complete(newToken);
+      return newToken;
+    } catch (e) {
+      _refreshCompleter!.completeError(e);
+      rethrow;
+    } finally {
+      _refreshCompleter = null;
     }
   }
 
@@ -332,6 +361,183 @@ class ApiClient {
     } catch (e) {
       ErrorService.logError('Failed to get stored token', error: e);
       return null;
+    }
+  }
+
+  // ============================================================================
+  // GENERIC ENTITY CRUD OPERATIONS
+  // ============================================================================
+  // These methods work with ANY entity by name - no per-entity services needed.
+  // Entity names map to API endpoints: 'customer' -> '/api/customers'
+
+  /// Build API endpoint from entity name
+  /// Uses explicit mapping for consistency with backend routes
+  /// NOTE: baseUrl already includes '/api', so we don't add it here
+  static String _entityEndpoint(String entityName) {
+    // Explicit mapping to match backend routes exactly
+    // This ensures frontend and backend stay in sync
+    const endpointMap = <String, String>{
+      'user': '/users',
+      'role': '/roles',
+      'customer': '/customers',
+      'technician': '/technicians',
+      'work_order': '/work_orders',
+      'workOrder': '/work_orders',
+      'invoice': '/invoices',
+      'contract': '/contracts',
+      'inventory':
+          '/inventory', // Singular! Backend uses /inventory not /inventories
+    };
+
+    // Use explicit mapping if available
+    if (endpointMap.containsKey(entityName)) {
+      return endpointMap[entityName]!;
+    }
+
+    // Fallback: standard pluralization for unknown entities
+    final plural = entityName.endsWith('y')
+        ? '${entityName.substring(0, entityName.length - 1)}ies'
+        : entityName.endsWith('s')
+        ? entityName
+        : '${entityName}s';
+    return '/$plural';
+  }
+
+  /// Fetch all entities with optional pagination, search, filters, and sort
+  ///
+  /// Returns standardized response with data, pagination, and metadata.
+  ///
+  /// Example:
+  /// ```dart
+  /// final result = await ApiClient.fetchEntities('customer', page: 1, limit: 50);
+  /// final customers = result['data'] as List<Map<String, dynamic>>;
+  /// final pagination = result['pagination'];
+  /// ```
+  static Future<Map<String, dynamic>> fetchEntities(
+    String entityName, {
+    int page = 1,
+    int limit = 50,
+    String? search,
+    Map<String, dynamic>? filters,
+    String? sortBy,
+    String sortOrder = 'DESC',
+  }) async {
+    final queryParams = <String, String>{
+      'page': page.toString(),
+      'limit': limit.toString(),
+    };
+
+    if (search != null && search.isNotEmpty) {
+      queryParams['search'] = search;
+    }
+    if (sortBy != null) {
+      queryParams['sortBy'] = sortBy;
+      queryParams['sortOrder'] = sortOrder;
+    }
+    if (filters != null) {
+      filters.forEach((key, value) {
+        if (value != null) {
+          queryParams[key] = value.toString();
+        }
+      });
+    }
+
+    final response = await get(
+      _entityEndpoint(entityName),
+      queryParameters: queryParams,
+    );
+
+    // Normalize response - ensure data is List<Map>
+    if (response['success'] == true) {
+      final data = response['data'];
+      return {
+        'data': (data is List)
+            ? data.map((e) => e as Map<String, dynamic>).toList()
+            : <Map<String, dynamic>>[],
+        'pagination': response['pagination'],
+        'count': response['count'],
+        'appliedFilters': response['appliedFilters'],
+        'timestamp': response['timestamp'],
+      };
+    }
+    throw Exception(response['error'] ?? 'Failed to fetch $entityName list');
+  }
+
+  /// Fetch single entity by ID
+  ///
+  /// Example:
+  /// ```dart
+  /// final customer = await ApiClient.fetchEntity('customer', 42);
+  /// print(customer['email']);
+  /// ```
+  static Future<Map<String, dynamic>> fetchEntity(
+    String entityName,
+    int id,
+  ) async {
+    final response = await get('${_entityEndpoint(entityName)}/$id');
+
+    if (response['success'] == true && response['data'] != null) {
+      return response['data'] as Map<String, dynamic>;
+    }
+    throw Exception(response['error'] ?? '$entityName not found');
+  }
+
+  /// Create new entity
+  ///
+  /// Example:
+  /// ```dart
+  /// final newCustomer = await ApiClient.createEntity('customer', {
+  ///   'email': 'new@example.com',
+  ///   'first_name': 'New',
+  /// });
+  /// ```
+  static Future<Map<String, dynamic>> createEntity(
+    String entityName,
+    Map<String, dynamic> data,
+  ) async {
+    final response = await post(_entityEndpoint(entityName), body: data);
+
+    if (response['success'] == true && response['data'] != null) {
+      return response['data'] as Map<String, dynamic>;
+    }
+    throw Exception(response['error'] ?? 'Failed to create $entityName');
+  }
+
+  /// Update existing entity (partial update via PATCH)
+  ///
+  /// Example:
+  /// ```dart
+  /// final updated = await ApiClient.updateEntity('customer', 42, {
+  ///   'first_name': 'Updated',
+  /// });
+  /// ```
+  static Future<Map<String, dynamic>> updateEntity(
+    String entityName,
+    int id,
+    Map<String, dynamic> data,
+  ) async {
+    final response = await patch(
+      '${_entityEndpoint(entityName)}/$id',
+      body: data,
+    );
+
+    if (response['success'] == true && response['data'] != null) {
+      return response['data'] as Map<String, dynamic>;
+    }
+    throw Exception(response['error'] ?? 'Failed to update $entityName');
+  }
+
+  /// Delete entity by ID
+  ///
+  /// Example:
+  /// ```dart
+  /// await ApiClient.deleteEntity('customer', 42);
+  /// ```
+  static Future<void> deleteEntity(String entityName, int id) async {
+    final response = await delete('${_entityEndpoint(entityName)}/$id');
+
+    if (response['success'] != true) {
+      throw Exception(response['error'] ?? 'Failed to delete $entityName');
     }
   }
 

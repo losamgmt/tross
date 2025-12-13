@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../config/constants.dart';
+import '../../core/routing/app_routes.dart';
 import '../../services/notification_service.dart';
 
 class LoginForm extends StatelessWidget {
@@ -54,7 +55,7 @@ class LoginForm extends StatelessWidget {
         // So we don't navigate here to prevent flash before redirect
         if (!kIsWeb) {
           // On mobile platforms, credentials are returned immediately
-          Navigator.of(context).pushReplacementNamed(AppConstants.homeRoute);
+          Navigator.of(context).pushReplacementNamed(AppRoutes.home);
         }
         // On web, do nothing - browser is redirecting to Auth0
       } else {

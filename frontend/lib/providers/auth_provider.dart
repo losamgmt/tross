@@ -94,6 +94,10 @@ class AuthProvider extends ChangeNotifier {
   /// Managed by AuthService, used by ApiClient
   String? get token => _authService.token;
 
+  /// Auth provider used for current session (auth0, development, unknown)
+  /// Useful for UI display and logout strategy selection
+  String? get provider => _authService.provider;
+
   // User convenience getters with safe defaults
 
   /// Display name for current user, defaults to 'User' if not authenticated

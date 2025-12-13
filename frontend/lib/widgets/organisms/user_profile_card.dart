@@ -1,13 +1,20 @@
 /// UserProfileCard - Organism for displaying user profile information
 ///
-/// Composes atoms and molecules to show user details
+/// Composes molecules (ErrorCard, UserAvatar) with minimal layout logic
 /// Used in settings page and anywhere profile display needed
+///
+/// **PURE COMPOSITION:** Uses molecules for all complex UI:
+/// - ErrorCard for error states
+/// - UserAvatar for profile avatar display
 library;
 
 import 'package:flutter/material.dart';
 import '../../config/app_spacing.dart';
 import '../../config/app_colors.dart';
 import '../../utils/helpers/string_helper.dart';
+import '../molecules/buttons/button_group.dart';
+import '../molecules/cards/error_card.dart';
+import '../molecules/user_avatar.dart';
 
 class UserProfileCard extends StatelessWidget {
   final Map<String, dynamic>? userProfile;
@@ -28,33 +35,22 @@ class UserProfileCard extends StatelessWidget {
     final spacing = context.spacing;
     final theme = Theme.of(context);
 
-    // Error state
+    // Error state - delegate to ErrorCard molecule
     if (error != null && error!.isNotEmpty) {
-      return Card(
-        elevation: 2,
-        child: Padding(
-          padding: spacing.paddingXL,
-          child: Column(
-            children: [
-              Icon(
-                Icons.error_outline,
-                size: spacing.xxl * 2,
-                color: AppColors.errorLight,
-              ),
-              SizedBox(height: spacing.lg),
-              Text(
-                error!,
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: AppColors.error,
+      return ErrorCard(
+        title: 'Profile Error',
+        message: error!,
+        icon: Icons.error_outline,
+        iconColor: AppColors.errorLight,
+        buttons: onRetry != null
+            ? [
+                ButtonConfig(
+                  label: 'Retry',
+                  onPressed: onRetry!,
+                  isPrimary: true,
                 ),
-                textAlign: TextAlign.center,
-              ),
-              SizedBox(height: spacing.lg),
-              if (onRetry != null)
-                ElevatedButton(onPressed: onRetry, child: const Text('Retry')),
-            ],
-          ),
-        ),
+              ]
+            : null,
       );
     }
 
@@ -65,7 +61,6 @@ class UserProfileCard extends StatelessWidget {
     final displayName = fullName.isNotEmpty ? fullName : 'User';
     final email = userProfile?['email'] ?? 'No email';
     final role = userProfile?['role'] ?? 'User';
-    final initial = StringHelper.getInitial(displayName);
 
     return Card(
       elevation: 2,
@@ -74,19 +69,13 @@ class UserProfileCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header with avatar and name
+            // Header with avatar and name - uses UserAvatar molecule
             Row(
               children: [
-                CircleAvatar(
-                  radius: spacing.xxl,
-                  backgroundColor: AppColors.brandPrimary,
-                  child: Text(
-                    initial,
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                      color: AppColors.textOnBrand,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                UserAvatar(
+                  name: displayName,
+                  email: email,
+                  size: spacing.xxl * 2,
                 ),
                 SizedBox(width: spacing.lg),
                 Flexible(

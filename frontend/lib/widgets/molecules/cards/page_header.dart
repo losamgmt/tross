@@ -15,7 +15,7 @@
 /// PageHeader(
 ///   title: 'Database Health',
 ///   subtitle: '2 databases',
-///   statusBadge: ConnectionStatusBadge(status: HealthStatus.healthy),
+///   statusBadge: AppBadge(label: 'Healthy', style: BadgeStyle.success),
 ///   action: IconButton(icon: Icon(Icons.refresh), onPressed: refresh),
 /// )
 /// ```

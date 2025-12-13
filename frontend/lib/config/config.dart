@@ -31,10 +31,5 @@ export 'permissions.dart';
 // Configuration
 export 'environment.dart';
 export 'app_config.dart';
-export 'role_config.dart';
 export 'table_column.dart';
 export 'table_config.dart';
-
-// Table Column Definitions
-export 'table_columns/user_columns.dart';
-export 'table_columns/role_columns.dart';

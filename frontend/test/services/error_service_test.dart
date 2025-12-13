@@ -1,14 +1,29 @@
+/// ErrorService Tests
+///
+/// Tests the centralized error/logging service.
+///
+/// **Note on `returnsNormally` assertions:**
+/// For logging methods, `returnsNormally` IS the correct assertion because:
+/// 1. Logging should NEVER throw exceptions (would cause cascading failures)
+/// 2. Logging is a side-effect with no return value to assert
+/// 3. The behavior we're testing is "graceful handling" not "returns data"
+///
+/// The real functional tests are in the getUserFriendlyMessage group.
+library;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tross_app/services/error_service.dart';
 
 void main() {
   group('ErrorService Tests', () {
     setUp(() {
-      // Reset any static state if needed
+      // Reset test mode state between tests
+      ErrorService.setTestMode(false);
     });
 
     group('Error Logging', () {
       test('should log errors without throwing', () {
+        // Logging should be resilient - never throw
         expect(() {
           ErrorService.logError('Test error message');
         }, returnsNormally);
@@ -86,18 +101,19 @@ void main() {
     });
 
     group('Test Mode Detection', () {
-      test('should allow manual test mode control', () {
-        // Set manual mode
+      test('should enable test mode when set', () {
         ErrorService.setTestMode(true);
         expect(ErrorService.isInTestMode, isTrue);
+      });
 
+      test('should disable test mode when unset', () {
+        ErrorService.setTestMode(true);
         ErrorService.setTestMode(false);
-        // After setting to false, manual mode is false
-        // (automatic detection might still be true/false depending on environment)
+        // Manual mode is now false; isInTestMode depends on environment
         expect(() => ErrorService.isInTestMode, returnsNormally);
       });
 
-      test('should handle test mode state changes', () {
+      test('manual test mode control should work', () {
         // Manual control should work
         ErrorService.setTestMode(true);
         final state1 = ErrorService.isInTestMode;
@@ -106,6 +122,13 @@ void main() {
         ErrorService.setTestMode(false);
         // State should reflect manual setting
         expect(() => ErrorService.isInTestMode, returnsNormally);
+      });
+
+      test('isInTestMode should be idempotent', () {
+        ErrorService.setTestMode(true);
+        final first = ErrorService.isInTestMode;
+        final second = ErrorService.isInTestMode;
+        expect(first, equals(second));
       });
     });
 

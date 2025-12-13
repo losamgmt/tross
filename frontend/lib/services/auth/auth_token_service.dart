@@ -84,14 +84,19 @@ class AuthTokenService {
     required String token,
     required Map<String, dynamic> user,
     String? refreshToken,
+    String? provider,
   }) async {
     try {
       await TokenManager.storeAuthData(
         token: token,
         user: user,
         refreshToken: refreshToken,
+        provider: provider,
       );
-      ErrorService.logInfo('Auth data stored successfully');
+      ErrorService.logInfo(
+        'Auth data stored successfully',
+        context: {'provider': provider},
+      );
     } catch (e) {
       ErrorService.logError('Failed to store auth data', error: e);
       rethrow;

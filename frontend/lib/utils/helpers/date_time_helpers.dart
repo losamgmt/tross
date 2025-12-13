@@ -25,13 +25,18 @@ class DateTimeHelpers {
   /// - "4h ago" - less than 1 day
   /// - "7d ago" - 1 day or more
   ///
+  /// The optional [referenceTime] parameter allows testing with fixed dates.
+  ///
   /// Example:
   /// ```dart
   /// final timestamp = DateTime.now().subtract(Duration(minutes: 30));
   /// print(DateTimeHelpers.formatRelativeTime(timestamp)); // "30m ago"
   /// ```
-  static String formatRelativeTime(DateTime timestamp) {
-    final now = DateTime.now();
+  static String formatRelativeTime(
+    DateTime timestamp, {
+    DateTime? referenceTime,
+  }) {
+    final now = referenceTime ?? DateTime.now();
     final difference = now.difference(timestamp);
 
     if (difference.inSeconds < 60) {
@@ -139,13 +144,15 @@ class DateTimeHelpers {
   /// - "N days ago" - within last week
   /// - "YYYY-MM-DD" - older than a week
   ///
+  /// The optional [referenceTime] parameter allows testing with fixed dates.
+  ///
   /// Example:
   /// ```dart
   /// final recent = DateTime.now().subtract(Duration(hours: 2));
   /// print(DateTimeHelpers.formatTimestamp(recent)); // "Today 14:30"
   /// ```
-  static String formatTimestamp(DateTime dt) {
-    final now = DateTime.now();
+  static String formatTimestamp(DateTime dt, {DateTime? referenceTime}) {
+    final now = referenceTime ?? DateTime.now();
     final diff = now.difference(dt);
 
     if (diff.inDays == 0) {

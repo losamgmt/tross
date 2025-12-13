@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tross_app/widgets/organisms/modals/generic_modal.dart';
-import 'package:tross_app/widgets/atoms/atoms.dart';
 
 /// Tests for GenericModal - COMPOSITION TESTING ONLY
 ///
 /// Philosophy:
-/// - Test that atoms are MOUNTED (composition)
+/// - Test that widgets are MOUNTED (composition)
 /// - Test that props are PASSED (data flow)
-/// - DO NOT test atom implementation (atoms test themselves)
+/// - DO NOT test implementation details
 void main() {
   group('GenericModal - Composition Tests', () {
     testWidgets('composes Dialog with content', (tester) async {
@@ -73,7 +72,7 @@ void main() {
       expect(find.byIcon(Icons.close), findsNothing);
     });
 
-    testWidgets('mounts SectionDivider when header present', (tester) async {
+    testWidgets('mounts Divider when header present', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -82,11 +81,11 @@ void main() {
         ),
       );
 
-      // Verify divider atom mounted
-      expect(find.byType(SectionDivider), findsAtLeastNWidgets(1));
+      // Verify divider mounted
+      expect(find.byType(Divider), findsAtLeastNWidgets(1));
     });
 
-    testWidgets('composes content with ScrollableContainer', (tester) async {
+    testWidgets('composes content with Scrollbar', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -95,12 +94,12 @@ void main() {
         ),
       );
 
-      // Verify ScrollableContainer atom mounted
-      expect(find.byType(ScrollableContainer), findsOneWidget);
+      // Verify Scrollbar mounted
+      expect(find.byType(Scrollbar), findsOneWidget);
       expect(find.text('Scrollable Content'), findsOneWidget);
     });
 
-    testWidgets('mounts ActionRow when actions provided', (tester) async {
+    testWidgets('mounts action Row when actions provided', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -115,24 +114,24 @@ void main() {
         ),
       );
 
-      // Verify ActionRow atom mounted
-      expect(find.byType(ActionRow), findsOneWidget);
+      // Verify actions are rendered
       expect(find.text('Cancel'), findsOneWidget);
       expect(find.text('Save'), findsOneWidget);
     });
 
-    testWidgets('does not mount ActionRow when no actions', (tester) async {
+    testWidgets('does not mount actions when no actions', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(body: GenericModal(content: const Text('Content'))),
         ),
       );
 
-      // Verify ActionRow NOT mounted
-      expect(find.byType(ActionRow), findsNothing);
+      // Verify action buttons NOT mounted
+      expect(find.byType(TextButton), findsNothing);
+      expect(find.byType(FilledButton), findsNothing);
     });
 
-    testWidgets('mounts SectionDivider before actions', (tester) async {
+    testWidgets('mounts Divider before actions', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -145,7 +144,7 @@ void main() {
       );
 
       // Verify divider mounted (should find at least one for actions)
-      expect(find.byType(SectionDivider), findsAtLeastNWidgets(1));
+      expect(find.byType(Divider), findsAtLeastNWidgets(1));
     });
 
     testWidgets('calls onClose when close button tapped', (tester) async {
@@ -264,7 +263,7 @@ void main() {
 
       // Header mounted (close button present)
       expect(find.byIcon(Icons.close), findsOneWidget);
-      expect(find.byType(SectionDivider), findsAtLeastNWidgets(1));
+      expect(find.byType(Divider), findsAtLeastNWidgets(1));
     });
 
     testWidgets('does not mount header when no title and no close button', (
@@ -283,8 +282,8 @@ void main() {
 
       // No header components mounted
       expect(find.byIcon(Icons.close), findsNothing);
-      // Still has ScrollableContainer for content
-      expect(find.byType(ScrollableContainer), findsOneWidget);
+      // Still has Scrollbar for content
+      expect(find.byType(Scrollbar), findsOneWidget);
     });
   });
 }

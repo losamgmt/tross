@@ -16,6 +16,7 @@ library;
 
 import 'package:flutter/material.dart';
 import '../../../config/app_spacing.dart';
+import '../../../config/constants.dart';
 import '../../../utils/helpers/string_helper.dart';
 import '../../atoms/atoms.dart';
 
@@ -68,7 +69,7 @@ class _DevLoginCardState extends State<DevLoginCard> {
                 Icon(Icons.code, color: theme.colorScheme.error, size: 20),
                 SizedBox(width: spacing.sm),
                 Text(
-                  'Developer Login',
+                  AppConstants.devLoginCardTitle,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: theme.colorScheme.error,
@@ -78,7 +79,7 @@ class _DevLoginCardState extends State<DevLoginCard> {
             ),
             spacing.gapSM,
             Text(
-              'For testing and development only',
+              AppConstants.devLoginCardDescription,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
               ),
@@ -92,7 +93,7 @@ class _DevLoginCardState extends State<DevLoginCard> {
               displayText: StringHelper.capitalize,
               onChanged: (role) => setState(() => _selectedRole = role),
               placeholder: 'Select Role',
-              helperText: 'Choose a role to test with',
+              helperText: AppConstants.devLoginRoleHint,
             ),
 
             spacing.gapMD,
@@ -105,7 +106,7 @@ class _DevLoginCardState extends State<DevLoginCard> {
                     ? () => widget.onDevLogin(_selectedRole!)
                     : null,
                 icon: const Icon(Icons.login),
-                label: const Text('Dev Login'),
+                label: const Text(AppConstants.devLoginButton),
                 style: OutlinedButton.styleFrom(
                   padding: EdgeInsets.symmetric(
                     horizontal: spacing.lg,
