@@ -22,14 +22,16 @@ class TokenService {
    * @param {string} userAgent - Client user agent
    * @returns {Promise<{accessToken: string, refreshToken: string}>}
    */
-  async generateTokenPair(user, ipAddress = null, userAgent = null) {
+  async generateTokenPair(user, ipAddress = null, userAgent = null, provider = 'auth0') {
     try {
       // Generate short-lived access token (15 minutes)
       const accessToken = jwt.sign(
         {
-          userId: user.id,
+          sub: user.id.toString(), // Standard JWT claim (required by auth middleware)
+          userId: user.id, // Keep for backwards compatibility
           email: user.email,
           role: user.role,
+          provider: provider, // Required by auth middleware
           type: 'access',
         },
         JWT_SECRET,
@@ -146,10 +148,13 @@ class TokenService {
         role: storedToken.role,
       };
 
+      // Preserve the provider from the original token, default to auth0
+      const provider = decoded.provider || 'auth0';
       const newTokenPair = await this.generateTokenPair(
         user,
         ipAddress,
         userAgent,
+        provider,
       );
 
       // Revoke old refresh token

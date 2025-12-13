@@ -67,7 +67,7 @@ const VALID_OPERATIONS = ['create', 'update', 'delete'];
  *     newValues: { email: 'test@example.com', company_name: 'ACME' }
  *   });
  */
-async function logEntityAudit(operation, entityName, result, auditContext) {
+async function logEntityAudit(operation, entityName, result, auditContext, oldValues = null) {
   // Validate operation
   if (!operation || !VALID_OPERATIONS.includes(operation)) {
     logger.warn('Invalid audit operation', { operation, entityName });
@@ -94,14 +94,23 @@ async function logEntityAudit(operation, entityName, result, auditContext) {
     return;
   }
 
+  // Determine old and new values:
+  // - For updates: oldValues param (5th arg) OR auditContext.oldValues, result is newValues
+  // - For creates: result is newValues, no oldValues
+  // - For deletes: result is oldValues, no newValues
+  const effectiveOldValues = oldValues || auditContext.oldValues || null;
+  const effectiveNewValues = operation === 'delete'
+    ? null
+    : (auditContext.newValues || result || null);
+
   try {
     await auditService.log({
       userId: auditContext.userId || null,
       action,
       resourceType,
       resourceId: result?.id || null,
-      oldValues: auditContext.oldValues || null,
-      newValues: auditContext.newValues || null,
+      oldValues: operation === 'create' ? null : effectiveOldValues,
+      newValues: effectiveNewValues,
       ipAddress: auditContext.ipAddress || null,
       userAgent: auditContext.userAgent || null,
       result: AuditResults.SUCCESS,

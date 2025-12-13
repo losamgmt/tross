@@ -43,18 +43,22 @@ const { logger } = require('../../config/logger');
 const POLICY_HANDLERS = {
   /**
    * all_records: Full access, no filtering needed
+   * applied: false because no actual filtering occurs
    */
   all_records: () => ({
     clause: '',
     params: [],
+    noFilter: true, // Flag to indicate no filtering was applied
   }),
 
   /**
    * public_resource: Same as all_records (e.g., roles table)
+   * applied: false because no actual filtering occurs
    */
   public_resource: () => ({
     clause: '',
     params: [],
+    noFilter: true,
   }),
 
   /**
@@ -199,6 +203,11 @@ function buildRLSFilter(rlsContext, metadata, paramOffset = 0) {
   // Execute the policy handler
   const result = handler(userId, metadata, paramOffset);
 
+  // Determine if RLS actually filtered anything
+  // 'applied' = true only when actual row filtering occurred
+  // 'applied' = false for all_records/public_resource (full access, no restriction)
+  const actuallyFiltered = !result.noFilter && (result.clause || false);
+
   logger.debug('buildRLSFilter: Applied RLS filter', {
     policy,
     entity: metadata?.tableName,
@@ -209,7 +218,7 @@ function buildRLSFilter(rlsContext, metadata, paramOffset = 0) {
   return {
     clause: result.clause,
     params: result.params,
-    applied: true,
+    applied: !!actuallyFiltered,
   };
 }
 

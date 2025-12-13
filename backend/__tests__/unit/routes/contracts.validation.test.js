@@ -5,10 +5,12 @@
  * Uses centralized setup from route-test-setup.js (DRY architecture).
  *
  * Test Coverage: Input validation, conflict handling, constraint errors
+ * 
+ * NOTE: Now uses GenericEntityService instead of Contract model (Phase 4 strangler-fig)
  */
 
 const request = require('supertest');
-const Contract = require('../../../db/models/Contract');
+const GenericEntityService = require('../../../services/generic-entity-service');
 const auditService = require('../../../services/audit-service');
 const { authenticateToken, requirePermission } = require('../../../middleware/auth');
 const { enforceRLS } = require('../../../middleware/row-level-security');
@@ -24,7 +26,7 @@ const {
 // MOCK CONFIGURATION (Hoisted by Jest)
 // ============================================================================
 
-jest.mock('../../../db/models/Contract');
+jest.mock('../../../services/generic-entity-service');
 jest.mock('../../../services/audit-service');
 jest.mock('../../../utils/request-helpers');
 
@@ -69,12 +71,17 @@ jest.mock('../../../validators', () => ({
   validateContractUpdate: jest.fn((req, res, next) => next()),
 }));
 
+const {
+  validateIdParam,
+  validateContractCreate,
+  validateContractUpdate,
+} = require('../../../validators');
+
 // ============================================================================
 // TEST APP SETUP (After mocks are hoisted)
 // ============================================================================
 
 const contractsRouter = require('../../../routes/contracts');
-const { validateContractCreate, validateContractUpdate, validateIdParam } = require('../../../validators');
 const app = createRouteTestApp(contractsRouter, '/api/contracts');
 
 // ============================================================================
@@ -91,6 +98,17 @@ describe('routes/contracts.js - Validation & Error Handling', () => {
       enforceRLS,
     });
     auditService.log.mockResolvedValue(true);
+    
+    // Reset GenericEntityService mocks
+    GenericEntityService.findAll = jest.fn();
+    GenericEntityService.findById = jest.fn();
+    GenericEntityService.create = jest.fn();
+    GenericEntityService.update = jest.fn();
+    GenericEntityService.delete = jest.fn();
+
+    // Reset validator mocks
+    validateContractCreate.mockImplementation((req, res, next) => next());
+    validateContractUpdate.mockImplementation((req, res, next) => next());
   });
 
   afterEach(() => {
@@ -101,22 +119,12 @@ describe('routes/contracts.js - Validation & Error Handling', () => {
   // GET /api/contracts/:id - Validation
   // ===========================
   describe('GET /api/contracts/:id - Validation', () => {
-    test('should return 400 for invalid ID (non-numeric)', async () => {
+    test('should return 400 when id is not a valid number', async () => {
       validateIdParam.mockImplementation(() => (req, res, next) => {
-        return res.status(400).json({ success: false, error: 'Validation Error', message: 'Invalid ID parameter' });
+        return res.status(400).json({ success: false, error: 'Validation Error', message: 'ID must be a positive integer' });
       });
 
-      const response = await request(app).get('/api/contracts/abc');
-      expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
-      expect(response.body.success).toBe(false);
-    });
-
-    test('should return 400 for invalid ID (zero or negative)', async () => {
-      validateIdParam.mockImplementation(() => (req, res, next) => {
-        return res.status(400).json({ success: false, error: 'Validation Error', message: 'ID must be positive' });
-      });
-
-      const response = await request(app).get('/api/contracts/-5');
+      const response = await request(app).get('/api/contracts/invalid');
       expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
     });
   });
@@ -127,34 +135,22 @@ describe('routes/contracts.js - Validation & Error Handling', () => {
   describe('POST /api/contracts - Validation', () => {
     test('should return 400 when required fields are missing', async () => {
       validateContractCreate.mockImplementation((req, res, next) => {
-        return res.status(400).json({ success: false, error: 'Validation Error', message: 'Customer ID is required' });
+        return res.status(400).json({ success: false, error: 'Validation Error', message: 'Required fields missing' });
       });
 
       const response = await request(app).post('/api/contracts').send({});
       expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
       expect(response.body.success).toBe(false);
-      expect(Contract.create).not.toHaveBeenCalled();
+      expect(GenericEntityService.create).not.toHaveBeenCalled();
     });
 
-    test('should return 400 when end_date is before start_date', async () => {
-      validateContractCreate.mockImplementation((req, res, next) => {
-        return res.status(400).json({ success: false, error: 'Validation Error', message: 'End date must be after start date' });
-      });
-
-      const response = await request(app).post('/api/contracts').send({ 
-        start_date: '2025-12-31', 
-        end_date: '2025-01-01' 
-      });
-      expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
-    });
-
-    test('should return 409 when contract_number already exists', async () => {
+    test('should return 409 when contract name already exists', async () => {
       validateContractCreate.mockImplementation((req, res, next) => next());
       const duplicateError = new Error('duplicate key value violates unique constraint');
       duplicateError.code = '23505';
-      Contract.create.mockRejectedValue(duplicateError);
+      GenericEntityService.create.mockRejectedValue(duplicateError);
 
-      const response = await request(app).post('/api/contracts').send({ contract_number: 'CON-001' });
+      const response = await request(app).post('/api/contracts').send({ name: 'Existing Contract' });
       expect(response.status).toBe(HTTP_STATUS.CONFLICT);
     });
   });
@@ -163,23 +159,21 @@ describe('routes/contracts.js - Validation & Error Handling', () => {
   // PATCH /api/contracts/:id - Validation
   // ===========================
   describe('PATCH /api/contracts/:id - Validation', () => {
-    test('should return 400 when status value is invalid', async () => {
+    test('should return 400 when update data is invalid', async () => {
       validateContractUpdate.mockImplementation((req, res, next) => {
         return res.status(400).json({ success: false, error: 'Validation Error', message: 'Invalid status value' });
       });
 
-      const response = await request(app).patch('/api/contracts/1').send({ status: 'bogus_status' });
+      const response = await request(app).patch('/api/contracts/1').send({ status: 'invalid_status' });
       expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
-      expect(Contract.update).not.toHaveBeenCalled();
+      expect(GenericEntityService.update).not.toHaveBeenCalled();
     });
 
-    test('should return 400 when date format is invalid', async () => {
-      validateContractUpdate.mockImplementation((req, res, next) => {
-        return res.status(400).json({ success: false, error: 'Validation Error', message: 'Invalid date format' });
-      });
+    test('should return 404 when contract does not exist', async () => {
+      GenericEntityService.findById.mockResolvedValue(null);
 
-      const response = await request(app).patch('/api/contracts/1').send({ end_date: 'not-a-date' });
-      expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
+      const response = await request(app).patch('/api/contracts/999').send({ status: 'active' });
+      expect(response.status).toBe(HTTP_STATUS.NOT_FOUND);
     });
   });
 
@@ -187,14 +181,11 @@ describe('routes/contracts.js - Validation & Error Handling', () => {
   // DELETE /api/contracts/:id - Validation
   // ===========================
   describe('DELETE /api/contracts/:id - Validation', () => {
-    test('should return 400 for invalid ID parameter', async () => {
-      validateIdParam.mockImplementation(() => (req, res, next) => {
-        return res.status(400).json({ success: false, error: 'Validation Error', message: 'Invalid ID' });
-      });
+    test('should return 404 when contract does not exist', async () => {
+      GenericEntityService.findById.mockResolvedValue(null);
 
-      const response = await request(app).delete('/api/contracts/invalid');
-      expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
-      expect(Contract.delete).not.toHaveBeenCalled();
+      const response = await request(app).delete('/api/contracts/999');
+      expect(response.status).toBe(HTTP_STATUS.NOT_FOUND);
     });
   });
 });

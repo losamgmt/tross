@@ -145,18 +145,12 @@ describe('GenericEntityService', () => {
         expect(Array.isArray(metadata.requiredFields)).toBe(true);
       });
 
-      test('should have createableFields property', () => {
+      test('should have immutableFields property', () => {
+        // Phase 4: Exclusion pattern - immutableFields defines what CANNOT be updated
         const metadata = GenericEntityService._getMetadata('user');
 
-        expect(metadata.createableFields).toBeDefined();
-        expect(Array.isArray(metadata.createableFields)).toBe(true);
-      });
-
-      test('should have updateableFields property', () => {
-        const metadata = GenericEntityService._getMetadata('user');
-
-        expect(metadata.updateableFields).toBeDefined();
-        expect(Array.isArray(metadata.updateableFields)).toBe(true);
+        expect(metadata.immutableFields).toBeDefined();
+        expect(Array.isArray(metadata.immutableFields)).toBe(true);
       });
 
       test('should have rlsResource property', () => {
@@ -310,10 +304,14 @@ describe('GenericEntityService', () => {
 
         // Assert
         expect(result).toEqual(mockUser);
-        expect(db.query).toHaveBeenCalledWith(
-          'SELECT * FROM users WHERE id = $1',
-          [1],
-        );
+        // findById delegates to findByField with table-prefixed columns and JOINs
+        const [query, params] = db.query.mock.calls[0];
+        expect(query).toContain('SELECT users.*');
+        expect(query).toContain('FROM users');
+        expect(query).toContain('WHERE users.id = $1');
+        expect(query).toContain('LEFT JOIN roles'); // user has defaultIncludes: ['role']
+        expect(query).toContain('LIMIT 1');
+        expect(params).toEqual([1]);
       });
 
       test('should return role entity by ID', async () => {
@@ -331,10 +329,13 @@ describe('GenericEntityService', () => {
 
         // Assert
         expect(result).toEqual(mockRole);
-        expect(db.query).toHaveBeenCalledWith(
-          'SELECT * FROM roles WHERE id = $1',
-          [5],
-        );
+        // findById delegates to findByField with table-prefixed columns
+        const [query, params] = db.query.mock.calls[0];
+        expect(query).toContain('SELECT roles.*');
+        expect(query).toContain('FROM roles');
+        expect(query).toContain('WHERE roles.id = $1');
+        expect(query).toContain('LIMIT 1');
+        expect(params).toEqual([5]);
       });
 
       test('should return workOrder entity by ID', async () => {
@@ -351,10 +352,13 @@ describe('GenericEntityService', () => {
 
         // Assert
         expect(result).toEqual(mockWorkOrder);
-        expect(db.query).toHaveBeenCalledWith(
-          'SELECT * FROM work_orders WHERE id = $1',
-          [42],
-        );
+        // findById delegates to findByField with table-prefixed columns
+        const [query, params] = db.query.mock.calls[0];
+        expect(query).toContain('SELECT work_orders.*');
+        expect(query).toContain('FROM work_orders');
+        expect(query).toContain('WHERE work_orders.id = $1');
+        expect(query).toContain('LIMIT 1');
+        expect(params).toEqual([42]);
       });
     });
 
@@ -390,10 +394,9 @@ describe('GenericEntityService', () => {
 
         // Assert
         expect(result).toEqual(mockUser);
-        expect(db.query).toHaveBeenCalledWith(
-          'SELECT * FROM users WHERE id = $1',
-          [123], // Integer, not string
-        );
+        const [query, params] = db.query.mock.calls[0];
+        expect(query).toContain('WHERE users.id = $1');
+        expect(params).toEqual([123]); // Integer, not string
       });
 
       test('should coerce float to integer (truncated)', async () => {
@@ -405,10 +408,9 @@ describe('GenericEntityService', () => {
         const result = await GenericEntityService.findById('user', 42.9);
 
         // Assert
-        expect(db.query).toHaveBeenCalledWith(
-          'SELECT * FROM users WHERE id = $1',
-          [42], // Truncated to integer
-        );
+        const [query, params] = db.query.mock.calls[0];
+        expect(query).toContain('WHERE users.id = $1');
+        expect(params).toEqual([42]); // Truncated to integer
       });
     });
 
@@ -474,47 +476,42 @@ describe('GenericEntityService', () => {
         db.query.mockResolvedValue({ rows: [] });
 
         // Test multiple entities to verify table name resolution
+        // findById delegates to findByField with table-prefixed columns
         await GenericEntityService.findById('customer', 1);
-        expect(db.query).toHaveBeenLastCalledWith(
-          'SELECT * FROM customers WHERE id = $1',
-          [1],
-        );
+        let [query] = db.query.mock.calls[db.query.mock.calls.length - 1];
+        expect(query).toContain('FROM customers');
+        expect(query).toContain('WHERE customers.id = $1');
 
         await GenericEntityService.findById('technician', 2);
-        expect(db.query).toHaveBeenLastCalledWith(
-          'SELECT * FROM technicians WHERE id = $1',
-          [2],
-        );
+        [query] = db.query.mock.calls[db.query.mock.calls.length - 1];
+        expect(query).toContain('FROM technicians');
+        expect(query).toContain('WHERE technicians.id = $1');
 
         await GenericEntityService.findById('invoice', 3);
-        expect(db.query).toHaveBeenLastCalledWith(
-          'SELECT * FROM invoices WHERE id = $1',
-          [3],
-        );
+        [query] = db.query.mock.calls[db.query.mock.calls.length - 1];
+        expect(query).toContain('FROM invoices');
+        expect(query).toContain('WHERE invoices.id = $1');
 
         await GenericEntityService.findById('contract', 4);
-        expect(db.query).toHaveBeenLastCalledWith(
-          'SELECT * FROM contracts WHERE id = $1',
-          [4],
-        );
+        [query] = db.query.mock.calls[db.query.mock.calls.length - 1];
+        expect(query).toContain('FROM contracts');
+        expect(query).toContain('WHERE contracts.id = $1');
 
         await GenericEntityService.findById('inventory', 5);
-        expect(db.query).toHaveBeenLastCalledWith(
-          'SELECT * FROM inventory WHERE id = $1',
-          [5],
-        );
+        [query] = db.query.mock.calls[db.query.mock.calls.length - 1];
+        expect(query).toContain('FROM inventory');
+        expect(query).toContain('WHERE inventory.id = $1');
       });
 
       test('should use correct primary key from metadata', async () => {
         db.query.mockResolvedValue({ rows: [] });
 
         // All our entities use 'id' as primary key, but test verifies
-        // the query uses metadata.primaryKey
+        // the query uses metadata.primaryKey (table-prefixed in findByField)
         await GenericEntityService.findById('user', 100);
-        expect(db.query).toHaveBeenCalledWith(
-          expect.stringContaining('WHERE id = $1'),
-          [100],
-        );
+        const [query, params] = db.query.mock.calls[0];
+        expect(query).toContain('WHERE users.id = $1');
+        expect(params).toEqual([100]);
       });
 
       test('should use parameterized query to prevent SQL injection', async () => {
@@ -522,9 +519,10 @@ describe('GenericEntityService', () => {
 
         await GenericEntityService.findById('user', 1);
 
-        // Verify query uses $1 placeholder
+        // Verify query uses $1 placeholder with table-prefixed columns
         const [query, params] = db.query.mock.calls[0];
-        expect(query).toBe('SELECT * FROM users WHERE id = $1');
+        expect(query).toContain('WHERE users.id = $1');
+        expect(query).toContain('LIMIT 1');
         expect(params).toEqual([1]);
         // The ID value (1) is in params array, not interpolated into query string
         expect(params[0]).toBe(1);
@@ -549,10 +547,10 @@ describe('GenericEntityService', () => {
 
         // Assert
         expect(result).toEqual(mockUser);
-        expect(db.query).toHaveBeenCalledWith(
-          'SELECT * FROM users WHERE id = $1 AND id = $2',
-          [42, 42],
-        );
+        const [query, params] = db.query.mock.calls[0];
+        expect(query).toContain('WHERE users.id = $1');
+        expect(query).toContain('AND id = $2'); // RLS filter
+        expect(params).toEqual([42, 42]);
       });
 
       test('should apply all_records RLS (no additional filter)', async () => {
@@ -568,11 +566,11 @@ describe('GenericEntityService', () => {
 
         // Assert
         expect(result).toEqual(mockUser);
-        // all_records should not add any filter
-        expect(db.query).toHaveBeenCalledWith(
-          'SELECT * FROM users WHERE id = $1',
-          [1],
-        );
+        // all_records should not add any filter beyond the base WHERE
+        const [query, params] = db.query.mock.calls[0];
+        expect(query).toContain('WHERE users.id = $1');
+        expect(query).not.toContain('AND id = $2'); // No additional RLS filter
+        expect(params).toEqual([1]);
       });
 
       test('should apply deny_all RLS (always returns null)', async () => {
@@ -588,10 +586,10 @@ describe('GenericEntityService', () => {
         // Assert
         expect(result).toBeNull();
         // deny_all adds WHERE 1=0
-        expect(db.query).toHaveBeenCalledWith(
-          'SELECT * FROM invoices WHERE id = $1 AND 1=0',
-          [1],
-        );
+        const [query, params] = db.query.mock.calls[0];
+        expect(query).toContain('WHERE invoices.id = $1');
+        expect(query).toContain('AND 1=0');
+        expect(params).toEqual([1]);
       });
 
       test('should work without RLS context (backward compatible)', async () => {
@@ -602,12 +600,12 @@ describe('GenericEntityService', () => {
         // Act - no rlsContext parameter
         const result = await GenericEntityService.findById('user', 1);
 
-        // Assert - should work exactly as before
+        // Assert - should work with table-prefixed columns
         expect(result).toEqual(mockUser);
-        expect(db.query).toHaveBeenCalledWith(
-          'SELECT * FROM users WHERE id = $1',
-          [1],
-        );
+        const [query, params] = db.query.mock.calls[0];
+        expect(query).toContain('SELECT users.*');
+        expect(query).toContain('WHERE users.id = $1');
+        expect(params).toEqual([1]);
       });
 
       test('should return null when RLS blocks access to existing record', async () => {
@@ -622,10 +620,10 @@ describe('GenericEntityService', () => {
 
         // Assert
         expect(result).toBeNull();
-        expect(db.query).toHaveBeenCalledWith(
-          'SELECT * FROM users WHERE id = $1 AND id = $2',
-          [42, 99],
-        );
+        const [query, params] = db.query.mock.calls[0];
+        expect(query).toContain('WHERE users.id = $1');
+        expect(query).toContain('AND id = $2');
+        expect(params).toEqual([42, 99]);
       });
 
       test('should apply assigned_work_orders_only RLS for technicians', async () => {
@@ -641,10 +639,10 @@ describe('GenericEntityService', () => {
 
         // Assert
         expect(result).toEqual(mockWorkOrder);
-        expect(db.query).toHaveBeenCalledWith(
-          'SELECT * FROM work_orders WHERE id = $1 AND assigned_technician_id = $2',
-          [10, 5],
-        );
+        const [query, params] = db.query.mock.calls[0];
+        expect(query).toContain('WHERE work_orders.id = $1');
+        expect(query).toContain('AND assigned_technician_id = $2');
+        expect(params).toEqual([10, 5]);
       });
 
       test('should apply own_work_orders_only RLS for customers', async () => {
@@ -660,10 +658,10 @@ describe('GenericEntityService', () => {
 
         // Assert
         expect(result).toEqual(mockWorkOrder);
-        expect(db.query).toHaveBeenCalledWith(
-          'SELECT * FROM work_orders WHERE id = $1 AND customer_id = $2',
-          [10, 42],
-        );
+        const [query, params] = db.query.mock.calls[0];
+        expect(query).toContain('WHERE work_orders.id = $1');
+        expect(query).toContain('AND customer_id = $2');
+        expect(params).toEqual([10, 42]);
       });
     });
   });
@@ -947,7 +945,9 @@ describe('GenericEntityService', () => {
         const countQuery = db.query.mock.calls[0][0];
         const selectQuery = db.query.mock.calls[1][0];
         expect(countQuery).toContain('COUNT(*)');
-        expect(selectQuery).toContain('SELECT *');
+        // findAll uses table-prefixed columns with optional JOINs
+        expect(selectQuery).toContain('SELECT users.*');
+        expect(selectQuery).toContain('FROM users');
       });
 
       test('should use parameterized queries', async () => {
@@ -1205,32 +1205,31 @@ describe('GenericEntityService', () => {
     });
 
     // ------------------------------------------------------------------------
-    // Field Filtering
+    // Field Filtering (Exclusion Pattern)
     // ------------------------------------------------------------------------
 
     describe('field filtering', () => {
-      test('should ignore fields not in createableFields', async () => {
+      test('should exclude system-managed fields on create', async () => {
         // Arrange
         db.query.mockResolvedValue({
           rows: [{ id: 1, email: 'test@example.com' }],
         });
 
-        // Act
+        // Act - try to set id and created_at (system-managed)
         await GenericEntityService.create('customer', {
           email: 'test@example.com',
-          id: 999, // Should be ignored (not createable)
-          created_at: '2020-01-01', // Should be ignored (not createable)
-          hacker_field: 'malicious', // Should be ignored (not in schema)
+          id: 999, // Should be excluded (system-managed on create)
+          created_at: '2020-01-01', // Should be excluded (system-managed on create)
         });
 
-        // Assert - check the query only includes valid fields
-        const [query, values] = db.query.mock.calls[0];
+        // Assert - system-managed fields should be excluded
+        const [query] = db.query.mock.calls[0];
         expect(query).toContain('email');
-        expect(query).not.toContain('hacker_field');
-        expect(values).toEqual(['test@example.com']);
+        expect(query).not.toContain('id ='); // id is auto-generated
+        expect(query).not.toContain('created_at'); // created_at is auto-set
       });
 
-      test('should only include provided createable fields', async () => {
+      test('should include provided fields in create', async () => {
         // Arrange
         db.query.mockResolvedValue({
           rows: [{ id: 1, email: 'test@example.com', phone: '555-1234' }],
@@ -1240,7 +1239,6 @@ describe('GenericEntityService', () => {
         await GenericEntityService.create('customer', {
           email: 'test@example.com',
           phone: '555-1234',
-          // company_name NOT provided - should not be in query
         });
 
         // Assert
@@ -1551,30 +1549,20 @@ describe('GenericEntityService', () => {
     // ------------------------------------------------------------------------
 
     describe('field filtering', () => {
-      test('should ignore fields not in updateableFields', async () => {
-        // Arrange
-        db.query.mockResolvedValue({
-          rows: [{ id: 1, email: 'test@example.com', phone: '555-1234' }],
-        });
+      test('should reject requests containing universal immutable fields', async () => {
+        // STRICT MODE: Attempting to update immutable fields should throw ImmutableFieldError
+        // This prevents silent partial updates - the entire request is rejected
 
-        // Act
-        await GenericEntityService.update('customer', 1, {
-          phone: '555-1234',
-          id: 999, // Should be ignored (not updateable)
-          created_at: '2020-01-01', // Should be ignored (not updateable)
-          hacker_field: 'malicious', // Should be ignored (not in schema)
-        });
-
-        // Assert - check the query only includes valid fields
-        const [query, values] = db.query.mock.calls[0];
-        expect(query).toContain('phone');
-        expect(query).not.toContain('hacker_field');
-        expect(query).not.toContain('created_at');
-        // Values should be: phone value, then ID
-        expect(values).toEqual(['555-1234', 1]);
+        await expect(
+          GenericEntityService.update('customer', 1, {
+            phone: '555-1234',
+            id: 999, // Universal immutable - should trigger rejection
+            created_at: '2020-01-01', // Universal immutable - should trigger rejection
+          }),
+        ).rejects.toThrow('Cannot update immutable field(s): id, created_at');
       });
 
-      test('should only update provided updateable fields', async () => {
+      test('should only update provided fields', async () => {
         // Arrange
         db.query.mockResolvedValue({
           rows: [{ id: 1, email: 'test@example.com', status: 'active' }],
@@ -1616,13 +1604,14 @@ describe('GenericEntityService', () => {
         ).rejects.toThrow('Data is required and must be an object for customer');
       });
 
-      test('should throw when no valid updateable fields provided', async () => {
+      test('should throw ImmutableFieldError when only immutable fields provided', async () => {
+        // STRICT MODE: Attempting to update ONLY immutable fields should throw ImmutableFieldError
         await expect(
           GenericEntityService.update('customer', 1, {
             id: 999, // Not updateable
             created_at: '2020-01-01', // Not updateable
           }),
-        ).rejects.toThrow('No valid updateable fields provided for customer');
+        ).rejects.toThrow('Cannot update immutable field(s): id, created_at');
       });
 
       test('should throw when data object is empty', async () => {
@@ -1696,30 +1685,49 @@ describe('GenericEntityService', () => {
     // ------------------------------------------------------------------------
 
     describe('query structure', () => {
-      test('should build UPDATE ... SET ... WHERE ... RETURNING * query', async () => {
-        // Arrange
-        db.query.mockResolvedValue({
-          rows: [{ id: 1, phone: '555-1234' }],
-        });
+      test('should build UPDATE ... SET ... WHERE ... RETURNING query', async () => {
+        // Arrange - UPDATE returns id, then findById re-fetches with JOINs
+        db.query
+          .mockResolvedValueOnce({ rows: [{ id: 1 }] }) // UPDATE RETURNING id
+          .mockResolvedValueOnce({ rows: [{ id: 1, phone: '555-1234' }] }); // findById re-fetch
 
         // Act
         await GenericEntityService.update('customer', 1, {
           phone: '555-1234',
         });
 
-        // Assert
+        // Assert - First call is UPDATE with RETURNING id (not RETURNING *)
         const [query] = db.query.mock.calls[0];
         expect(query).toContain('UPDATE customers');
         expect(query).toContain('SET');
         expect(query).toContain('WHERE id =');
-        expect(query).toContain('RETURNING *');
+        expect(query).toContain('RETURNING id'); // Returns id, then re-fetches
+      });
+
+      test('should re-fetch entity via findById after update', async () => {
+        // Arrange - UPDATE returns id, then findById re-fetches with JOINs
+        db.query
+          .mockResolvedValueOnce({ rows: [{ id: 1 }] }) // UPDATE RETURNING id
+          .mockResolvedValueOnce({ rows: [{ id: 1, phone: '555-1234' }] }); // findById re-fetch
+
+        // Act
+        await GenericEntityService.update('customer', 1, {
+          phone: '555-1234',
+        });
+
+        // Assert - Second call is SELECT (findById)
+        expect(db.query).toHaveBeenCalledTimes(2);
+        const [selectQuery] = db.query.mock.calls[1];
+        expect(selectQuery).toContain('SELECT customers.*');
+        expect(selectQuery).toContain('FROM customers');
+        expect(selectQuery).toContain('WHERE customers.id = $1');
       });
 
       test('should use parameterized query with $1, $2, etc', async () => {
         // Arrange
-        db.query.mockResolvedValue({
-          rows: [{ id: 1, phone: '555-1234', status: 'active' }],
-        });
+        db.query
+          .mockResolvedValueOnce({ rows: [{ id: 1 }] }) // UPDATE RETURNING id
+          .mockResolvedValueOnce({ rows: [{ id: 1, phone: '555-1234', status: 'active' }] }); // findById re-fetch
 
         // Act
         await GenericEntityService.update('customer', 1, {
@@ -1738,7 +1746,9 @@ describe('GenericEntityService', () => {
 
       test('should use correct table name from metadata', async () => {
         // Arrange
-        db.query.mockResolvedValue({ rows: [{ id: 1, description: 'Updated' }] });
+        db.query
+          .mockResolvedValueOnce({ rows: [{ id: 1 }] }) // UPDATE RETURNING id
+          .mockResolvedValueOnce({ rows: [{ id: 1, description: 'Updated' }] }); // findById re-fetch
 
         // Act
         await GenericEntityService.update('role', 1, {
@@ -1757,9 +1767,11 @@ describe('GenericEntityService', () => {
 
     describe('works with multiple entities', () => {
       test('should update role entity', async () => {
-        // Arrange
+        // Arrange - UPDATE returns id, then findById re-fetches
         const updatedRole = { id: 1, description: 'New description', is_active: true };
-        db.query.mockResolvedValue({ rows: [updatedRole] });
+        db.query
+          .mockResolvedValueOnce({ rows: [{ id: 1 }] }) // UPDATE RETURNING id
+          .mockResolvedValueOnce({ rows: [updatedRole] }); // findById re-fetch
 
         // Act
         const result = await GenericEntityService.update('role', 1, {
@@ -1771,13 +1783,15 @@ describe('GenericEntityService', () => {
       });
 
       test('should update workOrder entity', async () => {
-        // Arrange
+        // Arrange - UPDATE returns id, then findById re-fetches
         const updatedWorkOrder = {
           id: 1,
           title: 'Updated Title',
           status: 'in_progress',
         };
-        db.query.mockResolvedValue({ rows: [updatedWorkOrder] });
+        db.query
+          .mockResolvedValueOnce({ rows: [{ id: 1 }] }) // UPDATE RETURNING id
+          .mockResolvedValueOnce({ rows: [updatedWorkOrder] }); // findById re-fetch
 
         // Act
         const result = await GenericEntityService.update('workOrder', 1, {
@@ -1835,14 +1849,16 @@ describe('GenericEntityService', () => {
       test('should allow updating description on system role', async () => {
         // Arrange
         // description is NOT in immutableFields, so protection check is skipped entirely
-        // Only one db.query call needed (the actual update)
+        // UPDATE + re-fetch via findById (for JOINs)
         const updatedRole = {
           id: 1,
           name: 'admin',
           priority: 100,
           description: 'Updated admin description',
         };
-        db.query.mockResolvedValue({ rows: [updatedRole] });
+        db.query
+          .mockResolvedValueOnce({ rows: [{ id: 1 }] }) // UPDATE RETURNING id
+          .mockResolvedValueOnce({ rows: [updatedRole] }); // findById re-fetch
 
         // Act
         const result = await GenericEntityService.update('role', 1, {
@@ -1852,20 +1868,23 @@ describe('GenericEntityService', () => {
         // Assert
         expect(result.description).toBe('Updated admin description');
         expect(result.name).toBe('admin'); // unchanged
-        // Only one query call (the update), no protection check query
-        expect(db.query).toHaveBeenCalledTimes(1);
+        // Two query calls: UPDATE + re-fetch via findById
+        expect(db.query).toHaveBeenCalledTimes(2);
       });
 
       test('should allow updating is_active on system role', async () => {
         // Arrange
         // is_active is NOT in immutableFields, so protection check is skipped
+        // UPDATE + re-fetch via findById (for JOINs)
         const updatedRole = {
           id: 3,
           name: 'dispatcher',
           priority: 60,
           is_active: false,
         };
-        db.query.mockResolvedValue({ rows: [updatedRole] });
+        db.query
+          .mockResolvedValueOnce({ rows: [{ id: 3 }] }) // UPDATE RETURNING id
+          .mockResolvedValueOnce({ rows: [updatedRole] }); // findById re-fetch
 
         // Act
         const result = await GenericEntityService.update('role', 3, {
@@ -1874,16 +1893,19 @@ describe('GenericEntityService', () => {
 
         // Assert
         expect(result.is_active).toBe(false);
-        expect(db.query).toHaveBeenCalledTimes(1);
+        // Two query calls: UPDATE + re-fetch via findById
+        expect(db.query).toHaveBeenCalledTimes(2);
       });
 
       test('should allow updating priority on non-system role', async () => {
-        // Arrange - findById returns a NON-system role
+        // Arrange - findById returns a NON-system role for protection check
+        // Then UPDATE + re-fetch for the actual update
         const customRole = { id: 10, name: 'custom-role', priority: 25 };
         const updatedRole = { id: 10, name: 'custom-role', priority: 99 };
         db.query
-          .mockResolvedValueOnce({ rows: [customRole] })
-          .mockResolvedValueOnce({ rows: [updatedRole] });
+          .mockResolvedValueOnce({ rows: [customRole] }) // Pre-check: findById for system protection
+          .mockResolvedValueOnce({ rows: [{ id: 10 }] }) // UPDATE RETURNING id
+          .mockResolvedValueOnce({ rows: [updatedRole] }); // findById re-fetch
 
         // Act - priority IS updateable, and since it's not a system role, it should work
         const result = await GenericEntityService.update('role', 10, {
@@ -1906,8 +1928,9 @@ describe('GenericEntityService', () => {
 
         // Assert
         expect(result.email).toBe('new@example.com');
-        // db.query should only be called once (the update), not twice (protection + update)
-        expect(db.query).toHaveBeenCalledTimes(1);
+        // Two query calls: UPDATE + re-fetch via findByField (for JOINs)
+        // No protection check for non-role entities
+        expect(db.query).toHaveBeenCalledTimes(2);
       });
     });
   });

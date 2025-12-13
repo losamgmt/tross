@@ -1,6 +1,7 @@
 // User Data Service - Handles both config-based and database-based user data
 const { TEST_USERS } = require('../config/test-users');
 const GenericEntityService = require('./generic-entity-service');
+const AuthUserService = require('./auth-user-service');
 
 class UserDataService {
   constructor() {
@@ -63,9 +64,8 @@ class UserDataService {
       // Just return the user from config (don't store anywhere)
       return this.getUserByAuth0Id(auth0Data.sub);
     } else {
-      // Use database - User.findOrCreate still exists for Auth0-specific logic
-      const User = require('../db/models/User');
-      return User.findOrCreate(auth0Data);
+      // Use AuthUserService for Auth0-specific logic (SRP)
+      return AuthUserService.findOrCreateFromAuth0(auth0Data);
     }
   }
 

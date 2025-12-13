@@ -6,13 +6,13 @@
  *
  * Test Coverage: Error handling, validation, edge cases
  * 
- * NOTE: PUT /api/auth/me now uses GenericEntityService.findByField
- * instead of User.findByAuth0Id
+ * NOTE: PUT /api/auth/me now uses GenericEntityService.findByField and
+ * GenericEntityService.update (strangler-fig Phase 4 complete)
  */
 
 const request = require("supertest");
 const authRoutes = require("../../../routes/auth");
-const User = require("../../../db/models/User");
+// User model removed - using GenericEntityService (strangler-fig Phase 4)
 const GenericEntityService = require("../../../services/generic-entity-service");
 const tokenService = require("../../../services/token-service");
 const auditService = require("../../../services/audit-service");
@@ -27,13 +27,16 @@ const {
 } = require("../../helpers/route-test-setup");
 
 // Mock dependencies
-jest.mock("../../../db/models/User");
 jest.mock("../../../db/models/Role");
 jest.mock("../../../services/user-data");
 jest.mock("../../../services/token-service");
 jest.mock("../../../services/audit-service");
 jest.mock("../../../services/generic-entity-service");
-jest.mock("../../../middleware/auth");
+jest.mock("../../../middleware/auth", () => ({
+  authenticateToken: jest.fn((req, res, next) => next()),
+  requirePermission: jest.fn(() => (req, res, next) => next()),
+  requireMinimumRole: jest.fn(() => (req, res, next) => next()),
+}));
 jest.mock("../../../utils/request-helpers");
 jest.mock("jsonwebtoken");
 
@@ -89,6 +92,7 @@ describe("routes/auth.js - Validation & Error Handling", () => {
 
     // Reset GenericEntityService mock
     GenericEntityService.findByField = jest.fn();
+    GenericEntityService.update = jest.fn();
   });
 
   afterEach(() => {
@@ -135,7 +139,7 @@ describe("routes/auth.js - Validation & Error Handling", () => {
       expect(response.status).toBe(404);
       expect(response.body.error).toBeDefined();
       expect(response.body.message).toBeDefined();
-      expect(User.update).not.toHaveBeenCalled();
+      expect(GenericEntityService.update).not.toHaveBeenCalled();
     });
 
     test("should return 400 when no valid fields to update", async () => {
@@ -152,17 +156,17 @@ describe("routes/auth.js - Validation & Error Handling", () => {
       expect(response.status).toBe(400);
       expect(response.body.error).toBeDefined(); // Joi validation error
       expect(response.body.message).toContain("At least one field"); // Joi's message
-      expect(User.update).not.toHaveBeenCalled();
+      expect(GenericEntityService.update).not.toHaveBeenCalled();
     });
 
     test("should handle update errors gracefully", async () => {
-      // Arrange - use GenericEntityService.findByField
+      // Arrange - use GenericEntityService.findByField and update
       GenericEntityService.findByField.mockResolvedValue({
         id: 1,
         auth0_id: "auth0|123",
       });
 
-      User.update.mockRejectedValue(new Error("Database error"));
+      GenericEntityService.update.mockRejectedValue(new Error("Database error"));
 
       // Act
       const response = await request(app)

@@ -8,11 +8,12 @@
  * - SECURE: Parameterized queries prevent SQL injection
  * - COMPOSABLE: Each function returns reusable components
  * - PURE: No side effects, no state
+ * - JOIN-AWARE: All clauses support table prefixes for unambiguous column references
  *
  * USAGE:
- *   const search = QueryBuilderService.buildSearchClause(term, metadata.searchableFields);
- *   const filters = QueryBuilderService.buildFilterClause(params, metadata.filterableFields);
- *   const sort = QueryBuilderService.buildSortClause(sortBy, order, metadata.sortableFields, metadata.defaultSort);
+ *   const search = QueryBuilderService.buildSearchClause(term, metadata.searchableFields, 'users');
+ *   const filters = QueryBuilderService.buildFilterClause(params, metadata.filterableFields, 0, 'users');
+ *   const sort = QueryBuilderService.buildSortClause(sortBy, order, metadata.sortableFields, metadata.defaultSort, 'users');
  *   const where = QueryBuilderService.combineWhereClauses([search.clause, filters.clause]);
  */
 
@@ -27,17 +28,18 @@ class QueryBuilderService {
    *
    * @param {string} searchTerm - User's search input
    * @param {string[]} searchableFields - Fields to search (from metadata)
+   * @param {string} [tablePrefix] - Table name prefix for JOIN queries (optional)
    * @returns {Object} { clause: string, params: array, paramOffset: number }
    *
    * @example
-   *   buildSearchClause('john', ['first_name', 'last_name', 'email'])
+   *   buildSearchClause('john', ['first_name', 'last_name', 'email'], 'users')
    *   // Returns: {
-   *   //   clause: '(first_name ILIKE $1 OR last_name ILIKE $2 OR email ILIKE $3)',
+   *   //   clause: '(users.first_name ILIKE $1 OR users.last_name ILIKE $2 OR users.email ILIKE $3)',
    *   //   params: ['%john%', '%john%', '%john%'],
    *   //   paramOffset: 3
    *   // }
    */
-  static buildSearchClause(searchTerm, searchableFields = []) {
+  static buildSearchClause(searchTerm, searchableFields = [], tablePrefix = null) {
     // No search term or no searchable fields = no search clause
     if (!searchTerm || searchableFields.length === 0) {
       return { clause: null, params: [], paramOffset: 0 };
@@ -49,9 +51,10 @@ class QueryBuilderService {
       return { clause: null, params: [], paramOffset: 0 };
     }
 
-    // Build ILIKE clause for each field
+    // Build ILIKE clause for each field (with optional table prefix)
+    const prefix = tablePrefix ? `${tablePrefix}.` : '';
     const conditions = searchableFields.map((field, index) => {
-      return `${field} ILIKE $${index + 1}`;
+      return `${prefix}${field} ILIKE $${index + 1}`;
     });
 
     // Combine with OR (match ANY field)
@@ -86,17 +89,18 @@ class QueryBuilderService {
    * @param {Object} filters - Key-value filter object from query params
    * @param {string[]} filterableFields - Fields allowed (from metadata)
    * @param {number} paramOffset - Starting parameter index (for combining clauses)
+   * @param {string} [tablePrefix] - Table name prefix for JOIN queries (optional)
    * @returns {Object} { clause: string, params: array, paramOffset: number }
    *
    * @example
-   *   buildFilterClause({ role_id: '2', is_active: 'true' }, ['role_id', 'is_active'])
+   *   buildFilterClause({ role_id: '2', is_active: 'true' }, ['role_id', 'is_active'], 0, 'users')
    *   // Returns: {
-   *   //   clause: 'role_id = $1 AND is_active = $2',
+   *   //   clause: 'users.role_id = $1 AND users.is_active = $2',
    *   //   params: ['2', 'true'],
    *   //   paramOffset: 2
    *   // }
    */
-  static buildFilterClause(filters = {}, filterableFields = [], paramOffset = 0) {
+  static buildFilterClause(filters = {}, filterableFields = [], paramOffset = 0, tablePrefix = null) {
     // No filters or no filterable fields = no filter clause
     if (!filters || Object.keys(filters).length === 0 || filterableFields.length === 0) {
       return { clause: null, params: [], paramOffset };
@@ -105,6 +109,7 @@ class QueryBuilderService {
     const conditions = [];
     const params = [];
     let currentOffset = paramOffset;
+    const prefix = tablePrefix ? `${tablePrefix}.` : '';
 
     // Process each filter
     for (const [field, value] of Object.entries(filters)) {
@@ -138,18 +143,18 @@ class QueryBuilderService {
               : operatorValue.split(',').map(v => v.trim());
 
             const placeholders = values.map((_, i) => `$${currentOffset + i}`).join(', ');
-            conditions.push(`${field} IN (${placeholders})`);
+            conditions.push(`${prefix}${field} IN (${placeholders})`);
             params.push(...values);
             currentOffset += values.length - 1; // Adjust for multiple params
           } else {
-            conditions.push(`${field} ${sqlOperator} $${currentOffset}`);
+            conditions.push(`${prefix}${field} ${sqlOperator} $${currentOffset}`);
             params.push(operatorValue);
           }
         }
       } else {
         // Simple exact match
         currentOffset++;
-        conditions.push(`${field} = $${currentOffset}`);
+        conditions.push(`${prefix}${field} = $${currentOffset}`);
         params.push(value);
       }
     }
@@ -180,13 +185,14 @@ class QueryBuilderService {
    * @param {string} sortOrder - 'ASC' or 'DESC'
    * @param {string[]} sortableFields - Fields allowed (from metadata)
    * @param {Object} defaultSort - Fallback sort (from metadata)
+   * @param {string} [tablePrefix] - Table name prefix for JOIN queries (optional)
    * @returns {string} ORDER BY clause
    *
    * @example
-   *   buildSortClause('created_at', 'desc', ['id', 'created_at'], { field: 'id', order: 'ASC' })
-   *   // Returns: 'created_at DESC'
+   *   buildSortClause('created_at', 'desc', ['id', 'created_at'], { field: 'id', order: 'ASC' }, 'users')
+   *   // Returns: 'users.created_at DESC'
    */
-  static buildSortClause(sortBy, sortOrder, sortableFields = [], defaultSort = {}) {
+  static buildSortClause(sortBy, sortOrder, sortableFields = [], defaultSort = {}, tablePrefix = null) {
     // Determine if we're using the requested field or falling back to default
     const isValidField = sortableFields.includes(sortBy);
     const field = isValidField
@@ -206,7 +212,8 @@ class QueryBuilderService {
         : (defaultSort.order || 'ASC').toUpperCase();
     }
 
-    return `${field} ${order}`;
+    const prefix = tablePrefix ? `${tablePrefix}.` : '';
+    return `${prefix}${field} ${order}`;
   }
 
   // ==========================================================================

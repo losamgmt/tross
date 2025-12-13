@@ -89,29 +89,28 @@ describe('Customer Model - Validation', () => {
 - Authentication flow
 - Error handling
 
-**Example:** API endpoint
+**Architecture:** Factory-driven testing with metadata-driven scenarios.
+
+**Example:** Factory test pattern
 ```javascript
-// __tests__/integration/customers-api.test.js
-describe('GET /api/customers', () => {
-  it('should return paginated customers', async () => {
-    const response = await request(app)
-      .get('/api/customers?page=1&limit=10')
-      .set('Authorization', `Bearer ${adminToken}`);
+// __tests__/integration/customer-factory.test.js
+// Metadata-driven - automatically tests CRUD, validation, RLS, pagination, search
+const { runStandardCrudTests } = require('../factory/test-factory');
+const customerMetadata = require('../../config/customer.metadata');
 
-    expect(response.status).toBe(200);
-    expect(response.body).toHaveProperty('data');
-    expect(response.body.data).toBeInstanceOf(Array);
-    expect(response.body).toHaveProperty('pagination');
-  });
-
-  it('should require authentication', async () => {
-    const response = await request(app)
-      .get('/api/customers');
-
-    expect(response.status).toBe(401);
+describe('Customer API Factory Tests', () => {
+  runStandardCrudTests({
+    entity: 'customers',
+    metadata: customerMetadata,
+    // Factory auto-generates tests for all CRUD operations, validation, permissions
   });
 });
 ```
+
+**Specialized Tests:** Non-standard behavior tested in `specialized/` folder:
+- `user-role-assignment.test.js` - Cross-entity workflows
+- `entity-guards.test.js` - Protected entity deletion
+- `audit-logging.test.js` - Audit trail compliance
 
 **Best Practices:**
 - Use test database (not dev/prod!)
@@ -149,6 +148,25 @@ beforeEach(async () => {
 
 ## Frontend Testing
 
+### Running Frontend Tests
+
+```bash
+# From project root (recommended)
+npm run test:frontend              # Smart test runner with retries
+npm run test:frontend:failures     # Show only failures (clean output)
+npm run test:frontend:coverage     # Run with coverage percentage
+
+# Or directly with Flutter
+flutter test --reporter=compact
+
+# Run specific test suites
+flutter test test/widgets/
+flutter test test/providers/
+flutter test test/services/
+```
+
+**Current Status:** 1,427 tests passing, 60% line coverage
+
 ### Widget Tests (`test/widgets/`)
 
 **What to test:**
@@ -157,33 +175,31 @@ beforeEach(async () => {
 - State changes
 - Error states
 
-**Example:** Button widget
+**Example:** Button widget (using test helpers)
 ```dart
 // test/widgets/atoms/custom_button_test.dart
+import 'package:flutter_test/flutter_test.dart';
+import '../../helpers/helpers.dart';  // Barrel file
+
 void main() {
   testWidgets('CustomButton renders with text', (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: CustomButton(
-          text: 'Click Me',
-          onPressed: () {},
-        ),
+    await tester.pumpTestWidget(
+      CustomButton(
+        text: 'Click Me',
+        onPressed: () {},
       ),
     );
 
-    expect(find.text('Click Me'), findsOneWidget);
-    expect(find.byType(ElevatedButton), findsOneWidget);
+    expect(find.text('Click Me'), findsWidgets);
   });
 
   testWidgets('CustomButton calls onPressed when tapped', (tester) async {
     bool pressed = false;
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: CustomButton(
-          text: 'Click Me',
-          onPressed: () => pressed = true,
-        ),
+    await tester.pumpTestWidget(
+      CustomButton(
+        text: 'Click Me',
+        onPressed: () => pressed = true,
       ),
     );
 
@@ -223,20 +239,21 @@ void main() {
 
 ## E2E Testing (Playwright)
 
-**What to test:**
-- Critical user journeys (auth, CRUD workflows)
-- Business workflows (customer → work order → invoice)
-- Error handling and edge cases
-- Cross-browser compatibility (Chromium, Firefox, WebKit, Mobile Chrome)
+**Philosophy:**
+- E2E tests prove the **stack connects** - not logic or contracts
+- Unit tests verify logic (comprehensive)
+- Integration tests verify API contracts (factory-driven)
+- E2E smoke tests verify full-stack connectivity (minimal)
 
-**Architecture:** 188 tests across 4 browsers (47 scenarios × 4 = 188)
+**What to test in E2E:**
+- Health check and database connectivity
+- Authentication flow (tokens work end-to-end)
+- Cross-entity business workflows (customer → work order → invoice)
+- Role-based permission enforcement
 
 **Test Files:**
-- `e2e/api.spec.ts` - Complete business workflows
-- `e2e/auth.spec.ts` - Authentication flows
-- `e2e/error-handling.spec.ts` - Validation and error cases
-- `e2e/user-management.spec.ts` - User CRUD operations
-- `e2e/role-management.spec.ts` - Role CRUD operations
+- `e2e/smoke.spec.ts` - Health checks + business workflow
+- `e2e/roles-permissions.spec.ts` - Role CRUD + permission enforcement
 
 ---
 
@@ -293,20 +310,20 @@ test('Create customer', async ({ request }) => {
 
 ### E2E Scope
 
-**Focus:** Business workflows and user journeys  
-**Not tested in E2E:** Backend security internals (RLS, permissions)
+**Focus:** Stack connectivity and business workflows  
+**Not duplicated in E2E:** Validation, error handling, CRUD edge cases
 
-> **Why?** Row-level security (RLS) is thoroughly tested in backend integration tests. E2E uses development tokens (no database user IDs) for convenience. See `backend/__tests__/integration/*-api.test.js` for RLS coverage.
+> **Why?** All validation, permissions, and CRUD behavior is comprehensively tested in the integration test factory (`__tests__/factory/`). E2E smoke tests prove the full stack connects without duplicating that coverage.
 
 ---
 
 ### Run E2E Tests
 
 ```bash
-npx playwright test                # Full suite (188 tests)
-npx playwright test --ui           # Interactive mode
-npx playwright test auth.spec.ts   # Single file
-npx playwright test --project=chromium  # Single browser
+npx playwright test                     # Full smoke suite
+npx playwright test --ui                # Interactive mode
+npx playwright test smoke.spec.ts       # Core business workflow
+npx playwright test roles-permissions   # Permission enforcement
 ```
 
 ---
@@ -368,8 +385,13 @@ __tests__/
     services/
       auth-service.test.js
   integration/
-    customers-api.test.js         # Full API tests
-    auth-flow.test.js
+    *-factory.test.js             # Factory-driven API tests (8 entities)
+    specialized/
+      user-role-assignment.test.js # Cross-entity behavior
+      entity-guards.test.js        # Core entities protection
+      audit-logging.test.js        # Audit compliance
+  factory/
+    scenarios/                     # Reusable test scenarios
 ```
 
 ### Test Structure

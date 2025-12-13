@@ -14,14 +14,18 @@ const {
   validatePagination,
   validateQuery,
 } = require('../validators');
-const Customer = require('../db/models/Customer');
-const auditService = require('../services/audit-service');
-const { AuditActions, ResourceTypes, AuditResults } = require('../services/audit-constants');
-const { getClientIp, getUserAgent } = require('../utils/request-helpers');
+// Customer model removed - using GenericEntityService (strangler-fig Phase 4)
+const { buildRlsContext, buildAuditContext } = require('../utils/request-context');
 const { logger } = require('../config/logger');
 const customerMetadata = require('../config/models/customer-metadata');
+const GenericEntityService = require('../services/generic-entity-service');
+const { filterDataByRole } = require('../utils/response-transform');
+const { handleDbError, buildDbErrorConfig } = require('../utils/db-error-handler');
 
 const router = express.Router();
+
+// Build DB error config from metadata (single source of truth)
+const DB_ERROR_CONFIG = buildDbErrorConfig(customerMetadata);
 
 /**
  * @openapi
@@ -98,19 +102,21 @@ router.get(
     try {
       const { page, limit } = req.validated.pagination;
       const { search, filters, sortBy, sortOrder } = req.validated.query;
+      const rlsContext = buildRlsContext(req);
 
-      const result = await Customer.findAll({
+      const result = await GenericEntityService.findAll('customer', {
         page,
         limit,
         search,
         filters,
         sortBy,
         sortOrder,
-        req, // Pass request for RLS filtering
-      });
+      }, rlsContext);
+
+      const sanitizedData = filterDataByRole(result.data, customerMetadata, req.dbUser.role, 'read');
 
       return ResponseFormatter.list(res, {
-        data: result.data,
+        data: sanitizedData,
         pagination: result.pagination,
         appliedFilters: result.appliedFilters,
         rlsApplied: result.rlsApplied,
@@ -156,17 +162,18 @@ router.get(
   async (req, res) => {
     try {
       const customerId = req.validated.id;
-      const customer = await Customer.findById(customerId, req);
+      const rlsContext = buildRlsContext(req);
+
+      const customer = await GenericEntityService.findById('customer', customerId, rlsContext);
 
       if (!customer) {
         return ResponseFormatter.notFound(res, 'Customer not found');
       }
 
-      res.json({
-        success: true,
-        data: customer,
-        timestamp: new Date().toISOString(),
-      });
+      // Apply metadata-driven field-level filtering
+      const sanitizedData = filterDataByRole(customer, customerMetadata, req.dbUser.role, 'read');
+
+      return ResponseFormatter.get(res, sanitizedData);
     } catch (error) {
       logger.error('Error retrieving customer', {
         error: error.message,
@@ -223,36 +230,24 @@ router.post(
   async (req, res) => {
     try {
       const { email, phone, company_name } = req.body;
-      const ipAddress = getClientIp(req);
-      const userAgent = getUserAgent(req);
+      const auditContext = buildAuditContext(req);
 
-      const newCustomer = await Customer.create({
+      const newCustomer = await GenericEntityService.create('customer', {
         email,
         phone,
         company_name,
-      });
+      }, { auditContext });
 
-      await auditService.log({
-        userId: req.user.userId,
-        action: AuditActions.CUSTOMER_CREATE,
-        resourceType: ResourceTypes.CUSTOMER,
-        resourceId: newCustomer.id,
-        newValues: { email, phone, company_name },
-        ipAddress,
-        userAgent,
-        result: AuditResults.SUCCESS,
-      });
+      if (!newCustomer) {
+        throw new Error('Customer creation failed unexpectedly');
+      }
 
       return ResponseFormatter.created(res, newCustomer, 'Customer created successfully');
     } catch (error) {
-      logger.error('Error creating customer', { error: error.message });
+      logger.error('Error creating customer', { error: error.message, code: error.code });
 
-      if (error.code === '23505') {
-        return ResponseFormatter.conflict(res, 'Email already exists');
-      }
-
-      if (error.code === '23514') {
-        return ResponseFormatter.badRequest(res, 'Invalid field value - check status and other enum fields');
+      if (handleDbError(error, res, DB_ERROR_CONFIG)) {
+        return;
       }
 
       return ResponseFormatter.internalError(res, error);
@@ -320,45 +315,30 @@ router.patch(
   async (req, res) => {
     try {
       const customerId = req.validated.id;
-      const ipAddress = getClientIp(req);
-      const userAgent = getUserAgent(req);
+      const rlsContext = buildRlsContext(req);
+      const auditContext = buildAuditContext(req);
 
-      // Check if customer exists (with RLS filtering)
-      const customer = await Customer.findById(customerId, req);
-      if (!customer) {
+      const oldCustomer = await GenericEntityService.findById('customer', customerId, rlsContext);
+      if (!oldCustomer) {
         return ResponseFormatter.notFound(res, 'Customer not found');
       }
 
-      // RLS enforced: customer can update own record, technician+ can update any
+      const updatedCustomer = await GenericEntityService.update('customer', customerId, req.body, { auditContext });
 
-      await Customer.update(customerId, req.body);
-      const updatedCustomer = await Customer.findById(customerId);
-
-      await auditService.log({
-        userId: req.user.userId,
-        action: AuditActions.CUSTOMER_UPDATE,
-        resourceType: ResourceTypes.CUSTOMER,
-        resourceId: customerId,
-        oldValues: customer,
-        newValues: updatedCustomer,
-        ipAddress,
-        userAgent,
-        result: AuditResults.SUCCESS,
-      });
+      if (!updatedCustomer) {
+        return ResponseFormatter.notFound(res, 'Customer not found');
+      }
 
       return ResponseFormatter.updated(res, updatedCustomer, 'Customer updated successfully');
     } catch (error) {
       logger.error('Error updating customer', {
         error: error.message,
+        code: error.code,
         customerId: req.params.id,
       });
 
-      if (error.code === '23505') {
-        return ResponseFormatter.conflict(res, 'Email already exists');
-      }
-
-      if (error.code === '23514') {
-        return ResponseFormatter.badRequest(res, 'Invalid field value - check status and other enum fields');
+      if (handleDbError(error, res, DB_ERROR_CONFIG)) {
+        return;
       }
 
       return ResponseFormatter.internalError(res, error);
@@ -401,26 +381,13 @@ router.delete(
   async (req, res) => {
     try {
       const customerId = req.validated.id;
-      const ipAddress = getClientIp(req);
-      const userAgent = getUserAgent(req);
+      const auditContext = buildAuditContext(req);
 
-      const customer = await Customer.findById(customerId);
-      if (!customer) {
+      const deleted = await GenericEntityService.delete('customer', customerId, { auditContext });
+
+      if (!deleted) {
         return ResponseFormatter.notFound(res, 'Customer not found');
       }
-
-      await Customer.delete(customerId);
-
-      await auditService.log({
-        userId: req.user.userId,
-        action: AuditActions.CUSTOMER_DELETE,
-        resourceType: ResourceTypes.CUSTOMER,
-        resourceId: customerId,
-        oldValues: customer,
-        ipAddress,
-        userAgent,
-        result: AuditResults.SUCCESS,
-      });
 
       return ResponseFormatter.deleted(res, 'Customer deleted successfully');
     } catch (error) {
@@ -429,9 +396,9 @@ router.delete(
         customerId: req.params.id,
       });
 
-      // Handle race condition: customer may have been deleted by another request
-      if (error.message === 'Customer not found') {
-        return ResponseFormatter.notFound(res, 'Customer not found');
+      // Handle deletion blocked by dependents (work_orders, invoices, etc.)
+      if (error.message.includes('Cannot delete') || error.message.startsWith('Cannot delete customer:')) {
+        return ResponseFormatter.badRequest(res, error.message);
       }
 
       return ResponseFormatter.internalError(res, error);

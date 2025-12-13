@@ -5,13 +5,15 @@
  * Uses centralized setup from route-test-setup.js (DRY architecture).
  *
  * Test Coverage: GET, POST, PATCH, DELETE /api/work_orders and /api/work_orders/:id
+ * 
+ * NOTE: Now uses GenericEntityService instead of WorkOrder model (Phase 4 strangler-fig)
  */
 
 // ============================================================================
 // MOCK CONFIGURATION (Hoisted by Jest)
 // ============================================================================
 
-jest.mock('../../../db/models/WorkOrder');
+jest.mock('../../../services/generic-entity-service');
 jest.mock('../../../services/audit-service');
 jest.mock('../../../utils/request-helpers');
 jest.mock('../../../middleware/auth', () => ({
@@ -53,7 +55,7 @@ jest.mock('../../../validators', () => ({
 }));
 
 const request = require('supertest');
-const WorkOrder = require('../../../db/models/WorkOrder');
+const GenericEntityService = require('../../../services/generic-entity-service');
 const auditService = require('../../../services/audit-service');
 const { getClientIp, getUserAgent } = require('../../../utils/request-helpers');
 const { authenticateToken, requirePermission } = require('../../../middleware/auth');
@@ -82,6 +84,13 @@ describe('routes/work_orders.js - CRUD Operations', () => {
       enforceRLS,
     });
     auditService.log.mockResolvedValue(true);
+    
+    // Reset GenericEntityService mocks
+    GenericEntityService.findAll = jest.fn();
+    GenericEntityService.findById = jest.fn();
+    GenericEntityService.create = jest.fn();
+    GenericEntityService.update = jest.fn();
+    GenericEntityService.delete = jest.fn();
   });
 
   afterEach(() => {
@@ -95,7 +104,7 @@ describe('routes/work_orders.js - CRUD Operations', () => {
         { id: 2, title: 'Install Heater', status: 'in_progress', customer_id: 11 },
       ];
 
-      WorkOrder.findAll.mockResolvedValue({
+      GenericEntityService.findAll.mockResolvedValue({
         data: mockWorkOrders,
         pagination: { page: 1, limit: 50, totalRecords: 2, totalPages: 1 },
         appliedFilters: {},
@@ -108,11 +117,11 @@ describe('routes/work_orders.js - CRUD Operations', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.data).toEqual(mockWorkOrders);
       expect(response.body.count).toBe(2);
-      expect(WorkOrder.findAll).toHaveBeenCalled();
+      expect(GenericEntityService.findAll).toHaveBeenCalledWith('workOrder', expect.any(Object), expect.any(Object));
     });
 
     test('should handle database errors', async () => {
-      WorkOrder.findAll.mockRejectedValue(new Error('Database connection failed'));
+      GenericEntityService.findAll.mockRejectedValue(new Error('Database connection failed'));
 
       const response = await request(app).get('/api/work_orders');
 
@@ -123,18 +132,18 @@ describe('routes/work_orders.js - CRUD Operations', () => {
   describe('GET /api/work_orders/:id', () => {
     test('should return work order by ID', async () => {
       const mockWorkOrder = { id: 1, title: 'Repair AC', status: 'pending', customer_id: 10 };
-      WorkOrder.findById.mockResolvedValue(mockWorkOrder);
+      GenericEntityService.findById.mockResolvedValue(mockWorkOrder);
 
       const response = await request(app).get('/api/work_orders/1');
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
       expect(response.body.data).toBeDefined();
-      expect(WorkOrder.findById).toHaveBeenCalledWith(1, expect.any(Object));
+      expect(GenericEntityService.findById).toHaveBeenCalledWith('workOrder', 1, expect.any(Object));
     });
 
     test('should return 404 for non-existent work order', async () => {
-      WorkOrder.findById.mockResolvedValue(null);
+      GenericEntityService.findById.mockResolvedValue(null);
 
       const response = await request(app).get('/api/work_orders/999');
 
@@ -142,7 +151,7 @@ describe('routes/work_orders.js - CRUD Operations', () => {
     });
 
     test('should handle database errors', async () => {
-      WorkOrder.findById.mockRejectedValue(new Error('Database error'));
+      GenericEntityService.findById.mockRejectedValue(new Error('Database error'));
 
       const response = await request(app).get('/api/work_orders/1');
 
@@ -155,19 +164,18 @@ describe('routes/work_orders.js - CRUD Operations', () => {
       const newWorkOrderData = { title: 'Fix Plumbing', customer_id: 10, priority: 'high' };
       const createdWorkOrder = { id: 3, ...newWorkOrderData, status: 'pending', created_at: new Date().toISOString() };
 
-      WorkOrder.create.mockResolvedValue(createdWorkOrder);
-      auditService.log.mockResolvedValue(true);
+      GenericEntityService.create.mockResolvedValue(createdWorkOrder);
 
       const response = await request(app).post('/api/work_orders').send(newWorkOrderData);
 
       expect(response.status).toBe(HTTP_STATUS.CREATED);
       expect(response.body.success).toBe(true);
       expect(response.body.data).toBeDefined();
-      expect(WorkOrder.create).toHaveBeenCalled();
+      expect(GenericEntityService.create).toHaveBeenCalledWith('workOrder', newWorkOrderData, expect.any(Object));
     });
 
     test('should handle database errors', async () => {
-      WorkOrder.create.mockRejectedValue(new Error('Creation failed'));
+      GenericEntityService.create.mockRejectedValue(new Error('Creation failed'));
 
       const response = await request(app)
         .post('/api/work_orders')
@@ -184,10 +192,8 @@ describe('routes/work_orders.js - CRUD Operations', () => {
       const existingWorkOrder = { id: 1, title: 'Repair AC', status: 'in_progress', customer_id: 10 };
       const updatedWorkOrder = { ...existingWorkOrder, status: 'completed' };
 
-      WorkOrder.findById.mockResolvedValueOnce(existingWorkOrder);
-      WorkOrder.update.mockResolvedValue(updatedWorkOrder);
-      WorkOrder.findById.mockResolvedValueOnce(updatedWorkOrder);
-      auditService.log.mockResolvedValue(true);
+      GenericEntityService.findById.mockResolvedValue(existingWorkOrder);
+      GenericEntityService.update.mockResolvedValue(updatedWorkOrder);
 
       const response = await request(app).patch('/api/work_orders/1').send(updateData);
 
@@ -197,7 +203,7 @@ describe('routes/work_orders.js - CRUD Operations', () => {
     });
 
     test('should return 404 for non-existent work order', async () => {
-      WorkOrder.findById.mockResolvedValue(null);
+      GenericEntityService.findById.mockResolvedValue(null);
 
       const response = await request(app).patch('/api/work_orders/999').send({ status: 'completed' });
 
@@ -212,14 +218,9 @@ describe('routes/work_orders.js - CRUD Operations', () => {
         title: 'Repair AC',
         is_active: true,
       };
-      const deletedWorkOrder = {
-        ...existingWorkOrder,
-        is_active: false,
-      };
 
-      WorkOrder.findById.mockResolvedValue(existingWorkOrder);
-      WorkOrder.delete.mockResolvedValue(deletedWorkOrder);
-      auditService.log.mockResolvedValue(true);
+      GenericEntityService.findById.mockResolvedValue(existingWorkOrder);
+      GenericEntityService.delete.mockResolvedValue(true);
 
       const response = await request(app).delete('/api/work_orders/1');
 
@@ -228,7 +229,7 @@ describe('routes/work_orders.js - CRUD Operations', () => {
     });
 
     test('should return 404 for non-existent work order', async () => {
-      WorkOrder.findById.mockResolvedValue(null);
+      GenericEntityService.findById.mockResolvedValue(null);
 
       const response = await request(app).delete('/api/work_orders/999');
 
@@ -237,8 +238,8 @@ describe('routes/work_orders.js - CRUD Operations', () => {
 
     test('should handle database errors', async () => {
       // Arrange
-      WorkOrder.findById.mockResolvedValue({ id: 1, title: 'Repair AC' });
-      WorkOrder.delete.mockRejectedValue(new Error('Database error'));
+      GenericEntityService.findById.mockResolvedValue({ id: 1, title: 'Repair AC' });
+      GenericEntityService.delete.mockRejectedValue(new Error('Database error'));
 
       // Act
       const response = await request(app).delete('/api/work_orders/1');

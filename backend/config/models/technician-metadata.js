@@ -8,6 +8,11 @@
  * SINGLE SOURCE OF TRUTH for Technician model query and CRUD capabilities
  */
 
+const {
+  FIELD_ACCESS_LEVELS: FAL,
+  UNIVERSAL_FIELD_ACCESS,
+} = require('../constants');
+
 module.exports = {
   // Table name in database
   tableName: 'technicians',
@@ -26,6 +31,12 @@ module.exports = {
   identityField: 'license_number',
 
   /**
+   * Whether the identity field has a UNIQUE constraint in the database
+   * Used for duplicate rejection tests
+   */
+  identityFieldUnique: true,
+
+  /**
    * RLS resource name for permission checks
    * Maps to permissions.json resource names
    */
@@ -41,16 +52,76 @@ module.exports = {
   requiredFields: ['license_number'],
 
   /**
-   * Fields that can be set during CREATE
-   * Excludes: id, created_at, updated_at (system-managed)
+   * Fields that cannot be modified after creation (beyond universal immutables: id, created_at)
+   * Empty array = all fields are updateable
    */
-  createableFields: ['license_number', 'certifications', 'skills', 'hourly_rate', 'status'],
+  immutableFields: [],
+
+  // ============================================================================
+  // FIELD ACCESS CONTROL (role-based field-level CRUD permissions)
+  // ============================================================================
+  // Each field specifies the MINIMUM role required for each CRUD operation.
+  // Permissions accumulate UPWARD: manager has all dispatcher + technician + customer permissions.
+  // Universal fields (id, is_active, created_at, updated_at, status) are in UNIVERSAL_FIELD_ACCESS.
+  // Use FAL shortcuts for common patterns, or define custom { create, read, update, delete }.
+
+  fieldAccess: {
+    // Entity Contract v2.0 fields (id, is_active, created_at, updated_at, status)
+    ...UNIVERSAL_FIELD_ACCESS,
+
+    // License number - internal identifier, manager+ can manage
+    license_number: {
+      create: 'manager',
+      read: 'technician', // Technicians can see own and peers' license numbers
+      update: 'manager',
+      delete: 'none',
+    },
+
+    // Hourly rate - sensitive financial data, manager+ only
+    hourly_rate: FAL.MANAGER_MANAGED,
+
+    // Certifications - publicly visible, self-editable by technician
+    certifications: FAL.SELF_EDITABLE,
+
+    // Skills - publicly visible, self-editable by technician
+    skills: FAL.SELF_EDITABLE,
+
+    // Performance notes - manager internal notes, not visible to technician
+    performance_notes: FAL.MANAGER_MANAGED,
+  },
+
+  // ============================================================================
+  // RELATIONSHIPS (for JOIN queries)
+  // ============================================================================
 
   /**
-   * Fields that can be modified during UPDATE
-   * Excludes: id, created_at
+   * Relationships to JOIN by default in all queries (findById, findAll, findByField)
+   * These are included automatically without needing to specify 'include' option
    */
-  updateableFields: ['license_number', 'certifications', 'skills', 'hourly_rate', 'status', 'is_active'],
+  defaultIncludes: [],
+
+  /**
+   * Foreign key relationships
+   * Used for JOIN generation and validation
+   */
+  relationships: {
+    // Technicians have many assigned work orders
+    assignedWorkOrders: {
+      type: 'hasMany',
+      foreignKey: 'assigned_technician_id',
+      table: 'work_orders',
+      fields: ['id', 'title', 'status', 'priority', 'scheduled_start', 'customer_id'],
+      description: 'Work orders assigned to this technician',
+    },
+    // Optional: User account linked to this technician profile
+    userAccount: {
+      type: 'hasOne',
+      foreignKey: 'technician_profile_id',
+      table: 'users',
+      fields: ['id', 'email', 'first_name', 'last_name'],
+      description: 'User account linked to this technician profile (if any)',
+    },
+  },
 
   // ============================================================================
   // DELETE CONFIGURATION (for GenericEntityService.delete)

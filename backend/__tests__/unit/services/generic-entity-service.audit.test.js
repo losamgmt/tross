@@ -169,10 +169,11 @@ describe('GenericEntityService - Audit Logging', () => {
     };
 
     test('should call logEntityAudit with old and new values', async () => {
-      // Arrange - first query fetches old values, second updates
+      // Arrange - first query fetches old values, second updates, third re-fetches with JOINs
       db.query
         .mockResolvedValueOnce({ rows: [mockOldRecord], rowCount: 1 }) // findById for old values
-        .mockResolvedValueOnce({ rows: [mockUpdatedRecord], rowCount: 1 }); // actual update
+        .mockResolvedValueOnce({ rows: [{ id: 1 }], rowCount: 1 }) // actual update (returns id)
+        .mockResolvedValueOnce({ rows: [mockUpdatedRecord], rowCount: 1 }); // re-fetch via findByField
 
       // Act
       await GenericEntityService.update(
@@ -194,8 +195,10 @@ describe('GenericEntityService - Audit Logging', () => {
     });
 
     test('should NOT call logEntityAudit without auditContext', async () => {
-      // Arrange
-      db.query.mockResolvedValue({ rows: [mockUpdatedRecord], rowCount: 1 });
+      // Arrange - update + re-fetch
+      db.query
+        .mockResolvedValueOnce({ rows: [{ id: 1 }], rowCount: 1 }) // update
+        .mockResolvedValueOnce({ rows: [mockUpdatedRecord], rowCount: 1 }); // re-fetch
 
       // Act
       await GenericEntityService.update('customer', 1, { company_name: 'New Co' });
@@ -205,21 +208,23 @@ describe('GenericEntityService - Audit Logging', () => {
     });
 
     test('should NOT fetch old values without auditContext', async () => {
-      // Arrange
-      db.query.mockResolvedValue({ rows: [mockUpdatedRecord], rowCount: 1 });
+      // Arrange - update + re-fetch
+      db.query
+        .mockResolvedValueOnce({ rows: [{ id: 1 }], rowCount: 1 }) // update
+        .mockResolvedValueOnce({ rows: [mockUpdatedRecord], rowCount: 1 }); // re-fetch
 
       // Act
       await GenericEntityService.update('customer', 1, { company_name: 'New Co' });
 
-      // Assert - only 1 query (the update), not 2 (findById + update)
-      expect(db.query).toHaveBeenCalledTimes(1);
+      // Assert - 2 queries: update + re-fetch (no findById for old values)
+      expect(db.query).toHaveBeenCalledTimes(2);
     });
 
     test('should return null for non-existent entity (no audit)', async () => {
-      // Arrange - first query fetches old values, update returns nothing
+      // Arrange - findById for old values, update returns nothing (no re-fetch)
       db.query
         .mockResolvedValueOnce({ rows: [mockOldRecord], rowCount: 1 }) // findById for old values
-        .mockResolvedValueOnce({ rows: [], rowCount: 0 }); // no rows updated
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 }); // no rows updated (id not found)
 
       // Act
       const result = await GenericEntityService.update(

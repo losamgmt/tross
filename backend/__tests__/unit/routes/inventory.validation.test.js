@@ -2,14 +2,11 @@
  * Unit Tests: inventory routes - Validation & Error Handling
  *
  * Tests validation logic, constraint violations, and error scenarios.
- * Uses centralized setup from route-test-setup.js (DRY architecture).
- *
- * Test Coverage: Input validation, conflict handling, constraint errors
+ * Uses GenericEntityService (strangler-fig migration pattern).
  */
 
 const request = require('supertest');
-const Inventory = require('../../../db/models/Inventory');
-const auditService = require('../../../services/audit-service');
+const GenericEntityService = require('../../../services/generic-entity-service');
 const { authenticateToken, requirePermission } = require('../../../middleware/auth');
 const { enforceRLS } = require('../../../middleware/row-level-security');
 const { getClientIp, getUserAgent } = require('../../../utils/request-helpers');
@@ -21,11 +18,10 @@ const {
 } = require('../../helpers/route-test-setup');
 
 // ============================================================================
-// MOCK CONFIGURATION (Hoisted by Jest)
+// MOCK CONFIGURATION
 // ============================================================================
 
-jest.mock('../../../db/models/Inventory');
-jest.mock('../../../services/audit-service');
+jest.mock('../../../services/generic-entity-service');
 jest.mock('../../../utils/request-helpers');
 
 jest.mock('../../../config/models/inventory-metadata', () => ({
@@ -79,7 +75,7 @@ jest.mock('../../../validators', () => ({
 }));
 
 // ============================================================================
-// TEST APP SETUP (After mocks are hoisted)
+// TEST APP SETUP
 // ============================================================================
 
 const inventoryRouter = require('../../../routes/inventory');
@@ -99,7 +95,7 @@ describe('routes/inventory.js - Validation & Error Handling', () => {
       requirePermission,
       enforceRLS,
     });
-    auditService.log.mockResolvedValue(true);
+    jest.clearAllMocks();
   });
 
   afterEach(() => {
@@ -142,7 +138,7 @@ describe('routes/inventory.js - Validation & Error Handling', () => {
       const response = await request(app).post('/api/inventory').send({});
       expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
       expect(response.body.success).toBe(false);
-      expect(Inventory.create).not.toHaveBeenCalled();
+      expect(GenericEntityService.create).not.toHaveBeenCalled();
     });
 
     test('should return 400 when quantity is negative', async () => {
@@ -158,7 +154,7 @@ describe('routes/inventory.js - Validation & Error Handling', () => {
       validateInventoryCreate.mockImplementation((req, res, next) => next());
       const duplicateError = new Error('duplicate key value violates unique constraint');
       duplicateError.code = '23505';
-      Inventory.create.mockRejectedValue(duplicateError);
+      GenericEntityService.create.mockRejectedValue(duplicateError);
 
       const response = await request(app).post('/api/inventory').send({ name: 'Widget', sku: 'SKU-001' });
       expect(response.status).toBe(HTTP_STATUS.CONFLICT);
@@ -176,7 +172,7 @@ describe('routes/inventory.js - Validation & Error Handling', () => {
 
       const response = await request(app).patch('/api/inventory/1').send({ quantity: 'lots' });
       expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
-      expect(Inventory.update).not.toHaveBeenCalled();
+      expect(GenericEntityService.update).not.toHaveBeenCalled();
     });
 
     test('should return 400 when unit_price is negative', async () => {
@@ -200,7 +196,7 @@ describe('routes/inventory.js - Validation & Error Handling', () => {
 
       const response = await request(app).delete('/api/inventory/invalid');
       expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
-      expect(Inventory.delete).not.toHaveBeenCalled();
+      expect(GenericEntityService.delete).not.toHaveBeenCalled();
     });
   });
 });

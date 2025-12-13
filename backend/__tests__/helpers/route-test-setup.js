@@ -7,8 +7,13 @@
  * ARCHITECTURE:
  * - Data-driven validator mocking (no hardcoded validator names)
  * - Generic middleware patterns (auth, permissions, validation)
+ * - GenericEntityService mocking (Phase 4: strangler-fig migration)
  * - SRP: One function per responsibility
  * - DRY: Zero duplication across route tests
+ * 
+ * PHASE 4 UPDATE:
+ * Routes now use GenericEntityService instead of individual models (Role, User, etc.)
+ * This file provides centralized mocking for GenericEntityService CRUD operations.
  */
 
 const express = require("express");
@@ -160,6 +165,115 @@ function createValidatorMockConfig() {
   return mockConfig;
 }
 
+// ============================================================================
+// GENERIC ENTITY SERVICE MOCK (Phase 4: Strangler-Fig Migration)
+// ============================================================================
+
+/**
+ * Create a mock configuration for GenericEntityService
+ * 
+ * Used in jest.mock() calls to replace the real service with controllable mocks.
+ * All CRUD methods are mocked with sensible defaults that can be overridden per-test.
+ * 
+ * USAGE in test file:
+ *   jest.mock('../../../services/generic-entity-service', () => 
+ *     require('../../helpers/route-test-setup').createGenericEntityServiceMock()
+ *   );
+ * 
+ * Then in tests:
+ *   const GenericEntityService = require('../../../services/generic-entity-service');
+ *   GenericEntityService.findById.mockResolvedValue({ id: 1, name: 'admin' });
+ * 
+ * @returns {Object} Mock GenericEntityService module
+ */
+function createGenericEntityServiceMock() {
+  return {
+    findById: jest.fn().mockResolvedValue(null),
+    findAll: jest.fn().mockResolvedValue({ data: [], count: 0, pagination: {} }),
+    create: jest.fn().mockResolvedValue({ id: 1 }),
+    update: jest.fn().mockResolvedValue({ id: 1 }),
+    delete: jest.fn().mockResolvedValue({ id: 1 }),
+    findByField: jest.fn().mockResolvedValue(null),
+    count: jest.fn().mockResolvedValue(0),
+    batch: jest.fn().mockResolvedValue({ results: [], errors: [], stats: {} }),
+  };
+}
+
+/**
+ * Setup GenericEntityService mock with common defaults for an entity
+ * 
+ * Call in beforeEach() to configure mocks for a specific entity type.
+ * Provides sensible defaults while allowing per-test overrides.
+ * 
+ * @param {Object} GenericEntityService - The mocked service (from require)
+ * @param {string} entityName - Entity name (e.g., 'role', 'user', 'customer')
+ * @param {Object} options - Configuration options
+ * @param {Object} options.defaultRecord - Default record to return from findById
+ * @param {Array} options.defaultList - Default list to return from findAll
+ * @param {number} options.defaultCount - Default count for findAll
+ */
+function setupGenericEntityServiceMock(GenericEntityService, entityName, options = {}) {
+  const {
+    defaultRecord = null,
+    defaultList = [],
+    defaultCount = 0,
+  } = options;
+
+  // Reset all mocks
+  Object.values(GenericEntityService).forEach(mock => {
+    if (typeof mock.mockReset === 'function') {
+      mock.mockReset();
+    }
+  });
+
+  // Set up default implementations
+  GenericEntityService.findById.mockImplementation(async (entity, id) => {
+    if (entity === entityName) {
+      return defaultRecord;
+    }
+    return null;
+  });
+
+  GenericEntityService.findAll.mockImplementation(async (entity, queryOptions) => {
+    if (entity === entityName) {
+      return {
+        data: defaultList,
+        count: defaultCount || defaultList.length,
+        pagination: {
+          page: queryOptions?.page || 1,
+          limit: queryOptions?.limit || 50,
+          totalPages: Math.ceil((defaultCount || defaultList.length) / (queryOptions?.limit || 50)),
+        },
+      };
+    }
+    return { data: [], count: 0, pagination: {} };
+  });
+
+  GenericEntityService.create.mockImplementation(async (entity, data) => {
+    if (entity === entityName) {
+      return { id: 1, ...data, created_at: new Date().toISOString() };
+    }
+    throw new Error(`Unexpected entity: ${entity}`);
+  });
+
+  GenericEntityService.update.mockImplementation(async (entity, id, data) => {
+    if (entity === entityName && defaultRecord) {
+      return { ...defaultRecord, ...data, updated_at: new Date().toISOString() };
+    }
+    return null;
+  });
+
+  GenericEntityService.delete.mockImplementation(async (entity, id) => {
+    if (entity === entityName && defaultRecord) {
+      return { ...defaultRecord };
+    }
+    throw new Error(`${entityName} not found`);
+  });
+
+  GenericEntityService.findByField.mockResolvedValue(null);
+  GenericEntityService.count.mockResolvedValue(defaultCount || defaultList.length);
+}
+
 /**
  * Create a configured Express test app with a router
  * @param {Router} router - Express router to mount
@@ -271,8 +385,10 @@ module.exports = {
   createValidatorMockConfig,
   createValidatorMock,
   createFactoryValidatorMock,
+  createGenericEntityServiceMock,
   
   // Setup/teardown (use in beforeEach/afterEach)
   setupRouteMocks,
+  setupGenericEntityServiceMock,
   teardownRouteMocks,
 };

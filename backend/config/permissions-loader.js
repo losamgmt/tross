@@ -49,13 +49,14 @@ function loadPermissions(forceReload = false) {
     permissionCache = config;
     lastModified = fileModified;
 
-    console.log('[Permissions] ✅ Loaded permission config from', PERMISSIONS_CONFIG_PATH);
-    console.log('[Permissions] 📊 Roles:', Object.keys(config.roles).length);
-    console.log('[Permissions] 📊 Resources:', Object.keys(config.resources).length);
+    // Console is appropriate for module initialization logging
+    if (process.env.NODE_ENV !== 'test') {
+      console.log('[Permissions] Loaded config:', Object.keys(config.roles).length, 'roles,', Object.keys(config.resources).length, 'resources');
+    }
 
     return config;
   } catch (error) {
-    console.error('[Permissions] ❌ Failed to load permissions:', error.message);
+    console.error('[Permissions] Failed to load:', error.message);
     throw new Error(`Permission config error: ${error.message}`);
   }
 }
@@ -130,7 +131,7 @@ function validatePermissionConfig(config) {
     }
   }
 
-  console.log('[Permissions] ✅ Configuration validation passed');
+  // Validation passed - no need to log (reduce noise)
 }
 
 /**
@@ -265,7 +266,7 @@ function getRowLevelSecurity(roleName, resource) {
  * @returns {Object} New permission configuration
  */
 function reloadPermissions() {
-  console.log('[Permissions] 🔄 Hot-reloading permissions...');
+  console.log('[Permissions] Hot-reloading...');
   return loadPermissions(true);
 }
 

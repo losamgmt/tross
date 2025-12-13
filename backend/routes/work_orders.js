@@ -13,15 +13,19 @@ const {
   validatePagination,
   validateQuery,
 } = require('../validators');
-const WorkOrder = require('../db/models/WorkOrder');
-const auditService = require('../services/audit-service');
-const { AuditActions, ResourceTypes, AuditResults } = require('../services/audit-constants');
-const { getClientIp, getUserAgent } = require('../utils/request-helpers');
+// WorkOrder model removed - using GenericEntityService (strangler-fig Phase 4)
+const { buildRlsContext, buildAuditContext } = require('../utils/request-context');
 const { logger } = require('../config/logger');
 const workOrderMetadata = require('../config/models/work-order-metadata');
 const ResponseFormatter = require('../utils/response-formatter');
+const GenericEntityService = require('../services/generic-entity-service');
+const { filterDataByRole } = require('../utils/response-transform');
+const { handleDbError, buildDbErrorConfig } = require('../utils/db-error-handler');
 
 const router = express.Router();
+
+// Build DB error config from metadata (single source of truth)
+const DB_ERROR_CONFIG = buildDbErrorConfig(workOrderMetadata);
 
 /**
  * @openapi
@@ -114,25 +118,27 @@ router.get(
     try {
       const { page, limit } = req.validated.pagination;
       const { search, filters, sortBy, sortOrder } = req.validated.query;
+      const rlsContext = buildRlsContext(req);
 
-      const result = await WorkOrder.findAll({
+      const result = await GenericEntityService.findAll('workOrder', {
         page,
         limit,
         search,
         filters,
         sortBy,
         sortOrder,
-        req,
-      });
+      }, rlsContext);
+
+      const sanitizedData = filterDataByRole(result.data, workOrderMetadata, req.dbUser.role, 'read');
 
       return ResponseFormatter.list(res, {
-        data: result.data,
+        data: sanitizedData,
         pagination: result.pagination,
         appliedFilters: result.appliedFilters,
         rlsApplied: result.rlsApplied,
       });
     } catch (error) {
-      logger.error('Error deleting work order', { error: error.message, id });
+      logger.error('Error retrieving work orders', { error: error.message });
       return ResponseFormatter.internalError(res, error);
     }
   },
@@ -172,19 +178,23 @@ router.get(
   async (req, res) => {
     try {
       const workOrderId = req.validated.id;
-      const workOrder = await WorkOrder.findById(workOrderId, req);
+      const rlsContext = buildRlsContext(req);
+
+      const workOrder = await GenericEntityService.findById('workOrder', workOrderId, rlsContext);
 
       if (!workOrder) {
         return ResponseFormatter.notFound(res, 'Work order not found');
       }
 
-      return ResponseFormatter.get(res, workOrder);
+      const sanitizedData = filterDataByRole(workOrder, workOrderMetadata, req.dbUser.role, 'read');
+
+      return ResponseFormatter.get(res, sanitizedData);
     } catch (error) {
       logger.error('Error retrieving work order', {
         error: error.message,
         workOrderId: req.params.id,
       });
-      return ResponseFormatter.internalError(res, 'Failed to retrieve work order', error);
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );
@@ -245,51 +255,37 @@ router.post(
   async (req, res) => {
     try {
       const { title, description, customer_id, assigned_technician_id, priority, status } = req.body;
-      const ipAddress = getClientIp(req);
-      const userAgent = getUserAgent(req);
+      const auditContext = buildAuditContext(req);
 
       // Customers can only create work orders for themselves
       if (req.dbUser && req.dbUser.role === 'customer') {
-        // For customers, enforce customer_id matches their user profile
-        // This prevents customers from creating work orders for other customers
         if (customer_id && customer_id !== req.dbUser.id) {
           return ResponseFormatter.forbidden(res, 'Customers can only create work orders for their own account.');
         }
       }
 
-      const newWorkOrder = await WorkOrder.create({
+      const newWorkOrder = await GenericEntityService.create('workOrder', {
         title,
         description,
         customer_id,
         assigned_technician_id,
         priority,
         status,
-      });
+      }, { auditContext });
 
-      await auditService.log({
-        userId: req.user.userId,
-        action: AuditActions.WORK_ORDER_CREATE,
-        resourceType: ResourceTypes.WORK_ORDER,
-        resourceId: newWorkOrder.id,
-        newValues: { title, customer_id, priority },
-        ipAddress,
-        userAgent,
-        result: AuditResults.SUCCESS,
-      });
+      if (!newWorkOrder) {
+        throw new Error('Work order creation failed unexpectedly');
+      }
 
       return ResponseFormatter.created(res, newWorkOrder, 'Work order created successfully');
     } catch (error) {
-      logger.error('Error creating work order', { error: error.message });
+      logger.error('Error creating work order', { error: error.message, code: error.code });
 
-      if (error.code === '23505') {
-        return ResponseFormatter.conflict(res, 'Work order with this identifier already exists');
+      if (handleDbError(error, res, DB_ERROR_CONFIG)) {
+        return;
       }
 
-      if (error.code === '23514') {
-        return ResponseFormatter.badRequest(res, 'Invalid field value - check status, priority and other enum fields');
-      }
-
-      return ResponseFormatter.internalError(res, 'Failed to create work order', error);
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );
@@ -356,59 +352,45 @@ router.patch(
   async (req, res) => {
     try {
       const workOrderId = req.validated.id;
-      const ipAddress = getClientIp(req);
-      const userAgent = getUserAgent(req);
+      const rlsContext = buildRlsContext(req);
+      const auditContext = buildAuditContext(req);
 
-      const workOrder = await WorkOrder.findById(workOrderId);
-      if (!workOrder) {
+      const oldWorkOrder = await GenericEntityService.findById('workOrder', workOrderId, rlsContext);
+      if (!oldWorkOrder) {
         return ResponseFormatter.notFound(res, 'Work order not found');
       }
 
       // Row-level security: Ensure user has access to update this work order
-      // Customer role: can only update their own work orders
       if (req.dbUser && req.dbUser.role === 'customer') {
-        if (workOrder.customer_id !== req.dbUser.id) {
+        if (oldWorkOrder.customer_id !== req.dbUser.id) {
           return ResponseFormatter.forbidden(res, 'You can only update your own work orders.');
         }
       }
-      // Technician role: can only update assigned work orders
       if (req.dbUser && req.dbUser.role === 'technician') {
-        if (workOrder.assigned_technician_id !== req.dbUser.id) {
+        if (oldWorkOrder.assigned_technician_id !== req.dbUser.id) {
           return ResponseFormatter.forbidden(res, 'You can only update work orders assigned to you.');
         }
       }
 
-      await WorkOrder.update(workOrderId, req.body);
-      const updatedWorkOrder = await WorkOrder.findById(workOrderId);
+      const updatedWorkOrder = await GenericEntityService.update('workOrder', workOrderId, req.body, { auditContext });
 
-      await auditService.log({
-        userId: req.user.userId,
-        action: AuditActions.WORK_ORDER_UPDATE,
-        resourceType: ResourceTypes.WORK_ORDER,
-        resourceId: workOrderId,
-        oldValues: workOrder,
-        newValues: updatedWorkOrder,
-        ipAddress,
-        userAgent,
-        result: AuditResults.SUCCESS,
-      });
+      if (!updatedWorkOrder) {
+        return ResponseFormatter.notFound(res, 'Work order not found');
+      }
 
       return ResponseFormatter.updated(res, updatedWorkOrder, 'Work order updated successfully');
     } catch (error) {
       logger.error('Error updating work order', {
         error: error.message,
+        code: error.code,
         workOrderId: req.params.id,
       });
 
-      if (error.code === '23505') {
-        return ResponseFormatter.conflict(res, 'Work order with this identifier already exists');
+      if (handleDbError(error, res, DB_ERROR_CONFIG)) {
+        return;
       }
 
-      if (error.code === '23514') {
-        return ResponseFormatter.badRequest(res, 'Invalid field value - check status, priority and other enum fields');
-      }
-
-      return ResponseFormatter.internalError(res, 'Failed to update work order', error);
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );
@@ -449,34 +431,29 @@ router.delete(
   async (req, res) => {
     try {
       const workOrderId = req.validated.id;
-      const ipAddress = getClientIp(req);
-      const userAgent = getUserAgent(req);
+      const rlsContext = buildRlsContext(req);
+      const auditContext = buildAuditContext(req);
 
-      const workOrder = await WorkOrder.findById(workOrderId);
+      const workOrder = await GenericEntityService.findById('workOrder', workOrderId, rlsContext);
       if (!workOrder) {
         return ResponseFormatter.notFound(res, 'Work order not found');
       }
 
-      await WorkOrder.delete(workOrderId);
-
-      await auditService.log({
-        userId: req.user.userId,
-        action: AuditActions.WORK_ORDER_DELETE,
-        resourceType: ResourceTypes.WORK_ORDER,
-        resourceId: workOrderId,
-        oldValues: workOrder,
-        ipAddress,
-        userAgent,
-        result: AuditResults.SUCCESS,
-      });
+      await GenericEntityService.delete('workOrder', workOrderId, { auditContext, oldValues: workOrder });
 
       return ResponseFormatter.deleted(res, 'Work order deleted successfully');
     } catch (error) {
       logger.error('Error deleting work order', {
         error: error.message,
+        code: error.code,
         workOrderId: req.params.id,
       });
-      return ResponseFormatter.internalError(res, 'Failed to delete work order', error);
+
+      if (handleDbError(error, res, DB_ERROR_CONFIG)) {
+        return;
+      }
+
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );

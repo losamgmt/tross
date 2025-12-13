@@ -47,7 +47,7 @@ function loadValidationRules() {
 
     return validationRules;
   } catch (error) {
-    console.error('[ValidationLoader] ❌ Failed to load validation rules:', error.message);
+    console.error('[ValidationLoader] Failed to load validation rules:', error.message);
     throw new Error('Cannot load validation rules. Check config/validation-rules.json');
   }
 }
@@ -277,6 +277,10 @@ function buildCompositeSchema(operationName) {
     roleId: 'roleId',
     is_active: 'is_active',
     isActive: 'isActive',
+    customer_profile_id: 'customerProfileId',
+    customerProfileId: 'customerProfileId',
+    technician_profile_id: 'technicianProfileId',
+    technicianProfileId: 'technicianProfileId',
     name: 'roleName', // Default to roleName for backward compatibility
     roleName: 'roleName',
     priority: isRoleOperation ? 'rolePriority' : 'priority', // Context-aware

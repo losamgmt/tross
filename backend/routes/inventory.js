@@ -14,14 +14,18 @@ const {
   validatePagination,
   validateQuery,
 } = require('../validators');
-const Inventory = require('../db/models/Inventory');
-const auditService = require('../services/audit-service');
-const { AuditActions, ResourceTypes, AuditResults } = require('../services/audit-constants');
-const { getClientIp, getUserAgent } = require('../utils/request-helpers');
+// Inventory model removed - using GenericEntityService (strangler-fig Phase 4)
+const { buildRlsContext, buildAuditContext } = require('../utils/request-context');
 const { logger } = require('../config/logger');
 const inventoryMetadata = require('../config/models/inventory-metadata');
+const GenericEntityService = require('../services/generic-entity-service');
+const { filterDataByRole } = require('../utils/response-transform');
+const { handleDbError, buildDbErrorConfig } = require('../utils/db-error-handler');
 
 const router = express.Router();
+
+// Build DB error config from metadata (single source of truth)
+const DB_ERROR_CONFIG = buildDbErrorConfig(inventoryMetadata);
 
 /**
  * @openapi
@@ -96,26 +100,28 @@ router.get(
     try {
       const { page, limit } = req.validated.pagination;
       const { search, filters, sortBy, sortOrder } = req.validated.query;
+      const rlsContext = buildRlsContext(req);
 
-      const result = await Inventory.findAll({
+      const result = await GenericEntityService.findAll('inventory', {
         page,
         limit,
         search,
         filters,
         sortBy,
         sortOrder,
-        req,
-      });
+      }, rlsContext);
+
+      const sanitizedData = filterDataByRole(result.data, inventoryMetadata, req.dbUser.role, 'read');
 
       return ResponseFormatter.list(res, {
-        data: result.data,
+        data: sanitizedData,
         pagination: result.pagination,
         appliedFilters: result.appliedFilters,
         rlsApplied: result.rlsApplied,
       });
     } catch (error) {
       logger.error('Error retrieving inventory', { error: error.message });
-      return ResponseFormatter.internalError(res, 'Failed to retrieve inventory');
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );
@@ -154,19 +160,23 @@ router.get(
   async (req, res) => {
     try {
       const inventoryId = req.validated.id;
-      const inventory = await Inventory.findById(inventoryId, req);
+      const rlsContext = buildRlsContext(req);
+
+      const inventory = await GenericEntityService.findById('inventory', inventoryId, rlsContext);
 
       if (!inventory) {
         return ResponseFormatter.notFound(res, 'Inventory item not found');
       }
 
-      return ResponseFormatter.get(res, inventory);
+      const sanitizedData = filterDataByRole(inventory, inventoryMetadata, req.dbUser.role, 'read');
+
+      return ResponseFormatter.get(res, sanitizedData);
     } catch (error) {
       logger.error('Error retrieving inventory item', {
         error: error.message,
         inventoryId: req.params.id,
       });
-      return ResponseFormatter.internalError(res, 'Failed to retrieve inventory item');
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );
@@ -218,43 +228,34 @@ router.post(
   validateInventoryCreate,
   async (req, res) => {
     try {
-      const { name, sku, description, quantity, status } = req.body;
-      const ipAddress = getClientIp(req);
-      const userAgent = getUserAgent(req);
+      const { name, sku, description, quantity, status, reorder_level, unit_cost, location, supplier } = req.body;
+      const auditContext = buildAuditContext(req);
 
-      const newInventory = await Inventory.create({
+      const newInventory = await GenericEntityService.create('inventory', {
         name,
         sku,
         description,
         quantity,
         status,
-      });
+        reorder_level,
+        unit_cost,
+        location,
+        supplier,
+      }, { auditContext });
 
-      await auditService.log({
-        userId: req.user.userId,
-        action: AuditActions.INVENTORY_CREATE,
-        resourceType: ResourceTypes.INVENTORY,
-        resourceId: newInventory.id,
-        newValues: { name, sku, quantity },
-        ipAddress,
-        userAgent,
-        result: AuditResults.SUCCESS,
-      });
+      if (!newInventory) {
+        throw new Error('Inventory creation failed unexpectedly');
+      }
 
       return ResponseFormatter.created(res, newInventory, 'Inventory item created successfully');
     } catch (error) {
       logger.error('Error creating inventory item', { error: error.message, code: error.code });
 
-      // Handle unique constraint violation (duplicate SKU)
-      if (error.code === '23505') {
-        return ResponseFormatter.conflict(res, 'SKU already exists');
+      if (handleDbError(error, res, DB_ERROR_CONFIG)) {
+        return;
       }
 
-      if (error.code === '23514') {
-        return ResponseFormatter.badRequest(res, 'Invalid field value - check status and other enum fields');
-      }
-
-      return ResponseFormatter.internalError(res, 'Failed to create inventory item');
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );
@@ -314,45 +315,33 @@ router.patch(
   async (req, res) => {
     try {
       const inventoryId = req.validated.id;
-      const ipAddress = getClientIp(req);
-      const userAgent = getUserAgent(req);
+      const rlsContext = buildRlsContext(req);
+      const auditContext = buildAuditContext(req);
 
-      const inventory = await Inventory.findById(inventoryId);
-      if (!inventory) {
+      const oldInventory = await GenericEntityService.findById('inventory', inventoryId, rlsContext);
+      if (!oldInventory) {
         return ResponseFormatter.notFound(res, 'Inventory item not found');
       }
 
-      await Inventory.update(inventoryId, req.body);
-      const updatedInventory = await Inventory.findById(inventoryId);
+      const updatedInventory = await GenericEntityService.update('inventory', inventoryId, req.body, { auditContext });
 
-      await auditService.log({
-        userId: req.user.userId,
-        action: AuditActions.INVENTORY_UPDATE,
-        resourceType: ResourceTypes.INVENTORY,
-        resourceId: inventoryId,
-        oldValues: inventory,
-        newValues: updatedInventory,
-        ipAddress,
-        userAgent,
-        result: AuditResults.SUCCESS,
-      });
+      if (!updatedInventory) {
+        return ResponseFormatter.notFound(res, 'Inventory item not found');
+      }
 
       return ResponseFormatter.updated(res, updatedInventory, 'Inventory item updated successfully');
     } catch (error) {
       logger.error('Error updating inventory item', {
         error: error.message,
+        code: error.code,
         inventoryId: req.params.id,
       });
 
-      if (error.code === '23505') {
-        return ResponseFormatter.conflict(res, 'SKU already exists');
+      if (handleDbError(error, res, DB_ERROR_CONFIG)) {
+        return;
       }
 
-      if (error.code === '23514') {
-        return ResponseFormatter.badRequest(res, 'Invalid field value - check status and other enum fields');
-      }
-
-      return ResponseFormatter.internalError(res, 'Failed to update inventory item');
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );
@@ -392,26 +381,13 @@ router.delete(
   async (req, res) => {
     try {
       const inventoryId = req.validated.id;
-      const ipAddress = getClientIp(req);
-      const userAgent = getUserAgent(req);
+      const auditContext = buildAuditContext(req);
 
-      const inventory = await Inventory.findById(inventoryId);
-      if (!inventory) {
+      const deleted = await GenericEntityService.delete('inventory', inventoryId, { auditContext });
+
+      if (!deleted) {
         return ResponseFormatter.notFound(res, 'Inventory item not found');
       }
-
-      await Inventory.delete(inventoryId);
-
-      await auditService.log({
-        userId: req.user.userId,
-        action: AuditActions.INVENTORY_DELETE,
-        resourceType: ResourceTypes.INVENTORY,
-        resourceId: inventoryId,
-        oldValues: inventory,
-        ipAddress,
-        userAgent,
-        result: AuditResults.SUCCESS,
-      });
 
       return ResponseFormatter.deleted(res, 'Inventory item deleted successfully');
     } catch (error) {
@@ -419,7 +395,7 @@ router.delete(
         error: error.message,
         inventoryId: req.params.id,
       });
-      return ResponseFormatter.internalError(res, 'Failed to delete inventory item');
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );

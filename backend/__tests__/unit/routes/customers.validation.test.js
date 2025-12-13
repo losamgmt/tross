@@ -5,10 +5,12 @@
  * Uses centralized setup from route-test-setup.js (DRY architecture).
  *
  * Test Coverage: Input validation, conflict handling, constraint errors
+ * 
+ * NOTE: Now uses GenericEntityService instead of Customer model (Phase 4 strangler-fig)
  */
 
 const request = require('supertest');
-const Customer = require('../../../db/models/Customer');
+const GenericEntityService = require('../../../services/generic-entity-service');
 const auditService = require('../../../services/audit-service');
 const { authenticateToken, requirePermission } = require('../../../middleware/auth');
 const { enforceRLS } = require('../../../middleware/row-level-security');
@@ -24,18 +26,9 @@ const {
 // MOCK CONFIGURATION (Hoisted by Jest)
 // ============================================================================
 
-jest.mock('../../../db/models/Customer');
+jest.mock('../../../services/generic-entity-service');
 jest.mock('../../../services/audit-service');
 jest.mock('../../../utils/request-helpers');
-
-jest.mock('../../../config/models/customer-metadata', () => ({
-  tableName: 'customers',
-  primaryKey: 'id',
-  searchableFields: ['email', 'company_name'],
-  filterableFields: ['id', 'email', 'is_active', 'status'],
-  sortableFields: ['id', 'email', 'created_at'],
-  defaultSort: 'created_at DESC',
-}));
 
 jest.mock('../../../middleware/auth', () => ({
   authenticateToken: jest.fn((req, res, next) => next()),
@@ -50,7 +43,6 @@ jest.mock('../../../middleware/row-level-security', () => ({
   }),
 }));
 
-// Validation mocks - these can reject requests with 400 errors
 jest.mock('../../../validators', () => ({
   validatePagination: jest.fn(() => (req, res, next) => {
     if (!req.validated) req.validated = {};
@@ -79,12 +71,17 @@ jest.mock('../../../validators', () => ({
   validateCustomerUpdate: jest.fn((req, res, next) => next()),
 }));
 
+const {
+  validateIdParam,
+  validateCustomerCreate,
+  validateCustomerUpdate,
+} = require('../../../validators');
+
 // ============================================================================
 // TEST APP SETUP (After mocks are hoisted)
 // ============================================================================
 
 const customersRouter = require('../../../routes/customers');
-const { validateCustomerCreate, validateCustomerUpdate, validateIdParam } = require('../../../validators');
 const app = createRouteTestApp(customersRouter, '/api/customers');
 
 // ============================================================================
@@ -101,6 +98,17 @@ describe('routes/customers.js - Validation & Error Handling', () => {
       enforceRLS,
     });
     auditService.log.mockResolvedValue(true);
+    
+    // Reset GenericEntityService mocks
+    GenericEntityService.findAll = jest.fn();
+    GenericEntityService.findById = jest.fn();
+    GenericEntityService.create = jest.fn();
+    GenericEntityService.update = jest.fn();
+    GenericEntityService.delete = jest.fn();
+
+    // Reset validator mocks
+    validateCustomerCreate.mockImplementation((req, res, next) => next());
+    validateCustomerUpdate.mockImplementation((req, res, next) => next());
   });
 
   afterEach(() => {
@@ -111,43 +119,12 @@ describe('routes/customers.js - Validation & Error Handling', () => {
   // GET /api/customers/:id - Validation
   // ===========================
   describe('GET /api/customers/:id - Validation', () => {
-    test('should return 400 for invalid ID (non-numeric)', async () => {
-      // Arrange - validateIdParam will reject
+    test('should return 400 when id is not a valid number', async () => {
       validateIdParam.mockImplementation(() => (req, res, next) => {
-        return res.status(400).json({ success: false, error: 'Validation Error', message: 'Invalid ID parameter' });
+        return res.status(400).json({ success: false, error: 'Validation Error', message: 'ID must be a positive integer' });
       });
 
-      // Act
-      const response = await request(app).get('/api/customers/abc');
-
-      // Assert
-      expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
-      expect(response.body.success).toBe(false);
-    });
-
-    test('should return 400 for invalid ID (zero)', async () => {
-      // Arrange
-      validateIdParam.mockImplementation(() => (req, res, next) => {
-        return res.status(400).json({ success: false, error: 'Validation Error', message: 'ID must be positive' });
-      });
-
-      // Act
-      const response = await request(app).get('/api/customers/0');
-
-      // Assert
-      expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
-    });
-
-    test('should return 400 for invalid ID (negative)', async () => {
-      // Arrange
-      validateIdParam.mockImplementation(() => (req, res, next) => {
-        return res.status(400).json({ success: false, error: 'Validation Error', message: 'ID must be positive' });
-      });
-
-      // Act
-      const response = await request(app).get('/api/customers/-1');
-
-      // Assert
+      const response = await request(app).get('/api/customers/invalid');
       expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
     });
   });
@@ -157,59 +134,24 @@ describe('routes/customers.js - Validation & Error Handling', () => {
   // ===========================
   describe('POST /api/customers - Validation', () => {
     test('should return 400 when required fields are missing', async () => {
-      // Arrange - validator rejects empty body
       validateCustomerCreate.mockImplementation((req, res, next) => {
-        return res.status(400).json({ 
-          success: false, 
-          error: 'Validation Error', 
-          message: 'Email is required' 
-        });
+        return res.status(400).json({ success: false, error: 'Validation Error', message: 'Required fields missing' });
       });
 
-      // Act
       const response = await request(app).post('/api/customers').send({});
-
-      // Assert
       expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
       expect(response.body.success).toBe(false);
-      expect(Customer.create).not.toHaveBeenCalled();
-    });
-
-    test('should return 400 when email format is invalid', async () => {
-      // Arrange
-      validateCustomerCreate.mockImplementation((req, res, next) => {
-        return res.status(400).json({ 
-          success: false, 
-          error: 'Validation Error', 
-          message: 'Email must be a valid email address' 
-        });
-      });
-
-      // Act
-      const response = await request(app)
-        .post('/api/customers')
-        .send({ email: 'not-an-email' });
-
-      // Assert
-      expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
-      expect(response.body.message).toContain('email');
+      expect(GenericEntityService.create).not.toHaveBeenCalled();
     });
 
     test('should return 409 when email already exists', async () => {
-      // Arrange - validation passes, but DB rejects duplicate
       validateCustomerCreate.mockImplementation((req, res, next) => next());
       const duplicateError = new Error('duplicate key value violates unique constraint');
       duplicateError.code = '23505';
-      Customer.create.mockRejectedValue(duplicateError);
+      GenericEntityService.create.mockRejectedValue(duplicateError);
 
-      // Act
-      const response = await request(app)
-        .post('/api/customers')
-        .send({ email: 'existing@example.com', company_name: 'ACME' });
-
-      // Assert
+      const response = await request(app).post('/api/customers').send({ email: 'existing@example.com' });
       expect(response.status).toBe(HTTP_STATUS.CONFLICT);
-      expect(response.body.success).toBe(false);
     });
   });
 
@@ -218,45 +160,20 @@ describe('routes/customers.js - Validation & Error Handling', () => {
   // ===========================
   describe('PATCH /api/customers/:id - Validation', () => {
     test('should return 400 when update data is invalid', async () => {
-      // Arrange
       validateCustomerUpdate.mockImplementation((req, res, next) => {
-        return res.status(400).json({ 
-          success: false, 
-          error: 'Validation Error', 
-          message: 'Invalid field value' 
-        });
+        return res.status(400).json({ success: false, error: 'Validation Error', message: 'Invalid email format' });
       });
 
-      // Act
-      const response = await request(app)
-        .patch('/api/customers/1')
-        .send({ email: 'invalid' });
-
-      // Assert
+      const response = await request(app).patch('/api/customers/1').send({ email: 'bad-email' });
       expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
-      expect(Customer.update).not.toHaveBeenCalled();
+      expect(GenericEntityService.update).not.toHaveBeenCalled();
     });
 
-    test('should return 409 when email already exists on update', async () => {
-      // Arrange - validation passes, but DB rejects duplicate
-      validateIdParam.mockImplementation(() => (req, res, next) => {
-        req.validated = { id: 1 };
-        next();
-      });
-      validateCustomerUpdate.mockImplementation((req, res, next) => next());
-      Customer.findById.mockResolvedValue({ id: 1, email: 'original@test.com' });
-      
-      const duplicateError = new Error('duplicate key value violates unique constraint');
-      duplicateError.code = '23505';
-      Customer.update.mockRejectedValue(duplicateError);
+    test('should return 404 when customer does not exist', async () => {
+      GenericEntityService.findById.mockResolvedValue(null);
 
-      // Act
-      const response = await request(app)
-        .patch('/api/customers/1')
-        .send({ email: 'taken@example.com' });
-
-      // Assert - route returns 409 for duplicate constraint violations
-      expect(response.status).toBe(HTTP_STATUS.CONFLICT);
+      const response = await request(app).patch('/api/customers/999').send({ first_name: 'New' });
+      expect(response.status).toBe(HTTP_STATUS.NOT_FOUND);
     });
   });
 
@@ -264,18 +181,11 @@ describe('routes/customers.js - Validation & Error Handling', () => {
   // DELETE /api/customers/:id - Validation
   // ===========================
   describe('DELETE /api/customers/:id - Validation', () => {
-    test('should return 400 for invalid ID parameter', async () => {
-      // Arrange
-      validateIdParam.mockImplementation(() => (req, res, next) => {
-        return res.status(400).json({ success: false, error: 'Validation Error', message: 'Invalid ID' });
-      });
+    test('should return 404 when customer does not exist', async () => {
+      GenericEntityService.findById.mockResolvedValue(null);
 
-      // Act
-      const response = await request(app).delete('/api/customers/invalid');
-
-      // Assert
-      expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
-      expect(Customer.delete).not.toHaveBeenCalled();
+      const response = await request(app).delete('/api/customers/999');
+      expect(response.status).toBe(HTTP_STATUS.NOT_FOUND);
     });
   });
 });

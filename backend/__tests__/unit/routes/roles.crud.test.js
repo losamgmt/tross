@@ -5,10 +5,13 @@
  * Uses centralized setup from route-test-setup.js (DRY architecture).
  *
  * Test Coverage: GET, POST, PUT, DELETE /api/roles and /api/roles/:id
+ * 
+ * PHASE 4 UPDATE:
+ * Routes now use GenericEntityService instead of Role model.
+ * Tests mock GenericEntityService via centralized route-test-setup.js.
  */
 
 const request = require("supertest");
-const Role = require("../../../db/models/Role");
 const auditService = require("../../../services/audit-service");
 const { AuditActions, ResourceTypes } = require("../../../services/audit-constants");
 const { authenticateToken, requirePermission } = require("../../../middleware/auth");
@@ -21,13 +24,23 @@ const { HTTP_STATUS } = require("../../../config/constants");
 const { getClientIp, getUserAgent } = require("../../../utils/request-helpers");
 const {
   createRouteTestApp,
+  createGenericEntityServiceMock,
   setupRouteMocks,
+  setupGenericEntityServiceMock,
   teardownRouteMocks,
 } = require("../../helpers/route-test-setup");
 
-// Mock dependencies
-jest.mock("../../../db/models/Role");
+// Mock GenericEntityService (Phase 4: replaces Role model)
+jest.mock("../../../services/generic-entity-service", () => 
+  require("../../helpers/route-test-setup").createGenericEntityServiceMock()
+);
+const GenericEntityService = require("../../../services/generic-entity-service");
+
+// Mock other dependencies
 jest.mock("../../../services/audit-service");
+jest.mock("../../../db/helpers/default-value-helper", () => ({
+  getNextOrdinalValue: jest.fn().mockResolvedValue(50),
+}));
 jest.mock("../../../middleware/auth", () => ({
   authenticateToken: jest.fn((req, res, next) => next()),
   requirePermission: jest.fn(() => (req, res, next) => next()),
@@ -85,6 +98,16 @@ describe("routes/roles.js - CRUD Operations", () => {
       validateRoleUpdate,
       validatePagination,
     });
+    
+    // Setup GenericEntityService mocks with sensible defaults
+    setupGenericEntityServiceMock(GenericEntityService, 'role', {
+      defaultRecord: { id: 1, name: 'admin', priority: 100, created_at: new Date().toISOString() },
+      defaultList: [
+        { id: 1, name: 'admin', priority: 100 },
+        { id: 2, name: 'manager', priority: 80 },
+      ],
+      defaultCount: 2,
+    });
   });
 
   afterEach(() => {
@@ -102,7 +125,7 @@ describe("routes/roles.js - CRUD Operations", () => {
         { id: 2, name: "client", created_at: "2025-10-17T16:52:17.841Z" },
         { id: 3, name: "manager", created_at: "2025-10-17T16:52:17.841Z" },
       ];
-      Role.findAll.mockResolvedValue({
+      GenericEntityService.findAll.mockResolvedValue({
         data: mockRoles,
         pagination: {
           page: 1,
@@ -125,12 +148,12 @@ describe("routes/roles.js - CRUD Operations", () => {
       expect(response.body.pagination).toBeDefined();
       expect(response.body.pagination.total).toBe(3);
       expect(response.body.timestamp).toBeDefined();
-      expect(Role.findAll).toHaveBeenCalledTimes(1);
+      expect(GenericEntityService.findAll).toHaveBeenCalledTimes(1);
     });
 
     test("should return empty array when no roles exist", async () => {
       // Arrange
-      Role.findAll.mockResolvedValue({
+      GenericEntityService.findAll.mockResolvedValue({
         data: [],
         pagination: {
           page: 1,
@@ -159,7 +182,7 @@ describe("routes/roles.js - CRUD Operations", () => {
         name: `role${i}`,
         created_at: new Date(),
       }));
-      Role.findAll.mockResolvedValue({
+      GenericEntityService.findAll.mockResolvedValue({
         data: firstPage,
         pagination: {
           page: 1,
@@ -195,7 +218,7 @@ describe("routes/roles.js - CRUD Operations", () => {
         name: "admin",
         created_at: "2025-10-17T16:52:17.917Z",
       };
-      Role.findById.mockResolvedValue(mockRole);
+      GenericEntityService.findById.mockResolvedValue(mockRole);
 
       // Act
       const response = await request(app).get("/api/roles/1");
@@ -205,7 +228,7 @@ describe("routes/roles.js - CRUD Operations", () => {
       expect(response.body.success).toBe(true);
       expect(response.body.data).toEqual(mockRole);
       expect(response.body.timestamp).toBeDefined();
-      expect(Role.findById).toHaveBeenCalledWith(1, expect.any(Object)); // Validator coerces to integer
+      expect(GenericEntityService.findById).toHaveBeenCalledWith('role', 1, expect.any(Object)); // entity name + id + rlsContext
     });
 
     test("should handle non-numeric ID gracefully", async () => {
@@ -232,8 +255,7 @@ describe("routes/roles.js - CRUD Operations", () => {
         description: null,
         created_at: "2025-10-17T16:52:17.961Z",
       };
-      Role.create.mockResolvedValue(mockCreatedRole);
-      auditService.log.mockResolvedValue(undefined);
+      GenericEntityService.create.mockResolvedValue(mockCreatedRole);
 
       // Act
       const response = await request(app)
@@ -248,15 +270,12 @@ describe("routes/roles.js - CRUD Operations", () => {
       expect(response.body.message).toBe("Role created successfully");
       expect(response.body.timestamp).toBeDefined();
 
-      expect(Role.create).toHaveBeenCalledWith(newRoleName, undefined);
-      expect(auditService.log).toHaveBeenCalledWith(
-        expect.objectContaining({
-          userId: 1,
-          action: AuditActions.ROLE_CREATE,
-          resourceType: ResourceTypes.ROLE,
-          resourceId: mockCreatedRole.id,
-        })
+      expect(GenericEntityService.create).toHaveBeenCalledWith(
+        'role',
+        expect.objectContaining({ name: newRoleName }),
+        expect.any(Object)
       );
+      // Note: auditService.log is no longer called directly - GenericEntityService handles audit logging internally
     });
 
     test("should handle special characters in role names", async () => {
@@ -266,8 +285,7 @@ describe("routes/roles.js - CRUD Operations", () => {
         name: "test-role_123",
         created_at: new Date(),
       };
-      Role.create.mockResolvedValue(specialRole);
-      auditService.log.mockResolvedValue(undefined);
+      GenericEntityService.create.mockResolvedValue(specialRole);
 
       // Act
       const response = await request(app)
@@ -281,9 +299,9 @@ describe("routes/roles.js - CRUD Operations", () => {
   });
 
   // ===========================
-  // PUT /api/roles/:id - Update Role
+  // PATCH /api/roles/:id - Update Role
   // ===========================
-  describe("PUT /api/roles/:id", () => {
+  describe("PATCH /api/roles/:id", () => {
     test("should update role successfully and log audit", async () => {
       // Arrange
       const oldRole = {
@@ -296,13 +314,13 @@ describe("routes/roles.js - CRUD Operations", () => {
         name: "supervisor",
         created_at: "2025-10-17T16:52:18.015Z",
       };
-      Role.findById.mockResolvedValue(oldRole);
-      Role.update.mockResolvedValue(updatedRole);
+      GenericEntityService.findById.mockResolvedValue(oldRole);
+      GenericEntityService.update.mockResolvedValue(updatedRole);
       auditService.log.mockResolvedValue(undefined);
 
       // Act
       const response = await request(app)
-        .put("/api/roles/3")
+        .patch("/api/roles/3")
         .send({ name: "supervisor" })
         .set("User-Agent", "jest-update-agent");
 
@@ -312,16 +330,14 @@ describe("routes/roles.js - CRUD Operations", () => {
       expect(response.body.data).toEqual(updatedRole);
       expect(response.body.message).toBe("Role updated successfully");
 
-      expect(Role.findById).toHaveBeenCalledWith(3, expect.any(Object));
-      expect(Role.update).toHaveBeenCalledWith(3, { name: "supervisor" });
-      expect(auditService.log).toHaveBeenCalledWith(
-        expect.objectContaining({
-          userId: 1,
-          action: AuditActions.ROLE_UPDATE,
-          resourceType: ResourceTypes.ROLE,
-          resourceId: 3,
-        })
+      expect(GenericEntityService.findById).toHaveBeenCalledWith('role', 3, expect.any(Object));
+      expect(GenericEntityService.update).toHaveBeenCalledWith(
+        'role',
+        3,
+        { name: "supervisor" },
+        expect.any(Object)
       );
+      // Note: auditService.log is no longer called directly - GenericEntityService handles audit logging internally
     });
 
     test("should use validatedId from middleware", async () => {
@@ -332,19 +348,24 @@ describe("routes/roles.js - CRUD Operations", () => {
         name: "senior-analyst",
         created_at: new Date(),
       };
-      Role.findById.mockResolvedValue(oldRole);
-      Role.update.mockResolvedValue(updatedRole);
+      GenericEntityService.findById.mockResolvedValue(oldRole);
+      GenericEntityService.update.mockResolvedValue(updatedRole);
       auditService.log.mockResolvedValue(undefined);
 
       // Act - validateIdParam mock now sets both req.validated.id and req.validatedId
       const response = await request(app)
-        .put("/api/roles/5")
+        .patch("/api/roles/5")
         .send({ name: "senior-analyst" });
 
       // Assert
       expect(response.status).toBe(200);
-      expect(Role.findById).toHaveBeenCalledWith(5, expect.any(Object));
-      expect(Role.update).toHaveBeenCalledWith(5, { name: "senior-analyst" });
+      expect(GenericEntityService.findById).toHaveBeenCalledWith('role', 5, expect.any(Object));
+      expect(GenericEntityService.update).toHaveBeenCalledWith(
+        'role',
+        5,
+        { name: "senior-analyst" },
+        expect.any(Object)
+      );
     });
   });
 
@@ -359,8 +380,7 @@ describe("routes/roles.js - CRUD Operations", () => {
         name: "observer",
         created_at: "2025-10-17T16:52:18.100Z",
       };
-      Role.delete.mockResolvedValue(deletedRole);
-      auditService.log.mockResolvedValue(undefined);
+      GenericEntityService.delete.mockResolvedValue(deletedRole);
 
       // Act
       const response = await request(app)
@@ -374,33 +394,26 @@ describe("routes/roles.js - CRUD Operations", () => {
       expect(response.body.message).toBe("Role deleted successfully");
       expect(response.body.timestamp).toBeDefined();
 
-      expect(Role.delete).toHaveBeenCalledWith(5);
-      expect(auditService.log).toHaveBeenCalledWith(
-        expect.objectContaining({
-          userId: 1,
-          action: AuditActions.ROLE_DELETE,
-          resourceType: ResourceTypes.ROLE,
-          resourceId: 5,
-        })
-      );
+      expect(GenericEntityService.delete).toHaveBeenCalledWith('role', 5, expect.any(Object));
+      // Note: auditService.log is no longer called directly - GenericEntityService handles audit logging internally
     });
 
     test("should parse ID as integer", async () => {
       // Arrange
       const deletedRole = { id: 7, name: "temp", created_at: new Date() };
-      Role.delete.mockResolvedValue(deletedRole);
+      GenericEntityService.delete.mockResolvedValue(deletedRole);
       auditService.log.mockResolvedValue(undefined);
 
       // Act
       await request(app).delete("/api/roles/7");
 
       // Assert
-      expect(Role.delete).toHaveBeenCalledWith(7);
+      expect(GenericEntityService.delete).toHaveBeenCalledWith('role', 7, expect.any(Object));
     });
 
     test("should handle concurrent delete requests gracefully", async () => {
-      // Arrange - Simulate role already deleted
-      Role.delete.mockRejectedValue(new Error("Role not found"));
+      // Arrange - GenericEntityService.delete returns null for not-found (doesn't throw)
+      GenericEntityService.delete.mockResolvedValue(null);
 
       // Act
       const response = await request(app).delete("/api/roles/5");

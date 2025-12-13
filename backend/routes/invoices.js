@@ -13,15 +13,19 @@ const {
   validatePagination,
   validateQuery,
 } = require('../validators');
-const Invoice = require('../db/models/Invoice');
-const auditService = require('../services/audit-service');
-const { AuditActions, ResourceTypes, AuditResults } = require('../services/audit-constants');
-const { getClientIp, getUserAgent } = require('../utils/request-helpers');
+// Invoice model removed - using GenericEntityService (strangler-fig Phase 4)
+const { buildRlsContext, buildAuditContext } = require('../utils/request-context');
 const { logger } = require('../config/logger');
 const invoiceMetadata = require('../config/models/invoice-metadata');
 const ResponseFormatter = require('../utils/response-formatter');
+const GenericEntityService = require('../services/generic-entity-service');
+const { filterDataByRole } = require('../utils/response-transform');
+const { handleDbError, buildDbErrorConfig } = require('../utils/db-error-handler');
 
 const router = express.Router();
+
+// Build DB error config from metadata (single source of truth)
+const DB_ERROR_CONFIG = buildDbErrorConfig(invoiceMetadata);
 
 /**
  * @openapi
@@ -108,19 +112,21 @@ router.get(
     try {
       const { page, limit } = req.validated.pagination;
       const { search, filters, sortBy, sortOrder } = req.validated.query;
+      const rlsContext = buildRlsContext(req);
 
-      const result = await Invoice.findAll({
+      const result = await GenericEntityService.findAll('invoice', {
         page,
         limit,
         search,
         filters,
         sortBy,
         sortOrder,
-        req,
-      });
+      }, rlsContext);
+
+      const sanitizedData = filterDataByRole(result.data, invoiceMetadata, req.dbUser.role, 'read');
 
       return ResponseFormatter.list(res, {
-        data: result.data,
+        data: sanitizedData,
         pagination: result.pagination,
         appliedFilters: result.appliedFilters,
         rlsApplied: result.rlsApplied,
@@ -166,19 +172,26 @@ router.get(
   async (req, res) => {
     try {
       const invoiceId = req.validated.id;
-      const invoice = await Invoice.findById(invoiceId, req);
+
+      // Build RLS context from middleware
+      const rlsContext = req.rlsPolicy ? { policy: req.rlsPolicy, userId: req.rlsUserId } : null;
+
+      const invoice = await GenericEntityService.findById('invoice', invoiceId, rlsContext);
 
       if (!invoice) {
         return ResponseFormatter.notFound(res, 'Invoice not found');
       }
 
-      return ResponseFormatter.get(res, invoice);
+      // Apply metadata-driven field-level filtering
+      const sanitizedData = filterDataByRole(invoice, invoiceMetadata, req.dbUser.role, 'read');
+
+      return ResponseFormatter.get(res, sanitizedData);
     } catch (error) {
       logger.error('Error retrieving invoice', {
         error: error.message,
         invoiceId: req.params.id,
       });
-      return ResponseFormatter.internalError(res, 'Failed to retrieve invoice');
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );
@@ -239,11 +252,10 @@ router.post(
   validateInvoiceCreate,
   async (req, res) => {
     try {
-      const { invoice_number, customer_id, work_order_id, amount, tax, total, status } = req.body;
-      const ipAddress = getClientIp(req);
-      const userAgent = getUserAgent(req);
+      const { invoice_number, customer_id, work_order_id, amount, tax, total, status, due_date } = req.body;
+      const auditContext = buildAuditContext(req);
 
-      const newInvoice = await Invoice.create({
+      const newInvoice = await GenericEntityService.create('invoice', {
         invoice_number,
         customer_id,
         work_order_id,
@@ -251,32 +263,22 @@ router.post(
         tax,
         total,
         status,
-      });
+        due_date,
+      }, { auditContext });
 
-      await auditService.log({
-        userId: req.user.userId,
-        action: AuditActions.INVOICE_CREATE,
-        resourceType: ResourceTypes.INVOICE,
-        resourceId: newInvoice.id,
-        newValues: { invoice_number, customer_id, amount, total },
-        ipAddress,
-        userAgent,
-        result: AuditResults.SUCCESS,
-      });
+      if (!newInvoice) {
+        throw new Error('Invoice creation failed unexpectedly');
+      }
 
       return ResponseFormatter.created(res, newInvoice, 'Invoice created successfully');
     } catch (error) {
-      logger.error('Error creating invoice', { error: error.message });
+      logger.error('Error creating invoice', { error: error.message, code: error.code });
 
-      if (error.code === '23505') {
-        return ResponseFormatter.conflict(res, 'Invoice number already exists');
+      if (handleDbError(error, res, DB_ERROR_CONFIG)) {
+        return;
       }
 
-      if (error.code === '23514') {
-        return ResponseFormatter.badRequest(res, 'Invalid field value - check status and other enum fields');
-      }
-
-      return ResponseFormatter.internalError(res, 'Failed to create invoice');
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );
@@ -336,28 +338,19 @@ router.patch(
   async (req, res) => {
     try {
       const invoiceId = req.validated.id;
-      const ipAddress = getClientIp(req);
-      const userAgent = getUserAgent(req);
+      const rlsContext = buildRlsContext(req);
+      const auditContext = buildAuditContext(req);
 
-      const invoice = await Invoice.findById(invoiceId);
-      if (!invoice) {
+      const oldInvoice = await GenericEntityService.findById('invoice', invoiceId, rlsContext);
+      if (!oldInvoice) {
         return ResponseFormatter.notFound(res, 'Invoice not found');
       }
 
-      await Invoice.update(invoiceId, req.body);
-      const updatedInvoice = await Invoice.findById(invoiceId);
+      const updatedInvoice = await GenericEntityService.update('invoice', invoiceId, req.body, { auditContext });
 
-      await auditService.log({
-        userId: req.user.userId,
-        action: AuditActions.INVOICE_UPDATE,
-        resourceType: ResourceTypes.INVOICE,
-        resourceId: invoiceId,
-        oldValues: invoice,
-        newValues: updatedInvoice,
-        ipAddress,
-        userAgent,
-        result: AuditResults.SUCCESS,
-      });
+      if (!updatedInvoice) {
+        return ResponseFormatter.notFound(res, 'Invoice not found');
+      }
 
       return ResponseFormatter.updated(res, updatedInvoice, 'Invoice updated successfully');
     } catch (error) {
@@ -366,15 +359,11 @@ router.patch(
         invoiceId: req.params.id,
       });
 
-      if (error.code === '23505') {
-        return ResponseFormatter.conflict(res, 'Invoice number already exists');
+      if (handleDbError(error, res, DB_ERROR_CONFIG)) {
+        return;
       }
 
-      if (error.code === '23514') {
-        return ResponseFormatter.badRequest(res, 'Invalid field value - check status and other enum fields');
-      }
-
-      return ResponseFormatter.internalError(res, 'Failed to update invoice');
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );
@@ -414,26 +403,13 @@ router.delete(
   async (req, res) => {
     try {
       const invoiceId = req.validated.id;
-      const ipAddress = getClientIp(req);
-      const userAgent = getUserAgent(req);
+      const auditContext = buildAuditContext(req);
 
-      const invoice = await Invoice.findById(invoiceId);
-      if (!invoice) {
+      const deleted = await GenericEntityService.delete('invoice', invoiceId, { auditContext });
+
+      if (!deleted) {
         return ResponseFormatter.notFound(res, 'Invoice not found');
       }
-
-      await Invoice.delete(invoiceId);
-
-      await auditService.log({
-        userId: req.user.userId,
-        action: AuditActions.INVOICE_DELETE,
-        resourceType: ResourceTypes.INVOICE,
-        resourceId: invoiceId,
-        oldValues: invoice,
-        ipAddress,
-        userAgent,
-        result: AuditResults.SUCCESS,
-      });
 
       return ResponseFormatter.deleted(res, 'Invoice deleted successfully');
     } catch (error) {
@@ -441,7 +417,7 @@ router.delete(
         error: error.message,
         invoiceId: req.params.id,
       });
-      return ResponseFormatter.internalError(res, 'Failed to delete invoice');
+      return ResponseFormatter.internalError(res, error);
     }
   },
 );

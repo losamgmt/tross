@@ -5,8 +5,7 @@
  * This allows Auth0 login to work alongside dev auth.
  */
 const express = require('express');
-const _crypto = require('crypto');
-const _User = require('../db/models/User');
+// crypto and User model removed - not used in this file
 const ResponseFormatter = require('../utils/response-formatter');
 const Auth0Strategy = require('../services/auth/Auth0Strategy');
 const tokenService = require('../services/token-service');
@@ -102,6 +101,7 @@ router.post('/callback', validateAuthCallback, async (req, res) => {
       authResult.user,
       ipAddress,
       userAgent,
+      'auth0',
     );
 
     // Log successful login
@@ -153,7 +153,8 @@ router.post('/callback', validateAuthCallback, async (req, res) => {
  *     tags: [Auth0]
  *     summary: Validate Auth0 ID token (PKCE flow)
  *     description: |
- *       Validates Auth0 ID token from PKCE flow and generates app token.
+ *       Validates Auth0 ID token from PKCE flow, generates app token,
+ *       and creates a refresh token stored in the database for session management.
  *       ALWAYS uses Auth0Strategy - works regardless of AUTH_MODE.
  *       Used by frontend after successful PKCE authentication.
  *     requestBody:
@@ -178,10 +179,13 @@ router.post('/callback', validateAuthCallback, async (req, res) => {
  *               properties:
  *                 token:
  *                   type: string
- *                   description: App JWT token
+ *                   description: App JWT access token (15 min expiry)
  *                 app_token:
  *                   type: string
- *                   description: App JWT token (alias)
+ *                   description: App JWT access token (alias)
+ *                 refresh_token:
+ *                   type: string
+ *                   description: Refresh token for session renewal (7 day expiry)
  *                 user:
  *                   $ref: '#/components/schemas/User'
  *                 provider:
@@ -207,9 +211,32 @@ router.post('/validate', validateAuth0Token, async (req, res) => {
       email: result.user.email,
     });
 
+    // Generate refresh token pair and store in database
+    // This enables server-side session management (revocation, logout-all, etc.)
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    const userAgent = req.headers['user-agent'];
+    const tokens = await tokenService.generateTokenPair(
+      result.user,
+      ipAddress,
+      userAgent,
+      'auth0',
+    );
+
+    // Log successful login
+    await auditService.log({
+      userId: result.user.id,
+      action: AuditActions.LOGIN,
+      resourceType: ResourceTypes.AUTH,
+      newValues: { provider: 'auth0', method: 'validate' },
+      ipAddress,
+      userAgent,
+      result: AuditResults.SUCCESS,
+    });
+
     return ResponseFormatter.get(res, {
-      token: result.token,
-      app_token: result.token,
+      token: tokens.accessToken,
+      app_token: tokens.accessToken,
+      refresh_token: tokens.refreshToken,
       user: result.user,
       provider: 'auth0',
     });

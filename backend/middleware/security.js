@@ -58,6 +58,19 @@ const sanitizeInput = () => {
  */
 const securityHeaders = () => {
   const isDevelopment = process.env.NODE_ENV !== 'production';
+  // In production, these MUST be set via environment variables
+  const cdnDomain = process.env.CDN_DOMAIN;
+  const apiDomain = process.env.API_DOMAIN;
+
+  // Build production image sources (filter out undefined)
+  const prodImgSrc = [SECURITY.HEADERS.CSP_SELF, 'data:', cdnDomain].filter(Boolean);
+
+  // Build production connect sources (filter out undefined)
+  const prodConnectSrc = [
+    SECURITY.HEADERS.CSP_SELF,
+    apiDomain,
+    'https://*.auth0.com',
+  ].filter(Boolean);
 
   return helmet({
     contentSecurityPolicy: {
@@ -71,15 +84,11 @@ const securityHeaders = () => {
         // Allow all HTTPS images in dev (Flutter hot reload), restrict to CDN in production
         imgSrc: isDevelopment
           ? [SECURITY.HEADERS.CSP_SELF, 'data:', 'https:']
-          : [SECURITY.HEADERS.CSP_SELF, 'data:', 'https://cdn.trossapp.com'],
+          : prodImgSrc,
         // Allow all connections in dev, restrict to API domain in production
         connectSrc: isDevelopment
           ? [SECURITY.HEADERS.CSP_SELF, '*']
-          : [
-            SECURITY.HEADERS.CSP_SELF,
-            'https://api.trossapp.com',
-            'https://*.auth0.com',
-          ],
+          : prodConnectSrc,
         fontSrc: [SECURITY.HEADERS.CSP_SELF],
         objectSrc: [SECURITY.HEADERS.CSP_NONE],
         mediaSrc: [SECURITY.HEADERS.CSP_SELF],

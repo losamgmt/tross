@@ -2,14 +2,11 @@
  * Unit Tests: invoices routes - Validation & Error Handling
  *
  * Tests validation logic, constraint violations, and error scenarios.
- * Uses centralized setup from route-test-setup.js (DRY architecture).
- *
- * Test Coverage: Input validation, conflict handling, constraint errors
+ * Uses GenericEntityService (strangler-fig migration pattern).
  */
 
 const request = require('supertest');
-const Invoice = require('../../../db/models/Invoice');
-const auditService = require('../../../services/audit-service');
+const GenericEntityService = require('../../../services/generic-entity-service');
 const { authenticateToken, requirePermission } = require('../../../middleware/auth');
 const { enforceRLS } = require('../../../middleware/row-level-security');
 const { getClientIp, getUserAgent } = require('../../../utils/request-helpers');
@@ -21,20 +18,19 @@ const {
 } = require('../../helpers/route-test-setup');
 
 // ============================================================================
-// MOCK CONFIGURATION (Hoisted by Jest)
+// MOCK CONFIGURATION
 // ============================================================================
 
-jest.mock('../../../db/models/Invoice');
-jest.mock('../../../services/audit-service');
+jest.mock('../../../services/generic-entity-service');
 jest.mock('../../../utils/request-helpers');
 
 jest.mock('../../../config/models/invoice-metadata', () => ({
   tableName: 'invoices',
   primaryKey: 'id',
-  searchableFields: ['invoice_number'],
+  searchableFields: ['invoice_number', 'notes'],
   filterableFields: ['id', 'invoice_number', 'customer_id', 'status'],
-  sortableFields: ['id', 'invoice_number', 'created_at'],
-  defaultSort: { field: 'created_at', order: 'DESC' },
+  sortableFields: ['id', 'invoice_number', 'invoice_date', 'created_at'],
+  defaultSort: { field: 'invoice_date', order: 'DESC' },
 }));
 
 jest.mock('../../../middleware/auth', () => ({
@@ -61,7 +57,7 @@ jest.mock('../../../validators', () => ({
     if (!req.validated.query) req.validated.query = {};
     req.validated.query.search = req.query.search;
     req.validated.query.filters = req.query.filters || {};
-    req.validated.query.sortBy = req.query.sortBy || 'created_at';
+    req.validated.query.sortBy = req.query.sortBy || 'invoice_date';
     req.validated.query.sortOrder = req.query.sortOrder || 'DESC';
     next();
   }),
@@ -79,7 +75,7 @@ jest.mock('../../../validators', () => ({
 }));
 
 // ============================================================================
-// TEST APP SETUP (After mocks are hoisted)
+// TEST APP SETUP
 // ============================================================================
 
 const invoicesRouter = require('../../../routes/invoices');
@@ -99,7 +95,7 @@ describe('routes/invoices.js - Validation & Error Handling', () => {
       requirePermission,
       enforceRLS,
     });
-    auditService.log.mockResolvedValue(true);
+    jest.clearAllMocks();
   });
 
   afterEach(() => {
@@ -136,32 +132,42 @@ describe('routes/invoices.js - Validation & Error Handling', () => {
   describe('POST /api/invoices - Validation', () => {
     test('should return 400 when required fields are missing', async () => {
       validateInvoiceCreate.mockImplementation((req, res, next) => {
-        return res.status(400).json({ success: false, error: 'Validation Error', message: 'Customer ID is required' });
+        return res.status(400).json({ success: false, error: 'Validation Error', message: 'Invoice number is required' });
       });
 
       const response = await request(app).post('/api/invoices').send({});
       expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
       expect(response.body.success).toBe(false);
-      expect(Invoice.create).not.toHaveBeenCalled();
+      expect(GenericEntityService.create).not.toHaveBeenCalled();
     });
 
-    test('should return 400 when amount is negative', async () => {
+    test('should return 400 when customer_id is invalid', async () => {
       validateInvoiceCreate.mockImplementation((req, res, next) => {
-        return res.status(400).json({ success: false, error: 'Validation Error', message: 'Amount must be positive' });
+        return res.status(400).json({ success: false, error: 'Validation Error', message: 'Valid customer_id is required' });
       });
 
-      const response = await request(app).post('/api/invoices').send({ amount: -100 });
+      const response = await request(app).post('/api/invoices').send({ invoice_number: 'INV-001', customer_id: 'invalid' });
       expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
     });
 
-    test('should return 409 when invoice_number already exists', async () => {
+    test('should return 409 when invoice number already exists', async () => {
       validateInvoiceCreate.mockImplementation((req, res, next) => next());
       const duplicateError = new Error('duplicate key value violates unique constraint');
       duplicateError.code = '23505';
-      Invoice.create.mockRejectedValue(duplicateError);
+      GenericEntityService.create.mockRejectedValue(duplicateError);
 
-      const response = await request(app).post('/api/invoices').send({ invoice_number: 'INV-001' });
+      const response = await request(app).post('/api/invoices').send({ invoice_number: 'INV-001', customer_id: 1 });
       expect(response.status).toBe(HTTP_STATUS.CONFLICT);
+    });
+
+    test('should return 400 when foreign key constraint fails', async () => {
+      validateInvoiceCreate.mockImplementation((req, res, next) => next());
+      const fkError = new Error('insert or update on table "invoices" violates foreign key constraint');
+      fkError.code = '23503';
+      GenericEntityService.create.mockRejectedValue(fkError);
+
+      const response = await request(app).post('/api/invoices').send({ invoice_number: 'INV-002', customer_id: 9999 });
+      expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
     });
   });
 
@@ -169,22 +175,22 @@ describe('routes/invoices.js - Validation & Error Handling', () => {
   // PATCH /api/invoices/:id - Validation
   // ===========================
   describe('PATCH /api/invoices/:id - Validation', () => {
-    test('should return 400 when status value is invalid', async () => {
+    test('should return 400 when status is invalid', async () => {
       validateInvoiceUpdate.mockImplementation((req, res, next) => {
         return res.status(400).json({ success: false, error: 'Validation Error', message: 'Invalid status value' });
       });
 
-      const response = await request(app).patch('/api/invoices/1').send({ status: 'bogus_status' });
+      const response = await request(app).patch('/api/invoices/1').send({ status: 'invalid_status' });
       expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
-      expect(Invoice.update).not.toHaveBeenCalled();
+      expect(GenericEntityService.update).not.toHaveBeenCalled();
     });
 
-    test('should return 400 when due_date format is invalid', async () => {
+    test('should return 400 when total_amount is negative', async () => {
       validateInvoiceUpdate.mockImplementation((req, res, next) => {
-        return res.status(400).json({ success: false, error: 'Validation Error', message: 'Invalid date format' });
+        return res.status(400).json({ success: false, error: 'Validation Error', message: 'Total amount cannot be negative' });
       });
 
-      const response = await request(app).patch('/api/invoices/1').send({ due_date: 'not-a-date' });
+      const response = await request(app).patch('/api/invoices/1').send({ total_amount: -100 });
       expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
     });
   });
@@ -200,7 +206,7 @@ describe('routes/invoices.js - Validation & Error Handling', () => {
 
       const response = await request(app).delete('/api/invoices/invalid');
       expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
-      expect(Invoice.delete).not.toHaveBeenCalled();
+      expect(GenericEntityService.delete).not.toHaveBeenCalled();
     });
   });
 });

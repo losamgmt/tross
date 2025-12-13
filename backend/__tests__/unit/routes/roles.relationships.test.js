@@ -1,136 +1,172 @@
 /**
- * Unit Tests: Role Routes - Relationships
+ * Unit Tests: roles routes - Relationships & Foreign Keys
  *
- * Tests GET /api/roles/:id/users endpoint BEHAVIOR:
- * - Returns list of users belonging to a role
- * - Handles empty results gracefully
- * - Returns proper error responses
- * - Supports pagination
- *
- * NOTE: Tests focus on BEHAVIOR not implementation details.
- * We don't test exact parameters passed to internal services.
+ * Tests relationship queries and foreign key constraint handling.
+ * Uses GenericEntityService (strangler-fig migration pattern).
  */
 
-const request = require("supertest");
-const express = require("express");
+const request = require('supertest');
+const GenericEntityService = require('../../../services/generic-entity-service');
+const { authenticateToken, requirePermission } = require('../../../middleware/auth');
+const { enforceRLS } = require('../../../middleware/row-level-security');
+const { getClientIp, getUserAgent } = require('../../../utils/request-helpers');
+const { HTTP_STATUS } = require('../../../config/constants');
+const {
+  createRouteTestApp,
+  setupRouteMocks,
+  teardownRouteMocks,
+} = require('../../helpers/route-test-setup');
 
-// Mock dependencies before requiring the router
-jest.mock("../../../services/generic-entity-service");
-jest.mock("../../../db/models/Role");
-jest.mock("../../../middleware/auth", () => ({
-  authenticateToken: (req, res, next) => {
-    req.user = { sub: "auth0|admin", userId: 1 };
-    req.dbUser = { id: 1, role_id: 1, role: "admin" };
+// ============================================================================
+// MOCK CONFIGURATION
+// ============================================================================
+
+jest.mock('../../../services/generic-entity-service');
+jest.mock('../../../utils/request-helpers');
+jest.mock('../../../db/helpers/default-value-helper', () => ({
+  getNextOrdinalValue: jest.fn().mockResolvedValue(50),
+}));
+
+jest.mock('../../../config/models/role-metadata', () => ({
+  tableName: 'roles',
+  primaryKey: 'id',
+  searchableFields: ['name', 'description'],
+  filterableFields: ['id', 'name'],
+  sortableFields: ['id', 'name', 'created_at'],
+  defaultSort: { field: 'name', order: 'ASC' },
+}));
+
+jest.mock('../../../middleware/auth', () => ({
+  authenticateToken: jest.fn((req, res, next) => next()),
+  requirePermission: jest.fn(() => (req, res, next) => next()),
+}));
+
+jest.mock('../../../middleware/row-level-security', () => ({
+  enforceRLS: jest.fn(() => (req, res, next) => {
+    req.rlsPolicy = 'all_records';
+    req.rlsUserId = 1;
     next();
-  },
-  requirePermission: () => (req, res, next) => next(),
-}));
-jest.mock("../../../middleware/row-level-security", () => ({
-  enforceRLS: () => (req, res, next) => next(),
-}));
-jest.mock("../../../services/audit-service");
-jest.mock("../../../config/logger", () => ({
-  logger: {
-    info: jest.fn(),
-    error: jest.fn(),
-    warn: jest.fn(),
-    debug: jest.fn(),
-  },
+  }),
 }));
 
-const GenericEntityService = require("../../../services/generic-entity-service");
-const rolesRouter = require("../../../routes/roles");
+jest.mock('../../../validators', () => ({
+  validatePagination: jest.fn(() => (req, res, next) => {
+    if (!req.validated) req.validated = {};
+    req.validated.pagination = { page: 1, limit: 50, offset: 0 };
+    next();
+  }),
+  validateQuery: jest.fn(() => (req, res, next) => {
+    if (!req.validated) req.validated = {};
+    if (!req.validated.query) req.validated.query = {};
+    req.validated.query.search = req.query.search;
+    req.validated.query.filters = req.query.filters || {};
+    req.validated.query.sortBy = req.query.sortBy || 'name';
+    req.validated.query.sortOrder = req.query.sortOrder || 'ASC';
+    next();
+  }),
+  validateIdParam: jest.fn(() => (req, res, next) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id) || id < 1) {
+      return res.status(400).json({ success: false, error: 'Validation Error', message: 'Invalid ID parameter' });
+    }
+    if (!req.validated) req.validated = {};
+    req.validated.id = id;
+    next();
+  }),
+  validateRoleCreate: jest.fn((req, res, next) => next()),
+  validateRoleUpdate: jest.fn((req, res, next) => next()),
+}));
 
-const app = express();
-app.use(express.json());
-app.use("/api/roles", rolesRouter);
+// ============================================================================
+// TEST APP SETUP
+// ============================================================================
 
-describe("routes/roles.js - GET /api/roles/:id/users", () => {
+const rolesRouter = require('../../../routes/roles');
+const { validateRoleCreate, validateIdParam } = require('../../../validators');
+const app = createRouteTestApp(rolesRouter, '/api/roles');
+
+// ============================================================================
+// TEST SUITE
+// ============================================================================
+
+describe('routes/roles.js - Relationships & Foreign Keys', () => {
   beforeEach(() => {
+    setupRouteMocks({
+      getClientIp,
+      getUserAgent,
+      authenticateToken,
+      requirePermission,
+      enforceRLS,
+    });
     jest.clearAllMocks();
   });
 
-  describe("Success Scenarios", () => {
-    test("should return users belonging to the role", async () => {
-      // Arrange - mock returns users
-      GenericEntityService.findAll.mockResolvedValue({
-        data: [
-          { id: 1, email: "user1@test.com", first_name: "User", last_name: "One" },
-          { id: 2, email: "user2@test.com", first_name: "User", last_name: "Two" },
-        ],
-        pagination: { page: 1, limit: 50, total: 2, totalPages: 1 },
+  afterEach(() => {
+    teardownRouteMocks();
+  });
+
+  // ===========================
+  // DELETE - Foreign Key Constraints
+  // ===========================
+  describe('DELETE /api/roles/:id - Foreign Key Constraints', () => {
+    test('should return 400 when role has associated users (FK violation)', async () => {
+      validateIdParam.mockImplementation(() => (req, res, next) => {
+        if (!req.validated) req.validated = {};
+        req.validated.id = 1;
+        next();
       });
 
-      // Act
-      const response = await request(app)
-        .get("/api/roles/1/users")
-        .set("Authorization", "Bearer test-token");
+      const fkError = new Error('update or delete on table "roles" violates foreign key constraint');
+      fkError.code = '23503';
+      GenericEntityService.delete.mockRejectedValue(fkError);
 
-      // Assert BEHAVIOR: returns success with user data
-      expect(response.status).toBe(200);
-      expect(response.body.data).toHaveLength(2);
-      expect(response.body.data[0]).toHaveProperty("email");
-      expect(response.body.pagination).toBeDefined();
+      const response = await request(app).delete('/api/roles/1');
+      // FK violations return 400 Bad Request with helpful message
+      expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
+      expect(response.body.success).toBe(false);
     });
 
-    test("should return empty array when no users have the role", async () => {
-      // Arrange
-      GenericEntityService.findAll.mockResolvedValue({
-        data: [],
-        pagination: { page: 1, limit: 50, total: 0, totalPages: 0 },
+    test('should return 404 when role does not exist', async () => {
+      validateIdParam.mockImplementation(() => (req, res, next) => {
+        if (!req.validated) req.validated = {};
+        req.validated.id = 9999;
+        next();
       });
 
-      // Act
-      const response = await request(app)
-        .get("/api/roles/999/users")
-        .set("Authorization", "Bearer test-token");
+      GenericEntityService.delete.mockResolvedValue(null);
 
-      // Assert BEHAVIOR: returns success with empty data
-      expect(response.status).toBe(200);
-      expect(response.body.data).toEqual([]);
+      const response = await request(app).delete('/api/roles/9999');
+      expect(response.status).toBe(HTTP_STATUS.NOT_FOUND);
     });
 
-    test("should support pagination query parameters", async () => {
-      // Arrange
-      GenericEntityService.findAll.mockResolvedValue({
-        data: [{ id: 5, email: "user5@test.com" }],
-        pagination: { page: 2, limit: 5, total: 10, totalPages: 2 },
+    test('should successfully delete role without dependencies', async () => {
+      validateIdParam.mockImplementation(() => (req, res, next) => {
+        if (!req.validated) req.validated = {};
+        req.validated.id = 5;
+        next();
       });
 
-      // Act
-      const response = await request(app)
-        .get("/api/roles/1/users?page=2&limit=5")
-        .set("Authorization", "Bearer test-token");
+      GenericEntityService.delete.mockResolvedValue({ id: 5, name: 'Temp Role' });
 
-      // Assert BEHAVIOR: pagination is reflected in response
-      expect(response.status).toBe(200);
-      expect(response.body.pagination.page).toBe(2);
-      expect(response.body.pagination.limit).toBe(5);
+      const response = await request(app).delete('/api/roles/5');
+      expect(response.status).toBe(HTTP_STATUS.OK);
+      expect(response.body.success).toBe(true);
     });
   });
 
-  describe("Error Scenarios", () => {
-    test("should return 500 when database error occurs", async () => {
-      // Arrange
-      GenericEntityService.findAll.mockRejectedValue(new Error("Database error"));
+  // ===========================
+  // POST - Unique Constraint
+  // ===========================
+  describe('POST /api/roles - Unique Constraints', () => {
+    test('should return 409 when role name already exists', async () => {
+      validateRoleCreate.mockImplementation((req, res, next) => next());
+      const duplicateError = new Error('duplicate key value violates unique constraint');
+      duplicateError.code = '23505';
+      GenericEntityService.create.mockRejectedValue(duplicateError);
 
-      // Act
-      const response = await request(app)
-        .get("/api/roles/1/users")
-        .set("Authorization", "Bearer test-token");
-
-      // Assert BEHAVIOR: returns error status
-      expect(response.status).toBe(500);
-    });
-
-    test("should return 400 for non-numeric role ID", async () => {
-      // Act
-      const response = await request(app)
-        .get("/api/roles/abc/users")
-        .set("Authorization", "Bearer test-token");
-
-      // Assert BEHAVIOR: rejects invalid input
-      expect(response.status).toBe(400);
+      const response = await request(app).post('/api/roles').send({ name: 'Admin' });
+      expect(response.status).toBe(HTTP_STATUS.CONFLICT);
+      expect(response.body.success).toBe(false);
     });
   });
 });

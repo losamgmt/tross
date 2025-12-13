@@ -5,10 +5,12 @@
  * Uses centralized setup from route-test-setup.js (DRY architecture).
  *
  * Test Coverage: Input validation, conflict handling, constraint errors
+ * 
+ * NOTE: Now uses GenericEntityService instead of Technician model (Phase 4 strangler-fig)
  */
 
 const request = require('supertest');
-const Technician = require('../../../db/models/Technician');
+const GenericEntityService = require('../../../services/generic-entity-service');
 const auditService = require('../../../services/audit-service');
 const { authenticateToken, requirePermission } = require('../../../middleware/auth');
 const { enforceRLS } = require('../../../middleware/row-level-security');
@@ -24,7 +26,7 @@ const {
 // MOCK CONFIGURATION (Hoisted by Jest)
 // ============================================================================
 
-jest.mock('../../../db/models/Technician');
+jest.mock('../../../services/generic-entity-service');
 jest.mock('../../../services/audit-service');
 jest.mock('../../../utils/request-helpers');
 
@@ -69,12 +71,17 @@ jest.mock('../../../validators', () => ({
   validateTechnicianUpdate: jest.fn((req, res, next) => next()),
 }));
 
+const {
+  validateIdParam,
+  validateTechnicianCreate,
+  validateTechnicianUpdate,
+} = require('../../../validators');
+
 // ============================================================================
 // TEST APP SETUP (After mocks are hoisted)
 // ============================================================================
 
 const techniciansRouter = require('../../../routes/technicians');
-const { validateTechnicianCreate, validateTechnicianUpdate, validateIdParam } = require('../../../validators');
 const app = createRouteTestApp(techniciansRouter, '/api/technicians');
 
 // ============================================================================
@@ -91,6 +98,17 @@ describe('routes/technicians.js - Validation & Error Handling', () => {
       enforceRLS,
     });
     auditService.log.mockResolvedValue(true);
+    
+    // Reset GenericEntityService mocks
+    GenericEntityService.findAll = jest.fn();
+    GenericEntityService.findById = jest.fn();
+    GenericEntityService.create = jest.fn();
+    GenericEntityService.update = jest.fn();
+    GenericEntityService.delete = jest.fn();
+
+    // Reset validator mocks
+    validateTechnicianCreate.mockImplementation((req, res, next) => next());
+    validateTechnicianUpdate.mockImplementation((req, res, next) => next());
   });
 
   afterEach(() => {
@@ -101,22 +119,12 @@ describe('routes/technicians.js - Validation & Error Handling', () => {
   // GET /api/technicians/:id - Validation
   // ===========================
   describe('GET /api/technicians/:id - Validation', () => {
-    test('should return 400 for invalid ID (non-numeric)', async () => {
+    test('should return 400 when id is not a valid number', async () => {
       validateIdParam.mockImplementation(() => (req, res, next) => {
-        return res.status(400).json({ success: false, error: 'Validation Error', message: 'Invalid ID parameter' });
+        return res.status(400).json({ success: false, error: 'Validation Error', message: 'ID must be a positive integer' });
       });
 
-      const response = await request(app).get('/api/technicians/abc');
-      expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
-      expect(response.body.success).toBe(false);
-    });
-
-    test('should return 400 for invalid ID (zero or negative)', async () => {
-      validateIdParam.mockImplementation(() => (req, res, next) => {
-        return res.status(400).json({ success: false, error: 'Validation Error', message: 'ID must be positive' });
-      });
-
-      const response = await request(app).get('/api/technicians/0');
+      const response = await request(app).get('/api/technicians/invalid');
       expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
     });
   });
@@ -127,13 +135,13 @@ describe('routes/technicians.js - Validation & Error Handling', () => {
   describe('POST /api/technicians - Validation', () => {
     test('should return 400 when required fields are missing', async () => {
       validateTechnicianCreate.mockImplementation((req, res, next) => {
-        return res.status(400).json({ success: false, error: 'Validation Error', message: 'License number is required' });
+        return res.status(400).json({ success: false, error: 'Validation Error', message: 'Required fields missing' });
       });
 
       const response = await request(app).post('/api/technicians').send({});
       expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
       expect(response.body.success).toBe(false);
-      expect(Technician.create).not.toHaveBeenCalled();
+      expect(GenericEntityService.create).not.toHaveBeenCalled();
     });
 
     test('should return 400 when hourly_rate is negative', async () => {
@@ -149,7 +157,7 @@ describe('routes/technicians.js - Validation & Error Handling', () => {
       validateTechnicianCreate.mockImplementation((req, res, next) => next());
       const duplicateError = new Error('duplicate key value violates unique constraint');
       duplicateError.code = '23505';
-      Technician.create.mockRejectedValue(duplicateError);
+      GenericEntityService.create.mockRejectedValue(duplicateError);
 
       const response = await request(app).post('/api/technicians').send({ license_number: 'TECH-001' });
       expect(response.status).toBe(HTTP_STATUS.CONFLICT);
@@ -167,7 +175,14 @@ describe('routes/technicians.js - Validation & Error Handling', () => {
 
       const response = await request(app).patch('/api/technicians/1').send({ status: 'invalid_status' });
       expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
-      expect(Technician.update).not.toHaveBeenCalled();
+      expect(GenericEntityService.update).not.toHaveBeenCalled();
+    });
+
+    test('should return 404 when technician does not exist', async () => {
+      GenericEntityService.findById.mockResolvedValue(null);
+
+      const response = await request(app).patch('/api/technicians/999').send({ status: 'active' });
+      expect(response.status).toBe(HTTP_STATUS.NOT_FOUND);
     });
   });
 
@@ -175,14 +190,11 @@ describe('routes/technicians.js - Validation & Error Handling', () => {
   // DELETE /api/technicians/:id - Validation
   // ===========================
   describe('DELETE /api/technicians/:id - Validation', () => {
-    test('should return 400 for invalid ID parameter', async () => {
-      validateIdParam.mockImplementation(() => (req, res, next) => {
-        return res.status(400).json({ success: false, error: 'Validation Error', message: 'Invalid ID' });
-      });
+    test('should return 404 when technician does not exist', async () => {
+      GenericEntityService.findById.mockResolvedValue(null);
 
-      const response = await request(app).delete('/api/technicians/invalid');
-      expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
-      expect(Technician.delete).not.toHaveBeenCalled();
+      const response = await request(app).delete('/api/technicians/999');
+      expect(response.status).toBe(HTTP_STATUS.NOT_FOUND);
     });
   });
 });

@@ -275,10 +275,13 @@ class Role {
       }
     }
 
-    const allowedFields = ['name', 'description', 'permissions', 'is_active', 'priority'];
+    // EXCLUSION PATTERN: Define fields that CANNOT be updated
+    // Universal immutables (id, created_at) handled by buildUpdateClause automatically
+    // Role-specific: none beyond universals (name CAN be changed for non-protected roles)
+    const immutableFields = [];
 
-    // Build SET clause using helper
-    const { updates: fields, values, hasUpdates } = buildUpdateClause(normalizedUpdates, allowedFields);
+    // Build SET clause using helper with exclusion pattern
+    const { updates: fields, values, hasUpdates } = buildUpdateClause(normalizedUpdates, immutableFields);
 
     if (!hasUpdates) {
       throw new Error(MODEL_ERRORS.ROLE.NO_VALID_FIELDS);

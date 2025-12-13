@@ -6,13 +6,13 @@
  *
  * Test Coverage: Profile retrieval and updates
  * 
- * NOTE: PUT /api/auth/me now uses GenericEntityService.findByField
- * instead of User.findByAuth0Id
+ * NOTE: PUT /api/auth/me now uses GenericEntityService.findByField and
+ * GenericEntityService.update (strangler-fig Phase 4 complete)
  */
 
 const request = require("supertest");
 const authRoutes = require("../../../routes/auth");
-const User = require("../../../db/models/User");
+// User model removed - using GenericEntityService (strangler-fig Phase 4)
 const GenericEntityService = require("../../../services/generic-entity-service");
 const { authenticateToken } = require("../../../middleware/auth");
 const { validateProfileUpdate } = require("../../../validators");
@@ -24,13 +24,16 @@ const {
 } = require("../../helpers/route-test-setup");
 
 // Mock dependencies
-jest.mock("../../../db/models/User");
 jest.mock("../../../db/models/Role");
 jest.mock("../../../services/user-data");
 jest.mock("../../../services/token-service");
 jest.mock("../../../services/audit-service");
 jest.mock("../../../services/generic-entity-service");
-jest.mock("../../../middleware/auth");
+jest.mock("../../../middleware/auth", () => ({
+  authenticateToken: jest.fn((req, res, next) => next()),
+  requirePermission: jest.fn(() => (req, res, next) => next()),
+  requireMinimumRole: jest.fn(() => (req, res, next) => next()),
+}));
 jest.mock("../../../validators");
 jest.mock("../../../utils/request-helpers");
 jest.mock("jsonwebtoken");
@@ -82,6 +85,7 @@ describe("routes/auth.js - Profile Operations", () => {
 
     // Reset GenericEntityService mock
     GenericEntityService.findByField = jest.fn();
+    GenericEntityService.update = jest.fn();
   });
 
   afterEach(() => {
@@ -152,25 +156,24 @@ describe("routes/auth.js - Profile Operations", () => {
       };
 
       // Mock GenericEntityService.findByField for finding by auth0_id
-      GenericEntityService.findByField
-        .mockResolvedValueOnce({
-          id: 1,
-          auth0_id: "auth0|123",
-          email: "test@example.com",
-          role: "user",
-          first_name: "Test",
-          last_name: "User",
-        })
-        .mockResolvedValueOnce({
-          id: 1,
-          auth0_id: "auth0|123",
-          email: "test@example.com",
-          role: "user",
-          first_name: "Updated",
-          last_name: "Name",
-        });
+      GenericEntityService.findByField.mockResolvedValue({
+        id: 1,
+        auth0_id: "auth0|123",
+        email: "test@example.com",
+        role: "user",
+        first_name: "Test",
+        last_name: "User",
+      });
 
-      User.update.mockResolvedValue(true);
+      // Mock GenericEntityService.update to return updated user
+      GenericEntityService.update.mockResolvedValue({
+        id: 1,
+        auth0_id: "auth0|123",
+        email: "test@example.com",
+        role: "user",
+        first_name: "Updated",
+        last_name: "Name",
+      });
 
       // Act
       const response = await request(app).put("/api/auth/me").send(updates);
@@ -182,50 +185,46 @@ describe("routes/auth.js - Profile Operations", () => {
       expect(response.body.data.first_name).toBe("Updated");
       expect(response.body.data.last_name).toBe("Name");
       expect(GenericEntityService.findByField).toHaveBeenCalledWith("user", "auth0_id", "auth0|123");
-      expect(User.update).toHaveBeenCalledWith(1, updates);
+      expect(GenericEntityService.update).toHaveBeenCalledWith("user", 1, updates);
     });
 
     test("should update single field successfully", async () => {
       // Arrange
       const updates = { first_name: "NewName" };
 
-      GenericEntityService.findByField
-        .mockResolvedValueOnce({
-          id: 1,
-          auth0_id: "auth0|123",
-          first_name: "Old",
-        })
-        .mockResolvedValueOnce({
-          id: 1,
-          auth0_id: "auth0|123",
-          first_name: "NewName",
-        });
+      GenericEntityService.findByField.mockResolvedValue({
+        id: 1,
+        auth0_id: "auth0|123",
+        first_name: "Old",
+      });
 
-      User.update.mockResolvedValue(true);
+      GenericEntityService.update.mockResolvedValue({
+        id: 1,
+        auth0_id: "auth0|123",
+        first_name: "NewName",
+      });
 
       // Act
       const response = await request(app).put("/api/auth/me").send(updates);
 
       // Assert
       expect(response.status).toBe(200);
-      expect(User.update).toHaveBeenCalledWith(1, { first_name: "NewName" });
+      expect(GenericEntityService.update).toHaveBeenCalledWith("user", 1, { first_name: "NewName" });
     });
 
     test("should filter out disallowed fields", async () => {
       // Arrange
-      GenericEntityService.findByField
-        .mockResolvedValueOnce({
-          id: 1,
-          auth0_id: "auth0|123",
-          first_name: "Test",
-        })
-        .mockResolvedValueOnce({
-          id: 1,
-          auth0_id: "auth0|123",
-          first_name: "Updated",
-        });
+      GenericEntityService.findByField.mockResolvedValue({
+        id: 1,
+        auth0_id: "auth0|123",
+        first_name: "Test",
+      });
 
-      User.update.mockResolvedValue(true);
+      GenericEntityService.update.mockResolvedValue({
+        id: 1,
+        auth0_id: "auth0|123",
+        first_name: "Updated",
+      });
 
       // Act
       const response = await request(app).put("/api/auth/me").send({
@@ -236,7 +235,7 @@ describe("routes/auth.js - Profile Operations", () => {
 
       // Assert
       expect(response.status).toBe(200);
-      expect(User.update).toHaveBeenCalledWith(1, { first_name: "Updated" });
+      expect(GenericEntityService.update).toHaveBeenCalledWith("user", 1, { first_name: "Updated" });
     });
 
     test("should return 404 when user not found by auth0_id", async () => {

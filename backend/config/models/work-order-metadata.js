@@ -8,6 +8,11 @@
  * SINGLE SOURCE OF TRUTH for Work Order model query and CRUD capabilities
  */
 
+const {
+  FIELD_ACCESS_LEVELS: _FAL,
+  UNIVERSAL_FIELD_ACCESS,
+} = require('../constants');
+
 module.exports = {
   // Table name in database
   tableName: 'work_orders',
@@ -41,16 +46,152 @@ module.exports = {
   requiredFields: ['title', 'customer_id'],
 
   /**
-   * Fields that can be set during CREATE
-   * Excludes: id, created_at, updated_at (system-managed)
+   * Fields that cannot be modified after creation (beyond universal immutables: id, created_at)
+   * Empty array = all fields are updateable
    */
-  createableFields: ['title', 'description', 'priority', 'customer_id', 'assigned_technician_id', 'scheduled_start', 'scheduled_end', 'status'],
+  immutableFields: [],
+
+  // ============================================================================
+  // FIELD-LEVEL ACCESS CONTROL (for response-transform.js)
+  // ============================================================================
 
   /**
-   * Fields that can be modified during UPDATE
-   * Excludes: id, created_at
+   * Per-field CRUD permissions using FIELD_ACCESS_LEVELS shortcuts
+   * Entity Contract fields use UNIVERSAL_FIELD_ACCESS spread
+   *
+   * Work Order access (RLS applies):
+   * - Customers: See their own work orders (limited fields)
+   * - Technicians: See assigned work orders (operational fields)
+   * - Dispatchers+: Full read access, can assign technicians
+   * - Managers+: Full CRUD
    */
-  updateableFields: ['title', 'description', 'priority', 'assigned_technician_id', 'scheduled_start', 'scheduled_end', 'completed_at', 'status', 'is_active'],
+  fieldAccess: {
+    // Entity Contract v2.0 fields
+    ...UNIVERSAL_FIELD_ACCESS,
+
+    // Identity field - title is the display name
+    title: {
+      create: 'customer', // Customers can create work orders
+      read: 'customer',
+      update: 'dispatcher', // Dispatchers+ can edit
+      delete: 'none',
+    },
+
+    // Description - customer provides, dispatcher+ can edit
+    description: {
+      create: 'customer',
+      read: 'customer',
+      update: 'dispatcher',
+      delete: 'none',
+    },
+
+    // FK to customers - set on create, dispatcher+ can view
+    customer_id: {
+      create: 'customer',
+      read: 'technician', // Technicians need to see customer
+      update: 'none', // Cannot reassign to different customer
+      delete: 'none',
+    },
+
+    // FK to technicians - dispatcher+ assigns
+    assigned_technician_id: {
+      create: 'dispatcher',
+      read: 'customer',
+      update: 'dispatcher',
+      delete: 'none',
+    },
+
+    // Priority - customer sets, dispatcher+ can override
+    priority: {
+      create: 'customer',
+      read: 'customer',
+      update: 'dispatcher',
+      delete: 'none',
+    },
+
+    // Scheduling - dispatcher+ manages, all can read
+    scheduled_start: {
+      create: 'dispatcher',
+      read: 'customer',
+      update: 'dispatcher',
+      delete: 'none',
+    },
+    scheduled_end: {
+      create: 'dispatcher',
+      read: 'customer',
+      update: 'dispatcher',
+      delete: 'none',
+    },
+
+    // Completion timestamp - system/technician sets
+    completed_at: {
+      create: 'none',
+      read: 'customer',
+      update: 'technician',
+      delete: 'none',
+    },
+  },
+
+  // ============================================================================
+  // FOREIGN KEY CONFIGURATION (for db-error-handler.js)
+  // ============================================================================
+
+  /**
+   * Foreign key relationships for error message generation
+   * Maps FK field -> { table, displayName }
+   */
+  foreignKeys: {
+    customer_id: {
+      table: 'customers',
+      displayName: 'Customer',
+    },
+    assigned_technician_id: {
+      table: 'technicians',
+      displayName: 'Technician',
+    },
+  },
+
+  // ============================================================================
+  // RELATIONSHIPS (for JOIN queries)
+  // ============================================================================
+
+  /**
+   * Relationships to JOIN by default in all queries (findById, findAll, findByField)
+   * These are included automatically without needing to specify 'include' option
+   * Work orders almost always need customer info displayed
+   */
+  defaultIncludes: ['customer'],
+
+  /**
+   * Foreign key relationships
+   * Used for JOIN generation and validation
+   */
+  relationships: {
+    // Work order belongs to a customer (required)
+    customer: {
+      type: 'belongsTo',
+      foreignKey: 'customer_id',
+      table: 'customers',
+      fields: ['id', 'email', 'company_name', 'phone'],
+      description: 'Customer who requested this work order',
+    },
+    // Work order may be assigned to a technician (optional)
+    assignedTechnician: {
+      type: 'belongsTo',
+      foreignKey: 'assigned_technician_id',
+      table: 'technicians',
+      fields: ['id', 'license_number', 'status'],
+      description: 'Technician assigned to this work order',
+    },
+    // Work order may have invoices
+    invoices: {
+      type: 'hasMany',
+      foreignKey: 'work_order_id',
+      table: 'invoices',
+      fields: ['id', 'invoice_number', 'status', 'total'],
+      description: 'Invoices generated from this work order',
+    },
+  },
 
   // ============================================================================
   // DELETE CONFIGURATION (for GenericEntityService.delete)

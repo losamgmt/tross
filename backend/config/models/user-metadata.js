@@ -8,6 +8,11 @@
  * SINGLE SOURCE OF TRUTH for User model query and CRUD capabilities
  */
 
+const {
+  FIELD_ACCESS_LEVELS: FAL,
+  UNIVERSAL_FIELD_ACCESS,
+} = require('../constants');
+
 module.exports = {
   // Table name in database
   tableName: 'users',
@@ -35,6 +40,12 @@ module.exports = {
    * Used for: Display names, search results, logging
    */
   identityField: 'email',
+
+  /**
+   * Whether the identity field has a UNIQUE constraint in the database
+   * Used for duplicate rejection tests
+   */
+  identityFieldUnique: true,
 
   /**
    * RLS resource name for permission checks
@@ -67,16 +78,88 @@ module.exports = {
   requiredFields: ['email', 'first_name', 'last_name'],
 
   /**
-   * Fields that can be set during CREATE
-   * Excludes: id, created_at, updated_at (system-managed)
+   * Fields that cannot be modified after creation (beyond universal immutables: id, created_at)
+   * - email: User identity, cannot change
+   * - auth0_id: Auth binding, cannot change
    */
-  createableFields: ['email', 'auth0_id', 'first_name', 'last_name', 'role_id', 'status'],
+  immutableFields: ['email', 'auth0_id'],
+
+  // ============================================================================
+  // FIELD ACCESS CONTROL (role-based field-level CRUD permissions)
+  // ============================================================================
+  // Each field specifies the MINIMUM role required for each CRUD operation.
+  // Permissions accumulate UPWARD: admin has all manager + dispatcher + technician + customer permissions.
+  // Universal fields (id, is_active, created_at, updated_at, status) are in UNIVERSAL_FIELD_ACCESS.
+  // Use FAL shortcuts for common patterns, or define custom { create, read, update, delete }.
+
+  fieldAccess: {
+    // Entity Contract v2.0 fields (id, is_active, created_at, updated_at, status)
+    ...UNIVERSAL_FIELD_ACCESS,
+
+    // Email - identity field, readable by all authenticated, only admin can set
+    email: {
+      create: 'admin',
+      read: 'customer', // Users can see own email, admin sees all
+      update: 'none', // Immutable
+      delete: 'none',
+    },
+
+    // Auth0 ID - internal auth binding, admin only
+    auth0_id: {
+      create: 'admin', // Set during Auth0 SSO flow
+      read: 'none', // Never exposed in API (also in sensitiveFields)
+      update: 'none', // Immutable
+      delete: 'none',
+    },
+
+    // Name fields - self-editable, admin can manage
+    first_name: FAL.SELF_EDITABLE,
+    last_name: FAL.SELF_EDITABLE,
+
+    // Role assignment - admin only, but readable by all authenticated users
+    role_id: {
+      create: 'admin',
+      read: 'customer',
+      update: 'admin',
+      delete: 'none',
+    },
+
+    // Role name from JOIN - readonly, publicly readable
+    role: FAL.PUBLIC_READONLY,
+
+    // Profile links - admin managed (set via profile creation flows)
+    customer_profile_id: FAL.ADMIN_ONLY,
+    technician_profile_id: FAL.ADMIN_ONLY,
+  },
+
+  // ============================================================================
+  // FOREIGN KEY CONFIGURATION (for db-error-handler)
+  // ============================================================================
 
   /**
-   * Fields that can be modified during UPDATE
-   * Excludes: id, email (immutable), auth0_id (immutable), created_at
+   * Foreign keys for user-friendly DB error messages
+   * Used by buildDbErrorConfig() to generate handleDbError config
+   *
+   * settableOnCreate: Whether this FK can be set via POST (default: true)
+   * Some FKs are managed via separate workflows (e.g., profile linking)
    */
-  updateableFields: ['first_name', 'last_name', 'role_id', 'status', 'is_active'],
+  foreignKeys: {
+    role_id: {
+      table: 'roles',
+      displayName: 'Role',
+      settableOnCreate: true,
+    },
+    customer_profile_id: {
+      table: 'customers',
+      displayName: 'Customer Profile',
+      settableOnCreate: false, // Set via profile linking, not user creation
+    },
+    technician_profile_id: {
+      table: 'technicians',
+      displayName: 'Technician Profile',
+      settableOnCreate: false, // Set via profile linking, not user creation
+    },
+  },
 
   // ============================================================================
   // DELETE CONFIGURATION (for GenericEntityService.delete)
@@ -232,7 +315,7 @@ module.exports = {
   fields: {
     // TIER 1: Universal Entity Contract Fields
     id: { type: 'integer', readonly: true },
-    email: { type: 'string', required: true, maxLength: 255 },
+    email: { type: 'email', required: true, maxLength: 255 },
     is_active: { type: 'boolean', default: true },
     created_at: { type: 'timestamp', readonly: true },
     updated_at: { type: 'timestamp', readonly: true },

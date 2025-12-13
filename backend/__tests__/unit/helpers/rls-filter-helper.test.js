@@ -63,10 +63,11 @@ describe('RLS Filter Helper', () => {
           userMetadata
         );
 
+        // applied: false because no actual filtering occurs (full access)
         expect(result).toEqual({
           clause: '',
           params: [],
-          applied: true,
+          applied: false,
         });
       });
 
@@ -77,7 +78,8 @@ describe('RLS Filter Helper', () => {
         );
 
         expect(result.clause).toBe('');
-        expect(result.applied).toBe(true);
+        // applied: false because no actual filtering occurs
+        expect(result.applied).toBe(false);
       });
     });
 
@@ -88,10 +90,11 @@ describe('RLS Filter Helper', () => {
           { tableName: 'roles' }
         );
 
+        // applied: false because no actual filtering occurs (public access)
         expect(result).toEqual({
           clause: '',
           params: [],
-          applied: true,
+          applied: false,
         });
       });
     });
@@ -347,7 +350,8 @@ describe('RLS Filter Helper', () => {
       );
 
       expect(result.clause).toBe('');
-      expect(result.applied).toBe(true);
+      // applied: false because no actual filtering occurs (full access)
+      expect(result.applied).toBe(false);
     });
   });
 

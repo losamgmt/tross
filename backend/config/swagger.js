@@ -52,8 +52,8 @@ const options = {
         \`\`\`
       `,
       contact: {
-        name: 'TrossApp Team',
-        email: 'dev@trossapp.com',
+        name: process.env.APP_NAME ? `${process.env.APP_NAME} Team` : 'TrossApp Team',
+        email: process.env.CONTACT_EMAIL || 'dev@example.com',
       },
       license: {
         name: 'MIT',
@@ -62,13 +62,13 @@ const options = {
     },
     servers: [
       {
-        url: 'http://localhost:3001',
+        url: process.env.DEV_API_URL || 'http://localhost:3001',
         description: 'Development server',
       },
-      {
-        url: 'https://api.trossapp.com',
-        description: 'Production server (future)',
-      },
+      ...(process.env.API_DOMAIN ? [{
+        url: process.env.API_DOMAIN,
+        description: 'Production server',
+      }] : []),
     ],
     components: {
       securitySchemes: {

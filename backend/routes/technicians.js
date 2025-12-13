@@ -7,7 +7,6 @@ const express = require('express');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
 const { enforceRLS } = require('../middleware/row-level-security');
 const ResponseFormatter = require('../utils/response-formatter');
-const { hasMinimumRole } = require('../config/permissions-loader');
 const {
   validateTechnicianCreate,
   validateTechnicianUpdate,
@@ -15,41 +14,18 @@ const {
   validatePagination,
   validateQuery,
 } = require('../validators');
-const Technician = require('../db/models/Technician');
-const auditService = require('../services/audit-service');
-const { AuditActions, ResourceTypes, AuditResults } = require('../services/audit-constants');
-const { getClientIp, getUserAgent } = require('../utils/request-helpers');
+// Technician model removed - using GenericEntityService (strangler-fig Phase 4)
+const { buildRlsContext, buildAuditContext } = require('../utils/request-context');
 const { logger } = require('../config/logger');
 const technicianMetadata = require('../config/models/technician-metadata');
+const GenericEntityService = require('../services/generic-entity-service');
+const { filterDataByRole } = require('../utils/response-transform');
+const { handleDbError, buildDbErrorConfig } = require('../utils/db-error-handler');
 
 const router = express.Router();
 
-/**
- * Sanitize technician data based on requesting user's role
- * Customers see limited info (name, certs, photo only)
- * Technicians+ see full profile
- */
-function sanitizeTechnicianData(technician, userRole) {
-  if (!technician) {
-    return technician;
-  }
-
-  // If customer, filter sensitive fields
-  if (userRole === 'customer' || userRole === 1) {
-    return {
-      id: technician.id,
-      // Public fields only - no license_number, hourly_rate, etc.
-      status: technician.status,
-      is_active: technician.is_active,
-      created_at: technician.created_at,
-      certifications: technician.certifications, // Public info
-      skills: technician.skills, // Public info
-    };
-  }
-
-  // Technicians and above see full profile
-  return technician;
-}
+// Build DB error config from metadata (single source of truth)
+const DB_ERROR_CONFIG = buildDbErrorConfig(technicianMetadata);
 
 /**
  * @openapi
@@ -127,21 +103,18 @@ router.get(
     try {
       const { page, limit } = req.validated.pagination;
       const { search, filters, sortBy, sortOrder } = req.validated.query;
+      const rlsContext = buildRlsContext(req);
 
-      const result = await Technician.findAll({
+      const result = await GenericEntityService.findAll('technician', {
         page,
         limit,
         search,
         filters,
         sortBy,
         sortOrder,
-        req,
-      });
+      }, rlsContext);
 
-      // Apply field-level filtering based on role
-      const sanitizedData = result.data.map((tech) =>
-        sanitizeTechnicianData(tech, req.dbUser.role),
-      );
+      const sanitizedData = filterDataByRole(result.data, technicianMetadata, req.dbUser.role, 'read');
 
       return ResponseFormatter.list(res, {
         data: sanitizedData,
@@ -192,17 +165,16 @@ router.get(
   async (req, res) => {
     try {
       const technicianId = req.validated.id;
-      const technician = await Technician.findById(technicianId, req);
+      const rlsContext = buildRlsContext(req);
+
+      const technician = await GenericEntityService.findById('technician', technicianId, rlsContext);
 
       if (!technician) {
         return ResponseFormatter.notFound(res, 'Technician not found');
       }
 
-      // Apply field-level filtering
-      const sanitizedData = sanitizeTechnicianData(
-        technician,
-        req.dbUser.role,
-      );
+      // Apply metadata-driven field-level filtering
+      const sanitizedData = filterDataByRole(technician, technicianMetadata, req.dbUser.role, 'read');
 
       return ResponseFormatter.get(res, sanitizedData);
     } catch (error) {
@@ -261,37 +233,27 @@ router.post(
   validateTechnicianCreate,
   async (req, res) => {
     try {
-      const { license_number, hourly_rate, status } = req.body;
-      const ipAddress = getClientIp(req);
-      const userAgent = getUserAgent(req);
+      const { license_number, hourly_rate, status, certifications, skills } = req.body;
+      const auditContext = buildAuditContext(req);
 
-      const newTechnician = await Technician.create({
+      const newTechnician = await GenericEntityService.create('technician', {
         license_number,
         hourly_rate,
         status,
-      });
+        certifications,
+        skills,
+      }, { auditContext });
 
-      await auditService.log({
-        userId: req.user.userId,
-        action: AuditActions.TECHNICIAN_CREATE,
-        resourceType: ResourceTypes.TECHNICIAN,
-        resourceId: newTechnician.id,
-        newValues: { license_number, hourly_rate, status },
-        ipAddress,
-        userAgent,
-        result: AuditResults.SUCCESS,
-      });
+      if (!newTechnician) {
+        throw new Error('Technician creation failed unexpectedly');
+      }
 
       return ResponseFormatter.created(res, newTechnician, 'Technician created successfully');
     } catch (error) {
-      logger.error('Error creating technician', { error: error.message });
+      logger.error('Error creating technician', { error: error.message, code: error.code });
 
-      if (error.code === '23505') {
-        return ResponseFormatter.conflict(res, 'License number already exists');
-      }
-
-      if (error.code === '23514') {
-        return ResponseFormatter.badRequest(res, 'Invalid status value. Must be one of: available, on_job, off_duty, suspended');
+      if (handleDbError(error, res, DB_ERROR_CONFIG)) {
+        return;
       }
 
       return ResponseFormatter.internalError(res, error);
@@ -360,50 +322,30 @@ router.patch(
   async (req, res) => {
     try {
       const technicianId = req.validated.id;
-      const ipAddress = getClientIp(req);
-      const userAgent = getUserAgent(req);
+      const rlsContext = buildRlsContext(req);
+      const auditContext = buildAuditContext(req);
 
-      const technician = await Technician.findById(technicianId);
-      if (!technician) {
+      const oldTechnician = await GenericEntityService.findById('technician', technicianId, rlsContext);
+      if (!oldTechnician) {
         return ResponseFormatter.notFound(res, 'Technician not found');
       }
 
-      // Authorization: Technicians can update own profile, manager+ can update any profile
-      const isSelfUpdate = req.dbUser && req.dbUser.id && technician.user_id === req.dbUser.id;
-      const isManagerPlus = req.dbUser && hasMinimumRole(req.dbUser.role, 'manager');
+      const updatedTechnician = await GenericEntityService.update('technician', technicianId, req.body, { auditContext });
 
-      if (!isSelfUpdate && !isManagerPlus) {
-        return ResponseFormatter.forbidden(res, 'You can only update your own technician profile. Manager role required to update others.');
+      if (!updatedTechnician) {
+        return ResponseFormatter.notFound(res, 'Technician not found');
       }
-
-      await Technician.update(technicianId, req.body);
-      const updatedTechnician = await Technician.findById(technicianId);
-
-      await auditService.log({
-        userId: req.user.userId,
-        action: AuditActions.TECHNICIAN_UPDATE,
-        resourceType: ResourceTypes.TECHNICIAN,
-        resourceId: technicianId,
-        oldValues: technician,
-        newValues: updatedTechnician,
-        ipAddress,
-        userAgent,
-        result: AuditResults.SUCCESS,
-      });
 
       return ResponseFormatter.updated(res, updatedTechnician, 'Technician updated successfully');
     } catch (error) {
       logger.error('Error updating technician', {
         error: error.message,
+        code: error.code,
         technicianId: req.params.id,
       });
 
-      if (error.code === '23505') {
-        return ResponseFormatter.conflict(res, 'License number already exists');
-      }
-
-      if (error.code === '23514') {
-        return ResponseFormatter.badRequest(res, 'Invalid status value. Must be one of: available, on_job, off_duty, suspended');
+      if (handleDbError(error, res, DB_ERROR_CONFIG)) {
+        return;
       }
 
       return ResponseFormatter.internalError(res, error);
@@ -446,26 +388,13 @@ router.delete(
   async (req, res) => {
     try {
       const technicianId = req.validated.id;
-      const ipAddress = getClientIp(req);
-      const userAgent = getUserAgent(req);
+      const auditContext = buildAuditContext(req);
 
-      const technician = await Technician.findById(technicianId);
-      if (!technician) {
+      const deleted = await GenericEntityService.delete('technician', technicianId, { auditContext });
+
+      if (!deleted) {
         return ResponseFormatter.notFound(res, 'Technician not found');
       }
-
-      await Technician.delete(technicianId);
-
-      await auditService.log({
-        userId: req.user.userId,
-        action: AuditActions.TECHNICIAN_DELETE,
-        resourceType: ResourceTypes.TECHNICIAN,
-        resourceId: technicianId,
-        oldValues: technician,
-        ipAddress,
-        userAgent,
-        result: AuditResults.SUCCESS,
-      });
 
       return ResponseFormatter.deleted(res, 'Technician deleted successfully');
     } catch (error) {
@@ -473,6 +402,12 @@ router.delete(
         error: error.message,
         technicianId: req.params.id,
       });
+
+      // Handle deletion blocked by dependents (work_orders, etc.)
+      if (error.message.includes('Cannot delete') || error.message.startsWith('Cannot delete technician:')) {
+        return ResponseFormatter.badRequest(res, error.message);
+      }
+
       return ResponseFormatter.internalError(res, error);
     }
   },

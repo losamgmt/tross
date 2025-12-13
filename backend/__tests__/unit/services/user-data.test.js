@@ -11,10 +11,10 @@
 
 const { UserDataService } = require('../../../services/user-data');
 const { TEST_USERS } = require('../../../config/test-users');
-const User = require('../../../db/models/User');
+const AuthUserService = require('../../../services/auth-user-service');
 const GenericEntityService = require('../../../services/generic-entity-service');
 
-jest.mock('../../../db/models/User');
+jest.mock('../../../services/auth-user-service');
 jest.mock('../../../services/generic-entity-service');
 
 describe('UserDataService', () => {
@@ -128,20 +128,20 @@ describe('UserDataService', () => {
       expect(user.auth0_id).toBe(testUser.auth0_id);
     });
 
-    test('should call User.findOrCreate in production mode', async () => {
+    test('should call AuthUserService.findOrCreateFromAuth0 in production mode', async () => {
       // Arrange
       process.env.USE_TEST_AUTH = 'false';
       process.env.NODE_ENV = 'production';
       const service = new (require('../../../services/user-data').UserDataService.constructor)();
       const auth0Data = { sub: 'auth0|123', email: 'new@example.com' };
       const mockUser = { id: 1, auth0_id: 'auth0|123' };
-      User.findOrCreate.mockResolvedValue(mockUser);
+      AuthUserService.findOrCreateFromAuth0.mockResolvedValue(mockUser);
 
       // Act
       const user = await service.findOrCreateUser(auth0Data);
 
       // Assert
-      expect(User.findOrCreate).toHaveBeenCalledWith(auth0Data);
+      expect(AuthUserService.findOrCreateFromAuth0).toHaveBeenCalledWith(auth0Data);
       expect(user).toEqual(mockUser);
     });
   });

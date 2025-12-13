@@ -8,6 +8,11 @@
  * SINGLE SOURCE OF TRUTH for Role model query and CRUD capabilities
  */
 
+const {
+  FIELD_ACCESS_LEVELS: FAL,
+  UNIVERSAL_FIELD_ACCESS,
+} = require('../constants');
+
 module.exports = {
   // Table name in database
   tableName: 'roles',
@@ -26,6 +31,12 @@ module.exports = {
   identityField: 'name',
 
   /**
+   * Whether the identity field has a UNIQUE constraint in the database
+   * Used for duplicate rejection tests
+   */
+  identityFieldUnique: true,
+
+  /**
    * RLS resource name for permission checks
    * Maps to permissions.json resource names
    */
@@ -37,20 +48,58 @@ module.exports = {
 
   /**
    * Fields required when creating a new entity
+   * Note: priority is optional - defaults to max + 1 via default-value-helper
    */
-  requiredFields: ['name', 'priority'],
+  requiredFields: ['name'],
 
   /**
-   * Fields that can be set during CREATE
-   * Excludes: id, created_at, updated_at (system-managed)
+   * Fields that CANNOT be modified during UPDATE (immutable after creation)
+   * All other fields in the table are allowed.
+   * Universal immutables (id, created_at) are always excluded automatically via ENTITY_FIELDS constant.
+   *
+   * Empty array = only universal immutables apply (all business fields are editable)
    */
-  createableFields: ['name', 'description', 'priority', 'status'],
+  immutableFields: [],
 
-  /**
-   * Fields that can be modified during UPDATE
-   * Excludes: id, name (immutable after creation), created_at
-   */
-  updateableFields: ['description', 'priority', 'status', 'is_active'],
+  // ============================================================================
+  // FIELD ACCESS CONTROL (role-based field-level CRUD permissions)
+  // ============================================================================
+  // Each field specifies the MINIMUM role required for each CRUD operation.
+  // Permissions accumulate UPWARD: manager has all dispatcher + technician + customer permissions.
+  // Universal fields (id, is_active, created_at, updated_at, status) are in UNIVERSAL_FIELD_ACCESS.
+  // Use FAL shortcuts for common patterns, or define custom { create, read, update, delete }.
+
+  fieldAccess: {
+    // Entity Contract v2.0 fields (id, is_active, created_at, updated_at, status)
+    ...UNIVERSAL_FIELD_ACCESS,
+
+    // Name - the role identifier, admin-only management
+    name: {
+      create: 'admin',
+      read: 'customer', // Everyone can see role names
+      update: 'admin',
+      delete: 'none',
+    },
+
+    // Description - role explanation, admin-only management
+    description: {
+      create: 'admin',
+      read: 'customer', // Everyone can see role descriptions
+      update: 'admin',
+      delete: 'none',
+    },
+
+    // Priority - role hierarchy level, admin-only management
+    priority: {
+      create: 'admin',
+      read: 'manager', // Only manager+ need to see priority
+      update: 'admin',
+      delete: 'none',
+    },
+
+    // Is system role flag - read-only indicator
+    is_system_role: FAL.PUBLIC_READONLY,
+  },
 
   // ============================================================================
   // DELETE CONFIGURATION (for GenericEntityService.delete)
@@ -183,8 +232,26 @@ module.exports = {
   restrictedFields: [],
 
   // ============================================================================
+  // FOREIGN KEY CONFIGURATION (for DB error handling)
+  // ============================================================================
+
+  /**
+   * Outbound foreign keys (this table references other tables)
+   * Used by buildDbErrorConfig() for user-friendly FK violation messages
+   * Roles don't reference other tables - they ARE the referenced table
+   */
+  foreignKeys: {},
+
+  // ============================================================================
   // RELATIONSHIPS (for JOIN queries)
   // ============================================================================
+
+  /**
+   * Relationships to JOIN by default in all queries (findById, findAll, findByField)
+   * These are included automatically without needing to specify 'include' option
+   * Roles don't need any default includes (users/permissions are opt-in)
+   */
+  defaultIncludes: [],
 
   /**
    * Foreign key relationships
@@ -220,8 +287,8 @@ module.exports = {
 
     // TIER 2: Lifecycle status
     status: {
-      type: 'string',
-      enum: ['active', 'disabled'],
+      type: 'enum',
+      values: ['active', 'disabled'],
       default: 'active',
       description: 'Role lifecycle state - disabled roles cannot be newly assigned',
     },

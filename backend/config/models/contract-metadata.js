@@ -8,6 +8,11 @@
  * SINGLE SOURCE OF TRUTH for Contract model query and CRUD capabilities
  */
 
+const {
+  FIELD_ACCESS_LEVELS: FAL,
+  UNIVERSAL_FIELD_ACCESS,
+} = require('../constants');
+
 module.exports = {
   // Table name in database
   tableName: 'contracts',
@@ -41,16 +46,99 @@ module.exports = {
   requiredFields: ['contract_number', 'customer_id', 'start_date'],
 
   /**
-   * Fields that can be set during CREATE
-   * Excludes: id, created_at, updated_at (system-managed)
+   * Fields that cannot be modified after creation (beyond universal immutables: id, created_at)
+   * - contract_number: Audit trail identity, cannot change
    */
-  createableFields: ['contract_number', 'customer_id', 'start_date', 'end_date', 'terms', 'value', 'billing_cycle', 'status'],
+  immutableFields: ['contract_number'],
+
+  // ============================================================================
+  // FIELD-LEVEL ACCESS CONTROL (for response-transform.js)
+  // ============================================================================
 
   /**
-   * Fields that can be modified during UPDATE
-   * Excludes: id, contract_number (immutable), created_at
+   * Per-field CRUD permissions using FIELD_ACCESS_LEVELS shortcuts
+   * Entity Contract fields use UNIVERSAL_FIELD_ACCESS spread
+   *
+   * Contract access (RLS applies):
+   * - Customers: See their own contracts (read only)
+   * - Technicians: Deny all (no contract access per permissions)
+   * - Dispatchers+: Full read access
+   * - Managers+: CREATE/UPDATE/DELETE
    */
-  updateableFields: ['start_date', 'end_date', 'terms', 'value', 'billing_cycle', 'status', 'is_active'],
+  fieldAccess: {
+    // Entity Contract v2.0 fields
+    ...UNIVERSAL_FIELD_ACCESS,
+
+    // Identity field - audit trail, immutable after creation
+    contract_number: {
+      create: 'manager',
+      read: 'customer',
+      update: 'none', // Immutable
+      delete: 'none',
+    },
+
+    // FK to customers - required, set on create
+    customer_id: {
+      create: 'manager',
+      read: 'customer',
+      update: 'none', // Cannot reassign contract to different customer
+      delete: 'none',
+    },
+
+    // Contract dates - manager+ manages
+    start_date: FAL.MANAGER_MANAGED_PUBLIC_READ,
+    end_date: FAL.MANAGER_MANAGED_PUBLIC_READ,
+
+    // Contract terms - manager+ manages, customer can read
+    terms: FAL.MANAGER_MANAGED_PUBLIC_READ,
+
+    // Financial field - sensitive, manager+ only
+    value: FAL.MANAGER_MANAGED,
+
+    // Billing cycle - manager+ manages, customer can read
+    billing_cycle: FAL.MANAGER_MANAGED_PUBLIC_READ,
+  },
+
+  // ============================================================================
+  // FOREIGN KEY CONFIGURATION (for db-error-handler.js)
+  // ============================================================================
+
+  /**
+   * Foreign key relationships for error message generation
+   * Maps FK field -> { table, displayName }
+   */
+  foreignKeys: {
+    customer_id: {
+      table: 'customers',
+      displayName: 'Customer',
+    },
+  },
+
+  // ============================================================================
+  // RELATIONSHIPS (for JOIN queries)
+  // ============================================================================
+
+  /**
+   * Relationships to JOIN by default in all queries (findById, findAll, findByField)
+   * These are included automatically without needing to specify 'include' option
+   * Contracts almost always need customer info displayed
+   */
+  defaultIncludes: ['customer'],
+
+  /**
+   * Foreign key relationships
+   * Used for JOIN generation and validation
+   */
+  relationships: {
+    // Contract belongs to a customer (required)
+    customer: {
+      type: 'belongsTo',
+      foreignKey: 'customer_id',
+      table: 'customers',
+      fields: ['id', 'email', 'company_name', 'phone'],
+      description: 'Customer this contract is with',
+    },
+  },
 
   // ============================================================================
   // DELETE CONFIGURATION (for GenericEntityService.delete)

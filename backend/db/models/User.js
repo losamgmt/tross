@@ -1,123 +1,19 @@
 // Robust User model with error handling and validation
+// STRANGLER-FIG PATTERN: Delegates standard CRUD to GenericEntityService
+// Keeps Auth0-specific logic (createFromAuth0, findOrCreate) in this model
 const db = require('../connection');
 const { logger } = require('../../config/logger');
 const { MODEL_ERRORS } = require('../../config/constants');
 const { toSafeInteger } = require('../../validators/type-coercion');
 const { deleteWithAuditCascade } = require('../helpers/delete-helper');
-const { buildUpdateClause } = require('../helpers/update-helper');
-const PaginationService = require('../../services/pagination-service');
-const QueryBuilderService = require('../../services/query-builder-service');
 const userMetadata = require('../../config/models/user-metadata');
 const { mapAuth0ToUser, validateAuth0Data } = require('../../utils/auth0-mapper');
 const GenericEntityService = require('../../services/generic-entity-service');
 
 class User {
   // ============================================================================
-  // PRIVATE QUERY BUILDER (DRY)
+  // PRIVATE HELPERS (minimal - most logic now in GenericEntityService)
   // ============================================================================
-
-  /**
-   * Build base SELECT query for user with role
-   * Centralized query pattern to eliminate duplication
-   *
-   * @private
-   * @param {string} whereClause - WHERE clause (optional)
-   * @param {string} orderBy - ORDER BY clause (optional)
-   * @returns {string} SQL query
-   */
-  static _buildUserWithRoleQuery(whereClause = '', orderBy = '') {
-    return `
-      SELECT u.*, r.name as role, u.role_id
-      FROM users u 
-      LEFT JOIN roles r ON u.role_id = r.id
-      ${whereClause}
-      ${orderBy}
-    `.trim();
-  }
-
-  /**
-   * Build RLS filter clause based on user's policy
-   * @private
-   * @param {Object} req - Express request with RLS context (rlsPolicy, rlsUserId)
-   * @returns {Object} { clause: string, values: array, applied: boolean }
-   */
-  static _buildRLSFilter(req) {
-    // No RLS context = no filtering
-    if (!req || !req.hasOwnProperty('rlsPolicy')) {
-      return { clause: '', values: [], applied: false };
-    }
-
-    const { rlsPolicy, rlsUserId } = req;
-
-    // Unknown policy = security failsafe (deny all)
-    if (!['all_records', 'own_record_only'].includes(rlsPolicy)) {
-      logger.warn('Unknown RLS policy for users', { policy: rlsPolicy, userId: rlsUserId });
-      return { clause: '1=0', values: [], applied: true };
-    }
-
-    // all_records policy = no filtering (technician+ see everything)
-    if (rlsPolicy === 'all_records') {
-      return { clause: '', values: [], applied: true };
-    }
-
-    // own_record_only = filter by user id (customers see only themselves)
-    if (rlsPolicy === 'own_record_only') {
-      if (!rlsUserId) {
-        logger.error('RLS userId missing for own_record_only policy', { policy: rlsPolicy });
-        return { clause: '1=0', values: [], applied: true };
-      }
-      return { clause: 'u.id = $1', values: [rlsUserId], applied: true };
-    }
-
-    // Fallback (shouldn't reach here)
-    return { clause: '', values: [], applied: false };
-  }
-
-  /**
-   * Apply RLS filter to existing WHERE clause
-   * @private
-   * @param {Object} req - Express request with RLS context
-   * @param {string} existingWhere - Existing WHERE clause (may be empty)
-   * @param {array} existingValues - Existing query parameter values
-   * @returns {Object} { whereClause: string, values: array, rlsApplied: boolean }
-   */
-  static _applyRLSFilter(req, existingWhere = '', existingValues = []) {
-    const rlsFilter = this._buildRLSFilter(req);
-
-    // No RLS filtering needed
-    if (!rlsFilter.clause) {
-      return {
-        whereClause: existingWhere,
-        values: existingValues,
-        rlsApplied: rlsFilter.applied,
-      };
-    }
-
-    // Apply RLS filter
-    const hasExistingWhere = existingWhere.trim().length > 0;
-    const cleanedWhere = hasExistingWhere ? existingWhere.replace(/^WHERE\s+/i, '') : '';
-
-    let combinedClause;
-    let combinedValues;
-
-    if (hasExistingWhere) {
-      // Adjust RLS parameter placeholders to account for existing params
-      const paramOffset = existingValues.length;
-      const adjustedRlsClause = rlsFilter.clause.replace(/\$(\d+)/g, (_, num) => `$${parseInt(num) + paramOffset}`);
-
-      combinedClause = `WHERE ${cleanedWhere} AND ${adjustedRlsClause}`;
-      combinedValues = [...existingValues, ...rlsFilter.values];
-    } else {
-      combinedClause = `WHERE ${rlsFilter.clause}`;
-      combinedValues = rlsFilter.values;
-    }
-
-    return {
-      whereClause: combinedClause,
-      values: combinedValues,
-      rlsApplied: rlsFilter.applied,
-    };
-  }
 
   /**
    * Validate user data contextually
@@ -166,16 +62,14 @@ class User {
   }
 
   // ============================================================================
-  // PUBLIC METHODS
+  // PUBLIC METHODS - DELEGATED TO GenericEntityService
   // ============================================================================
 
   // NOTE: findByAuth0Id has been removed - use GenericEntityService.findByField('user', 'auth0_id', value)
 
   /**
    * Find user by ID with role
-   * KISS: Direct JOIN with users.role_id (many-to-one relationship)
-   *
-   * TYPE SAFE: Validates id is a positive integer
+   * STRANGLER-FIG: Delegates to GenericEntityService
    *
    * @param {number|string} id - User ID (will be coerced to integer)
    * @param {Object} req - Express request with RLS context (optional)
@@ -183,25 +77,71 @@ class User {
    * @throws {Error} If id is not a valid positive integer
    */
   static async findById(id, req = null) {
-    // TYPE SAFETY: Ensure id is a valid positive integer
-    const safeId = toSafeInteger(id, 'userId', { min: 1, allowNull: false });
+    // Build RLS context from request (if provided)
+    const rlsContext = req && req.rlsPolicy ? {
+      policy: req.rlsPolicy,
+      userId: req.rlsUserId,
+    } : null;
 
-    try {
-      const { whereClause, values } = this._applyRLSFilter(req, 'WHERE u.id = $1', [safeId]);
-      const query = this._buildUserWithRoleQuery(whereClause);
-      const result = await db.query(query, values);
-      const user = result.rows[0] || null;
+    // Delegate to GenericEntityService
+    const user = await GenericEntityService.findById('user', id, rlsContext);
 
-      // Validate and enrich user data before returning
-      return user ? this._validateUserData(user, { isApiResponse: false }) : null;
-    } catch (error) {
-      logger.error('Error finding user by ID', {
-        error: error.message,
-        userId: id,
-      });
-      throw new Error(MODEL_ERRORS.USER.RETRIEVAL_FAILED);
-    }
+    // Apply user-specific validation
+    return user ? this._validateUserData(user, { isApiResponse: false }) : null;
   }
+
+  /**
+   * Find all users with pagination, search, filters, and sorting
+   * STRANGLER-FIG: Delegates to GenericEntityService
+   *
+   * @param {Object} options - Query options (page, limit, search, filters, sortBy, sortOrder)
+   * @returns {Promise<Object>} { data: User[], pagination: {...}, appliedFilters: {...} }
+   */
+  static async findAll(options = {}) {
+    // Build RLS context from request (if provided)
+    const rlsContext = options.req && options.req.rlsPolicy ? {
+      policy: options.req.rlsPolicy,
+      userId: options.req.rlsUserId,
+    } : null;
+
+    // Delegate to GenericEntityService
+    const result = await GenericEntityService.findAll('user', options, rlsContext);
+
+    // Apply user-specific validation to all results
+    result.data = result.data.map(user =>
+      this._validateUserData(user, { isApiResponse: true }),
+    );
+
+    return result;
+  }
+
+  /**
+   * Update user profile with validation
+   * STRANGLER-FIG: Delegates to GenericEntityService
+   *
+   * @param {number|string} id - User ID (will be coerced to integer)
+   * @param {Object} updates - Fields to update (email is excluded - immutable via Auth0)
+   * @param {Object} context - Optional context for audit logging
+   * @returns {Promise<Object>} Updated user object
+   * @throws {Error} If id is invalid or no valid fields to update
+   */
+  static async update(id, updates, context = null) {
+    // Build audit context from options (if provided)
+    const options = context ? { auditContext: context } : {};
+
+    // Delegate to GenericEntityService
+    const updatedUser = await GenericEntityService.update('user', id, updates, options);
+
+    if (!updatedUser) {
+      throw new Error(MODEL_ERRORS.USER.NOT_FOUND);
+    }
+
+    return updatedUser;
+  }
+
+  // ============================================================================
+  // AUTH0-SPECIFIC METHODS (kept in User model)
+  // ============================================================================
 
   /**
    * Create user from Auth0 data
@@ -361,207 +301,6 @@ class User {
       throw new Error(MODEL_ERRORS.USER.CREATION_FAILED);
     }
   }
-
-  /**
-   * Find all users with pagination, search, filters, and sorting
-   * Contract v2.0: Metadata-driven query building (ZERO hardcoding!)
-   *
-   * SRP: Uses PaginationService for pagination + QueryBuilderService for queries
-   * KISS: Direct JOIN with users.role_id (many-to-one relationship)
-   *
-   * @param {Object} options - Query options
-   * @param {number} [options.page=1] - Page number (1-indexed)
-   * @param {number} [options.limit=50] - Items per page (max: 200)
-   * @param {boolean} [options.includeInactive=false] - Include inactive users
-   * @param {string} [options.search] - Search term (searches across searchable fields)
-   * @param {Object} [options.filters] - Filters (e.g., { role_id: 2, is_active: true })
-   * @param {string} [options.sortBy] - Field to sort by (validated against metadata)
-   * @param {string} [options.sortOrder] - 'ASC' or 'DESC'
-   * @returns {Promise<Object>} { data: User[], pagination: {...}, appliedFilters: {...} }
-   */
-  static async findAll(options = {}) {
-    try {
-      // SRP: Delegate pagination validation to centralized service
-      const { page, limit, offset } = PaginationService.validateParams(options);
-      const includeInactive = options.includeInactive || false;
-
-      // Build query using metadata-driven approach
-      const { searchableFields, filterableFields, sortableFields, defaultSort } = userMetadata;
-
-      // Build search clause (case-insensitive ILIKE across all searchable fields)
-      const search = QueryBuilderService.buildSearchClause(
-        options.search,
-        searchableFields,
-      );
-
-      // Build filter clause (generic key-value filters with operator support)
-      const filterOptions = { ...options.filters };
-
-      const filters = QueryBuilderService.buildFilterClause(
-        filterOptions,
-        filterableFields,
-        search ? search.paramOffset : 0, // Offset params if search clause exists
-      );
-
-      // Combine WHERE clauses (including explicit u.is_active to avoid ambiguity with roles.is_active)
-      const whereClauses = [search?.clause, filters?.clause].filter(Boolean);
-
-      // Add is_active filter with table alias to avoid ambiguity (both users and roles have is_active)
-      if (!includeInactive) {
-        const isActiveParamIndex = (search?.paramOffset || 0) + (filters?.paramOffset || 0) + 1;
-        whereClauses.push(`u.is_active = $${isActiveParamIndex}`);
-      }
-
-      const baseWhereClause = whereClauses.length > 0
-        ? `WHERE ${whereClauses.join(' AND ')}`
-        : '';
-
-      // Combine parameters
-      const params = [
-        ...(search?.params || []),
-        ...(filters?.params || []),
-      ];
-
-      // Add is_active parameter if filtering for active users
-      if (!includeInactive) {
-        params.push(true);
-      }
-
-      // Apply RLS filter
-      const { whereClause: finalWhereClause, values: rlsValues, rlsApplied } = this._applyRLSFilter(options.req, baseWhereClause, params);
-
-      // Build sort clause (validated against sortableFields)
-      const sortClause = QueryBuilderService.buildSortClause(
-        options.sortBy,
-        options.sortOrder,
-        sortableFields,
-        defaultSort,
-      );
-
-      // Get total count for pagination metadata
-      const countQuery = `
-        SELECT COUNT(*) as total
-        FROM users u
-        ${finalWhereClause}
-      `;
-      const countResult = await db.query(countQuery, rlsValues);
-      const total = parseInt(countResult.rows[0].total);
-
-      // Get paginated users with role data
-      const query = this._buildUserWithRoleQuery(
-        finalWhereClause,
-        `ORDER BY u.${sortClause} LIMIT ${limit} OFFSET ${offset}`,
-      );
-      const result = await db.query(query, rlsValues);
-
-      // Apply validation to all users in the result set
-      const validatedUsers = result.rows.map(user =>
-        this._validateUserData(user, { isApiResponse: true }),
-      );
-
-      // SRP: Delegate metadata generation to centralized service
-      const metadata = PaginationService.generateMetadata(page, limit, total);
-
-      return {
-        data: validatedUsers,
-        pagination: metadata,
-        appliedFilters: {
-          search: options.search || null,
-          filters: filterOptions,
-          sortBy: options.sortBy || defaultSort.field,
-          sortOrder: options.sortOrder || defaultSort.order,
-        },
-        rlsApplied,
-      };
-    } catch (error) {
-      logger.error('Error finding all users', { error: error.message });
-      throw new Error(MODEL_ERRORS.USER.RETRIEVAL_ALL_FAILED);
-    }
-  }
-
-  /**
-   * Update user profile with validation
-   *
-   * TYPE SAFE: Validates id is a positive integer
-   *
-   * @param {number|string} id - User ID (will be coerced to integer)
-   * @param {Object} updates - Fields to update
-   * @param {string} [updates.email] - User email
-   * @param {string} [updates.first_name] - User first name
-   * @param {string} [updates.last_name] - User last name
-   * @param {boolean} [updates.is_active] - User active status
-   * Contract v2.0: Generic update with optional audit context
-   *
-   * @param {number|string} id - User ID (will be coerced to integer)
-   * @param {Object} updates - Fields to update
-   * @param {Object} context - Optional context for audit logging
-   * @param {number} context.userId - ID of user performing the update
-   * @param {string} context.ipAddress - IP address of request
-   * @param {string} context.userAgent - User agent of request
-   * @returns {Promise<Object>} Updated user object
-   * @throws {Error} If id is invalid or no valid fields to update
-   */
-  static async update(id, updates, _context = null) {
-    // TYPE SAFETY: Ensure id is a valid positive integer
-    const safeId = toSafeInteger(id, 'userId', { min: 1, allowNull: false });
-
-    if (!updates || typeof updates !== 'object') {
-      throw new Error(MODEL_ERRORS.USER.ID_AND_UPDATES_REQUIRED);
-    }
-
-    // role_id included for PUT /api/users/:id/role endpoint
-    const allowedFields = ['email', 'first_name', 'last_name', 'is_active', 'role_id'];
-
-    // Build SET clause using helper
-    const { updates: fields, values, hasUpdates } = buildUpdateClause(updates, allowedFields);
-
-    if (!hasUpdates) {
-      throw new Error(MODEL_ERRORS.USER.NO_VALID_FIELDS);
-    }
-
-    // Contract v2.0: No audit fields on entity
-    // Audit logging happens via AuditService (handled by caller)
-
-    try {
-      values.push(safeId);
-
-      const query = `
-        UPDATE users 
-        SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP 
-        WHERE id = $${values.length} 
-        RETURNING *
-      `;
-
-      const result = await db.query(query, values);
-
-      if (result.rows.length === 0) {
-        throw new Error(MODEL_ERRORS.USER.NOT_FOUND);
-      }
-
-      // Fetch full user with role name via JOIN
-      const updatedUser = await this.findById(safeId);
-
-      if (!updatedUser) {
-        throw new Error(MODEL_ERRORS.USER.NOT_FOUND_AFTER_UPDATE);
-      }
-
-      // Contract v2.0: Updates (including is_active changes) are logged via audit trail
-      // Deactivation is just an update with is_active=false - no special handling needed
-      // The audit log will capture oldValues/newValues including is_active changes
-
-      return updatedUser;
-    } catch (error) {
-      logger.error('Error updating user', { error: error.message, userId: id });
-
-      if (error.constraint === 'users_email_key') {
-        throw new Error(MODEL_ERRORS.USER.EMAIL_EXISTS);
-      }
-
-      throw new Error(MODEL_ERRORS.USER.UPDATE_FAILED);
-    }
-  }
-
-  // NOTE: setRole has been removed - use User.update(userId, { role_id: roleId }) or GenericEntityService.update('user', userId, { role_id: roleId })
 
   /**
    * Delete user permanently from database

@@ -1,22 +1,26 @@
 const express = require('express');
 const router = express.Router();
-const Role = require('../db/models/Role');
+// Role model removed - using GenericEntityService (strangler-fig Phase 4)
 const { authenticateToken, requirePermission } = require('../middleware/auth');
 const { enforceRLS } = require('../middleware/row-level-security');
 const {
   validateRoleCreate,
   validateRoleUpdate,
-  validateIdParam, // Using centralized validator
-  validatePagination, // Query string validation
-  validateQuery, // NEW: Metadata-driven query validation
-} = require('../validators'); // Now from validators/ instead of middleware/
-const auditService = require('../services/audit-service');
-const { AuditActions, ResourceTypes } = require('../services/audit-constants');
-const { getClientIp, getUserAgent } = require('../utils/request-helpers');
+  validateIdParam,
+  validatePagination,
+  validateQuery,
+} = require('../validators');
 const { logger } = require('../config/logger');
 const ResponseFormatter = require('../utils/response-formatter');
-const roleMetadata = require('../config/models/role-metadata'); // NEW: Role metadata
+const roleMetadata = require('../config/models/role-metadata');
 const GenericEntityService = require('../services/generic-entity-service');
+const { filterDataByRole } = require('../utils/response-transform');
+const { getNextOrdinalValue } = require('../db/helpers/default-value-helper');
+const { handleDbError, buildDbErrorConfig } = require('../utils/db-error-handler');
+const { buildRlsContext, buildAuditContext } = require('../utils/request-context');
+
+// Build DB error config from metadata (single source of truth)
+const DB_ERROR_CONFIG = buildDbErrorConfig(roleMetadata);
 
 /**
  * @openapi
@@ -122,23 +126,24 @@ router.get(
   validateQuery(roleMetadata), // NEW: Metadata-driven validation
   async (req, res) => {
     try {
-    // Extract validated query params
       const { page, limit } = req.validated.pagination;
       const { search, filters, sortBy, sortOrder } = req.validated.query;
+      const rlsContext = buildRlsContext(req);
 
-      // Call model with all query options + req for RLS
-      const result = await Role.findAll({
+      const result = await GenericEntityService.findAll('role', {
         page,
         limit,
         search,
         filters,
         sortBy,
         sortOrder,
-        req,
-      });
+      }, rlsContext);
+
+      // Apply metadata-driven field-level filtering based on role
+      const sanitizedData = filterDataByRole(result.data, roleMetadata, req.dbUser.role, 'read');
 
       return ResponseFormatter.list(res, {
-        data: result.data,
+        data: sanitizedData,
         pagination: result.pagination,
         appliedFilters: result.appliedFilters,
         rlsApplied: result.rlsApplied,
@@ -191,14 +196,18 @@ router.get(
   validateIdParam(),
   async (req, res) => {
     try {
-      const roleId = req.validated.id; // From validateIdParam middleware
-      const role = await Role.findById(roleId, req);
+      const roleId = req.validated.id;
+      const rlsContext = buildRlsContext(req);
+
+      const role = await GenericEntityService.findById('role', roleId, rlsContext);
 
       if (!role) {
         return ResponseFormatter.notFound(res, 'Role not found');
       }
 
-      return ResponseFormatter.get(res, role);
+      const sanitizedData = filterDataByRole(role, roleMetadata, req.dbUser.role, 'read');
+
+      return ResponseFormatter.get(res, sanitizedData);
     } catch (error) {
       logger.error('Error fetching role', {
         error: error.message,
@@ -359,32 +368,30 @@ router.post(
   validateRoleCreate,
   async (req, res) => {
     try {
-      const { name, priority, description } = req.body;
+      const { name, description } = req.body;
+      let { priority } = req.body;
 
       // Check if role name already exists
       if (!name) {
         return ResponseFormatter.badRequest(res, 'Role name is required');
       }
 
-      // Create role with optional priority
-      const newRole = await Role.create(name, priority);
-
-      // If description was provided, update it
-      if (description !== undefined) {
-        await Role.update(newRole.id, { description });
-        newRole.description = description;
+      // Auto-generate priority if not provided (max + 1, default 50)
+      if (priority === undefined || priority === null) {
+        priority = await getNextOrdinalValue('roles', 'priority', 50);
       }
 
-      // Log the creation
-      await auditService.log({
-        userId: req.dbUser.id,
-        action: AuditActions.ROLE_CREATE,
-        resourceType: ResourceTypes.ROLE,
-        resourceId: newRole.id,
-        newValues: { name: newRole.name, priority: newRole.priority, description: newRole.description },
-        ipAddress: getClientIp(req),
-        userAgent: getUserAgent(req),
-      });
+      const auditContext = buildAuditContext(req);
+
+      const newRole = await GenericEntityService.create('role', {
+        name,
+        priority,
+        description,
+      }, { auditContext });
+
+      if (!newRole) {
+        throw new Error('Role creation failed unexpectedly');
+      }
 
       return ResponseFormatter.created(res, newRole, 'Role created successfully');
     } catch (error) {
@@ -393,9 +400,9 @@ router.post(
         roleName: req.body.name,
       });
 
-      // Handle duplicate key violations (code from DB, message from model)
-      if (error.code === '23505' || error.message === 'Role name already exists') {
-        return ResponseFormatter.conflict(res, 'Role name already exists');
+      // Handle database errors (unique constraints, etc.)
+      if (handleDbError(error, res, DB_ERROR_CONFIG)) {
+        return;
       }
 
       return ResponseFormatter.internalError(res, error);
@@ -524,7 +531,7 @@ router.post(
  *       409:
  *         description: Conflict - Role name already exists
  */
-router.put(
+router.patch(
   '/:id',
   authenticateToken,
   requirePermission('roles', 'update'),
@@ -532,11 +539,11 @@ router.put(
   validateRoleUpdate,
   async (req, res) => {
     try {
-      const roleId = req.validated.id; // From validateIdParam middleware
+      const roleId = req.validated.id;
       const { name, description, permissions, is_active, priority } = req.body;
+      const rlsContext = buildRlsContext(req);
 
-      // Get old role for audit
-      const oldRole = await Role.findById(roleId, req);
+      const oldRole = await GenericEntityService.findById('role', roleId, rlsContext);
       if (!oldRole) {
         return ResponseFormatter.notFound(res, 'Role not found');
       }
@@ -549,43 +556,14 @@ router.put(
       if (is_active !== undefined) {updates.is_active = is_active;}
       if (priority !== undefined) {updates.priority = priority;}
 
-      // Update role
-      const updatedRole = await Role.update(roleId, updates);
+      const auditContext = buildAuditContext(req);
 
-      // Log the update (capture changes)
-      const oldValues = {};
-      const newValues = {};
-      if (name !== undefined && oldRole.name !== updatedRole.name) {
-        oldValues.name = oldRole.name;
-        newValues.name = updatedRole.name;
-      }
-      if (description !== undefined && oldRole.description !== updatedRole.description) {
-        oldValues.description = oldRole.description;
-        newValues.description = updatedRole.description;
-      }
-      if (permissions !== undefined) {
-        oldValues.permissions = oldRole.permissions;
-        newValues.permissions = updatedRole.permissions;
-      }
-      if (is_active !== undefined && oldRole.is_active !== updatedRole.is_active) {
-        oldValues.is_active = oldRole.is_active;
-        newValues.is_active = updatedRole.is_active;
-      }
-      if (priority !== undefined && oldRole.priority !== updatedRole.priority) {
-        oldValues.priority = oldRole.priority;
-        newValues.priority = updatedRole.priority;
-      }
+      const updatedRole = await GenericEntityService.update('role', roleId, updates, { auditContext });
 
-      await auditService.log({
-        userId: req.dbUser.id,
-        action: AuditActions.ROLE_UPDATE,
-        resourceType: ResourceTypes.ROLE,
-        resourceId: roleId,
-        oldValues,
-        newValues,
-        ipAddress: getClientIp(req),
-        userAgent: getUserAgent(req),
-      });
+      // Handle race condition: role deleted between findById and update
+      if (!updatedRole) {
+        return ResponseFormatter.notFound(res, 'Role not found');
+      }
 
       return ResponseFormatter.updated(res, updatedRole, 'Role updated successfully');
     } catch (error) {
@@ -594,17 +572,14 @@ router.put(
         roleId: req.params.id,
       });
 
-      if (error.message === 'Cannot modify protected role') {
+      // Handle protected role modification attempts (pattern match for service messages)
+      if (error.message.includes('Cannot modify') && error.message.includes('system role')) {
         return ResponseFormatter.badRequest(res, error.message);
       }
 
-      // Handle duplicate key violations (code from DB, message from model)
-      if (error.code === '23505' || error.message === 'Role name already exists') {
-        return ResponseFormatter.conflict(res, 'Role name already exists');
-      }
-
-      if (error.message === 'Role not found') {
-        return ResponseFormatter.notFound(res, error.message);
+      // Handle database errors (unique constraints, etc.)
+      if (handleDbError(error, res, DB_ERROR_CONFIG)) {
+        return;
       }
 
       return ResponseFormatter.internalError(res, error);
@@ -659,21 +634,14 @@ router.delete(
   validateIdParam(),
   async (req, res) => {
     try {
-      const roleId = req.validated.id; // From validateIdParam middleware
+      const roleId = req.validated.id;
+      const auditContext = buildAuditContext(req);
 
-      // Delete role (will throw error if protected or has users)
-      const deletedRole = await Role.delete(roleId);
+      const deletedRole = await GenericEntityService.delete('role', roleId, { auditContext });
 
-      // Log the deletion
-      await auditService.log({
-        userId: req.dbUser.id,
-        action: AuditActions.ROLE_DELETE,
-        resourceType: ResourceTypes.ROLE,
-        resourceId: roleId,
-        oldValues: { name: deletedRole.name },
-        ipAddress: getClientIp(req),
-        userAgent: getUserAgent(req),
-      });
+      if (!deletedRole) {
+        return ResponseFormatter.notFound(res, 'Role not found');
+      }
 
       return ResponseFormatter.deleted(res, 'Role deleted successfully');
     } catch (error) {
@@ -683,14 +651,16 @@ router.delete(
       });
 
       if (
-        error.message === 'Cannot delete protected role' ||
+        error.message.includes('Cannot delete system role') ||
+        error.message.includes('Cannot delete protected role') ||
         error.message.startsWith('Cannot delete role:')
       ) {
         return ResponseFormatter.badRequest(res, error.message);
       }
 
-      if (error.message === 'Role not found') {
-        return ResponseFormatter.notFound(res, error.message);
+      // Handle database errors (FK constraints, etc.)
+      if (handleDbError(error, res, DB_ERROR_CONFIG)) {
+        return;
       }
 
       return ResponseFormatter.internalError(res, error);

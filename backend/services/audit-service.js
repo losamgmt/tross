@@ -2,7 +2,6 @@ const { query: db } = require('../db/connection');
 const { logger } = require('../config/logger');
 const {
   AuditActions,
-  ResourceTypes, // eslint-disable-line no-unused-vars
   AuditResults,
 } = require('./audit-constants');
 const { toSafeUserId, toSafeInteger } = require('../validators/type-coercion');

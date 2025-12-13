@@ -31,6 +31,38 @@ const { cascadeDeleteDependents } = require('../db/helpers/cascade-helper');
 const { buildRLSFilter, buildRLSFilterForFindById } = require('../db/helpers/rls-filter-helper');
 const { filterOutput, filterOutputArray } = require('../db/helpers/output-filter-helper');
 const { logEntityAudit, isAuditEnabled } = require('../db/helpers/audit-helper');
+const { ENTITY_FIELDS } = require('../config/constants');
+const { sanitizeData } = require('../utils/data-hygiene');
+
+/**
+ * Table name to entity name mapping for related entity lookups
+ */
+const TABLE_TO_ENTITY = {
+  users: 'user',
+  roles: 'role',
+  customers: 'customer',
+  technicians: 'technician',
+  work_orders: 'workOrder',
+  contracts: 'contract',
+  invoices: 'invoice',
+  inventory: 'inventory',
+};
+
+/**
+ * Get the identity field for a related entity's table
+ * Used in JOIN queries to select the appropriate display field
+ *
+ * @param {string} tableName - Related table name (e.g., 'customers')
+ * @returns {string} Identity field name (e.g., 'email' for customers)
+ */
+function getRelatedIdentityField(tableName) {
+  const entityName = TABLE_TO_ENTITY[tableName];
+  if (!entityName || !allMetadata[entityName]) {
+    // Fallback to 'name' for unknown entities (backward compatibility)
+    return 'name';
+  }
+  return allMetadata[entityName].identityField || 'name';
+}
 
 /**
  * Valid entity names (keys from config/models/index.js)
@@ -87,6 +119,44 @@ class GenericEntityService {
     return metadata;
   }
 
+  /**
+   * Serialize values for database insertion/update based on field types
+   *
+   * SRP: ONLY converts JavaScript values to database-compatible format
+   *
+   * @private
+   * @param {Object} data - Data object with field values
+   * @param {Object} metadata - Entity metadata with field definitions
+   * @returns {Object} Data with JSON fields serialized
+   *
+   * Handles:
+   * - json/jsonb fields: Arrays and objects are JSON.stringify'd
+   * - Other types: Passed through unchanged
+   */
+  static _serializeForDb(data, metadata) {
+    if (!metadata.fields) {
+      return data; // No field definitions, pass through
+    }
+
+    const serialized = {};
+    for (const [field, value] of Object.entries(data)) {
+      const fieldDef = metadata.fields[field];
+
+      // Serialize JSON/JSONB fields
+      if (fieldDef && (fieldDef.type === 'json' || fieldDef.type === 'jsonb')) {
+        if (value !== null && value !== undefined && typeof value === 'object') {
+          serialized[field] = JSON.stringify(value);
+        } else {
+          serialized[field] = value; // Already a string or null
+        }
+      } else {
+        serialized[field] = value;
+      }
+    }
+
+    return serialized;
+  }
+
   // ============================================================================
   // READ OPERATIONS
   // ============================================================================
@@ -118,51 +188,16 @@ class GenericEntityService {
    *   // Returns user if authorized, null if not
    */
   static async findById(entityName, id, rlsContext = null) {
-    // Get metadata (throws if invalid entityName)
+    // Get metadata to find primary key name
     const metadata = this._getMetadata(entityName);
 
     // Validate and coerce ID to integer (throws on invalid)
     // toSafeInteger enforces min=1 by default, so 0 and negatives throw
     const safeId = toSafeInteger(id);
 
-    // Build base WHERE clause
-    const whereClauses = [`${metadata.primaryKey} = $1`];
-    const params = [safeId];
-
-    // Apply RLS filter if context provided
-    if (rlsContext) {
-      const rlsFilter = buildRLSFilterForFindById(rlsContext, metadata, params.length);
-
-      if (rlsFilter.clause) {
-        whereClauses.push(rlsFilter.clause);
-        params.push(...rlsFilter.params);
-      }
-
-      logger.debug('GenericEntityService.findById with RLS', {
-        entity: entityName,
-        id: safeId,
-        policy: rlsContext.policy,
-        rlsApplied: rlsFilter.applied,
-        rlsClause: rlsFilter.clause || '(none)',
-      });
-    }
-
-    // Build parameterized query
-    const query = `SELECT * FROM ${metadata.tableName} WHERE ${whereClauses.join(' AND ')}`;
-
-    logger.debug('GenericEntityService.findById', {
-      entity: entityName,
-      table: metadata.tableName,
-      id: safeId,
-      hasRLS: !!rlsContext,
-    });
-
-    // Execute query
-    const result = await db.query(query, params);
-
-    // Return first row or null (with sensitive fields filtered)
-    const record = result.rows[0] || null;
-    return record ? filterOutput(record, metadata) : null;
+    // Delegate to findByField using the primary key
+    // Note: primaryKey (e.g., 'id') must be in filterableFields for this to work
+    return this.findByField(entityName, metadata.primaryKey, safeId, rlsContext);
   }
 
   /**
@@ -212,12 +247,41 @@ class GenericEntityService {
       filterableFields = [],
       sortableFields = [],
       defaultSort = { field: 'id', order: 'ASC' },
+      defaultIncludes = [],
+      relationships = {},
     } = metadata;
 
+    // Build SELECT and JOIN clauses for default includes
+    let selectClause = `${tableName}.*`;
+    let joinClause = '';
+
+    if (defaultIncludes.length > 0) {
+      const joinParts = [];
+      const selectParts = [];
+
+      for (const relName of defaultIncludes) {
+        const rel = relationships[relName];
+        if (rel && rel.type === 'belongsTo') {
+          // Add the related entity's identity field as an alias (e.g., r.name for role, c.email for customer)
+          const relAlias = relName.charAt(0); // 'r' for role, 'c' for customer
+          const identityField = getRelatedIdentityField(rel.table);
+          selectParts.push(`${relAlias}.${identityField} as ${relName}`);
+          joinParts.push(`LEFT JOIN ${rel.table} ${relAlias} ON ${tableName}.${rel.foreignKey} = ${relAlias}.id`);
+        }
+      }
+
+      if (selectParts.length > 0) {
+        selectClause = `${tableName}.*, ${selectParts.join(', ')}`;
+        joinClause = joinParts.join(' ');
+      }
+    }
+
     // Build search clause (case-insensitive ILIKE across searchable fields)
+    // Pass tableName as prefix to avoid ambiguity with JOINs
     const search = QueryBuilderService.buildSearchClause(
       options.search,
       searchableFields,
+      tableName,
     );
 
     // Build filter clause
@@ -232,6 +296,7 @@ class GenericEntityService {
       filterOptions,
       filterableFields,
       search ? search.paramOffset : 0,
+      tableName,
     );
 
     // Combine WHERE clauses
@@ -244,6 +309,7 @@ class GenericEntityService {
     ];
 
     // Apply RLS filter if context provided
+    let rlsApplied = false;
     if (rlsContext) {
       const rlsFilter = buildRLSFilter(rlsContext, metadata, params.length);
 
@@ -251,6 +317,8 @@ class GenericEntityService {
         whereClauses.push(rlsFilter.clause);
         params.push(...rlsFilter.params);
       }
+
+      rlsApplied = rlsFilter.applied;
 
       logger.debug('GenericEntityService.findAll with RLS', {
         entity: entityName,
@@ -264,12 +332,13 @@ class GenericEntityService {
       ? `WHERE ${whereClauses.join(' AND ')}`
       : '';
 
-    // Build sort clause (validated against sortableFields)
+    // Build sort clause (validated against sortableFields, with table prefix)
     const sortClause = QueryBuilderService.buildSortClause(
       options.sortBy,
       options.sortOrder,
       sortableFields,
       defaultSort,
+      tableName,
     );
 
     logger.debug('GenericEntityService.findAll', {
@@ -280,17 +349,19 @@ class GenericEntityService {
       whereClause,
       sortClause,
       hasRLS: !!rlsContext,
+      hasJoins: joinClause.length > 0,
     });
 
     // Get total count for pagination metadata
-    const countQuery = `SELECT COUNT(*) as total FROM ${tableName} ${whereClause}`;
+    const countQuery = `SELECT COUNT(*) as total FROM ${tableName} ${joinClause} ${whereClause}`;
     const countResult = await db.query(countQuery, params);
     const total = parseInt(countResult.rows[0].total);
 
-    // Get paginated entities
+    // Get paginated entities with optional JOINs
     const query = `
-      SELECT * 
+      SELECT ${selectClause} 
       FROM ${tableName} 
+      ${joinClause}
       ${whereClause} 
       ORDER BY ${sortClause}
       LIMIT ${limit} OFFSET ${offset}
@@ -312,6 +383,7 @@ class GenericEntityService {
         sortBy: options.sortBy || defaultSort.field,
         sortOrder: options.sortOrder || defaultSort.order,
       },
+      rlsApplied,
     };
   }
 
@@ -363,10 +435,10 @@ class GenericEntityService {
       for (const relName of defaultIncludes) {
         const rel = relationships[relName];
         if (rel && rel.type === 'belongsTo') {
-          // Add the related field as an alias (e.g., r.name as role)
-          // Only include the primary identifier field to keep it simple
-          const relAlias = relName.charAt(0); // 'r' for role
-          selectParts.push(`${relAlias}.name as ${relName}`);
+          // Add the related entity's identity field as an alias (e.g., r.name for role, c.email for customer)
+          const relAlias = relName.charAt(0); // 'r' for role, 'c' for customer
+          const identityField = getRelatedIdentityField(rel.table);
+          selectParts.push(`${relAlias}.${identityField} as ${relName}`);
           joinParts.push(`LEFT JOIN ${rel.table} ${relAlias} ON ${tableName}.${rel.foreignKey} = ${relAlias}.id`);
         }
       }
@@ -532,16 +604,22 @@ class GenericEntityService {
     // Get metadata (throws if invalid entityName)
     const metadata = this._getMetadata(entityName);
 
-    const { tableName, requiredFields = [], createableFields = [] } = metadata;
+    const { tableName, requiredFields = [] } = metadata;
 
     // Validate data is an object
     if (!data || typeof data !== 'object' || Array.isArray(data)) {
       throw new Error(`Data is required and must be an object for ${entityName}`);
     }
 
-    // Validate required fields are present
+    // =========================================================================
+    // UNIVERSAL DATA HYGIENE (type-based, not field-based)
+    // Trims all strings, lowercases enums, etc. based on metadata.fields types
+    // =========================================================================
+    const cleanData = sanitizeData(data, metadata);
+
+    // Validate required fields are present (after sanitization)
     const missingFields = requiredFields.filter(
-      (field) => data[field] === undefined || data[field] === null || data[field] === '',
+      (field) => cleanData[field] === undefined || cleanData[field] === null || cleanData[field] === '',
     );
 
     if (missingFields.length > 0) {
@@ -550,11 +628,12 @@ class GenericEntityService {
       );
     }
 
-    // Filter data to only include createable fields
+    // Filter data using EXCLUSION pattern - allow all fields EXCEPT system-managed ones
+    // Uses centralized constant from config/constants.js
     const filteredData = {};
-    for (const field of createableFields) {
-      if (data[field] !== undefined) {
-        filteredData[field] = data[field];
+    for (const [field, value] of Object.entries(cleanData)) {
+      if (!ENTITY_FIELDS.SYSTEM_MANAGED_ON_CREATE.includes(field) && value !== undefined) {
+        filteredData[field] = value;
       }
     }
 
@@ -564,10 +643,13 @@ class GenericEntityService {
       throw new Error(`No valid fields provided for ${entityName}`);
     }
 
+    // Serialize JSON/JSONB fields for database insertion
+    const serializedData = this._serializeForDb(filteredData, metadata);
+
     // Build parameterized INSERT query
     const columns = fields.join(', ');
     const placeholders = fields.map((_, i) => `$${i + 1}`).join(', ');
-    const values = fields.map((field) => filteredData[field]);
+    const values = fields.map((field) => serializedData[field]);
 
     const query = `
       INSERT INTO ${tableName} (${columns})
@@ -630,7 +712,7 @@ class GenericEntityService {
     // Get metadata (throws if invalid entityName)
     const metadata = this._getMetadata(entityName);
 
-    const { tableName, primaryKey, updateableFields = [], identityField, systemProtected } = metadata;
+    const { tableName, primaryKey, immutableFields = [], identityField, systemProtected } = metadata;
 
     // Validate and coerce ID (throws on invalid)
     const safeId = toSafeInteger(id);
@@ -641,12 +723,38 @@ class GenericEntityService {
     }
 
     // =========================================================================
+    // UNIVERSAL DATA HYGIENE (type-based, not field-based)
+    // Trims all strings, lowercases enums, etc. based on metadata.fields types
+    // =========================================================================
+    const cleanData = sanitizeData(data, metadata);
+
+    // =========================================================================
+    // FILTER UNKNOWN FIELDS (only allow fields defined in metadata)
+    // This prevents "column does not exist" DB errors from unknown fields
+    // Use fieldAccess keys if available (our standard), fallback to fields
+    // =========================================================================
+    const knownFields = metadata.fieldAccess
+      ? Object.keys(metadata.fieldAccess)
+      : (metadata.fields ? Object.keys(metadata.fields) : []);
+    const filteredData = {};
+    for (const [field, value] of Object.entries(cleanData)) {
+      if (knownFields.length === 0 || knownFields.includes(field)) {
+        filteredData[field] = value;
+      } else {
+        logger.debug('GenericEntityService.update: Unknown field ignored', {
+          entity: entityName,
+          field,
+        });
+      }
+    }
+
+    // =========================================================================
     // SYSTEM PROTECTION CHECK (before any DB operation)
     // =========================================================================
     if (systemProtected) {
-      // Check if attempting to modify immutable fields
+      // Check if attempting to modify system-protected immutable fields
       const attemptedImmutable = (systemProtected.immutableFields || []).filter(
-        field => data[field] !== undefined,
+        field => filteredData[field] !== undefined,
       );
 
       if (attemptedImmutable.length > 0) {
@@ -665,11 +773,16 @@ class GenericEntityService {
       }
     }
 
-    // Use buildUpdateClause helper to filter and build SET clause
-    const { updates, values, hasUpdates } = buildUpdateClause(
-      data,
-      updateableFields,
-    );
+    // Use buildUpdateClause with EXCLUSION pattern
+    // All fields allowed except those in immutableFields (+ universal immutables)
+    // Extract JSONB field names from metadata for proper serialization
+    const jsonbFields = metadata.fields
+      ? Object.entries(metadata.fields)
+        .filter(([_, def]) => def.type === 'json' || def.type === 'jsonb')
+        .map(([name]) => name)
+      : [];
+
+    const { updates, values, hasUpdates } = buildUpdateClause(filteredData, immutableFields, { jsonbFields });
 
     if (!hasUpdates) {
       throw new Error(`No valid updateable fields provided for ${entityName}`);
@@ -694,7 +807,7 @@ class GenericEntityService {
       UPDATE ${tableName}
       SET ${updates.join(', ')}
       WHERE ${primaryKey} = $${values.length}
-      RETURNING *
+      RETURNING ${primaryKey}
     `;
 
     logger.debug('GenericEntityService.update', {
@@ -717,15 +830,16 @@ class GenericEntityService {
       fieldsUpdated: updates.length,
     });
 
-    // Filter sensitive fields from response
-    const filteredResult = filterOutput(result.rows[0], metadata);
+    // Re-fetch using findById to include JOINs (defaultIncludes)
+    // This ensures the returned record has all relationship data
+    const updatedRecord = await this.findById(entityName, safeId);
 
     // Log audit event (non-blocking) with old and new values
     if (options.auditContext && isAuditEnabled(entityName)) {
-      logEntityAudit('update', entityName, filteredResult, options.auditContext, oldValues);
+      logEntityAudit('update', entityName, updatedRecord, options.auditContext, oldValues);
     }
 
-    return filteredResult;
+    return updatedRecord;
   }
 
   /**
@@ -922,7 +1036,7 @@ class GenericEntityService {
       }
     }
 
-    const { tableName, primaryKey, requiredFields = [], createableFields = [], updateableFields = [] } = metadata;
+    const { tableName, primaryKey, requiredFields = [], immutableFields = [] } = metadata;
     const { continueOnError = false, auditContext } = options;
 
     const results = [];
@@ -952,11 +1066,12 @@ class GenericEntityService {
                 throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
               }
 
-              // Filter to createable fields only
+              // Filter using EXCLUSION pattern - allow all fields EXCEPT system-managed ones
+              // Uses centralized constant from config/constants.js
               const filteredData = {};
-              for (const field of createableFields) {
-                if (op.data[field] !== undefined) {
-                  filteredData[field] = op.data[field];
+              for (const [field, value] of Object.entries(op.data)) {
+                if (!ENTITY_FIELDS.SYSTEM_MANAGED_ON_CREATE.includes(field) && value !== undefined) {
+                  filteredData[field] = value;
                 }
               }
 
@@ -994,11 +1109,13 @@ class GenericEntityService {
 
               const oldRecord = fetchResult.rows[0];
 
-              // Filter to updateable fields only
+              // Filter using EXCLUSION pattern - allow all fields EXCEPT immutables
+              // Uses centralized constant from config/constants.js
+              const allExcluded = [...ENTITY_FIELDS.UNIVERSAL_IMMUTABLES, ...immutableFields];
               const updateData = {};
-              for (const field of updateableFields) {
-                if (op.data[field] !== undefined) {
-                  updateData[field] = op.data[field];
+              for (const [field, value] of Object.entries(op.data)) {
+                if (!allExcluded.includes(field) && value !== undefined) {
+                  updateData[field] = value;
                 }
               }
 

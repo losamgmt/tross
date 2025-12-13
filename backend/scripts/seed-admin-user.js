@@ -10,27 +10,24 @@ const { UserDataService } = require('../services/user-data');
 const { logger } = require('../config/logger');
 
 const ADMIN_USER_DATA = {
-  email: process.env.ADMIN_EMAIL || 'admin@trossapp.com',
-  password: process.env.ADMIN_PASSWORD || 'TrossAdmin123!',
-  name: 'System Administrator',
+  email: process.env.ADMIN_EMAIL,
+  password: process.env.ADMIN_PASSWORD,
+  name: process.env.ADMIN_NAME || 'System Administrator',
 };
 
 async function seedAdminUser() {
   try {
     logger.info('🌱 Starting Auth0 admin user seeding...');
 
-    // Check if admin email is provided
+    // Require admin credentials
     if (!process.env.ADMIN_EMAIL) {
-      logger.warn(
-        '⚠️  ADMIN_EMAIL not set in environment. Using default: admin@trossapp.com',
-      );
+      logger.error('❌ ADMIN_EMAIL environment variable is required');
+      process.exit(1);
     }
 
     if (!process.env.ADMIN_PASSWORD) {
-      logger.warn(
-        '⚠️  ADMIN_PASSWORD not set in environment. Using default password.',
-      );
-      logger.warn('   🔒 Change this immediately in production!');
+      logger.error('❌ ADMIN_PASSWORD environment variable is required');
+      process.exit(1);
     }
 
     // Initialize Auth0 strategy

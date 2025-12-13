@@ -12,14 +12,14 @@ describe('Health Endpoints - Integration Tests', () => {
   // No DB cleanup needed - health endpoints are read-only
 
   describe('GET /api/health - Basic Health Check', () => {
-    test('should return 200 and healthy status', async () => {
+    test('should return 200 and operational status', async () => {
       // Act
       const response = await request(app).get('/api/health');
 
-      // Assert
+      // Assert - 200 means operational; status may be healthy or degraded based on latency
       expect(response.status).toBe(200);
+      expect(['healthy', 'degraded']).toContain(response.body.status);
       expect(response.body).toMatchObject({
-        status: 'healthy',
         timestamp: expect.any(String),
         uptime: expect.any(Number),
       });
@@ -48,9 +48,9 @@ describe('Health Endpoints - Integration Tests', () => {
       // Act - If this returns 200, DB is connected
       const response = await request(app).get('/api/health');
 
-      // Assert
+      // Assert - 200 means DB connected; status may be healthy or degraded based on latency
       expect(response.status).toBe(200);
-      expect(response.body.status).toBe('healthy');
+      expect(['healthy', 'degraded']).toContain(response.body.status);
     });
   });
 
@@ -167,10 +167,10 @@ describe('Health Endpoints - Integration Tests', () => {
 
       const responses = await Promise.all(requests);
 
-      // Assert - All should succeed
+      // Assert - All should succeed; status may vary based on latency
       responses.forEach((response) => {
         expect(response.status).toBe(200);
-        expect(response.body.status).toBe('healthy');
+        expect(['healthy', 'degraded']).toContain(response.body.status);
       });
     });
 

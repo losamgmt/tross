@@ -6,7 +6,7 @@
  */
 const express = require('express');
 const DevAuthStrategy = require('../services/auth/DevAuthStrategy');
-const _User = require('../db/models/User');
+// User model removed - not used in this file
 const { HTTP_STATUS } = require('../config/constants');
 const { logger } = require('../config/logger');
 const ResponseFormatter = require('../utils/response-formatter');

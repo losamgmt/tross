@@ -8,6 +8,11 @@
  * SINGLE SOURCE OF TRUTH for Invoice model query and CRUD capabilities
  */
 
+const {
+  FIELD_ACCESS_LEVELS: _FAL,
+  UNIVERSAL_FIELD_ACCESS,
+} = require('../constants');
+
 module.exports = {
   // Table name in database
   tableName: 'invoices',
@@ -41,16 +46,142 @@ module.exports = {
   requiredFields: ['invoice_number', 'customer_id', 'amount', 'total'],
 
   /**
-   * Fields that can be set during CREATE
-   * Excludes: id, created_at, updated_at (system-managed)
+   * Fields that cannot be modified after creation (beyond universal immutables: id, created_at)
+   * - invoice_number: Audit trail identity, cannot change
    */
-  createableFields: ['invoice_number', 'customer_id', 'work_order_id', 'amount', 'tax', 'total', 'due_date', 'status'],
+  immutableFields: ['invoice_number'],
+
+  // ============================================================================
+  // FIELD-LEVEL ACCESS CONTROL (for response-transform.js)
+  // ============================================================================
 
   /**
-   * Fields that can be modified during UPDATE
-   * Excludes: id, invoice_number (immutable), created_at
+   * Per-field CRUD permissions using FIELD_ACCESS_LEVELS shortcuts
+   * Entity Contract fields use UNIVERSAL_FIELD_ACCESS spread
+   *
+   * Invoice access (RLS applies):
+   * - Customers: See their own invoices (read only)
+   * - Technicians: Deny all (no invoice access per permissions)
+   * - Dispatchers+: CREATE/UPDATE
+   * - Managers+: DELETE
    */
-  updateableFields: ['amount', 'tax', 'total', 'due_date', 'paid_at', 'status', 'is_active'],
+  fieldAccess: {
+    // Entity Contract v2.0 fields
+    ...UNIVERSAL_FIELD_ACCESS,
+
+    // Identity field - audit trail, immutable after creation
+    invoice_number: {
+      create: 'dispatcher',
+      read: 'customer',
+      update: 'none', // Immutable
+      delete: 'none',
+    },
+
+    // FK to customers - required, set on create
+    customer_id: {
+      create: 'dispatcher',
+      read: 'customer',
+      update: 'none', // Cannot reassign invoice to different customer
+      delete: 'none',
+    },
+
+    // FK to work_orders - optional, can be updated
+    work_order_id: {
+      create: 'dispatcher',
+      read: 'customer',
+      update: 'dispatcher',
+      delete: 'none',
+    },
+
+    // Financial fields - dispatcher+ manages, customer can read
+    amount: {
+      create: 'dispatcher',
+      read: 'customer',
+      update: 'dispatcher',
+      delete: 'none',
+    },
+    tax: {
+      create: 'dispatcher',
+      read: 'customer',
+      update: 'dispatcher',
+      delete: 'none',
+    },
+    total: {
+      create: 'dispatcher',
+      read: 'customer',
+      update: 'dispatcher',
+      delete: 'none',
+    },
+
+    // Due date - dispatcher+ manages
+    due_date: {
+      create: 'dispatcher',
+      read: 'customer',
+      update: 'dispatcher',
+      delete: 'none',
+    },
+
+    // Payment timestamp - system managed on payment
+    paid_at: {
+      create: 'none',
+      read: 'customer',
+      update: 'dispatcher', // Set when payment received
+      delete: 'none',
+    },
+  },
+
+  // ============================================================================
+  // FOREIGN KEY CONFIGURATION (for db-error-handler.js)
+  // ============================================================================
+
+  /**
+   * Foreign key relationships for error message generation
+   * Maps FK field -> { table, displayName }
+   */
+  foreignKeys: {
+    customer_id: {
+      table: 'customers',
+      displayName: 'Customer',
+    },
+    work_order_id: {
+      table: 'work_orders',
+      displayName: 'Work Order',
+    },
+  },
+
+  // ============================================================================
+  // RELATIONSHIPS (for JOIN queries)
+  // ============================================================================
+
+  /**
+   * Relationships to JOIN by default in all queries (findById, findAll, findByField)
+   * These are included automatically without needing to specify 'include' option
+   * Invoices almost always need customer info displayed
+   */
+  defaultIncludes: ['customer'],
+
+  /**
+   * Foreign key relationships
+   * Used for JOIN generation and validation
+   */
+  relationships: {
+    // Invoice belongs to a customer (required)
+    customer: {
+      type: 'belongsTo',
+      foreignKey: 'customer_id',
+      table: 'customers',
+      fields: ['id', 'email', 'company_name', 'phone'],
+      description: 'Customer billed by this invoice',
+    },
+    // Invoice may be linked to a work order (optional)
+    workOrder: {
+      type: 'belongsTo',
+      foreignKey: 'work_order_id',
+      table: 'work_orders',
+      fields: ['id', 'title', 'status'],
+      description: 'Work order this invoice is for',
+    },
+  },
 
   // ============================================================================
   // DELETE CONFIGURATION (for GenericEntityService.delete)

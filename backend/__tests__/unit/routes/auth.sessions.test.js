@@ -12,10 +12,11 @@ const authRoutes = require("../../../routes/auth");
 const tokenService = require("../../../services/token-service");
 const auditService = require("../../../services/audit-service");
 const { AuditActions, ResourceTypes, AuditResults } = require("../../../services/audit-constants");
-const { authenticateToken } = require("../../../middleware/auth");
+const { authenticateToken, requirePermission } = require("../../../middleware/auth");
 const { validateProfileUpdate } = require("../../../validators");
 const { getClientIp, getUserAgent } = require("../../../utils/request-helpers");
 const jwt = require("jsonwebtoken");
+const GenericEntityService = require("../../../services/generic-entity-service");
 const {
   createRouteTestApp,
   setupRouteMocks,
@@ -28,9 +29,14 @@ jest.mock("../../../db/models/Role");
 jest.mock("../../../services/user-data");
 jest.mock("../../../services/token-service");
 jest.mock("../../../services/audit-service");
-jest.mock("../../../middleware/auth");
+jest.mock("../../../middleware/auth", () => ({
+  authenticateToken: jest.fn((req, res, next) => next()),
+  requirePermission: jest.fn(() => (req, res, next) => next()),
+  requireMinimumRole: jest.fn(() => (req, res, next) => next()),
+}));
 jest.mock("../../../utils/request-helpers");
 jest.mock("jsonwebtoken");
+jest.mock("../../../services/generic-entity-service");
 
 // Mock validators with proper factory functions
 jest.mock("../../../validators", () => ({
@@ -350,6 +356,104 @@ describe("routes/auth.js - Session Management", () => {
       expect(response.body.data[0].token_hash).toBeUndefined();
       expect(response.body.data[0].refresh_token).toBeUndefined();
       expect(response.body.data[0].id).toBe("token-1");
+    });
+  });
+
+  describe("POST /api/auth/admin/revoke-user-sessions/:userId", () => {
+    beforeEach(() => {
+      // Mock requirePermission to pass for admin
+      requirePermission.mockImplementation(() => (req, res, next) => next());
+      
+      // Reset GenericEntityService mock
+      GenericEntityService.findById.mockResolvedValue({
+        id: 42,
+        email: "target@example.com",
+        first_name: "Target",
+        last_name: "User",
+      });
+    });
+
+    test("should revoke all sessions for target user", async () => {
+      // Arrange
+      tokenService.revokeAllUserTokens.mockResolvedValue(3);
+      auditService.log.mockResolvedValue();
+
+      // Act
+      const response = await request(app)
+        .post("/api/auth/admin/revoke-user-sessions/42")
+        .send({ reason: "Account compromised" });
+
+      // Assert
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.sessionsRevoked).toBe(3);
+      expect(response.body.data.targetUserId).toBe(42);
+      expect(response.body.message).toContain("Revoked 3 session(s)");
+
+      // Verify token service called
+      expect(tokenService.revokeAllUserTokens).toHaveBeenCalledWith(42, "Account compromised");
+
+      // Verify audit log
+      expect(auditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: AuditActions.ADMIN_REVOKE_SESSIONS,
+          resourceType: ResourceTypes.USER,
+          resourceId: 42,
+          result: AuditResults.SUCCESS,
+        })
+      );
+    });
+
+    test("should use default reason if not provided", async () => {
+      // Arrange
+      tokenService.revokeAllUserTokens.mockResolvedValue(1);
+      auditService.log.mockResolvedValue();
+
+      // Act
+      const response = await request(app)
+        .post("/api/auth/admin/revoke-user-sessions/42");
+
+      // Assert
+      expect(response.status).toBe(200);
+      expect(tokenService.revokeAllUserTokens).toHaveBeenCalledWith(42, "admin_revocation");
+    });
+
+    test("should return 400 for invalid user ID", async () => {
+      // Act
+      const response = await request(app)
+        .post("/api/auth/admin/revoke-user-sessions/invalid");
+
+      // Assert
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+    });
+
+    test("should return 404 if target user not found", async () => {
+      // Arrange
+      GenericEntityService.findById.mockResolvedValue(null);
+
+      // Act
+      const response = await request(app)
+        .post("/api/auth/admin/revoke-user-sessions/999");
+
+      // Assert
+      expect(response.status).toBe(404);
+      expect(response.body.success).toBe(false);
+    });
+
+    test("should handle zero sessions gracefully", async () => {
+      // Arrange
+      tokenService.revokeAllUserTokens.mockResolvedValue(0);
+      auditService.log.mockResolvedValue();
+
+      // Act
+      const response = await request(app)
+        .post("/api/auth/admin/revoke-user-sessions/42");
+
+      // Assert
+      expect(response.status).toBe(200);
+      expect(response.body.data.sessionsRevoked).toBe(0);
+      expect(response.body.message).toContain("Revoked 0 session(s)");
     });
   });
 });

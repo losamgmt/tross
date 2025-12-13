@@ -8,6 +8,11 @@
  * SINGLE SOURCE OF TRUTH for Inventory model query and CRUD capabilities
  */
 
+const {
+  FIELD_ACCESS_LEVELS: FAL,
+  UNIVERSAL_FIELD_ACCESS,
+} = require('../constants');
+
 module.exports = {
   // Table name in database
   tableName: 'inventory',
@@ -41,16 +46,100 @@ module.exports = {
   requiredFields: ['name', 'sku'],
 
   /**
-   * Fields that can be set during CREATE
-   * Excludes: id, created_at, updated_at (system-managed)
+   * Fields that cannot be modified after creation (beyond universal immutables: id, created_at)
+   * - sku: Barcode/lookup identity, cannot change
    */
-  createableFields: ['name', 'sku', 'description', 'quantity', 'reorder_level', 'unit_cost', 'location', 'supplier', 'status'],
+  immutableFields: ['sku'],
+
+  // ============================================================================
+  // FIELD-LEVEL ACCESS CONTROL (for response-transform.js)
+  // ============================================================================
 
   /**
-   * Fields that can be modified during UPDATE
-   * Excludes: id, sku (immutable), created_at
+   * Per-field CRUD permissions using FIELD_ACCESS_LEVELS shortcuts
+   * Entity Contract fields use UNIVERSAL_FIELD_ACCESS spread
+   *
+   * Inventory access: Technician+ only (customers blocked at permission level)
+   * - Technicians: READ only (view parts availability)
+   * - Dispatchers+: CREATE/UPDATE (manage stock)
+   * - Managers+: DELETE
    */
-  updateableFields: ['name', 'description', 'quantity', 'reorder_level', 'unit_cost', 'location', 'supplier', 'status', 'is_active'],
+  fieldAccess: {
+    // Entity Contract v2.0 fields
+    ...UNIVERSAL_FIELD_ACCESS,
+
+    // Identity field - set on create, immutable, technician+ read
+    name: {
+      create: 'dispatcher',
+      read: 'technician',
+      update: 'dispatcher',
+      delete: 'none',
+    },
+
+    // SKU - immutable after creation (barcode identity)
+    sku: {
+      create: 'dispatcher',
+      read: 'technician',
+      update: 'none', // Immutable
+      delete: 'none',
+    },
+
+    // Operational fields - dispatcher+ manages, technician+ reads
+    description: {
+      create: 'dispatcher',
+      read: 'technician',
+      update: 'dispatcher',
+      delete: 'none',
+    },
+    quantity: {
+      create: 'dispatcher',
+      read: 'technician',
+      update: 'dispatcher',
+      delete: 'none',
+    },
+    reorder_level: {
+      create: 'dispatcher',
+      read: 'technician',
+      update: 'dispatcher',
+      delete: 'none',
+    },
+    location: {
+      create: 'dispatcher',
+      read: 'technician',
+      update: 'dispatcher',
+      delete: 'none',
+    },
+
+    // Financial field - manager+ only (cost data is sensitive)
+    unit_cost: FAL.MANAGER_MANAGED,
+
+    // Supplier info - manager+ manages, technician+ can read
+    supplier: {
+      create: 'manager',
+      read: 'technician',
+      update: 'manager',
+      delete: 'none',
+    },
+  },
+
+  // ============================================================================
+  // RELATIONSHIPS (for JOIN queries)
+  // ============================================================================
+
+  /**
+   * Relationships to JOIN by default in all queries (findById, findAll, findByField)
+   * These are included automatically without needing to specify 'include' option
+   */
+  defaultIncludes: [],
+
+  /**
+   * Foreign key relationships
+   * Used for JOIN generation and validation
+   *
+   * Note: Inventory is a standalone entity with no foreign key relationships.
+   * This empty object is included for metadata parity across all entities.
+   */
+  relationships: {},
 
   // ============================================================================
   // DELETE CONFIGURATION (for GenericEntityService.delete)

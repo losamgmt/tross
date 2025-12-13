@@ -13,15 +13,18 @@ const {
   validatePagination,
   validateQuery,
 } = require('../validators');
-const Contract = require('../db/models/Contract');
-const auditService = require('../services/audit-service');
-const { AuditActions, ResourceTypes, AuditResults } = require('../services/audit-constants');
-const { getClientIp, getUserAgent } = require('../utils/request-helpers');
 const { logger } = require('../config/logger');
 const contractMetadata = require('../config/models/contract-metadata');
 const ResponseFormatter = require('../utils/response-formatter');
+const GenericEntityService = require('../services/generic-entity-service');
+const { filterDataByRole } = require('../utils/response-transform');
+const { handleDbError, buildDbErrorConfig } = require('../utils/db-error-handler');
+const { buildRlsContext, buildAuditContext } = require('../utils/request-context');
 
 const router = express.Router();
+
+// Build DB error config from metadata (single source of truth)
+const DB_ERROR_CONFIG = buildDbErrorConfig(contractMetadata);
 
 /**
  * @openapi
@@ -110,17 +113,25 @@ router.get(
       const { page, limit } = req.validated.pagination;
       const { search, filters, sortBy, sortOrder } = req.validated.query;
 
-      const result = await Contract.findAll({
+      // Call GenericEntityService with all query options
+      const result = await GenericEntityService.findAll('contract', {
         page,
         limit,
         search,
         filters,
         sortBy,
         sortOrder,
-        req,
-      });
+      }, buildRlsContext(req));
 
-      return ResponseFormatter.list(res, result);
+      // Apply metadata-driven field-level filtering based on role
+      const sanitizedData = filterDataByRole(result.data, contractMetadata, req.dbUser.role, 'read');
+
+      return ResponseFormatter.list(res, {
+        data: sanitizedData,
+        pagination: result.pagination,
+        appliedFilters: result.appliedFilters,
+        rlsApplied: result.rlsApplied,
+      });
     } catch (error) {
       logger.error('Error retrieving contracts', { error: error.message });
       return ResponseFormatter.internalError(res, error);
@@ -162,13 +173,17 @@ router.get(
   async (req, res) => {
     try {
       const contractId = req.validated.id;
-      const contract = await Contract.findById(contractId, req);
+
+      const contract = await GenericEntityService.findById('contract', contractId, buildRlsContext(req));
 
       if (!contract) {
         return ResponseFormatter.notFound(res, 'Contract not found');
       }
 
-      return ResponseFormatter.get(res, contract);
+      // Apply metadata-driven field-level filtering
+      const sanitizedData = filterDataByRole(contract, contractMetadata, req.dbUser.role, 'read');
+
+      return ResponseFormatter.get(res, sanitizedData);
     } catch (error) {
       logger.error('Error retrieving contract', {
         error: error.message,
@@ -230,45 +245,31 @@ router.post(
   validateContractCreate,
   async (req, res) => {
     try {
-      const { contract_number, customer_id, start_date, end_date, value, status } = req.body;
-      const ipAddress = getClientIp(req);
-      const userAgent = getUserAgent(req);
+      const { contract_number, customer_id, start_date, end_date, value, status, terms, billing_cycle } = req.body;
 
-      const newContract = await Contract.create({
+      const newContract = await GenericEntityService.create('contract', {
         contract_number,
         customer_id,
         start_date,
         end_date,
         value,
         status,
-      });
+        terms,
+        billing_cycle,
+      }, { auditContext: buildAuditContext(req) });
 
-      await auditService.log({
-        userId: req.user.userId,
-        action: AuditActions.CONTRACT_CREATE,
-        resourceType: ResourceTypes.CONTRACT,
-        resourceId: newContract.id,
-        newValues: { contract_number, customer_id, value },
-        ipAddress,
-        userAgent,
-        result: AuditResults.SUCCESS,
-      });
+      // Guard against unexpected null/undefined return
+      if (!newContract) {
+        throw new Error('Contract creation failed unexpectedly');
+      }
 
       return ResponseFormatter.created(res, newContract, 'Contract created successfully');
     } catch (error) {
-      logger.error('Error creating contract', { error: error.message });
+      logger.error('Error creating contract', { error: error.message, code: error.code });
 
-      if (error.code === '23505') {
-        return ResponseFormatter.conflict(res, 'Contract number already exists');
-      }
-
-      if (error.code === '23514') {
-        return ResponseFormatter.badRequest(res, 'Invalid field value - check status and other enum fields');
-      }
-
-      // PostgreSQL date/time format errors
-      if (error.code === '22007' || error.code === '22008') {
-        return ResponseFormatter.badRequest(res, 'Invalid date format - use YYYY-MM-DD');
+      // Handle database errors (FK violations, unique constraints, etc.)
+      if (handleDbError(error, res, DB_ERROR_CONFIG)) {
+        return;
       }
 
       return ResponseFormatter.internalError(res, error);
@@ -333,28 +334,23 @@ router.patch(
   async (req, res) => {
     try {
       const contractId = req.validated.id;
-      const ipAddress = getClientIp(req);
-      const userAgent = getUserAgent(req);
+      const rlsContext = buildRlsContext(req);
 
-      const contract = await Contract.findById(contractId);
-      if (!contract) {
+      // Check if contract exists (with RLS filtering)
+      const oldContract = await GenericEntityService.findById('contract', contractId, rlsContext);
+      if (!oldContract) {
         return ResponseFormatter.notFound(res, 'Contract not found');
       }
 
-      await Contract.update(contractId, req.body);
-      const updatedContract = await Contract.findById(contractId);
-
-      await auditService.log({
-        userId: req.user.userId,
-        action: AuditActions.CONTRACT_UPDATE,
-        resourceType: ResourceTypes.CONTRACT,
-        resourceId: contractId,
-        oldValues: contract,
-        newValues: updatedContract,
-        ipAddress,
-        userAgent,
-        result: AuditResults.SUCCESS,
+      // Update contract (audit logging handled internally via auditContext)
+      const updatedContract = await GenericEntityService.update('contract', contractId, req.body, {
+        auditContext: buildAuditContext(req),
       });
+
+      // Handle race condition: contract deleted between findById and update
+      if (!updatedContract) {
+        return ResponseFormatter.notFound(res, 'Contract not found');
+      }
 
       return ResponseFormatter.updated(res, updatedContract, 'Contract updated successfully');
     } catch (error) {
@@ -363,17 +359,9 @@ router.patch(
         contractId: req.params.id,
       });
 
-      if (error.code === '23505') {
-        return ResponseFormatter.conflict(res, 'Contract number already exists');
-      }
-
-      if (error.code === '23514') {
-        return ResponseFormatter.badRequest(res, 'Invalid field value - check status and other enum fields');
-      }
-
-      // PostgreSQL date/time format errors
-      if (error.code === '22007' || error.code === '22008') {
-        return ResponseFormatter.badRequest(res, 'Invalid date format - use YYYY-MM-DD');
+      // Handle database errors (FK violations, unique constraints, etc.)
+      if (handleDbError(error, res, DB_ERROR_CONFIG)) {
+        return;
       }
 
       return ResponseFormatter.internalError(res, error);
@@ -416,26 +404,15 @@ router.delete(
   async (req, res) => {
     try {
       const contractId = req.validated.id;
-      const ipAddress = getClientIp(req);
-      const userAgent = getUserAgent(req);
 
-      const contract = await Contract.findById(contractId);
-      if (!contract) {
+      // Delete contract (returns null if not found, handles cascade via metadata.dependents)
+      const deletedContract = await GenericEntityService.delete('contract', contractId, {
+        auditContext: buildAuditContext(req),
+      });
+
+      if (!deletedContract) {
         return ResponseFormatter.notFound(res, 'Contract not found');
       }
-
-      await Contract.delete(contractId);
-
-      await auditService.log({
-        userId: req.user.userId,
-        action: AuditActions.CONTRACT_DELETE,
-        resourceType: ResourceTypes.CONTRACT,
-        resourceId: contractId,
-        oldValues: contract,
-        ipAddress,
-        userAgent,
-        result: AuditResults.SUCCESS,
-      });
 
       return ResponseFormatter.deleted(res, 'Contract deleted successfully');
     } catch (error) {

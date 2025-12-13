@@ -253,6 +253,7 @@ if (!isTest()) {
   try {
     AppConfig.validate();
   } catch (error) {
+    // Console is appropriate for bootstrap/startup errors
     console.error('Configuration Error:', error.message);
     if (isProduction()) {
       // In production, fail fast if configuration is invalid

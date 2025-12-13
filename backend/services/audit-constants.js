@@ -27,6 +27,7 @@ const AuditActions = {
   LOGIN_FAILED: 'login_failed',
   LOGOUT: 'logout',
   LOGOUT_ALL_DEVICES: 'logout_all_devices',
+  ADMIN_REVOKE_SESSIONS: 'admin_revoke_sessions',
   TOKEN_REFRESH: 'token_refresh',
   PASSWORD_RESET: 'password_reset',
   UNAUTHORIZED_ACCESS: 'unauthorized_access',

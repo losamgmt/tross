@@ -13,14 +13,12 @@ const Joi = require('joi');
 const { buildCompositeSchema, getValidationMetadata } = require('../utils/validation-loader');
 const ResponseFormatter = require('../utils/response-formatter');
 
-// Load validation metadata on startup
+// Log validation metadata on startup (console is appropriate for module initialization)
 try {
   const metadata = getValidationMetadata();
-  console.log(`[ValidationLoader] 📋 Loaded validation rules v${metadata.version}`);
-  console.log(`[ValidationLoader] 📊 Available operations: ${metadata.operations.join(', ')}`);
-  console.log(`[ValidationLoader] 🎯 Policy: ${JSON.stringify(metadata.policy)}`);
+  console.log(`[ValidationLoader] Loaded validation rules v${metadata.version}`);
 } catch (error) {
-  console.error('[ValidationLoader] ❌ Failed to load validation metadata:', error.message);
+  console.error('[ValidationLoader] Failed to load validation metadata:', error.message);
 }
 
 /**
@@ -28,7 +26,7 @@ try {
  * DRY principle: Single error handler for all validators
  */
 const createValidator = (schema) => (req, res, next) => {
-  const { error } = schema.validate(req.body, {
+  const { error, value } = schema.validate(req.body, {
     abortEarly: false, // Return all errors, not just the first
     stripUnknown: true, // Remove unknown fields for security
   });
@@ -42,6 +40,9 @@ const createValidator = (schema) => (req, res, next) => {
     return ResponseFormatter.badRequest(res, error.details[0].message, details);
   }
 
+  // Replace req.body with validated/stripped value
+  // Routes can now just use req.body directly without manual destructuring
+  req.body = value;
   next();
 };
 

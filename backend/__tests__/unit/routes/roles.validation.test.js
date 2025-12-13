@@ -6,10 +6,13 @@
  * Uses centralized setup from route-test-setup.js (DRY architecture).
  *
  * Test Coverage: Error handling, constraints, middleware integration
+ * 
+ * PHASE 4 UPDATE:
+ * Routes now use GenericEntityService instead of Role model.
+ * Tests mock GenericEntityService via centralized route-test-setup.js.
  */
 
 const request = require("supertest");
-const Role = require("../../../db/models/Role");
 const auditService = require("../../../services/audit-service");
 const { authenticateToken, requirePermission } = require("../../../middleware/auth");
 const {
@@ -21,13 +24,23 @@ const { HTTP_STATUS } = require("../../../config/constants");
 const { getClientIp, getUserAgent } = require("../../../utils/request-helpers");
 const {
   createRouteTestApp,
+  createGenericEntityServiceMock,
   setupRouteMocks,
+  setupGenericEntityServiceMock,
   teardownRouteMocks,
 } = require("../../helpers/route-test-setup");
 
-// Mock dependencies
-jest.mock("../../../db/models/Role");
+// Mock GenericEntityService (Phase 4: replaces Role model)
+jest.mock("../../../services/generic-entity-service", () => 
+  require("../../helpers/route-test-setup").createGenericEntityServiceMock()
+);
+const GenericEntityService = require("../../../services/generic-entity-service");
+
+// Mock other dependencies
 jest.mock("../../../services/audit-service");
+jest.mock("../../../db/helpers/default-value-helper", () => ({
+  getNextOrdinalValue: jest.fn().mockResolvedValue(50),
+}));
 jest.mock("../../../middleware/auth", () => ({
   authenticateToken: jest.fn((req, res, next) => next()),
   requirePermission: jest.fn(() => (req, res, next) => next()),
@@ -82,6 +95,16 @@ describe("routes/roles.js - Validation & Error Handling", () => {
       validateRoleCreate,
       validateRoleUpdate,
     });
+    
+    // Setup GenericEntityService mocks with sensible defaults
+    setupGenericEntityServiceMock(GenericEntityService, 'role', {
+      defaultRecord: { id: 1, name: 'admin', priority: 100, created_at: new Date().toISOString() },
+      defaultList: [
+        { id: 1, name: 'admin', priority: 100 },
+        { id: 2, name: 'manager', priority: 80 },
+      ],
+      defaultCount: 2,
+    });
   });
 
   afterEach(() => {
@@ -95,7 +118,7 @@ describe("routes/roles.js - Validation & Error Handling", () => {
     test("should return 500 when database error occurs", async () => {
       // Arrange
       const dbError = new Error("Database connection failed");
-      Role.findAll.mockRejectedValue(dbError);
+      GenericEntityService.findAll.mockRejectedValue(dbError);
 
       // Act
       const response = await request(app).get("/api/roles");
@@ -114,7 +137,7 @@ describe("routes/roles.js - Validation & Error Handling", () => {
   describe("GET /api/roles/:id - Error Handling", () => {
     test("should return 404 when role not found", async () => {
       // Arrange
-      Role.findById.mockResolvedValue(null);
+      GenericEntityService.findById.mockResolvedValue(null);
 
       // Act
       const response = await request(app).get("/api/roles/999");
@@ -129,7 +152,7 @@ describe("routes/roles.js - Validation & Error Handling", () => {
     test("should return 500 when database error occurs", async () => {
       // Arrange
       const dbError = new Error("Database query failed");
-      Role.findById.mockRejectedValue(dbError);
+      GenericEntityService.findById.mockRejectedValue(dbError);
 
       // Act
       const response = await request(app).get("/api/roles/1");
@@ -154,7 +177,7 @@ describe("routes/roles.js - Validation & Error Handling", () => {
       expect(response.body.success).toBe(false);
       expect(response.body.error).toBeDefined();
       expect(response.body.message).toBeDefined();
-      expect(Role.create).not.toHaveBeenCalled();
+      expect(GenericEntityService.create).not.toHaveBeenCalled();
     });
 
     test("should return 400 when name is null", async () => {
@@ -169,9 +192,10 @@ describe("routes/roles.js - Validation & Error Handling", () => {
     });
 
     test("should return 409 when role name already exists", async () => {
-      // Arrange
+      // Arrange - GenericEntityService.create throws on duplicate
       const duplicateError = new Error("Role name already exists");
-      Role.create.mockRejectedValue(duplicateError);
+      duplicateError.code = '23505'; // PostgreSQL unique violation
+      GenericEntityService.create.mockRejectedValue(duplicateError);
 
       // Act
       const response = await request(app)
@@ -188,7 +212,7 @@ describe("routes/roles.js - Validation & Error Handling", () => {
     test("should return 500 when database error occurs during creation", async () => {
       // Arrange
       const dbError = new Error("Database insertion failed");
-      Role.create.mockRejectedValue(dbError);
+      GenericEntityService.create.mockRejectedValue(dbError);
 
       // Act
       const response = await request(app)
@@ -209,7 +233,7 @@ describe("routes/roles.js - Validation & Error Handling", () => {
         name: "analyst",
         created_at: new Date(),
       };
-      Role.create.mockResolvedValue(mockCreatedRole);
+      GenericEntityService.create.mockResolvedValue(mockCreatedRole);
       auditService.log.mockRejectedValue(new Error("Audit service down"));
 
       // Act
@@ -217,13 +241,13 @@ describe("routes/roles.js - Validation & Error Handling", () => {
         .post("/api/roles")
         .send({ name: "analyst" });
 
-      // Assert
-      expect(response.status).toBe(HTTP_STATUS.INTERNAL_SERVER_ERROR);
+      // Assert - Route should still succeed even if audit fails (non-blocking)
+      expect(response.status).toBe(HTTP_STATUS.CREATED);
     });
 
-    test("should handle Role.create returning undefined", async () => {
+    test("should handle GenericEntityService.create returning undefined", async () => {
       // Arrange
-      Role.create.mockResolvedValue(undefined);
+      GenericEntityService.create.mockResolvedValue(undefined);
 
       // Act
       const response = await request(app)
@@ -236,16 +260,16 @@ describe("routes/roles.js - Validation & Error Handling", () => {
   });
 
   // ===========================
-  // PUT /api/roles/:id - Validation
+  // PATCH /api/roles/:id - Validation
   // ===========================
-  describe("PUT /api/roles/:id - Validation", () => {
+  describe("PATCH /api/roles/:id - Validation", () => {
     test("should return 404 when role not found before update", async () => {
       // Arrange
-      Role.findById.mockResolvedValue(null);
+      GenericEntityService.findById.mockResolvedValue(null);
 
       // Act
       const response = await request(app)
-        .put("/api/roles/999")
+        .patch("/api/roles/999")
         .send({ name: "newname" });
 
       // Assert
@@ -253,18 +277,20 @@ describe("routes/roles.js - Validation & Error Handling", () => {
       expect(response.body.success).toBe(false);
       expect(response.body.error).toBeDefined();
       expect(response.body.message).toBeDefined();
-      expect(Role.update).not.toHaveBeenCalled();
+      expect(GenericEntityService.update).not.toHaveBeenCalled();
     });
 
-    test("should return 400 when attempting to modify protected role", async () => {
-      // Arrange
+    test("should return 400 when attempting to modify protected role name", async () => {
+      // Arrange - findById returns admin role, update throws protected error
       const adminRole = { id: 1, name: "admin", created_at: new Date() };
-      Role.findById.mockResolvedValue(adminRole);
-      Role.update.mockRejectedValue(new Error("Cannot modify protected role"));
+      GenericEntityService.findById.mockResolvedValue(adminRole);
+      GenericEntityService.update.mockRejectedValue(
+        new Error("Cannot modify name on system role: admin")
+      );
 
       // Act
       const response = await request(app)
-        .put("/api/roles/1")
+        .patch("/api/roles/1")
         .send({ name: "superadmin" });
 
       // Assert
@@ -277,12 +303,14 @@ describe("routes/roles.js - Validation & Error Handling", () => {
     test("should return 409 when new name already exists", async () => {
       // Arrange
       const oldRole = { id: 3, name: "manager", created_at: new Date() };
-      Role.findById.mockResolvedValue(oldRole);
-      Role.update.mockRejectedValue(new Error("Role name already exists"));
+      GenericEntityService.findById.mockResolvedValue(oldRole);
+      const duplicateError = new Error("Role name already exists");
+      duplicateError.code = '23505';
+      GenericEntityService.update.mockRejectedValue(duplicateError);
 
       // Act
       const response = await request(app)
-        .put("/api/roles/3")
+        .patch("/api/roles/3")
         .send({ name: "admin" });
 
       // Assert
@@ -295,12 +323,12 @@ describe("routes/roles.js - Validation & Error Handling", () => {
     test("should return 404 when role deleted during update (race condition)", async () => {
       // Arrange
       const oldRole = { id: 3, name: "manager", created_at: new Date() };
-      Role.findById.mockResolvedValue(oldRole);
-      Role.update.mockRejectedValue(new Error("Role not found"));
+      GenericEntityService.findById.mockResolvedValue(oldRole);
+      GenericEntityService.update.mockResolvedValue(null); // Returns null if not found
 
       // Act
       const response = await request(app)
-        .put("/api/roles/3")
+        .patch("/api/roles/3")
         .send({ name: "supervisor" });
 
       // Assert
@@ -312,12 +340,12 @@ describe("routes/roles.js - Validation & Error Handling", () => {
     test("should return 500 when unexpected database error occurs", async () => {
       // Arrange
       const oldRole = { id: 3, name: "manager", created_at: new Date() };
-      Role.findById.mockResolvedValue(oldRole);
-      Role.update.mockRejectedValue(new Error("Connection timeout"));
+      GenericEntityService.findById.mockResolvedValue(oldRole);
+      GenericEntityService.update.mockRejectedValue(new Error("Connection timeout"));
 
       // Act
       const response = await request(app)
-        .put("/api/roles/3")
+        .patch("/api/roles/3")
         .send({ name: "supervisor" });
 
       // Assert
@@ -326,19 +354,19 @@ describe("routes/roles.js - Validation & Error Handling", () => {
       expect(response.body.message).toBeDefined();
     });
 
-    test("should handle Role.update returning undefined", async () => {
+    test("should handle GenericEntityService.update returning undefined", async () => {
       // Arrange
       const oldRole = { id: 3, name: "manager" };
-      Role.findById.mockResolvedValue(oldRole);
-      Role.update.mockResolvedValue(undefined);
+      GenericEntityService.findById.mockResolvedValue(oldRole);
+      GenericEntityService.update.mockResolvedValue(undefined);
 
       // Act
       const response = await request(app)
-        .put("/api/roles/3")
+        .patch("/api/roles/3")
         .send({ name: "supervisor" });
 
       // Assert - Will try to log audit with undefined
-      expect(response.status).toBe(HTTP_STATUS.INTERNAL_SERVER_ERROR);
+      expect(response.status).toBe(HTTP_STATUS.NOT_FOUND);
     });
   });
 
@@ -348,7 +376,9 @@ describe("routes/roles.js - Validation & Error Handling", () => {
   describe("DELETE /api/roles/:id - Validation", () => {
     test("should return 400 when attempting to delete protected role", async () => {
       // Arrange
-      Role.delete.mockRejectedValue(new Error("Cannot delete protected role"));
+      GenericEntityService.delete.mockRejectedValue(
+        new Error("Cannot delete system role: admin")
+      );
 
       // Act
       const response = await request(app).delete("/api/roles/1");
@@ -361,9 +391,9 @@ describe("routes/roles.js - Validation & Error Handling", () => {
     });
 
     test("should return 400 when role has assigned users", async () => {
-      // Arrange
-      Role.delete.mockRejectedValue(
-        new Error("Cannot delete role: users are assigned to this role"),
+      // Arrange - GenericEntityService throws with user count in message
+      GenericEntityService.delete.mockRejectedValue(
+        new Error("Cannot delete role: 3 user(s) are assigned to this role"),
       );
 
       // Act
@@ -372,14 +402,12 @@ describe("routes/roles.js - Validation & Error Handling", () => {
       // Assert
       expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
       expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe(
-        "Cannot delete role: users are assigned to this role",
-      );
+      expect(response.body.message).toContain("user(s) are assigned");
     });
 
     test("should return 404 when role not found", async () => {
-      // Arrange
-      Role.delete.mockRejectedValue(new Error("Role not found"));
+      // Arrange - GenericEntityService.delete returns null for not-found (doesn't throw)
+      GenericEntityService.delete.mockResolvedValue(null);
 
       // Act
       const response = await request(app).delete("/api/roles/999");
@@ -393,7 +421,7 @@ describe("routes/roles.js - Validation & Error Handling", () => {
 
     test("should return 500 when unexpected database error occurs", async () => {
       // Arrange
-      Role.delete.mockRejectedValue(new Error("Database error"));
+      GenericEntityService.delete.mockRejectedValue(new Error("Connection pool exhausted"));
 
       // Act
       const response = await request(app).delete("/api/roles/5");
@@ -441,10 +469,10 @@ describe("routes/roles.js - Validation & Error Handling", () => {
     // Note: Validator behavior testing is covered in validator unit tests
     // Direct validators are plain functions (not jest.fn()) and cannot be mocked in route tests
 
-    test("PUT /api/roles/:id should validate ID param", async () => {
+    test("PATCH /api/roles/:id should validate ID param", async () => {
       // Act - validateIdParam mock now validates properly
       const response = await request(app)
-        .put("/api/roles/invalid")
+        .patch("/api/roles/invalid")
         .send({ name: "test" });
 
       // Assert

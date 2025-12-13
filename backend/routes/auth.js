@@ -1,12 +1,9 @@
 // Clean authentication routes
 const express = require('express');
-const { authenticateToken } = require('../middleware/auth');
+const { authenticateToken, requirePermission } = require('../middleware/auth');
 const { refreshLimiter } = require('../middleware/rate-limit');
 const ResponseFormatter = require('../utils/response-formatter');
-const User = require('../db/models/User');
-const _Role = require('../db/models/Role');
-const _userDataService = require('../services/user-data');
-const _crypto = require('crypto');
+// User model removed - using GenericEntityService (strangler-fig Phase 4)
 const tokenService = require('../services/token-service');
 const auditService = require('../services/audit-service');
 const { AuditActions, ResourceTypes, AuditResults } = require('../services/audit-constants');
@@ -154,8 +151,8 @@ router.put(
         return ResponseFormatter.badRequest(res, 'No valid fields to update');
       }
 
-      await User.update(dbUser.id, updates);
-      const updatedUser = await GenericEntityService.findByField('user', 'auth0_id', req.user.sub);
+      // Use GenericEntityService instead of User.update
+      const updatedUser = await GenericEntityService.update('user', dbUser.id, updates);
 
       return ResponseFormatter.updated(res, updatedUser, 'Profile updated successfully');
     } catch (error) {
@@ -432,5 +429,125 @@ router.get('/sessions', authenticateToken, async (req, res) => {
     return ResponseFormatter.internalError(res, error);
   }
 });
+
+/**
+ * @openapi
+ * /api/auth/admin/revoke-user-sessions/{userId}:
+ *   post:
+ *     tags: [Authentication]
+ *     summary: Revoke all sessions for a specific user (Admin only)
+ *     description: |
+ *       Immediately invalidates all refresh tokens for the specified user.
+ *       Use this when a user account is compromised or needs to be force-logged out.
+ *       Requires 'users:delete' permission (admin only).
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: The ID of the user whose sessions to revoke
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               reason:
+ *                 type: string
+ *                 description: Reason for revoking sessions (for audit log)
+ *                 example: "Account compromised"
+ *     responses:
+ *       200:
+ *         description: Sessions revoked successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                   example: "Revoked 3 session(s) for user 42"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     sessionsRevoked:
+ *                       type: integer
+ *                     targetUserId:
+ *                       type: integer
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Admin access required
+ *       404:
+ *         description: User not found
+ */
+router.post(
+  '/admin/revoke-user-sessions/:userId',
+  authenticateToken,
+  requirePermission('users', 'delete'),
+  async (req, res) => {
+    try {
+      const targetUserId = parseInt(req.params.userId, 10);
+      const reason = req.body?.reason || 'admin_revocation';
+
+      if (isNaN(targetUserId) || targetUserId < 1) {
+        return ResponseFormatter.badRequest(res, 'Invalid user ID');
+      }
+
+      // Verify target user exists
+      const targetUser = await GenericEntityService.findById('users', targetUserId);
+      if (!targetUser) {
+        return ResponseFormatter.notFound(res, 'User');
+      }
+
+      // Revoke all tokens for the target user
+      const count = await tokenService.revokeAllUserTokens(targetUserId, reason);
+
+      const ipAddress = getClientIp(req);
+      const userAgent = getUserAgent(req);
+
+      // Audit log for security tracking
+      await auditService.log({
+        userId: req.dbUser.id,
+        action: AuditActions.ADMIN_REVOKE_SESSIONS,
+        resourceType: ResourceTypes.USER,
+        resourceId: targetUserId,
+        newValues: {
+          sessionsRevoked: count,
+          reason,
+          targetUserEmail: targetUser.email,
+        },
+        ipAddress,
+        userAgent,
+        result: AuditResults.SUCCESS,
+      });
+
+      logger.info('Admin revoked user sessions', {
+        adminId: req.dbUser.id,
+        targetUserId,
+        sessionsRevoked: count,
+        reason,
+      });
+
+      return ResponseFormatter.updated(
+        res,
+        { sessionsRevoked: count, targetUserId },
+        `Revoked ${count} session(s) for user ${targetUserId}`,
+      );
+    } catch (error) {
+      logger.error('Error in admin session revocation', {
+        error: error.message,
+        adminId: req.dbUser?.id,
+        targetUserId: req.params.userId,
+      });
+      return ResponseFormatter.internalError(res, error);
+    }
+  },
+);
 
 module.exports = router;
