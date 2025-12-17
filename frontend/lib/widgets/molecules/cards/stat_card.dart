@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../config/app_spacing.dart';
+import '../../../config/app_colors.dart';
 
 /// StatCard - Molecule for displaying a statistic with label and count
 ///
@@ -11,15 +12,13 @@ import '../../../config/app_spacing.dart';
 /// - Optional icon
 /// - Customizable colors (background, text)
 /// - Optional tap action
+/// - Optional trend indicator (for dashboard cards)
 /// - Consistent styling across dashboards
 /// - Zero business logic, pure presentation
 ///
-/// This is the generic equivalent of Lane's `_buildStatCard()` and
-/// `_buildQuickActionCard()` patterns.
-///
 /// Usage:
 /// ```dart
-/// // Simple stat card
+/// // Simple stat card (horizontal layout)
 /// StatCard(
 ///   label: 'Total Assets',
 ///   value: '14',
@@ -27,14 +26,14 @@ import '../../../config/app_spacing.dart';
 ///   textColor: Colors.black87,
 /// )
 ///
-/// // With icon and tap action
-/// StatCard(
-///   label: 'Pending',
-///   value: '6',
-///   icon: Icons.pending_outlined,
-///   backgroundColor: Colors.orange.shade100,
-///   textColor: Colors.orange.shade700,
-///   onTap: () => navigateToPending(),
+/// // Dashboard stat card with trend (vertical layout)
+/// StatCard.dashboard(
+///   label: 'Total Users',
+///   value: '1,234',
+///   icon: Icons.people_outline,
+///   color: AppColors.brandPrimary,
+///   trend: '+12%',
+///   trendUp: true,
 /// )
 /// ```
 class StatCard extends StatelessWidget {
@@ -49,6 +48,11 @@ class StatCard extends StatelessWidget {
   final double? minHeight;
   final bool showChevron;
 
+  // Dashboard-specific properties
+  final String? trend;
+  final bool? trendUp;
+  final bool _isDashboardStyle;
+
   const StatCard({
     super.key,
     required this.label,
@@ -61,10 +65,116 @@ class StatCard extends StatelessWidget {
     this.width,
     this.minHeight,
     this.showChevron = false,
-  });
+  }) : trend = null,
+       trendUp = null,
+       _isDashboardStyle = false;
+
+  /// Dashboard-style stat card with vertical layout and optional trend indicator
+  const StatCard.dashboard({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.icon,
+    Color? color,
+    this.trend,
+    this.trendUp,
+    this.onTap,
+    this.width,
+  }) : backgroundColor = null,
+       textColor = color,
+       iconColor = color,
+       minHeight = null,
+       showChevron = false,
+       _isDashboardStyle = true;
 
   @override
   Widget build(BuildContext context) {
+    if (_isDashboardStyle) {
+      return _buildDashboardStyle(context);
+    }
+    return _buildCompactStyle(context);
+  }
+
+  /// Dashboard-style: Vertical layout with trend indicator, wrapped in Card
+  Widget _buildDashboardStyle(BuildContext context) {
+    final theme = Theme.of(context);
+    final cardColor = textColor ?? theme.colorScheme.primary;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: cardColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(icon, color: cardColor, size: 24),
+                ),
+                const Spacer(),
+                if (trend != null) _buildTrendBadge(theme),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              value,
+              style: theme.textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: cardColor,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Trend badge for dashboard cards
+  Widget _buildTrendBadge(ThemeData theme) {
+    final isUp = trendUp ?? true;
+    final trendColor = isUp ? AppColors.success : AppColors.error;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: trendColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isUp ? Icons.trending_up : Icons.trending_down,
+            size: 14,
+            color: trendColor,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            trend!,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: trendColor,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Compact-style: Horizontal layout for quick stats
+  Widget _buildCompactStyle(BuildContext context) {
     final spacing = context.spacing;
     final theme = Theme.of(context);
     final effectiveBackgroundColor =

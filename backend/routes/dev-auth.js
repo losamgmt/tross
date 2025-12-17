@@ -96,7 +96,7 @@ router.get('/token', async (req, res) => {
       role: requestedRole,
     });
 
-    logger.info(`🔧 Dev auth: Generated token for ${user.email} (${user.role})`);
+    // Note: DevAuthStrategy already logs token generation
 
     return res.status(HTTP_STATUS.OK).json({
       success: true,

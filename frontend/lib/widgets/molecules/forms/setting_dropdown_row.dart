@@ -87,32 +87,61 @@ class SettingDropdownRow<T> extends StatelessWidget {
           ),
           SizedBox(width: spacing.md),
           // Dropdown (right side, flex: 3 or fixed width)
-          SizedBox(
-            width: dropdownWidth,
-            child: Expanded(
-              flex: dropdownWidth == null ? 3 : 0,
-              child: DropdownButtonFormField<T>(
-                initialValue: value,
-                decoration: InputDecoration(
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: spacing.md,
-                    vertical: spacing.sm,
-                  ),
-                  border: OutlineInputBorder(borderRadius: spacing.radiusSM),
-                ),
-                items: items.map((item) {
-                  return DropdownMenuItem<T>(
-                    value: item,
-                    child: Text(
-                      displayText(item),
-                      style: theme.textTheme.bodyMedium,
+          dropdownWidth != null
+              ? SizedBox(
+                  width: dropdownWidth,
+                  child: DropdownButtonFormField<T>(
+                    initialValue: value,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: spacing.md,
+                        vertical: spacing.sm,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: spacing.radiusSM,
+                      ),
                     ),
-                  );
-                }).toList(),
-                onChanged: enabled ? onChanged : null,
-              ),
-            ),
-          ),
+                    items: items.map((item) {
+                      return DropdownMenuItem<T>(
+                        value: item,
+                        child: Text(
+                          displayText(item),
+                          style: theme.textTheme.bodyMedium,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: enabled ? onChanged : null,
+                  ),
+                )
+              : Expanded(
+                  flex: 3,
+                  child: DropdownButtonFormField<T>(
+                    initialValue: value,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: spacing.md,
+                        vertical: spacing.sm,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: spacing.radiusSM,
+                      ),
+                    ),
+                    items: items.map((item) {
+                      return DropdownMenuItem<T>(
+                        value: item,
+                        child: Text(
+                          displayText(item),
+                          style: theme.textTheme.bodyMedium,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: enabled ? onChanged : null,
+                  ),
+                ),
         ],
       ),
     );

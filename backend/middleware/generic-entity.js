@@ -165,7 +165,8 @@ const extractEntity = (req, res, next) => {
   // If :id param present, validate and attach
   if (req.params.id !== undefined) {
     try {
-      req.entityId = toSafeInteger(req.params.id);
+      // silent: true because URL params are ALWAYS strings - coercion is expected, not noteworthy
+      req.entityId = toSafeInteger(req.params.id, 'id', { silent: true });
     } catch (error) {
       return sendError(
         res,

@@ -39,7 +39,8 @@ class TitledCard extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: StyleConstants.cardBorderRadius,
       ),
-      color: color ?? StyleConstants.dbCardColor,
+      // Use theme's surface color by default (null lets Card use theme)
+      color: color,
       child: Padding(
         padding: padding ?? StyleConstants.dbCardPadding,
         child: Column(

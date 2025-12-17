@@ -13,6 +13,12 @@ const { HTTP_STATUS } = require('../../../config/constants');
 jest.mock('../../../config/permissions-loader');
 jest.mock('../../../config/logger', () => ({
   logSecurityEvent: jest.fn(),
+  logger: {
+    debug: jest.fn(),
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+  },
 }));
 jest.mock('../../../utils/request-helpers', () => ({
   getClientIp: jest.fn(() => '127.0.0.1'),

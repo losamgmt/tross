@@ -44,7 +44,7 @@ class EntityNavConfig {
   });
 }
 
-/// Default entity configurations
+/// Default entity configurations - uses camelCase entity names
 const Map<String, EntityNavConfig> _defaultEntityConfigs = {
   'user': EntityNavConfig(
     group: 'Administration',
@@ -62,7 +62,7 @@ const Map<String, EntityNavConfig> _defaultEntityConfigs = {
     icon: Icons.engineering,
     sortOrder: 1,
   ),
-  'work_order': EntityNavConfig(
+  'workOrder': EntityNavConfig(
     group: 'Operations',
     icon: Icons.assignment,
     sortOrder: 2,
@@ -80,6 +80,11 @@ const Map<String, EntityNavConfig> _defaultEntityConfigs = {
   'inventory': EntityNavConfig(
     group: 'Operations',
     icon: Icons.inventory_2,
+    sortOrder: 3,
+  ),
+  'preferences': EntityNavConfig(
+    group: 'Administration',
+    icon: Icons.settings,
     sortOrder: 3,
   ),
 };
@@ -117,7 +122,7 @@ class EntityNavBuilder {
   static List<NavMenuItem> buildEntityMenu({
     Map<String, EntityNavConfig>? entityConfigs,
     bool includeGroups = true,
-    String routePrefix = '/entities',
+    String routePrefix = '/entity',
     bool Function(String entityName)? filter,
   }) {
     final configs = {..._defaultEntityConfigs, ...?entityConfigs};
@@ -194,7 +199,7 @@ class EntityNavBuilder {
   static NavMenuItem buildEntityItem(
     String entityName, {
     EntityNavConfig? config,
-    String routePrefix = '/entities',
+    String routePrefix = '/entity',
   }) {
     final metadata = EntityMetadataRegistry.get(entityName);
     final cfg =

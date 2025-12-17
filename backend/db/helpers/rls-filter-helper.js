@@ -200,6 +200,29 @@ function buildRLSFilter(rlsContext, metadata, paramOffset = 0) {
     };
   }
 
+  // Policies that require a valid userId for filtering
+  const policiesRequiringUserId = [
+    'own_record_only',
+    'own_work_orders_only',
+    'assigned_work_orders_only',
+    'own_invoices_only',
+    'own_contracts_only',
+  ];
+
+  // If userId is null and the policy requires user-specific filtering, deny access
+  // This handles dev users with null userId trying to access user-filtered resources
+  if (userId === null && policiesRequiringUserId.includes(policy)) {
+    logger.debug('buildRLSFilter: Denying access - null userId with user-specific policy', {
+      policy,
+      entity: metadata?.tableName,
+    });
+    return {
+      clause: '1=0',
+      params: [],
+      applied: true,
+    };
+  }
+
   // Execute the policy handler
   const result = handler(userId, metadata, paramOffset);
 

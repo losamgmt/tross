@@ -31,10 +31,10 @@ import '../../../config/constants.dart';
 import '../../molecules/cards/dashboard_card.dart';
 import '../../molecules/layout/refreshable_section.dart';
 import 'cards/database_health_card.dart';
-import '../../molecules/empty_state.dart';
+import '../../molecules/feedback/empty_state.dart';
 import '../../atoms/indicators/app_badge.dart';
 import '../../atoms/indicators/loading_indicator.dart';
-import '../../helpers/refreshable_data_widget.dart';
+import '../providers/auto_refresh_data_provider.dart';
 import '../../molecules/cards/error_card.dart';
 import '../../molecules/buttons/button_group.dart';
 

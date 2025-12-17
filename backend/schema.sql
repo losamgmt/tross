@@ -176,6 +176,40 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
 );
 
 -- ============================================================================
+-- USER PREFERENCES TABLE
+-- ============================================================================
+-- Business entity: User preferences storage (1:1 relationship with users)
+-- Contract compliance: ✓ SIMPLIFIED (no lifecycle states needed)
+--
+-- Design rationale:
+--   - Uses JSONB for flexible preference storage (schema-on-read)
+--   - One row per user (UNIQUE constraint on user_id)
+--   - CASCADE delete when user is deleted
+--   - Trigger-managed updated_at for consistency
+--
+-- Initial preference keys:
+--   - theme: 'system' | 'light' | 'dark'
+--   - notificationsEnabled: boolean
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS user_preferences (
+    -- Primary key
+    id SERIAL PRIMARY KEY,
+    
+    -- User relationship (1:1)
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    
+    -- Preferences storage (JSONB for flexibility)
+    preferences JSONB NOT NULL DEFAULT '{}',
+    
+    -- Timestamps (TIER 1 compliance)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    
+    -- Ensure one preference row per user
+    CONSTRAINT user_preferences_user_unique UNIQUE (user_id)
+);
+
+-- ============================================================================
 -- PERFORMANCE INDEXES
 -- ============================================================================
 
@@ -193,6 +227,9 @@ CREATE INDEX IF NOT EXISTS idx_users_role_id ON users(role_id);
 CREATE INDEX IF NOT EXISTS idx_users_created ON users(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_users_status ON users(status);
 CREATE INDEX IF NOT EXISTS idx_users_status_active ON users(status, is_active) WHERE is_active = true;
+
+-- User preferences indexes (user_id already has UNIQUE constraint which creates implicit index)
+-- No additional indexes needed - UNIQUE constraint handles fast lookups
 
 -- Audit logs indexes (critical for performance)
 CREATE INDEX IF NOT EXISTS idx_audit_logs_resource ON audit_logs(resource_type, resource_id);
@@ -229,6 +266,12 @@ CREATE TRIGGER update_roles_updated_at
 DROP TRIGGER IF EXISTS update_users_updated_at ON users;
 CREATE TRIGGER update_users_updated_at
     BEFORE UPDATE ON users
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_user_preferences_updated_at ON user_preferences;
+CREATE TRIGGER update_user_preferences_updated_at
+    BEFORE UPDATE ON user_preferences
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 

@@ -21,6 +21,7 @@ library;
 
 import 'dart:convert';
 import 'package:flutter/services.dart';
+import '../models/permission.dart';
 import 'error_service.dart';
 
 /// Field types matching backend field definitions
@@ -148,8 +149,8 @@ class EntityMetadata {
   /// Human-readable identity field (e.g., 'email' for customers, 'title' for work orders)
   final String identityField;
 
-  /// Resource name for permission checks
-  final String rlsResource;
+  /// Resource type for permission checks (type-safe enum)
+  final ResourceType rlsResource;
 
   /// Fields required for create operations
   final List<String> requiredFields;
@@ -218,12 +219,22 @@ class EntityMetadata {
         json['displayNamePlural'] as String? ??
         _toDisplayNamePlural(displayName);
 
+    // Parse rlsResource string to ResourceType enum (fail-fast if invalid)
+    final rlsResourceString = json['rlsResource'] as String? ?? '${name}s';
+    final rlsResource = ResourceType.fromString(rlsResourceString);
+    if (rlsResource == null) {
+      throw ArgumentError(
+        'Invalid rlsResource "$rlsResourceString" for entity "$name". '
+        'Must be one of: ${ResourceType.values.map((r) => r.toBackendString()).join(", ")}',
+      );
+    }
+
     return EntityMetadata(
       name: name,
       tableName: json['tableName'] as String? ?? '${name}s',
       primaryKey: json['primaryKey'] as String? ?? 'id',
       identityField: json['identityField'] as String? ?? 'id',
-      rlsResource: json['rlsResource'] as String? ?? '${name}s',
+      rlsResource: rlsResource,
       requiredFields:
           (json['requiredFields'] as List<dynamic>?)?.cast<String>() ?? [],
       immutableFields:
@@ -289,6 +300,9 @@ class EntityMetadata {
 /// Registry for all entity metadata
 ///
 /// Singleton that loads and caches all entity metadata.
+///
+/// Entity names use camelCase (e.g., 'workOrder', 'preferences')
+/// matching the backend's canonical naming convention.
 class EntityMetadataRegistry {
   static final EntityMetadataRegistry _instance = EntityMetadataRegistry._();
   static EntityMetadataRegistry get instance => _instance;
@@ -358,7 +372,7 @@ class EntityMetadataRegistry {
       'contract',
       'invoice',
       'inventory',
-      'work_order',
+      'workOrder',
     ];
 
     for (final entity in defaultEntities) {
@@ -372,12 +386,29 @@ class EntityMetadataRegistry {
 
   /// Create default metadata for an entity
   EntityMetadata _createDefaultMetadata(String name) {
+    // Try to find ResourceType by name directly first, then with 's' suffix
+    ResourceType? rlsResource = ResourceType.fromString(name);
+    rlsResource ??= ResourceType.fromString('${name}s');
+
+    if (rlsResource == null) {
+      throw ArgumentError(
+        'Cannot create default metadata for unknown entity "$name". '
+        'No matching ResourceType found for "$name" or "${name}s".',
+      );
+    }
+
+    // Convert camelCase to snake_case for table name
+    final tableName = name.replaceAllMapped(
+      RegExp(r'([A-Z])'),
+      (m) => '_${m.group(1)!.toLowerCase()}',
+    );
+
     return EntityMetadata(
       name: name,
-      tableName: '${name}s',
+      tableName: '${tableName}s',
       primaryKey: 'id',
       identityField: _getDefaultIdentityField(name),
-      rlsResource: '${name}s',
+      rlsResource: rlsResource,
       requiredFields: _getDefaultRequiredFields(name),
       immutableFields: const [],
       searchableFields: _getDefaultSearchableFields(name),
@@ -530,6 +561,7 @@ class EntityMetadataRegistry {
   /// Get metadata for an entity
   ///
   /// Throws if entity not found and no default available.
+  /// Entity names use camelCase: 'workOrder', 'preferences'
   static EntityMetadata get(String entityName) {
     if (!_instance._initialized) {
       throw StateError(
@@ -544,6 +576,7 @@ class EntityMetadataRegistry {
   }
 
   /// Get metadata for an entity, or null if not found
+  /// Entity names use camelCase: 'workOrder', 'preferences'
   static EntityMetadata? tryGet(String entityName) {
     if (!_instance._initialized) return null;
     return _instance._metadata[entityName];

@@ -16,10 +16,23 @@ const {
   requireMinimumRole, 
   requirePermission 
 } = require('../../../middleware/auth');
+const { mockUserDataServiceFindOrCreateUser } = require('../../mocks/services.mock');
+
+// Mock the UserDataService for Auth0 token tests
+jest.mock('../../../services/user-data', () => ({
+  UserDataService: {
+    findOrCreateUser: jest.fn(),
+    getUserByAuth0Id: jest.fn(),
+    getAllUsers: jest.fn(),
+    isConfigMode: jest.fn(),
+  },
+}));
+
+const { UserDataService } = require('../../../services/user-data');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key';
 
-// Helper to create tokens with specific roles
+// Helper to create DEV tokens (read-only access)
 const createToken = (role, overrides = {}) => {
   const roleToAuth0Id = {
     admin: 'dev|admin001',
@@ -40,6 +53,38 @@ const createToken = (role, overrides = {}) => {
     JWT_SECRET,
     { expiresIn: '1h' }
   );
+};
+
+// Helper to create AUTH0 tokens (full read/write access)
+// Use this for tests that need to verify write permissions
+const createAuth0Token = (role) => {
+  return jwt.sign(
+    {
+      sub: `auth0|${role}-test-123`,
+      email: `${role}@auth0.test`,
+      role,
+      provider: 'auth0',
+    },
+    JWT_SECRET,
+    { expiresIn: '1h' }
+  );
+};
+
+// Helper to mock Auth0 user for write tests
+const mockAuth0User = (role) => {
+  const mockUser = {
+    id: 1,
+    auth0_id: `auth0|${role}-test-123`,
+    email: `${role}@auth0.test`,
+    first_name: 'Test',
+    last_name: 'User',
+    role: role,
+    is_active: true,
+    provider: 'auth0',
+    name: 'Test User',
+  };
+  mockUserDataServiceFindOrCreateUser(UserDataService, mockUser);
+  return mockUser;
 };
 
 describe('Authorization Bypass Prevention', () => {
@@ -236,7 +281,10 @@ describe('Authorization Bypass Prevention', () => {
 
   describe('Permission-Based Access Control', () => {
     test('admin should have users:delete permission', async () => {
-      const token = createToken('admin');
+      // Use Auth0 token for write operations (dev tokens are read-only)
+      mockAuth0User('admin');
+      const token = createAuth0Token('admin');
+      
       const response = await request(app)
         .delete('/api/users/123')
         .set('Authorization', `Bearer ${token}`);

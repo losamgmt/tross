@@ -15,15 +15,21 @@ class AppRoutes {
 
   // Protected Routes (authentication required)
   static const String home = '/home';
-  static const String profile = '/profile';
   static const String settings = '/settings';
 
   // Admin Routes (admin role required)
   static const String admin = '/admin';
-  static const String adminUsers = '/admin/users';
-  static const String adminRoles = '/admin/roles';
-  static const String adminAudit = '/admin/audit';
-  static const String adminSettings = '/admin/settings';
+
+  // Generic Entity Routes (dynamic - one route for ALL entities)
+  // Usage: /entity/users, /entity/customers, /entity/work_orders
+  static const String entity = '/entity';
+
+  /// Build entity list route
+  static String entityList(String entityName) => '/entity/$entityName';
+
+  /// Build entity detail route
+  static String entityDetail(String entityName, int id) =>
+      '/entity/$entityName/$id';
 
   // Status/Error Routes (public, no auth required)
   static const String error = '/error';
@@ -42,15 +48,9 @@ class AppRoutes {
     underConstruction,
   ];
 
-  static const List<String> protectedRoutes = [home, profile, settings];
+  static const List<String> protectedRoutes = [home, settings];
 
-  static const List<String> adminRoutes = [
-    admin,
-    adminUsers,
-    adminRoles,
-    adminAudit,
-    adminSettings,
-  ];
+  static const List<String> adminRoutes = [admin];
 
   // Helper Methods
 
@@ -76,19 +76,11 @@ class AppRoutes {
       case login:
         return 'Login';
       case home:
-        return 'Dashboard';
-      case profile:
-        return 'Profile';
+        return 'Home';
+      case settings:
+        return 'Settings';
       case admin:
-        return 'Admin Dashboard';
-      case adminUsers:
-        return 'User Management';
-      case adminRoles:
-        return 'Role Management';
-      case adminAudit:
-        return 'Audit Logs';
-      case adminSettings:
-        return 'Admin Settings';
+        return 'Admin';
       case error:
         return 'Error';
       case unauthorized:

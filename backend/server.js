@@ -139,6 +139,7 @@ const workOrdersRoutes = require('./routes/work_orders');
 const invoicesRoutes = require('./routes/invoices');
 const contractsRoutes = require('./routes/contracts');
 const inventoryRoutes = require('./routes/inventory');
+const preferencesRoutes = require('./routes/preferences');
 
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/users', apiLimiter, usersRoutes); // RESTful user management
@@ -149,6 +150,7 @@ app.use('/api/work_orders', apiLimiter, workOrdersRoutes);
 app.use('/api/invoices', apiLimiter, invoicesRoutes);
 app.use('/api/contracts', apiLimiter, contractsRoutes);
 app.use('/api/inventory', apiLimiter, inventoryRoutes);
+app.use('/api/preferences', apiLimiter, preferencesRoutes); // User preferences
 app.use('/api/dev', devAuthRoutes); // Development auth endpoints (no rate limit - dev only)
 app.use('/api/health', apiLimiter, healthRoutes); // Health monitoring endpoints
 app.use('/api/auth0', authLimiter, auth0Routes); // Auth0 OAuth endpoints - rate limited for brute force protection

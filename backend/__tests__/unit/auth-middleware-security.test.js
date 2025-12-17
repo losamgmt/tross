@@ -351,27 +351,8 @@ describe("Authentication Middleware - Security", () => {
       expect(response.body.error).toBe("Forbidden");
     });
 
-    test("should check create permission correctly", async () => {
-      // Admin (using valid test user credentials) should have users:create permission
-      const token = jwt.sign(
-        {
-          sub: "dev|admin001",
-          email: "admin@trossapp.dev", // Must match test-users.js
-          role: "admin",
-          provider: "development",
-        },
-        JWT_SECRET,
-        { expiresIn: "1h" },
-      );
-
-      const response = await request(app)
-        .post("/api/users")
-        .set("Authorization", `Bearer ${token}`)
-        .send({ name: "test" });
-
-      expect(response.status).toBe(200);
-      expect(response.body.success).toBe(true);
-    });
+    // NOTE: "Admin can POST" is tested in Dev User Write Protection section
+    // with Auth0 tokens, since dev users are read-only by design
 
     test("should reject user with no role", async () => {
       // Token without a role
@@ -415,6 +396,176 @@ describe("Authentication Middleware - Security", () => {
       if (AppConfig.isProduction) {
         expect(AppConfig.devAuthEnabled).toBe(false);
       }
+    });
+  });
+
+  // ============================================================================
+  // DEVELOPMENT USER WRITE PROTECTION
+  // Dev users can READ but CANNOT write (POST, PUT, PATCH, DELETE)
+  // This is defense-in-depth: dev tokens are not Auth0-authenticated
+  // ============================================================================
+  describe("Development User Write Protection", () => {
+    let writeApp;
+
+    beforeEach(() => {
+      writeApp = express();
+      writeApp.use(express.json());
+
+      // Test endpoints for each HTTP method
+      writeApp.get("/api/data", authenticateToken, (req, res) => {
+        res.json({ success: true, method: "GET" });
+      });
+      writeApp.post("/api/data", authenticateToken, (req, res) => {
+        res.json({ success: true, method: "POST" });
+      });
+      writeApp.put("/api/data", authenticateToken, (req, res) => {
+        res.json({ success: true, method: "PUT" });
+      });
+      writeApp.patch("/api/data", authenticateToken, (req, res) => {
+        res.json({ success: true, method: "PATCH" });
+      });
+      writeApp.delete("/api/data", authenticateToken, (req, res) => {
+        res.json({ success: true, method: "DELETE" });
+      });
+    });
+
+    const generateDevToken = (role = "admin") => {
+      return jwt.sign(
+        {
+          sub: `dev|${role}001`,
+          email: `${role}@trossapp.dev`,
+          role: role,
+          provider: "development",
+        },
+        JWT_SECRET,
+        { expiresIn: "1h" },
+      );
+    };
+
+    test("dev user should be allowed to GET (read)", async () => {
+      const token = generateDevToken("admin");
+
+      const response = await request(writeApp)
+        .get("/api/data")
+        .set("Authorization", `Bearer ${token}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.method).toBe("GET");
+    });
+
+    test("dev user should be BLOCKED from POST (create)", async () => {
+      const token = generateDevToken("admin");
+
+      const response = await request(writeApp)
+        .post("/api/data")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ name: "test" });
+
+      expect(response.status).toBe(403);
+      expect(response.body.error).toBe("Forbidden");
+      expect(response.body.message).toContain("read-only");
+    });
+
+    test("dev user should be BLOCKED from PUT (update)", async () => {
+      const token = generateDevToken("admin");
+
+      const response = await request(writeApp)
+        .put("/api/data")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ name: "updated" });
+
+      expect(response.status).toBe(403);
+      expect(response.body.error).toBe("Forbidden");
+      expect(response.body.message).toContain("read-only");
+    });
+
+    test("dev user should be BLOCKED from PATCH (partial update)", async () => {
+      const token = generateDevToken("admin");
+
+      const response = await request(writeApp)
+        .patch("/api/data")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ name: "patched" });
+
+      expect(response.status).toBe(403);
+      expect(response.body.error).toBe("Forbidden");
+      expect(response.body.message).toContain("read-only");
+    });
+
+    test("dev user should be BLOCKED from DELETE", async () => {
+      const token = generateDevToken("admin");
+
+      const response = await request(writeApp)
+        .delete("/api/data")
+        .set("Authorization", `Bearer ${token}`);
+
+      expect(response.status).toBe(403);
+      expect(response.body.error).toBe("Forbidden");
+      expect(response.body.message).toContain("read-only");
+    });
+
+    test("all dev roles should be blocked from writes", async () => {
+      const roles = ["admin", "manager", "dispatcher", "technician", "client"];
+
+      for (const role of roles) {
+        const token = generateDevToken(role);
+
+        const response = await request(writeApp)
+          .post("/api/data")
+          .set("Authorization", `Bearer ${token}`)
+          .send({ test: true });
+
+        expect(response.status).toBe(403);
+        expect(response.body.message).toContain("read-only");
+      }
+    });
+
+    test("Auth0 user should be allowed to POST (not blocked)", async () => {
+      // Mock UserDataService for Auth0 user
+      const mockUser = {
+        id: 1,
+        auth0_id: "auth0|write-test-123",
+        email: "writer@auth0.com",
+        first_name: "Write",
+        last_name: "Test",
+        role: "admin",
+        is_active: true,
+        provider: "auth0",
+        name: "Write Test",
+      };
+      mockUserDataServiceFindOrCreateUser(UserDataService, mockUser);
+
+      const token = jwt.sign(
+        {
+          sub: "auth0|write-test-123",
+          email: "writer@auth0.com",
+          role: "admin",
+          provider: "auth0",
+        },
+        JWT_SECRET,
+        { expiresIn: "1h" },
+      );
+
+      const response = await request(writeApp)
+        .post("/api/data")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ name: "auth0 write" });
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.method).toBe("POST");
+    });
+
+    test("error message should guide user to Auth0", async () => {
+      const token = generateDevToken("admin");
+
+      const response = await request(writeApp)
+        .post("/api/data")
+        .set("Authorization", `Bearer ${token}`)
+        .send({});
+
+      expect(response.body.message).toContain("Auth0");
     });
   });
 });

@@ -68,7 +68,7 @@ class PermissionService {
   /// Example:
   /// ```dart
   /// PermissionService.hasPermission('manager', ResourceType.roles, CrudOperation.read); // true
-  /// PermissionService.hasPermission('client', ResourceType.users, CrudOperation.delete); // false
+  /// PermissionService.hasPermission('customer', ResourceType.users, CrudOperation.delete); // false
   /// ```
   static bool hasPermission(
     String? roleName,
@@ -108,7 +108,7 @@ class PermissionService {
   ///
   /// Example:
   /// ```dart
-  /// final result = PermissionService.checkPermission('client', ResourceType.users, CrudOperation.delete);
+  /// final result = PermissionService.checkPermission('customer', ResourceType.users, CrudOperation.delete);
   /// if (!result.allowed) {
   ///   showError('Cannot delete users: ${result.denialReason}');
   /// }
@@ -242,7 +242,7 @@ class PermissionService {
   ///
   /// Example:
   /// ```dart
-  /// if (!PermissionService.canAccessResource('client', ResourceType.roles)) {
+  /// if (!PermissionService.canAccessResource('customer', ResourceType.roles)) {
   ///   // Redirect to unauthorized page
   /// }
   /// ```
@@ -256,7 +256,7 @@ class PermissionService {
   ///
   /// Example:
   /// ```dart
-  /// final policy = PermissionService.getRowLevelSecurity('client', ResourceType.users);
+  /// final policy = PermissionService.getRowLevelSecurity('customer', ResourceType.users);
   /// if (policy == 'own_record_only') {
   ///   // Filter users WHERE id = currentUserId
   /// }

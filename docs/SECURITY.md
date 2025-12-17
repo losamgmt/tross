@@ -56,6 +56,46 @@ async function authenticateToken(req, res, next) {
 }
 ```
 
+#### Development User Protection (Read-Only Mode)
+
+**Purpose:** Prevent accidental data modification in development mode
+
+Development users (file-based test users) are fundamentally incapable of modifying
+data. This is a defense-in-depth security measure implemented at the middleware level.
+
+**Why?**
+- Dev users are not authenticated through Auth0
+- Dev user IDs are `null` in the database layer
+- Allowing writes could corrupt shared development databases
+- Creates clear separation between "viewing" and "modifying" data
+
+**Implementation:**
+```javascript
+// backend/middleware/auth.js - Global write protection for dev users
+const MUTATING_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];
+
+// After setting req.dbUser for dev users:
+if (MUTATING_METHODS.includes(req.method)) {
+  logger.security('DEV_WRITE_BLOCKED', {
+    method: req.method,
+    path: req.path,
+    devUser: req.devUser.name,
+  });
+  return ResponseFormatter.forbidden(res, 
+    'Development users have read-only access. Sign in with Auth0 to modify data.'
+  );
+}
+```
+
+**Behavior:**
+- `GET` requests: ✅ Allowed (read-only access via role permissions)
+- `POST/PUT/PATCH/DELETE` requests: ❌ Blocked with 403 Forbidden
+- Admin UI can view all data but cannot modify it
+- Error message clearly explains the limitation
+
+**Security Events:**
+All blocked write attempts are logged with event type `DEV_WRITE_BLOCKED`.
+
 ---
 
 ### Tier 2: RBAC (Role-Based Access Control)

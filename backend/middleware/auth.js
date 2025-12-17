@@ -88,6 +88,19 @@ const authenticateToken = async (req, res, next) => {
 
     req.user = decoded;
 
+    // HTTP methods that mutate data - dev users CANNOT use these (with exceptions)
+    const MUTATING_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];
+
+    // Routes that are SAFE for dev users even with mutating methods
+    // These are session/auth operations, NOT business data mutations
+    // Check both full path and route-relative path for flexibility
+    const DEV_ALLOWED_WRITE_PATHS = [
+      '/api/auth/logout', // Logout just clears token/session, no DB mutation
+      '/logout', // Route-relative path (when checked via req.path)
+      '/api/auth/refresh', // Token refresh (if dev tokens supported it)
+      '/refresh', // Route-relative path
+    ];
+
     // CRITICAL: Development tokens should NEVER touch the database
     // They exist purely in-memory from test-users.js config
     if (decoded.provider === 'development') {
@@ -118,6 +131,34 @@ const authenticateToken = async (req, res, next) => {
         return sendAuthError(res, HTTP_STATUS.FORBIDDEN, 'Account has been deactivated');
       }
 
+      // ========================================================================
+      // CRITICAL SECURITY: Dev users are READ-ONLY (with safe exceptions)
+      // Dev tokens are NOT authenticated via Auth0 - they MUST NOT mutate data
+      // This is defense-in-depth: even if route code is buggy, this blocks writes
+      // Exception: Auth operations (logout, refresh) are safe - they manage
+      // session state, not business data
+      // ========================================================================
+      const requestPath = req.originalUrl || req.url;
+      const isAllowedPath = DEV_ALLOWED_WRITE_PATHS.some(path =>
+        requestPath.startsWith(path),
+      );
+
+      if (MUTATING_METHODS.includes(req.method) && !isAllowedPath) {
+        logSecurityEvent('DEV_WRITE_BLOCKED', {
+          ip: getClientIp(req),
+          userAgent: getUserAgent(req),
+          url: req.url,
+          method: req.method,
+          email: req.dbUser.email,
+          role: req.dbUser.role,
+        });
+        return sendAuthError(
+          res,
+          HTTP_STATUS.FORBIDDEN,
+          'Development users are read-only. Authenticate with Auth0 to modify data.',
+        );
+      }
+
       next();
     } else {
       // Auth0 provider: find or create user in database
@@ -145,6 +186,16 @@ const authenticateToken = async (req, res, next) => {
       next();
     }
   } catch (error) {
+    // Distinguish between expected expiration and actual security concerns
+    const isExpiredToken = error.name === 'TokenExpiredError' || error.message === 'jwt expired';
+
+    if (isExpiredToken) {
+      // Token expiration is normal auth flow - user needs to refresh/re-login
+      // Don't log as security event to reduce noise
+      return sendAuthError(res, HTTP_STATUS.FORBIDDEN, 'Token expired');
+    }
+
+    // Actual invalid tokens ARE a security concern
     logSecurityEvent('AUTH_INVALID_TOKEN', {
       ip: getClientIp(req),
       userAgent: getUserAgent(req),

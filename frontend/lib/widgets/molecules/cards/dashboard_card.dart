@@ -31,7 +31,8 @@ class DashboardCard extends StatelessWidget {
   Widget build(BuildContext context) {
     Widget card = Card(
       elevation: elevation,
-      color: color ?? StyleConstants.dbCardColor,
+      // Use theme's surface color by default (null lets Card use theme)
+      color: color,
       margin: margin ?? StyleConstants.dbCardMargin,
       clipBehavior: Clip.antiAlias, // Clip children to rounded corners
       shape: RoundedRectangleBorder(

@@ -90,6 +90,36 @@
         "invalid": [0, -1, 2147483648, "abc"]
       }
     },
+    "customerProfileId": {
+      "type": "integer",
+      "required": false,
+      "min": 1,
+      "max": 2147483647,
+      "errorMessages": {
+        "type": "Customer profile ID must be a number",
+        "min": "Customer profile ID must be positive",
+        "max": "Customer profile ID exceeds maximum value"
+      },
+      "examples": {
+        "valid": [1, 5, 100],
+        "invalid": [0, -1, "abc"]
+      }
+    },
+    "technicianProfileId": {
+      "type": "integer",
+      "required": false,
+      "min": 1,
+      "max": 2147483647,
+      "errorMessages": {
+        "type": "Technician profile ID must be a number",
+        "min": "Technician profile ID must be positive",
+        "max": "Technician profile ID exceeds maximum value"
+      },
+      "examples": {
+        "valid": [1, 5, 100],
+        "invalid": [0, -1, "abc"]
+      }
+    },
     "isActive": {
       "type": "boolean",
       "required": false,
@@ -613,12 +643,12 @@
   "compositeValidations": {
     "createUser": {
       "requiredFields": ["email", "first_name", "last_name"],
-      "optionalFields": ["role_id"],
+      "optionalFields": ["role_id", "customer_profile_id", "technician_profile_id"],
       "description": "Validation rules for creating a new user"
     },
     "updateUser": {
       "requiredFields": [],
-      "optionalFields": ["email", "first_name", "last_name", "role_id", "is_active"],
+      "optionalFields": ["email", "first_name", "last_name", "role_id", "is_active", "customer_profile_id", "technician_profile_id"],
       "description": "Validation rules for updating an existing user (all fields optional)"
     },
     "createRole": {

@@ -102,6 +102,7 @@ router.post('/callback', validateAuthCallback, async (req, res) => {
       ipAddress,
       userAgent,
       'auth0',
+      authResult.auth0Id, // Pass auth0Id explicitly (user object has it filtered out)
     );
 
     // Log successful login
@@ -220,6 +221,7 @@ router.post('/validate', validateAuth0Token, async (req, res) => {
       ipAddress,
       userAgent,
       'auth0',
+      result.auth0Id, // Pass auth0Id explicitly (user object has it filtered out)
     );
 
     // Log successful login

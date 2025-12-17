@@ -35,12 +35,23 @@ enum CrudOperation {
   update,
   delete;
 
+  /// Get operation from string (case-insensitive)
+  static CrudOperation? fromString(String? operation) {
+    if (operation == null || operation.isEmpty) return null;
+    final lower = operation.toLowerCase();
+    return CrudOperation.values.cast<CrudOperation?>().firstWhere(
+      (op) => op?.name == lower,
+      orElse: () => null,
+    );
+  }
+
   @override
   String toString() => name;
 }
 
 /// System Resources
 /// All resources that can be permission-controlled
+/// Must match backend permissions.json resources
 enum ResourceType {
   users,
   roles,
@@ -50,13 +61,26 @@ enum ResourceType {
   customers,
   inventory,
   invoices,
-  technicians;
+  technicians,
+  preferences;
 
   final String? _value;
   const ResourceType([this._value]);
 
   /// Get backend-compatible string (snake_case)
   String toBackendString() => _value ?? name;
+
+  /// Get ResourceType from string (handles both camelCase and snake_case)
+  static ResourceType? fromString(String? resource) {
+    if (resource == null || resource.isEmpty) return null;
+    final lower = resource.toLowerCase();
+    return ResourceType.values.cast<ResourceType?>().firstWhere(
+      (r) =>
+          r?.name.toLowerCase() == lower ||
+          r?.toBackendString().toLowerCase() == lower,
+      orElse: () => null,
+    );
+  }
 
   @override
   String toString() => _value ?? name;

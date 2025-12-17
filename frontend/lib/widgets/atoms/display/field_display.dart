@@ -127,7 +127,13 @@ class FieldDisplay extends StatelessWidget {
                 theme.colorScheme.onSurface.withValues(alpha: 0.6),
           ),
           SizedBox(width: spacing.xs),
-          Text(displayValue, style: effectiveStyle),
+          Flexible(
+            child: Text(
+              displayValue,
+              style: effectiveStyle,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ],
       );
     }

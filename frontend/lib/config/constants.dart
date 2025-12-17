@@ -109,11 +109,9 @@ class AppConstants {
 
   // Navigation
   static const String homeTitle = 'Home';
-  static const String profileTitle = 'Profile';
   static const String settingsTitle = 'Settings';
 
   // Menu Identifiers (internal keys for menu routing)
-  static const String menuProfile = 'profile';
   static const String menuSettings = 'settings';
   static const String menuAdmin = 'admin';
 
@@ -171,28 +169,13 @@ class StyleConstants {
   static const double cardSpacing = 12.0;
   static const double cardRunSpacing = 12.0;
 
-  // HealthStatusBox Styling
-  static const EdgeInsets healthBoxMargin = EdgeInsets.only(right: 12.0);
-  static const EdgeInsets healthBoxPadding = EdgeInsets.all(16.0);
-  static const Color healthBoxColor = Color(0xFFE3F2FD); // Light blue
-  static const double healthBoxSpacing = 8.0;
-  static const TextStyle healthBoxTitleStyle = TextStyle(
-    fontWeight: FontWeight.bold,
-    fontSize: 16.0,
-  );
+  // Card Styling (theme-aware - no hardcoded colors)
   static const BorderRadius cardBorderRadius = BorderRadius.all(
     Radius.circular(8.0),
   );
-
-  // DatabaseCard Styling
   static const EdgeInsets dbCardMargin = EdgeInsets.only(right: 8.0);
   static const EdgeInsets dbCardPadding = EdgeInsets.all(12.0);
-  static const Color dbCardColor = Color(0xFFFFFFFF); // White
   static const double dbCardSpacing = 6.0;
-  static const TextStyle dbCardTitleStyle = TextStyle(
-    fontWeight: FontWeight.w500,
-    fontSize: 14.0,
-  );
 }
 
 // API and Network Constants
