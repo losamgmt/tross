@@ -13,6 +13,7 @@ const workOrderMetadata = require('./work-order-metadata');
 const contractMetadata = require('./contract-metadata');
 const invoiceMetadata = require('./invoice-metadata');
 const inventoryMetadata = require('./inventory-metadata');
+const preferencesMetadata = require('./preferences-metadata');
 
 module.exports = {
   user: userMetadata,
@@ -23,4 +24,5 @@ module.exports = {
   contract: contractMetadata,
   invoice: invoiceMetadata,
   inventory: inventoryMetadata,
+  preferences: preferencesMetadata,
 };

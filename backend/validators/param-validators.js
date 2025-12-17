@@ -28,10 +28,12 @@ function validateIdParam(options = {}) {
   return (req, res, next) => {
     try {
       const value = req.params[paramName];
+      // silent: true - URL params are ALWAYS strings, coercion is expected and not noteworthy
       const validated = toSafeInteger(value, paramName, {
         min,
         max,
         allowNull: false,
+        silent: true,
       });
 
       // Attach to req.validated
@@ -64,9 +66,11 @@ function validateIdParams(paramNames) {
 
       for (const paramName of paramNames) {
         const value = req.params[paramName];
+        // silent: true - URL params are ALWAYS strings, coercion is expected
         const validated = toSafeInteger(value, paramName, {
           min: 1,
           allowNull: false,
+          silent: true,
         });
         req.validated[paramName] = validated;
       }

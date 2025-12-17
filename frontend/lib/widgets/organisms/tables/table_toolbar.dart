@@ -11,7 +11,12 @@ import '../../../config/app_spacing.dart';
 import '../search/search_bar.dart' as custom;
 
 class TableToolbar extends StatelessWidget {
+  /// String title (mutually exclusive with titleWidget)
   final String? title;
+
+  /// Custom title widget (e.g., dropdown selector) - takes precedence over title
+  final Widget? titleWidget;
+
   final ValueChanged<String>? onSearch;
   final List<Widget>? actions;
   final Widget? leading;
@@ -19,6 +24,7 @@ class TableToolbar extends StatelessWidget {
   const TableToolbar({
     super.key,
     this.title,
+    this.titleWidget,
     this.onSearch,
     this.actions,
     this.leading,
@@ -29,13 +35,25 @@ class TableToolbar extends StatelessWidget {
     final theme = Theme.of(context);
     final spacing = context.spacing;
 
+    // Determine the title display: widget takes precedence over string
+    final Widget? titleDisplay =
+        titleWidget ??
+        (title != null
+            ? Text(
+                title!,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              )
+            : null);
+
     return Container(
       padding: spacing.paddingLG,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Title and actions row
-          if (title != null || actions != null || leading != null)
+          if (titleDisplay != null || actions != null || leading != null)
             Padding(
               padding: EdgeInsets.only(bottom: spacing.lg),
               child: Row(
@@ -45,15 +63,7 @@ class TableToolbar extends StatelessWidget {
                     leading!,
                     SizedBox(width: spacing.md),
                   ],
-                  if (title != null)
-                    Flexible(
-                      child: Text(
-                        title!,
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
+                  if (titleDisplay != null) Flexible(child: titleDisplay),
                   if (actions != null) ...[
                     SizedBox(width: spacing.md),
                     Row(

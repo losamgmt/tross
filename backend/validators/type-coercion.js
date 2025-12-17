@@ -135,15 +135,19 @@ function toSafeUserId(value, fieldName = 'userId') {
 
   // Handle strings (likely dev token auth0_id)
   if (typeof value === 'string') {
-    logTypeCoercion({
-      field: fieldName,
-      originalValue: value,
-      originalType: 'string',
-      coercedValue: null,
-      coercedType: 'null',
-      reason:
-        'String userId detected (likely dev token) - dev users have no database ID',
-    });
+    // Skip verbose logging for expected dev tokens - this is routine, not exceptional
+    // Dev tokens have auth0_id format like 'dev|admin001'
+    if (!value.startsWith('dev|')) {
+      logTypeCoercion({
+        field: fieldName,
+        originalValue: value,
+        originalType: 'string',
+        coercedValue: null,
+        coercedType: 'null',
+        reason:
+          'String userId detected (likely dev token) - dev users have no database ID',
+      });
+    }
     return null;
   }
 

@@ -11,6 +11,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
 import '../providers/auth_provider.dart';
@@ -20,18 +21,20 @@ import '../config/app_spacing.dart';
 import '../core/routing/app_routes.dart';
 import '../services/error_service.dart';
 import '../services/notification_service.dart';
-import '../widgets/molecules/login_header.dart';
+import '../widgets/molecules/layout/login_header.dart';
 import '../widgets/organisms/login/production_login_card.dart';
 import '../widgets/organisms/login/dev_login_card.dart';
 import '../widgets/atoms/atoms.dart';
 
-/// Dev roles for login screen - matches backend test-users.js
+/// Dev roles for login screen
+/// Source of truth: config/permissions.json roles
+/// Must match backend: validRoles in routes/dev-auth.js
 const _devRoleNames = [
   'admin',
   'manager',
   'dispatcher',
   'technician',
-  'client',
+  'customer',
 ];
 
 class LoginScreen extends StatelessWidget {
@@ -162,7 +165,7 @@ class LoginScreen extends StatelessWidget {
           'Login successful - navigating to home',
           context: {'route': AppRoutes.home},
         );
-        Navigator.of(context).pushReplacementNamed(AppRoutes.home);
+        context.go(AppRoutes.home);
       } else {
         ErrorService.logWarning(
           '[Expected in tests] Login failed - showing error to user',

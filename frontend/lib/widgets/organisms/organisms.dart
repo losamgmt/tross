@@ -4,31 +4,66 @@
 /// Import this file to access all organism widgets
 library;
 
-// Async State Management
-export 'async_data_provider.dart';
-export 'stream_data_provider.dart';
-export 'refreshable_data_provider.dart';
+// Cards
+export 'cards/entity_detail_card.dart';
 
-// Form Organisms
-export 'forms/generic_form.dart';
+// Dashboards
+export 'dashboards/db_health_dashboard.dart';
+export 'dashboards/cards/database_health_card.dart';
+
+// Feedback
+export 'feedback/error_display.dart';
+export 'feedback/under_construction_display.dart';
+
+// Fields
+export 'fields/editable_field.dart';
+
+// Forms
 export 'forms/form_field.dart';
+export 'forms/generic_form.dart';
 
-// Search Organisms
-export 'search/search_bar.dart';
-
-// Navigation Organisms
-export 'navigation/navigation.dart';
-
-// Login Organisms
-export 'login/dev_login_card.dart';
-
-// Layout Organisms
+// Layout
 export 'layout/action_grid.dart';
 export 'layout/card_grid.dart';
 export 'layout/settings_section.dart';
+export 'layout/tabbed_container.dart';
 
-// UI Organisms
-export 'app_header.dart';
-export 'data_table.dart';
-export 'under_construction_display.dart';
-export 'user_profile_card.dart';
+// Login
+export 'login/dev_login_card.dart';
+export 'login/login_form.dart';
+export 'login/production_login_card.dart';
+
+// Charts (fl_chart)
+export 'charts/dashboard_charts.dart';
+
+// Dashboard
+export 'dashboard_content.dart';
+
+// Modals
+export 'modals/confirmation_modal.dart';
+export 'modals/entity_form_modal.dart';
+export 'modals/generic_modal.dart';
+
+// Navigation
+export 'navigation/app_footer.dart';
+export 'navigation/app_header.dart';
+export 'navigation/app_sidebar.dart';
+export 'navigation/entity_nav_builder.dart';
+export 'navigation/nav_menu_item.dart';
+export 'navigation/navigation.dart';
+
+// Providers (async data management)
+export 'providers/async_data_provider.dart';
+export 'providers/auto_refresh_data_provider.dart';
+export 'providers/refreshable_data_provider.dart';
+export 'providers/stream_data_provider.dart';
+
+// Guards (permission-based conditional rendering)
+export 'guards/permission_gate.dart';
+
+// Search
+export 'search/search_bar.dart';
+
+// Tables
+export 'tables/data_table.dart';
+export 'tables/table_toolbar.dart';

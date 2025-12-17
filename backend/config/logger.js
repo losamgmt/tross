@@ -108,13 +108,20 @@ const requestLogger = (req, res, next) => {
 
 /**
  * Log security events
+ * Respects severity field: DEBUG uses debug level, others use warn
  */
 const logSecurityEvent = (event, details = {}) => {
-  logger.warn('Security Event', {
+  const logData = {
     event,
-    timestamp: new Date().toISOString(),
     ...details,
-  });
+  };
+
+  // Use appropriate log level based on severity
+  if (details.severity === 'DEBUG') {
+    logger.debug('Security Event', logData);
+  } else {
+    logger.warn('Security Event', logData);
+  }
 };
 
 module.exports = {

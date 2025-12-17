@@ -11,7 +11,7 @@ import 'package:tross_app/config/app_config.dart';
 import 'package:tross_app/providers/app_provider.dart';
 import 'package:tross_app/providers/auth_provider.dart';
 import 'package:tross_app/screens/login_screen.dart';
-import 'package:tross_app/widgets/molecules/dev_mode_indicator.dart';
+import 'package:tross_app/widgets/molecules/indicators/dev_mode_indicator.dart';
 
 void main() {
   group('Security Integration Tests - UI + Service Layers', () {

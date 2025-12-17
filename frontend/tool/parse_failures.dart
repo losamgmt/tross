@@ -31,7 +31,8 @@ void main() async {
             '',
           );
         }
-      } else if (type == 'testDone' && event['result'] == 'failure') {
+      } else if (type == 'testDone' &&
+          (event['result'] == 'failure' || event['result'] == 'error')) {
         final testId = event['testID'] as int?;
         if (testId != null) {
           final name = tests[testId] ?? 'Unknown test';

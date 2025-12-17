@@ -8,8 +8,10 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/notification_service.dart';
+import '../core/routing/app_routes.dart';
 
 /// Configuration for an error action button
 class ErrorActionConfig {
@@ -33,12 +35,12 @@ class ErrorActionConfig {
 class ErrorActionCoordinator {
   /// Navigate to home page
   static Future<void> goHome(BuildContext context) async {
-    Navigator.of(context).pushReplacementNamed('/');
+    context.go(AppRoutes.home);
   }
 
   /// Navigate back
   static void goBack(BuildContext context) {
-    Navigator.of(context).pop();
+    context.pop();
   }
 
   /// Retry an async operation with loading state and error handling

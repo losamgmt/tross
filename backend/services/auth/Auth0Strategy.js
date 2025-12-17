@@ -113,6 +113,7 @@ class Auth0Strategy extends AuthStrategy {
       return {
         token: appToken,
         user: localUser,
+        auth0Id: mappedProfile.auth0_id, // Pass separately for token generation (filtered from user)
         auth0Tokens: {
           access_token: tokens.access_token,
           refresh_token: tokens.refresh_token,
@@ -259,6 +260,7 @@ class Auth0Strategy extends AuthStrategy {
       return {
         token: appToken,
         user: localUser,
+        auth0Id: mappedProfile.auth0_id, // Pass separately for token generation (filtered from user)
       };
     } catch (error) {
       logger.error('🔐 Auth0: ID token validation failed', {

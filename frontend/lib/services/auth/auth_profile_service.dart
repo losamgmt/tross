@@ -4,7 +4,8 @@
 /// Integrates with backend /api/auth/me endpoint
 library;
 
-import '../../config/permissions.dart';
+import '../../models/permission.dart';
+import '../../services/permission_service_dynamic.dart';
 import '../../config/api_endpoints.dart';
 import '../../utils/helpers/string_helper.dart';
 import '../api_client.dart';
@@ -219,39 +220,39 @@ class AuthProfileService {
 
   /// Check if user is admin
   static bool isAdmin(Map<String, dynamic>? user) {
-    return PermissionService.isAdmin(user?['role']);
+    return user?['role']?.toString().toLowerCase() == 'admin';
   }
 
   /// Check if user is manager or above
   static bool isManager(Map<String, dynamic>? user) {
-    return PermissionService.isManager(user?['role']);
+    return PermissionService.hasMinimumRole(user?['role'], UserRole.manager);
   }
 
   /// Check if user is dispatcher or above
   static bool isDispatcher(Map<String, dynamic>? user) {
-    return PermissionService.isDispatcher(user?['role']);
+    return PermissionService.hasMinimumRole(user?['role'], UserRole.dispatcher);
   }
 
   /// Check if user is technician or above
   static bool isTechnician(Map<String, dynamic>? user) {
-    return PermissionService.isTechnician(user?['role']);
+    return PermissionService.hasMinimumRole(user?['role'], UserRole.technician);
   }
 
   /// Check if user has permission to perform operation on resource
   static bool canPerform(
     Map<String, dynamic>? user,
-    String resource,
-    String operation,
+    ResourceType resource,
+    CrudOperation operation,
   ) {
-    return PermissionService.canPerform(user?['role'], resource, operation);
+    return PermissionService.hasPermission(user?['role'], resource, operation);
   }
 
   /// Check if user meets minimum role requirement
   static bool meetsMinimumRole(
     Map<String, dynamic>? user,
-    String requiredRole,
+    UserRole requiredRole,
   ) {
-    return PermissionService.meetsMinimumRole(user?['role'], requiredRole);
+    return PermissionService.hasMinimumRole(user?['role'], requiredRole);
   }
 
   /// Get user's display name

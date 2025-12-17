@@ -12,7 +12,6 @@ module.exports = {
   // Database Ports
   DB_DEV_PORT: 5432, // PostgreSQL Development
   DB_TEST_PORT: 5433, // PostgreSQL Test
-  REDIS_PORT: 6379, // Redis (sessions/cache)
 
   // Legacy/Deprecated (DO NOT USE)
   // VITE_PORT: 5173,     // ❌ Replaced by Flutter on 8080

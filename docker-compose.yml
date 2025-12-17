@@ -1,5 +1,5 @@
 # TrossApp Docker Compose - Development Environment
-# Provides PostgreSQL database and Redis cache for local development
+# Provides PostgreSQL database for local development
 
 services:
   # PostgreSQL Database (Standard port 5432)
@@ -27,23 +27,6 @@ services:
       - trossapp-network
     command: postgres -c log_statement=all -c log_destination=stderr
 
-  # Redis Cache (for future use)
-  redis:
-    image: redis:7-alpine
-    container_name: trossapp-redis
-    restart: unless-stopped
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-    networks:
-      - trossapp-network
-
   # pgAdmin (Database Administration - Optional)
   pgadmin:
     image: dpage/pgadmin4:latest
@@ -66,8 +49,6 @@ services:
 
 volumes:
   postgres_data:
-    driver: local
-  redis_data:
     driver: local
   pgadmin_data:
     driver: local

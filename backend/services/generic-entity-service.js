@@ -193,7 +193,8 @@ class GenericEntityService {
 
     // Validate and coerce ID to integer (throws on invalid)
     // toSafeInteger enforces min=1 by default, so 0 and negatives throw
-    const safeId = toSafeInteger(id);
+    // silent: true - IDs from controllers are strings (URL params), coercion is expected
+    const safeId = toSafeInteger(id, 'id', { silent: true });
 
     // Delegate to findByField using the primary key
     // Note: primaryKey (e.g., 'id') must be in filterableFields for this to work
@@ -715,7 +716,8 @@ class GenericEntityService {
     const { tableName, primaryKey, immutableFields = [], identityField, systemProtected } = metadata;
 
     // Validate and coerce ID (throws on invalid)
-    const safeId = toSafeInteger(id);
+    // silent: true - IDs from controllers are strings, coercion is expected
+    const safeId = toSafeInteger(id, 'id', { silent: true });
 
     // Validate data is an object
     if (!data || typeof data !== 'object' || Array.isArray(data)) {
@@ -877,7 +879,8 @@ class GenericEntityService {
     const { tableName, primaryKey, identityField, systemProtected } = metadata;
 
     // Validate and coerce ID (throws on invalid)
-    const safeId = toSafeInteger(id);
+    // silent: true - IDs from controllers are strings, coercion is expected
+    const safeId = toSafeInteger(id, 'id', { silent: true });
 
     // =========================================================================
     // SYSTEM PROTECTION CHECK (before any DB operation)
@@ -1097,7 +1100,7 @@ class GenericEntityService {
             }
 
             case 'update': {
-              const safeId = toSafeInteger(op.id);
+              const safeId = toSafeInteger(op.id, 'id', { silent: true });
 
               // Fetch current record for audit oldValues
               const fetchQuery = `SELECT * FROM ${tableName} WHERE ${primaryKey} = $1`;
@@ -1142,7 +1145,7 @@ class GenericEntityService {
             }
 
             case 'delete': {
-              const safeId = toSafeInteger(op.id);
+              const safeId = toSafeInteger(op.id, 'id', { silent: true });
 
               // Fetch record before delete for audit
               const fetchQuery = `SELECT * FROM ${tableName} WHERE ${primaryKey} = $1`;

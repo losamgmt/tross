@@ -20,15 +20,21 @@ class TokenService {
    * @param {Object} user - User object with id, email, role
    * @param {string} ipAddress - Client IP address
    * @param {string} userAgent - Client user agent
+   * @param {string} provider - Auth provider (auth0 or development)
+   * @param {string} auth0Id - Optional Auth0 ID (sub claim) - pass explicitly since user object may be filtered
    * @returns {Promise<{accessToken: string, refreshToken: string}>}
    */
-  async generateTokenPair(user, ipAddress = null, userAgent = null, provider = 'auth0') {
+  async generateTokenPair(user, ipAddress = null, userAgent = null, provider = 'auth0', auth0Id = null) {
     try {
       // Generate short-lived access token (15 minutes)
+      // Note: sub should be auth0_id for Auth0 compatibility, but we also include userId
+      // for internal operations. The auth middleware uses auth0_id to find/create users.
+      // IMPORTANT: auth0Id is passed explicitly because user object may have auth0_id filtered out
+      const subClaim = auth0Id || user.auth0_id || user.id.toString();
       const accessToken = jwt.sign(
         {
-          sub: user.id.toString(), // Standard JWT claim (required by auth middleware)
-          userId: user.id, // Keep for backwards compatibility
+          sub: subClaim, // Auth0 ID for user lookup
+          userId: user.id, // Database ID for internal operations
           email: user.email,
           role: user.role,
           provider: provider, // Required by auth middleware

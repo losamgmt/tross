@@ -10,7 +10,7 @@ library;
 
 import 'package:flutter/material.dart';
 import '../../../config/app_spacing.dart';
-import '../../forms/login_form.dart';
+import 'login_form.dart';
 
 class ProductionLoginCard extends StatelessWidget {
   const ProductionLoginCard({super.key});

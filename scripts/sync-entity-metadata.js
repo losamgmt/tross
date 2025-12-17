@@ -225,12 +225,11 @@ function syncMetadata() {
   // Transform each model
   const entities = [];
   for (const [entityName, backendMeta] of Object.entries(backendModels)) {
-    // Convert camelCase to snake_case for consistency
-    const normalizedName = entityName.replace(/([A-Z])/g, '_$1').toLowerCase().replace(/^_/, '');
-    
-    console.log(`  ✓ ${entityName} -> ${normalizedName}`);
-    frontendMetadata[normalizedName] = transformModel(entityName, backendMeta);
-    entities.push(normalizedName);
+    // Use entityName directly - camelCase is the canonical format across all layers
+    // No conversion! Backend and frontend use the SAME entity names.
+    console.log(`  ✓ ${entityName}`);
+    frontendMetadata[entityName] = transformModel(entityName, backendMeta);
+    entities.push(entityName);
   }
   
   // Write output

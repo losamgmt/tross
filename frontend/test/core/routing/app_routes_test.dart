@@ -12,15 +12,11 @@ void main() {
 
     test('protected routes are correctly defined', () {
       expect(AppRoutes.home, equals('/home'));
-      expect(AppRoutes.profile, equals('/profile'));
+      expect(AppRoutes.settings, equals('/settings'));
     });
 
     test('admin routes are correctly defined', () {
       expect(AppRoutes.admin, equals('/admin'));
-      expect(AppRoutes.adminUsers, equals('/admin/users'));
-      expect(AppRoutes.adminRoles, equals('/admin/roles'));
-      expect(AppRoutes.adminAudit, equals('/admin/audit'));
-      expect(AppRoutes.adminSettings, equals('/admin/settings'));
     });
 
     test('status/error routes are correctly defined', () {
@@ -44,15 +40,11 @@ void main() {
 
     test('protectedRoutes list contains protected routes', () {
       expect(AppRoutes.protectedRoutes, contains(AppRoutes.home));
-      expect(AppRoutes.protectedRoutes, contains(AppRoutes.profile));
+      expect(AppRoutes.protectedRoutes, contains(AppRoutes.settings));
     });
 
     test('adminRoutes list contains all admin routes', () {
       expect(AppRoutes.adminRoutes, contains(AppRoutes.admin));
-      expect(AppRoutes.adminRoutes, contains(AppRoutes.adminUsers));
-      expect(AppRoutes.adminRoutes, contains(AppRoutes.adminRoles));
-      expect(AppRoutes.adminRoutes, contains(AppRoutes.adminAudit));
-      expect(AppRoutes.adminRoutes, contains(AppRoutes.adminSettings));
     });
 
     test('route groups do not overlap', () {
@@ -101,9 +93,8 @@ void main() {
 
     test('requiresAuth() identifies routes requiring authentication', () {
       expect(AppRoutes.requiresAuth(AppRoutes.home), isTrue);
-      expect(AppRoutes.requiresAuth(AppRoutes.profile), isTrue);
+      expect(AppRoutes.requiresAuth(AppRoutes.settings), isTrue);
       expect(AppRoutes.requiresAuth(AppRoutes.admin), isTrue);
-      expect(AppRoutes.requiresAuth(AppRoutes.adminUsers), isTrue);
     });
 
     test('requiresAuth() returns false for public routes', () {
@@ -114,16 +105,12 @@ void main() {
 
     test('requiresAdmin() identifies admin routes correctly', () {
       expect(AppRoutes.requiresAdmin(AppRoutes.admin), isTrue);
-      expect(AppRoutes.requiresAdmin(AppRoutes.adminUsers), isTrue);
-      expect(AppRoutes.requiresAdmin(AppRoutes.adminRoles), isTrue);
-      expect(AppRoutes.requiresAdmin(AppRoutes.adminAudit), isTrue);
-      expect(AppRoutes.requiresAdmin(AppRoutes.adminSettings), isTrue);
     });
 
     test('requiresAdmin() returns false for non-admin routes', () {
       expect(AppRoutes.requiresAdmin(AppRoutes.home), isFalse);
       expect(AppRoutes.requiresAdmin(AppRoutes.login), isFalse);
-      expect(AppRoutes.requiresAdmin(AppRoutes.profile), isFalse);
+      expect(AppRoutes.requiresAdmin(AppRoutes.settings), isFalse);
     });
 
     test('requiresAdmin() uses startsWith for admin sub-routes', () {
@@ -137,24 +124,9 @@ void main() {
     test('getRouteName() returns user-friendly names', () {
       expect(AppRoutes.getRouteName(AppRoutes.root), equals('Login'));
       expect(AppRoutes.getRouteName(AppRoutes.login), equals('Login'));
-      expect(AppRoutes.getRouteName(AppRoutes.home), equals('Dashboard'));
-      expect(
-        AppRoutes.getRouteName(AppRoutes.admin),
-        equals('Admin Dashboard'),
-      );
-      expect(
-        AppRoutes.getRouteName(AppRoutes.adminUsers),
-        equals('User Management'),
-      );
-      expect(
-        AppRoutes.getRouteName(AppRoutes.adminRoles),
-        equals('Role Management'),
-      );
-      expect(
-        AppRoutes.getRouteName(AppRoutes.adminAudit),
-        equals('Audit Logs'),
-      );
-      expect(AppRoutes.getRouteName(AppRoutes.profile), equals('Profile'));
+      expect(AppRoutes.getRouteName(AppRoutes.home), equals('Home'));
+      expect(AppRoutes.getRouteName(AppRoutes.admin), equals('Admin'));
+      expect(AppRoutes.getRouteName(AppRoutes.settings), equals('Settings'));
       expect(AppRoutes.getRouteName(AppRoutes.error), equals('Error'));
       expect(
         AppRoutes.getRouteName(AppRoutes.unauthorized),

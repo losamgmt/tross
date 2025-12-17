@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+
 // Conditional import: use browser utils on web, stub on other platforms
 import 'utils/browser_utils_stub.dart'
     if (dart.library.html) 'utils/browser_utils_web.dart';
-import 'screens/login_screen.dart';
-import 'screens/home_screen.dart';
-import 'screens/admin/admin_dashboard.dart';
-import 'screens/settings/settings_screen.dart';
-import 'widgets/organisms/error_display.dart';
+
+import 'widgets/organisms/feedback/error_display.dart';
 import 'providers/auth_provider.dart';
 import 'providers/app_provider.dart';
+import 'providers/preferences_provider.dart';
 import 'core/routing/app_routes.dart';
-import 'core/routing/route_guard.dart';
+import 'core/routing/app_router.dart';
 import 'config/constants.dart';
-import 'config/app_theme.dart';
+import 'config/app_theme_flex.dart';
 import 'services/error_service.dart';
 import 'services/permission_service_dynamic.dart';
 import 'services/entity_metadata.dart';
@@ -48,7 +48,7 @@ void main() async {
 
     // In production, show our custom error display with recovery actions
     return MaterialApp(
-      theme: AppTheme.lightTheme,
+      theme: AppThemeConfig.lightTheme,
       debugShowCheckedModeBanner: false,
       home: Scaffold(
         body: ErrorDisplay(
@@ -121,9 +121,10 @@ void main() async {
   runApp(const TrossApp());
 }
 
-// Global navigator key for accessing context from anywhere
-final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-
+/// Main application widget
+///
+/// Sets up providers and delegates routing to go_router.
+/// Auth state changes trigger router refresh via [AuthProvider] as a Listenable.
 class TrossApp extends StatelessWidget {
   const TrossApp({super.key});
 
@@ -133,301 +134,77 @@ class TrossApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (context) => AppProvider()),
         ChangeNotifierProvider(create: (context) => AuthProvider()),
+        ChangeNotifierProvider(create: (context) => PreferencesProvider()),
       ],
-      child: const AuthStateListener(),
+      child: const _AppWithRouter(),
     );
   }
 }
 
-/// Global auth state listener - handles logout/auth loss across entire app
-class AuthStateListener extends StatelessWidget {
-  const AuthStateListener({super.key});
+/// App with go_router configuration
+///
+/// Consumes auth and preferences providers to configure routing and theming.
+/// go_router's redirect callback handles all auth-based navigation.
+class _AppWithRouter extends StatefulWidget {
+  const _AppWithRouter();
 
   @override
-  Widget build(BuildContext context) {
-    return Consumer<AuthProvider>(
-      builder: (context, authProvider, child) {
-        // If user loses authentication, immediately navigate to login
-        // This handles logout, token expiry, auth errors, etc.
-        // BUT: Don't interfere with login flow or Auth0 callback processing
-
-        // Debug logging
-        ErrorService.logInfo(
-          'Auth state changed',
-          context: {
-            'isAuthenticated': authProvider.isAuthenticated,
-            'isLoading': authProvider.isLoading,
-            'isRedirecting': authProvider.isRedirecting,
-          },
-        );
-
-        if (!authProvider.isAuthenticated &&
-            !authProvider.isLoading &&
-            !authProvider.isRedirecting) {
-          // Use addPostFrameCallback to avoid navigating during build
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            // Use global navigatorKey to access Navigator from anywhere
-            final navigator = navigatorKey.currentState;
-            if (navigator != null) {
-              final currentRoute = ModalRoute.of(
-                navigator.context,
-              )?.settings.name;
-
-              final publicRoutes = [
-                AppRoutes.login,
-                AppRoutes.callback,
-                AppRoutes.root,
-                AppRoutes.error,
-                AppRoutes.unauthorized,
-                AppRoutes.notFound,
-              ];
-
-              ErrorService.logInfo(
-                'Checking redirect conditions',
-                context: {
-                  'currentRoute': currentRoute,
-                  'shouldRedirect':
-                      currentRoute != null &&
-                      !publicRoutes.contains(currentRoute),
-                },
-              );
-
-              // Don't redirect if:
-              // 1. Already on login page
-              // 2. Processing Auth0 callback
-              // 3. On root route (handled by AuthWrapper)
-              // 4. On error/status pages (404, 403, 500, etc.)
-              // 5. Route is null (still initializing - let AuthWrapper handle it)
-
-              if (currentRoute != null &&
-                  !publicRoutes.contains(currentRoute)) {
-                ErrorService.logWarning(
-                  'Unauthenticated user on protected route - redirecting to login',
-                  context: {'from': currentRoute},
-                );
-                navigator.pushNamedAndRemoveUntil(
-                  AppRoutes.login,
-                  (route) => false, // Remove all previous routes
-                );
-              }
-            }
-          });
-        }
-
-        return MaterialApp(
-          title: AppConstants.appName, // 'Tross' - centralized branding
-          debugShowCheckedModeBanner: false,
-          navigatorKey: navigatorKey,
-          theme: AppTheme.lightTheme,
-          onGenerateRoute: (settings) {
-            // Handle routes with query parameters properly
-            final uri = Uri.parse(settings.name ?? '/');
-            final path = uri.path;
-
-            // Get authentication context for route guarding
-            final context = navigatorKey.currentContext;
-            if (context != null) {
-              final authProvider = Provider.of<AuthProvider>(
-                context,
-                listen: false,
-              );
-              final isAuthenticated = authProvider.isAuthenticated;
-              final user = authProvider.user;
-
-              // Check access with route guard
-              final guardResult = RouteGuard.checkAccess(
-                route: path,
-                isAuthenticated: isAuthenticated,
-                user: user,
-              );
-
-              // Handle access denial
-              if (!guardResult.canAccess) {
-                // Redirect to appropriate page
-                if (guardResult.redirectRoute == AppRoutes.login) {
-                  return MaterialPageRoute(builder: (_) => const LoginScreen());
-                } else if (guardResult.redirectRoute ==
-                    AppRoutes.unauthorized) {
-                  return MaterialPageRoute(
-                    builder: (_) =>
-                        ErrorDisplay.unauthorized(message: guardResult.reason),
-                  );
-                } else if (guardResult.redirectRoute == AppRoutes.home) {
-                  return MaterialPageRoute(builder: (_) => const HomeScreen());
-                }
-              }
-            }
-
-            // Route to appropriate screen
-            switch (path) {
-              case AppRoutes.root:
-                return MaterialPageRoute(builder: (_) => const AuthWrapper());
-
-              case AppRoutes.login:
-                return MaterialPageRoute(builder: (_) => const LoginScreen());
-
-              case AppRoutes.home:
-                return MaterialPageRoute(builder: (_) => const HomeScreen());
-
-              case AppRoutes.admin:
-                return MaterialPageRoute(
-                  builder: (_) => const AdminDashboard(),
-                );
-
-              case AppRoutes.settings:
-                return MaterialPageRoute(
-                  builder: (_) => const SettingsScreen(),
-                );
-
-              case AppRoutes.callback:
-                return MaterialPageRoute(
-                  builder: (_) => const Auth0CallbackHandler(),
-                );
-
-              case AppRoutes.unauthorized:
-                return MaterialPageRoute(
-                  builder: (_) => ErrorDisplay.unauthorized(),
-                );
-
-              case AppRoutes.notFound:
-                return MaterialPageRoute(
-                  builder: (_) => ErrorDisplay.notFound(requestedPath: path),
-                );
-
-              case AppRoutes.error:
-                return MaterialPageRoute(builder: (_) => ErrorDisplay.error());
-
-              // 404 - Route not found
-              default:
-                return MaterialPageRoute(
-                  builder: (_) => ErrorDisplay.notFound(requestedPath: path),
-                );
-            }
-          },
-          initialRoute: '/',
-        );
-      },
-    );
-  }
+  State<_AppWithRouter> createState() => _AppWithRouterState();
 }
 
-/// Auth0 Callback Handler - Processes OAuth redirect on web
-class Auth0CallbackHandler extends StatefulWidget {
-  const Auth0CallbackHandler({super.key});
+class _AppWithRouterState extends State<_AppWithRouter> {
+  late final GoRouter _router;
 
-  @override
-  State<Auth0CallbackHandler> createState() => _Auth0CallbackHandlerState();
-}
-
-class _Auth0CallbackHandlerState extends State<Auth0CallbackHandler> {
   @override
   void initState() {
     super.initState();
-    // Use addPostFrameCallback to avoid setState during build
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _handleCallback();
-    });
-  }
-
-  Future<void> _handleCallback() async {
-    ErrorService.logInfo('Starting Auth0 callback handling');
-
+    // Create router ONCE with auth provider
+    // Router listens to auth changes via refreshListenable
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final success = await authProvider.handleAuth0Callback();
+    _router = AppRouter.createRouter(authProvider);
 
-    ErrorService.logInfo(
-      'Auth0 callback completed',
-      context: {'success': success, 'mounted': mounted},
-    );
-
-    if (success) {
-      if (mounted) {
-        ErrorService.logInfo('Callback success - redirecting to home');
-        // Clean URL before navigation (remove OAuth query parameters)
-        if (kIsWeb) {
-          BrowserUtils.replaceHistoryState(AppRoutes.home);
-        }
-        Navigator.of(context).pushReplacementNamed(AppRoutes.home);
-      }
-    } else {
-      if (mounted) {
-        ErrorService.logWarning('Callback failed - redirecting to login');
-        // Clean URL before redirecting to login
-        if (kIsWeb) {
-          BrowserUtils.replaceHistoryState(AppRoutes.login);
-        }
-        Navigator.of(context).pushReplacementNamed(AppRoutes.login);
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Completing Auth0 login...'),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class AuthWrapper extends StatefulWidget {
-  const AuthWrapper({super.key});
-
-  @override
-  State<AuthWrapper> createState() => _AuthWrapperState();
-}
-
-class _AuthWrapperState extends State<AuthWrapper> {
-  @override
-  void initState() {
-    super.initState();
-    // Initialize providers when app starts
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final appProvider = Provider.of<AppProvider>(context, listen: false);
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-
-      await appProvider.initialize();
-      await authProvider.initialize();
+    // Initialize providers after first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeProviders();
     });
   }
 
+  Future<void> _initializeProviders() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final appProvider = Provider.of<AppProvider>(context, listen: false);
+    final preferencesProvider = Provider.of<PreferencesProvider>(
+      context,
+      listen: false,
+    );
+
+    // Connect preferences to auth - will auto-load on login and clear on logout
+    preferencesProvider.connectToAuth(authProvider);
+
+    // Initialize auth state (checks for stored session)
+    // If session exists, this triggers auth state change → preferences load
+    await authProvider.initialize();
+
+    // Initialize app state (checks backend health)
+    await appProvider.initialize();
+  }
+
+  @override
+  void dispose() {
+    _router.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Consumer2<AppProvider, AuthProvider>(
-      builder: (context, appProvider, authProvider, child) {
-        // Show loading while initializing OR redirecting to Auth0
-        if (!appProvider.isInitialized ||
-            authProvider.isLoading ||
-            authProvider.isRedirecting) {
-          return const Scaffold(
-            body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Initializing ${AppConstants.appName}...'),
-                ],
-              ),
-            ),
-          );
-        }
+    final preferencesProvider = Provider.of<PreferencesProvider>(context);
 
-        // Check if user is authenticated
-        if (authProvider.isAuthenticated) {
-          return const HomeScreen();
-        } else {
-          return const LoginScreen();
-        }
-      },
+    return MaterialApp.router(
+      title: AppConstants.appName,
+      debugShowCheckedModeBanner: false,
+      routerConfig: _router,
+      theme: AppThemeConfig.lightTheme,
+      darkTheme: AppThemeConfig.darkTheme,
+      themeMode: AppThemeConfig.getThemeMode(preferencesProvider.theme),
     );
   }
 }

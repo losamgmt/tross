@@ -32,7 +32,7 @@
 
 const { getRLSRule } = require('../config/permissions-loader');
 const { HTTP_STATUS } = require('../config/constants');
-const { logSecurityEvent } = require('../config/logger');
+const { logSecurityEvent, logger } = require('../config/logger');
 const { getClientIp, getUserAgent } = require('../utils/request-helpers');
 
 /**
@@ -97,15 +97,14 @@ const enforceRLS = (resource) => (req, res, next) => {
   req.rlsResource = resource;
   req.rlsUserId = userId;
 
-  logSecurityEvent('RLS_POLICY_APPLIED', {
-    ip: getClientIp(req),
-    userAgent: getUserAgent(req),
+  // Debug log only - RLS application is routine, not a security concern
+  // Use logger.debug directly to avoid cluttering warn logs
+  logger.debug('RLS policy applied', {
     url: req.url,
     userId,
     userRole,
     resource,
     policy: rlsPolicy,
-    severity: 'DEBUG',
   });
 
   next();

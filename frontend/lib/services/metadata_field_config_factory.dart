@@ -126,6 +126,56 @@ class MetadataFieldConfigFactory {
     );
   }
 
+  /// Generate field configs for display (read-only view)
+  ///
+  /// Includes ALL fields (even readonly ones like timestamps)
+  /// All configs marked as readOnly since this is for display only.
+  ///
+  /// [entityName] - Name of the entity (e.g., 'customer')
+  /// [includeFields] - If provided, only include these fields
+  /// [excludeFields] - Fields to exclude
+  /// [includeSystemFields] - If true, includes id, created_at, updated_at
+  static List<FieldConfig<Map<String, dynamic>, dynamic>> forDisplay(
+    String entityName, {
+    List<String>? includeFields,
+    List<String>? excludeFields,
+    bool includeSystemFields = false,
+  }) {
+    final metadata = meta.EntityMetadataRegistry.get(entityName);
+    final configs = <FieldConfig<Map<String, dynamic>, dynamic>>[];
+
+    // Default exclusions - system fields unless explicitly included
+    final defaultExclusions = includeSystemFields
+        ? <String>{}
+        : {'id', 'created_at', 'updated_at'};
+
+    for (final entry in metadata.fields.entries) {
+      final fieldName = entry.key;
+      final fieldDef = entry.value;
+
+      // Skip excluded fields
+      if (defaultExclusions.contains(fieldName)) continue;
+      if (excludeFields?.contains(fieldName) == true) continue;
+
+      // Skip if includeFields specified and field not in list
+      if (includeFields != null && !includeFields.contains(fieldName)) continue;
+
+      // Generate the config - always readonly for display
+      final config = _createFieldConfig(
+        fieldName: fieldName,
+        fieldDef: fieldDef,
+        metadata: metadata,
+        readOnly: true, // Always readonly for display
+      );
+
+      if (config != null) {
+        configs.add(config);
+      }
+    }
+
+    return configs;
+  }
+
   /// Generate a single field config from metadata
   static FieldConfig<Map<String, dynamic>, dynamic>? _createFieldConfig({
     required String fieldName,

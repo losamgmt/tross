@@ -7,7 +7,8 @@
 library;
 
 import 'package:flutter/material.dart';
-import '../config/permissions.dart';
+import '../models/permission.dart';
+import '../services/permission_service_dynamic.dart';
 import '../services/generic_entity_service.dart';
 import '../services/entity_metadata.dart';
 import '../services/metadata_field_config_factory.dart';
@@ -38,7 +39,11 @@ class GenericTableActionBuilders {
     final resource = metadata.rlsResource;
 
     // Edit action
-    if (hasPermission(userRole, resource, 'update')) {
+    if (PermissionService.hasPermission(
+      userRole,
+      resource,
+      CrudOperation.update,
+    )) {
       actions.add(
         AppButton(
           icon: Icons.edit_outlined,
@@ -56,7 +61,11 @@ class GenericTableActionBuilders {
     }
 
     // Delete action
-    if (hasPermission(userRole, resource, 'delete')) {
+    if (PermissionService.hasPermission(
+      userRole,
+      resource,
+      CrudOperation.delete,
+    )) {
       final identityField = metadata.identityField;
       final entityDisplayName =
           entity[identityField]?.toString() ?? '#${entity['id']}';
@@ -120,7 +129,11 @@ class GenericTableActionBuilders {
     );
 
     // Create action
-    if (hasPermission(userRole, resource, 'create')) {
+    if (PermissionService.hasPermission(
+      userRole,
+      resource,
+      CrudOperation.create,
+    )) {
       actions.add(
         IconButton(
           icon: const Icon(Icons.add),

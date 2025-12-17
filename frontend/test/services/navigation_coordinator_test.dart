@@ -1,254 +1,237 @@
-/// Tests for NavigationCoordinator service
+/// Tests for NavigationCoordinator service (go_router based)
 ///
 /// **BEHAVIORAL FOCUS:**
-/// - Static methods delegate to Navigator correctly
+/// - Static methods delegate to go_router correctly
 /// - All navigation operations work as expected
 /// - canPop returns correct boolean
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:tross_app/services/navigation_coordinator.dart';
 
 void main() {
   group('NavigationCoordinator', () {
-    group('navigateTo', () {
-      testWidgets('pushes named route onto navigation stack', (tester) async {
-        String? pushedRoute;
+    late GoRouter router;
 
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Builder(
-              builder: (context) => ElevatedButton(
-                onPressed: () {
-                  NavigationCoordinator.navigateTo(context, '/settings');
-                },
-                child: const Text('Navigate'),
+    /// Helper to create a test router with given routes
+    GoRouter createTestRouter({
+      String initialLocation = '/',
+      required List<RouteBase> routes,
+    }) {
+      return GoRouter(initialLocation: initialLocation, routes: routes);
+    }
+
+    group('go', () {
+      testWidgets('navigates to route (replaces history)', (tester) async {
+        router = createTestRouter(
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (context, state) => Scaffold(
+                body: ElevatedButton(
+                  onPressed: () =>
+                      NavigationCoordinator.go(context, '/settings'),
+                  child: const Text('Go to Settings'),
+                ),
               ),
             ),
-            onGenerateRoute: (settings) {
-              pushedRoute = settings.name;
-              return MaterialPageRoute(
-                builder: (_) => const Scaffold(body: Text('Settings')),
-              );
-            },
-          ),
+            GoRoute(
+              path: '/settings',
+              builder: (context, state) =>
+                  const Scaffold(body: Text('Settings Page')),
+            ),
+          ],
         );
 
-        await tester.tap(find.text('Navigate'));
+        await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+
+        await tester.tap(find.text('Go to Settings'));
         await tester.pumpAndSettle();
 
-        expect(pushedRoute, '/settings');
-        expect(find.text('Settings'), findsOneWidget);
+        expect(find.text('Settings Page'), findsOneWidget);
+        expect(find.text('Go to Settings'), findsNothing);
       });
     });
 
-    group('navigateAndReplace', () {
-      testWidgets('replaces current route with new route', (tester) async {
-        String? replacedRoute;
-
-        await tester.pumpWidget(
-          MaterialApp(
-            initialRoute: '/initial',
-            onGenerateRoute: (settings) {
-              if (settings.name == '/initial') {
-                return MaterialPageRoute(
-                  builder: (context) => Scaffold(
-                    body: ElevatedButton(
-                      onPressed: () {
-                        NavigationCoordinator.navigateAndReplace(
-                          context,
-                          '/replaced',
-                        );
-                      },
-                      child: const Text('Replace'),
+    group('push', () {
+      testWidgets('pushes route onto stack (adds to history)', (tester) async {
+        router = createTestRouter(
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (context, state) => Scaffold(
+                body: ElevatedButton(
+                  onPressed: () =>
+                      NavigationCoordinator.push(context, '/details'),
+                  child: const Text('Push Details'),
+                ),
+              ),
+            ),
+            GoRoute(
+              path: '/details',
+              builder: (context, state) => Scaffold(
+                body: Column(
+                  children: [
+                    const Text('Details Page'),
+                    ElevatedButton(
+                      onPressed: () => NavigationCoordinator.pop(context),
+                      child: const Text('Go Back'),
                     ),
-                  ),
-                );
-              }
-              replacedRoute = settings.name;
-              return MaterialPageRoute(
-                builder: (_) => const Scaffold(body: Text('Replaced Page')),
-              );
-            },
-          ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         );
 
-        await tester.tap(find.text('Replace'));
+        await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+
+        await tester.tap(find.text('Push Details'));
         await tester.pumpAndSettle();
 
-        expect(replacedRoute, '/replaced');
-        expect(find.text('Replaced Page'), findsOneWidget);
+        expect(find.text('Details Page'), findsOneWidget);
+
+        // Should be able to pop back
+        await tester.tap(find.text('Go Back'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Push Details'), findsOneWidget);
       });
     });
 
-    group('navigateAndRemoveAll', () {
-      testWidgets('clears stack and pushes new route', (tester) async {
-        await tester.pumpWidget(
-          MaterialApp(
-            initialRoute: '/first',
-            onGenerateRoute: (settings) {
-              if (settings.name == '/first') {
-                return MaterialPageRoute(
-                  builder: (context) => Scaffold(
-                    body: ElevatedButton(
-                      onPressed: () {
-                        NavigationCoordinator.navigateAndRemoveAll(
-                          context,
-                          '/home',
-                        );
-                      },
-                      child: const Text('Clear and Go Home'),
-                    ),
+    group('goNamed', () {
+      testWidgets('navigates to named route with parameters', (tester) async {
+        router = GoRouter(
+          initialLocation: '/',
+          routes: [
+            GoRoute(
+              path: '/',
+              name: 'home',
+              builder: (context, state) => Scaffold(
+                body: ElevatedButton(
+                  onPressed: () => NavigationCoordinator.goNamed(
+                    context,
+                    'user',
+                    pathParameters: {'id': '123'},
                   ),
-                );
-              }
-              return MaterialPageRoute(
-                builder: (context) => Scaffold(
-                  body: Column(
-                    children: [
-                      const Text('Home'),
-                      Text('Can pop: ${NavigationCoordinator.canPop(context)}'),
-                    ],
-                  ),
+                  child: const Text('View User'),
                 ),
-              );
-            },
-          ),
+              ),
+            ),
+            GoRoute(
+              path: '/user/:id',
+              name: 'user',
+              builder: (context, state) => Scaffold(
+                body: Text('User ID: ${state.pathParameters['id']}'),
+              ),
+            ),
+          ],
         );
 
-        await tester.tap(find.text('Clear and Go Home'));
+        await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+
+        await tester.tap(find.text('View User'));
         await tester.pumpAndSettle();
 
-        expect(find.text('Home'), findsOneWidget);
-        // After removing all routes, canPop should be false
-        expect(find.text('Can pop: false'), findsOneWidget);
+        expect(find.text('User ID: 123'), findsOneWidget);
       });
 
-      testWidgets('respects custom predicate', (tester) async {
-        await tester.pumpWidget(
-          MaterialApp(
-            initialRoute: '/first',
-            onGenerateRoute: (settings) {
-              if (settings.name == '/first') {
-                return MaterialPageRoute(
-                  settings: settings,
-                  builder: (context) => Scaffold(
-                    body: ElevatedButton(
-                      onPressed: () {
-                        NavigationCoordinator.navigateTo(context, '/second');
-                      },
-                      child: const Text('Go to Second'),
-                    ),
+      testWidgets('passes query parameters', (tester) async {
+        router = GoRouter(
+          initialLocation: '/',
+          routes: [
+            GoRoute(
+              path: '/',
+              name: 'home',
+              builder: (context, state) => Scaffold(
+                body: ElevatedButton(
+                  onPressed: () => NavigationCoordinator.goNamed(
+                    context,
+                    'search',
+                    queryParameters: {'q': 'flutter', 'page': '1'},
                   ),
-                );
-              }
-              if (settings.name == '/second') {
-                return MaterialPageRoute(
-                  settings: settings,
-                  builder: (context) => Scaffold(
-                    body: ElevatedButton(
-                      onPressed: () {
-                        NavigationCoordinator.navigateAndRemoveAll(
-                          context,
-                          '/home',
-                          predicate: (route) => route.isFirst,
-                        );
-                      },
-                      child: const Text('Go Home, Keep First'),
-                    ),
-                  ),
-                );
-              }
-              return MaterialPageRoute(
-                settings: settings,
-                builder: (context) => Scaffold(
-                  body: Text(
-                    'Home - Can pop: ${NavigationCoordinator.canPop(context)}',
-                  ),
+                  child: const Text('Search'),
                 ),
-              );
-            },
-          ),
+              ),
+            ),
+            GoRoute(
+              path: '/search',
+              name: 'search',
+              builder: (context, state) => Scaffold(
+                body: Text(
+                  'Query: ${state.uri.queryParameters['q']}, '
+                  'Page: ${state.uri.queryParameters['page']}',
+                ),
+              ),
+            ),
+          ],
         );
 
-        await tester.tap(find.text('Go to Second'));
+        await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+
+        await tester.tap(find.text('Search'));
         await tester.pumpAndSettle();
 
-        await tester.tap(find.text('Go Home, Keep First'));
-        await tester.pumpAndSettle();
-
-        // With predicate keeping first route, we should be able to pop
-        expect(find.textContaining('Can pop: true'), findsOneWidget);
+        expect(find.text('Query: flutter, Page: 1'), findsOneWidget);
       });
     });
 
     group('pop', () {
-      testWidgets('removes current route from stack', (tester) async {
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Builder(
-              builder: (context) => Scaffold(
+      testWidgets('pops current route from stack', (tester) async {
+        router = createTestRouter(
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (context, state) => Scaffold(
                 body: ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (innerContext) => Scaffold(
-                          body: ElevatedButton(
-                            onPressed: () {
-                              NavigationCoordinator.pop(innerContext);
-                            },
-                            child: const Text('Go Back'),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                  child: const Text('Go Forward'),
+                  onPressed: () =>
+                      NavigationCoordinator.push(context, '/page2'),
+                  child: const Text('Page 1'),
                 ),
               ),
             ),
-          ),
+            GoRoute(
+              path: '/page2',
+              builder: (context, state) => Scaffold(
+                body: ElevatedButton(
+                  onPressed: () => NavigationCoordinator.pop(context),
+                  child: const Text('Page 2 - Pop'),
+                ),
+              ),
+            ),
+          ],
         );
 
-        await tester.tap(find.text('Go Forward'));
+        await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+
+        // Push to page 2
+        await tester.tap(find.text('Page 1'));
         await tester.pumpAndSettle();
 
-        expect(find.text('Go Back'), findsOneWidget);
+        expect(find.text('Page 2 - Pop'), findsOneWidget);
 
-        await tester.tap(find.text('Go Back'));
+        // Pop back to page 1
+        await tester.tap(find.text('Page 2 - Pop'));
         await tester.pumpAndSettle();
 
-        expect(find.text('Go Forward'), findsOneWidget);
-        expect(find.text('Go Back'), findsNothing);
+        expect(find.text('Page 1'), findsOneWidget);
       });
 
-      testWidgets('passes result to previous route', (tester) async {
+      testWidgets('passes result when popping', (tester) async {
         String? receivedResult;
 
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Builder(
-              builder: (context) => Scaffold(
+        router = createTestRouter(
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (context, state) => Scaffold(
                 body: Column(
                   children: [
                     ElevatedButton(
                       onPressed: () async {
-                        final result = await Navigator.of(context).push<String>(
-                          MaterialPageRoute(
-                            builder: (innerContext) => Scaffold(
-                              body: ElevatedButton(
-                                onPressed: () {
-                                  NavigationCoordinator.pop(
-                                    innerContext,
-                                    result: 'success',
-                                  );
-                                },
-                                child: const Text('Return Result'),
-                              ),
-                            ),
-                          ),
-                        );
+                        final result = await context.push<String>('/dialog');
                         receivedResult = result;
                       },
                       child: const Text('Open Dialog'),
@@ -258,8 +241,20 @@ void main() {
                 ),
               ),
             ),
-          ),
+            GoRoute(
+              path: '/dialog',
+              builder: (context, state) => Scaffold(
+                body: ElevatedButton(
+                  onPressed: () =>
+                      NavigationCoordinator.pop(context, result: 'success'),
+                  child: const Text('Return Result'),
+                ),
+              ),
+            ),
+          ],
         );
+
+        await tester.pumpWidget(MaterialApp.router(routerConfig: router));
 
         await tester.tap(find.text('Open Dialog'));
         await tester.pumpAndSettle();
@@ -267,117 +262,119 @@ void main() {
         await tester.tap(find.text('Return Result'));
         await tester.pumpAndSettle();
 
+        // Rebuild to show result
+        await tester.pump();
+
         expect(receivedResult, 'success');
       });
     });
 
-    group('popUntil', () {
-      testWidgets('pops routes until predicate matches', (tester) async {
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Builder(
-              builder: (context) => Scaffold(
-                body: ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (ctx2) => Scaffold(
-                          body: ElevatedButton(
-                            onPressed: () {
-                              Navigator.of(ctx2).push(
-                                MaterialPageRoute(
-                                  builder: (ctx3) => Scaffold(
-                                    body: ElevatedButton(
-                                      onPressed: () {
-                                        NavigationCoordinator.popUntil(
-                                          ctx3,
-                                          (route) => route.isFirst,
-                                        );
-                                      },
-                                      child: const Text('Pop to First'),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                            child: const Text('Go to Third'),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                  child: const Text('First Page'),
-                ),
-              ),
-            ),
-          ),
-        );
-
-        // Navigate to third page
-        await tester.tap(find.text('First Page'));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('Go to Third'));
-        await tester.pumpAndSettle();
-
-        expect(find.text('Pop to First'), findsOneWidget);
-
-        // Pop back to first
-        await tester.tap(find.text('Pop to First'));
-        await tester.pumpAndSettle();
-
-        expect(find.text('First Page'), findsOneWidget);
-      });
-    });
-
     group('canPop', () {
-      testWidgets('returns false when only one route exists', (tester) async {
+      testWidgets('returns false when at root', (tester) async {
         late bool canPopResult;
 
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Builder(
-              builder: (context) {
+        router = createTestRouter(
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (context, state) {
                 canPopResult = NavigationCoordinator.canPop(context);
                 return Text('Can pop: $canPopResult');
               },
             ),
-          ),
+          ],
         );
+
+        await tester.pumpWidget(MaterialApp.router(routerConfig: router));
 
         expect(canPopResult, isFalse);
       });
 
-      testWidgets('returns true when multiple routes exist', (tester) async {
+      testWidgets('returns true after push', (tester) async {
         late bool canPopResult;
 
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Builder(
-              builder: (context) => Scaffold(
+        router = createTestRouter(
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (context, state) => Scaffold(
                 body: ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (innerContext) {
-                          canPopResult = NavigationCoordinator.canPop(
-                            innerContext,
-                          );
-                          return Text('Can pop: $canPopResult');
-                        },
-                      ),
-                    );
-                  },
+                  onPressed: () => context.push('/page2'),
                   child: const Text('Push'),
                 ),
               ),
             ),
-          ),
+            GoRoute(
+              path: '/page2',
+              builder: (context, state) {
+                canPopResult = NavigationCoordinator.canPop(context);
+                return Text('Can pop: $canPopResult');
+              },
+            ),
+          ],
         );
+
+        await tester.pumpWidget(MaterialApp.router(routerConfig: router));
 
         await tester.tap(find.text('Push'));
         await tester.pumpAndSettle();
 
         expect(canPopResult, isTrue);
+      });
+    });
+
+    group('replace', () {
+      testWidgets('replaces current route with new route', (tester) async {
+        router = createTestRouter(
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (context, state) => Scaffold(
+                body: ElevatedButton(
+                  onPressed: () => context.push('/page2'),
+                  child: const Text('Page 1'),
+                ),
+              ),
+            ),
+            GoRoute(
+              path: '/page2',
+              builder: (context, state) => Scaffold(
+                body: ElevatedButton(
+                  onPressed: () =>
+                      NavigationCoordinator.replace(context, '/page3'),
+                  child: const Text('Page 2 - Replace'),
+                ),
+              ),
+            ),
+            GoRoute(
+              path: '/page3',
+              builder: (context, state) => Scaffold(
+                body: ElevatedButton(
+                  onPressed: () => NavigationCoordinator.pop(context),
+                  child: const Text('Page 3 - Pop'),
+                ),
+              ),
+            ),
+          ],
+        );
+
+        await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+
+        // Go to page 2
+        await tester.tap(find.text('Page 1'));
+        await tester.pumpAndSettle();
+
+        // Replace with page 3
+        await tester.tap(find.text('Page 2 - Replace'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Page 3 - Pop'), findsOneWidget);
+
+        // Pop should go back to page 1 (page 2 was replaced)
+        await tester.tap(find.text('Page 3 - Pop'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Page 1'), findsOneWidget);
       });
     });
   });

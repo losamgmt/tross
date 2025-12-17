@@ -385,8 +385,8 @@ class ApiClient {
       'workOrder': '/work_orders',
       'invoice': '/invoices',
       'contract': '/contracts',
-      'inventory':
-          '/inventory', // Singular! Backend uses /inventory not /inventories
+      'inventory': '/inventory', // Singular! Backend uses /inventory
+      'preferences': '/preferences', // User preferences (1:1 with user)
     };
 
     // Use explicit mapping if available

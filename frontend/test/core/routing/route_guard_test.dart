@@ -133,9 +133,9 @@ void main() {
       expect(result.canAccess, isTrue);
     });
 
-    test('denies access to profile route without authentication', () {
+    test('denies access to settings route without authentication', () {
       final result = RouteGuard.checkAccess(
-        route: AppRoutes.profile,
+        route: AppRoutes.settings,
         isAuthenticated: false,
         user: null,
       );
@@ -181,53 +181,6 @@ void main() {
       );
 
       expect(result.canAccess, isTrue);
-    });
-
-    test('denies access to admin sub-routes for non-admin', () {
-      final adminSubRoutes = [
-        AppRoutes.adminUsers,
-        AppRoutes.adminRoles,
-        AppRoutes.adminAudit,
-        AppRoutes.adminSettings,
-      ];
-
-      for (final route in adminSubRoutes) {
-        final result = RouteGuard.checkAccess(
-          route: route,
-          isAuthenticated: true,
-          user: {'role': 'technician', 'email': 'tech@test.com'},
-        );
-
-        expect(
-          result.canAccess,
-          isFalse,
-          reason: '$route should deny non-admin access',
-        );
-        expect(result.redirectRoute, equals(AppRoutes.unauthorized));
-      }
-    });
-
-    test('allows access to admin sub-routes for admin', () {
-      final adminSubRoutes = [
-        AppRoutes.adminUsers,
-        AppRoutes.adminRoles,
-        AppRoutes.adminAudit,
-        AppRoutes.adminSettings,
-      ];
-
-      for (final route in adminSubRoutes) {
-        final result = RouteGuard.checkAccess(
-          route: route,
-          isAuthenticated: true,
-          user: {'role': 'admin', 'email': 'admin@test.com'},
-        );
-
-        expect(
-          result.canAccess,
-          isTrue,
-          reason: '$route should allow admin access',
-        );
-      }
     });
   });
 

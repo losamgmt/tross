@@ -325,6 +325,44 @@
           "description": "Managers and above can delete inventory items"
         }
       }
+    },
+
+    "preferences": {
+      "description": "User preferences and settings (theme, notifications, etc.)",
+      "rowLevelSecurity": {
+        "customer": "own_record_only",
+        "technician": "own_record_only",
+        "dispatcher": "own_record_only",
+        "manager": "own_record_only",
+        "admin": "all_records"
+      },
+      "permissions": {
+        "create": {
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "System creates preferences for all users automatically"
+        },
+        "read": {
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Users can read their own preferences (row-level security applies)"
+        },
+        "update": {
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Users can update their own preferences"
+        },
+        "delete": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "Only admins can delete preference records (typically only on user deletion)"
+        },
+        "admin": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "Only admins can view/manage other users' preferences"
+        }
+      }
     }
   },
 
