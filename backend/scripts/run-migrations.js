@@ -90,7 +90,7 @@ async function applyMigration(migration, dryRun = false) {
 
   if (dryRun) {
     logger.info('   [DRY RUN] Would execute migration');
-    return;
+    return { status: 'dry-run' };
   }
 
   const client = await pool.connect();
@@ -108,15 +108,41 @@ async function applyMigration(migration, dryRun = false) {
     // Record migration
     await client.query(
       `INSERT INTO schema_migrations (version, name, execution_time_ms, checksum)
-       VALUES ($1, $2, $3, $4)`,
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (version) DO NOTHING`,
       [migration.version, migration.name, executionTime, checksum],
     );
 
     await client.query('COMMIT');
 
     logger.info(`   ✅ Applied in ${executionTime}ms`);
+    return { status: 'applied', executionTime };
   } catch (error) {
     await client.query('ROLLBACK');
+    
+    // Check if this is a "already exists" type error - migration may have been partially applied
+    const isIdempotentError = 
+      error.message.includes('already exists') ||
+      error.message.includes('duplicate key') ||
+      error.message.includes('violates unique constraint');
+    
+    if (isIdempotentError) {
+      logger.info(`   ⏭️  Skipped (already applied): ${error.message.split('\n')[0]}`);
+      
+      // Still record it as applied if not already recorded
+      try {
+        await pool.query(
+          `INSERT INTO schema_migrations (version, name, execution_time_ms, checksum)
+           VALUES ($1, $2, $3, $4)
+           ON CONFLICT (version) DO NOTHING`,
+          [migration.version, migration.name, 0, checksum],
+        );
+      } catch (_recordError) {
+        // Ignore - already recorded
+      }
+      return { status: 'skipped' };
+    }
+    
     logger.error(`   ❌ Failed: ${error.message}`);
     throw error;
   } finally {

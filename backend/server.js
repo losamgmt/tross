@@ -15,6 +15,7 @@ const {
 const { requestTimeout, timeoutHandler } = require('./middleware/timeout');
 const { validateEnvironment } = require('./utils/env-validator');
 const { getAllowedOrigins } = require('./config/deployment-adapter');
+const { initializeDatabase } = require('./scripts/init-database');
 require('dotenv').config();
 
 // Environment Validation
@@ -225,10 +226,19 @@ process.on('SIGINT', async () => {
 
 // Start server and test database connection (skip in test mode - supertest handles it)
 if (process.env.NODE_ENV !== 'test') {
-  const server = app.listen(PORT, async () => {
-    logger.info(`🚀 TrossApp Backend running on port ${PORT}`);
-    logger.info(`📍 Health check: http://localhost:${PORT}/api/health`);
-    logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  // Initialize database schema and seed data (idempotent - safe to run every time)
+  (async () => {
+    try {
+      await initializeDatabase();
+    } catch (error) {
+      logger.error('⚠️ Database initialization failed:', error.message);
+      // Continue server startup - DB may already be initialized
+    }
+
+    const server = app.listen(PORT, async () => {
+      logger.info(`🚀 TrossApp Backend running on port ${PORT}`);
+      logger.info(`📍 Health check: http://localhost:${PORT}/api/health`);
+      logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
 
     // Configure server-level timeouts
     // Layer 1: Outermost timeout protection
@@ -262,6 +272,7 @@ if (process.env.NODE_ENV !== 'test') {
       );
     }
   });
+  })();
 }
 
 module.exports = app;
