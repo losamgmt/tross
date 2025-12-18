@@ -155,7 +155,8 @@ const query = async (text, params) => {
 
     return result;
   } catch (error) {
-    logger.error('Query error:', { error: error.message, query: text });
+    // Use console.error with single-line JSON for Railway visibility
+    console.error(JSON.stringify({ level: 'error', message: 'Query error', error: error.message, code: error.code }));
     throw error;
   }
 };
