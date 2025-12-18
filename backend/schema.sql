@@ -2,33 +2,23 @@
 -- TROSSAPP DATABASE SCHEMA
 -- ============================================================================
 -- IDEMPOTENT: Safe to run multiple times
--- VERSION: 2.1
--- LAST UPDATED: 2025-11-10
+-- VERSION: 2.2
+-- LAST UPDATED: 2025-12-18
 --
--- ENTITY CONTRACT v2.0 - TWO-TIER SYSTEM:
--- 
--- TIER 1: Universal Entity Contract Fields (MANDATORY for ALL business entities)
---   - id SERIAL PRIMARY KEY
---   - name/email/title (identity field)
---   - is_active BOOLEAN (soft delete - "Does this record exist?")
---   - created_at TIMESTAMP (performance cache from audit_logs)
---   - updated_at TIMESTAMP (auto-managed by trigger)
---
--- TIER 2: Entity-Specific Lifecycle Fields (OPTIONAL - only for workflow entities)
---   - status VARCHAR(50) (lifecycle state - "What stage is this record in?")
---   - Entity-specific string values with CHECK constraint
---   - Examples: 'pending_activation', 'active', 'suspended' (users)
---   - NOT REDUNDANT with is_active - serve different purposes
---
--- KEY DISTINCTION:
---   - is_active: Universal soft delete (ALL entities use)
---   - status: Lifecycle state (workflow entities only)
---
--- AUDIT PHILOSOPHY:
---   - created_by/updated_by/deactivated_by → REMOVED (use audit_logs)
---   - created_at/updated_at → KEPT (performance cache only)
---   - Source of truth: audit_logs table
+-- PRE-PRODUCTION MODE: Full reset on each deploy
+-- When going live, remove the DROP TABLE section below
 -- ============================================================================
+
+-- ============================================================================
+-- PRE-PRODUCTION: DROP ALL TABLES FOR CLEAN RESET
+-- Remove this section when you have production data to preserve
+-- ============================================================================
+DROP TABLE IF EXISTS user_preferences CASCADE;
+DROP TABLE IF EXISTS audit_logs CASCADE;
+DROP TABLE IF EXISTS work_orders CASCADE;
+DROP TABLE IF EXISTS customers CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+DROP TABLE IF EXISTS roles CASCADE;
 
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
