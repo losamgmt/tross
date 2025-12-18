@@ -182,8 +182,8 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
 -- Contract compliance: ✓ SIMPLIFIED (no lifecycle states needed)
 --
 -- Design rationale:
+--   - SHARED PRIMARY KEY pattern: id = users.id (true 1:1 identifying relationship)
 --   - Uses JSONB for flexible preference storage (schema-on-read)
---   - One row per user (UNIQUE constraint on user_id)
 --   - CASCADE delete when user is deleted
 --   - Trigger-managed updated_at for consistency
 --
@@ -192,21 +192,16 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
 --   - notificationsEnabled: boolean
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS user_preferences (
-    -- Primary key
-    id SERIAL PRIMARY KEY,
-    
-    -- User relationship (1:1)
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    -- Primary key = users.id (shared PK pattern for 1:1)
+    -- NOT SERIAL - id is provided, not auto-generated
+    id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
     
     -- Preferences storage (JSONB for flexibility)
     preferences JSONB NOT NULL DEFAULT '{}',
     
     -- Timestamps (TIER 1 compliance)
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    
-    -- Ensure one preference row per user
-    CONSTRAINT user_preferences_user_unique UNIQUE (user_id)
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 -- ============================================================================

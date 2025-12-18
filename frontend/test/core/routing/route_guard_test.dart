@@ -91,7 +91,6 @@ void main() {
         AppRoutes.error,
         AppRoutes.unauthorized,
         AppRoutes.notFound,
-        AppRoutes.underConstruction,
       ];
 
       for (final route in routes) {

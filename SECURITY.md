@@ -172,7 +172,3 @@ git push origin --force --all
 
 For security concerns: [your-email@example.com]  
 For general issues: [GitHub Issues](https://github.com/losamgmt/tross-app/issues)
-
----
-
-**Last Updated:** November 21, 2025

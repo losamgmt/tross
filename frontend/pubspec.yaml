@@ -53,6 +53,7 @@ flutter:
     - assets/config/permissions.json
     - assets/config/validation-rules.json
     - assets/config/entity-metadata.json
+    - assets/config/nav-config.json
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

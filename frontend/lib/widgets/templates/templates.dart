@@ -11,3 +11,7 @@ library;
 
 // Adaptive/Responsive layouts
 export 'adaptive_shell.dart';
+
+// Re-export navigation types for convenience
+export '../organisms/navigation/nav_menu_item.dart';
+export '../../services/nav_menu_builder.dart';

@@ -8,7 +8,8 @@
  * - Validate preference values against schema
  *
  * DESIGN:
- * - 1:1 relationship with users (each user has one preferences row)
+ * - 1:1 relationship with users via SHARED PRIMARY KEY pattern
+ * - user_preferences.id = users.id (identifying relationship)
  * - JSONB storage for flexible schema evolution
  * - Application-level validation using preferenceSchema from metadata
  * - Automatic preference row creation on first access (upsert pattern)
@@ -49,11 +50,11 @@ class PreferencesService {
       throw new Error('Valid userId is required');
     }
 
-    // Try to get existing preferences
+    // Try to get existing preferences (id = userId in shared PK pattern)
     const result = await db(
-      `SELECT id, user_id, preferences, created_at, updated_at
+      `SELECT id, preferences, created_at, updated_at
        FROM user_preferences
-       WHERE user_id = $1`,
+       WHERE id = $1`,
       [safeUserId],
     );
 
@@ -85,11 +86,12 @@ class PreferencesService {
       throw new Error('Valid userId is required');
     }
 
+    // Shared PK: id = userId
     const result = await db(
-      `INSERT INTO user_preferences (user_id, preferences)
+      `INSERT INTO user_preferences (id, preferences)
        VALUES ($1, $2)
-       ON CONFLICT (user_id) DO UPDATE SET updated_at = CURRENT_TIMESTAMP
-       RETURNING id, user_id, preferences, created_at, updated_at`,
+       ON CONFLICT (id) DO UPDATE SET updated_at = CURRENT_TIMESTAMP
+       RETURNING id, preferences, created_at, updated_at`,
       [safeUserId, JSON.stringify(DEFAULT_PREFERENCES)],
     );
 
@@ -127,12 +129,13 @@ class PreferencesService {
     await this.initializePreferences(safeUserId);
 
     // Update using JSONB merge (preserves existing keys not in updates)
+    // Shared PK: id = userId
     const result = await db(
       `UPDATE user_preferences
        SET preferences = preferences || $2::jsonb,
            updated_at = CURRENT_TIMESTAMP
-       WHERE user_id = $1
-       RETURNING id, user_id, preferences, created_at, updated_at`,
+       WHERE id = $1
+       RETURNING id, preferences, created_at, updated_at`,
       [safeUserId, JSON.stringify(updates)],
     );
 
@@ -179,12 +182,13 @@ class PreferencesService {
       throw new Error('Valid userId is required');
     }
 
+    // Shared PK: id = userId
     const result = await db(
       `UPDATE user_preferences
        SET preferences = $2::jsonb,
            updated_at = CURRENT_TIMESTAMP
-       WHERE user_id = $1
-       RETURNING id, user_id, preferences, created_at, updated_at`,
+       WHERE id = $1
+       RETURNING id, preferences, created_at, updated_at`,
       [safeUserId, JSON.stringify(DEFAULT_PREFERENCES)],
     );
 

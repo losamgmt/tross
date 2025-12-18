@@ -12,6 +12,7 @@
     "rlsResource": "users",
     "displayName": "User",
     "displayNamePlural": "Users",
+    "icon": "people_outlined",
     "requiredFields": [
       "email",
       "first_name",
@@ -140,6 +141,7 @@
     "rlsResource": "roles",
     "displayName": "Role",
     "displayNamePlural": "Roles",
+    "icon": "security_outlined",
     "requiredFields": [
       "name"
     ],
@@ -241,6 +243,7 @@
     "rlsResource": "customers",
     "displayName": "Customer",
     "displayNamePlural": "Customers",
+    "icon": "business_outlined",
     "requiredFields": [
       "email"
     ],
@@ -338,6 +341,7 @@
     "rlsResource": "technicians",
     "displayName": "Technician",
     "displayNamePlural": "Technicians",
+    "icon": "engineering_outlined",
     "requiredFields": [
       "license_number"
     ],
@@ -427,6 +431,7 @@
     "rlsResource": "work_orders",
     "displayName": "Work Order",
     "displayNamePlural": "Work Orders",
+    "icon": "assignment_outlined",
     "requiredFields": [
       "title",
       "customer_id"
@@ -555,6 +560,7 @@
     "rlsResource": "contracts",
     "displayName": "Contract",
     "displayNamePlural": "Contracts",
+    "icon": "description_outlined",
     "requiredFields": [
       "contract_number",
       "customer_id",
@@ -668,6 +674,7 @@
     "rlsResource": "invoices",
     "displayName": "Invoice",
     "displayNamePlural": "Invoices",
+    "icon": "receipt_long_outlined",
     "requiredFields": [
       "invoice_number",
       "customer_id",
@@ -790,6 +797,7 @@
     "rlsResource": "inventory",
     "displayName": "Inventory",
     "displayNamePlural": "Inventory",
+    "icon": "inventory_2_outlined",
     "requiredFields": [
       "name",
       "sku"
@@ -893,25 +901,24 @@
   "preferences": {
     "tableName": "user_preferences",
     "primaryKey": "id",
-    "identityField": "user_id",
+    "identityField": "id",
     "rlsResource": "preferences",
     "displayName": "Preferences",
-    "displayNamePlural": "Preferenceses",
+    "displayNamePlural": "Preferences",
+    "icon": "tune_outlined",
     "requiredFields": [
-      "user_id"
+      "id"
     ],
     "immutableFields": [
-      "user_id"
+      "id"
     ],
     "filterableFields": [
       "id",
-      "user_id",
       "created_at",
       "updated_at"
     ],
     "sortableFields": [
       "id",
-      "user_id",
       "created_at",
       "updated_at"
     ],
@@ -920,7 +927,7 @@
       "order": "DESC"
     },
     "relationships": {
-      "user_id": {
+      "id": {
         "relatedEntity": "user",
         "displayField": "email",
         "type": "belongsTo"
@@ -928,10 +935,6 @@
     },
     "fields": {
       "id": {
-        "type": "integer",
-        "readonly": true
-      },
-      "user_id": {
         "type": "foreignKey",
         "relatedEntity": "user",
         "displayField": "email",

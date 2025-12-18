@@ -62,7 +62,10 @@ enum ResourceType {
   inventory,
   invoices,
   technicians,
-  preferences;
+  preferences,
+  // Synthetic resources (nav visibility, not entity CRUD)
+  dashboard,
+  adminPanel('admin_panel');
 
   final String? _value;
   const ResourceType([this._value]);

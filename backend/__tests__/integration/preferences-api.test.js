@@ -5,7 +5,8 @@
  * Validates authentication, CRUD operations, and validation
  *
  * IMPORTANT: These tests require the user_preferences table to exist.
- * Run migration 013_add_user_preferences.sql before running these tests.
+ * Run migrations 013 and 014 before running these tests.
+ * Uses shared PK pattern: user_preferences.id = users.id
  */
 
 const request = require('supertest');
@@ -56,7 +57,7 @@ describe('Preferences API Endpoints - Integration Tests', () => {
       expect(response.body).toMatchObject({
         success: true,
         data: expect.objectContaining({
-          user_id: customerUser.id,
+          id: customerUser.id, // Shared PK: id = userId
           preferences: expect.objectContaining({
             theme: expect.any(String),
             notificationsEnabled: expect.any(Boolean),
@@ -342,7 +343,7 @@ describe('Preferences API Endpoints - Integration Tests', () => {
 
       // Assert
       expect(response.status).toBe(HTTP_STATUS.OK);
-      expect(response.body.data.user_id).toBe(customerUser.id);
+      expect(response.body.data.id).toBe(customerUser.id); // Shared PK
     });
   });
 
@@ -371,7 +372,7 @@ describe('Preferences API Endpoints - Integration Tests', () => {
       // Assert
       expect(customerResponse.body.data.preferences.theme).toBe('dark');
       expect(adminResponse.body.data.preferences.theme).toBe('light');
-      expect(customerResponse.body.data.user_id).not.toBe(adminResponse.body.data.user_id);
+      expect(customerResponse.body.data.id).not.toBe(adminResponse.body.data.id); // Shared PK
     });
   });
 
@@ -405,8 +406,7 @@ describe('Preferences API Endpoints - Integration Tests', () => {
 
       expect(response.status).toBe(HTTP_STATUS.OK);
       expect(response.body.data).toMatchObject({
-        id: null,
-        user_id: null,
+        id: null, // Dev users have no DB record
         preferences: {
           theme: 'system',  // Default from metadata
           notificationsEnabled: true,  // Default from metadata

@@ -48,7 +48,6 @@ export 'modals/generic_modal.dart';
 export 'navigation/app_footer.dart';
 export 'navigation/app_header.dart';
 export 'navigation/app_sidebar.dart';
-export 'navigation/entity_nav_builder.dart';
 export 'navigation/nav_menu_item.dart';
 export 'navigation/navigation.dart';
 

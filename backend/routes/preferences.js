@@ -39,6 +39,7 @@ const router = express.Router();
  *     description: |
  *       Retrieve the authenticated user's preferences.
  *       Creates default preferences if none exist.
+ *       Uses shared PK pattern: preferences.id = users.id
  *     security:
  *       - BearerAuth: []
  *     responses:
@@ -53,8 +54,7 @@ const router = express.Router();
  *                 data:
  *                   type: object
  *                   properties:
- *                     id: { type: integer }
- *                     user_id: { type: integer }
+ *                     id: { type: integer, description: "Same as user ID (shared PK)" }
  *                     preferences:
  *                       type: object
  *                       properties:
@@ -83,9 +83,9 @@ router.get(
           defaultPreferences[key] = config.default;
         }
 
+        // Shared PK pattern: id = userId, no separate user_id field
         return ResponseFormatter.get(res, {
           id: null,
-          user_id: null,
           preferences: defaultPreferences,
           created_at: null,
           updated_at: null,

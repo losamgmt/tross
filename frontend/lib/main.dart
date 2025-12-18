@@ -19,6 +19,7 @@ import 'config/app_theme_flex.dart';
 import 'services/error_service.dart';
 import 'services/permission_service_dynamic.dart';
 import 'services/entity_metadata.dart';
+import 'services/nav_config_loader.dart';
 import 'config/validation_rules.dart';
 
 void main() async {
@@ -27,6 +28,9 @@ void main() async {
 
   // Initialize data-driven permission system
   await PermissionService.initialize();
+
+  // Initialize navigation config (loads from nav-config.json)
+  await NavConfigService.initialize();
 
   // Initialize entity metadata registry (loads from entity-metadata.json)
   await EntityMetadataRegistry.instance.initialize();

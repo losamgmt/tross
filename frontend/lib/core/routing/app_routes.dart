@@ -3,6 +3,7 @@
 // SRP: This class has one responsibility - define route paths
 
 import '../../config/constants.dart';
+import '../../services/nav_config_loader.dart';
 
 class AppRoutes {
   // Private constructor to prevent instantiation
@@ -35,33 +36,58 @@ class AppRoutes {
   static const String error = '/error';
   static const String unauthorized = '/unauthorized';
   static const String notFound = '/not-found';
-  static const String underConstruction = '/under-construction';
 
-  // Route Groups for Easy Checking
-  static const List<String> publicRoutes = [
+  // ════════════════════════════════════════════════════════════════════════
+  // METADATA-DRIVEN HELPERS (use NavConfigService when available)
+  // ════════════════════════════════════════════════════════════════════════
+
+  /// Get public route paths from nav-config.json
+  /// Falls back to static list if NavConfigService not initialized
+  static List<String> getPublicRoutePaths() {
+    if (!NavConfigService.isInitialized) {
+      return _fallbackPublicRoutes;
+    }
+    return NavConfigService.config.publicRoutes.map((r) => r.path).toList();
+  }
+
+  /// Check if route is public using nav-config.json
+  static bool isPublicPath(String path) {
+    if (!NavConfigService.isInitialized) {
+      return _fallbackPublicRoutes.contains(path);
+    }
+    return NavConfigService.config.isPublicRoute(path);
+  }
+
+  // Static fallback for when NavConfigService not yet initialized
+  static const List<String> _fallbackPublicRoutes = [
     root,
     login,
     callback,
     error,
     unauthorized,
     notFound,
-    underConstruction,
   ];
+
+  // Legacy static list (kept for backward compatibility)
+  static const List<String> publicRoutes = _fallbackPublicRoutes;
 
   static const List<String> protectedRoutes = [home, settings];
 
   static const List<String> adminRoutes = [admin];
 
-  // Helper Methods
+  // ════════════════════════════════════════════════════════════════════════
+  // HELPER METHODS
+  // ════════════════════════════════════════════════════════════════════════
 
   /// Check if route is public (no auth required)
+  /// Uses NavConfigService when initialized, falls back to static list
   static bool isPublicRoute(String route) {
-    return publicRoutes.contains(route);
+    return isPublicPath(route);
   }
 
   /// Check if route requires authentication
   static bool requiresAuth(String route) {
-    return protectedRoutes.contains(route) || adminRoutes.contains(route);
+    return !isPublicPath(route);
   }
 
   /// Check if route requires admin role
@@ -87,8 +113,6 @@ class AppRoutes {
         return 'Access Denied';
       case notFound:
         return 'Not Found';
-      case underConstruction:
-        return 'Under Construction';
       default:
         return AppConstants.appName; // 'Tross'
     }

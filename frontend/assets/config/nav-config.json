@@ -1,0 +1,70 @@
+{
+  "$schema": "./nav-config.schema.json",
+  "version": "1.3.0",
+
+  "_comments": {
+    "permissionResource": "Maps to permissions.json resource for nav visibility. Distinct from entity-metadata.json rlsResource which controls row-level data access.",
+    "syntheticResources": "dashboard, admin_panel, preferences are synthetic (non-entity) resources defined in permissions.json for nav visibility checks."
+  },
+
+  "publicRoutes": [
+    { "id": "root", "path": "/" },
+    { "id": "login", "path": "/login" },
+    { "id": "callback", "path": "/callback" },
+    { "id": "error", "path": "/error" },
+    { "id": "unauthorized", "path": "/unauthorized" },
+    { "id": "notFound", "path": "/not-found" }
+  ],
+
+  "groups": [
+    { "id": "main", "label": "Main", "order": 0 },
+    { "id": "crm", "label": "CRM", "order": 1 },
+    { "id": "operations", "label": "Operations", "order": 2 },
+    { "id": "finance", "label": "Finance", "order": 3 },
+    { "id": "admin", "label": "Administration", "order": 98 }
+  ],
+
+  "staticItems": [
+    {
+      "id": "dashboard",
+      "label": "Dashboard",
+      "icon": "dashboard_outlined",
+      "route": "/",
+      "group": "main",
+      "order": 0,
+      "permissionResource": "dashboard",
+      "menuType": "sidebar"
+    },
+    {
+      "id": "admin_panel",
+      "label": "Admin",
+      "icon": "admin_panel_settings_outlined",
+      "route": "/admin",
+      "group": "account",
+      "order": 0,
+      "permissionResource": "admin_panel",
+      "menuType": "userMenu"
+    },
+    {
+      "id": "settings",
+      "label": "Settings",
+      "icon": "settings_outlined",
+      "route": "/settings",
+      "group": "account",
+      "order": 1,
+      "permissionResource": "preferences",
+      "menuType": "userMenu"
+    }
+  ],
+
+  "entityPlacements": {
+    "customer": { "group": "crm", "order": 1 },
+    "contract": { "group": "crm", "order": 2 },
+    "invoice": { "group": "finance", "order": 1 },
+    "technician": { "group": "operations", "order": 1 },
+    "workOrder": { "group": "operations", "order": 2 },
+    "inventory": { "group": "operations", "order": 3 },
+    "user": { "group": "admin", "order": 1 },
+    "role": { "group": "admin", "order": 2 }
+  }
+}

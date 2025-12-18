@@ -4,6 +4,8 @@
  * Tests preferences service functionality with mocked database.
  * Follows AAA pattern (Arrange, Act, Assert) and DRY principles.
  *
+ * DESIGN: Uses shared PK pattern - id = userId (no separate user_id column)
+ *
  * Test Coverage:
  * - getPreferences() - fetch and auto-create
  * - initializePreferences() - create default preferences
@@ -40,10 +42,9 @@ describe('services/preferences-service.js', () => {
 
   describe('getPreferences()', () => {
     test('should return existing preferences merged with defaults', async () => {
-      // Arrange
+      // Arrange - id = userId in shared PK pattern
       const mockPrefs = {
-        id: 1,
-        user_id: 42,
+        id: 42,
         preferences: { theme: 'dark' }, // Only theme set
         created_at: new Date(),
         updated_at: new Date(),
@@ -65,10 +66,9 @@ describe('services/preferences-service.js', () => {
     });
 
     test('should create default preferences if none exist', async () => {
-      // Arrange
+      // Arrange - id = userId in shared PK pattern
       const mockNewPrefs = {
-        id: 1,
-        user_id: 42,
+        id: 42,
         preferences: DEFAULT_PREFERENCES,
         created_at: new Date(),
         updated_at: new Date(),
@@ -102,10 +102,9 @@ describe('services/preferences-service.js', () => {
 
   describe('initializePreferences()', () => {
     test('should create preferences with defaults using UPSERT', async () => {
-      // Arrange
+      // Arrange - id = userId in shared PK pattern
       const mockPrefs = {
-        id: 1,
-        user_id: 42,
+        id: 42,
         preferences: DEFAULT_PREFERENCES,
         created_at: new Date(),
         updated_at: new Date(),
@@ -132,11 +131,10 @@ describe('services/preferences-service.js', () => {
 
   describe('updatePreferences()', () => {
     test('should update multiple preferences using JSONB merge', async () => {
-      // Arrange
+      // Arrange - id = userId in shared PK pattern
       const updates = { theme: 'light', notificationsEnabled: false };
       const mockUpdated = {
-        id: 1,
-        user_id: 42,
+        id: 42,
         preferences: updates,
         created_at: new Date(),
         updated_at: new Date(),
@@ -197,10 +195,9 @@ describe('services/preferences-service.js', () => {
 
   describe('updatePreference()', () => {
     test('should update single preference key', async () => {
-      // Arrange
+      // Arrange - id = userId in shared PK pattern
       const mockUpdated = {
-        id: 1,
-        user_id: 42,
+        id: 42,
         preferences: { theme: 'dark', notificationsEnabled: true },
         created_at: new Date(),
         updated_at: new Date(),
@@ -222,10 +219,9 @@ describe('services/preferences-service.js', () => {
 
   describe('resetPreferences()', () => {
     test('should reset preferences to defaults', async () => {
-      // Arrange
+      // Arrange - id = userId in shared PK pattern
       const mockReset = {
-        id: 1,
-        user_id: 42,
+        id: 42,
         preferences: DEFAULT_PREFERENCES,
         created_at: new Date(),
         updated_at: new Date(),
@@ -247,10 +243,9 @@ describe('services/preferences-service.js', () => {
     });
 
     test('should create preferences if user has none when resetting', async () => {
-      // Arrange
+      // Arrange - id = userId in shared PK pattern
       const mockCreated = {
-        id: 1,
-        user_id: 42,
+        id: 42,
         preferences: DEFAULT_PREFERENCES,
         created_at: new Date(),
         updated_at: new Date(),

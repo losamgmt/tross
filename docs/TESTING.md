@@ -165,7 +165,7 @@ flutter test test/providers/
 flutter test test/services/
 ```
 
-**Current Status:** 1,427 tests passing, 60% line coverage
+Run `flutter test` to see current test counts and coverage.
 
 ### Widget Tests (`test/widgets/`)
 

@@ -53,17 +53,8 @@ class AppRouter {
           return null;
         }
 
-        // Public routes that don't require auth
-        final publicRoutes = [
-          AppRoutes.login,
-          AppRoutes.callback,
-          AppRoutes.root,
-          AppRoutes.error,
-          AppRoutes.unauthorized,
-          AppRoutes.notFound,
-        ];
-
-        final isPublicRoute = publicRoutes.contains(currentPath);
+        // Use metadata-driven public route check
+        final isPublicRoute = AppRoutes.isPublicPath(currentPath);
 
         // If not authenticated and trying to access protected route
         if (!isAuthenticated && !isPublicRoute) {

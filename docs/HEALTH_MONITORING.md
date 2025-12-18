@@ -275,12 +275,6 @@ railway logs -f
 
 ---
 
-**Maintained by:** TrossApp Development Team  
-**Last Updated:** 2025-11-21  
-**Review Cycle:** Quarterly or after incidents
-
----
-
 ## Quick Start: UptimeRobot Setup
 
 **Free tier monitoring (5-minute checks, email alerts)**

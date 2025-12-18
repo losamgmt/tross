@@ -23,7 +23,6 @@ void main() {
       expect(AppRoutes.error, equals('/error'));
       expect(AppRoutes.unauthorized, equals('/unauthorized'));
       expect(AppRoutes.notFound, equals('/not-found'));
-      expect(AppRoutes.underConstruction, equals('/under-construction'));
     });
   });
 
@@ -35,7 +34,6 @@ void main() {
       expect(AppRoutes.publicRoutes, contains(AppRoutes.error));
       expect(AppRoutes.publicRoutes, contains(AppRoutes.unauthorized));
       expect(AppRoutes.publicRoutes, contains(AppRoutes.notFound));
-      expect(AppRoutes.publicRoutes, contains(AppRoutes.underConstruction));
     });
 
     test('protectedRoutes list contains protected routes', () {
@@ -133,10 +131,6 @@ void main() {
         equals('Access Denied'),
       );
       expect(AppRoutes.getRouteName(AppRoutes.notFound), equals('Not Found'));
-      expect(
-        AppRoutes.getRouteName(AppRoutes.underConstruction),
-        equals('Under Construction'),
-      );
     });
 
     test('getRouteName() returns default for unknown routes', () {

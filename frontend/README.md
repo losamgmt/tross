@@ -121,7 +121,7 @@ User Login → LoginScreen → AuthProvider.login()
 **Key Design Decisions:**
 
 - See `docs/architecture/decisions/` for all ADRs
-- See `docs/auth/FLUTTER_AUTH_ARCHITECTURE.md` for auth implementation
+- See `docs/AUTH.md` for auth implementation
 - KISS principle throughout - minimal abstraction, maximum clarity
 - Defensive validation at every data boundary (API, JSON, user input)
 
@@ -221,7 +221,7 @@ flutter test test/integration/        # Integration tests
 - E2E: Complete user journey validation
 - Concurrency: Multi-operation stress testing
 
-View detailed coverage: `frontend/coverage/COVERAGE_ANALYSIS.md`
+Run `flutter test --coverage` to generate coverage reports.
 
 **CI/CD:** See [CI_CD.md](../docs/CI_CD.md#-frontend-cicd) for automated testing pipeline and GitHub Actions workflow.
 
@@ -324,10 +324,10 @@ flutter test --coverage
 
 - **Main README:** `../README.md` - Project overview
 - **API Docs:** `../docs/api/README.md` - Backend endpoints
-- **Auth Guide:** `../docs/AUTH0_INTEGRATION.md`
+- **Auth Guide:** `../docs/AUTH.md`
 - **Deployment:** `../docs/DEPLOYMENT.md`
-- **Architecture:** `../docs/auth/FLUTTER_AUTH_ARCHITECTURE.md`
-- **Testing Strategy:** `frontend/coverage/COVERAGE_ANALYSIS.md`
+- **Architecture:** `../docs/ARCHITECTURE.md`
+- **Testing Strategy:** `../docs/TESTING.md`
 
 ---
 

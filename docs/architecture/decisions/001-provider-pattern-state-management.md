@@ -143,8 +143,3 @@ class AuthProvider extends ChangeNotifier {
 - [Flutter State Management Guide](https://docs.flutter.dev/data-and-backend/state-mgmt/options)
 - Implementation: `frontend/lib/providers/`
 - Tests: `frontend/test/providers/`
-
----
-
-**Last Reviewed:** October 27, 2025  
-**Status:** Active in production

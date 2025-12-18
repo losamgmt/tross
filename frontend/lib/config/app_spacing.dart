@@ -105,3 +105,45 @@ class AppSpacingConst {
   static const Widget gapLG = SizedBox(width: lg, height: lg);
   static const Widget gapXL = SizedBox(width: xl, height: xl);
 }
+
+/// Responsive breakpoints for layout decisions
+///
+/// Centralized breakpoint values for consistent responsive behavior.
+/// Use with LayoutBuilder or MediaQuery.
+class AppBreakpoints {
+  AppBreakpoints._();
+
+  /// Mobile: 0 - 599px
+  static const double mobile = 600;
+
+  /// Tablet: 600 - 899px
+  static const double tablet = 900;
+
+  /// Desktop: 900px+
+  static const double desktop = 900;
+
+  /// Wide desktop: 1200px+
+  static const double wideDesktop = 1200;
+
+  /// Sidebar/navigation breakpoint (show persistent sidebar)
+  static const double sidebarBreakpoint = 900;
+
+  /// Default sidebar width
+  static const double sidebarWidth = 240;
+
+  /// Collapsed sidebar width (icon-only)
+  static const double sidebarCollapsedWidth = 72;
+
+  /// Check if width is mobile
+  static bool isMobile(double width) => width < mobile;
+
+  /// Check if width is tablet
+  static bool isTablet(double width) => width >= mobile && width < desktop;
+
+  /// Check if width is desktop or wider
+  static bool isDesktop(double width) => width >= desktop;
+
+  /// Check if sidebar should be persistent (not drawer)
+  static bool shouldShowPersistentSidebar(double width) =>
+      width >= sidebarBreakpoint;
+}

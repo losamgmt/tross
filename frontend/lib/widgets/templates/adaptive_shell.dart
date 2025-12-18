@@ -1,12 +1,13 @@
-/// AdaptiveShell - Template-level responsive layout wrapper
+/// AdaptiveShell - Responsive layout template with sidebar/drawer navigation
 ///
-/// Provides a clean top-bar only layout with:
-/// - App bar with logo, page title, and user menu
-/// - User menu dropdown (top-right) for navigation, settings, and logout
-/// - Responsive body that adapts to screen width
-/// - NO sidebars, bottom nav, or navigation rails
+/// Provides a responsive layout with:
+/// - Narrow screens (<900px): Hamburger menu with drawer
+/// - Wide screens (>=900px): Persistent sidebar
+/// - App bar with page title and user menu
+/// - User menu dropdown for account actions (Settings, Admin, Logout)
 ///
-/// Single point of access for navigation: the user menu dropdown.
+/// Navigation items are derived from nav-config.json via NavMenuBuilder.
+/// Uses centralized breakpoints from AppBreakpoints.
 ///
 /// Usage:
 /// ```dart
@@ -22,103 +23,14 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../config/app_colors.dart';
+import '../../config/app_spacing.dart';
 import '../../config/constants.dart';
 import '../../core/routing/app_routes.dart';
 import '../../providers/auth_provider.dart';
-import '../../services/auth/auth_profile_service.dart';
+import '../../services/nav_menu_builder.dart';
+import '../organisms/navigation/nav_menu_item.dart';
 
-/// Navigation menu item configuration
-class NavMenuItem {
-  final String id;
-  final String label;
-  final IconData icon;
-  final String route;
-  final bool Function(Map<String, dynamic>? user)? visibleWhen;
-  final bool isDivider;
-
-  const NavMenuItem({
-    required this.id,
-    required this.label,
-    required this.icon,
-    required this.route,
-    this.visibleWhen,
-    this.isDivider = false,
-  });
-
-  /// Create a divider item
-  const NavMenuItem.divider()
-    : id = '_divider',
-      label = '',
-      icon = Icons.remove,
-      route = '',
-      visibleWhen = null,
-      isDivider = true;
-
-  /// Default navigation menu items - includes core pages and entity access
-  static List<NavMenuItem> get defaults => [
-    // Core app pages
-    const NavMenuItem(
-      id: 'home',
-      label: 'Dashboard',
-      icon: Icons.dashboard_outlined,
-      route: AppRoutes.home,
-    ),
-    NavMenuItem(
-      id: 'admin',
-      label: 'Admin (All Entities)',
-      icon: Icons.admin_panel_settings_outlined,
-      route: AppRoutes.admin,
-      visibleWhen: (user) => AuthProfileService.isAdmin(user),
-    ),
-
-    // Divider before entity section
-    const NavMenuItem.divider(),
-
-    // Entity quick links (most common entities) - camelCase names
-    const NavMenuItem(
-      id: 'entity_user',
-      label: 'Users',
-      icon: Icons.people_outlined,
-      route: '/entity/user',
-    ),
-    const NavMenuItem(
-      id: 'entity_customer',
-      label: 'Customers',
-      icon: Icons.business_outlined,
-      route: '/entity/customer',
-    ),
-    const NavMenuItem(
-      id: 'entity_workOrder',
-      label: 'Work Orders',
-      icon: Icons.assignment_outlined,
-      route: '/entity/workOrder',
-    ),
-    const NavMenuItem(
-      id: 'entity_invoice',
-      label: 'Invoices',
-      icon: Icons.receipt_long_outlined,
-      route: '/entity/invoice',
-    ),
-    const NavMenuItem(
-      id: 'entity_inventory',
-      label: 'Inventory',
-      icon: Icons.inventory_2_outlined,
-      route: '/entity/inventory',
-    ),
-
-    // Divider before settings
-    const NavMenuItem.divider(),
-
-    const NavMenuItem(
-      id: 'settings',
-      label: 'Settings',
-      icon: Icons.settings_outlined,
-      route: AppRoutes.settings,
-    ),
-  ];
-}
-
-/// Clean top-bar layout with dropdown navigation
+/// Responsive layout shell with sidebar/drawer navigation
 class AdaptiveShell extends StatelessWidget {
   /// The main body content
   final Widget body;
@@ -129,8 +41,11 @@ class AdaptiveShell extends StatelessWidget {
   /// Page title for the app bar
   final String pageTitle;
 
-  /// Custom navigation items (defaults to standard app nav)
-  final List<NavMenuItem>? menuItems;
+  /// Custom sidebar items (defaults to NavMenuBuilder.buildSidebarItems())
+  final List<NavMenuItem>? sidebarMenuItems;
+
+  /// Custom user menu items (defaults to NavMenuBuilder.buildUserMenuItems())
+  final List<NavMenuItem>? userMenuItems;
 
   /// Whether to show the app bar
   final bool showAppBar;
@@ -140,7 +55,8 @@ class AdaptiveShell extends StatelessWidget {
     required this.body,
     required this.currentRoute,
     required this.pageTitle,
-    this.menuItems,
+    this.sidebarMenuItems,
+    this.userMenuItems,
     this.showAppBar = true,
   });
 
@@ -148,63 +64,243 @@ class AdaptiveShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
     final user = authProvider.user;
-    final visibleMenuItems = _getVisibleMenuItems(user);
 
+    // Get menu items from NavMenuBuilder and filter by permissions
+    final sidebarItems = NavMenuBuilder.filterForUser(
+      sidebarMenuItems ?? NavMenuBuilder.buildSidebarItems(),
+      user,
+    );
+    final userItems = NavMenuBuilder.filterForUser(
+      userMenuItems ?? NavMenuBuilder.buildUserMenuItems(),
+      user,
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWideScreen = AppBreakpoints.shouldShowPersistentSidebar(
+          constraints.maxWidth,
+        );
+
+        if (isWideScreen) {
+          return _buildWideLayout(
+            context,
+            authProvider,
+            sidebarItems,
+            userItems,
+          );
+        } else {
+          return _buildNarrowLayout(
+            context,
+            authProvider,
+            sidebarItems,
+            userItems,
+          );
+        }
+      },
+    );
+  }
+
+  /// Wide screen layout: persistent sidebar + main content
+  Widget _buildWideLayout(
+    BuildContext context,
+    AuthProvider authProvider,
+    List<NavMenuItem> sidebarItems,
+    List<NavMenuItem> userItems,
+  ) {
+    return Row(
+      children: [
+        // Persistent sidebar
+        _SidebarContent(
+          items: sidebarItems,
+          currentRoute: currentRoute,
+          width: AppBreakpoints.sidebarWidth,
+          isDrawer: false,
+        ),
+        // Vertical divider
+        const VerticalDivider(width: 1, thickness: 1),
+        // Main content area
+        Expanded(
+          child: Scaffold(
+            appBar: showAppBar
+                ? _buildAppBar(
+                    context,
+                    authProvider,
+                    userItems,
+                    showMenuButton: false,
+                  )
+                : null,
+            body: body,
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Narrow screen layout: drawer-based navigation
+  Widget _buildNarrowLayout(
+    BuildContext context,
+    AuthProvider authProvider,
+    List<NavMenuItem> sidebarItems,
+    List<NavMenuItem> userItems,
+  ) {
     return Scaffold(
       appBar: showAppBar
-          ? _buildAppBar(context, authProvider, visibleMenuItems)
+          ? _buildAppBar(context, authProvider, userItems)
           : null,
+      drawer: Drawer(
+        width: AppBreakpoints.sidebarWidth,
+        child: _SidebarContent(
+          items: sidebarItems,
+          currentRoute: currentRoute,
+          width: AppBreakpoints.sidebarWidth,
+          isDrawer: true,
+        ),
+      ),
       body: body,
     );
   }
 
-  /// Get filtered menu items based on user permissions
-  List<NavMenuItem> _getVisibleMenuItems(Map<String, dynamic>? user) {
-    final items = menuItems ?? NavMenuItem.defaults;
-    return items.where((item) {
-      if (item.visibleWhen == null) return true;
-      return item.visibleWhen!(user);
-    }).toList();
-  }
-
-  /// Build the app bar with logo and user menu
+  /// Build the app bar with optional hamburger menu and user menu
   PreferredSizeWidget _buildAppBar(
     BuildContext context,
     AuthProvider authProvider,
-    List<NavMenuItem> visibleMenuItems,
-  ) {
+    List<NavMenuItem> userItems, {
+    bool showMenuButton = true,
+  }) {
     return AppBar(
       backgroundColor: AppColors.brandPrimary,
       foregroundColor: AppColors.white,
       title: Text(pageTitle),
       centerTitle: true,
-      leading: _buildLogo(context),
-      leadingWidth: 120,
-      actions: [_buildUserMenu(context, authProvider, visibleMenuItems)],
+      automaticallyImplyLeading: showMenuButton,
+      actions: [
+        _UserMenuButton(
+          authProvider: authProvider,
+          userItems: userItems,
+          currentRoute: currentRoute,
+        ),
+        const SizedBox(width: 8),
+      ],
     );
   }
+}
 
-  /// Build the logo/home button
-  Widget _buildLogo(BuildContext context) {
-    return TextButton.icon(
-      onPressed: () => context.go(AppRoutes.home),
-      icon: const Icon(Icons.home, color: AppColors.white),
-      label: Text(
-        AppConstants.appName,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-          color: AppColors.white,
-          fontWeight: FontWeight.bold,
+// ============================================================================
+// SIDEBAR CONTENT WIDGET
+// ============================================================================
+
+/// Sidebar content - used by both drawer and persistent sidebar
+class _SidebarContent extends StatelessWidget {
+  final List<NavMenuItem> items;
+  final String currentRoute;
+  final double width;
+  final bool isDrawer;
+
+  const _SidebarContent({
+    required this.items,
+    required this.currentRoute,
+    required this.width,
+    required this.isDrawer,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: width,
+      child: Material(
+        color: isDrawer ? null : Theme.of(context).scaffoldBackgroundColor,
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            _buildHeader(context),
+            ...items.map((item) => _buildItem(context, item)),
+          ],
         ),
       ),
     );
   }
 
-  /// Build user menu dropdown - SINGLE POINT OF ACCESS for nav, settings, logout
-  Widget _buildUserMenu(
-    BuildContext context,
-    AuthProvider authProvider,
-    List<NavMenuItem> visibleMenuItems,
-  ) {
+  Widget _buildHeader(BuildContext context) {
+    return Container(
+      color: AppColors.brandPrimary,
+      padding: const EdgeInsets.all(16),
+      child: SafeArea(
+        bottom: false,
+        child: Row(
+          children: [
+            const Icon(Icons.home, color: AppColors.white, size: 32),
+            const SizedBox(width: 12),
+            Text(
+              AppConstants.appName,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: AppColors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildItem(BuildContext context, NavMenuItem item) {
+    if (item.isDivider) {
+      return const Divider();
+    }
+
+    final isActive = _isItemActive(item);
+
+    return ListTile(
+      leading: item.icon != null
+          ? Icon(item.icon, color: isActive ? AppColors.brandPrimary : null)
+          : null,
+      title: Text(
+        item.label,
+        style: TextStyle(
+          fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+          color: isActive ? AppColors.brandPrimary : null,
+        ),
+      ),
+      selected: isActive,
+      onTap: () => _handleTap(context, item),
+    );
+  }
+
+  bool _isItemActive(NavMenuItem item) {
+    return item.route == currentRoute ||
+        (item.route == '/' && currentRoute == AppRoutes.home);
+  }
+
+  void _handleTap(BuildContext context, NavMenuItem item) {
+    // Close drawer if in drawer mode
+    if (isDrawer) {
+      Navigator.pop(context);
+    }
+    // Navigate if route is different
+    if (item.route != null && item.route != currentRoute) {
+      context.go(item.route!);
+    }
+  }
+}
+
+// ============================================================================
+// USER MENU BUTTON WIDGET
+// ============================================================================
+
+/// User menu button with dropdown for account actions
+class _UserMenuButton extends StatelessWidget {
+  final AuthProvider authProvider;
+  final List<NavMenuItem> userItems;
+  final String currentRoute;
+
+  const _UserMenuButton({
+    required this.authProvider,
+    required this.userItems,
+    required this.currentRoute,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     final userName = authProvider.userName;
     final userEmail = authProvider.userEmail;
 
@@ -216,20 +312,7 @@ class AdaptiveShell extends StatelessWidget {
           style: const TextStyle(color: AppColors.white),
         ),
       ),
-      onSelected: (value) async {
-        if (value == 'logout') {
-          await authProvider.logout();
-          return;
-        }
-        // Navigate to route
-        final menuItem = visibleMenuItems.firstWhere(
-          (item) => item.id == value,
-          orElse: () => visibleMenuItems.first,
-        );
-        if (menuItem.route != currentRoute) {
-          context.go(menuItem.route);
-        }
-      },
+      onSelected: (value) => _handleSelection(context, value),
       itemBuilder: (_) => [
         // User info header
         PopupMenuItem(
@@ -244,42 +327,22 @@ class AdaptiveShell extends StatelessWidget {
         ),
         const PopupMenuDivider(),
 
-        // Navigation items (with divider support)
-        ...visibleMenuItems.expand((item) {
-          if (item.isDivider) {
-            return [const PopupMenuDivider()];
-          }
-          return [
-            PopupMenuItem<String>(
-              value: item.id,
-              child: ListTile(
-                leading: Icon(
-                  item.icon,
-                  color: item.route == currentRoute
-                      ? AppColors.brandPrimary
-                      : null,
-                ),
-                title: Text(
-                  item.label,
-                  style: TextStyle(
-                    fontWeight: item.route == currentRoute
-                        ? FontWeight.bold
-                        : FontWeight.normal,
-                    color: item.route == currentRoute
-                        ? AppColors.brandPrimary
-                        : null,
-                  ),
-                ),
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-              ),
+        // User menu items (Settings, Admin, etc.)
+        ...userItems.map(
+          (item) => PopupMenuItem<String>(
+            value: item.id,
+            child: ListTile(
+              leading: Icon(item.icon),
+              title: Text(item.label),
+              dense: true,
+              contentPadding: EdgeInsets.zero,
             ),
-          ];
-        }),
+          ),
+        ),
 
         const PopupMenuDivider(),
 
-        // Logout
+        // Logout (always present, handled separately)
         const PopupMenuItem(
           value: 'logout',
           child: ListTile(
@@ -291,5 +354,21 @@ class AdaptiveShell extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  void _handleSelection(BuildContext context, String value) async {
+    if (value == 'logout') {
+      await authProvider.logout();
+      return;
+    }
+
+    // Find and navigate to the selected item's route
+    final menuItem = userItems.firstWhere(
+      (item) => item.id == value,
+      orElse: () => userItems.first,
+    );
+    if (menuItem.route != null && menuItem.route != currentRoute) {
+      context.go(menuItem.route!);
+    }
   }
 }

@@ -1,6 +1,6 @@
 /// AdaptiveShell Template Tests
 ///
-/// Tests for the clean top-bar layout template with dropdown navigation.
+/// Tests for the responsive layout template with drawer/sidebar navigation.
 library;
 
 import 'package:flutter/material.dart';
@@ -23,36 +23,54 @@ Widget wrapWithProviders(Widget child) {
 }
 
 void main() {
-  group('NavMenuItem', () {
-    test('defaults contains expected menu items', () {
-      final defaults = NavMenuItem.defaults;
+  group('NavMenuBuilder', () {
+    test('buildSidebarItems returns list with dashboard', () {
+      final sidebarItems = NavMenuBuilder.buildSidebarItems();
 
-      expect(defaults.length, greaterThanOrEqualTo(3));
-      expect(defaults.any((d) => d.id == 'home'), isTrue);
-      expect(defaults.any((d) => d.id == 'settings'), isTrue);
-      expect(defaults.any((d) => d.id == 'admin'), isTrue);
-    });
-
-    test('visibleWhen filter works correctly', () {
-      final adminItem = NavMenuItem(
-        id: 'admin',
-        label: 'Admin',
-        icon: Icons.admin_panel_settings,
-        route: '/admin',
-        visibleWhen: (user) => user?['role'] == 'admin',
+      expect(sidebarItems.length, greaterThanOrEqualTo(1));
+      expect(
+        sidebarItems.any((d) => d.id == 'home' || d.id == 'dashboard'),
+        isTrue,
       );
-
-      // Non-admin user
-      expect(adminItem.visibleWhen!({'role': 'viewer'}), isFalse);
-
-      // Admin user
-      expect(adminItem.visibleWhen!({'role': 'admin'}), isTrue);
-
-      // Null user
-      expect(adminItem.visibleWhen!(null), isFalse);
     });
 
-    test('menu item without visibleWhen is always visible', () {
+    test('buildUserMenuItems returns list with settings', () {
+      final userMenuItems = NavMenuBuilder.buildUserMenuItems();
+
+      expect(userMenuItems.length, greaterThanOrEqualTo(1));
+      expect(userMenuItems.any((d) => d.id == 'settings'), isTrue);
+    });
+
+    test('filterForUser with visibleWhen works correctly', () {
+      final items = [
+        NavMenuItem(
+          id: 'admin',
+          label: 'Admin',
+          icon: Icons.admin_panel_settings,
+          route: '/admin',
+          visibleWhen: (user) => user?['role'] == 'admin',
+        ),
+        const NavMenuItem(
+          id: 'home',
+          label: 'Home',
+          icon: Icons.home,
+          route: '/home',
+        ),
+      ];
+
+      // Non-admin user - should only see home
+      final filtered = NavMenuBuilder.filterForUser(items, {'role': 'viewer'});
+      expect(filtered.length, 1);
+      expect(filtered.first.id, 'home');
+
+      // Admin user - should see both
+      final adminFiltered = NavMenuBuilder.filterForUser(items, {
+        'role': 'admin',
+      });
+      expect(adminFiltered.length, 2);
+    });
+
+    test('menu item without visibleWhen respects requiresAuth default', () {
       const item = NavMenuItem(
         id: 'home',
         label: 'Home',
@@ -61,6 +79,23 @@ void main() {
       );
 
       expect(item.visibleWhen, isNull);
+      // Default requiresAuth is true, so null user should return false
+      expect(item.isVisibleFor(null), isFalse);
+      // Authenticated user should see it
+      expect(item.isVisibleFor({'role': 'user'}), isTrue);
+    });
+
+    test('menu item with requiresAuth false is visible to all', () {
+      const item = NavMenuItem(
+        id: 'public',
+        label: 'Public',
+        icon: Icons.public,
+        route: '/public',
+        requiresAuth: false,
+      );
+
+      expect(item.isVisibleFor(null), isTrue);
+      expect(item.isVisibleFor({'role': 'user'}), isTrue);
     });
   });
 
@@ -97,7 +132,7 @@ void main() {
       expect(find.text('Dashboard'), findsOneWidget);
     });
 
-    testWidgets('renders app name in logo area', (tester) async {
+    testWidgets('renders app name in drawer header', (tester) async {
       await tester.pumpWidget(
         wrapWithProviders(
           const AdaptiveShell(
@@ -110,7 +145,12 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // App name should appear in the leading area
+      // Open drawer to see app name
+      final scaffoldState = tester.state<ScaffoldState>(find.byType(Scaffold));
+      scaffoldState.openDrawer();
+      await tester.pumpAndSettle();
+
+      // App name should appear in the drawer header
       expect(find.text('Tross'), findsOneWidget);
     });
 
@@ -166,19 +206,41 @@ void main() {
       await tester.tap(find.byType(PopupMenuButton<String>));
       await tester.pumpAndSettle();
 
-      // Menu items should appear
-      expect(find.text('Dashboard'), findsWidgets);
+      // User menu items should appear (account-related only)
       expect(find.text('Settings'), findsOneWidget);
       expect(find.text('Logout'), findsOneWidget);
     });
 
-    testWidgets('accepts custom menu items', (tester) async {
+    testWidgets('drawer contains sidebar items', (tester) async {
+      await tester.pumpWidget(
+        wrapWithProviders(
+          const AdaptiveShell(
+            currentRoute: AppRoutes.home,
+            pageTitle: 'Test',
+            body: SizedBox(),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Open the drawer via the hamburger menu
+      final scaffoldState = tester.state<ScaffoldState>(find.byType(Scaffold));
+      scaffoldState.openDrawer();
+      await tester.pumpAndSettle();
+
+      // Drawer should contain sidebar items (Dashboard, entities)
+      expect(find.text('Dashboard'), findsOneWidget);
+    });
+
+    testWidgets('accepts custom sidebar menu items', (tester) async {
       final customItems = [
         const NavMenuItem(
           id: 'custom',
           label: 'Custom Item',
           icon: Icons.star,
           route: '/custom',
+          requiresAuth: false, // Visible without auth for testing
         ),
       ];
 
@@ -188,15 +250,16 @@ void main() {
             currentRoute: '/custom',
             pageTitle: 'Test',
             body: const SizedBox(),
-            menuItems: customItems,
+            sidebarMenuItems: customItems,
           ),
         ),
       );
 
       await tester.pumpAndSettle();
 
-      // Open menu
-      await tester.tap(find.byType(PopupMenuButton<String>));
+      // Open the drawer
+      final scaffoldState = tester.state<ScaffoldState>(find.byType(Scaffold));
+      scaffoldState.openDrawer();
       await tester.pumpAndSettle();
 
       expect(find.text('Custom Item'), findsOneWidget);

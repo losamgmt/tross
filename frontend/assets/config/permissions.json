@@ -363,12 +363,79 @@
           "description": "Only admins can view/manage other users' preferences"
         }
       }
+    },
+
+    "dashboard": {
+      "description": "Main dashboard view - role-driven overview of relevant data (synthetic resource for nav)",
+      "rowLevelSecurity": {
+        "customer": "own_record_only",
+        "technician": "own_record_only",
+        "dispatcher": "all_records",
+        "manager": "all_records",
+        "admin": "all_records"
+      },
+      "permissions": {
+        "create": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "N/A - synthetic resource, no data to create"
+        },
+        "read": {
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "All authenticated users can access the dashboard"
+        },
+        "update": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "N/A - synthetic resource, no data to update"
+        },
+        "delete": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "N/A - synthetic resource, no data to delete"
+        }
+      }
+    },
+
+    "admin_panel": {
+      "description": "Admin control center - system health, sessions, audit logs (synthetic resource for nav)",
+      "rowLevelSecurity": {
+        "customer": "deny_all",
+        "technician": "deny_all",
+        "dispatcher": "deny_all",
+        "manager": "deny_all",
+        "admin": "all_records"
+      },
+      "permissions": {
+        "create": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "N/A - synthetic resource, no data to create"
+        },
+        "read": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "Only admins can access the admin panel"
+        },
+        "update": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "N/A - synthetic resource, no data to update"
+        },
+        "delete": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "N/A - synthetic resource, no data to delete"
+        }
+      }
     }
   },
 
   "_comments": {
     "usage": "This file is the single source of truth for permissions. Both backend and frontend load this file dynamically.",
     "rowLevelSecurity": "Defines what records a role can see. Frontend uses this for UI, backend enforces in queries.",
+    "syntheticResources": "dashboard and admin_panel are synthetic (non-entity) resources for nav visibility. They use the same permission structure as entities.",
     "rlsPolicies": {
       "all_records": "No filtering - role can see all records (applied: false)",
       "own_record_only": "Filter by user ID - user sees only their own record (applied: true)",

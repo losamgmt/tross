@@ -149,8 +149,13 @@ class EntityMetadata {
   /// Human-readable identity field (e.g., 'email' for customers, 'title' for work orders)
   final String identityField;
 
-  /// Resource type for permission checks (type-safe enum)
+  /// Resource type for RLS (row-level security) - determines which RECORDS user can access.
+  /// This is distinct from nav visibility (which uses permissions.json resource.read).
   final ResourceType rlsResource;
+
+  /// Icon name for Material Icons (e.g., 'people_outlined', 'business_outlined').
+  /// Used for navigation menus and entity displays.
+  final String? icon;
 
   /// Fields required for create operations
   final List<String> requiredFields;
@@ -185,6 +190,7 @@ class EntityMetadata {
     required this.primaryKey,
     required this.identityField,
     required this.rlsResource,
+    this.icon,
     required this.requiredFields,
     required this.immutableFields,
     required this.searchableFields,
@@ -235,6 +241,7 @@ class EntityMetadata {
       primaryKey: json['primaryKey'] as String? ?? 'id',
       identityField: json['identityField'] as String? ?? 'id',
       rlsResource: rlsResource,
+      icon: json['icon'] as String?,
       requiredFields:
           (json['requiredFields'] as List<dynamic>?)?.cast<String>() ?? [],
       immutableFields:

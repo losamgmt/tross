@@ -5,10 +5,11 @@
  * This is a simplified metadata for a 1:1 user relationship table
  *
  * DESIGN NOTES:
- * - Each user has exactly one preferences row (1:1 relationship)
+ * - SHARED PRIMARY KEY pattern: id = users.id (true 1:1 identifying relationship)
+ * - No separate user_id column - id IS the user reference
  * - Preferences stored as JSONB for flexibility
  * - Preference keys/types validated at application layer
- * - RLS ensures users only access their own preferences
+ * - RLS ensures users only access their own preferences (WHERE id = userId)
  */
 
 const {
@@ -16,10 +17,10 @@ const {
 } = require('../constants');
 
 module.exports = {
-  // Table name in database (legacy name, may rename in future migration)
+  // Table name in database
   tableName: 'user_preferences',
 
-  // Primary key
+  // Primary key (shared with users.id)
   primaryKey: 'id',
 
   // ============================================================================
@@ -28,9 +29,15 @@ module.exports = {
 
   /**
    * The human-readable identifier field
-   * For preferences, this is the user_id since it's 1:1 with users
+   * For preferences with shared PK, id IS the user reference
    */
-  identityField: 'user_id',
+  identityField: 'id',
+
+  /**
+   * Whether the identity field has a UNIQUE constraint
+   * id is PK, so inherently unique
+   */
+  identityFieldUnique: true,
 
   /**
    * RLS resource name for permission checks
@@ -53,15 +60,15 @@ module.exports = {
 
   /**
    * Fields required when creating a new preferences row
-   * user_id is required; preferences defaults to {}
+   * id must be provided (= user id, not auto-generated)
    */
-  requiredFields: ['user_id'],
+  requiredFields: ['id'],
 
   /**
    * Fields that cannot be modified after creation
-   * user_id is immutable (1:1 relationship established at creation)
+   * id is immutable (it's the PK and FK to users)
    */
-  immutableFields: ['user_id'],
+  immutableFields: ['id'],
 
   // ============================================================================
   // FIELD ACCESS CONTROL
@@ -70,14 +77,12 @@ module.exports = {
   // Admin can access any user's preferences
 
   fieldAccess: {
-    // Primary key
-    id: FAL.SYSTEM_ONLY,
-
-    // User relationship (set at creation, immutable)
-    user_id: {
-      create: 'admin', // System creates on user's behalf
+    // Primary key = user id (shared PK pattern)
+    // Set at creation, immutable
+    id: {
+      create: 'admin', // System creates on user's behalf (provides user id)
       read: 'customer', // Users see their own via RLS
-      update: 'none', // Immutable
+      update: 'none', // Immutable - it's the PK
       delete: 'none',
     },
 
@@ -93,8 +98,12 @@ module.exports = {
   // FOREIGN KEY CONFIGURATION
   // ============================================================================
 
+  /**
+   * Shared PK pattern: id references users.id
+   * This is both PK and FK (identifying relationship)
+   */
   foreignKeys: {
-    user_id: {
+    id: {
       table: 'users',
       displayName: 'User',
       settableOnCreate: true,
@@ -116,19 +125,19 @@ module.exports = {
   // ============================================================================
 
   /**
-   * Not searchable - preferences are fetched by user_id
+   * Not searchable - preferences are fetched by id (= user id)
    */
   searchableFields: [],
 
   /**
-   * Filterable by user_id only
+   * Filterable by id only
    */
-  filterableFields: ['id', 'user_id', 'created_at', 'updated_at'],
+  filterableFields: ['id', 'created_at', 'updated_at'],
 
   /**
    * Sortable fields
    */
-  sortableFields: ['id', 'user_id', 'created_at', 'updated_at'],
+  sortableFields: ['id', 'created_at', 'updated_at'],
 
   /**
    * Default sort
@@ -148,12 +157,12 @@ module.exports = {
   defaultIncludes: [],
 
   /**
-   * Relationship to user
+   * Relationship to user via shared PK
    */
   relationships: {
     user: {
       type: 'belongsTo',
-      foreignKey: 'user_id',
+      foreignKey: 'id', // Shared PK: preferences.id = users.id
       table: 'users',
       fields: ['id', 'email', 'first_name', 'last_name'],
     },
@@ -164,8 +173,14 @@ module.exports = {
   // ============================================================================
 
   fields: {
-    id: { type: 'integer', readonly: true },
-    user_id: { type: 'integer', required: true, readonly: true },
+    // id = users.id (shared PK pattern)
+    // NOT auto-generated - must be provided on creation
+    id: {
+      type: 'integer',
+      required: true,
+      readonly: true,
+      description: 'Primary key = users.id (shared PK pattern)',
+    },
     preferences: {
       type: 'jsonb',
       default: {},
