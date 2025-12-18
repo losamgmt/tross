@@ -54,13 +54,13 @@ ON CONFLICT (email) DO UPDATE SET
 -- USER PREFERENCES (linked to admin user)
 -- ============================================================================
 INSERT INTO user_preferences (
-    user_id,
+    id,
     preferences
 ) VALUES (
     (SELECT id FROM users WHERE email = 'zarika.amber@gmail.com'),
     '{"theme": "system", "notificationsEnabled": true}'::jsonb
 )
-ON CONFLICT (user_id) DO UPDATE SET
+ON CONFLICT (id) DO UPDATE SET
     preferences = EXCLUDED.preferences;
 
 -- ============================================================================
