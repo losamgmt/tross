@@ -196,4 +196,5 @@ coverage/
 backend/coverage/
 
 # Diagnostic/temporary scripts
-backend/test-db-connection.js
+backend/test-db-connection.js# Demo folder - do not deploy
+LANE/
