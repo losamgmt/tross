@@ -53,8 +53,8 @@ async function initializeDatabase() {
     results.schema = true;
     logger.info('✅ Schema applied successfully');
   } catch (error) {
-    logger.error('❌ Schema failed:', error.message || error);
-    logger.error('Schema error details:', { code: error.code, detail: error.detail, where: error.where });
+    logger.error('❌ Schema failed:', String(error));
+    logger.error('Schema error full:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
     // Don't throw - schema might already exist
   }
 
@@ -66,8 +66,8 @@ async function initializeDatabase() {
     results.seed = true;
     logger.info('✅ Seed data applied successfully');
   } catch (error) {
-    logger.error('❌ Seed data failed:', error.message || error);
-    logger.error('Seed error details:', { code: error.code, detail: error.detail, where: error.where });
+    logger.error('❌ Seed data failed:', String(error));
+    logger.error('Seed error full:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
     // Don't throw - seeds might already exist
   }
 
