@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:web/web.dart' as web;
 
 /// Centralized application configuration - Single source of truth
 ///
@@ -74,17 +75,32 @@ class AppConfig {
   static const String _prodFrontendUrl =
       'https://trossapp.vercel.app'; // Update when deployed
 
-  /// Frontend URL - always localhost when running `flutter run` locally
-  /// Only uses prodFrontendUrl when actually deployed to Vercel
-  static String get frontendUrl => isLocalFrontend
-      ? _devFrontendUrl
-      : (useProdBackend ? _prodFrontendUrl : _devFrontendUrl);
+  /// Get the current browser origin (e.g., https://preview-abc.vercel.app)
+  /// Falls back to _prodFrontendUrl if not in browser context
+  static String get _currentOrigin {
+    try {
+      if (kIsWeb) {
+        final origin = web.window.location.origin;
+        if (origin.isNotEmpty) {
+          return origin;
+        }
+      }
+    } catch (_) {
+      // Not in browser context
+    }
+    return _prodFrontendUrl;
+  }
 
-  /// Callback URL for Auth0 - always localhost during local development
-  /// This allows testing prod backend with local frontend
+  /// Frontend URL - always localhost when running `flutter run` locally
+  /// When deployed, uses the actual browser origin (supports Vercel previews)
+  static String get frontendUrl =>
+      isLocalFrontend ? _devFrontendUrl : _currentOrigin;
+
+  /// Callback URL for Auth0
+  /// Uses current browser origin when deployed (supports Vercel preview deployments)
   static String get callbackUrl => kDebugMode
       ? '$_devFrontendUrl/callback' // Always localhost when running locally
-      : '$frontendUrl/callback'; // Only use prod URL when deployed
+      : '$_currentOrigin/callback'; // Use actual browser origin when deployed
 
   // ============================================================================
   // HEALTH MONITORING ENDPOINTS
