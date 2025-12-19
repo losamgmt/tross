@@ -16,6 +16,7 @@ library;
 import '../models/permission.dart';
 import '../services/auth/auth_profile_service.dart';
 import '../services/entity_metadata.dart';
+import '../services/error_service.dart';
 import '../services/nav_config_loader.dart';
 import '../services/permission_service_dynamic.dart';
 import '../utils/entity_icon_resolver.dart';
@@ -55,11 +56,32 @@ class NavMenuBuilder {
   /// Filter items based on user permissions
   ///
   /// Removes items the user doesn't have access to.
+  /// DEFENSIVE: If filtering fails for any reason, returns all items
+  /// (backend validates permissions anyway).
   static List<NavMenuItem> filterForUser(
     List<NavMenuItem> items,
     Map<String, dynamic>? user,
   ) {
-    return items.where((item) => item.isVisibleFor(user)).toList();
+    try {
+      final filtered = items.where((item) => item.isVisibleFor(user)).toList();
+      ErrorService.logInfo(
+        '[NavMenu] filterForUser result',
+        context: {
+          'inputCount': items.length,
+          'outputCount': filtered.length,
+          'hasUser': user != null,
+          'userRole': user?['role'],
+        },
+      );
+      return filtered;
+    } catch (e) {
+      ErrorService.logError(
+        '[NavMenu] filterForUser failed - returning all items',
+        error: e,
+        context: {'itemCount': items.length, 'hasUser': user != null},
+      );
+      return items; // Defensive: show all items on error
+    }
   }
 
   // ============================================================================
@@ -120,6 +142,15 @@ class NavMenuBuilder {
     // Map permissionResource to ResourceType for nav visibility check
     final resourceType = ResourceType.fromString(staticItem.permissionResource);
 
+    ErrorService.logInfo(
+      '[NavMenu] Converting static item',
+      context: {
+        'id': staticItem.id,
+        'permissionResource': staticItem.permissionResource,
+        'resourceTypeResolved': resourceType?.toBackendString(),
+      },
+    );
+
     // Use icon from config, fallback to ID-based lookup
     final icon =
         EntityIconResolver.fromString(staticItem.icon) ??
@@ -169,13 +200,52 @@ class NavMenuBuilder {
   // ============================================================================
 
   /// Check if user can access a resource
+  ///
+  /// DEFENSIVE: Returns true on error to avoid hiding menu items due to bugs.
+  /// Backend always validates permissions, so false negatives are worse than
+  /// false positives (user clicks, gets 403 → that's fine).
   static bool _canAccessResource(
     ResourceType resource,
     Map<String, dynamic>? user,
   ) {
-    if (user == null) return false;
-    final role = user['role'] as String?;
-    return PermissionService.hasPermission(role, resource, CrudOperation.read);
+    try {
+      if (user == null) {
+        ErrorService.logWarning(
+          '[NavMenu] _canAccessResource: user is null',
+          context: {'resource': resource.toBackendString()},
+        );
+        return false;
+      }
+      final role = user['role'] as String?;
+      if (role == null || role.isEmpty) {
+        ErrorService.logWarning(
+          '[NavMenu] _canAccessResource: role is null/empty',
+          context: {'resource': resource.toBackendString(), 'user': user},
+        );
+        return true; // Defensive: show menu item, let backend reject if unauthorized
+      }
+      final result = PermissionService.hasPermission(
+        role,
+        resource,
+        CrudOperation.read,
+      );
+      ErrorService.logInfo(
+        '[NavMenu] _canAccessResource check',
+        context: {
+          'resource': resource.toBackendString(),
+          'role': role,
+          'result': result,
+        },
+      );
+      return result;
+    } catch (e) {
+      ErrorService.logError(
+        '[NavMenu] _canAccessResource exception - defaulting to visible',
+        error: e,
+        context: {'resource': resource.toBackendString()},
+      );
+      return true; // Defensive: show menu item on error
+    }
   }
 
   /// Check if user can access an entity

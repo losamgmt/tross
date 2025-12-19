@@ -41,7 +41,9 @@ class EntityScreen extends StatefulWidget {
 
 class _EntityScreenState extends State<EntityScreen> {
   /// GlobalKey to trigger refresh on CRUD operations
-  final _tableKey =
+  /// Uses late initialization to ensure key changes when entity changes
+  GlobalKey<organisms.RefreshableDataProviderState<List<Map<String, dynamic>>>>
+  _tableKey =
       GlobalKey<
         organisms.RefreshableDataProviderState<List<Map<String, dynamic>>>
       >();
@@ -49,6 +51,20 @@ class _EntityScreenState extends State<EntityScreen> {
   /// Refresh handler for CRUD callbacks
   void _refreshTable() {
     _tableKey.currentState?.refresh();
+  }
+
+  @override
+  void didUpdateWidget(EntityScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // When entity changes, create a new key to force complete rebuild
+    if (oldWidget.entityName != widget.entityName) {
+      setState(() {
+        _tableKey =
+            GlobalKey<
+              organisms.RefreshableDataProviderState<List<Map<String, dynamic>>>
+            >();
+      });
+    }
   }
 
   @override

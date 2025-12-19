@@ -80,23 +80,34 @@ class NavMenuItem {
   }
 
   /// Check if this item should be visible for the given user
+  ///
+  /// DEFENSIVE: Returns true on exception to avoid hiding menu items due to bugs.
+  /// Backend validates permissions, so showing an item the user can't use is
+  /// better than hiding valid items due to a frontend bug.
   bool isVisibleFor(Map<String, dynamic>? user) {
-    // Check custom visibility function first
-    if (visibleWhen != null) {
-      return visibleWhen!(user);
-    }
+    try {
+      // Check custom visibility function first
+      if (visibleWhen != null) {
+        return visibleWhen!(user);
+      }
 
-    // Check auth requirement
-    if (requiresAuth && user == null) {
-      return false;
-    }
+      // Check auth requirement
+      if (requiresAuth && user == null) {
+        return false;
+      }
 
-    // Check admin requirement
-    if (requiresAdmin) {
-      final role = user?['role'] as String?;
-      return role == 'admin';
-    }
+      // Check admin requirement
+      if (requiresAdmin) {
+        final role = user?['role'] as String?;
+        return role == 'admin';
+      }
 
-    return true;
+      return true;
+    } catch (e) {
+      // On any error, default to visible - backend will reject if unauthorized
+      // This prevents bugs from hiding legitimate menu items
+      debugPrint('[NavMenuItem] isVisibleFor exception for $id: $e');
+      return true;
+    }
   }
 }

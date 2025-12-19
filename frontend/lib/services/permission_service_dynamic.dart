@@ -48,6 +48,9 @@ class PermissionService {
     _config = await PermissionConfigLoader.load(forceReload: forceReload);
   }
 
+  /// Check if service is initialized
+  static bool get isInitialized => _config != null;
+
   /// Get cached config (throws if not initialized)
   static PermissionConfig get _ensureConfig {
     if (_config == null) {
@@ -78,6 +81,14 @@ class PermissionService {
     // Validate inputs
     if (roleName == null || roleName.isEmpty) {
       return false; // No role = no permission
+    }
+
+    // Check if service is initialized
+    if (!isInitialized) {
+      // Not initialized - this shouldn't happen in normal flow
+      // Return true defensively to avoid hiding UI elements due to init issues
+      // Backend will validate actual permissions
+      return true;
     }
 
     final config = _ensureConfig;
