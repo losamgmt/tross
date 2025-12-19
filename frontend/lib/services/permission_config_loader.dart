@@ -11,9 +11,25 @@
 library;
 
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import '../utils/helpers/string_helper.dart';
 import 'error_service.dart';
+
+/// Expected minimum version of permissions.json
+/// Bump this when adding new resources that the frontend depends on
+const String kExpectedPermissionVersion = '3.0.1';
+
+/// Required resources that MUST exist in permissions.json
+/// If any are missing, the config is considered invalid/stale
+const List<String> kRequiredResources = [
+  'users',
+  'roles',
+  'work_orders',
+  'preferences',
+  'dashboard',
+  'admin_panel',
+];
 
 /// Permission Configuration Model
 class PermissionConfig {
@@ -58,18 +74,38 @@ class PermissionConfig {
 
   /// Get role priority by name (case-insensitive)
   int? getRolePriority(String? roleName) {
-    if (roleName == null || roleName.isEmpty) return null;
+    if (roleName == null || roleName.isEmpty) {
+      debugPrint('[PermConfig] getRolePriority: roleName is null/empty');
+      return null;
+    }
     final normalized = StringHelper.toLowerCase(roleName);
-    return roles[normalized]?.priority;
+    final priority = roles[normalized]?.priority;
+    if (priority == null) {
+      debugPrint(
+        '[PermConfig] getRolePriority: role "$normalized" not found. Available: ${roles.keys.join(', ')}',
+      );
+    }
+    return priority;
   }
 
   /// Get minimum priority required for operation on resource
   int? getMinimumPriority(String resource, String operation) {
     final resourceConfig = resources[resource];
-    if (resourceConfig == null) return null;
+    if (resourceConfig == null) {
+      debugPrint(
+        '[PermConfig] getMinimumPriority: resource "$resource" not found. Available: ${resources.keys.join(', ')}',
+      );
+      return null;
+    }
 
     final permission = resourceConfig.permissions[operation];
-    return permission?.minimumPriority;
+    if (permission == null) {
+      debugPrint(
+        '[PermConfig] getMinimumPriority: operation "$operation" not found for resource "$resource". Available: ${resourceConfig.permissions.keys.join(', ')}',
+      );
+      return null;
+    }
+    return permission.minimumPriority;
   }
 
   /// Get minimum role required for operation on resource
@@ -194,18 +230,36 @@ class PermissionConfigLoader {
 
     try {
       // Load from assets
+      debugPrint('[PermConfigLoader] Loading permissions.json from assets...');
       final jsonString = await rootBundle.loadString(
         'assets/config/permissions.json',
       );
+      debugPrint(
+        '[PermConfigLoader] Asset loaded, size: ${jsonString.length} bytes',
+      );
+
       final jsonData = json.decode(jsonString) as Map<String, dynamic>;
 
-      // Validate and parse
+      // Validate structure and required resources
       _validateConfig(jsonData);
       final config = PermissionConfig.fromJson(jsonData);
+
+      // Validate version compatibility
+      _validateVersion(config.version);
+
+      // Validate all required resources exist
+      _validateRequiredResources(config);
 
       // Cache and return
       _cached = config;
       _loadedAt = DateTime.now();
+
+      debugPrint('[PermConfigLoader] ✓ Config loaded successfully');
+      debugPrint('[PermConfigLoader]   version: ${config.version}');
+      debugPrint('[PermConfigLoader]   roles: ${config.roles.keys.join(', ')}');
+      debugPrint(
+        '[PermConfigLoader]   resources: ${config.resources.keys.join(', ')}',
+      );
 
       ErrorService.logInfo(
         '[Permissions] Loaded config',
@@ -213,14 +267,79 @@ class PermissionConfigLoader {
           'version': config.version,
           'roles': config.roles.length,
           'resources': config.resources.length,
+          'resourceKeys': config.resources.keys.toList(),
         },
       );
 
       return config;
-    } catch (e) {
-      ErrorService.logError('[Permissions] Failed to load', error: e);
+    } catch (e, stackTrace) {
+      debugPrint('[PermConfigLoader] ✗ FAILED TO LOAD: $e');
+      ErrorService.logError(
+        '[Permissions] Failed to load',
+        error: e,
+        stackTrace: stackTrace,
+      );
       rethrow;
     }
+  }
+
+  /// Validate config version is compatible
+  static void _validateVersion(String loadedVersion) {
+    // Parse version components (e.g., "3.0.1" -> [3, 0, 1])
+    final loaded = loadedVersion.split('.').map(int.tryParse).toList();
+    final expected = kExpectedPermissionVersion
+        .split('.')
+        .map(int.tryParse)
+        .toList();
+
+    if (loaded.length < 2 || expected.length < 2) {
+      debugPrint(
+        '[PermConfigLoader] WARNING: Could not parse version "$loadedVersion"',
+      );
+      return;
+    }
+
+    // Check major.minor compatibility (patch can differ)
+    final loadedMajor = loaded[0] ?? 0;
+    final loadedMinor = loaded[1] ?? 0;
+    final expectedMajor = expected[0] ?? 0;
+    final expectedMinor = expected[1] ?? 0;
+
+    if (loadedMajor < expectedMajor ||
+        (loadedMajor == expectedMajor && loadedMinor < expectedMinor)) {
+      throw Exception(
+        'Stale permissions.json: loaded v$loadedVersion but frontend requires v$kExpectedPermissionVersion+. '
+        'This usually means the browser/CDN is serving a cached old version. '
+        'Try hard refresh (Ctrl+Shift+R) or clear browser cache.',
+      );
+    }
+
+    debugPrint(
+      '[PermConfigLoader] ✓ Version check passed: $loadedVersion >= $kExpectedPermissionVersion',
+    );
+  }
+
+  /// Validate all required resources exist
+  static void _validateRequiredResources(PermissionConfig config) {
+    final missing = <String>[];
+    for (final resource in kRequiredResources) {
+      if (!config.resources.containsKey(resource)) {
+        missing.add(resource);
+      }
+    }
+
+    if (missing.isNotEmpty) {
+      throw Exception(
+        'Missing required resources in permissions.json: ${missing.join(', ')}. '
+        'Found resources: ${config.resources.keys.join(', ')}. '
+        'This usually means the browser/CDN is serving a cached old version. '
+        'Try hard refresh (Ctrl+Shift+R) or clear browser cache.',
+      );
+    }
+
+    debugPrint(
+      '[PermConfigLoader] ✓ All ${kRequiredResources.length} required resources present',
+    );
   }
 
   /// Validate configuration structure
