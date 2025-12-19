@@ -29,7 +29,10 @@ class LoginForm extends StatelessWidget {
                 ? null
                 : () => _loginWithAuth0(context),
             icon: const Icon(Icons.security),
-            label: Text(AppConstants.loginButtonAuth0),
+            label: Text(
+              AppConstants.loginButtonAuth0,
+              overflow: TextOverflow.ellipsis,
+            ),
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.primary,
               foregroundColor: Theme.of(context).colorScheme.onPrimary,

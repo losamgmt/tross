@@ -300,18 +300,37 @@ npm run dev
 - Create new "Regular Web Application"
 - Note: Domain, Client ID, Client Secret
 
-**2. Configure Callback URLs**
+**2. Configure URLs (supports Vercel previews)**
 ```
 Allowed Callback URLs:
-http://localhost:3001/api/auth0/callback
-https://your-domain.com/api/auth0/callback
+http://localhost:8080/callback
+https://trossapp.vercel.app/callback
+https://*-zarika-ambers-projects.vercel.app/callback
 
 Allowed Logout URLs:
 http://localhost:8080
-https://your-domain.com
+https://trossapp.vercel.app
+https://*-zarika-ambers-projects.vercel.app
+
+Allowed Web Origins:
+http://localhost:8080
+https://trossapp.vercel.app
+https://*-zarika-ambers-projects.vercel.app
+
+Allowed Origins (CORS):
+http://localhost:8080
+https://trossapp.vercel.app
+https://*-zarika-ambers-projects.vercel.app
 ```
 
-**3. Set Environment Variables**
+**3. Configure Branding (Optional)**
+Go to Branding → Universal Login → Settings:
+- **Logo**: Upload your app logo (200x200px recommended)
+- **Favicon**: Upload favicon to fix browser tab icon (32x32px .ico or .png)
+- **Primary Color**: Set to match your app's theme
+- **Background**: Customize login page background
+
+**4. Set Environment Variables**
 ```bash
 # backend/.env
 AUTH0_DOMAIN=your-tenant.auth0.com
