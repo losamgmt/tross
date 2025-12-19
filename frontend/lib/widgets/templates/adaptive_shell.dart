@@ -27,7 +27,9 @@ import '../../config/app_spacing.dart';
 import '../../config/constants.dart';
 import '../../core/routing/app_routes.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/nav_config_loader.dart';
 import '../../services/nav_menu_builder.dart';
+import '../../services/permission_service_dynamic.dart';
 import '../organisms/navigation/nav_menu_item.dart';
 
 /// Responsive layout shell with sidebar/drawer navigation
@@ -65,26 +67,19 @@ class AdaptiveShell extends StatelessWidget {
     final authProvider = context.watch<AuthProvider>();
     final user = authProvider.user;
 
-    // DEBUG: Log user data for production debugging
-    debugPrint('[AdaptiveShell] user: $user');
-    debugPrint('[AdaptiveShell] user role: ${user?['role']}');
-    debugPrint('[AdaptiveShell] user role_priority: ${user?['role_priority']}');
+    // DEBUG: Check service initialization
+    final navConfigInit = NavConfigService.isInitialized;
+    final permissionInit = PermissionService.isInitialized;
+
+    // Get UNFILTERED items first for debug
+    final rawUserItems = userMenuItems ?? NavMenuBuilder.buildUserMenuItems();
 
     // Get menu items from NavMenuBuilder and filter by permissions
     final sidebarItems = NavMenuBuilder.filterForUser(
       sidebarMenuItems ?? NavMenuBuilder.buildSidebarItems(),
       user,
     );
-    final userItems = NavMenuBuilder.filterForUser(
-      userMenuItems ?? NavMenuBuilder.buildUserMenuItems(),
-      user,
-    );
-
-    // DEBUG: Log filtered items
-    debugPrint('[AdaptiveShell] userItems count: ${userItems.length}');
-    debugPrint(
-      '[AdaptiveShell] userItems: ${userItems.map((i) => i.id).toList()}',
-    );
+    final userItems = NavMenuBuilder.filterForUser(rawUserItems, user);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -98,6 +93,9 @@ class AdaptiveShell extends StatelessWidget {
             authProvider,
             sidebarItems,
             userItems,
+            navInit: navConfigInit,
+            permInit: permissionInit,
+            rawCount: rawUserItems.length,
           );
         } else {
           return _buildNarrowLayout(
@@ -105,6 +103,9 @@ class AdaptiveShell extends StatelessWidget {
             authProvider,
             sidebarItems,
             userItems,
+            navInit: navConfigInit,
+            permInit: permissionInit,
+            rawCount: rawUserItems.length,
           );
         }
       },
@@ -116,8 +117,11 @@ class AdaptiveShell extends StatelessWidget {
     BuildContext context,
     AuthProvider authProvider,
     List<NavMenuItem> sidebarItems,
-    List<NavMenuItem> userItems,
-  ) {
+    List<NavMenuItem> userItems, {
+    bool navInit = false,
+    bool permInit = false,
+    int rawCount = 0,
+  }) {
     return Row(
       children: [
         // Persistent sidebar
@@ -138,6 +142,9 @@ class AdaptiveShell extends StatelessWidget {
                     authProvider,
                     userItems,
                     showMenuButton: false,
+                    navInit: navInit,
+                    permInit: permInit,
+                    rawCount: rawCount,
                   )
                 : null,
             body: body,
@@ -152,11 +159,21 @@ class AdaptiveShell extends StatelessWidget {
     BuildContext context,
     AuthProvider authProvider,
     List<NavMenuItem> sidebarItems,
-    List<NavMenuItem> userItems,
-  ) {
+    List<NavMenuItem> userItems, {
+    bool navInit = false,
+    bool permInit = false,
+    int rawCount = 0,
+  }) {
     return Scaffold(
       appBar: showAppBar
-          ? _buildAppBar(context, authProvider, userItems)
+          ? _buildAppBar(
+              context,
+              authProvider,
+              userItems,
+              navInit: navInit,
+              permInit: permInit,
+              rawCount: rawCount,
+            )
           : null,
       drawer: Drawer(
         width: AppBreakpoints.sidebarWidth,
@@ -177,11 +194,13 @@ class AdaptiveShell extends StatelessWidget {
     AuthProvider authProvider,
     List<NavMenuItem> userItems, {
     bool showMenuButton = true,
+    bool navInit = false,
+    bool permInit = false,
+    int rawCount = 0,
   }) {
-    // DEBUG: Show role in app bar for production debugging
-    final userRole = authProvider.user?['role'] ?? 'null';
+    // DEBUG: Show service init status in app bar
     final debugTitle =
-        '$pageTitle [role: $userRole, items: ${userItems.length}]';
+        '$pageTitle [nav:$navInit perm:$permInit raw:$rawCount filt:${userItems.length}]';
 
     return AppBar(
       backgroundColor: AppColors.brandPrimary,
