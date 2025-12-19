@@ -21,8 +21,8 @@
 /// ```
 library;
 
-import 'package:flutter/foundation.dart';
 import '../models/permission.dart';
+import 'error_service.dart';
 import 'permission_config_loader.dart';
 
 /// Permission Service
@@ -79,9 +79,8 @@ class PermissionService {
     ResourceType resource,
     CrudOperation operation,
   ) {
-    // Validate inputs
+    // Validate inputs - silent return, this is expected for unauthenticated users
     if (roleName == null || roleName.isEmpty) {
-      debugPrint('[PermCheck] roleName null/empty');
       return false; // No role = no permission
     }
 
@@ -90,14 +89,16 @@ class PermissionService {
       // Not initialized - this shouldn't happen in normal flow
       // Return true defensively to avoid hiding UI elements due to init issues
       // Backend will validate actual permissions
-      debugPrint('[PermCheck] not initialized - returning true');
+      ErrorService.logDebug('[PermCheck] not initialized - returning true');
       return true;
     }
 
     final config = _ensureConfig;
     final userPriority = config.getRolePriority(roleName);
     if (userPriority == null) {
-      debugPrint('[PermCheck] userPriority null for role: $roleName');
+      ErrorService.logDebug(
+        '[PermCheck] userPriority null for role: $roleName',
+      );
       return false; // Unknown role = no permission
     }
 
@@ -110,15 +111,17 @@ class PermissionService {
     );
 
     if (requiredPriority == null) {
-      debugPrint(
+      ErrorService.logDebug(
         '[PermCheck] requiredPriority null for $resourceKey.$operationKey',
       );
       return false; // Unknown permission = no permission
     }
 
+    // Permission checks are frequent - only log in debug mode
+    // This eliminates the massive log spam in production
     final result = userPriority >= requiredPriority;
-    debugPrint(
-      '[PermCheck] role=$roleName res=$resourceKey op=$operationKey userPri=$userPriority reqPri=$requiredPriority => $result',
+    ErrorService.logDebug(
+      '[PermCheck] $roleName:$resourceKey:$operationKey = $result',
     );
 
     // User priority must be >= required priority

@@ -1,5 +1,8 @@
 import 'package:flutter/foundation.dart';
-import 'package:web/web.dart' as web;
+
+// Conditional import: use web version on web platforms, stub on VM/test
+import 'browser_origin_stub.dart'
+    if (dart.library.html) 'browser_origin_web.dart';
 
 /// Centralized application configuration - Single source of truth
 ///
@@ -78,15 +81,11 @@ class AppConfig {
   /// Get the current browser origin (e.g., https://preview-abc.vercel.app)
   /// Falls back to _prodFrontendUrl if not in browser context
   static String get _currentOrigin {
-    try {
-      if (kIsWeb) {
-        final origin = web.window.location.origin;
-        if (origin.isNotEmpty) {
-          return origin;
-        }
+    if (kIsWeb) {
+      final origin = getBrowserOrigin();
+      if (origin.isNotEmpty) {
+        return origin;
       }
-    } catch (_) {
-      // Not in browser context
     }
     return _prodFrontendUrl;
   }

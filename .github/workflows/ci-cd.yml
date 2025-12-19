@@ -12,8 +12,9 @@ on:
     branches: [ main ]
 
 env:
-  NODE_VERSION: '18'
-  FLUTTER_VERSION: '3.16.0'
+  NODE_VERSION: '20'
+  # Flutter 3.38.x includes Dart 3.10.x which satisfies SDK >=3.9.2 <4.0.0
+  FLUTTER_VERSION: '3.38.0'
 
 jobs:
   # Test Backend
@@ -34,7 +35,8 @@ jobs:
           --health-timeout 5s
           --health-retries 5
         ports:
-          - 5432:5432
+          # Map to 5433 to match test database port in constants.js
+          - 5433:5432
 
     steps:
       - name: Checkout code
@@ -52,13 +54,16 @@ jobs:
       - name: Run backend tests
         run: npm run test --workspace=backend
         env:
-          # deployment-adapter.js uses individual vars when DATABASE_URL not set
-          DB_HOST: localhost
-          DB_PORT: 5432
-          DB_NAME: trossapp_test
-          DB_USER: postgres
-          DB_PASSWORD: test123
+          # Test database configuration (matches constants.js TEST config)
+          TEST_DB_HOST: localhost
+          TEST_DB_PORT: 5433
+          TEST_DB_NAME: trossapp_test
+          TEST_DB_USER: postgres
+          TEST_DB_PASSWORD: test123
           NODE_ENV: test
+          JWT_SECRET: test-secret-key-for-ci
+          AUTH_MODE: development
+          USE_TEST_AUTH: 'true'
 
   # Test Frontend
   test-frontend:

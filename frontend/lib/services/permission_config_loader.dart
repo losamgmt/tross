@@ -11,7 +11,6 @@
 library;
 
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import '../utils/helpers/string_helper.dart';
 import 'error_service.dart';
@@ -75,14 +74,15 @@ class PermissionConfig {
   /// Get role priority by name (case-insensitive)
   int? getRolePriority(String? roleName) {
     if (roleName == null || roleName.isEmpty) {
-      debugPrint('[PermConfig] getRolePriority: roleName is null/empty');
+      // Silent in prod - this is expected for unauthenticated state
       return null;
     }
     final normalized = StringHelper.toLowerCase(roleName);
     final priority = roles[normalized]?.priority;
     if (priority == null) {
-      debugPrint(
-        '[PermConfig] getRolePriority: role "$normalized" not found. Available: ${roles.keys.join(', ')}',
+      ErrorService.logDebug(
+        '[PermConfig] role "$normalized" not found',
+        context: {'available': roles.keys.toList()},
       );
     }
     return priority;
@@ -92,16 +92,18 @@ class PermissionConfig {
   int? getMinimumPriority(String resource, String operation) {
     final resourceConfig = resources[resource];
     if (resourceConfig == null) {
-      debugPrint(
-        '[PermConfig] getMinimumPriority: resource "$resource" not found. Available: ${resources.keys.join(', ')}',
+      ErrorService.logDebug(
+        '[PermConfig] resource "$resource" not found',
+        context: {'available': resources.keys.toList()},
       );
       return null;
     }
 
     final permission = resourceConfig.permissions[operation];
     if (permission == null) {
-      debugPrint(
-        '[PermConfig] getMinimumPriority: operation "$operation" not found for resource "$resource". Available: ${resourceConfig.permissions.keys.join(', ')}',
+      ErrorService.logDebug(
+        '[PermConfig] operation "$operation" not found for "$resource"',
+        context: {'available': resourceConfig.permissions.keys.toList()},
       );
       return null;
     }
@@ -230,12 +232,13 @@ class PermissionConfigLoader {
 
     try {
       // Load from assets
-      debugPrint('[PermConfigLoader] Loading permissions.json from assets...');
+      ErrorService.logDebug('[PermConfigLoader] Loading permissions.json...');
       final jsonString = await rootBundle.loadString(
         'assets/config/permissions.json',
       );
-      debugPrint(
-        '[PermConfigLoader] Asset loaded, size: ${jsonString.length} bytes',
+      ErrorService.logDebug(
+        '[PermConfigLoader] Asset loaded',
+        context: {'size': '${jsonString.length} bytes'},
       );
 
       final jsonData = json.decode(jsonString) as Map<String, dynamic>;
@@ -254,26 +257,14 @@ class PermissionConfigLoader {
       _cached = config;
       _loadedAt = DateTime.now();
 
-      debugPrint('[PermConfigLoader] ✓ Config loaded successfully');
-      debugPrint('[PermConfigLoader]   version: ${config.version}');
-      debugPrint('[PermConfigLoader]   roles: ${config.roles.keys.join(', ')}');
-      debugPrint(
-        '[PermConfigLoader]   resources: ${config.resources.keys.join(', ')}',
-      );
-
-      ErrorService.logInfo(
-        '[Permissions] Loaded config',
-        context: {
-          'version': config.version,
-          'roles': config.roles.length,
-          'resources': config.resources.length,
-          'resourceKeys': config.resources.keys.toList(),
-        },
+      // Summary log - still uses logDebug for dev-only output
+      ErrorService.logDebug(
+        '[PermConfigLoader] ✓ Config loaded: v${config.version}, ${config.roles.length} roles, ${config.resources.length} resources',
       );
 
       return config;
     } catch (e, stackTrace) {
-      debugPrint('[PermConfigLoader] ✗ FAILED TO LOAD: $e');
+      // Errors always log (they're important)
       ErrorService.logError(
         '[Permissions] Failed to load',
         error: e,
@@ -293,8 +284,8 @@ class PermissionConfigLoader {
         .toList();
 
     if (loaded.length < 2 || expected.length < 2) {
-      debugPrint(
-        '[PermConfigLoader] WARNING: Could not parse version "$loadedVersion"',
+      ErrorService.logWarning(
+        '[Permissions] Could not parse version "$loadedVersion"',
       );
       return;
     }
@@ -308,15 +299,14 @@ class PermissionConfigLoader {
     if (loadedMajor < expectedMajor ||
         (loadedMajor == expectedMajor && loadedMinor < expectedMinor)) {
       // WARNING only - don't crash the app, just log loudly
-      final message =
-          'STALE CONFIG: permissions.json v$loadedVersion < required v$kExpectedPermissionVersion. '
-          'CDN may be caching old version. Try Ctrl+Shift+R.';
-      debugPrint('[PermConfigLoader] ⚠️ WARNING: $message');
-      ErrorService.logWarning('[Permissions] $message');
+      ErrorService.logWarning(
+        '[Permissions] STALE CONFIG: v$loadedVersion < required v$kExpectedPermissionVersion. '
+        'CDN may be caching old version. Try Ctrl+Shift+R.',
+      );
       // Continue anyway - better to show something than blank page
     } else {
-      debugPrint(
-        '[PermConfigLoader] ✓ Version check passed: $loadedVersion >= $kExpectedPermissionVersion',
+      ErrorService.logDebug(
+        '[PermConfigLoader] ✓ Version OK: $loadedVersion >= $kExpectedPermissionVersion',
       );
     }
   }
@@ -331,15 +321,14 @@ class PermissionConfigLoader {
     }
 
     if (missing.isNotEmpty) {
-      // WARNING only - don't crash the app, just log loudly
-      final message =
-          'Missing resources: ${missing.join(', ')}. Found: ${config.resources.keys.join(', ')}. '
-          'CDN may be caching old version. Try Ctrl+Shift+R.';
-      debugPrint('[PermConfigLoader] ⚠️ WARNING: $message');
-      ErrorService.logWarning('[Permissions] $message');
+      // WARNING only - don't crash the app
+      ErrorService.logWarning(
+        '[Permissions] Missing resources: ${missing.join(', ')}. '
+        'CDN may be caching old version. Try Ctrl+Shift+R.',
+      );
       // Continue anyway - better to show something than blank page
     } else {
-      debugPrint(
+      ErrorService.logDebug(
         '[PermConfigLoader] ✓ All ${kRequiredResources.length} required resources present',
       );
     }
@@ -394,7 +383,7 @@ class PermissionConfigLoader {
       }
     }
 
-    ErrorService.logInfo('[Permissions] Configuration validation passed');
+    ErrorService.logDebug('[Permissions] Configuration validation passed');
   }
 
   /// Clear cache (useful for testing)

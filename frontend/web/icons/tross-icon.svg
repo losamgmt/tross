@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Tross App Icon: Wrench in Circle (matches Icons.build_circle) -->
+  <!-- Primary color: #CD7F32 (Bronze - your actual brand color) -->
+  
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="256" fill="#CD7F32"/>
+  
+  <!-- Wrench icon (negative space / white) -->
+  <!-- This is a simplified wrench shape matching Material Design's build icon -->
+  <path fill="#FFFFFF" d="M352.5 306.6l-94.3-94.3c6.8-21.3 1.6-45.2-15.6-62.4-21.9-21.9-54.5-25.4-80.2-10.5L211 188l-35.3 35.3-48.6-48.6c-14.9 25.7-11.4 58.3 10.5 80.2 17.2 17.2 41.1 22.4 62.4 15.6l94.3 94.3c3.5 3.5 9.2 3.5 12.7 0l45.5-45.5c3.6-3.5 3.6-9.2 0-12.7zM190.1 208L208 190.1l24.7 24.7-17.9 17.9-24.7-24.7z"/>
+</svg>
+</svg>

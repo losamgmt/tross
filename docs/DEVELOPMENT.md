@@ -386,12 +386,40 @@ tail -f backend/logs/combined.log
 # Flutter DevTools
 flutter run -d chrome --observatory-port=9200
 
-# Print debugging
-debugPrint('Value: $value');
-
 # Widget inspector
 # Open Chrome DevTools while running
 ```
+
+### Frontend Logging Strategy
+
+Use `ErrorService` for all logging. This ensures:
+- **Silent in production** (no console spam for users)
+- **Silent in tests** (clean test output)
+- **Active in local dev** (full debugging)
+
+**Log Levels:**
+```dart
+// Error - Always logged to developer.log, prints in debug mode
+ErrorService.logError('Failed to load data', error: e, context: {'id': 123});
+
+// Warning - Shows in debug mode, useful for deprecations/issues
+ErrorService.logWarning('Config may be stale', context: {'version': '1.0'});
+
+// Info - General flow information (debug mode only)
+ErrorService.logInfo('User logged in', context: {'email': user.email});
+
+// Debug - Verbose tracing (debug mode only, not in tests)
+ErrorService.logDebug('Permission check', context: {'role': role, 'resource': res});
+```
+
+**Never use:**
+- `print()` directly - not environment-aware
+- `debugPrint()` directly - use `ErrorService.logDebug()` instead
+
+**Why?**
+- `kDebugMode` is false in production Flutter web builds
+- `isInTestMode` prevents log pollution during `flutter test`
+- Centralized control over all logging behavior
 
 ---
 

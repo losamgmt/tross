@@ -126,4 +126,25 @@ class ErrorService {
     // Default fallback
     return 'Something went wrong. Please try again or contact support if the problem persists.';
   }
+
+  /// Log debug-level messages (verbose logging for development only)
+  ///
+  /// COMPLETELY SILENT in:
+  /// - Production builds (kDebugMode = false)
+  /// - Test execution (isInTestMode = true)
+  ///
+  /// Only outputs to console during local development.
+  /// Use this for detailed tracing that helps during development
+  /// but would be noise in production console.
+  static void logDebug(String message, {Map<String, dynamic>? context}) {
+    // Debug logging ONLY in local development, not in prod builds or tests
+    if (!kDebugMode || isInTestMode) return;
+
+    // ignore: avoid_print
+    print('🔍 DEBUG: $message');
+    if (context != null) {
+      // ignore: avoid_print
+      print('   Context: $context');
+    }
+  }
 }

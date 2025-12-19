@@ -11,8 +11,9 @@ on:
     branches: [ develop ]
 
 env:
-  NODE_VERSION: '18'
-  FLUTTER_VERSION: '3.16.0'
+  NODE_VERSION: '20'
+  # Flutter 3.38.x includes Dart 3.10.x which satisfies SDK >=3.9.2 <4.0.0
+  FLUTTER_VERSION: '3.38.0'
 
 jobs:
   # Quick validation for development
