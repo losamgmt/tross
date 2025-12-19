@@ -138,6 +138,7 @@ class NavMenuBuilder {
   ///
   /// Uses `permissionResource` for nav visibility (distinct from entity rlsResource
   /// which controls row-level data access).
+  /// If `permissionResource` is null, item is visible to all authenticated users.
   static NavMenuItem _staticItemToNavMenuItem(StaticNavItem staticItem) {
     // Map permissionResource to ResourceType for nav visibility check
     final resourceType = ResourceType.fromString(staticItem.permissionResource);
@@ -148,6 +149,7 @@ class NavMenuBuilder {
         'id': staticItem.id,
         'permissionResource': staticItem.permissionResource,
         'resourceTypeResolved': resourceType?.toBackendString(),
+        'hasPermissionCheck': resourceType != null,
       },
     );
 
@@ -161,8 +163,9 @@ class NavMenuBuilder {
       label: staticItem.label,
       icon: icon,
       route: staticItem.route,
-      // Don't use requiresAuth - visibleWhen handles permission checks
-      requiresAuth: false,
+      // If no permissionResource, just require auth (any logged-in user)
+      // If permissionResource exists, use visibleWhen for permission check
+      requiresAuth: resourceType == null,
       visibleWhen: resourceType != null
           ? (user) => _canAccessResource(resourceType, user)
           : null,

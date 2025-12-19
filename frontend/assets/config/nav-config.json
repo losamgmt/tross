@@ -52,7 +52,6 @@
       "route": "/settings",
       "group": "account",
       "order": 1,
-      "permissionResource": "preferences",
       "menuType": "userMenu"
     }
   ],
