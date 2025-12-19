@@ -2,7 +2,7 @@ name: tross_app
 description: "Tross - Professional work order management system with skills-based matching"
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 1.0.1+1
 
 environment:
   sdk: '>=3.9.2 <4.0.0'

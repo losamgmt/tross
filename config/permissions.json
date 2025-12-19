@@ -3,8 +3,8 @@
   "$id": "https://trossapp.com/schemas/permissions.json",
   "title": "TrossApp Permission Configuration",
   "description": "Single source of truth for role-based access control (RBAC). Used by both backend and frontend to ensure permission parity.",
-  "version": "3.0.0",
-  "lastModified": "2025-11-17",
+  "version": "3.0.1",
+  "lastModified": "2025-12-18",
   
   "roles": {
     "admin": {
