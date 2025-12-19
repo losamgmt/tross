@@ -701,9 +701,9 @@ class GenericEntityService {
     // Filter sensitive fields from response
     const filteredResult = filterOutput(result.rows[0], metadata);
 
-    // Log audit event (non-blocking)
+    // Log audit event (blocking to ensure audit is written before response)
     if (options.auditContext && isAuditEnabled(entityName)) {
-      logEntityAudit('create', entityName, filteredResult, options.auditContext);
+      await logEntityAudit('create', entityName, filteredResult, options.auditContext);
     }
 
     return filteredResult;
@@ -862,9 +862,9 @@ class GenericEntityService {
     // This ensures the returned record has all relationship data
     const updatedRecord = await this.findById(entityName, safeId);
 
-    // Log audit event (non-blocking) with old and new values
+    // Log audit event (blocking to ensure audit is written before response)
     if (options.auditContext && isAuditEnabled(entityName)) {
-      logEntityAudit('update', entityName, updatedRecord, options.auditContext, oldValues);
+      await logEntityAudit('update', entityName, updatedRecord, options.auditContext, oldValues);
     }
 
     return updatedRecord;
@@ -962,9 +962,9 @@ class GenericEntityService {
       const filteredResult = filterOutput(deleteResult.rows[0], metadata);
       const filteredOldValues = filterOutput(recordBeforeDelete, metadata);
 
-      // Log audit event (non-blocking) with old values
+      // Log audit event (blocking to ensure audit is written before response)
       if (options.auditContext && isAuditEnabled(entityName)) {
-        logEntityAudit('delete', entityName, filteredResult, options.auditContext, filteredOldValues);
+        await logEntityAudit('delete', entityName, filteredResult, options.auditContext, filteredOldValues);
       }
 
       return filteredResult;
@@ -1118,9 +1118,9 @@ class GenericEntityService {
               result = filterOutput(dbResult.rows[0], metadata);
               stats.created++;
 
-              // Audit (non-blocking)
+              // Audit (blocking to ensure audit is written before transaction completes)
               if (auditContext && isAuditEnabled(entityName)) {
-                logEntityAudit('create', entityName, result, auditContext);
+                await logEntityAudit('create', entityName, result, auditContext);
               }
               break;
             }
@@ -1162,10 +1162,10 @@ class GenericEntityService {
               result = filterOutput(dbResult.rows[0], metadata);
               stats.updated++;
 
-              // Audit with oldValues (non-blocking)
+              // Audit with oldValues (blocking to ensure audit is written before transaction completes)
               if (auditContext && isAuditEnabled(entityName)) {
                 const filteredOld = filterOutput(oldRecord, metadata);
-                logEntityAudit('update', entityName, result, auditContext, filteredOld);
+                await logEntityAudit('update', entityName, result, auditContext, filteredOld);
               }
               break;
             }
@@ -1192,10 +1192,10 @@ class GenericEntityService {
               result = filterOutput(dbResult.rows[0], metadata);
               stats.deleted++;
 
-              // Audit with oldValues (non-blocking)
+              // Audit with oldValues (blocking to ensure audit is written before transaction completes)
               if (auditContext && isAuditEnabled(entityName)) {
                 const filteredOld = filterOutput(oldRecord, metadata);
-                logEntityAudit('delete', entityName, result, auditContext, filteredOld);
+                await logEntityAudit('delete', entityName, result, auditContext, filteredOld);
               }
               break;
             }
