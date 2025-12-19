@@ -26,10 +26,8 @@ import '../../config/app_colors.dart';
 import '../../config/app_spacing.dart';
 import '../../config/constants.dart';
 import '../../core/routing/app_routes.dart';
-import '../../models/permission.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/nav_menu_builder.dart';
-import '../../services/permission_service_dynamic.dart';
 import '../organisms/navigation/nav_menu_item.dart';
 
 /// Responsive layout shell with sidebar/drawer navigation
@@ -67,31 +65,15 @@ class AdaptiveShell extends StatelessWidget {
     final authProvider = context.watch<AuthProvider>();
     final user = authProvider.user;
 
-    // DEBUG: Get permission config state
-    final configDebug = PermissionService.debugConfigInfo;
-
-    // DEBUG: Direct permission check for admin_panel
-    final userRole = user?['role'] as String?;
-    final adminPanelCheck = PermissionService.hasPermission(
-      userRole,
-      ResourceType.adminPanel,
-      CrudOperation.read,
-    );
-    final prefsCheck = PermissionService.hasPermission(
-      userRole,
-      ResourceType.preferences,
-      CrudOperation.read,
-    );
-
-    // Get UNFILTERED items first for debug
-    final rawUserItems = userMenuItems ?? NavMenuBuilder.buildUserMenuItems();
-
     // Get menu items from NavMenuBuilder and filter by permissions
     final sidebarItems = NavMenuBuilder.filterForUser(
       sidebarMenuItems ?? NavMenuBuilder.buildSidebarItems(),
       user,
     );
-    final userItems = NavMenuBuilder.filterForUser(rawUserItems, user);
+    final userItems = NavMenuBuilder.filterForUser(
+      userMenuItems ?? NavMenuBuilder.buildUserMenuItems(),
+      user,
+    );
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -105,9 +87,6 @@ class AdaptiveShell extends StatelessWidget {
             authProvider,
             sidebarItems,
             userItems,
-            configDebug: configDebug,
-            adminCheck: adminPanelCheck,
-            prefsCheck: prefsCheck,
           );
         } else {
           return _buildNarrowLayout(
@@ -115,9 +94,6 @@ class AdaptiveShell extends StatelessWidget {
             authProvider,
             sidebarItems,
             userItems,
-            configDebug: configDebug,
-            adminCheck: adminPanelCheck,
-            prefsCheck: prefsCheck,
           );
         }
       },
@@ -129,11 +105,8 @@ class AdaptiveShell extends StatelessWidget {
     BuildContext context,
     AuthProvider authProvider,
     List<NavMenuItem> sidebarItems,
-    List<NavMenuItem> userItems, {
-    String configDebug = '',
-    bool adminCheck = false,
-    bool prefsCheck = false,
-  }) {
+    List<NavMenuItem> userItems,
+  ) {
     return Row(
       children: [
         // Persistent sidebar
@@ -154,9 +127,6 @@ class AdaptiveShell extends StatelessWidget {
                     authProvider,
                     userItems,
                     showMenuButton: false,
-                    configDebug: configDebug,
-                    adminCheck: adminCheck,
-                    prefsCheck: prefsCheck,
                   )
                 : null,
             body: body,
@@ -171,21 +141,11 @@ class AdaptiveShell extends StatelessWidget {
     BuildContext context,
     AuthProvider authProvider,
     List<NavMenuItem> sidebarItems,
-    List<NavMenuItem> userItems, {
-    String configDebug = '',
-    bool adminCheck = false,
-    bool prefsCheck = false,
-  }) {
+    List<NavMenuItem> userItems,
+  ) {
     return Scaffold(
       appBar: showAppBar
-          ? _buildAppBar(
-              context,
-              authProvider,
-              userItems,
-              configDebug: configDebug,
-              adminCheck: adminCheck,
-              prefsCheck: prefsCheck,
-            )
+          ? _buildAppBar(context, authProvider, userItems)
           : null,
       drawer: Drawer(
         width: AppBreakpoints.sidebarWidth,
@@ -206,17 +166,11 @@ class AdaptiveShell extends StatelessWidget {
     AuthProvider authProvider,
     List<NavMenuItem> userItems, {
     bool showMenuButton = true,
-    String configDebug = '',
-    bool adminCheck = false,
-    bool prefsCheck = false,
   }) {
-    // DEBUG: Show config state and permission check results
-    final debugTitle = '$pageTitle [$configDebug a:$adminCheck p:$prefsCheck]';
-
     return AppBar(
       backgroundColor: AppColors.brandPrimary,
       foregroundColor: AppColors.white,
-      title: Text(debugTitle),
+      title: Text(pageTitle),
       centerTitle: true,
       automaticallyImplyLeading: showMenuButton,
       actions: [
