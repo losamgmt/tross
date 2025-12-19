@@ -52,6 +52,12 @@ class PermissionService {
   /// Check if service is initialized
   static bool get isInitialized => _config != null;
 
+  /// DEBUG: Get config debug info
+  static String get debugConfigInfo {
+    if (_config == null) return 'cfg:null';
+    return 'roles:${_config!.roles.length} res:${_config!.resources.length}';
+  }
+
   /// Get cached config (throws if not initialized)
   static PermissionConfig get _ensureConfig {
     if (_config == null) {

@@ -28,7 +28,6 @@ import '../../config/constants.dart';
 import '../../core/routing/app_routes.dart';
 import '../../models/permission.dart';
 import '../../providers/auth_provider.dart';
-import '../../services/nav_config_loader.dart';
 import '../../services/nav_menu_builder.dart';
 import '../../services/permission_service_dynamic.dart';
 import '../organisms/navigation/nav_menu_item.dart';
@@ -68,9 +67,8 @@ class AdaptiveShell extends StatelessWidget {
     final authProvider = context.watch<AuthProvider>();
     final user = authProvider.user;
 
-    // DEBUG: Check service initialization
-    final navConfigInit = NavConfigService.isInitialized;
-    final permissionInit = PermissionService.isInitialized;
+    // DEBUG: Get permission config state
+    final configDebug = PermissionService.debugConfigInfo;
 
     // DEBUG: Direct permission check for admin_panel
     final userRole = user?['role'] as String?;
@@ -107,9 +105,7 @@ class AdaptiveShell extends StatelessWidget {
             authProvider,
             sidebarItems,
             userItems,
-            navInit: navConfigInit,
-            permInit: permissionInit,
-            rawCount: rawUserItems.length,
+            configDebug: configDebug,
             adminCheck: adminPanelCheck,
             prefsCheck: prefsCheck,
           );
@@ -119,9 +115,7 @@ class AdaptiveShell extends StatelessWidget {
             authProvider,
             sidebarItems,
             userItems,
-            navInit: navConfigInit,
-            permInit: permissionInit,
-            rawCount: rawUserItems.length,
+            configDebug: configDebug,
             adminCheck: adminPanelCheck,
             prefsCheck: prefsCheck,
           );
@@ -136,9 +130,7 @@ class AdaptiveShell extends StatelessWidget {
     AuthProvider authProvider,
     List<NavMenuItem> sidebarItems,
     List<NavMenuItem> userItems, {
-    bool navInit = false,
-    bool permInit = false,
-    int rawCount = 0,
+    String configDebug = '',
     bool adminCheck = false,
     bool prefsCheck = false,
   }) {
@@ -162,9 +154,7 @@ class AdaptiveShell extends StatelessWidget {
                     authProvider,
                     userItems,
                     showMenuButton: false,
-                    navInit: navInit,
-                    permInit: permInit,
-                    rawCount: rawCount,
+                    configDebug: configDebug,
                     adminCheck: adminCheck,
                     prefsCheck: prefsCheck,
                   )
@@ -182,9 +172,7 @@ class AdaptiveShell extends StatelessWidget {
     AuthProvider authProvider,
     List<NavMenuItem> sidebarItems,
     List<NavMenuItem> userItems, {
-    bool navInit = false,
-    bool permInit = false,
-    int rawCount = 0,
+    String configDebug = '',
     bool adminCheck = false,
     bool prefsCheck = false,
   }) {
@@ -194,9 +182,7 @@ class AdaptiveShell extends StatelessWidget {
               context,
               authProvider,
               userItems,
-              navInit: navInit,
-              permInit: permInit,
-              rawCount: rawCount,
+              configDebug: configDebug,
               adminCheck: adminCheck,
               prefsCheck: prefsCheck,
             )
@@ -220,15 +206,12 @@ class AdaptiveShell extends StatelessWidget {
     AuthProvider authProvider,
     List<NavMenuItem> userItems, {
     bool showMenuButton = true,
-    bool navInit = false,
-    bool permInit = false,
-    int rawCount = 0,
+    String configDebug = '',
     bool adminCheck = false,
     bool prefsCheck = false,
   }) {
-    // DEBUG: Show service init status in app bar
-    final debugTitle =
-        '$pageTitle [a:$adminCheck p:$prefsCheck r:$rawCount f:${userItems.length}]';
+    // DEBUG: Show config state and permission check results
+    final debugTitle = '$pageTitle [$configDebug a:$adminCheck p:$prefsCheck]';
 
     return AppBar(
       backgroundColor: AppColors.brandPrimary,
