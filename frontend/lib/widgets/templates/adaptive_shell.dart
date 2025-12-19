@@ -65,6 +65,11 @@ class AdaptiveShell extends StatelessWidget {
     final authProvider = context.watch<AuthProvider>();
     final user = authProvider.user;
 
+    // DEBUG: Log user data for production debugging
+    debugPrint('[AdaptiveShell] user: $user');
+    debugPrint('[AdaptiveShell] user role: ${user?['role']}');
+    debugPrint('[AdaptiveShell] user role_priority: ${user?['role_priority']}');
+
     // Get menu items from NavMenuBuilder and filter by permissions
     final sidebarItems = NavMenuBuilder.filterForUser(
       sidebarMenuItems ?? NavMenuBuilder.buildSidebarItems(),
@@ -73,6 +78,12 @@ class AdaptiveShell extends StatelessWidget {
     final userItems = NavMenuBuilder.filterForUser(
       userMenuItems ?? NavMenuBuilder.buildUserMenuItems(),
       user,
+    );
+
+    // DEBUG: Log filtered items
+    debugPrint('[AdaptiveShell] userItems count: ${userItems.length}');
+    debugPrint(
+      '[AdaptiveShell] userItems: ${userItems.map((i) => i.id).toList()}',
     );
 
     return LayoutBuilder(
@@ -167,10 +178,15 @@ class AdaptiveShell extends StatelessWidget {
     List<NavMenuItem> userItems, {
     bool showMenuButton = true,
   }) {
+    // DEBUG: Show role in app bar for production debugging
+    final userRole = authProvider.user?['role'] ?? 'null';
+    final debugTitle =
+        '$pageTitle [role: $userRole, items: ${userItems.length}]';
+
     return AppBar(
       backgroundColor: AppColors.brandPrimary,
       foregroundColor: AppColors.white,
-      title: Text(pageTitle),
+      title: Text(debugTitle),
       centerTitle: true,
       automaticallyImplyLeading: showMenuButton,
       actions: [
