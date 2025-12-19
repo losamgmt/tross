@@ -265,74 +265,108 @@ describe('Deployment Adapter', () => {
   });
 
   describe('CORS Configuration', () => {
-    test('should parse ALLOWED_ORIGINS env var', () => {
+    // Helper to test the CORS origin validation function
+    const testOrigin = (originFn, origin) => {
+      return new Promise((resolve) => {
+        originFn(origin, (err, allowed) => {
+          resolve({ err, allowed });
+        });
+      });
+    };
+
+    test('should allow configured ALLOWED_ORIGINS', async () => {
       process.env.ALLOWED_ORIGINS = 'https://app.example.com,https://www.example.com';
-      const origins = getAllowedOrigins();
+      const originFn = getAllowedOrigins();
 
-      expect(origins).toContain('https://app.example.com');
-      expect(origins).toContain('https://www.example.com');
+      const result1 = await testOrigin(originFn, 'https://app.example.com');
+      const result2 = await testOrigin(originFn, 'https://www.example.com');
+
+      expect(result1.allowed).toBe(true);
+      expect(result2.allowed).toBe(true);
     });
 
-    test('should use FRONTEND_URL when ALLOWED_ORIGINS is not set', () => {
+    test('should use FRONTEND_URL when ALLOWED_ORIGINS is not set', async () => {
       process.env.FRONTEND_URL = 'https://frontend.example.com';
-      const origins = getAllowedOrigins();
+      const originFn = getAllowedOrigins();
 
-      expect(origins).toContain('https://frontend.example.com');
+      const result = await testOrigin(originFn, 'https://frontend.example.com');
+      expect(result.allowed).toBe(true);
     });
 
-    test('should trim whitespace from origins', () => {
+    test('should trim whitespace from origins', async () => {
       process.env.ALLOWED_ORIGINS = ' https://app.example.com , https://www.example.com ';
-      const origins = getAllowedOrigins();
+      const originFn = getAllowedOrigins();
 
-      expect(origins).toContain('https://app.example.com');
-      expect(origins).toContain('https://www.example.com');
-      expect(origins).not.toContain(' https://app.example.com');
+      const result = await testOrigin(originFn, 'https://app.example.com');
+      expect(result.allowed).toBe(true);
     });
 
-    test('should filter empty origins', () => {
+    test('should filter empty origins', async () => {
       process.env.ALLOWED_ORIGINS = 'https://app.example.com,,https://www.example.com';
-      const origins = getAllowedOrigins();
+      const originFn = getAllowedOrigins();
 
-      expect(origins).toContain('https://app.example.com');
-      expect(origins).toContain('https://www.example.com');
-      expect(origins.length).toBe(4); // 2 configured + 2 localhost (test env)
+      const result1 = await testOrigin(originFn, 'https://app.example.com');
+      const result2 = await testOrigin(originFn, 'https://www.example.com');
+
+      expect(result1.allowed).toBe(true);
+      expect(result2.allowed).toBe(true);
     });
 
-    test('should include localhost origins in non-production', () => {
+    test('should allow localhost origins in non-production', async () => {
       process.env.NODE_ENV = 'development';
-      const origins = getAllowedOrigins();
+      const originFn = getAllowedOrigins();
 
-      expect(origins).toContain('http://localhost:8080');
-      expect(origins).toContain('http://localhost:3000');
+      const result1 = await testOrigin(originFn, 'http://localhost:8080');
+      const result2 = await testOrigin(originFn, 'http://localhost:3000');
+
+      expect(result1.allowed).toBe(true);
+      expect(result2.allowed).toBe(true);
     });
 
-    test('should not duplicate localhost origins', () => {
-      process.env.NODE_ENV = 'test';
-      const origins = getAllowedOrigins();
-
-      const localhost8080Count = origins.filter(o => o === 'http://localhost:8080').length;
-      const localhost3000Count = origins.filter(o => o === 'http://localhost:3000').length;
-
-      expect(localhost8080Count).toBe(1);
-      expect(localhost3000Count).toBe(1);
-    });
-
-    test('should not include localhost in production', () => {
+    test('should reject localhost in production', async () => {
       process.env.NODE_ENV = 'production';
       process.env.ALLOWED_ORIGINS = 'https://app.example.com';
-      const origins = getAllowedOrigins();
+      const originFn = getAllowedOrigins();
 
-      expect(origins).not.toContain('http://localhost:8080');
-      expect(origins).not.toContain('http://localhost:3000');
+      const result = await testOrigin(originFn, 'http://localhost:8080');
+      expect(result.allowed).toBe(false);
     });
 
-    test('should return empty array plus localhost when no origins configured (non-production)', () => {
-      process.env.NODE_ENV = 'development';
-      const origins = getAllowedOrigins();
+    test('should allow requests with no origin (mobile apps, curl)', async () => {
+      process.env.NODE_ENV = 'production';
+      process.env.ALLOWED_ORIGINS = 'https://app.example.com';
+      const originFn = getAllowedOrigins();
 
-      expect(origins.length).toBe(2);
-      expect(origins).toContain('http://localhost:8080');
-      expect(origins).toContain('http://localhost:3000');
+      const result = await testOrigin(originFn, undefined);
+      expect(result.allowed).toBe(true);
+    });
+
+    test('should allow Vercel preview deployments', async () => {
+      process.env.NODE_ENV = 'production';
+      process.env.ALLOWED_ORIGINS = 'https://trossapp.vercel.app';
+      const originFn = getAllowedOrigins();
+
+      const result = await testOrigin(originFn, 'https://tross-app-frontend-abc123-zarika-ambers-projects.vercel.app');
+      expect(result.allowed).toBe(true);
+    });
+
+    test('should always allow main Vercel domain', async () => {
+      process.env.NODE_ENV = 'production';
+      process.env.ALLOWED_ORIGINS = 'https://other.example.com';
+      const originFn = getAllowedOrigins();
+
+      const result = await testOrigin(originFn, 'https://trossapp.vercel.app');
+      expect(result.allowed).toBe(true);
+    });
+
+    test('should reject unknown origins', async () => {
+      process.env.NODE_ENV = 'production';
+      process.env.ALLOWED_ORIGINS = 'https://app.example.com';
+      const originFn = getAllowedOrigins();
+
+      const result = await testOrigin(originFn, 'https://malicious.example.com');
+      expect(result.allowed).toBe(false);
+      expect(result.err).toBeTruthy();
     });
   });
 

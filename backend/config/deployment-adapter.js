@@ -130,7 +130,7 @@ function getHealthCheckPath() {
 
 /**
  * Get CORS allowed origins
- * @returns {string[]} Array of allowed origins
+ * @returns {string[]|Function} Array of allowed origins or origin validation function
  */
 function getAllowedOrigins() {
   const origins = process.env.ALLOWED_ORIGINS || process.env.FRONTEND_URL || '';
@@ -148,7 +148,34 @@ function getAllowedOrigins() {
   }
 
   logger.info('CORS allowed origins configured', { count: originList.length });
-  return originList;
+
+  // Return a function that also allows Vercel preview deployments
+  // Preview URLs: *-zarika-ambers-projects.vercel.app
+  return function(origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl, etc.)
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    // Check static origin list
+    if (originList.includes(origin)) {
+      return callback(null, true);
+    }
+
+    // Allow Vercel preview deployments (pattern: *-zarika-ambers-projects.vercel.app)
+    if (origin.endsWith('-zarika-ambers-projects.vercel.app')) {
+      logger.info('CORS: Allowing Vercel preview deployment', { origin });
+      return callback(null, true);
+    }
+
+    // Allow main Vercel domain
+    if (origin === 'https://trossapp.vercel.app') {
+      return callback(null, true);
+    }
+
+    logger.warn('CORS: Origin not allowed', { origin, allowedCount: originList.length });
+    return callback(new Error('Not allowed by CORS'), false);
+  };
 }
 
 /**
