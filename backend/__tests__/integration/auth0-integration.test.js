@@ -10,6 +10,13 @@
  * - Verify token validation, user creation, error handling
  */
 
+// Set test Auth0 config BEFORE requiring any modules that depend on it
+process.env.AUTH0_DOMAIN = process.env.AUTH0_DOMAIN || 'test-domain.auth0.com';
+process.env.AUTH0_CLIENT_ID = process.env.AUTH0_CLIENT_ID || 'test-client-id';
+process.env.AUTH0_CLIENT_SECRET = process.env.AUTH0_CLIENT_SECRET || 'test-client-secret';
+process.env.AUTH0_AUDIENCE = process.env.AUTH0_AUDIENCE || 'https://test-api.com';
+process.env.AUTH0_CALLBACK_URL = process.env.AUTH0_CALLBACK_URL || 'http://localhost:3001/callback';
+
 const Auth0Strategy = require('../../services/auth/Auth0Strategy');
 const { UserDataService } = require('../../services/user-data');
 const auth0Config = require('../../config/auth0');
@@ -52,19 +59,8 @@ describe('Auth0Strategy Integration Tests', () => {
   let originalEnv;
 
   beforeAll(() => {
-    // Save original env
+    // Save original env (env vars already set at top of file)
     originalEnv = { ...process.env };
-    
-    // Set test Auth0 config BEFORE requiring modules
-    process.env.AUTH0_DOMAIN = 'test-domain.auth0.com';
-    process.env.AUTH0_CLIENT_ID = 'test-client-id';
-    process.env.AUTH0_CLIENT_SECRET = 'test-client-secret';
-    process.env.AUTH0_AUDIENCE = 'https://test-api.com';
-    process.env.AUTH0_CALLBACK_URL = 'http://localhost:3001/callback';
-    
-    // Clear require cache to force reload with test env vars
-    delete require.cache[require.resolve('../../config/auth0')];
-    delete require.cache[require.resolve('../../services/auth/Auth0Strategy')];
   });
 
   afterAll(() => {
