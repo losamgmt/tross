@@ -21,6 +21,7 @@
 /// ```
 library;
 
+import 'package:flutter/foundation.dart';
 import '../models/permission.dart';
 import 'permission_config_loader.dart';
 
@@ -80,6 +81,7 @@ class PermissionService {
   ) {
     // Validate inputs
     if (roleName == null || roleName.isEmpty) {
+      debugPrint('[PermCheck] roleName null/empty');
       return false; // No role = no permission
     }
 
@@ -88,12 +90,14 @@ class PermissionService {
       // Not initialized - this shouldn't happen in normal flow
       // Return true defensively to avoid hiding UI elements due to init issues
       // Backend will validate actual permissions
+      debugPrint('[PermCheck] not initialized - returning true');
       return true;
     }
 
     final config = _ensureConfig;
     final userPriority = config.getRolePriority(roleName);
     if (userPriority == null) {
+      debugPrint('[PermCheck] userPriority null for role: $roleName');
       return false; // Unknown role = no permission
     }
 
@@ -106,11 +110,19 @@ class PermissionService {
     );
 
     if (requiredPriority == null) {
+      debugPrint(
+        '[PermCheck] requiredPriority null for $resourceKey.$operationKey',
+      );
       return false; // Unknown permission = no permission
     }
 
+    final result = userPriority >= requiredPriority;
+    debugPrint(
+      '[PermCheck] role=$roleName res=$resourceKey op=$operationKey userPri=$userPriority reqPri=$requiredPriority => $result',
+    );
+
     // User priority must be >= required priority
-    return userPriority >= requiredPriority;
+    return result;
   }
 
   /// Get detailed permission check result with denial reason

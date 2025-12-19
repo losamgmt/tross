@@ -26,6 +26,7 @@ import '../../config/app_colors.dart';
 import '../../config/app_spacing.dart';
 import '../../config/constants.dart';
 import '../../core/routing/app_routes.dart';
+import '../../models/permission.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/nav_config_loader.dart';
 import '../../services/nav_menu_builder.dart';
@@ -71,6 +72,19 @@ class AdaptiveShell extends StatelessWidget {
     final navConfigInit = NavConfigService.isInitialized;
     final permissionInit = PermissionService.isInitialized;
 
+    // DEBUG: Direct permission check for admin_panel
+    final userRole = user?['role'] as String?;
+    final adminPanelCheck = PermissionService.hasPermission(
+      userRole,
+      ResourceType.adminPanel,
+      CrudOperation.read,
+    );
+    final prefsCheck = PermissionService.hasPermission(
+      userRole,
+      ResourceType.preferences,
+      CrudOperation.read,
+    );
+
     // Get UNFILTERED items first for debug
     final rawUserItems = userMenuItems ?? NavMenuBuilder.buildUserMenuItems();
 
@@ -96,6 +110,8 @@ class AdaptiveShell extends StatelessWidget {
             navInit: navConfigInit,
             permInit: permissionInit,
             rawCount: rawUserItems.length,
+            adminCheck: adminPanelCheck,
+            prefsCheck: prefsCheck,
           );
         } else {
           return _buildNarrowLayout(
@@ -106,6 +122,8 @@ class AdaptiveShell extends StatelessWidget {
             navInit: navConfigInit,
             permInit: permissionInit,
             rawCount: rawUserItems.length,
+            adminCheck: adminPanelCheck,
+            prefsCheck: prefsCheck,
           );
         }
       },
@@ -121,6 +139,8 @@ class AdaptiveShell extends StatelessWidget {
     bool navInit = false,
     bool permInit = false,
     int rawCount = 0,
+    bool adminCheck = false,
+    bool prefsCheck = false,
   }) {
     return Row(
       children: [
@@ -145,6 +165,8 @@ class AdaptiveShell extends StatelessWidget {
                     navInit: navInit,
                     permInit: permInit,
                     rawCount: rawCount,
+                    adminCheck: adminCheck,
+                    prefsCheck: prefsCheck,
                   )
                 : null,
             body: body,
@@ -163,6 +185,8 @@ class AdaptiveShell extends StatelessWidget {
     bool navInit = false,
     bool permInit = false,
     int rawCount = 0,
+    bool adminCheck = false,
+    bool prefsCheck = false,
   }) {
     return Scaffold(
       appBar: showAppBar
@@ -173,6 +197,8 @@ class AdaptiveShell extends StatelessWidget {
               navInit: navInit,
               permInit: permInit,
               rawCount: rawCount,
+              adminCheck: adminCheck,
+              prefsCheck: prefsCheck,
             )
           : null,
       drawer: Drawer(
@@ -197,10 +223,12 @@ class AdaptiveShell extends StatelessWidget {
     bool navInit = false,
     bool permInit = false,
     int rawCount = 0,
+    bool adminCheck = false,
+    bool prefsCheck = false,
   }) {
     // DEBUG: Show service init status in app bar
     final debugTitle =
-        '$pageTitle [nav:$navInit perm:$permInit raw:$rawCount filt:${userItems.length}]';
+        '$pageTitle [a:$adminCheck p:$prefsCheck r:$rawCount f:${userItems.length}]';
 
     return AppBar(
       backgroundColor: AppColors.brandPrimary,
