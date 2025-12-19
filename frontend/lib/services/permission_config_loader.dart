@@ -307,16 +307,18 @@ class PermissionConfigLoader {
 
     if (loadedMajor < expectedMajor ||
         (loadedMajor == expectedMajor && loadedMinor < expectedMinor)) {
-      throw Exception(
-        'Stale permissions.json: loaded v$loadedVersion but frontend requires v$kExpectedPermissionVersion+. '
-        'This usually means the browser/CDN is serving a cached old version. '
-        'Try hard refresh (Ctrl+Shift+R) or clear browser cache.',
+      // WARNING only - don't crash the app, just log loudly
+      final message =
+          'STALE CONFIG: permissions.json v$loadedVersion < required v$kExpectedPermissionVersion. '
+          'CDN may be caching old version. Try Ctrl+Shift+R.';
+      debugPrint('[PermConfigLoader] ⚠️ WARNING: $message');
+      ErrorService.logWarning('[Permissions] $message');
+      // Continue anyway - better to show something than blank page
+    } else {
+      debugPrint(
+        '[PermConfigLoader] ✓ Version check passed: $loadedVersion >= $kExpectedPermissionVersion',
       );
     }
-
-    debugPrint(
-      '[PermConfigLoader] ✓ Version check passed: $loadedVersion >= $kExpectedPermissionVersion',
-    );
   }
 
   /// Validate all required resources exist
@@ -329,17 +331,18 @@ class PermissionConfigLoader {
     }
 
     if (missing.isNotEmpty) {
-      throw Exception(
-        'Missing required resources in permissions.json: ${missing.join(', ')}. '
-        'Found resources: ${config.resources.keys.join(', ')}. '
-        'This usually means the browser/CDN is serving a cached old version. '
-        'Try hard refresh (Ctrl+Shift+R) or clear browser cache.',
+      // WARNING only - don't crash the app, just log loudly
+      final message =
+          'Missing resources: ${missing.join(', ')}. Found: ${config.resources.keys.join(', ')}. '
+          'CDN may be caching old version. Try Ctrl+Shift+R.';
+      debugPrint('[PermConfigLoader] ⚠️ WARNING: $message');
+      ErrorService.logWarning('[Permissions] $message');
+      // Continue anyway - better to show something than blank page
+    } else {
+      debugPrint(
+        '[PermConfigLoader] ✓ All ${kRequiredResources.length} required resources present',
       );
     }
-
-    debugPrint(
-      '[PermConfigLoader] ✓ All ${kRequiredResources.length} required resources present',
-    );
   }
 
   /// Validate configuration structure
