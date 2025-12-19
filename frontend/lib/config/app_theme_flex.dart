@@ -90,8 +90,8 @@ class AppThemeConfig {
     swapColors: false,
     // Visual density
     visualDensity: FlexColorScheme.comfortablePlatformDensity,
-    // Font family (optional - can integrate Google Fonts here)
-    fontFamily: null,
+    // Use Roboto - Flutter's default, universally available
+    fontFamily: 'Roboto',
     // Sub-themes for component styling
     subThemesData: const FlexSubThemesData(
       // Use Material 3 defaults
@@ -137,7 +137,8 @@ class AppThemeConfig {
     darkIsTrueBlack: false,
     swapColors: false,
     visualDensity: FlexColorScheme.comfortablePlatformDensity,
-    fontFamily: null,
+    // Use Roboto - Flutter's default, universally available
+    fontFamily: 'Roboto',
     subThemesData: const FlexSubThemesData(
       useM2StyleDividerInM3: false,
       defaultRadius: 12.0,

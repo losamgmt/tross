@@ -105,6 +105,14 @@ class AuthProfileService {
           'profile.role',
           minLength: 3,
         ),
+        // Role priority for O(1) permission checks (1=customer, 5=admin)
+        'role_priority': Validators.toSafeInt(
+          rawProfile['role_priority'],
+          'profile.role_priority',
+          min: 1,
+          max: 10, // Allow room for future roles
+          allowNull: true, // Fallback to role name lookup if not present
+        ),
         'is_active':
             Validators.toSafeBool(
               rawProfile['is_active'],

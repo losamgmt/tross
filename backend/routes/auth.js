@@ -61,12 +61,16 @@ const router = express.Router();
 router.get('/me', authenticateToken, async (req, res) => {
   try {
     // req.dbUser is already populated by authenticateToken middleware
+    // with normalized role fields (role, role_priority, role_name)
     const user = req.dbUser;
 
-    // Format user data for frontend
+    // Format user data for frontend with consistent field names
     const formattedUser = {
       ...user,
       name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'User',
+      // Ensure role fields are present (normalize from JOIN field names)
+      role: user.role || user.role_name,
+      role_priority: user.role_priority,
     };
 
     return ResponseFormatter.get(res, formattedUser);
