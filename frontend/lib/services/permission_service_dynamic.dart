@@ -52,10 +52,12 @@ class PermissionService {
   /// Check if service is initialized
   static bool get isInitialized => _config != null;
 
-  /// DEBUG: Get config debug info
+  /// DEBUG: Get config debug info with resource keys
   static String get debugConfigInfo {
     if (_config == null) return 'cfg:null';
-    return 'roles:${_config!.roles.length} res:${_config!.resources.length}';
+    final hasAdmin = _config!.resources.containsKey('admin_panel');
+    final hasPrefs = _config!.resources.containsKey('preferences');
+    return 'r${_config!.roles.length}rs${_config!.resources.length}ap:$hasAdmin pf:$hasPrefs';
   }
 
   /// Get cached config (throws if not initialized)
