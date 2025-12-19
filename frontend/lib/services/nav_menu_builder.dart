@@ -217,10 +217,15 @@ class NavMenuBuilder {
         return false;
       }
       final role = user['role'] as String?;
+      final rolePriority = user['role_priority'];
       if (role == null || role.isEmpty) {
         ErrorService.logWarning(
           '[NavMenu] _canAccessResource: role is null/empty',
-          context: {'resource': resource.toBackendString(), 'user': user},
+          context: {
+            'resource': resource.toBackendString(),
+            'userKeys': user.keys.toList(),
+            'role_priority': rolePriority,
+          },
         );
         return true; // Defensive: show menu item, let backend reject if unauthorized
       }
@@ -234,6 +239,7 @@ class NavMenuBuilder {
         context: {
           'resource': resource.toBackendString(),
           'role': role,
+          'role_priority': rolePriority,
           'result': result,
         },
       );
