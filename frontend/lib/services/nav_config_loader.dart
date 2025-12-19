@@ -58,6 +58,7 @@ enum NavMenuType {
 /// Note: `permissionResource` controls NAV VISIBILITY (can user see this menu?).
 /// This is distinct from entity-metadata.json `rlsResource` which controls
 /// ROW-LEVEL DATA ACCESS (which records can user see?).
+/// If `permissionResource` is null, item is visible to all authenticated users.
 class StaticNavItem {
   final String id;
   final String label;
@@ -68,7 +69,8 @@ class StaticNavItem {
 
   /// Permission resource for nav visibility check.
   /// Maps to permissions.json resource name.
-  final String permissionResource;
+  /// If null, item is visible to all authenticated users.
+  final String? permissionResource;
 
   final NavMenuType menuType;
 
@@ -79,7 +81,7 @@ class StaticNavItem {
     required this.route,
     required this.group,
     required this.order,
-    required this.permissionResource,
+    this.permissionResource,
     this.menuType = NavMenuType.sidebar,
   });
 
@@ -91,7 +93,7 @@ class StaticNavItem {
       route: json['route'] as String,
       group: json['group'] as String,
       order: json['order'] as int,
-      permissionResource: json['permissionResource'] as String,
+      permissionResource: json['permissionResource'] as String?,
       menuType: json['menuType'] == 'userMenu'
           ? NavMenuType.userMenu
           : NavMenuType.sidebar,
