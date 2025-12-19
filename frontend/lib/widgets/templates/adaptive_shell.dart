@@ -273,7 +273,7 @@ class _SidebarContent extends StatelessWidget {
 
   void _handleTap(BuildContext context, NavMenuItem item) {
     // Close drawer if in drawer mode
-    if (isDrawer) {
+    if (isDrawer && Navigator.canPop(context)) {
       Navigator.pop(context);
     }
     // Navigate if route is different
