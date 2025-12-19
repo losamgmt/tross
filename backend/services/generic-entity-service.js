@@ -65,6 +65,56 @@ function getRelatedIdentityField(tableName) {
 }
 
 /**
+ * Build SELECT parts and JOIN parts for default includes
+ * Extracts relationship fields with smart aliasing:
+ * - Identity field (e.g., 'name') → relationship name (e.g., 'role')
+ * - Other fields → prefixed (e.g., 'priority' → 'role_priority')
+ *
+ * @param {string} tableName - Main table name
+ * @param {string[]} defaultIncludes - Relationship names to include
+ * @param {Object} relationships - Relationship definitions from metadata
+ * @returns {{ selectParts: string[], joinParts: string[] }} Parts for query building
+ */
+function buildDefaultIncludesClauses(tableName, defaultIncludes, relationships) {
+  const joinParts = [];
+  const selectParts = [];
+
+  for (const relName of defaultIncludes) {
+    const rel = relationships[relName];
+    if (rel && rel.type === 'belongsTo') {
+      const relAlias = relName.charAt(0); // 'r' for role, 'c' for customer
+      const identityField = getRelatedIdentityField(rel.table);
+
+      // Include all configured fields from relationship, or just identity field as fallback
+      if (rel.fields && rel.fields.length > 0) {
+        // Select specific fields with smart aliasing:
+        // - Identity field (e.g., 'name') → relationship name (e.g., 'role')
+        // - Other fields → prefixed (e.g., 'priority' → 'role_priority')
+        for (const field of rel.fields) {
+          // Skip 'id' to avoid confusion with main entity id
+          if (field === 'id') { continue; }
+
+          if (field === identityField) {
+            // Identity field: alias as relationship name (e.g., r.name as role)
+            selectParts.push(`${relAlias}.${field} as ${relName}`);
+          } else {
+            // Other fields: prefix with relationship name (e.g., r.priority as role_priority)
+            selectParts.push(`${relAlias}.${field} as ${relName}_${field}`);
+          }
+        }
+      } else {
+        // Fallback: just the identity field with relationship name as alias
+        selectParts.push(`${relAlias}.${identityField} as ${relName}`);
+      }
+
+      joinParts.push(`LEFT JOIN ${rel.table} ${relAlias} ON ${tableName}.${rel.foreignKey} = ${relAlias}.id`);
+    }
+  }
+
+  return { selectParts, joinParts };
+}
+
+/**
  * Valid entity names (keys from config/models/index.js)
  * Used for validation and error messages
  */
@@ -257,19 +307,7 @@ class GenericEntityService {
     let joinClause = '';
 
     if (defaultIncludes.length > 0) {
-      const joinParts = [];
-      const selectParts = [];
-
-      for (const relName of defaultIncludes) {
-        const rel = relationships[relName];
-        if (rel && rel.type === 'belongsTo') {
-          // Add the related entity's identity field as an alias (e.g., r.name for role, c.email for customer)
-          const relAlias = relName.charAt(0); // 'r' for role, 'c' for customer
-          const identityField = getRelatedIdentityField(rel.table);
-          selectParts.push(`${relAlias}.${identityField} as ${relName}`);
-          joinParts.push(`LEFT JOIN ${rel.table} ${relAlias} ON ${tableName}.${rel.foreignKey} = ${relAlias}.id`);
-        }
-      }
+      const { selectParts, joinParts } = buildDefaultIncludesClauses(tableName, defaultIncludes, relationships);
 
       if (selectParts.length > 0) {
         selectClause = `${tableName}.*, ${selectParts.join(', ')}`;
@@ -430,19 +468,7 @@ class GenericEntityService {
     let joinClause = '';
 
     if (defaultIncludes.length > 0) {
-      const joinParts = [];
-      const selectParts = [];
-
-      for (const relName of defaultIncludes) {
-        const rel = relationships[relName];
-        if (rel && rel.type === 'belongsTo') {
-          // Add the related entity's identity field as an alias (e.g., r.name for role, c.email for customer)
-          const relAlias = relName.charAt(0); // 'r' for role, 'c' for customer
-          const identityField = getRelatedIdentityField(rel.table);
-          selectParts.push(`${relAlias}.${identityField} as ${relName}`);
-          joinParts.push(`LEFT JOIN ${rel.table} ${relAlias} ON ${tableName}.${rel.foreignKey} = ${relAlias}.id`);
-        }
-      }
+      const { selectParts, joinParts } = buildDefaultIncludesClauses(tableName, defaultIncludes, relationships);
 
       if (selectParts.length > 0) {
         selectClause = `${tableName}.*, ${selectParts.join(', ')}`;

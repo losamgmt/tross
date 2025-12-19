@@ -165,10 +165,16 @@ const authenticateToken = async (req, res, next) => {
       // SECURITY: decoded.role comes from JWT (signed by Auth0 Action - tamper-proof)
       const dbUser = await userDataService.findOrCreateUser(decoded);
 
-      // Attach role from JWT (already verified by signature)
+      // Normalize role field: prefer JWT role (signed), then DB role from JOIN
+      // JOIN now returns: role (identity field), role_priority, role_description
+      const roleName = decoded.role || dbUser.role;
+      const rolePriority = dbUser.role_priority;
+
       req.dbUser = {
         ...dbUser,
-        role: decoded.role || dbUser.role, // Prefer JWT role (signed), fallback to DB
+        // Canonical role fields
+        role: roleName,              // 'admin', 'manager', etc.
+        role_priority: rolePriority, // 5, 4, 3, 2, 1
       };
 
       // CRITICAL SECURITY: Check if user is active (deactivated users cannot authenticate)

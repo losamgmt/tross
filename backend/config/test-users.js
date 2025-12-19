@@ -15,15 +15,18 @@
 //
 // ⚠️  Query-Time Fields (added by User.findById JOIN, NOT in DB):
 //    - role (string) - denormalized from roles.name for convenience
+//    - role_priority (int) - denormalized from roles.priority for O(1) permission checks
 //    - name (string) - computed from first_name + last_name
 //
 // 🔧 Non-DB Fields (dev-only routing):
 //    - provider (string) - signals "development" vs "auth0" auth strategy
 //
-// WHY both role_id AND role?
-// - role_id: Database foreign key (source of truth)
-// - role: Convenience field added by SQL JOIN for permission checks
-//   (User model does: SELECT u.*, r.name as role FROM users u LEFT JOIN roles r)
+// ROLE PRIORITY HIERARCHY:
+// - admin: 5 (highest)
+// - manager: 4
+// - dispatcher: 3
+// - technician: 2
+// - customer: 1 (lowest)
 
 const TEST_USERS = {
   admin: {
@@ -39,7 +42,8 @@ const TEST_USERS = {
     updated_at: '2025-01-01T00:00:00.000Z',
 
     // Query-time fields (added by JOIN, not in DB)
-    role: 'admin', // From roles.name (for permission checks)
+    role: 'admin',           // From roles.name
+    role_priority: 5,        // From roles.priority - for O(1) permission checks
 
     // Dev-only routing field
     provider: 'development',
@@ -55,6 +59,7 @@ const TEST_USERS = {
     created_at: '2025-01-01T00:00:00.000Z',
     updated_at: '2025-01-01T00:00:00.000Z',
     role: 'manager',
+    role_priority: 4,
     provider: 'development',
   },
   dispatcher: {
@@ -68,6 +73,7 @@ const TEST_USERS = {
     created_at: '2025-01-01T00:00:00.000Z',
     updated_at: '2025-01-01T00:00:00.000Z',
     role: 'dispatcher',
+    role_priority: 3,
     provider: 'development',
   },
   technician: {
@@ -81,6 +87,7 @@ const TEST_USERS = {
     created_at: '2025-01-01T00:00:00.000Z',
     updated_at: '2025-01-01T00:00:00.000Z',
     role: 'technician',
+    role_priority: 2,
     provider: 'development',
   },
   client: {
@@ -94,6 +101,7 @@ const TEST_USERS = {
     created_at: '2025-01-01T00:00:00.000Z',
     updated_at: '2025-01-01T00:00:00.000Z',
     role: 'customer',
+    role_priority: 1,
     provider: 'development',
   },
 };
