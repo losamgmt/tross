@@ -48,14 +48,17 @@ Most cloud platforms (Railway, Heroku, Render) provide a single `DATABASE_URL` e
 
 #### Option 2: Individual Variables (AWS, Google Cloud, Local)
 
+> **Source of truth:** See [`backend/config/deployment-adapter.js`](../backend/config/deployment-adapter.js) for current defaults.
+
 ```bash
 DB_HOST=your-db-host.region.rds.amazonaws.com
 DB_PORT=5432
 DB_NAME=trossapp_prod
 DB_USER=your_db_user
 DB_PASSWORD=your_db_password
-DB_POOL_MIN=2
-DB_POOL_MAX=20
+# Pool values default to constants.js values if not set
+DB_POOL_MIN=<your_min>
+DB_POOL_MAX=<your_max>
 ```
 
 If `DATABASE_URL` is not set, the adapter falls back to individual environment variables. This is useful for AWS RDS, Google Cloud SQL, or local development.
@@ -66,10 +69,12 @@ If `DATABASE_URL` is not set, the adapter falls back to individual environment v
 
 Create `.env.production`:
 
+> **Note:** Default values come from source files. See [`config/ports.js`](../config/ports.js) and [`backend/config/deployment-adapter.js`](../backend/config/deployment-adapter.js).
+
 ```bash
 # Node.js
 NODE_ENV=production
-PORT=3001
+# PORT defaults to value in config/ports.js if not set
 
 # Database - Choose ONE format:
 # Format 1: Single URL (Railway, Heroku, Render)
@@ -82,9 +87,9 @@ DATABASE_URL=postgresql://user:password@db-host:5432/trossapp_prod
 # DB_USER=your_db_user
 # DB_PASSWORD=your_db_password
 
-# Database Pool Configuration (optional, defaults shown)
-DB_POOL_MAX=20
-DB_POOL_MIN=2
+# Database Pool Configuration (optional, see deployment-adapter.js for defaults)
+# DB_POOL_MAX=<your_value>
+# DB_POOL_MIN=<your_value>
 
 # Security (CRITICAL - Generate strong secrets)
 JWT_SECRET=your-super-secure-64-character-minimum-secret-here-with-mixed-case-numbers-special
@@ -100,9 +105,9 @@ AUTH0_CALLBACK_URL=https://your-domain.com/api/auth0/callback
 FRONTEND_URL=https://your-domain.com
 ALLOWED_ORIGINS=https://your-domain.com
 
-# Rate Limiting
-RATE_LIMIT_WINDOW_MS=60000
-RATE_LIMIT_MAX=100
+# Rate Limiting (see deployment-adapter.js for defaults)
+# RATE_LIMIT_WINDOW_MS=<your_value>
+# RATE_LIMIT_MAX=<your_value>
 
 # Logging
 LOG_LEVEL=info
@@ -131,27 +136,49 @@ openssl rand -base64 48
 
 ---
 
-## Docker Deployment
+## Railway Deployment (Current Platform)
 
-### Production Docker Compose
+TrossApp is deployed on Railway. The platform auto-detects the Node.js backend and deploys from Git.
 
-**File:** `docker-compose.prod.yml`
+### Railway Configuration
+
+**Environment Variables (set in Railway dashboard):**
+- `DATABASE_URL` - Provided by Railway PostgreSQL plugin
+- `NODE_ENV=production`
+- `JWT_SECRET` - Your secure secret
+- `AUTH0_DOMAIN`, `AUTH0_CLIENT_ID`, `AUTH0_CLIENT_SECRET` - Auth0 credentials
+- `ALLOWED_ORIGINS` - Your frontend domain
+
+**railway.json** handles build configuration. See [`railway.json`](../railway.json).
+
+### Deployment Process
+
+1. Push to `main` branch
+2. Railway auto-deploys via GitHub integration
+3. Health checks verify deployment: `https://tross-api-production.up.railway.app/api/health`
+
+---
+
+## Docker Deployment (Alternative)
+
+For self-hosted deployments, use Docker Compose.
+
+### Example Production Docker Compose
+
+> **Note:** Create a `docker-compose.prod.yml` based on this template if self-hosting.
 
 ```yaml
 version: '3.8'
 
 services:
   backend:
-    image: trossapp/backend:latest
+    build: ./backend
     ports:
       - "3001:3001"
     environment:
       - NODE_ENV=production
       - DATABASE_URL=${DATABASE_URL}
       - JWT_SECRET=${JWT_SECRET}
-      - AUTH0_DOMAIN=${AUTH0_DOMAIN}
-      - AUTH0_CLIENT_ID=${AUTH0_CLIENT_ID}
-      - AUTH0_CLIENT_SECRET=${AUTH0_CLIENT_SECRET}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3001/api/health"]
@@ -159,20 +186,14 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
 
   frontend:
-    image: trossapp/frontend:latest
+    build: ./frontend
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./ssl:/etc/nginx/ssl:ro
     depends_on:
       - backend
     restart: unless-stopped

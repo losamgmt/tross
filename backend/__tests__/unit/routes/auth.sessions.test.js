@@ -24,8 +24,6 @@ const {
 } = require("../../helpers/route-test-setup");
 
 // Mock dependencies
-jest.mock("../../../db/models/User");
-jest.mock("../../../db/models/Role");
 jest.mock("../../../services/user-data");
 jest.mock("../../../services/token-service");
 jest.mock("../../../services/audit-service");

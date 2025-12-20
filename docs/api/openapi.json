@@ -1405,8 +1405,7 @@
                         "type": "string"
                       },
                       "example": [
-                        "GET /api/dev/token - Get test technician token",
-                        "GET /api/dev/admin-token - Get test admin token",
+                        "GET /api/dev/token?role=<role> - Get test token for any role",
                         "GET /api/dev/status - This endpoint"
                       ]
                     },

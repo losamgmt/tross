@@ -82,10 +82,13 @@ flutter run -d chrome
 ```
 
 ### Access Points
-- **Frontend:** http://localhost:8080
-- **Backend API:** http://localhost:3001
-- **API Docs:** http://localhost:3001/api-docs (Swagger)
-- **Health Check:** http://localhost:3001/api/health
+
+> **Port configuration:** See [`config/ports.js`](../config/ports.js) for current port assignments.
+
+- **Frontend:** `http://localhost:<FRONTEND_PORT>`
+- **Backend API:** `http://localhost:<BACKEND_PORT>`
+- **API Docs:** `http://localhost:<BACKEND_PORT>/api-docs` (Swagger)
+- **Health Check:** `http://localhost:<BACKEND_PORT>/api/health`
 
 ---
 
@@ -110,7 +113,7 @@ See [Auth Guide](AUTH.md) for Auth0 setup.
 
 ### Run Tests
 ```bash
-# Backend (1675+ tests)
+# Backend
 cd backend
 npm test
 
@@ -121,12 +124,13 @@ flutter test
 
 ### Check Health
 ```bash
-curl http://localhost:3001/api/health
+# Replace <BACKEND_PORT> with value from config/ports.js
+curl http://localhost:<BACKEND_PORT>/api/health
 
 # Expected response:
 {
   "status": "healthy",
-  "timestamp": "2025-11-19T...",
+  "timestamp": "...",
   "database": "connected"
 }
 ```
@@ -137,11 +141,11 @@ curl http://localhost:3001/api/health
 
 ### Port Already in Use
 ```bash
-# Check what's using port 3001
-npx kill-port 3001
+# Check what's using a port (replace <PORT> with actual port from config/ports.js)
+npx kill-port <PORT>
 
-# Or use different port
-PORT=3002 npm run dev
+# Or override port via environment
+PORT=<ALTERNATE_PORT> npm run dev
 ```
 
 ### Database Connection Failed

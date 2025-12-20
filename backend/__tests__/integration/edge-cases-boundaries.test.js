@@ -12,11 +12,7 @@
 const request = require('supertest');
 const app = require('../../server');
 const { createTestUser, cleanupTestDatabase } = require('../helpers/test-db');
-const Customer = require('../../db/models/Customer');
-const Contract = require('../../db/models/Contract');
-const WorkOrder = require('../../db/models/WorkOrder');
-const Invoice = require('../../db/models/Invoice');
-const Inventory = require('../../db/models/Inventory');
+const GenericEntityService = require('../../services/generic-entity-service');
 
 describe('Boundary Condition Tests', () => {
   let adminUser;
@@ -105,7 +101,7 @@ describe('Boundary Condition Tests', () => {
 
     afterEach(async () => {
       if (testCustomerId) {
-        await Customer.delete(testCustomerId);
+        await GenericEntityService.delete('customer', testCustomerId);
         testCustomerId = null;
       }
     });
@@ -181,8 +177,7 @@ describe('Boundary Condition Tests', () => {
     let testCustomerId;
 
     beforeAll(async () => {
-      const customer = await Customer.create({
-        name: 'Numeric Test Customer',
+      const customer = await GenericEntityService.create('customer', {
         email: `numeric-${Date.now()}@example.com`,
         phone: '1234567890',
       });
@@ -193,14 +188,14 @@ describe('Boundary Condition Tests', () => {
       // Delete all invoices first (foreign key constraint)
       for (const invoiceId of testInvoiceIds) {
         try {
-          await Invoice.delete(invoiceId);
+          await GenericEntityService.delete('invoice', invoiceId);
         } catch (err) {
           // Invoice might not exist
         }
       }
       // Then delete customer
       if (testCustomerId) {
-        await Customer.delete(testCustomerId);
+        await GenericEntityService.delete('customer', testCustomerId);
       }
     });
 
@@ -273,8 +268,7 @@ describe('Boundary Condition Tests', () => {
     const uniqueTimestamp = Date.now();
 
     beforeAll(async () => {
-      const customer = await Customer.create({
-        name: 'Date Test Customer',
+      const customer = await GenericEntityService.create('customer', {
         email: `datetest-${uniqueTimestamp}@example.com`,
         phone: '1234567890',
       });
@@ -285,14 +279,14 @@ describe('Boundary Condition Tests', () => {
       // Delete all contracts first (foreign key constraint)
       for (const contractId of testContractIds) {
         try {
-          await Contract.delete(contractId);
+          await GenericEntityService.delete('contract', contractId);
         } catch (err) {
           // Contract might not exist
         }
       }
       // Then delete customer
       if (testCustomerId) {
-        await Customer.delete(testCustomerId);
+        await GenericEntityService.delete('customer', testCustomerId);
       }
     });
 

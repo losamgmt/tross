@@ -29,6 +29,30 @@ const { toSafeInteger } = require('../validators/type-coercion');
 const { buildEntitySchema } = require('../utils/validation-schema-builder');
 
 // =============================================================================
+// FIELD ACCESS HELPERS
+// =============================================================================
+
+/**
+ * Derive updateable fields from fieldAccess metadata
+ * A field is updateable if its update access is NOT 'none'
+ *
+ * @param {Object} metadata - Entity metadata
+ * @returns {string[]} List of updateable field names
+ */
+function deriveUpdateableFields(metadata) {
+  const fieldAccess = metadata.fieldAccess || {};
+  const immutableFields = new Set(metadata.immutableFields || []);
+  
+  return Object.keys(fieldAccess).filter((field) => {
+    // Skip immutable fields
+    if (immutableFields.has(field)) return false;
+    
+    const access = fieldAccess[field];
+    return access && access.update && access.update !== 'none';
+  });
+}
+
+// =============================================================================
 // ERROR RESPONSE HELPERS
 // =============================================================================
 
@@ -462,7 +486,9 @@ const genericValidateBody = (operation) => (req, res, next) => {
   } else if (operation === 'update') {
     // Ensure at least one valid field
     if (Object.keys(value).length === 0) {
-      const updateableFields = entityMetadata.updateableFields || [];
+      // Derive updateable fields from fieldAccess if not explicitly defined
+      const updateableFields = entityMetadata.updateableFields || 
+        deriveUpdateableFields(entityMetadata);
       return sendError(
         res,
         HTTP_STATUS.BAD_REQUEST,

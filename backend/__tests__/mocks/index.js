@@ -46,7 +46,7 @@ const {
 
 // Legacy mocks (for backward compatibility)
 const dbMocksLegacy = require('./db.mock');
-const modelMocks = require('./models.mock');
+// modelMocks removed - models no longer used (GenericEntityService replaces them)
 const serviceMocks = require('./services.mock');
 const middlewareMocks = require('./middleware.mock');
 const loggerMocks = require('./logger.mock');
@@ -76,7 +76,6 @@ module.exports = {
 
   // Legacy exports (for backward compatibility)
   ...dbMocksLegacy,
-  ...modelMocks,
   ...serviceMocks,
   ...middlewareMocks,
   ...loggerMocks,

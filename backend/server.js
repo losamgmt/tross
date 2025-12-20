@@ -7,11 +7,7 @@ const { HTTP_STATUS, SECURITY } = require('./config/constants');
 const { TIMEOUTS } = require('./config/timeouts');
 const { logger, requestLogger } = require('./config/logger');
 const { securityHeaders, sanitizeInput } = require('./middleware/security');
-const {
-  apiLimiter,
-  authLimiter,
-  refreshLimiter: __refreshLimiter,
-} = require('./middleware/rate-limit');
+const { apiLimiter, authLimiter } = require('./middleware/rate-limit');
 const { requestTimeout, timeoutHandler } = require('./middleware/timeout');
 const { validateEnvironment } = require('./utils/env-validator');
 const { getAllowedOrigins } = require('./config/deployment-adapter');
@@ -133,29 +129,35 @@ app.get('/api/health/:service', async (req, res) => {
 
 // API routes with rate limiting
 const authRoutes = require('./routes/auth');
-const usersRoutes = require('./routes/users');
-const roleRoutes = require('./routes/roles');
 const devAuthRoutes = require('./routes/dev-auth');
 const auth0Routes = require('./routes/auth0');
 const healthRoutes = require('./routes/health');
 const schemaRoutes = require('./routes/schema');
-const customersRoutes = require('./routes/customers');
-const techniciansRoutes = require('./routes/technicians');
-const workOrdersRoutes = require('./routes/work_orders');
-const invoicesRoutes = require('./routes/invoices');
-const contractsRoutes = require('./routes/contracts');
-const inventoryRoutes = require('./routes/inventory');
 const preferencesRoutes = require('./routes/preferences');
+const rolesExtensions = require('./routes/roles-extensions');
+
+// Generic entity routes (replaces individual entity route files)
+const {
+  usersRouter,
+  rolesRouter,
+  customersRouter,
+  techniciansRouter,
+  inventoryRouter,
+  workOrdersRouter,
+  invoicesRouter,
+  contractsRouter,
+} = require('./routes/entities');
 
 app.use('/api/auth', authLimiter, authRoutes);
-app.use('/api/users', apiLimiter, usersRoutes); // RESTful user management
-app.use('/api/roles', apiLimiter, roleRoutes);
-app.use('/api/customers', apiLimiter, customersRoutes);
-app.use('/api/technicians', apiLimiter, techniciansRoutes);
-app.use('/api/work_orders', apiLimiter, workOrdersRoutes);
-app.use('/api/invoices', apiLimiter, invoicesRoutes);
-app.use('/api/contracts', apiLimiter, contractsRoutes);
-app.use('/api/inventory', apiLimiter, inventoryRoutes);
+app.use('/api/users', apiLimiter, usersRouter); // RESTful user management (generic)
+app.use('/api/roles', apiLimiter, rolesRouter); // Standard CRUD (generic)
+app.use('/api/roles', apiLimiter, rolesExtensions); // Extension: /:id/users
+app.use('/api/customers', apiLimiter, customersRouter);
+app.use('/api/technicians', apiLimiter, techniciansRouter);
+app.use('/api/work_orders', apiLimiter, workOrdersRouter);
+app.use('/api/invoices', apiLimiter, invoicesRouter);
+app.use('/api/contracts', apiLimiter, contractsRouter);
+app.use('/api/inventory', apiLimiter, inventoryRouter);
 app.use('/api/preferences', apiLimiter, preferencesRoutes); // User preferences
 app.use('/api/dev', devAuthRoutes); // Development auth endpoints (no rate limit - dev only)
 app.use('/api/health', apiLimiter, healthRoutes); // Health monitoring endpoints

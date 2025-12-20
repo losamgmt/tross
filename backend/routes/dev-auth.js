@@ -157,8 +157,7 @@ router.get('/token', async (req, res) => {
  *                   items:
  *                     type: string
  *                   example:
- *                     - "GET /api/dev/token - Get test technician token"
- *                     - "GET /api/dev/admin-token - Get test admin token"
+ *                     - "GET /api/dev/token?role=<role> - Get test token"
  *                     - "GET /api/dev/status - This endpoint"
  *                 note:
  *                   type: string

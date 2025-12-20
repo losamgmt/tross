@@ -364,7 +364,7 @@ void main() {
           // Dev endpoints should still exist (for error messages)
           // but validation will prevent their use
           expect(AppConfig.devTokenEndpoint, isNotEmpty);
-          expect(AppConfig.devAdminTokenEndpoint, isNotEmpty);
+          expect(AppConfig.devTokenForRole('admin'), isNotEmpty);
         }
       });
     });

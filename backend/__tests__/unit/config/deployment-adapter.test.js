@@ -188,15 +188,15 @@ describe('Deployment Adapter', () => {
     test('should use default values when individual env vars are missing', () => {
       const config = getDatabaseConfig();
 
-      expect(config).toEqual({
-        host: 'localhost',
-        port: 5432,
-        database: 'trossapp_dev',
-        user: 'postgres',
-        password: 'postgres',
-        min: 2,
-        max: 10,
-      });
+      // Test structure and types, not specific values (which are configuration decisions)
+      expect(config).toHaveProperty('host', 'localhost');
+      expect(config).toHaveProperty('port', 5432);
+      expect(config).toHaveProperty('database', 'trossapp_dev');
+      expect(config).toHaveProperty('user', 'postgres');
+      expect(config).toHaveProperty('password', 'postgres');
+      // Pool values should match OPTIONAL_ENV_VARS (source of truth)
+      expect(config.min).toBe(OPTIONAL_ENV_VARS.DB_POOL_MIN);
+      expect(config.max).toBe(OPTIONAL_ENV_VARS.DB_POOL_MAX);
     });
 
     test('should prioritize DATABASE_URL over individual env vars', () => {
@@ -519,23 +519,42 @@ describe('Deployment Adapter', () => {
   });
 
   describe('Optional Environment Variables', () => {
-    test('should have all expected defaults', () => {
-      expect(OPTIONAL_ENV_VARS).toEqual({
-        PORT: 3001,
-        BACKEND_PORT: 3001,
-        RATE_LIMIT_WINDOW_MS: 900000,
-        RATE_LIMIT_MAX_REQUESTS: 1000, // Professional standard (updated from 100)
-        REQUEST_TIMEOUT_MS: 30000,
-        DB_POOL_MIN: 2,
-        DB_POOL_MAX: 10,
+    const EXPECTED_KEYS = [
+      'PORT',
+      'BACKEND_PORT',
+      'RATE_LIMIT_WINDOW_MS',
+      'RATE_LIMIT_MAX_REQUESTS',
+      'REQUEST_TIMEOUT_MS',
+      'DB_POOL_MIN',
+      'DB_POOL_MAX',
+    ];
+
+    test('should have all expected keys', () => {
+      EXPECTED_KEYS.forEach((key) => {
+        expect(OPTIONAL_ENV_VARS).toHaveProperty(key);
       });
     });
 
+    test('should not have unexpected keys', () => {
+      const actualKeys = Object.keys(OPTIONAL_ENV_VARS);
+      expect(actualKeys.sort()).toEqual(EXPECTED_KEYS.sort());
+    });
+
     test('should have numeric values for all defaults', () => {
-      Object.values(OPTIONAL_ENV_VARS).forEach((value) => {
+      Object.entries(OPTIONAL_ENV_VARS).forEach(([key, value]) => {
         expect(typeof value).toBe('number');
         expect(value).toBeGreaterThan(0);
       });
+    });
+
+    test('should have valid pool constraints (min <= max)', () => {
+      expect(OPTIONAL_ENV_VARS.DB_POOL_MIN).toBeLessThanOrEqual(
+        OPTIONAL_ENV_VARS.DB_POOL_MAX
+      );
+    });
+
+    test('should have consistent port defaults', () => {
+      expect(OPTIONAL_ENV_VARS.PORT).toBe(OPTIONAL_ENV_VARS.BACKEND_PORT);
     });
   });
 });

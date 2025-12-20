@@ -10,8 +10,9 @@
  *   artillery report report.json
  */
 
+# Uses BACKEND_URL env var or defaults to config/ports.js value
 config:
-  target: 'http://localhost:3001'
+  target: '{{ $processEnvironment.BACKEND_URL || "http://localhost:3001" }}'
   phases:
     # Warm-up phase
     - duration: 30

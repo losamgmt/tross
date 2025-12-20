@@ -504,7 +504,7 @@ router.post(
       }
 
       // Verify target user exists
-      const targetUser = await GenericEntityService.findById('users', targetUserId);
+      const targetUser = await GenericEntityService.findById('user', targetUserId);
       if (!targetUser) {
         return ResponseFormatter.notFound(res, 'User');
       }

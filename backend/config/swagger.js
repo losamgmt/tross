@@ -7,6 +7,88 @@
 
 const swaggerJsdoc = require('swagger-jsdoc');
 
+// =============================================================================
+// HELPER: Generate CRUD paths for an entity
+// =============================================================================
+function generateEntityPaths(basePath, tag, schemaRef, displayName) {
+  return {
+    [`/api/${basePath}`]: {
+      get: {
+        tags: [tag],
+        summary: `List all ${displayName}`,
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', default: 50 } },
+          { name: 'search', in: 'query', schema: { type: 'string' } },
+          { name: 'sortBy', in: 'query', schema: { type: 'string' } },
+          { name: 'sortOrder', in: 'query', schema: { type: 'string', enum: ['asc', 'desc'] } },
+        ],
+        responses: {
+          200: { description: 'Paginated list', content: { 'application/json': { schema: { $ref: '#/components/schemas/PaginatedResponse' } } } },
+          401: { description: 'Unauthorized' },
+        },
+      },
+      post: {
+        tags: [tag],
+        summary: `Create ${displayName.slice(0, -1)}`,
+        security: [{ BearerAuth: [] }],
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: `#/components/schemas/${schemaRef}` } } } },
+        responses: {
+          201: { description: 'Created', content: { 'application/json': { schema: { $ref: `#/components/schemas/${schemaRef}` } } } },
+          400: { description: 'Validation error' },
+          401: { description: 'Unauthorized' },
+        },
+      },
+    },
+    [`/api/${basePath}/{id}`]: {
+      get: {
+        tags: [tag],
+        summary: `Get ${displayName.slice(0, -1)} by ID`,
+        security: [{ BearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+        responses: {
+          200: { description: 'Success', content: { 'application/json': { schema: { $ref: `#/components/schemas/${schemaRef}` } } } },
+          404: { description: 'Not found' },
+        },
+      },
+      patch: {
+        tags: [tag],
+        summary: `Update ${displayName.slice(0, -1)}`,
+        security: [{ BearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: `#/components/schemas/${schemaRef}` } } } },
+        responses: {
+          200: { description: 'Updated', content: { 'application/json': { schema: { $ref: `#/components/schemas/${schemaRef}` } } } },
+          404: { description: 'Not found' },
+        },
+      },
+      delete: {
+        tags: [tag],
+        summary: `Delete ${displayName.slice(0, -1)}`,
+        security: [{ BearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+        responses: {
+          200: { description: 'Deleted' },
+          404: { description: 'Not found' },
+        },
+      },
+    },
+  };
+}
+
+// Generate all entity paths
+const entityPaths = {
+  ...generateEntityPaths('users', 'Users', 'User', 'Users'),
+  ...generateEntityPaths('roles', 'Roles', 'Role', 'Roles'),
+  ...generateEntityPaths('customers', 'Customers', 'Customer', 'Customers'),
+  ...generateEntityPaths('technicians', 'Technicians', 'Technician', 'Technicians'),
+  ...generateEntityPaths('work_orders', 'Work Orders', 'WorkOrder', 'Work Orders'),
+  ...generateEntityPaths('invoices', 'Invoices', 'Invoice', 'Invoices'),
+  ...generateEntityPaths('contracts', 'Contracts', 'Contract', 'Contracts'),
+  ...generateEntityPaths('inventory', 'Inventory', 'Inventory', 'Inventory Items'),
+};
+
 const options = {
   definition: {
     openapi: '3.0.0',
@@ -70,6 +152,8 @@ const options = {
         description: 'Production server',
       }] : []),
     ],
+    // Programmatic path definitions for generic entity routes
+    paths: entityPaths,
     components: {
       securitySchemes: {
         BearerAuth: {
@@ -311,37 +395,181 @@ const options = {
             },
           },
         },
+        // =====================================================================
+        // BUSINESS ENTITY SCHEMAS
+        // =====================================================================
+        Customer: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', description: 'Customer ID', example: 1 },
+            email: { type: 'string', format: 'email', description: 'Customer email (unique)', example: 'customer@example.com' },
+            phone: { type: 'string', nullable: true, description: 'Phone number', example: '+1-555-123-4567' },
+            company_name: { type: 'string', nullable: true, description: 'Company name', example: 'Acme Corp' },
+            billing_address: { type: 'string', nullable: true, description: 'Billing address' },
+            is_active: { type: 'boolean', description: 'Soft delete flag', example: true },
+            created_at: { type: 'string', format: 'date-time' },
+            updated_at: { type: 'string', format: 'date-time' },
+          },
+        },
+        Technician: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', description: 'Technician ID', example: 1 },
+            email: { type: 'string', format: 'email', description: 'Technician email (unique)', example: 'tech@example.com' },
+            phone: { type: 'string', nullable: true, description: 'Phone number' },
+            skill_level: { type: 'string', nullable: true, description: 'Skill level', example: 'senior' },
+            certifications: { type: 'array', items: { type: 'string' }, nullable: true, description: 'List of certifications' },
+            is_active: { type: 'boolean', description: 'Soft delete flag', example: true },
+            created_at: { type: 'string', format: 'date-time' },
+            updated_at: { type: 'string', format: 'date-time' },
+          },
+        },
+        WorkOrder: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', description: 'Work Order ID', example: 1 },
+            title: { type: 'string', description: 'Work order title', example: 'HVAC Repair' },
+            description: { type: 'string', nullable: true, description: 'Detailed description' },
+            status: { type: 'string', enum: ['pending', 'in_progress', 'completed', 'cancelled'], example: 'pending' },
+            priority: { type: 'string', enum: ['low', 'medium', 'high', 'urgent'], example: 'medium' },
+            customer_id: { type: 'integer', description: 'FK to customers', example: 1 },
+            assigned_technician_id: { type: 'integer', nullable: true, description: 'FK to technicians' },
+            scheduled_date: { type: 'string', format: 'date', nullable: true },
+            completed_date: { type: 'string', format: 'date', nullable: true },
+            is_active: { type: 'boolean', description: 'Soft delete flag', example: true },
+            created_at: { type: 'string', format: 'date-time' },
+            updated_at: { type: 'string', format: 'date-time' },
+          },
+        },
+        Invoice: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', description: 'Invoice ID', example: 1 },
+            invoice_number: { type: 'string', description: 'Invoice number', example: 'INV-2025-001' },
+            amount: { type: 'number', format: 'decimal', description: 'Invoice amount', example: 250.00 },
+            status: { type: 'string', enum: ['draft', 'sent', 'paid', 'overdue', 'cancelled'], example: 'draft' },
+            customer_id: { type: 'integer', description: 'FK to customers', example: 1 },
+            work_order_id: { type: 'integer', nullable: true, description: 'FK to work_orders' },
+            due_date: { type: 'string', format: 'date', nullable: true },
+            paid_date: { type: 'string', format: 'date', nullable: true },
+            is_active: { type: 'boolean', description: 'Soft delete flag', example: true },
+            created_at: { type: 'string', format: 'date-time' },
+            updated_at: { type: 'string', format: 'date-time' },
+          },
+        },
+        Contract: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', description: 'Contract ID', example: 1 },
+            title: { type: 'string', description: 'Contract title', example: 'Annual Maintenance Agreement' },
+            customer_id: { type: 'integer', description: 'FK to customers', example: 1 },
+            start_date: { type: 'string', format: 'date' },
+            end_date: { type: 'string', format: 'date' },
+            value: { type: 'number', format: 'decimal', description: 'Contract value', example: 5000.00 },
+            status: { type: 'string', enum: ['draft', 'active', 'expired', 'cancelled'], example: 'active' },
+            is_active: { type: 'boolean', description: 'Soft delete flag', example: true },
+            created_at: { type: 'string', format: 'date-time' },
+            updated_at: { type: 'string', format: 'date-time' },
+          },
+        },
+        Inventory: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', description: 'Inventory item ID', example: 1 },
+            name: { type: 'string', description: 'Item name', example: 'HVAC Filter 20x25' },
+            sku: { type: 'string', nullable: true, description: 'Stock keeping unit', example: 'HVAC-F-2025' },
+            quantity: { type: 'integer', description: 'Current quantity', example: 50 },
+            unit_price: { type: 'number', format: 'decimal', description: 'Unit price', example: 12.99 },
+            reorder_level: { type: 'integer', nullable: true, description: 'Reorder threshold', example: 10 },
+            is_active: { type: 'boolean', description: 'Soft delete flag', example: true },
+            created_at: { type: 'string', format: 'date-time' },
+            updated_at: { type: 'string', format: 'date-time' },
+          },
+        },
+        // =====================================================================
+        // COMMON RESPONSE SCHEMAS
+        // =====================================================================
+        PaginatedResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            data: { type: 'array', items: { type: 'object' } },
+            pagination: {
+              type: 'object',
+              properties: {
+                page: { type: 'integer', example: 1 },
+                limit: { type: 'integer', example: 50 },
+                totalItems: { type: 'integer', example: 100 },
+                totalPages: { type: 'integer', example: 2 },
+                hasMore: { type: 'boolean', example: true },
+              },
+            },
+            timestamp: { type: 'string', format: 'date-time' },
+          },
+        },
       },
     },
     tags: [
+      // System & Monitoring
       {
         name: 'Health',
-        description: 'System health and monitoring endpoints',
+        description: 'System health and monitoring endpoints (liveness/readiness probes)',
       },
+      // Authentication
       {
         name: 'Authentication',
-        description:
-          'User authentication and session management (Development mode)',
+        description: 'User authentication, sessions, and profile management',
       },
       {
         name: 'Auth0',
-        description: 'Auth0 OAuth2/OIDC endpoints (Production authentication)',
-      },
-      {
-        name: 'Users',
-        description: 'User management endpoints (admin only)',
-      },
-      {
-        name: 'Roles',
-        description: 'Role management and user-role assignment',
-      },
-      {
-        name: 'Schema',
-        description: 'Database schema introspection for auto-generated UIs',
+        description: 'Auth0 OAuth2/OIDC endpoints (production authentication)',
       },
       {
         name: 'Development',
-        description: 'Development-only utilities (disabled in production)',
+        description: 'Development-only utilities (test tokens, status)',
+      },
+      // User & Access Management
+      {
+        name: 'Users',
+        description: 'User CRUD operations (admin only)',
+      },
+      {
+        name: 'Roles',
+        description: 'Role CRUD and user-role assignment',
+      },
+      {
+        name: 'Preferences',
+        description: 'User preferences management',
+      },
+      // Core Business Entities
+      {
+        name: 'Customers',
+        description: 'Customer management (CRM)',
+      },
+      {
+        name: 'Technicians',
+        description: 'Technician/field worker management',
+      },
+      {
+        name: 'Work Orders',
+        description: 'Work order lifecycle management',
+      },
+      {
+        name: 'Invoices',
+        description: 'Invoice and billing management',
+      },
+      {
+        name: 'Contracts',
+        description: 'Service contract management',
+      },
+      {
+        name: 'Inventory',
+        description: 'Parts and inventory tracking',
+      },
+      // Developer Tools
+      {
+        name: 'Schema',
+        description: 'Database schema introspection for auto-generated UIs',
       },
     ],
   },

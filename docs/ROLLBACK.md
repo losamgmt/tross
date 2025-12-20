@@ -291,7 +291,7 @@ Next Steps: [Plan for fix and redeployment]
 2. **Check your DNS:**
    ```bash
    nslookup trossapp.vercel.app
-   dig trossapp-production.up.railway.app
+   dig tross-api-production.up.railway.app
    ```
 
 3. **Emergency contact:**

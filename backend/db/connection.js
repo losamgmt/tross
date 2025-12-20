@@ -1,7 +1,7 @@
 // Database connection and pool management
 const { Pool } = require('pg');
 const { logger } = require('../config/logger');
-const { DATABASE } = require('../config/constants');
+const { DATABASE, DATABASE_PERFORMANCE } = require('../config/constants');
 const { TIMEOUTS } = require('../config/timeouts');
 const { getDatabaseConfig } = require('../config/deployment-adapter');
 require('dotenv').config();
@@ -133,8 +133,6 @@ pool.on('error', (err, _client) => {
 });
 
 // Query interface with slow query logging
-const { DATABASE_PERFORMANCE } = require('../config/constants');
-
 const query = async (text, params) => {
   const start = Date.now();
   try {

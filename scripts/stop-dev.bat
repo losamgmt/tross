@@ -9,11 +9,15 @@ echo.
 REM Navigate to project root
 cd /d "%~dp0.."
 
+REM Get ports from centralized config
+for /f %%i in ('node scripts/ports-helper.js backend') do set BACKEND_PORT=%%i
+for /f %%i in ('node scripts/ports-helper.js frontend') do set FRONTEND_PORT=%%i
+
 echo 🛑 Stopping all TrossApp processes...
 echo.
 
 REM Use our professional port killer
-node scripts/kill-port.js 3001 8080
+node scripts/kill-port.js %BACKEND_PORT% %FRONTEND_PORT%
 
 echo.
 echo 🧹 Cleaning up any remaining Flutter/Dart processes...

@@ -2,20 +2,16 @@
 
 Database schema evolution using SQL migration files.
 
-## Current Migrations
+## Migration Files
 
-- `000_create_migrations_table.sql` - Migration tracking system
-- `001_add_system_level_fields.sql` - TIER 1+2 audit fields
-- `003_add_role_priority.sql` - Role hierarchy system
-- `004_make_audit_logs_user_id_nullable.sql` - System-level audit logging
-- `005_add_deactivation_audit_fields.sql` - Soft delete tracking
-- `006_add_performance_indexes.sql` - Database optimization
-- `007_add_user_status_field.sql` - User lifecycle states
-- `008_add_work_order_schema.sql` - Work order entity
+> **Note:** Migration files are located in this directory. Run `ls migrations/` to see current files.
+
+The migration system tracks applied migrations in the `schema_migrations` table.
 
 ## Running Migrations
 
 ```bash
+# From backend directory
 npm run db:migrate
 ```
 

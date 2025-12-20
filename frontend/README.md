@@ -72,7 +72,7 @@ Cross-platform frontend for TrossApp built with Flutter, featuring:
                 │               │
         ┌───────▼───────────────▼────────────┐
         │      Backend API (Node.js)         │
-        │    http://localhost:3001/api       │
+        │   See config/ports.js for port     │
         └────────────────────────────────────┘
 ```
 
@@ -223,7 +223,7 @@ flutter test test/integration/        # Integration tests
 
 Run `flutter test --coverage` to generate coverage reports.
 
-**CI/CD:** See [CI_CD.md](../docs/CI_CD.md#-frontend-cicd) for automated testing pipeline and GitHub Actions workflow.
+**CI/CD:** See [CI_CD_GUIDE.md](../docs/CI_CD_GUIDE.md) for automated testing pipeline and GitHub Actions workflow.
 
 ---
 
@@ -233,17 +233,14 @@ Run `flutter test --coverage` to generate coverage reports.
 
 **Development (default):**
 
-- Backend: `http://localhost:3001`
+- Backend: See `config/ports.js` for port configuration
 - Uses dev auth tokens from backend
 - Hot reload enabled
 
 **Production:**
 
-```dart
-// lib/config/app_config.dart
-static const String environment = 'production';
-static const String baseUrl = 'https://api.trossapp.com';
-```
+> **Note:** Production URL is configured in `lib/config/app_config.dart`. 
+> Current Railway deployment: `https://tross-api-production.up.railway.app`
 
 ### Auth0 Configuration
 

@@ -49,6 +49,21 @@ jest.mock('../../../services/generic-entity-service', () => ({
   delete: jest.fn(),
   count: jest.fn(),
   batch: jest.fn(),
+  // _getMetadata is called during router creation to get entity config
+  _getMetadata: jest.fn((entityName) => ({
+    entityName,
+    displayName: entityName.charAt(0).toUpperCase() + entityName.slice(1),
+    tableName: entityName === 'workOrder' ? 'work_orders' : entityName + 's',
+    rlsResource: entityName === 'workOrder' ? 'work_orders' : entityName + 's',
+    fields: [
+      { name: 'id', type: 'integer', primaryKey: true },
+      { name: 'created_at', type: 'timestamp' },
+      { name: 'updated_at', type: 'timestamp' },
+    ],
+    searchableFields: ['id'],
+    filterableFields: ['id'],
+    sortableFields: ['id', 'created_at'],
+  })),
 }));
 jest.mock('../../../services/audit-service');
 jest.mock('../../../utils/request-helpers', () => ({
@@ -78,6 +93,21 @@ jest.mock('../../../middleware/row-level-security', () => {
   };
   return {
     enforceRLS: () => rlsMiddleware,
+  };
+});
+
+// Mock generic-entity middleware used by routes/entities.js
+jest.mock('../../../middleware/generic-entity', () => {
+  const passMiddleware = (req, res, next) => next();
+  const validateBodyMiddleware = () => (req, res, next) => {
+    req.validatedBody = req.body; // Pass body through as validated
+    next();
+  };
+  return {
+    genericRequirePermission: () => passMiddleware,
+    genericEnforceRLS: passMiddleware,
+    genericValidateBody: validateBodyMiddleware,
+    extractEntity: passMiddleware,
   };
 });
 
@@ -121,47 +151,79 @@ jest.mock('../../../validators', () => {
 // ENTITY CONFIGURATION
 // ============================================================================
 
+// Import the generic entity routers
+const {
+  usersRouter,
+  rolesRouter,
+  customersRouter,
+  techniciansRouter,
+  inventoryRouter,
+  invoicesRouter,
+  contractsRouter,
+  workOrdersRouter,
+} = require('../../../routes/entities');
+
 /**
  * Entity definitions for parameterized tests
  * Each entity has the same CRUD behavior via GenericEntityService
  */
 const ENTITIES = [
   {
+    name: 'user',
+    routePath: '/api/users',
+    router: usersRouter,
+    sampleData: { id: 1, email: 'user@example.com', username: 'testuser', role_id: 1 },
+    createData: { email: 'newuser@example.com', username: 'newuser', role_id: 1 },
+  },
+  {
+    name: 'role',
+    routePath: '/api/roles',
+    router: rolesRouter,
+    sampleData: { id: 1, name: 'admin', description: 'Administrator', priority: 100 },
+    createData: { name: 'newrole', description: 'New Role', priority: 10 },
+  },
+  {
     name: 'customer',
     routePath: '/api/customers',
-    routeModule: '../../../routes/customers',
+    router: customersRouter,
     sampleData: { id: 1, email: 'test@example.com', first_name: 'Test', last_name: 'User' },
     createData: { email: 'new@example.com', first_name: 'New', last_name: 'User' },
   },
   {
     name: 'technician',
     routePath: '/api/technicians',
-    routeModule: '../../../routes/technicians',
+    router: techniciansRouter,
     sampleData: { id: 1, user_id: 1, specialty: 'HVAC', status: 'active' },
     createData: { user_id: 2, specialty: 'Plumbing', status: 'active' },
   },
   {
     name: 'inventory',
     routePath: '/api/inventory',
-    routeModule: '../../../routes/inventory',
+    router: inventoryRouter,
     sampleData: { id: 1, name: 'Widget', quantity: 100, unit_price: 9.99 },
     createData: { name: 'New Widget', quantity: 50, unit_price: 19.99 },
   },
   {
     name: 'invoice',
     routePath: '/api/invoices',
-    routeModule: '../../../routes/invoices',
+    router: invoicesRouter,
     sampleData: { id: 1, customer_id: 1, total_amount: 100.00, status: 'pending' },
     createData: { customer_id: 1, total_amount: 200.00, status: 'draft' },
   },
   {
     name: 'contract',
     routePath: '/api/contracts',
-    routeModule: '../../../routes/contracts',
+    router: contractsRouter,
     sampleData: { id: 1, customer_id: 1, name: 'Service Contract', status: 'active' },
     createData: { customer_id: 1, name: 'New Contract', status: 'draft' },
   },
-  // work_orders has extra complexity (metadata deps) - keep dedicated test file
+  {
+    name: 'workOrder',
+    routePath: '/api/work_orders',
+    router: workOrdersRouter,
+    sampleData: { id: 1, customer_id: 1, title: 'Fix HVAC', status: 'pending', priority: 'medium' },
+    createData: { customer_id: 1, title: 'New Work Order', status: 'pending', priority: 'low' },
+  },
 ];
 
 // ============================================================================
@@ -194,12 +256,11 @@ function resetMocks() {
 
 describe.each(ENTITIES)(
   '$name routes - CRUD Operations',
-  ({ name, routePath, routeModule, sampleData, createData }) => {
+  ({ name, routePath, router, sampleData, createData }) => {
     let app;
 
     beforeAll(() => {
-      // Load route AFTER mocks are set up by Jest
-      const router = require(routeModule);
+      // Router is already imported from routes/entities.js
       app = createTestApp(routePath, router);
     });
 

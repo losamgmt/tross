@@ -91,16 +91,18 @@ cd frontend && flutter pub get
 ./scripts/start-dev.bat
 
 # Option 2: Manual startup
-npm run dev:backend    # Backend on :3001
-npm run dev:frontend   # Frontend on :8080
+npm run dev:backend    # Backend
+npm run dev:frontend   # Frontend
 ```
 
 ### 3️⃣ Access Application
 
-- **Frontend**: http://localhost:8080
-- **Backend API**: http://localhost:3001/api/health  
-- **API Documentation**: http://localhost:3001/api-docs (Swagger UI)
-- **Backend Health**: http://localhost:3001/api/health
+> **Port configuration:** See [`config/ports.js`](config/ports.js) for current port assignments.
+
+- **Frontend**: `http://localhost:<FRONTEND_PORT>`
+- **Backend API**: `http://localhost:<BACKEND_PORT>/api`
+- **API Documentation**: `http://localhost:<BACKEND_PORT>/api-docs` (Swagger UI)
+- **Backend Health**: `http://localhost:<BACKEND_PORT>/api/health`
 
 ---
 
@@ -205,37 +207,31 @@ npm run clean    # Reset build artifacts
 
 ```bash
 # Development - Two-Axis Configuration
-npm run dev:backend              # Start backend server (nodemon) on localhost:3001
+npm run dev:backend              # Start backend server (nodemon)
 npm run dev:frontend             # Local frontend → localhost backend (dev auth enabled)
 npm run dev:frontend:prod-backend # Local frontend → Railway backend (dev auth disabled, Auth0 only)
 
-# Testing (3416+ tests total)
+# Testing
 npm test                  # Run all tests (backend + frontend)
-npm run test:backend      # Backend Jest tests (1675+ tests)
-npm run test:frontend     # Flutter tests (1553+ tests)
-npm run test:e2e          # Playwright E2E tests (188 tests)
+npm run test:backend      # Backend Jest tests
+npm run test:frontend     # Flutter tests
+npm run test:e2e          # Playwright E2E tests
 npm run test:all          # All tests including E2E
 npm run test:watch        # Watch mode for backend tests
 npm run test:coverage     # Generate coverage reports
 
-# Database
+# Database (via Docker)
 npm run db:start          # Start PostgreSQL (Docker)
 npm run db:stop           # Stop PostgreSQL
 npm run db:migrate        # Run migrations
-npm run db:seed           # Seed database
+npm run db:seed           # Seed admin user
 npm run db:reset          # Reset database
-npm run db:backup         # Backup database
 
-# Build & Deploy
+# Build
 npm run build:all         # Build backend + frontend
-npm run docker:build      # Build production Docker images
-npm run docker:up         # Start production containers
-npm run deploy:prod       # Full production deployment
 
-# CI/CD
-npm run ci:test           # CI test suite
-npm run ci:build          # CI build process
-npm run ci:deploy         # CI deployment
+# CI
+npm run ci:test           # CI test suite (all tests)
 
 # Utilities
 npm run clean:flutter     # Clean Flutter build cache

@@ -2,28 +2,30 @@
 
 Essential scripts for development workflow.
 
-## íº€ Primary Scripts
+> **Port configuration:** See [`config/ports.js`](../config/ports.js) for current port assignments.
+
+## ï¿½ï¿½ï¿½ Primary Scripts
 
 **start-dev.bat** - Start complete dev environment (backend + frontend)
 **stop-dev.bat** - Clean shutdown of all processes
 
-## í´§ Utilities
+## ï¿½ï¿½ï¿½ Utilities
 
-**check-ports.js** - Verify ports 3001, 8080 available
+**check-ports.js** - Verify configured ports are available
 **kill-port.js** - Force-kill process on specific port
 
-## í³‹ Prefer npm Scripts
+## ï¿½ï¿½ï¿½ Prefer npm Scripts
 
 ```bash
-npm run dev:backend        # Backend (localhost:3001)
-npm run dev:frontend       # Frontend (localhost:8080)
-npm test                   # All tests (616 passing)
+npm run dev:backend        # Backend
+npm run dev:frontend       # Frontend
+npm test                   # All tests
 ```
 
-## í·‚ï¸ Backend Scripts
+## ï¿½ï¿½ï¿½ï¸ Backend Scripts
 
 See `backend/scripts/`:
-- `manual-curl-tests.sh` - API testing (10 tests)
+- `manual-curl-tests.sh` - API testing
 - `run-migration.js` - Database migrations
 
-**Status**: v1.0.0-backend-lock í´’
+**Status**: v1.0.0-backend-lock ï¿½ï¿½ï¿½

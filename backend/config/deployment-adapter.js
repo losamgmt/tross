@@ -30,7 +30,7 @@ const OPTIONAL_ENV_VARS = {
   RATE_LIMIT_MAX_REQUESTS: 1000, // Professional standard (GitHub: 5k/hr, we use 1k/15min)
   REQUEST_TIMEOUT_MS: 30000, // 30 seconds
   DB_POOL_MIN: 2,
-  DB_POOL_MAX: 10,
+  DB_POOL_MAX: 20, // Aligned with DATABASE.DEV.POOL.MAX in constants.js
 };
 
 /**

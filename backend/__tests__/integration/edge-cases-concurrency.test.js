@@ -11,7 +11,7 @@
 const request = require('supertest');
 const app = require('../../server');
 const { createTestUser, cleanupTestDatabase } = require('../helpers/test-db');
-const Customer = require('../../db/models/Customer');
+const GenericEntityService = require('../../services/generic-entity-service');
 
 describe('Unique Constraint Enforcement Tests', () => {
   let adminUser;
@@ -53,11 +53,9 @@ describe('Unique Constraint Enforcement Tests', () => {
       expect(conflictCount).toBe(2);
       
       // Clean up created customer(s)
-      const result = await Customer.findAll({ email: testEmail });
-      if (result && result.data) {
-        for (const customer of result.data) {
-          await Customer.delete(customer.id);
-        }
+      const result = await GenericEntityService.findByField('customer', 'email', testEmail);
+      if (result) {
+        await GenericEntityService.delete('customer', result.id);
       }
     });
   });

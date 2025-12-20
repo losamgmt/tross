@@ -376,13 +376,13 @@ class ApiClient {
   static String _entityEndpoint(String entityName) {
     // Explicit mapping to match backend routes exactly
     // This ensures frontend and backend stay in sync
+    // Entity names use snake_case for consistency with backend
     const endpointMap = <String, String>{
       'user': '/users',
       'role': '/roles',
       'customer': '/customers',
       'technician': '/technicians',
       'work_order': '/work_orders',
-      'workOrder': '/work_orders',
       'invoice': '/invoices',
       'contract': '/contracts',
       'inventory': '/inventory', // Singular! Backend uses /inventory
