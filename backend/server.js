@@ -247,38 +247,38 @@ if (process.env.NODE_ENV !== 'test') {
       logger.info(`📍 Health check: http://localhost:${PORT}/api/health`);
       logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
 
-    // Configure server-level timeouts
-    // Layer 1: Outermost timeout protection
-    server.setTimeout(TIMEOUTS.SERVER.REQUEST_TIMEOUT_MS);
-    server.keepAliveTimeout = TIMEOUTS.SERVER.KEEP_ALIVE_TIMEOUT_MS;
-    server.headersTimeout = TIMEOUTS.SERVER.HEADERS_TIMEOUT_MS;
+      // Configure server-level timeouts
+      // Layer 1: Outermost timeout protection
+      server.setTimeout(TIMEOUTS.SERVER.REQUEST_TIMEOUT_MS);
+      server.keepAliveTimeout = TIMEOUTS.SERVER.KEEP_ALIVE_TIMEOUT_MS;
+      server.headersTimeout = TIMEOUTS.SERVER.HEADERS_TIMEOUT_MS;
 
-    logger.info('⏱️  Server timeouts configured:', {
-      requestTimeout: `${TIMEOUTS.SERVER.REQUEST_TIMEOUT_MS / 1000}s`,
-      keepAliveTimeout: `${TIMEOUTS.SERVER.KEEP_ALIVE_TIMEOUT_MS / 1000}s`,
-      headersTimeout: `${TIMEOUTS.SERVER.HEADERS_TIMEOUT_MS / 1000}s`,
+      logger.info('⏱️  Server timeouts configured:', {
+        requestTimeout: `${TIMEOUTS.SERVER.REQUEST_TIMEOUT_MS / 1000}s`,
+        keepAliveTimeout: `${TIMEOUTS.SERVER.KEEP_ALIVE_TIMEOUT_MS / 1000}s`,
+        headersTimeout: `${TIMEOUTS.SERVER.HEADERS_TIMEOUT_MS / 1000}s`,
+      });
+
+      logger.info('⏱️  Request timeouts configured:', {
+        defaultTimeout: `${TIMEOUTS.REQUEST.DEFAULT_MS / 1000}s`,
+        databaseTimeout: `${TIMEOUTS.DATABASE.STATEMENT_TIMEOUT_MS / 1000}s`,
+        slowRequestThreshold: `${TIMEOUTS.MONITORING.SLOW_REQUEST_MS / 1000}s`,
+      });
+
+      // Test database connection on startup
+      try {
+        const db = require('./db/connection');
+        await db.testConnection();
+
+        // Validate enum synchronization between Joi and PostgreSQL
+        const { validateEnumSync } = require('./utils/validation-sync-checker');
+        await validateEnumSync(db);
+      } catch (_error) {
+        logger.error(
+          '⚠️ Database connection failed on startup. Server will continue but DB-dependent features will be unavailable.',
+        );
+      }
     });
-
-    logger.info('⏱️  Request timeouts configured:', {
-      defaultTimeout: `${TIMEOUTS.REQUEST.DEFAULT_MS / 1000}s`,
-      databaseTimeout: `${TIMEOUTS.DATABASE.STATEMENT_TIMEOUT_MS / 1000}s`,
-      slowRequestThreshold: `${TIMEOUTS.MONITORING.SLOW_REQUEST_MS / 1000}s`,
-    });
-
-    // Test database connection on startup
-    try {
-      const db = require('./db/connection');
-      await db.testConnection();
-
-      // Validate enum synchronization between Joi and PostgreSQL
-      const { validateEnumSync } = require('./utils/validation-sync-checker');
-      await validateEnumSync(db);
-    } catch (_error) {
-      logger.error(
-        '⚠️ Database connection failed on startup. Server will continue but DB-dependent features will be unavailable.',
-      );
-    }
-  });
   })();
 }
 

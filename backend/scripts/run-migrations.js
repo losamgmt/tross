@@ -119,16 +119,16 @@ async function applyMigration(migration, dryRun = false) {
     return { status: 'applied', executionTime };
   } catch (error) {
     await client.query('ROLLBACK');
-    
+
     // Check if this is a "already exists" type error - migration may have been partially applied
-    const isIdempotentError = 
+    const isIdempotentError =
       error.message.includes('already exists') ||
       error.message.includes('duplicate key') ||
       error.message.includes('violates unique constraint');
-    
+
     if (isIdempotentError) {
       logger.info(`   ⏭️  Skipped (already applied): ${error.message.split('\n')[0]}`);
-      
+
       // Still record it as applied if not already recorded
       try {
         await pool.query(
@@ -142,7 +142,7 @@ async function applyMigration(migration, dryRun = false) {
       }
       return { status: 'skipped' };
     }
-    
+
     logger.error(`   ❌ Failed: ${error.message}`);
     throw error;
   } finally {

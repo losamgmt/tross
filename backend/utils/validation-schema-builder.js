@@ -179,11 +179,13 @@ function deriveCreatableFields(metadata) {
 function deriveUpdateableFields(metadata) {
   const fieldAccess = metadata.fieldAccess || {};
   const immutableFields = new Set(metadata.immutableFields || []);
-  
+
   return Object.keys(fieldAccess).filter((field) => {
     // Skip immutable fields
-    if (immutableFields.has(field)) return false;
-    
+    if (immutableFields.has(field)) {
+      return false;
+    }
+
     const access = fieldAccess[field];
     return access && access.update && access.update !== 'none';
   });
