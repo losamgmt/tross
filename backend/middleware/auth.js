@@ -173,7 +173,7 @@ const authenticateToken = async (req, res, next) => {
       req.dbUser = {
         ...dbUser,
         // Canonical role fields
-        role: roleName,              // 'admin', 'manager', etc.
+        role: roleName, // 'admin', 'manager', etc.
         role_priority: rolePriority, // 5, 4, 3, 2, 1
       };
 

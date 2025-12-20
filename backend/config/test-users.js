@@ -42,8 +42,8 @@ const TEST_USERS = {
     updated_at: '2025-01-01T00:00:00.000Z',
 
     // Query-time fields (added by JOIN, not in DB)
-    role: 'admin',           // From roles.name
-    role_priority: 5,        // From roles.priority - for O(1) permission checks
+    role: 'admin', // From roles.name
+    role_priority: 5, // From roles.priority - for O(1) permission checks
 
     // Dev-only routing field
     provider: 'development',

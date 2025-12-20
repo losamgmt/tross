@@ -42,11 +42,13 @@ const { buildEntitySchema } = require('../utils/validation-schema-builder');
 function deriveUpdateableFields(metadata) {
   const fieldAccess = metadata.fieldAccess || {};
   const immutableFields = new Set(metadata.immutableFields || []);
-  
+
   return Object.keys(fieldAccess).filter((field) => {
     // Skip immutable fields
-    if (immutableFields.has(field)) return false;
-    
+    if (immutableFields.has(field)) {
+      return false;
+    }
+
     const access = fieldAccess[field];
     return access && access.update && access.update !== 'none';
   });
@@ -487,7 +489,7 @@ const genericValidateBody = (operation) => (req, res, next) => {
     // Ensure at least one valid field
     if (Object.keys(value).length === 0) {
       // Derive updateable fields from fieldAccess if not explicitly defined
-      const updateableFields = entityMetadata.updateableFields || 
+      const updateableFields = entityMetadata.updateableFields ||
         deriveUpdateableFields(entityMetadata);
       return sendError(
         res,
