@@ -371,6 +371,7 @@ class EntityMetadataRegistry {
 
   /// Load default metadata when JSON not available
   void _loadDefaults() {
+    // Use snake_case for entity names to match API/URL conventions
     final defaultEntities = [
       'user',
       'role',
@@ -379,12 +380,15 @@ class EntityMetadataRegistry {
       'contract',
       'invoice',
       'inventory',
-      'workOrder',
+      'work_order',
     ];
 
     for (final entity in defaultEntities) {
       _metadata[entity] = _createDefaultMetadata(entity);
     }
+
+    // Also register camelCase aliases for backwards compatibility
+    _metadata['workOrder'] = _metadata['work_order']!;
 
     ErrorService.logInfo(
       '[EntityMetadataRegistry] Loaded defaults for ${defaultEntities.length} entities',

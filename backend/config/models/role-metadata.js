@@ -48,9 +48,9 @@ module.exports = {
 
   /**
    * Fields required when creating a new entity
-   * Note: priority is optional - defaults to max + 1 via default-value-helper
+   * Note: priority is required at DB level (NOT NULL, no DEFAULT)
    */
-  requiredFields: ['name'],
+  requiredFields: ['name', 'priority'],
 
   /**
    * Fields that CANNOT be modified during UPDATE (immutable after creation)

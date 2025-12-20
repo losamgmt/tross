@@ -41,7 +41,7 @@ echo ""
 
 # Test 6: Get Admin Token
 echo "✅ Test 6: Get Admin Token"
-ADMIN_TOKEN=$(curl -s "$BASE_URL/api/dev/admin-token" | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+ADMIN_TOKEN=$(curl -s "$BASE_URL/api/dev/token?role=admin" | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
 echo "Admin token acquired: ${ADMIN_TOKEN:0:60}..."
 echo ""
 

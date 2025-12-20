@@ -41,7 +41,7 @@ describe('Audit Logging - Specialized Tests', () => {
       const response = await request(app)
         .post('/api/roles')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ name: uniqueRoleName });
+        .send({ name: uniqueRoleName, priority: 99 });
 
       expect(response.status).toBe(201);
 
@@ -69,7 +69,7 @@ describe('Audit Logging - Specialized Tests', () => {
       const createResponse = await request(app)
         .post('/api/roles')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ name: createRoleName });
+        .send({ name: createRoleName, priority: 99 });
 
       const roleId = createResponse.body.data.id;
 
@@ -101,7 +101,7 @@ describe('Audit Logging - Specialized Tests', () => {
       const createResponse = await request(app)
         .post('/api/roles')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ name: deleteRoleName });
+        .send({ name: deleteRoleName, priority: 99 });
 
       const roleId = createResponse.body.data.id;
 

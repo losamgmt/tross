@@ -12,6 +12,8 @@ cp backend/.env.example backend/.env
 
 ## Required Variables
 
+> **Source of truth:** Default values are defined in [`backend/config/deployment-adapter.js`](../backend/config/deployment-adapter.js) and [`backend/config/constants.js`](../backend/config/constants.js). Refer to those files for current defaults.
+
 ### Database Configuration
 
 | Variable | Description | Example | Required |
@@ -22,8 +24,8 @@ cp backend/.env.example backend/.env
 | `DB_NAME` | Database name (fallback) | `trossapp` | No |
 | `DB_USER` | Database user (fallback) | `postgres` | No |
 | `DB_PASSWORD` | Database password (fallback) | `secret` | No |
-| `DB_POOL_MIN` | Minimum pool connections | `2` | No |
-| `DB_POOL_MAX` | Maximum pool connections | `10` | No |
+| `DB_POOL_MIN` | Minimum pool connections | See `deployment-adapter.js` | No |
+| `DB_POOL_MAX` | Maximum pool connections | See `deployment-adapter.js` | No |
 
 > **Note**: `DATABASE_URL` takes precedence over individual DB_* variables.
 
@@ -43,8 +45,8 @@ cp backend/.env.example backend/.env
 | Variable | Description | Default | Required |
 |----------|-------------|---------|----------|
 | `NODE_ENV` | Environment mode | `development` | No |
-| `PORT` | Server port | `3001` | No |
-| `BACKEND_PORT` | Alternative port config | `3001` | No |
+| `PORT` | Server port | See `config/ports.js` | No |
+| `BACKEND_PORT` | Alternative port config | See `config/ports.js` | No |
 
 ### CORS & Security
 
@@ -57,11 +59,13 @@ cp backend/.env.example backend/.env
 
 ### Rate Limiting
 
+> **Defaults:** See `OPTIONAL_ENV_VARS` in [`backend/config/deployment-adapter.js`](../backend/config/deployment-adapter.js)
+
 | Variable | Description | Default | Required |
 |----------|-------------|---------|----------|
-| `RATE_LIMIT_WINDOW_MS` | Rate limit window (ms) | `900000` (15 min) | No |
-| `RATE_LIMIT_MAX_REQUESTS` | Max requests per window | `100` | No |
-| `REQUEST_TIMEOUT_MS` | Request timeout (ms) | `30000` (30s) | No |
+| `RATE_LIMIT_WINDOW_MS` | Rate limit window (ms) | See source | No |
+| `RATE_LIMIT_MAX_REQUESTS` | Max requests per window | See source | No |
+| `REQUEST_TIMEOUT_MS` | Request timeout (ms) | See source | No |
 
 ### Logging
 
@@ -104,6 +108,9 @@ cp backend/.env.example backend/.env
 ## Development vs Production
 
 ### Development Defaults
+
+> **Note:** These are illustrative examples. Actual defaults are defined in source files.
+> See [`backend/config/deployment-adapter.js`](../backend/config/deployment-adapter.js) for current values.
 
 ```env
 NODE_ENV=development

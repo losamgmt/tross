@@ -369,14 +369,14 @@ class _EntityDetailScreenState extends State<EntityDetailScreen> {
     );
   }
 
-  /// Get icon for entity type - uses camelCase names
+  /// Get icon for entity type - supports both camelCase and snake_case names
   IconData _getEntityIcon(String entityName) {
     return switch (entityName) {
       'user' => Icons.person,
       'role' => Icons.admin_panel_settings,
       'customer' => Icons.business,
       'technician' => Icons.engineering,
-      'workOrder' => Icons.assignment,
+      'workOrder' || 'work_order' => Icons.assignment,
       'contract' => Icons.description,
       'invoice' => Icons.receipt_long,
       'inventory' => Icons.inventory,

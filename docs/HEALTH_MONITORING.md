@@ -29,11 +29,9 @@ Guide to monitoring TrossApp's health and responding to issues.
 }
 ```
 
-**Platforms:**
-- Railway: `https://trossapp-production.up.railway.app/api/health`
-- Fly.io: `https://trossapp.fly.dev/api/health`
-- AWS: `https://api.trossapp.com/api/health`
-- Local: `http://localhost:3001/api/health`
+**Endpoints:**
+- Railway (Production): `https://tross-api-production.up.railway.app/api/health`
+- Local: `http://localhost:<BACKEND_PORT>/api/health` (see [`config/ports.js`](../config/ports.js))
 
 ---
 
@@ -58,13 +56,13 @@ Railway automatically checks `/api/health` every 30 seconds (configured in `rail
 **Quick Check (Command Line):**
 ```bash
 # Backend
-curl https://trossapp-production.up.railway.app/api/health
+curl https://tross-api-production.up.railway.app/api/health
 
 # Frontend
 curl https://trossapp.vercel.app
 
 # Check response time
-curl -w "@curl-format.txt" -o /dev/null -s https://trossapp-production.up.railway.app/api/health
+curl -w "@curl-format.txt" -o /dev/null -s https://tross-api-production.up.railway.app/api/health
 ```
 
 **Create `curl-format.txt`:**
@@ -94,7 +92,7 @@ time_total:  %{time_total}\n
 1. Sign up at https://uptimerobot.com
 2. Create new monitor:
    - Type: HTTP(s)
-   - URL: `https://trossapp-production.up.railway.app/api/health`
+   - URL: `https://tross-api-production.up.railway.app/api/health`
    - Interval: 5 minutes
 3. Add alert contacts (email, SMS, Slack)
 4. Repeat for frontend: `https://trossapp.vercel.app`
@@ -166,7 +164,7 @@ Create `scripts/health-check.sh`:
 ```bash
 #!/bin/bash
 
-BACKEND_URL="https://trossapp-production.up.railway.app/api/health"
+BACKEND_URL="https://tross-api-production.up.railway.app/api/health"
 RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" $BACKEND_URL)
 
 if [ $RESPONSE -eq 200 ]; then

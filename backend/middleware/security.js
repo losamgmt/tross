@@ -7,9 +7,7 @@
  */
 
 const helmet = require('helmet');
-const _mongoSanitize = require('express-mongo-sanitize');
 const { SECURITY } = require('../config/constants');
-const { logger: _logger } = require('../config/logger');
 
 /**
  * Input sanitization middleware

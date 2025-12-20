@@ -133,9 +133,9 @@ Don't want to install Node/Flutter/PostgreSQL locally? Use Codespaces:
 backend/
 ├── server.js              # Express app entry
 ├── routes/                # API endpoints
-│   ├── auth.js
-│   ├── users.js
-│   └── customers.js
+│   ├── auth.js            # Auth/session routes
+│   ├── entities.js        # Generic CRUD router factory (all entities)
+│   └── roles-extensions.js # Non-CRUD role-specific endpoints
 ├── db/
 │   ├── connection.js      # Database pool
 │   └── models/            # Data access layer

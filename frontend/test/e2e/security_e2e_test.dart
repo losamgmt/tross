@@ -104,7 +104,7 @@ void main() {
         // Endpoints exist for error messages, but backend validates
 
         expect(AppConfig.devTokenEndpoint, isNotEmpty);
-        expect(AppConfig.devAdminTokenEndpoint, isNotEmpty);
+        expect(AppConfig.devTokenForRole('admin'), isNotEmpty);
 
         // In production, these endpoints would return 403
         if (AppConfig.useProdBackend) {
@@ -301,7 +301,7 @@ void main() {
 
       test('dev token endpoints are properly scoped', () {
         expect(AppConfig.devTokenEndpoint, contains('/dev/'));
-        expect(AppConfig.devAdminTokenEndpoint, contains('/dev/'));
+        expect(AppConfig.devTokenForRole('admin'), contains('/dev/'));
 
         // Backend should protect these routes with middleware
         // (Tested in backend auth-middleware-security.test.js)

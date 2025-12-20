@@ -155,6 +155,41 @@ function buildSingleFieldSchema(fieldName, entityName, isRequired, rules) {
 }
 
 /**
+ * Derive creatable fields from fieldAccess metadata
+ * A field is creatable if its create access is NOT 'none'
+ *
+ * @param {Object} metadata - Entity metadata
+ * @returns {string[]} List of creatable field names
+ */
+function deriveCreatableFields(metadata) {
+  const fieldAccess = metadata.fieldAccess || {};
+  return Object.keys(fieldAccess).filter((field) => {
+    const access = fieldAccess[field];
+    return access && access.create && access.create !== 'none';
+  });
+}
+
+/**
+ * Derive updateable fields from fieldAccess metadata
+ * A field is updateable if its update access is NOT 'none'
+ *
+ * @param {Object} metadata - Entity metadata
+ * @returns {string[]} List of updateable field names
+ */
+function deriveUpdateableFields(metadata) {
+  const fieldAccess = metadata.fieldAccess || {};
+  const immutableFields = new Set(metadata.immutableFields || []);
+  
+  return Object.keys(fieldAccess).filter((field) => {
+    // Skip immutable fields
+    if (immutableFields.has(field)) return false;
+    
+    const access = fieldAccess[field];
+    return access && access.update && access.update !== 'none';
+  });
+}
+
+/**
  * Build a complete Joi object schema for an entity operation
  *
  * @param {string} entityName - Entity name (e.g., 'user', 'workOrder')
@@ -186,8 +221,8 @@ function buildEntitySchema(entityName, operation, metadata) {
       }
     }
 
-    // Createable fields are optional
-    const createableFields = metadata.createableFields || [];
+    // Derive creatable fields from fieldAccess (or use explicit list if provided)
+    const createableFields = metadata.createableFields || deriveCreatableFields(metadata);
     for (const field of createableFields) {
       // Skip if already added as required
       if (schemaFields[field]) {
@@ -200,8 +235,8 @@ function buildEntitySchema(entityName, operation, metadata) {
       }
     }
   } else if (operation === 'update') {
-    // All updateable fields are optional
-    const updateableFields = metadata.updateableFields || [];
+    // Derive updateable fields from fieldAccess (or use explicit list if provided)
+    const updateableFields = metadata.updateableFields || deriveUpdateableFields(metadata);
     for (const field of updateableFields) {
       const fieldSchema = buildSingleFieldSchema(field, entityName, false, rules);
       if (fieldSchema) {
@@ -242,6 +277,8 @@ module.exports = {
   buildSingleFieldSchema,
   clearSchemaCache,
   getSchemaCacheStats,
+  deriveCreatableFields,
+  deriveUpdateableFields,
   // Exported for testing
   _FIELD_TO_RULE_MAP: FIELD_TO_RULE_MAP,
   _getStatusRuleKey: getStatusRuleKey,

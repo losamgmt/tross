@@ -1,0 +1,303 @@
+/**
+ * Generic Entity Routes Factory
+ *
+ * SINGLE module for ALL entity CRUD operations.
+ * Replaces individual entity route files (customers.js, technicians.js, etc.)
+ *
+ * Architecture:
+ * - createEntityRouter(entityName) returns a router for that entity
+ * - Uses requirePermission for metadata-driven authorization
+ * - Uses enforceRLS for row-level security
+ * - Uses genericValidateBody for create/update validation
+ *
+ * Supported entities (defined in GenericEntityService metadata registry):
+ * - customer, technician, inventory, workOrder, invoice, contract
+ *
+ * All handlers use GenericEntityService + ResponseFormatter for consistent responses.
+ */
+const express = require('express');
+const { authenticateToken, requirePermission } = require('../middleware/auth');
+const { enforceRLS } = require('../middleware/row-level-security');
+const { genericValidateBody } = require('../middleware/generic-entity');
+const { validatePagination, validateIdParam, validateQuery } = require('../validators');
+const GenericEntityService = require('../services/generic-entity-service');
+const ResponseFormatter = require('../utils/response-formatter');
+const { filterDataByRole } = require('../utils/response-transform');
+const { buildRlsContext, buildAuditContext } = require('../utils/request-context');
+const { handleDbError, buildDbErrorConfig } = require('../utils/db-error-handler');
+const { logger } = require('../config/logger');
+
+// =============================================================================
+// ASYNC HANDLER WRAPPER
+// =============================================================================
+
+/**
+ * Async wrapper for consistent error handling
+ * Eliminates try/catch boilerplate in every handler
+ */
+const createAsyncHandler = (entityName, metadata) => (fn) => (req, res, next) => {
+  Promise.resolve(fn(req, res, next)).catch((error) => {
+    logger.error(`Error in ${entityName} operation`, {
+      error: error.message,
+      code: error.code,
+      entityId: req.params?.id,
+    });
+
+    // Try entity-specific DB error handling
+    if (metadata) {
+      const dbErrorConfig = buildDbErrorConfig(metadata);
+      if (handleDbError(error, res, dbErrorConfig)) {
+        return;
+      }
+    }
+
+    // Handle deletion blocked by dependents
+    if (error.message.includes('Cannot delete')) {
+      return ResponseFormatter.badRequest(res, error.message);
+    }
+
+    return ResponseFormatter.internalError(res, error);
+  });
+};
+
+// =============================================================================
+// ENTITY ROUTER FACTORY
+/**
+ * Convert entity name to human-readable display name
+ * Examples: 'workOrder' -> 'Work Order', 'customer' -> 'Customer'
+ *
+ * @param {string} entityName - Internal entity name
+ * @returns {string} Human-readable display name
+ */
+function toDisplayName(entityName) {
+  return entityName
+    // Split on camelCase boundaries
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    // Split on underscores
+    .replace(/_/g, ' ')
+    // Capitalize each word
+    .split(' ')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+// =============================================================================
+
+/**
+ * Create a router for a specific entity type
+ *
+ * @param {string} entityName - Internal entity name (e.g., 'customer', 'workOrder')
+ * @param {Object} options - Optional configuration
+ * @param {string} options.rlsResource - RLS resource name if different from entityName
+ * @returns {express.Router} Configured router for the entity
+ */
+function createEntityRouter(entityName, options = {}) {
+  const router = express.Router();
+
+  // Get metadata for this entity
+  const metadata = GenericEntityService._getMetadata(entityName);
+  // Use metadata displayName, or auto-generate from entityName
+  const displayName = metadata.displayName || toDisplayName(entityName);
+  const rlsResource = options.rlsResource || metadata.rlsResource || entityName;
+
+  // Create async handler bound to this entity
+  const asyncHandler = createAsyncHandler(entityName, metadata);
+
+  // Attach entity info to request for middleware
+  const attachEntity = (req, res, next) => {
+    req.entityName = entityName;
+    req.entityMetadata = metadata;
+    next();
+  };
+
+  // =============================================================================
+  // LIST ALL - GET /
+  // =============================================================================
+
+  router.get(
+    '/',
+    authenticateToken,
+    attachEntity,
+    requirePermission(rlsResource, 'read'),
+    enforceRLS(rlsResource),
+    validatePagination({ maxLimit: 200 }),
+    (req, res, next) => validateQuery(metadata)(req, res, next),
+    asyncHandler(async (req, res) => {
+      const { page, limit } = req.validated.pagination;
+      const { search, filters, sortBy, sortOrder } = req.validated.query;
+      const rlsContext = buildRlsContext(req);
+
+      const result = await GenericEntityService.findAll(entityName, {
+        page,
+        limit,
+        search,
+        filters,
+        sortBy,
+        sortOrder,
+      }, rlsContext);
+
+      const sanitizedData = filterDataByRole(
+        result.data,
+        metadata,
+        req.dbUser.role,
+        'read',
+      );
+
+      return ResponseFormatter.list(res, {
+        data: sanitizedData,
+        pagination: result.pagination,
+        appliedFilters: result.appliedFilters,
+        rlsApplied: result.rlsApplied,
+      });
+    }),
+  );
+
+  // =============================================================================
+  // GET BY ID - GET /:id
+  // =============================================================================
+
+  router.get(
+    '/:id',
+    authenticateToken,
+    attachEntity,
+    requirePermission(rlsResource, 'read'),
+    enforceRLS(rlsResource),
+    validateIdParam(),
+    asyncHandler(async (req, res) => {
+      const entityId = req.validated.id;
+      const rlsContext = buildRlsContext(req);
+
+      const entity = await GenericEntityService.findById(entityName, entityId, rlsContext);
+
+      if (!entity) {
+        return ResponseFormatter.notFound(res, `${displayName} not found`);
+      }
+
+      const sanitizedData = filterDataByRole(
+        entity,
+        metadata,
+        req.dbUser.role,
+        'read',
+      );
+
+      return ResponseFormatter.get(res, sanitizedData);
+    }),
+  );
+
+  // =============================================================================
+  // CREATE - POST /
+  // =============================================================================
+
+  router.post(
+    '/',
+    authenticateToken,
+    attachEntity,
+    requirePermission(rlsResource, 'create'),
+    genericValidateBody('create'),
+    asyncHandler(async (req, res) => {
+      const { validatedBody } = req;
+      const auditContext = buildAuditContext(req);
+
+      const created = await GenericEntityService.create(
+        entityName,
+        validatedBody,
+        { auditContext },
+      );
+
+      if (!created) {
+        throw new Error(`${displayName} creation failed unexpectedly`);
+      }
+
+      return ResponseFormatter.created(res, created, `${displayName} created successfully`);
+    }),
+  );
+
+  // =============================================================================
+  // UPDATE - PATCH /:id
+  // =============================================================================
+
+  router.patch(
+    '/:id',
+    authenticateToken,
+    attachEntity,
+    requirePermission(rlsResource, 'update'),
+    enforceRLS(rlsResource),
+    validateIdParam(),
+    genericValidateBody('update'),
+    asyncHandler(async (req, res) => {
+      const { validatedBody } = req;
+      const entityId = req.validated.id;
+      const rlsContext = buildRlsContext(req);
+      const auditContext = buildAuditContext(req);
+
+      // Check entity exists and user has access
+      const existing = await GenericEntityService.findById(entityName, entityId, rlsContext);
+      if (!existing) {
+        return ResponseFormatter.notFound(res, `${displayName} not found`);
+      }
+
+      const updated = await GenericEntityService.update(
+        entityName,
+        entityId,
+        validatedBody,
+        { auditContext },
+      );
+
+      if (!updated) {
+        return ResponseFormatter.notFound(res, `${displayName} not found`);
+      }
+
+      return ResponseFormatter.updated(res, updated, `${displayName} updated successfully`);
+    }),
+  );
+
+  // =============================================================================
+  // DELETE - DELETE /:id
+  // =============================================================================
+
+  router.delete(
+    '/:id',
+    authenticateToken,
+    attachEntity,
+    requirePermission(rlsResource, 'delete'),
+    enforceRLS(rlsResource),
+    validateIdParam(),
+    asyncHandler(async (req, res) => {
+      const entityId = req.validated.id;
+      const auditContext = buildAuditContext(req);
+
+      const deleted = await GenericEntityService.delete(
+        entityName,
+        entityId,
+        { auditContext },
+      );
+
+      if (!deleted) {
+        return ResponseFormatter.notFound(res, `${displayName} not found`);
+      }
+
+      return ResponseFormatter.deleted(res, `${displayName} deleted successfully`);
+    }),
+  );
+
+  return router;
+}
+
+// =============================================================================
+// PRE-BUILT ENTITY ROUTERS
+// =============================================================================
+
+// Export factory for custom use cases
+module.exports = {
+  createEntityRouter,
+
+  // Pre-built routers for standard entities
+  usersRouter: createEntityRouter('user', { rlsResource: 'users' }),
+  rolesRouter: createEntityRouter('role', { rlsResource: 'roles' }),
+  customersRouter: createEntityRouter('customer', { rlsResource: 'customers' }),
+  techniciansRouter: createEntityRouter('technician', { rlsResource: 'technicians' }),
+  inventoryRouter: createEntityRouter('inventory', { rlsResource: 'inventory' }),
+  workOrdersRouter: createEntityRouter('workOrder', { rlsResource: 'work_orders' }),
+  invoicesRouter: createEntityRouter('invoice', { rlsResource: 'invoices' }),
+  contractsRouter: createEntityRouter('contract', { rlsResource: 'contracts' }),
+};

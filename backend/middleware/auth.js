@@ -9,7 +9,7 @@
  */
 const jwt = require('jsonwebtoken');
 const { UserDataService: userDataService } = require('../services/user-data');
-const { HTTP_STATUS, USER_ROLES: _USER_ROLES } = require('../config/constants');
+const { HTTP_STATUS } = require('../config/constants');
 const { hasPermission, hasMinimumRole } = require('../config/permissions-loader');
 const { logSecurityEvent } = require('../config/logger');
 const { getClientIp, getUserAgent } = require('../utils/request-helpers');
@@ -210,21 +210,6 @@ const authenticateToken = async (req, res, next) => {
     });
     return sendAuthError(res, HTTP_STATUS.FORBIDDEN, 'Invalid or expired token');
   }
-};
-
-const _requireRole = (roleName) => (req, res, next) => {
-  if (!req.dbUser?.role || req.dbUser.role !== roleName) {
-    logSecurityEvent('AUTH_INSUFFICIENT_ROLE', {
-      ip: getClientIp(req),
-      userAgent: getUserAgent(req),
-      url: req.url,
-      userId: req.dbUser?.id,
-      requiredRole: roleName,
-      userRole: req.dbUser?.role,
-    });
-    return sendAuthError(res, HTTP_STATUS.FORBIDDEN, `${roleName} role required`);
-  }
-  next();
 };
 
 /**

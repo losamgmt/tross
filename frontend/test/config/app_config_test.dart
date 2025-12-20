@@ -92,10 +92,10 @@ void main() {
         expect(AppConfig.devTokenEndpoint, '${AppConfig.baseUrl}/dev/token');
       });
 
-      test('devAdminTokenEndpoint is constructed correctly', () {
+      test('devTokenForRole returns correct URL with role param', () {
         expect(
-          AppConfig.devAdminTokenEndpoint,
-          '${AppConfig.baseUrl}/dev/admin-token',
+          AppConfig.devTokenForRole('admin'),
+          '${AppConfig.baseUrl}/dev/token?role=admin',
         );
       });
 
@@ -227,7 +227,7 @@ void main() {
       test('all endpoint URLs use the same base URL', () {
         final endpoints = [
           AppConfig.devTokenEndpoint,
-          AppConfig.devAdminTokenEndpoint,
+          AppConfig.devTokenForRole('admin'),
           AppConfig.profileEndpoint,
           AppConfig.auth0LoginEndpoint,
           AppConfig.auth0CallbackEndpoint,

@@ -114,7 +114,7 @@ class AppConfig {
 
   // Development Endpoints (only available in dev mode)
   static String get devTokenEndpoint => '$baseUrl/dev/token';
-  static String get devAdminTokenEndpoint => '$baseUrl/dev/admin-token';
+  static String devTokenForRole(String role) => '$baseUrl/dev/token?role=$role';
 
   // Auth Endpoints
   static String get profileEndpoint => '$baseUrl/auth/me';

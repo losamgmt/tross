@@ -17,10 +17,12 @@ RESTful API design patterns and conventions.
 
 ## Base URL
 
-**Development:** `http://localhost:3001`  
-**Production:** `https://api.trossapp.com`
+> **Port configuration:** See [`config/ports.js`](../config/ports.js) for local port.
 
-**Live Documentation:** http://localhost:3001/api-docs (Swagger UI)
+**Development:** `http://localhost:<BACKEND_PORT>`  
+**Production:** `https://tross-api-production.up.railway.app`
+
+**Live Documentation:** `http://localhost:<BACKEND_PORT>/api-docs` (Swagger UI)
 
 ---
 
@@ -267,9 +269,9 @@ POST /api/customers
 }
 ```
 
-**Update Customer**
+**Update Customer** (Partial update)
 ```http
-PUT /api/customers/:id
+PATCH /api/customers/:id
 {
   "name": "Acme Corporation",
   "phone": "+1234567899"
@@ -307,9 +309,9 @@ POST /api/work_orders
 }
 ```
 
-**Update Work Order**
+**Update Work Order** (Partial update)
 ```http
-PUT /api/work_orders/:id
+PATCH /api/work_orders/:id
 {
   "status": "in_progress",
   "assigned_to": 456

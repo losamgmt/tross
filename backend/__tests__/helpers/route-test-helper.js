@@ -1,23 +1,25 @@
 /**
  * Route Test Helper
  * Clean, unified test infrastructure for route CRUD tests
- * 
+ *
  * PHILOSOPHY:
  * - Global setup handles module mocks (ONCE per file)
  * - beforeEach resets ALL mocks to fresh state
  * - Each test is pure: arrange, act, assert
  * - No shared state, no contamination
- * 
+ *
+ * NOTE: For generic entity routes (customers, users, roles, etc.),
+ * see generic-entity-routes.test.js which tests the entities.js router factory.
+ * This helper is used for specialized routes like auth.js.
+ *
  * USAGE:
  * const { setupRouteTest } = require('../../helpers/route-test-helper');
- * 
+ *
  * setupRouteTest({
- *   routerPath: '../../../routes/customers',
- *   routePath: '/api/customers',
- *   modelPath: '../../../db/models/Customer',
- *   metadataPath: '../../../config/models/customer-metadata',
+ *   routerPath: '../../../routes/auth',
+ *   routePath: '/api/auth',
  * });
- * 
+ *
  * Then use global test helpers in your tests:
  * - testApp (fresh Express app)
  * - testMocks (all mocks)

@@ -4,9 +4,11 @@ Common issues and solutions for TrossApp development and deployment.
 
 ## Quick Diagnostics
 
+> **Port values:** See [`config/ports.js`](../config/ports.js) for current port assignments.
+
 ```bash
-# Check backend health
-curl http://localhost:3001/api/health
+# Check backend health (replace <BACKEND_PORT> with value from config/ports.js)
+curl http://localhost:<BACKEND_PORT>/api/health
 
 # Check database connection
 cd backend && npm run db:migrate:status
@@ -21,13 +23,13 @@ cd backend && npm test -- --testNamePattern="health" --detectOpenHandles
 
 #### Port Already in Use
 
-**Error**: `EADDRINUSE: address already in use :::3001`
+**Error**: `EADDRINUSE: address already in use :::<PORT>`
 
 **Solution**:
 ```bash
-# Find process using port
-lsof -i :3001  # macOS/Linux
-netstat -ano | findstr :3001  # Windows
+# Find process using port (replace <PORT> with value from config/ports.js)
+lsof -i :<PORT>  # macOS/Linux
+netstat -ano | findstr :<PORT>  # Windows
 
 # Kill process
 kill -9 <PID>  # macOS/Linux
@@ -120,8 +122,8 @@ npm run db:seed:run  # Optional: seed test data
 # Ensure same secret across environments
 echo $JWT_SECRET
 
-# Get fresh dev token
-curl http://localhost:3001/api/dev/token?role=admin
+# Get fresh dev token (replace <BACKEND_PORT> with value from config/ports.js)
+curl http://localhost:<BACKEND_PORT>/api/dev/token?role=admin
 ```
 
 #### 401 Unauthorized
@@ -279,9 +281,8 @@ depends_on:
 #### Slow API Responses
 
 **Diagnostics**:
-```bash
-# Check response time
-time curl http://localhost:3001/api/users
+```bash\n# Check response time (replace <BACKEND_PORT> with value from config/ports.js)
+time curl http://localhost:<BACKEND_PORT>/api/users
 
 # Check database query time
 npm run db:debug

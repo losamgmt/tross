@@ -21,7 +21,7 @@ async function generateAdminToken(context, events, done) {
   }
 
   try {
-    const response = await axios.get(`${BACKEND_URL}/api/dev/admin-token`);
+    const response = await axios.get(`${BACKEND_URL}/api/dev/token?role=admin`);
     const token = response.data.token;
     
     cachedTokens.admin = { token, timestamp: Date.now() };

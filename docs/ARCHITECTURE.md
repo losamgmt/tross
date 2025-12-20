@@ -191,7 +191,7 @@ const user = await strategy.authenticate(credentials);
 **Decision:** Unit → Integration → E2E pyramid with high coverage.
 
 **Coverage:**
-- **1675+ tests** (98 test files)
+- Extensive test coverage across unit, integration, and E2E
 - Unit: Fast, isolated logic tests
 - Integration: API + DB tests
 - E2E: Critical user flows (Playwright)
