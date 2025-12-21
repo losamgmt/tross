@@ -57,7 +57,7 @@ describe('GenericEntityService', () => {
 
         expect(metadata).toBeDefined();
         expect(metadata.tableName).toBe('roles');
-        expect(metadata.identityField).toBe('name');
+        expect(metadata.identityField).toBe('priority');
       });
 
       test('should return metadata for "customer" entity', () => {
@@ -73,15 +73,15 @@ describe('GenericEntityService', () => {
 
         expect(metadata).toBeDefined();
         expect(metadata.tableName).toBe('technicians');
-        expect(metadata.identityField).toBe('license_number');
+        expect(metadata.identityField).toBe('email');
       });
 
-      test('should return metadata for "workOrder" entity', () => {
-        const metadata = GenericEntityService._getMetadata('workOrder');
+      test('should return metadata for "work_order" entity', () => {
+        const metadata = GenericEntityService._getMetadata('work_order');
 
         expect(metadata).toBeDefined();
         expect(metadata.tableName).toBe('work_orders');
-        expect(metadata.identityField).toBe('title');
+        expect(metadata.identityField).toBe('work_order_number');
       });
 
       test('should return metadata for "invoice" entity', () => {
@@ -105,7 +105,7 @@ describe('GenericEntityService', () => {
 
         expect(metadata).toBeDefined();
         expect(metadata.tableName).toBe('inventory');
-        expect(metadata.identityField).toBe('name');
+        expect(metadata.identityField).toBe('sku');
       });
     });
 
@@ -115,7 +115,7 @@ describe('GenericEntityService', () => {
 
     describe('case handling', () => {
       test('should preserve case for camelCase entity names', () => {
-        const metadata = GenericEntityService._getMetadata('workOrder');
+        const metadata = GenericEntityService._getMetadata('work_order');
         expect(metadata.tableName).toBe('work_orders');
       });
 
@@ -128,7 +128,7 @@ describe('GenericEntityService', () => {
         // These are the exact keys from config/models/index.js
         expect(() => GenericEntityService._getMetadata('user')).not.toThrow();
         expect(() => GenericEntityService._getMetadata('role')).not.toThrow();
-        expect(() => GenericEntityService._getMetadata('workOrder')).not.toThrow();
+        expect(() => GenericEntityService._getMetadata('work_order')).not.toThrow();
         expect(() => GenericEntityService._getMetadata('inventory')).not.toThrow();
       });
     });
@@ -348,7 +348,7 @@ describe('GenericEntityService', () => {
         db.query.mockResolvedValue({ rows: [mockWorkOrder] });
 
         // Act
-        const result = await GenericEntityService.findById('workOrder', 42);
+        const result = await GenericEntityService.findById('work_order', 42);
 
         // Assert
         expect(result).toEqual(mockWorkOrder);
@@ -632,7 +632,7 @@ describe('GenericEntityService', () => {
         db.query.mockResolvedValue({ rows: [mockWorkOrder] });
 
         // Act
-        const result = await GenericEntityService.findById('workOrder', 10, {
+        const result = await GenericEntityService.findById('work_order', 10, {
           policy: 'assigned_work_orders_only',
           userId: 5,
         });
@@ -651,7 +651,7 @@ describe('GenericEntityService', () => {
         db.query.mockResolvedValue({ rows: [mockWorkOrder] });
 
         // Act
-        const result = await GenericEntityService.findById('workOrder', 10, {
+        const result = await GenericEntityService.findById('work_order', 10, {
           policy: 'own_work_orders_only',
           userId: 42,
         });
@@ -885,7 +885,7 @@ describe('GenericEntityService', () => {
           { name: 'user', table: 'users' },
           { name: 'role', table: 'roles' },
           { name: 'customer', table: 'customers' },
-          { name: 'workOrder', table: 'work_orders' },
+          { name: 'work_order', table: 'work_orders' },
           { name: 'inventory', table: 'inventory' },
         ];
 
@@ -1063,7 +1063,7 @@ describe('GenericEntityService', () => {
 
         // Act - customer searching their own work orders
         const result = await GenericEntityService.findAll(
-          'workOrder',
+          'work_order',
           { page: 1, limit: 10, search: 'Fix' },
           { policy: 'own_work_orders_only', userId: 42 }
         );
@@ -1087,7 +1087,7 @@ describe('GenericEntityService', () => {
 
         // Act
         const result = await GenericEntityService.findAll(
-          'workOrder',
+          'work_order',
           { page: 1 },
           { policy: 'assigned_work_orders_only', userId: 5 }
         );
@@ -1140,6 +1140,8 @@ describe('GenericEntityService', () => {
         // Arrange
         const createdCustomer = {
           id: 1,
+          first_name: 'John',
+          last_name: 'Doe',
           email: 'test@example.com',
           is_active: true,
           created_at: new Date().toISOString(),
@@ -1148,6 +1150,8 @@ describe('GenericEntityService', () => {
 
         // Act
         const result = await GenericEntityService.create('customer', {
+          first_name: 'John',
+          last_name: 'Doe',
           email: 'test@example.com',
         });
 
@@ -1160,31 +1164,37 @@ describe('GenericEntityService', () => {
         // Arrange
         const createdCustomer = {
           id: 1,
+          first_name: 'John',
+          last_name: 'Doe',
           email: 'test@example.com',
           phone: '555-1234',
-          company_name: 'ACME Corp',
+          organization_name: 'ACME Corp',
           status: 'active',
         };
         db.query.mockResolvedValue({ rows: [createdCustomer] });
 
         // Act
         const result = await GenericEntityService.create('customer', {
+          first_name: 'John',
+          last_name: 'Doe',
           email: 'test@example.com',
           phone: '555-1234',
-          company_name: 'ACME Corp',
+          organization_name: 'ACME Corp',
           status: 'active',
         });
 
         // Assert
         expect(result.email).toBe('test@example.com');
         expect(result.phone).toBe('555-1234');
-        expect(result.company_name).toBe('ACME Corp');
+        expect(result.organization_name).toBe('ACME Corp');
       });
 
       test('should return created entity with RETURNING *', async () => {
         // Arrange
         const fullEntity = {
           id: 42,
+          first_name: 'Jane',
+          last_name: 'Doe',
           email: 'new@test.com',
           is_active: true,
           created_at: '2025-01-01T00:00:00Z',
@@ -1194,6 +1204,8 @@ describe('GenericEntityService', () => {
 
         // Act
         const result = await GenericEntityService.create('customer', {
+          first_name: 'Jane',
+          last_name: 'Doe',
           email: 'new@test.com',
         });
 
@@ -1212,11 +1224,13 @@ describe('GenericEntityService', () => {
       test('should exclude system-managed fields on create', async () => {
         // Arrange
         db.query.mockResolvedValue({
-          rows: [{ id: 1, email: 'test@example.com' }],
+          rows: [{ id: 1, first_name: 'John', last_name: 'Doe', email: 'test@example.com' }],
         });
 
         // Act - try to set id and created_at (system-managed)
         await GenericEntityService.create('customer', {
+          first_name: 'John',
+          last_name: 'Doe',
           email: 'test@example.com',
           id: 999, // Should be excluded (system-managed on create)
           created_at: '2020-01-01', // Should be excluded (system-managed on create)
@@ -1232,11 +1246,13 @@ describe('GenericEntityService', () => {
       test('should include provided fields in create', async () => {
         // Arrange
         db.query.mockResolvedValue({
-          rows: [{ id: 1, email: 'test@example.com', phone: '555-1234' }],
+          rows: [{ id: 1, first_name: 'John', last_name: 'Doe', email: 'test@example.com', phone: '555-1234' }],
         });
 
         // Act
         await GenericEntityService.create('customer', {
+          first_name: 'John',
+          last_name: 'Doe',
           email: 'test@example.com',
           phone: '555-1234',
         });
@@ -1256,6 +1272,8 @@ describe('GenericEntityService', () => {
       test('should throw when required field is missing', async () => {
         await expect(
           GenericEntityService.create('customer', {
+            first_name: 'John',
+            last_name: 'Doe',
             phone: '555-1234', // email is required but missing
           }),
         ).rejects.toThrow('Missing required fields for customer: email');
@@ -1264,6 +1282,8 @@ describe('GenericEntityService', () => {
       test('should throw when required field is null', async () => {
         await expect(
           GenericEntityService.create('customer', {
+            first_name: 'John',
+            last_name: 'Doe',
             email: null,
           }),
         ).rejects.toThrow('Missing required fields for customer: email');
@@ -1272,6 +1292,8 @@ describe('GenericEntityService', () => {
       test('should throw when required field is empty string', async () => {
         await expect(
           GenericEntityService.create('customer', {
+            first_name: 'John',
+            last_name: 'Doe',
             email: '',
           }),
         ).rejects.toThrow('Missing required fields for customer: email');
@@ -1335,7 +1357,7 @@ describe('GenericEntityService', () => {
 
         // Act & Assert
         await expect(
-          GenericEntityService.create('customer', { email: 'test@example.com' }),
+          GenericEntityService.create('customer', { first_name: 'John', last_name: 'Doe', email: 'test@example.com' }),
         ).rejects.toThrow('Connection refused');
       });
 
@@ -1347,7 +1369,7 @@ describe('GenericEntityService', () => {
 
         // Act & Assert
         await expect(
-          GenericEntityService.create('customer', { email: 'duplicate@example.com' }),
+          GenericEntityService.create('customer', { first_name: 'John', last_name: 'Doe', email: 'duplicate@example.com' }),
         ).rejects.toThrow('duplicate key value');
       });
     });
@@ -1360,11 +1382,13 @@ describe('GenericEntityService', () => {
       test('should build INSERT ... RETURNING * query', async () => {
         // Arrange
         db.query.mockResolvedValue({
-          rows: [{ id: 1, email: 'test@example.com' }],
+          rows: [{ id: 1, first_name: 'John', last_name: 'Doe', email: 'test@example.com' }],
         });
 
         // Act
         await GenericEntityService.create('customer', {
+          first_name: 'John',
+          last_name: 'Doe',
           email: 'test@example.com',
         });
 
@@ -1378,11 +1402,13 @@ describe('GenericEntityService', () => {
       test('should use parameterized query with $1, $2, etc', async () => {
         // Arrange
         db.query.mockResolvedValue({
-          rows: [{ id: 1, email: 'test@example.com', phone: '555-1234' }],
+          rows: [{ id: 1, first_name: 'John', last_name: 'Doe', email: 'test@example.com', phone: '555-1234' }],
         });
 
         // Act
         await GenericEntityService.create('customer', {
+          first_name: 'John',
+          last_name: 'Doe',
           email: 'test@example.com',
           phone: '555-1234',
         });
@@ -1392,7 +1418,7 @@ describe('GenericEntityService', () => {
         expect(query).toContain('$1');
         expect(query).toContain('$2');
         expect(Array.isArray(values)).toBe(true);
-        expect(values.length).toBe(2);
+        expect(values.length).toBe(4);
       });
 
       test('should use correct table name from metadata', async () => {
@@ -1435,15 +1461,19 @@ describe('GenericEntityService', () => {
         // Arrange
         const createdTech = {
           id: 1,
+          first_name: 'Mike',
+          last_name: 'Smith',
+          email: 'mike@example.com',
           license_number: 'TECH-001',
-          user_id: 5,
         };
         db.query.mockResolvedValue({ rows: [createdTech] });
 
         // Act
         const result = await GenericEntityService.create('technician', {
+          first_name: 'Mike',
+          last_name: 'Smith',
+          email: 'mike@example.com',
           license_number: 'TECH-001',
-          user_id: 5,
         });
 
         // Assert
@@ -1794,7 +1824,7 @@ describe('GenericEntityService', () => {
           .mockResolvedValueOnce({ rows: [updatedWorkOrder] }); // findById re-fetch
 
         // Act
-        const result = await GenericEntityService.update('workOrder', 1, {
+        const result = await GenericEntityService.update('work_order', 1, {
           title: 'Updated Title',
           status: 'in_progress',
         });
@@ -2234,7 +2264,7 @@ describe('GenericEntityService', () => {
           .mockResolvedValueOnce({ rows: [], rowCount: 0 });
 
         // Act
-        await GenericEntityService.delete('workOrder', 1);
+        await GenericEntityService.delete('work_order', 1);
 
         // Assert
         const selectCall = mockClient.query.mock.calls[1][0];
@@ -2420,7 +2450,7 @@ describe('GenericEntityService', () => {
         { name: 'role', table: 'roles', cascadeCount: 1 },
         { name: 'customer', table: 'customers', cascadeCount: 1 },
         { name: 'technician', table: 'technicians', cascadeCount: 1 },
-        { name: 'workOrder', table: 'work_orders', cascadeCount: 1 },
+        { name: 'work_order', table: 'work_orders', cascadeCount: 1 },
         { name: 'invoice', table: 'invoices', cascadeCount: 1 },
         { name: 'contract', table: 'contracts', cascadeCount: 1 },
         { name: 'inventory', table: 'inventory', cascadeCount: 1 },

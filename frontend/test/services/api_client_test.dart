@@ -31,10 +31,6 @@ void main() {
         expect(_getEntityEndpoint('work_order'), '/work_orders');
       });
 
-      test('maps "workOrder" to /work_orders endpoint (camelCase support)', () {
-        expect(_getEntityEndpoint('workOrder'), '/work_orders');
-      });
-
       test('maps "inventory" to /inventory (singular, not /inventories)', () {
         // Special case: inventory stays singular per backend API
         expect(_getEntityEndpoint('inventory'), '/inventory');
@@ -240,7 +236,6 @@ String _getEntityEndpoint(String entityName) {
     'customer': '/customers',
     'technician': '/technicians',
     'work_order': '/work_orders',
-    'workOrder': '/work_orders',
     'invoice': '/invoices',
     'contract': '/contracts',
     'inventory': '/inventory',

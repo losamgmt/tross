@@ -82,16 +82,17 @@ const sendError = (res, status, error, message) => {
  * Handles pluralization and case normalization
  *
  * URL: /api/v2/customers/1 → entityName: 'customer'
- * URL: /api/v2/work-orders/1 → entityName: 'workOrder'
+ * URL: /api/v2/work-orders/1 → entityName: 'work_order'
+ * All internal entity names use snake_case
  */
 const ENTITY_URL_MAP = {
-  // Plural URL forms → internal entity names
+  // Plural URL forms → internal entity names (snake_case only)
   users: 'user',
   roles: 'role',
   customers: 'customer',
   technicians: 'technician',
-  'work-orders': 'workOrder',
-  workorders: 'workOrder',
+  'work-orders': 'work_order',
+  work_orders: 'work_order',
   invoices: 'invoice',
   contracts: 'contract',
   inventory: 'inventory',
@@ -100,8 +101,8 @@ const ENTITY_URL_MAP = {
   role: 'role',
   customer: 'customer',
   technician: 'technician',
-  'work-order': 'workOrder',
-  workorder: 'workOrder',
+  'work-order': 'work_order',
+  work_order: 'work_order',
   invoice: 'invoice',
   contract: 'contract',
 };

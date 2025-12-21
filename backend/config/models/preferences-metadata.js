@@ -1,6 +1,8 @@
 /**
  * Preferences Model Metadata
  *
+ * Category: N/A (system table, not a business entity)
+ *
  * SRP: ONLY defines preferences table structure and query capabilities
  * This is a simplified metadata for a 1:1 user relationship table
  *
@@ -14,6 +16,7 @@
 
 const {
   FIELD_ACCESS_LEVELS: FAL,
+  ENTITY_CATEGORIES,
 } = require('../constants');
 
 module.exports = {
@@ -44,6 +47,26 @@ module.exports = {
    * Uses 'preferences' as the resource name in permissions
    */
   rlsResource: 'preferences',
+
+  // ============================================================================
+  // ENTITY CATEGORY
+  // ============================================================================
+
+  /**
+   * Entity category: N/A - preferences is a system table, not a business entity
+   * It uses SYSTEM category for consistency but doesn't participate in name patterns
+   */
+  entityCategory: null,
+
+  // ============================================================================
+  // FIELD ALIASING (for UI display names)
+  // ============================================================================
+
+  /**
+   * Field aliases for UI display. Key = field name, Value = display label
+   * Empty object = use field names as-is
+   */
+  fieldAliases: {},
 
   // ============================================================================
   // OUTPUT FILTERING

@@ -8,6 +8,7 @@
 const request = require('supertest');
 const app = require('../../../server');
 const { createTestUser, cleanupTestDatabase } = require('../../helpers/test-db');
+const { getUniqueValues } = require('../../helpers/test-helpers');
 const GenericEntityService = require('../../../services/generic-entity-service');
 const db = require('../../../db/connection');
 const jwt = require('jsonwebtoken');
@@ -36,12 +37,13 @@ describe('Audit Logging - Specialized Tests', () => {
 
   describe('Role CRUD Audit Logging', () => {
     test('should log role creation in audit_logs', async () => {
-      const uniqueRoleName = `test-role-${Date.now()}-audit`;
+      const unique = getUniqueValues();
+      const uniqueRoleName = `test-role-${unique.id}-audit`;
 
       const response = await request(app)
         .post('/api/roles')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ name: uniqueRoleName, priority: 99 });
+        .send({ name: uniqueRoleName, priority: unique.priority });
 
       expect(response.status).toBe(201);
 
@@ -63,13 +65,14 @@ describe('Audit Logging - Specialized Tests', () => {
     });
 
     test('should log role updates in audit_logs', async () => {
-      const createRoleName = `test-role-${Date.now()}-create`;
-      const updatedRoleName = `test-role-${Date.now()}-update`;
+      const unique = getUniqueValues();
+      const createRoleName = `test-role-${unique.id}-create`;
+      const updatedRoleName = `test-role-${unique.id}-update`;
 
       const createResponse = await request(app)
         .post('/api/roles')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ name: createRoleName, priority: 99 });
+        .send({ name: createRoleName, priority: unique.priority });
 
       const roleId = createResponse.body.data.id;
 
@@ -96,12 +99,13 @@ describe('Audit Logging - Specialized Tests', () => {
     });
 
     test('should log role deletion in audit_logs', async () => {
-      const deleteRoleName = `test-role-${Date.now()}-delete`;
+      const unique = getUniqueValues();
+      const deleteRoleName = `test-role-${unique.id}-delete`;
 
       const createResponse = await request(app)
         .post('/api/roles')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ name: deleteRoleName, priority: 99 });
+        .send({ name: deleteRoleName, priority: unique.priority });
 
       const roleId = createResponse.body.data.id;
 

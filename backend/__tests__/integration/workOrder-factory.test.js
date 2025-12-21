@@ -19,7 +19,7 @@ describe('Work Order Entity', () => {
     await cleanupTestDatabase();
   });
 
-  runEntityTests('workOrder', {
+  runEntityTests('work_order', {
     app,
     db: db.pool
   });

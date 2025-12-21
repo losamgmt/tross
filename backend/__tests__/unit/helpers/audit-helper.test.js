@@ -141,7 +141,7 @@ describe('db/helpers/audit-helper.js', () => {
       test('should work with all 8 entities', async () => {
         const entities = [
           'user', 'role', 'customer', 'technician',
-          'workOrder', 'invoice', 'contract', 'inventory',
+          'work_order', 'invoice', 'contract', 'inventory',
         ];
 
         for (const entity of entities) {
@@ -396,7 +396,7 @@ describe('db/helpers/audit-helper.js', () => {
     test('should return true for valid entities by default', () => {
       expect(isAuditEnabled('user')).toBe(true);
       expect(isAuditEnabled('customer')).toBe(true);
-      expect(isAuditEnabled('workOrder')).toBe(true);
+      expect(isAuditEnabled('work_order')).toBe(true);
     });
 
     test('should return false for invalid entity name', () => {

@@ -134,14 +134,14 @@ const AuditResults = {
  * Map entity names (from metadata) to ResourceTypes constants
  *
  * Used by GenericEntityService and audit-helper to convert
- * camelCase entity names to snake_case resource types.
+ * entity names to snake_case resource types.
  */
 const EntityToResourceType = {
   user: ResourceTypes.USER,
   role: ResourceTypes.ROLE,
   customer: ResourceTypes.CUSTOMER,
   technician: ResourceTypes.TECHNICIAN,
-  workOrder: ResourceTypes.WORK_ORDER,
+  work_order: ResourceTypes.WORK_ORDER,
   invoice: ResourceTypes.INVOICE,
   contract: ResourceTypes.CONTRACT,
   inventory: ResourceTypes.INVENTORY,
@@ -177,7 +177,7 @@ const EntityActionMap = {
     update: AuditActions.TECHNICIAN_UPDATE,
     delete: AuditActions.TECHNICIAN_DELETE,
   },
-  workOrder: {
+  work_order: {
     create: AuditActions.WORK_ORDER_CREATE,
     update: AuditActions.WORK_ORDER_UPDATE,
     delete: AuditActions.WORK_ORDER_DELETE,

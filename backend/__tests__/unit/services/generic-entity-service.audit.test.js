@@ -57,8 +57,10 @@ describe('GenericEntityService - Audit Logging', () => {
   describe('create - audit logging', () => {
     const mockCreatedRecord = {
       id: 1,
+      first_name: 'John',
+      last_name: 'Doe',
       email: 'test@example.com',
-      company_name: 'Test Co',
+      organization_name: 'Test Co',
       is_active: true,
     };
 
@@ -79,7 +81,7 @@ describe('GenericEntityService - Audit Logging', () => {
       // Act
       await GenericEntityService.create(
         'customer',
-        { email: 'test@example.com', company_name: 'Test Co' },
+        { first_name: 'John', last_name: 'Doe', email: 'test@example.com', organization_name: 'Test Co' },
         { auditContext: mockAuditContext },
       );
 
@@ -96,8 +98,10 @@ describe('GenericEntityService - Audit Logging', () => {
     test('should NOT call logEntityAudit without auditContext', async () => {
       // Act
       await GenericEntityService.create('customer', {
+        first_name: 'John',
+        last_name: 'Doe',
         email: 'test@example.com',
-        company_name: 'Test Co',
+        organization_name: 'Test Co',
       });
 
       // Assert
@@ -108,7 +112,7 @@ describe('GenericEntityService - Audit Logging', () => {
       // Act
       await GenericEntityService.create(
         'customer',
-        { email: 'test@example.com', company_name: 'Test Co' },
+        { first_name: 'John', last_name: 'Doe', email: 'test@example.com', organization_name: 'Test Co' },
         { auditContext: null },
       );
 
@@ -123,7 +127,7 @@ describe('GenericEntityService - Audit Logging', () => {
       // Act
       await GenericEntityService.create(
         'customer',
-        { email: 'test@example.com', company_name: 'Test Co' },
+        { first_name: 'John', last_name: 'Doe', email: 'test@example.com', organization_name: 'Test Co' },
         { auditContext: mockAuditContext },
       );
 
@@ -134,8 +138,10 @@ describe('GenericEntityService - Audit Logging', () => {
     test('should return result even without auditContext', async () => {
       // Act
       const result = await GenericEntityService.create('customer', {
+        first_name: 'John',
+        last_name: 'Doe',
         email: 'test@example.com',
-        company_name: 'Test Co',
+        organization_name: 'Test Co',
       });
 
       // Assert
@@ -150,15 +156,21 @@ describe('GenericEntityService - Audit Logging', () => {
   describe('update - audit logging', () => {
     const mockOldRecord = {
       id: 1,
+      first_name: 'John',
+      last_name: 'Doe',
       email: 'old@example.com',
-      company_name: 'Old Co',
+      organization_name: 'Old Co',
+      phone: '555-1234',
       is_active: true,
     };
 
     const mockUpdatedRecord = {
       id: 1,
+      first_name: 'John',
+      last_name: 'Doe',
       email: 'old@example.com',
-      company_name: 'New Co',
+      organization_name: 'Old Co',
+      phone: '555-9999',
       is_active: true,
     };
 
@@ -179,7 +191,7 @@ describe('GenericEntityService - Audit Logging', () => {
       await GenericEntityService.update(
         'customer',
         1,
-        { company_name: 'New Co' },
+        { phone: '555-9999' },
         { auditContext: mockAuditContext },
       );
 
@@ -188,9 +200,9 @@ describe('GenericEntityService - Audit Logging', () => {
       expect(mockLogEntityAudit).toHaveBeenCalledWith(
         'update',
         'customer',
-        expect.objectContaining({ id: 1, company_name: 'New Co' }),
+        expect.objectContaining({ id: 1, phone: '555-9999' }),
         mockAuditContext,
-        expect.objectContaining({ id: 1, company_name: 'Old Co' }), // old values
+        expect.objectContaining({ id: 1, phone: '555-1234' }), // old values
       );
     });
 
@@ -201,7 +213,7 @@ describe('GenericEntityService - Audit Logging', () => {
         .mockResolvedValueOnce({ rows: [mockUpdatedRecord], rowCount: 1 }); // re-fetch
 
       // Act
-      await GenericEntityService.update('customer', 1, { company_name: 'New Co' });
+      await GenericEntityService.update('customer', 1, { phone: '555-9999' });
 
       // Assert
       expect(mockLogEntityAudit).not.toHaveBeenCalled();
@@ -214,7 +226,7 @@ describe('GenericEntityService - Audit Logging', () => {
         .mockResolvedValueOnce({ rows: [mockUpdatedRecord], rowCount: 1 }); // re-fetch
 
       // Act
-      await GenericEntityService.update('customer', 1, { company_name: 'New Co' });
+      await GenericEntityService.update('customer', 1, { phone: '555-9999' });
 
       // Assert - 2 queries: update + re-fetch (no findById for old values)
       expect(db.query).toHaveBeenCalledTimes(2);
@@ -230,7 +242,7 @@ describe('GenericEntityService - Audit Logging', () => {
       const result = await GenericEntityService.update(
         'customer',
         999,
-        { company_name: 'New Co' },
+        { phone: '555-9999' },
         { auditContext: mockAuditContext },
       );
 
@@ -345,14 +357,14 @@ describe('GenericEntityService - Audit Logging', () => {
       // Arrange
       const partialContext = { userId: 123 }; // no ipAddress or userAgent
       db.query.mockResolvedValue({
-        rows: [{ id: 1, email: 'test@example.com', company_name: 'Test Co' }],
+        rows: [{ id: 1, first_name: 'John', last_name: 'Doe', email: 'test@example.com', organization_name: 'Test Co' }],
         rowCount: 1,
       });
 
       // Act
       await GenericEntityService.create(
         'customer',
-        { email: 'test@example.com', company_name: 'Test Co' },
+        { first_name: 'John', last_name: 'Doe', email: 'test@example.com', organization_name: 'Test Co' },
         { auditContext: partialContext },
       );
 
@@ -368,14 +380,14 @@ describe('GenericEntityService - Audit Logging', () => {
     test('should handle options with other fields alongside auditContext', async () => {
       // Arrange
       db.query.mockResolvedValue({
-        rows: [{ id: 1, email: 'test@example.com', company_name: 'Test Co' }],
+        rows: [{ id: 1, first_name: 'John', last_name: 'Doe', email: 'test@example.com', organization_name: 'Test Co' }],
         rowCount: 1,
       });
 
       // Act
       await GenericEntityService.create(
         'customer',
-        { email: 'test@example.com', company_name: 'Test Co' },
+        { first_name: 'John', last_name: 'Doe', email: 'test@example.com', organization_name: 'Test Co' },
         {
           auditContext: { userId: 123 },
           someOtherOption: 'value', // should be ignored

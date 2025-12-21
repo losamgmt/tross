@@ -61,7 +61,7 @@
     "contract": { "group": "crm", "order": 2 },
     "invoice": { "group": "finance", "order": 1 },
     "technician": { "group": "operations", "order": 1 },
-    "workOrder": { "group": "operations", "order": 2 },
+    "work_order": { "group": "operations", "order": 2 },
     "inventory": { "group": "operations", "order": 3 },
     "user": { "group": "admin", "order": 1 },
     "role": { "group": "admin", "order": 2 }

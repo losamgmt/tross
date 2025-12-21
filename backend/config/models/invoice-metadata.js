@@ -1,6 +1,8 @@
 /**
  * Invoice Model Metadata
  *
+ * Category: COMPUTED (auto-generated invoice_number identity, computed name)
+ *
  * SRP: ONLY defines Invoice table structure and query capabilities
  * Used by QueryBuilderService to generate dynamic queries
  * Used by GenericEntityService for CRUD operations
@@ -11,6 +13,7 @@
 const {
   FIELD_ACCESS_LEVELS: _FAL,
   UNIVERSAL_FIELD_ACCESS,
+  ENTITY_CATEGORIES,
 } = require('../constants');
 
 module.exports = {
@@ -21,14 +24,29 @@ module.exports = {
   primaryKey: 'id',
 
   // ============================================================================
+  // ENTITY CATEGORY (determines name handling pattern)
+  // ============================================================================
+
+  /**
+   * Entity category: COMPUTED entities have auto-generated identifiers
+   * and computed name from template: "{customer.fullName}: {summary}: {identifier}"
+   */
+  entityCategory: ENTITY_CATEGORIES.COMPUTED,
+
+  // ============================================================================
   // IDENTITY CONFIGURATION (Entity Contract v2.0)
   // ============================================================================
 
   /**
-   * The human-readable identifier field (not the PK)
-   * Used for: Display names, search results, logging
+   * The unique identifier field (auto-generated: INV-YYYY-NNNN)
+   * Used for: Unique references, search results, logging
    */
   identityField: 'invoice_number',
+
+  /**
+   * Whether the identity field has a UNIQUE constraint in the database
+   */
+  identityFieldUnique: true,
 
   /**
    * RLS resource name for permission checks
@@ -37,13 +55,38 @@ module.exports = {
   rlsResource: 'invoices',
 
   // ============================================================================
+  // FIELD ALIASING (for UI display names)
+  // ============================================================================
+
+  /**
+   * Field aliases for UI display. Key = field name, Value = display label
+   * Empty object = use field names as-is
+   */
+  fieldAliases: {},
+
+  // ============================================================================
+  // COMPUTED NAME CONFIGURATION
+  // ============================================================================
+
+  /**
+   * Configuration for computing the human-readable name
+   * Template: "{customer.fullName}: {summary}: {invoice_number}"
+   */
+  computedName: {
+    template: '{customer.fullName}: {summary}: {invoice_number}',
+    sources: ['customer_id', 'summary', 'invoice_number'],
+    readOnly: false,
+  },
+
+  // ============================================================================
   // CRUD CONFIGURATION (for GenericEntityService)
   // ============================================================================
 
   /**
    * Fields required when creating a new entity
+   * invoice_number is auto-generated
    */
-  requiredFields: ['invoice_number', 'customer_id', 'amount', 'total'],
+  requiredFields: ['customer_id', 'amount', 'total'],
 
   /**
    * Fields that cannot be modified after creation (beyond universal immutables: id, created_at)
@@ -69,11 +112,27 @@ module.exports = {
     // Entity Contract v2.0 fields
     ...UNIVERSAL_FIELD_ACCESS,
 
-    // Identity field - audit trail, immutable after creation
+    // Identity field - auto-generated, immutable
     invoice_number: {
-      create: 'dispatcher',
+      create: 'none', // Auto-generated
       read: 'customer',
       update: 'none', // Immutable
+      delete: 'none',
+    },
+
+    // Computed name field (optional user override)
+    name: {
+      create: 'dispatcher',
+      read: 'customer',
+      update: 'dispatcher',
+      delete: 'none',
+    },
+
+    // Brief description of this invoice
+    summary: {
+      create: 'dispatcher',
+      read: 'customer',
+      update: 'dispatcher',
       delete: 'none',
     },
 
@@ -170,7 +229,7 @@ module.exports = {
       type: 'belongsTo',
       foreignKey: 'customer_id',
       table: 'customers',
-      fields: ['id', 'email', 'company_name', 'phone'],
+      fields: ['id', 'email', 'first_name', 'last_name', 'organization_name', 'phone'],
       description: 'Customer billed by this invoice',
     },
     // Invoice may be linked to a work order (optional)
@@ -178,7 +237,7 @@ module.exports = {
       type: 'belongsTo',
       foreignKey: 'work_order_id',
       table: 'work_orders',
-      fields: ['id', 'title', 'status'],
+      fields: ['id', 'work_order_number', 'name', 'status'],
       description: 'Work order this invoice is for',
     },
   },
@@ -209,7 +268,7 @@ module.exports = {
    * Fields that support text search (ILIKE %term%)
    * These are concatenated with OR for full-text search
    */
-  searchableFields: ['invoice_number'],
+  searchableFields: ['invoice_number', 'name', 'summary'],
 
   // ============================================================================
   // FILTER CONFIGURATION (Exact Match & Operators)
@@ -277,6 +336,10 @@ module.exports = {
       values: ['draft', 'sent', 'paid', 'overdue', 'cancelled'],
       default: 'draft',
     },
+
+    // COMPUTED entity fields
+    name: { type: 'string', maxLength: 255 },
+    summary: { type: 'string', maxLength: 255 },
 
     // Entity-specific fields
     work_order_id: { type: 'integer' },

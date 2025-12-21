@@ -358,6 +358,41 @@ class _AsyncSelectFieldState<T, V> extends State<_AsyncSelectField<T, V>> {
 
     final valueField = widget.config.valueField ?? 'id';
     final displayField = widget.config.asyncDisplayField ?? 'name';
+    final displayFields = widget.config.asyncDisplayFields;
+    final displayTemplate = widget.config.asyncDisplayTemplate;
+
+    // Build display string from item using template or fields
+    String buildDisplayString(Map<String, dynamic> item) {
+      // If template provided, use it with placeholder substitution
+      if (displayTemplate != null) {
+        var result = displayTemplate;
+        // Replace all placeholders with their values
+        for (final key in item.keys) {
+          result = result.replaceAll('{$key}', item[key]?.toString() ?? '');
+        }
+        // Remove any remaining unreplaced placeholders (missing fields)
+        result = result.replaceAll(RegExp(r'\{[^}]+\}'), '');
+        // Clean up orphaned separators (e.g., " - " at start/end or doubled)
+        result = result
+            .replaceAll(RegExp(r'^\s*-\s*'), '') // " - " at start
+            .replaceAll(RegExp(r'\s*-\s*$'), '') // " - " at end
+            .replaceAll(RegExp(r'\s*-\s*-\s*'), ' - ') // double separators
+            .trim();
+        return result.isNotEmpty ? result : 'ID: ${item[valueField]}';
+      }
+
+      // If multiple displayFields provided, join them
+      if (displayFields != null && displayFields.isNotEmpty) {
+        final parts = displayFields
+            .map((f) => item[f]?.toString())
+            .where((v) => v != null && v.isNotEmpty)
+            .toList();
+        return parts.isNotEmpty ? parts.join(' - ') : 'ID: ${item[valueField]}';
+      }
+
+      // Fallback to single displayField
+      return item[displayField]?.toString() ?? 'ID: ${item[valueField]}';
+    }
 
     // Convert items to select format
     final selectItems = <int>[];
@@ -367,7 +402,7 @@ class _AsyncSelectFieldState<T, V> extends State<_AsyncSelectField<T, V>> {
       final id = item[valueField] as int?;
       if (id != null) {
         selectItems.add(id);
-        displayMap[id] = item[displayField]?.toString() ?? 'ID: $id';
+        displayMap[id] = buildDisplayString(item);
       }
     }
 

@@ -11,7 +11,8 @@
  * - Uses genericValidateBody for create/update validation
  *
  * Supported entities (defined in GenericEntityService metadata registry):
- * - customer, technician, inventory, workOrder, invoice, contract
+ * - customer, technician, inventory, work_order, invoice, contract
+ * - All entity names use snake_case
  *
  * All handlers use GenericEntityService + ResponseFormatter for consistent responses.
  */
@@ -64,15 +65,13 @@ const createAsyncHandler = (entityName, metadata) => (fn) => (req, res, next) =>
 // ENTITY ROUTER FACTORY
 /**
  * Convert entity name to human-readable display name
- * Examples: 'workOrder' -> 'Work Order', 'customer' -> 'Customer'
+ * Examples: 'work_order' -> 'Work Order', 'customer' -> 'Customer'
  *
- * @param {string} entityName - Internal entity name
+ * @param {string} entityName - Internal entity name (snake_case)
  * @returns {string} Human-readable display name
  */
 function toDisplayName(entityName) {
   return entityName
-    // Split on camelCase boundaries
-    .replace(/([a-z])([A-Z])/g, '$1 $2')
     // Split on underscores
     .replace(/_/g, ' ')
     // Capitalize each word
@@ -86,7 +85,7 @@ function toDisplayName(entityName) {
 /**
  * Create a router for a specific entity type
  *
- * @param {string} entityName - Internal entity name (e.g., 'customer', 'workOrder')
+ * @param {string} entityName - Internal entity name (e.g., 'customer', 'work_order')
  * @param {Object} options - Optional configuration
  * @param {string} options.rlsResource - RLS resource name if different from entityName
  * @returns {express.Router} Configured router for the entity
@@ -297,7 +296,7 @@ module.exports = {
   customersRouter: createEntityRouter('customer', { rlsResource: 'customers' }),
   techniciansRouter: createEntityRouter('technician', { rlsResource: 'technicians' }),
   inventoryRouter: createEntityRouter('inventory', { rlsResource: 'inventory' }),
-  workOrdersRouter: createEntityRouter('workOrder', { rlsResource: 'work_orders' }),
+  workOrdersRouter: createEntityRouter('work_order', { rlsResource: 'work_orders' }),
   invoicesRouter: createEntityRouter('invoice', { rlsResource: 'invoices' }),
   contractsRouter: createEntityRouter('contract', { rlsResource: 'contracts' }),
 };

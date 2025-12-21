@@ -1,6 +1,8 @@
 /**
  * Customer Model Metadata
  *
+ * Category: HUMAN (first_name + last_name, email identity)
+ *
  * SRP: ONLY defines Customer table structure and query capabilities
  * Used by QueryBuilderService to generate dynamic queries
  * Used by GenericEntityService for CRUD operations
@@ -9,8 +11,8 @@
  */
 
 const {
-  FIELD_ACCESS_LEVELS: FAL,
   UNIVERSAL_FIELD_ACCESS,
+  ENTITY_CATEGORIES,
 } = require('../constants');
 
 module.exports = {
@@ -19,6 +21,16 @@ module.exports = {
 
   // Primary key
   primaryKey: 'id',
+
+  // ============================================================================
+  // ENTITY CATEGORY (determines name handling pattern)
+  // ============================================================================
+
+  /**
+   * Entity category: HUMAN entities use first_name + last_name
+   * Display name computed as fullName = "{first_name} {last_name}"
+   */
+  entityCategory: ENTITY_CATEGORIES.HUMAN,
 
   // ============================================================================
   // IDENTITY CONFIGURATION (Entity Contract v2.0)
@@ -43,33 +55,52 @@ module.exports = {
   rlsResource: 'customers',
 
   // ============================================================================
+  // FIELD ALIASING (for UI display names)
+  // ============================================================================
+
+  /**
+   * Field aliases for UI display. Key = field name, Value = display label
+   * Empty object = use field names as-is
+   */
+  fieldAliases: {},
+
+  // ============================================================================
   // CRUD CONFIGURATION (for GenericEntityService)
   // ============================================================================
 
   /**
    * Fields required when creating a new entity
    */
-  requiredFields: ['email'],
+  requiredFields: ['email', 'first_name', 'last_name'],
 
   /**
    * Fields that cannot be modified after creation (beyond universal immutables: id, created_at)
-   * Empty array = all fields are updateable
    */
   immutableFields: [],
 
   // ============================================================================
   // FIELD ACCESS CONTROL (role-based field-level CRUD permissions)
   // ============================================================================
-  // Each field specifies the MINIMUM role required for each CRUD operation.
-  // Permissions accumulate UPWARD: manager has all dispatcher + technician + customer permissions.
-  // Universal fields (id, is_active, created_at, updated_at, status) are in UNIVERSAL_FIELD_ACCESS.
-  // Use FAL shortcuts for common patterns, or define custom { create, read, update, delete }.
 
   fieldAccess: {
     // Entity Contract v2.0 fields (id, is_active, created_at, updated_at, status)
     ...UNIVERSAL_FIELD_ACCESS,
 
-    // Email - identity field, dispatcher+ can create, customer can read own, immutable after create
+    // HUMAN entity name fields
+    first_name: {
+      create: 'dispatcher',
+      read: 'customer',
+      update: 'customer', // Self-editable with RLS
+      delete: 'none',
+    },
+    last_name: {
+      create: 'dispatcher',
+      read: 'customer',
+      update: 'customer', // Self-editable with RLS
+      delete: 'none',
+    },
+
+    // Email - identity field, dispatcher+ can create, customer can read own
     email: {
       create: 'dispatcher',
       read: 'customer', // RLS ensures customers only see own
@@ -85,47 +116,42 @@ module.exports = {
       delete: 'none',
     },
 
-    // Company name - customer can update their own
-    company_name: {
+    // Organization name - customer can update their own
+    organization_name: {
       create: 'dispatcher',
       read: 'customer',
       update: 'customer', // Self-editable with RLS
       delete: 'none',
     },
 
-    // Billing address - customer can update their own, internal teams can view
+    // Addresses - customer can update their own, internal teams can view
     billing_address: {
       create: 'dispatcher',
       read: 'customer',
       update: 'customer',
       delete: 'none',
     },
-
-    // Notes - internal notes by staff, not visible to customer
-    notes: FAL.MANAGER_MANAGED,
+    service_address: {
+      create: 'dispatcher',
+      read: 'customer',
+      update: 'customer',
+      delete: 'none',
+    },
   },
 
   // ============================================================================
   // RELATIONSHIPS (for JOIN queries)
   // ============================================================================
 
-  /**
-   * Relationships to JOIN by default in all queries (findById, findAll, findByField)
-   * These are included automatically without needing to specify 'include' option
-   */
   defaultIncludes: [],
 
-  /**
-   * Foreign key relationships
-   * Used for JOIN generation and validation
-   */
   relationships: {
     // Customers have many work orders
     workOrders: {
       type: 'hasMany',
       foreignKey: 'customer_id',
       table: 'work_orders',
-      fields: ['id', 'title', 'status', 'priority', 'scheduled_start'],
+      fields: ['id', 'work_order_number', 'name', 'status', 'priority', 'scheduled_start'],
       description: 'Work orders submitted by this customer',
     },
     // Customers have many invoices
@@ -133,7 +159,7 @@ module.exports = {
       type: 'hasMany',
       foreignKey: 'customer_id',
       table: 'invoices',
-      fields: ['id', 'invoice_number', 'status', 'total', 'due_date'],
+      fields: ['id', 'invoice_number', 'name', 'status', 'total', 'due_date'],
       description: 'Invoices billed to this customer',
     },
     // Customers have many contracts
@@ -141,7 +167,7 @@ module.exports = {
       type: 'hasMany',
       foreignKey: 'customer_id',
       table: 'contracts',
-      fields: ['id', 'contract_number', 'status', 'start_date', 'end_date'],
+      fields: ['id', 'contract_number', 'name', 'status', 'start_date', 'end_date'],
       description: 'Service contracts with this customer',
     },
     // Optional: User account linked to this customer profile
@@ -158,14 +184,6 @@ module.exports = {
   // DELETE CONFIGURATION (for GenericEntityService.delete)
   // ============================================================================
 
-  /**
-   * Dependent records that must be cascade-deleted before this entity
-   * Only for relationships NOT handled by database ON DELETE CASCADE/SET NULL
-   *
-   * Note: work_orders, invoices, contracts have ON DELETE RESTRICT
-   *       (deletion blocked if dependents exist - business rule, not cascade)
-   * For audit_logs: polymorphic FK via resource_type + resource_id
-   */
   dependents: [
     {
       table: 'audit_logs',
@@ -178,29 +196,25 @@ module.exports = {
   // SEARCH CONFIGURATION (Text Search with ILIKE)
   // ============================================================================
 
-  /**
-   * Fields that support text search (ILIKE %term%)
-   * These are concatenated with OR for full-text search
-   */
   searchableFields: [
+    'first_name',
+    'last_name',
     'email',
     'phone',
-    'company_name',
+    'organization_name',
   ],
 
   // ============================================================================
   // FILTER CONFIGURATION (Exact Match & Operators)
   // ============================================================================
 
-  /**
-   * Fields that can be used in WHERE clauses
-   * Supports: exact match, gt, gte, lt, lte, in, not
-   */
   filterableFields: [
     'id',
     'email',
+    'first_name',
+    'last_name',
     'phone',
-    'company_name',
+    'organization_name',
     'is_active',
     'status',
     'created_at',
@@ -211,22 +225,18 @@ module.exports = {
   // SORT CONFIGURATION
   // ============================================================================
 
-  /**
-   * Fields that can be used in ORDER BY clauses
-   */
   sortableFields: [
     'id',
     'email',
-    'company_name',
+    'first_name',
+    'last_name',
+    'organization_name',
     'is_active',
     'status',
     'created_at',
     'updated_at',
   ],
 
-  /**
-   * Default sort when no sortBy specified
-   */
   defaultSort: {
     field: 'created_at',
     order: 'DESC',
@@ -251,9 +261,13 @@ module.exports = {
       default: 'pending',
     },
 
+    // HUMAN entity name fields
+    first_name: { type: 'string', required: true, maxLength: 100 },
+    last_name: { type: 'string', required: true, maxLength: 100 },
+
     // Entity-specific fields
     phone: { type: 'phone', maxLength: 50 },
-    company_name: { type: 'string', maxLength: 255 },
+    organization_name: { type: 'string', maxLength: 255 },
     billing_address: { type: 'jsonb' },
     service_address: { type: 'jsonb' },
   },

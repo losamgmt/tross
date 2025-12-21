@@ -53,8 +53,8 @@ jest.mock('../../../services/generic-entity-service', () => ({
   _getMetadata: jest.fn((entityName) => ({
     entityName,
     displayName: entityName.charAt(0).toUpperCase() + entityName.slice(1),
-    tableName: entityName === 'workOrder' ? 'work_orders' : entityName + 's',
-    rlsResource: entityName === 'workOrder' ? 'work_orders' : entityName + 's',
+    tableName: entityName === 'work_order' ? 'work_orders' : entityName + 's',
+    rlsResource: entityName === 'work_order' ? 'work_orders' : entityName + 's',
     fields: [
       { name: 'id', type: 'integer', primaryKey: true },
       { name: 'created_at', type: 'timestamp' },
@@ -218,7 +218,7 @@ const ENTITIES = [
     createData: { customer_id: 1, name: 'New Contract', status: 'draft' },
   },
   {
-    name: 'workOrder',
+    name: 'work_order',
     routePath: '/api/work_orders',
     router: workOrdersRouter,
     sampleData: { id: 1, customer_id: 1, title: 'Fix HVAC', status: 'pending', priority: 'medium' },

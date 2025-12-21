@@ -1,6 +1,8 @@
 /**
  * User Model Metadata
  *
+ * Category: HUMAN (first_name + last_name, email as identity)
+ *
  * SRP: ONLY defines User table structure and query capabilities
  * Used by QueryBuilderService to generate dynamic queries
  * Used by GenericEntityService for CRUD operations
@@ -11,6 +13,7 @@
 const {
   FIELD_ACCESS_LEVELS: FAL,
   UNIVERSAL_FIELD_ACCESS,
+  ENTITY_CATEGORIES,
 } = require('../constants');
 
 module.exports = {
@@ -52,6 +55,25 @@ module.exports = {
    * Maps to permissions.json resource names
    */
   rlsResource: 'users',
+
+  // ============================================================================
+  // ENTITY CATEGORY (determines name handling pattern)
+  // ============================================================================
+
+  /**
+   * Entity category: HUMAN entities use first_name + last_name for display
+   */
+  entityCategory: ENTITY_CATEGORIES.HUMAN,
+
+  // ============================================================================
+  // FIELD ALIASING (for UI display names)
+  // ============================================================================
+
+  /**
+   * Field aliases for UI display. Key = field name, Value = display label
+   * Empty object = use field names as-is
+   */
+  fieldAliases: {},
 
   // ============================================================================
   // OUTPUT FILTERING (for API responses)

@@ -78,8 +78,8 @@ describe('normalizeEntityName', () => {
       ['users', 'user'],
       ['roles', 'role'],
       ['technicians', 'technician'],
-      ['work-orders', 'workOrder'],
-      ['workorders', 'workOrder'],
+      ['work-orders', 'work_order'],
+      ['work_orders', 'work_order'],
       ['invoices', 'invoice'],
       ['contracts', 'contract'],
       ['inventory', 'inventory'],
@@ -154,7 +154,7 @@ describe('extractEntity', () => {
 
       extractEntity(mockReq, mockRes, mockNext);
 
-      expect(mockReq.entityName).toBe('workOrder');
+      expect(mockReq.entityName).toBe('work_order');
       expect(mockNext).toHaveBeenCalled();
     });
 
@@ -692,7 +692,7 @@ describe('ENTITY_URL_MAP', () => {
     expect(internalNames).toContain('role');
     expect(internalNames).toContain('customer');
     expect(internalNames).toContain('technician');
-    expect(internalNames).toContain('workOrder');
+    expect(internalNames).toContain('work_order');
     expect(internalNames).toContain('invoice');
     expect(internalNames).toContain('contract');
     expect(internalNames).toContain('inventory');
@@ -705,9 +705,9 @@ describe('ENTITY_URL_MAP', () => {
     expect(ENTITY_URL_MAP['customers']).toBe('customer');
   });
 
-  test('should support hyphenated forms for work-orders', () => {
-    expect(ENTITY_URL_MAP['work-orders']).toBe('workOrder');
-    expect(ENTITY_URL_MAP['work-order']).toBe('workOrder');
-    expect(ENTITY_URL_MAP['workorders']).toBe('workOrder');
+  test('should support hyphenated forms for work_orders', () => {
+    expect(ENTITY_URL_MAP['work-orders']).toBe('work_order');
+    expect(ENTITY_URL_MAP['work-order']).toBe('work_order');
+    expect(ENTITY_URL_MAP['work_orders']).toBe('work_order');
   });
 });
