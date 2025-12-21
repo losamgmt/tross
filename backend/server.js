@@ -135,6 +135,7 @@ const healthRoutes = require('./routes/health');
 const schemaRoutes = require('./routes/schema');
 const preferencesRoutes = require('./routes/preferences');
 const rolesExtensions = require('./routes/roles-extensions');
+const statsRoutes = require('./routes/stats');
 
 // Generic entity routes (replaces individual entity route files)
 const {
@@ -159,6 +160,7 @@ app.use('/api/invoices', apiLimiter, invoicesRouter);
 app.use('/api/contracts', apiLimiter, contractsRouter);
 app.use('/api/inventory', apiLimiter, inventoryRouter);
 app.use('/api/preferences', apiLimiter, preferencesRoutes); // User preferences
+app.use('/api/stats', apiLimiter, statsRoutes); // Stats/aggregation endpoints
 app.use('/api/dev', devAuthRoutes); // Development auth endpoints (no rate limit - dev only)
 app.use('/api/health', apiLimiter, healthRoutes); // Health monitoring endpoints
 app.use('/api/auth0', authLimiter, auth0Routes); // Auth0 OAuth endpoints - rate limited for brute force protection
