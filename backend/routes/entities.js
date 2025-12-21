@@ -300,4 +300,5 @@ module.exports = {
   invoicesRouter: createEntityRouter('invoice', { rlsResource: 'invoices' }),
   contractsRouter: createEntityRouter('contract', { rlsResource: 'contracts' }),
   savedViewsRouter: createEntityRouter('saved_view', { rlsResource: 'saved_views' }),
+  entitySettingsRouter: createEntityRouter('entity_settings', { rlsResource: 'entity_settings' }),
 };

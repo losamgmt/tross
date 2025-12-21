@@ -149,6 +149,7 @@ const {
   invoicesRouter,
   contractsRouter,
   savedViewsRouter,
+  entitySettingsRouter,
 } = require('./routes/entities');
 
 app.use('/api/auth', authLimiter, authRoutes);
@@ -162,6 +163,7 @@ app.use('/api/invoices', apiLimiter, invoicesRouter);
 app.use('/api/contracts', apiLimiter, contractsRouter);
 app.use('/api/inventory', apiLimiter, inventoryRouter);
 app.use('/api/saved_views', apiLimiter, savedViewsRouter); // User saved table views
+app.use('/api/entity_settings', apiLimiter, entitySettingsRouter); // Admin entity settings
 app.use('/api/preferences', apiLimiter, preferencesRoutes); // User preferences
 app.use('/api/stats', apiLimiter, statsRoutes); // Stats/aggregation endpoints
 app.use('/api/export', apiLimiter, exportRoutes); // CSV export endpoints

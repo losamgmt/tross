@@ -37,6 +37,7 @@ import '../../../config/app_spacing.dart';
 import '../../../config/table_column.dart';
 import '../../../config/table_config.dart';
 import '../../../config/constants.dart';
+import '../../../services/entity_settings_service.dart';
 // SavedViewService is used via TableCustomizationMenu
 import '../../../utils/helpers/pagination_helper.dart';
 import '../../atoms/typography/column_header.dart';
@@ -128,9 +129,64 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
   List<TableColumn<T>> get _visibleColumns =>
       widget.columns.where((c) => !_hiddenColumnIds.contains(c.id)).toList();
 
+  /// Whether entity settings have been loaded
+  bool _settingsLoaded = false;
+
   @override
   void initState() {
     super.initState();
+    _loadEntitySettings();
+  }
+
+  /// Load entity settings if entityName is provided
+  Future<void> _loadEntitySettings() async {
+    if (widget.entityName == null) {
+      _settingsLoaded = true;
+      return;
+    }
+
+    try {
+      // Import is at file level, use the service
+      final settings = await EntitySettingsService.getForEntity(
+        widget.entityName!,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        // Apply default density
+        if (settings.defaultDensity != null) {
+          _density = TableDensity.values.firstWhere(
+            (d) => d.name == settings.defaultDensity,
+            orElse: () => TableDensity.standard,
+          );
+        }
+
+        // Apply default columns (hide columns not in the list)
+        if (settings.defaultColumns != null &&
+            settings.defaultColumns!.isNotEmpty) {
+          _hiddenColumnIds = widget.columns
+              .where((c) => !settings.defaultColumns!.contains(c.id))
+              .map((c) => c.id)
+              .toSet();
+        }
+
+        // Apply default sort
+        if (settings.defaultSort != null) {
+          _sortColumnId = settings.defaultSort!.field;
+          _sortDirection = settings.defaultSort!.direction == 'desc'
+              ? SortDirection.descending
+              : SortDirection.ascending;
+        }
+
+        _settingsLoaded = true;
+      });
+    } catch (e) {
+      // Silently fail - settings are optional
+      if (mounted) {
+        setState(() => _settingsLoaded = true);
+      }
+    }
   }
 
   @override
