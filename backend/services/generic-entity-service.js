@@ -50,11 +50,14 @@ const TABLE_TO_ENTITY = {
 };
 
 /**
- * Get the identity field for a related entity's table
+ * Get the display field for a related entity's table
  * Used in JOIN queries to select the appropriate display field
+ * 
+ * Prefers 'displayField' (human-readable) over 'identityField' (uniqueness)
+ * Example: roles have identityField='priority' but displayField='name'
  *
  * @param {string} tableName - Related table name (e.g., 'customers')
- * @returns {string} Identity field name (e.g., 'email' for customers)
+ * @returns {string} Display field name (e.g., 'email' for customers, 'name' for roles)
  */
 function getRelatedIdentityField(tableName) {
   const entityName = TABLE_TO_ENTITY[tableName];
@@ -62,7 +65,9 @@ function getRelatedIdentityField(tableName) {
     // Fallback to 'name' for unknown entities (backward compatibility)
     return 'name';
   }
-  return allMetadata[entityName].identityField || 'name';
+  const metadata = allMetadata[entityName];
+  // Prefer displayField for JOINs, fall back to identityField, then 'name'
+  return metadata.displayField || metadata.identityField || 'name';
 }
 
 /**

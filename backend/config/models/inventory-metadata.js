@@ -44,6 +44,12 @@ module.exports = {
   identityField: 'sku',
 
   /**
+   * The human-readable display field for relationships
+   * Used when JOINing this entity - 'name' is what we show
+   */
+  displayField: 'name',
+
+  /**
    * Whether the identity field has a UNIQUE constraint in the database
    */
   identityFieldUnique: true,
@@ -57,7 +63,6 @@ module.exports = {
   // ============================================================================
   // FIELD ALIASING (for UI display names)
   // ============================================================================
-
   /**
    * Field aliases for UI display. Key = field name, Value = display label
    * Empty object = use field names as-is
