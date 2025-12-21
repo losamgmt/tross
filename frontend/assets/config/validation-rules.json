@@ -161,7 +161,7 @@
         "max": "Priority cannot exceed 100"
       },
       "examples": {
-        "valid": [1, 50, 100],
+        "valid": [10, 50, 100],
         "invalid": [0, -1, 101, "high"]
       }
     },
@@ -535,12 +535,11 @@
     },
     "license_number": {
       "type": "string",
-      "required": true,
+      "required": false,
       "minLength": 3,
       "maxLength": 100,
       "trim": true,
       "errorMessages": {
-        "required": "License number is required",
         "minLength": "License number must be at least 3 characters",
         "maxLength": "License number cannot exceed 100 characters"
       }
@@ -612,6 +611,38 @@
         "pattern": "Contract number must be in format CTR-YYYY-NNNN"
       }
     },
+    "work_order_number": {
+      "type": "string",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 100,
+      "trim": true,
+      "pattern": "^WO-[0-9]{4}-[0-9]+$",
+      "errorMessages": {
+        "required": "Work order number is required",
+        "minLength": "Work order number cannot be empty",
+        "maxLength": "Work order number cannot exceed 100 characters",
+        "pattern": "Work order number must be in format WO-YYYY-NNNN"
+      }
+    },
+    "summary": {
+      "type": "string",
+      "required": false,
+      "maxLength": 255,
+      "trim": true,
+      "errorMessages": {
+        "maxLength": "Summary cannot exceed 255 characters"
+      }
+    },
+    "organization_name": {
+      "type": "string",
+      "required": false,
+      "maxLength": 255,
+      "trim": true,
+      "errorMessages": {
+        "maxLength": "Organization name cannot exceed 255 characters"
+      }
+    },
     "start_date": {
       "type": "string",
       "required": false,
@@ -680,7 +711,7 @@
     },
     "createCustomer": {
       "requiredFields": ["first_name", "last_name", "email"],
-      "optionalFields": ["phone", "organization_name", "status"],
+      "optionalFields": ["phone", "organization_name"],
       "description": "Validation rules for creating a customer profile"
     },
     "updateCustomer": {
@@ -751,8 +782,6 @@
           "Added 'summary' field validator (VARCHAR 255) for brief descriptions",
           "Updated composite validations: work orders, invoices, contracts now use 'name' and 'summary'",
           "Fixed COMPUTED entity requiredFields: removed auto-generated identifiers (work_order_number, invoice_number, contract_number)",
-          "Fixed HUMAN entity requiredFields: customers and technicians now require first_name, last_name, email",
-          "Renamed 'company_name' to 'organization_name' for consistency",
           "Synced frontend and backend validation-rules.json for full parity"
         ]
       },

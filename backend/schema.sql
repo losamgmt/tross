@@ -18,6 +18,8 @@
 -- PRE-PRODUCTION: DROP ALL TABLES FOR CLEAN RESET
 -- Remove this section when you have production data to preserve
 -- ============================================================================
+DROP TABLE IF EXISTS entity_settings CASCADE;
+DROP TABLE IF EXISTS user_saved_view CASCADE;
 DROP TABLE IF EXISTS user_preferences CASCADE;
 DROP TABLE IF EXISTS audit_logs CASCADE;
 DROP TABLE IF EXISTS invoices CASCADE;
@@ -245,6 +247,37 @@ CREATE TABLE IF NOT EXISTS user_saved_view (
 );
 
 -- ============================================================================
+-- ENTITY SETTINGS TABLE
+-- ============================================================================
+-- Admin-level default settings for each entity (applies to all users)
+-- Only one settings record per entity_name (singleton per entity)
+-- Category: N/A (system table, not a business entity)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS entity_settings (
+    id SERIAL PRIMARY KEY,
+    
+    -- Which entity this settings applies to (e.g., 'work_order', 'customer')
+    entity_name VARCHAR(50) UNIQUE NOT NULL,
+    
+    -- Display settings as JSONB
+    -- Structure: {
+    --   defaultSort: { field: string, direction: 'asc'|'desc' },
+    --   defaultColumns: string[] (columns shown by default),
+    --   columnLabels: { [field]: string } (custom labels),
+    --   defaultDensity: 'compact'|'standard'|'comfortable',
+    --   defaultPageSize: number
+    -- }
+    settings JSONB NOT NULL DEFAULT '{}',
+    
+    -- Who last modified these settings
+    updated_by INTEGER REFERENCES users(id),
+    
+    -- Timestamps
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+-- ============================================================================
 -- PERFORMANCE INDEXES
 -- ============================================================================
 
@@ -317,6 +350,12 @@ CREATE TRIGGER update_user_preferences_updated_at
 DROP TRIGGER IF EXISTS update_user_saved_view_updated_at ON user_saved_view;
 CREATE TRIGGER update_user_saved_view_updated_at
     BEFORE UPDATE ON user_saved_view
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_entity_settings_updated_at ON entity_settings;
+CREATE TRIGGER update_entity_settings_updated_at
+    BEFORE UPDATE ON entity_settings
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 

@@ -15,6 +15,7 @@ const invoiceMetadata = require('./invoice-metadata');
 const inventoryMetadata = require('./inventory-metadata');
 const preferencesMetadata = require('./preferences-metadata');
 const savedViewMetadata = require('./saved-view-metadata');
+const entitySettingsMetadata = require('./entity-settings-metadata');
 
 module.exports = {
   user: userMetadata,
@@ -27,4 +28,5 @@ module.exports = {
   inventory: inventoryMetadata,
   preferences: preferencesMetadata,
   saved_view: savedViewMetadata,
+  entity_settings: entitySettingsMetadata,
 };
