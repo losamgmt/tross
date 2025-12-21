@@ -44,6 +44,13 @@ module.exports = {
   identityField: 'priority',
 
   /**
+   * The human-readable display field for relationships
+   * Used when JOINing this entity - 'name' is what we show as 'role'
+   * Distinct from identityField which is for uniqueness validation
+   */
+  displayField: 'name',
+
+  /**
    * Whether the identity field has a UNIQUE constraint in the database
    * Used for duplicate rejection tests
    */
