@@ -137,6 +137,7 @@ const preferencesRoutes = require('./routes/preferences');
 const rolesExtensions = require('./routes/roles-extensions');
 const statsRoutes = require('./routes/stats');
 const exportRoutes = require('./routes/export');
+const auditRoutes = require('./routes/audit');
 
 // Generic entity routes (replaces individual entity route files)
 const {
@@ -167,6 +168,7 @@ app.use('/api/entity_settings', apiLimiter, entitySettingsRouter); // Admin enti
 app.use('/api/preferences', apiLimiter, preferencesRoutes); // User preferences
 app.use('/api/stats', apiLimiter, statsRoutes); // Stats/aggregation endpoints
 app.use('/api/export', apiLimiter, exportRoutes); // CSV export endpoints
+app.use('/api/audit', apiLimiter, auditRoutes); // Audit log endpoints
 app.use('/api/dev', devAuthRoutes); // Development auth endpoints (no rate limit - dev only)
 app.use('/api/health', apiLimiter, healthRoutes); // Health monitoring endpoints
 app.use('/api/auth0', authLimiter, auth0Routes); // Auth0 OAuth endpoints - rate limited for brute force protection
