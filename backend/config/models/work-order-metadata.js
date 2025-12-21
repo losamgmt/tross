@@ -1,6 +1,8 @@
 /**
  * Work Order Model Metadata
  *
+ * Category: COMPUTED (auto-generated work_order_number identity, computed name)
+ *
  * SRP: ONLY defines Work Order table structure and query capabilities
  * Used by QueryBuilderService to generate dynamic queries
  * Used by GenericEntityService for CRUD operations
@@ -11,6 +13,7 @@
 const {
   FIELD_ACCESS_LEVELS: _FAL,
   UNIVERSAL_FIELD_ACCESS,
+  ENTITY_CATEGORIES,
 } = require('../constants');
 
 module.exports = {
@@ -21,14 +24,29 @@ module.exports = {
   primaryKey: 'id',
 
   // ============================================================================
+  // ENTITY CATEGORY (determines name handling pattern)
+  // ============================================================================
+
+  /**
+   * Entity category: COMPUTED entities have auto-generated identifiers
+   * and computed name from template: "{customer.fullName}: {summary}: {identifier}"
+   */
+  entityCategory: ENTITY_CATEGORIES.COMPUTED,
+
+  // ============================================================================
   // IDENTITY CONFIGURATION (Entity Contract v2.0)
   // ============================================================================
 
   /**
-   * The human-readable identifier field (not the PK)
-   * Used for: Display names, search results, logging
+   * The unique identifier field (auto-generated: WO-YYYY-NNNN)
+   * Used for: Unique references, search results, logging
    */
-  identityField: 'title',
+  identityField: 'work_order_number',
+
+  /**
+   * Whether the identity field has a UNIQUE constraint in the database
+   */
+  identityFieldUnique: true,
 
   /**
    * RLS resource name for permission checks
@@ -37,48 +55,72 @@ module.exports = {
   rlsResource: 'work_orders',
 
   // ============================================================================
+  // FIELD ALIASING (for UI display names)
+  // ============================================================================
+
+  /**
+   * Field aliases for UI display. Key = field name, Value = display label
+   * work_order.name is displayed as "Title" in the UI
+   */
+  fieldAliases: {
+    name: 'Title',
+  },
+
+  // ============================================================================
+  // COMPUTED NAME CONFIGURATION
+  // ============================================================================
+
+  /**
+   * Configuration for computing the human-readable name
+   * Template: "{customer.fullName}: {summary}: {work_order_number}"
+   */
+  computedName: {
+    template: '{customer.fullName}: {summary}: {work_order_number}',
+    sources: ['customer_id', 'summary', 'work_order_number'],
+    readOnly: false, // Users can override the computed name
+  },
+
+  // ============================================================================
   // CRUD CONFIGURATION (for GenericEntityService)
   // ============================================================================
 
   /**
    * Fields required when creating a new entity
+   * work_order_number is auto-generated, name is computed
    */
-  requiredFields: ['title', 'customer_id'],
+  requiredFields: ['customer_id'],
 
   /**
-   * Fields that cannot be modified after creation (beyond universal immutables: id, created_at)
-   * Empty array = all fields are updateable
+   * Fields that cannot be modified after creation
    */
-  immutableFields: [],
+  immutableFields: ['work_order_number'],
 
   // ============================================================================
   // FIELD-LEVEL ACCESS CONTROL (for response-transform.js)
   // ============================================================================
 
-  /**
-   * Per-field CRUD permissions using FIELD_ACCESS_LEVELS shortcuts
-   * Entity Contract fields use UNIVERSAL_FIELD_ACCESS spread
-   *
-   * Work Order access (RLS applies):
-   * - Customers: See their own work orders (limited fields)
-   * - Technicians: See assigned work orders (operational fields)
-   * - Dispatchers+: Full read access, can assign technicians
-   * - Managers+: Full CRUD
-   */
   fieldAccess: {
     // Entity Contract v2.0 fields
     ...UNIVERSAL_FIELD_ACCESS,
 
-    // Identity field - title is the display name
-    title: {
-      create: 'customer', // Customers can create work orders
+    // Identity field - auto-generated, immutable
+    work_order_number: {
+      create: 'none', // Auto-generated
+      read: 'customer',
+      update: 'none', // Immutable
+      delete: 'none',
+    },
+
+    // Computed name field (aliased as "Title" in UI)
+    name: {
+      create: 'customer', // Customers can provide initial title
       read: 'customer',
       update: 'dispatcher', // Dispatchers+ can edit
       delete: 'none',
     },
 
-    // Description - customer provides, dispatcher+ can edit
-    description: {
+    // Summary - brief description for computed name
+    summary: {
       create: 'customer',
       read: 'customer',
       update: 'dispatcher',
@@ -136,18 +178,22 @@ module.exports = {
   // FOREIGN KEY CONFIGURATION (for db-error-handler.js)
   // ============================================================================
 
-  /**
-   * Foreign key relationships for error message generation
-   * Maps FK field -> { table, displayName }
-   */
   foreignKeys: {
     customer_id: {
       table: 'customers',
       displayName: 'Customer',
+      // FK dropdown display config
+      relatedEntity: 'customer',
+      displayFields: ['first_name', 'last_name', 'email'],
+      displayTemplate: '{first_name} {last_name} - {email}',
     },
     assigned_technician_id: {
       table: 'technicians',
       displayName: 'Technician',
+      // FK dropdown display config
+      relatedEntity: 'technician',
+      displayFields: ['first_name', 'last_name', 'email'],
+      displayTemplate: '{first_name} {last_name} - {email}',
     },
   },
 
@@ -155,24 +201,15 @@ module.exports = {
   // RELATIONSHIPS (for JOIN queries)
   // ============================================================================
 
-  /**
-   * Relationships to JOIN by default in all queries (findById, findAll, findByField)
-   * These are included automatically without needing to specify 'include' option
-   * Work orders almost always need customer info displayed
-   */
   defaultIncludes: ['customer'],
 
-  /**
-   * Foreign key relationships
-   * Used for JOIN generation and validation
-   */
   relationships: {
     // Work order belongs to a customer (required)
     customer: {
       type: 'belongsTo',
       foreignKey: 'customer_id',
       table: 'customers',
-      fields: ['id', 'email', 'company_name', 'phone'],
+      fields: ['id', 'email', 'first_name', 'last_name', 'organization_name', 'phone'],
       description: 'Customer who requested this work order',
     },
     // Work order may be assigned to a technician (optional)
@@ -180,7 +217,7 @@ module.exports = {
       type: 'belongsTo',
       foreignKey: 'assigned_technician_id',
       table: 'technicians',
-      fields: ['id', 'license_number', 'status'],
+      fields: ['id', 'email', 'first_name', 'last_name', 'license_number', 'status'],
       description: 'Technician assigned to this work order',
     },
     // Work order may have invoices
@@ -188,7 +225,7 @@ module.exports = {
       type: 'hasMany',
       foreignKey: 'work_order_id',
       table: 'invoices',
-      fields: ['id', 'invoice_number', 'status', 'total'],
+      fields: ['id', 'invoice_number', 'name', 'status', 'total'],
       description: 'Invoices generated from this work order',
     },
   },
@@ -197,13 +234,6 @@ module.exports = {
   // DELETE CONFIGURATION (for GenericEntityService.delete)
   // ============================================================================
 
-  /**
-   * Dependent records that must be cascade-deleted before this entity
-   * Only for relationships NOT handled by database ON DELETE CASCADE/SET NULL
-   *
-   * Note: invoices.work_order_id has ON DELETE SET NULL (DB handles it)
-   * For audit_logs: polymorphic FK via resource_type + resource_id
-   */
   dependents: [
     {
       table: 'audit_logs',
@@ -216,23 +246,16 @@ module.exports = {
   // SEARCH CONFIGURATION (Text Search with ILIKE)
   // ============================================================================
 
-  /**
-   * Fields that support text search (ILIKE %term%)
-   * These are concatenated with OR for full-text search
-   */
-  searchableFields: ['title', 'description'],
+  searchableFields: ['work_order_number', 'name', 'summary'],
 
   // ============================================================================
   // FILTER CONFIGURATION (Exact Match & Operators)
   // ============================================================================
 
-  /**
-   * Fields that can be used in WHERE clauses
-   * Supports: exact match, gt, gte, lt, lte, in, not
-   */
   filterableFields: [
     'id',
-    'title',
+    'work_order_number',
+    'name',
     'customer_id',
     'assigned_technician_id',
     'is_active',
@@ -248,12 +271,10 @@ module.exports = {
   // SORT CONFIGURATION
   // ============================================================================
 
-  /**
-   * Fields that can be used in ORDER BY clauses
-   */
   sortableFields: [
     'id',
-    'title',
+    'work_order_number',
+    'name',
     'priority',
     'status',
     'scheduled_start',
@@ -263,9 +284,6 @@ module.exports = {
     'updated_at',
   ],
 
-  /**
-   * Default sort when no sortBy specified
-   */
   defaultSort: {
     field: 'created_at',
     order: 'DESC',
@@ -278,7 +296,7 @@ module.exports = {
   fields: {
     // TIER 1: Universal Entity Contract Fields
     id: { type: 'integer', readonly: true },
-    title: { type: 'string', required: true, maxLength: 255 },
+    work_order_number: { type: 'string', readonly: true, maxLength: 100 },
     is_active: { type: 'boolean', default: true },
     created_at: { type: 'timestamp', readonly: true },
     updated_at: { type: 'timestamp', readonly: true },
@@ -290,15 +308,29 @@ module.exports = {
       default: 'pending',
     },
 
+    // COMPUTED entity name field (aliased as "Title" in UI)
+    name: { type: 'string', required: true, maxLength: 255 },
+    summary: { type: 'string', maxLength: 255 },
+
     // Entity-specific fields
-    description: { type: 'text' },
     priority: {
       type: 'enum',
       values: ['low', 'normal', 'high', 'urgent'],
       default: 'normal',
     },
-    customer_id: { type: 'integer', required: true },
-    assigned_technician_id: { type: 'integer' },
+    customer_id: {
+      type: 'foreignKey',
+      relatedEntity: 'customer',
+      displayFields: ['first_name', 'last_name', 'email'],
+      displayTemplate: '{first_name} {last_name} - {email}',
+      required: true,
+    },
+    assigned_technician_id: {
+      type: 'foreignKey',
+      relatedEntity: 'technician',
+      displayFields: ['first_name', 'last_name', 'email'],
+      displayTemplate: '{first_name} {last_name} - {email}',
+    },
     scheduled_start: { type: 'timestamp' },
     scheduled_end: { type: 'timestamp' },
     completed_at: { type: 'timestamp' },

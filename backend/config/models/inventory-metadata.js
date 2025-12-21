@@ -1,6 +1,8 @@
 /**
  * Inventory Model Metadata
  *
+ * Category: SIMPLE (name field for display, sku as identity)
+ *
  * SRP: ONLY defines Inventory table structure and query capabilities
  * Used by QueryBuilderService to generate dynamic queries
  * Used by GenericEntityService for CRUD operations
@@ -11,6 +13,7 @@
 const {
   FIELD_ACCESS_LEVELS: FAL,
   UNIVERSAL_FIELD_ACCESS,
+  ENTITY_CATEGORIES,
 } = require('../constants');
 
 module.exports = {
@@ -21,20 +24,45 @@ module.exports = {
   primaryKey: 'id',
 
   // ============================================================================
+  // ENTITY CATEGORY (determines name handling pattern)
+  // ============================================================================
+
+  /**
+   * Entity category: SIMPLE entities have a direct name field
+   * and a unique identifier field (sku for inventory)
+   */
+  entityCategory: ENTITY_CATEGORIES.SIMPLE,
+
+  // ============================================================================
   // IDENTITY CONFIGURATION (Entity Contract v2.0)
   // ============================================================================
 
   /**
-   * The human-readable identifier field (not the PK)
-   * Used for: Display names, search results, logging
+   * The unique identifier field - SKU is the barcode/lookup identity
+   * Multiple items can have the same 'name' but different SKUs
    */
-  identityField: 'name',
+  identityField: 'sku',
+
+  /**
+   * Whether the identity field has a UNIQUE constraint in the database
+   */
+  identityFieldUnique: true,
 
   /**
    * RLS resource name for permission checks
    * Maps to permissions.json resource names
    */
   rlsResource: 'inventory',
+
+  // ============================================================================
+  // FIELD ALIASING (for UI display names)
+  // ============================================================================
+
+  /**
+   * Field aliases for UI display. Key = field name, Value = display label
+   * Empty object = use field names as-is
+   */
+  fieldAliases: {},
 
   // ============================================================================
   // CRUD CONFIGURATION (for GenericEntityService)

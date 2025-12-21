@@ -6,23 +6,25 @@
  *
  * PRINCIPLE: If validation-rules.json says a field must match a pattern,
  * we generate data that matches that pattern. No hardcoding. No exceptions.
+ * 
+ * UNIQUENESS: Uses the central getUniqueValues() from test-helpers to ensure
+ * all tests share the same counter, preventing cross-test unique constraint conflicts.
  */
 
 const { loadValidationRules } = require('../../../utils/validation-loader');
-
-// Counter for uniqueness - combined with timestamp for cross-run uniqueness
-let counter = 0;
-const runId = Date.now();
+const { getUniqueValues } = require('../../helpers/test-helpers');
 
 /**
  * Increment counter and return both the full unique ID and just the counter
  * This ensures a single increment per call, keeping values in sync
+ * 
+ * Delegates to the central getUniqueValues() for consistent uniqueness.
  */
 function getNextUnique() {
-  const num = ++counter;
+  const vals = getUniqueValues();
   return {
-    id: `${runId}_${num}`,    // Full unique ID with timestamp
-    num: num,                  // Just the counter for numeric uses
+    id: vals.id,     // Full unique ID with timestamp
+    num: vals.num,   // Just the counter for numeric uses
   };
 }
 
@@ -171,12 +173,14 @@ function makeUnique(fieldDef, baseValue, uniqueId, uniqueSuffix) {
     return generateFromPattern(fieldDef.pattern, uniqueId, uniqueSuffix);
   }
   
-  // Numbers: extract counter from uniqueId for numeric values
+  // Numbers: use baseValue (first example) as the starting point
+  // This allows validation rules to set a higher base (e.g., priority 10)
+  // to avoid conflicts with seed data
   if (fieldDef.type === 'integer' || fieldDef.type === 'number') {
     const counterPart = parseInt(uniqueId.split('_')[1]) || 1;
-    const min = fieldDef.min ?? 1;
+    const base = typeof baseValue === 'number' ? baseValue : (fieldDef.min ?? 1);
     const max = fieldDef.max ?? 1000000;
-    return Math.min(min + counterPart, max);
+    return Math.min(base + counterPart, max);
   }
   
   // For strings without pattern, append suffix
@@ -191,6 +195,20 @@ function makeUnique(fieldDef, baseValue, uniqueId, uniqueSuffix) {
  * Generate value from pattern regex
  */
 function generateFromPattern(pattern, uniqueId, uniqueSuffix) {
+  const counterPart = parseInt(uniqueId.split('_')[1]) || 1;
+  const year = new Date().getFullYear();
+  
+  // COMPUTED entity identifier patterns (WO-YYYY-NNNN, INV-YYYY-NNNN, CTR-YYYY-NNNN)
+  if (pattern.includes('WO-') || pattern.includes('WO')) {
+    return `WO-${year}-${String(counterPart).padStart(4, '0')}`;
+  }
+  if (pattern.includes('INV-') || pattern.includes('INV')) {
+    return `INV-${year}-${String(counterPart).padStart(4, '0')}`;
+  }
+  if (pattern.includes('CTR-') || pattern.includes('CTR')) {
+    return `CTR-${year}-${String(counterPart).padStart(4, '0')}`;
+  }
+  
   // Human names: ^[a-zA-Z\s'-]+$
   if (pattern === "^[a-zA-Z\\s'-]+$") {
     return `Test${uniqueSuffix}`;
@@ -203,7 +221,6 @@ function generateFromPattern(pattern, uniqueId, uniqueSuffix) {
   
   // E.164 phone: ^\+?[1-9]\d{1,14}$
   if (pattern.includes('\\+') && pattern.includes('\\d')) {
-    const counterPart = parseInt(uniqueId.split('_')[1]) || 1;
     return `+1555${String(counterPart).padStart(7, '0')}`;
   }
   
@@ -215,14 +232,6 @@ function generateFromPattern(pattern, uniqueId, uniqueSuffix) {
   // SKU-like: alphanumeric
   if (pattern === "^[A-Z0-9-]+$" || pattern.includes('[A-Z0-9')) {
     return `SKU-${uniqueId}`;
-  }
-  
-  // Invoice/Contract number patterns
-  if (pattern.includes('INV') || pattern.includes('invoice')) {
-    return `INV-${uniqueId}`;
-  }
-  if (pattern.includes('CON') || pattern.includes('contract')) {
-    return `CON-${uniqueId}`;
   }
   
   // Default: alphanumeric string
@@ -275,6 +284,18 @@ function generateFromConstraints(fieldDef, fieldName, uniqueId, uniqueSuffix) {
  */
 function generateInferredValue(fieldName, uniqueId, uniqueSuffix) {
   const counterPart = parseInt(uniqueId.split('_')[1]) || 1;
+  const year = new Date().getFullYear();
+  
+  // COMPUTED entity identifiers (auto-generated format: PREFIX-YYYY-NNNN)
+  if (fieldName === 'work_order_number') {
+    return `WO-${year}-${String(counterPart).padStart(4, '0')}`;
+  }
+  if (fieldName === 'invoice_number') {
+    return `INV-${year}-${String(counterPart).padStart(4, '0')}`;
+  }
+  if (fieldName === 'contract_number') {
+    return `CTR-${year}-${String(counterPart).padStart(4, '0')}`;
+  }
   
   // FK references
   if (fieldName.endsWith('_id')) {

@@ -202,6 +202,88 @@ function assertResponseStructure(response, expected) {
   expect(new Date(response.body.timestamp)).toBeInstanceOf(Date);
 }
 
+// ============================================================================
+// UNIVERSAL UNIQUE VALUE GENERATOR
+// ============================================================================
+// Use this for ALL test data that requires unique values.
+// Centralized to prevent cross-test conflicts with unique constraints.
+
+let _uniqueCounter = 0;
+const _runId = Date.now();
+
+/**
+ * Get the next unique counter value and formatted variants
+ * SINGLE SOURCE OF TRUTH for unique test values.
+ * 
+ * All generated values comply with validation-rules.json patterns.
+ * 
+ * @returns {Object} { num, id, suffix, email, priority, phone, firstName, lastName, ... }
+ */
+function getUniqueValues() {
+  const num = ++_uniqueCounter;
+  const id = `${_runId}_${num}`;
+  
+  // Convert number to letters for human-readable suffixes (1->A, 27->AA)
+  // This is VALIDATION-SAFE for human names (letters only)
+  let n = num;
+  let suffix = '';
+  while (n > 0) {
+    n--;
+    suffix = String.fromCharCode(65 + (n % 26)) + suffix;
+    n = Math.floor(n / 26);
+  }
+  suffix = suffix || 'A';
+  
+  // Priority: validation rules allow 1-100, seed data uses 1-5
+  // Map num to range 10-99 using modulo, wrapping if needed
+  const priority = 10 + ((num - 1) % 90);
+  
+  return {
+    num,                                    // Raw counter: 1, 2, 3...
+    id,                                     // Full unique ID: "1734567890123_1"
+    suffix,                                 // Letter suffix: "A", "B", "AA" (validation-safe)
+    email: `test_${id}@example.com`,        // Unique email
+    priority,                               // Unique priority (10-99, avoids seed data 1-5)
+    phone: `+1555${String(num).padStart(7, '0')}`, // Unique phone E.164 format
+    
+    // Human names - LETTERS ONLY per validation pattern ^[a-zA-Z\s'-]+$
+    firstName: `Test${suffix}`,             // e.g., "TestA", "TestAB"
+    lastName: `User${suffix}`,              // e.g., "UserA", "UserAB"
+    name: `Test${suffix}`,                  // Generic name (letters only)
+    
+    // Role/entity names - allow alphanumeric per pattern ^[a-zA-Z0-9\s_-]+$
+    roleName: `TestRole${suffix}`,          // e.g., "TestRoleA" (no underscores for safety)
+    companyName: `Company ${suffix}`,       // e.g., "Company A"
+  };
+}
+
+/**
+ * Generate a unique value for a specific field type
+ * @param {string} fieldType - Type of field (email, priority, phone, name, etc.)
+ * @returns {*} Unique value appropriate for that field type
+ */
+function uniqueValue(fieldType) {
+  const vals = getUniqueValues();
+  
+  const typeMap = {
+    email: vals.email,
+    priority: vals.priority,
+    phone: vals.phone,
+    name: vals.name,
+    firstName: vals.name,
+    first_name: vals.name,
+    lastName: `Last${vals.suffix}`,
+    last_name: `Last${vals.suffix}`,
+    roleName: vals.roleName,
+    role_name: vals.roleName,
+    id: vals.id,
+    suffix: vals.suffix,
+    num: vals.num,
+  };
+  
+  return typeMap[fieldType] ?? vals.id;
+}
+
 module.exports = {
   createTestApp,
   generateTestToken,
@@ -216,4 +298,7 @@ module.exports = {
   cleanupTestEnv,
   sleep,
   assertResponseStructure,
+  // Universal unique value generators
+  getUniqueValues,
+  uniqueValue,
 };

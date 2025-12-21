@@ -194,7 +194,7 @@ function deriveUpdateableFields(metadata) {
 /**
  * Build a complete Joi object schema for an entity operation
  *
- * @param {string} entityName - Entity name (e.g., 'user', 'workOrder')
+ * @param {string} entityName - Entity name (e.g., 'user', 'work_order')
  * @param {string} operation - 'create' or 'update'
  * @param {Object} metadata - Entity metadata from config/models
  * @returns {Joi.ObjectSchema} Complete Joi validation schema

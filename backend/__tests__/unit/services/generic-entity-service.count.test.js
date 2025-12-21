@@ -131,7 +131,7 @@ describe('GenericEntityService.count()', () => {
         userId: 1,
       };
 
-      const result = await GenericEntityService.count('workOrder', {}, rlsContext);
+      const result = await GenericEntityService.count('work_order', {}, rlsContext);
 
       expect(result).toBe(3);
       // Should have RLS filter in WHERE clause
@@ -147,7 +147,7 @@ describe('GenericEntityService.count()', () => {
         userId: 1,
       };
 
-      await GenericEntityService.count('workOrder', { status: 'pending' }, rlsContext);
+      await GenericEntityService.count('work_order', { status: 'pending' }, rlsContext);
 
       // Should have both status filter AND RLS filter
       const query = db.query.mock.calls[0][0];

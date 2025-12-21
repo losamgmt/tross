@@ -281,8 +281,11 @@ function buildCompositeSchema(operationName) {
     customerProfileId: 'customerProfileId',
     technician_profile_id: 'technicianProfileId',
     technicianProfileId: 'technicianProfileId',
-    name: 'roleName', // Default to roleName for backward compatibility
+    name: isRoleOperation ? 'roleName' : 'name', // Context-aware: role uses roleName, others use name
     roleName: 'roleName',
+    summary: 'summary', // Brief description field for COMPUTED entities
+    organization_name: 'organization_name', // Customer organization field
+    organizationName: 'organization_name',
     priority: isRoleOperation ? 'rolePriority' : 'priority', // Context-aware
     rolePriority: 'rolePriority',
     description: isRoleOperation ? 'roleDescription' : 'description', // Context-aware

@@ -189,6 +189,8 @@ describe('Body Validators - Factory Pattern (Phase 9)', () => {
     describe('validateCustomerCreate', () => {
       test('should pass valid customer creation data', () => {
         req.body = {
+          first_name: 'John',
+          last_name: 'Doe',
           email: 'contact@acme.com',
         };
 
@@ -202,7 +204,6 @@ describe('Body Validators - Factory Pattern (Phase 9)', () => {
     describe('validateWorkOrderCreate', () => {
       test('should pass valid work order creation data', () => {
         req.body = {
-          title: 'Fix HVAC',
           customer_id: 1,
           priority: 'high',
           status: 'pending',

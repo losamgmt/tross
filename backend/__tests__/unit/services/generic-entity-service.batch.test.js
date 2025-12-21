@@ -99,13 +99,13 @@ describe('GenericEntityService.batch()', () => {
       // Setup mock responses
       mockClient.query
         .mockResolvedValueOnce({}) // BEGIN
-        .mockResolvedValueOnce({ rows: [{ id: 1, email: 'a@test.com', company_name: 'A Corp' }] })
-        .mockResolvedValueOnce({ rows: [{ id: 2, email: 'b@test.com', company_name: 'B Corp' }] })
+        .mockResolvedValueOnce({ rows: [{ id: 1, first_name: 'Alice', last_name: 'Test', email: 'a@test.com', organization_name: 'A Corp' }] })
+        .mockResolvedValueOnce({ rows: [{ id: 2, first_name: 'Bob', last_name: 'Test', email: 'b@test.com', organization_name: 'B Corp' }] })
         .mockResolvedValueOnce({}); // COMMIT
 
       const result = await GenericEntityService.batch('customer', [
-        { operation: 'create', data: { email: 'a@test.com', company_name: 'A Corp' } },
-        { operation: 'create', data: { email: 'b@test.com', company_name: 'B Corp' } },
+        { operation: 'create', data: { first_name: 'Alice', last_name: 'Test', email: 'a@test.com', organization_name: 'A Corp' } },
+        { operation: 'create', data: { first_name: 'Bob', last_name: 'Test', email: 'b@test.com', organization_name: 'B Corp' } },
       ]);
 
       expect(result.success).toBe(true);
@@ -194,7 +194,7 @@ describe('GenericEntityService.batch()', () => {
     test('should handle create, update, delete in order', async () => {
       mockClient.query
         .mockResolvedValueOnce({}) // BEGIN
-        .mockResolvedValueOnce({ rows: [{ id: 10, email: 'new@test.com', company_name: 'New' }] }) // CREATE
+        .mockResolvedValueOnce({ rows: [{ id: 10, first_name: 'New', last_name: 'User', email: 'new@test.com', organization_name: 'New' }] }) // CREATE
         .mockResolvedValueOnce({ rows: [{ id: 5, phone: '555-1111' }] }) // SELECT for update
         .mockResolvedValueOnce({ rows: [{ id: 5, phone: '555-9999' }] }) // UPDATE
         .mockResolvedValueOnce({ rows: [{ id: 3, email: 'del@test.com' }] }) // SELECT for delete
@@ -202,7 +202,7 @@ describe('GenericEntityService.batch()', () => {
         .mockResolvedValueOnce({}); // COMMIT
 
       const result = await GenericEntityService.batch('customer', [
-        { operation: 'create', data: { email: 'new@test.com', company_name: 'New' } },
+        { operation: 'create', data: { first_name: 'New', last_name: 'User', email: 'new@test.com', organization_name: 'New' } },
         { operation: 'update', id: 5, data: { phone: '555-9999' } },
         { operation: 'delete', id: 3 },
       ]);
@@ -217,13 +217,13 @@ describe('GenericEntityService.batch()', () => {
     test('should rollback all on error (default behavior)', async () => {
       mockClient.query
         .mockResolvedValueOnce({}) // BEGIN
-        .mockResolvedValueOnce({ rows: [{ id: 1, email: 'good@test.com', company_name: 'Good' }] }) // First CREATE
+        .mockResolvedValueOnce({ rows: [{ id: 1, first_name: 'Good', last_name: 'User', email: 'good@test.com', organization_name: 'Good' }] }) // First CREATE
         .mockRejectedValueOnce(new Error('DB error')) // Second CREATE fails
         .mockResolvedValueOnce({}); // ROLLBACK
 
       const result = await GenericEntityService.batch('customer', [
-        { operation: 'create', data: { email: 'good@test.com', company_name: 'Good' } },
-        { operation: 'create', data: { email: 'bad@test.com', company_name: 'Bad' } },
+        { operation: 'create', data: { first_name: 'Good', last_name: 'User', email: 'good@test.com', organization_name: 'Good' } },
+        { operation: 'create', data: { first_name: 'Bad', last_name: 'User', email: 'bad@test.com', organization_name: 'Bad' } },
       ]);
 
       expect(result.success).toBe(false);
@@ -234,15 +234,15 @@ describe('GenericEntityService.batch()', () => {
     test('should continue on error when continueOnError=true', async () => {
       mockClient.query
         .mockResolvedValueOnce({}) // BEGIN
-        .mockResolvedValueOnce({ rows: [{ id: 1, email: 'good@test.com', company_name: 'Good' }] }) // First CREATE
+        .mockResolvedValueOnce({ rows: [{ id: 1, first_name: 'Good', last_name: 'User', email: 'good@test.com', organization_name: 'Good' }] }) // First CREATE
         .mockResolvedValueOnce({ rows: [] }) // Second: SELECT not found
-        .mockResolvedValueOnce({ rows: [{ id: 3, email: 'also@test.com', company_name: 'Also' }] }) // Third CREATE
+        .mockResolvedValueOnce({ rows: [{ id: 3, first_name: 'Also', last_name: 'User', email: 'also@test.com', organization_name: 'Also' }] }) // Third CREATE
         .mockResolvedValueOnce({}); // COMMIT
 
       const result = await GenericEntityService.batch('customer', [
-        { operation: 'create', data: { email: 'good@test.com', company_name: 'Good' } },
+        { operation: 'create', data: { first_name: 'Good', last_name: 'User', email: 'good@test.com', organization_name: 'Good' } },
         { operation: 'update', id: 999, data: { phone: '555' } }, // Will fail - not found
-        { operation: 'create', data: { email: 'also@test.com', company_name: 'Also' } },
+        { operation: 'create', data: { first_name: 'Also', last_name: 'User', email: 'also@test.com', organization_name: 'Also' } },
       ], { continueOnError: true });
 
       expect(result.success).toBe(false);
@@ -264,7 +264,7 @@ describe('GenericEntityService.batch()', () => {
         .mockResolvedValueOnce({});
 
       await GenericEntityService.batch('customer', [
-        { operation: 'create', data: { email: 'test@test.com', company_name: 'Test' } },
+        { operation: 'create', data: { first_name: 'Test', last_name: 'User', email: 'test@test.com', organization_name: 'Test' } },
       ]);
 
       expect(mockClient.release).toHaveBeenCalled();
@@ -277,7 +277,7 @@ describe('GenericEntityService.batch()', () => {
         .mockResolvedValueOnce({});
 
       await GenericEntityService.batch('customer', [
-        { operation: 'create', data: { email: 'test@test.com', company_name: 'Test' } },
+        { operation: 'create', data: { first_name: 'Test', last_name: 'User', email: 'test@test.com', organization_name: 'Test' } },
       ]);
 
       expect(mockClient.release).toHaveBeenCalled();
@@ -290,7 +290,7 @@ describe('GenericEntityService.batch()', () => {
 
       // Batch catches operation errors and returns them in results
       const result = await GenericEntityService.batch('customer', [
-        { operation: 'create', data: { email: 'test@test.com', company_name: 'Test' } },
+        { operation: 'create', data: { first_name: 'Test', last_name: 'User', email: 'test@test.com', organization_name: 'Test' } },
       ]);
 
       expect(result.success).toBe(false);
@@ -304,13 +304,13 @@ describe('GenericEntityService.batch()', () => {
     test('should return detailed results for each operation', async () => {
       mockClient.query
         .mockResolvedValueOnce({})
-        .mockResolvedValueOnce({ rows: [{ id: 1, email: 'a@test.com', company_name: 'A' }] })
-        .mockResolvedValueOnce({ rows: [{ id: 2, email: 'b@test.com', company_name: 'B' }] })
+        .mockResolvedValueOnce({ rows: [{ id: 1, first_name: 'A', last_name: 'User', email: 'a@test.com', organization_name: 'A' }] })
+        .mockResolvedValueOnce({ rows: [{ id: 2, first_name: 'B', last_name: 'User', email: 'b@test.com', organization_name: 'B' }] })
         .mockResolvedValueOnce({});
 
       const result = await GenericEntityService.batch('customer', [
-        { operation: 'create', data: { email: 'a@test.com', company_name: 'A' } },
-        { operation: 'create', data: { email: 'b@test.com', company_name: 'B' } },
+        { operation: 'create', data: { first_name: 'A', last_name: 'User', email: 'a@test.com', organization_name: 'A' } },
+        { operation: 'create', data: { first_name: 'B', last_name: 'User', email: 'b@test.com', organization_name: 'B' } },
       ]);
 
       expect(result).toMatchObject({

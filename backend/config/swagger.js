@@ -83,7 +83,7 @@ const entityPaths = {
   ...generateEntityPaths('roles', 'Roles', 'Role', 'Roles'),
   ...generateEntityPaths('customers', 'Customers', 'Customer', 'Customers'),
   ...generateEntityPaths('technicians', 'Technicians', 'Technician', 'Technicians'),
-  ...generateEntityPaths('work_orders', 'Work Orders', 'WorkOrder', 'Work Orders'),
+  ...generateEntityPaths('work_orders', 'Work Orders', 'Work_Order', 'Work Orders'),
   ...generateEntityPaths('invoices', 'Invoices', 'Invoice', 'Invoices'),
   ...generateEntityPaths('contracts', 'Contracts', 'Contract', 'Contracts'),
   ...generateEntityPaths('inventory', 'Inventory', 'Inventory', 'Inventory Items'),

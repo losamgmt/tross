@@ -30,7 +30,7 @@ void main() {
         ],
         'entityPlacements': {
           'customer': {'group': 'crm', 'order': 1},
-          'workOrder': {'group': 'operations', 'order': 2},
+          'work_order': {'group': 'operations', 'order': 2},
         },
       };
 

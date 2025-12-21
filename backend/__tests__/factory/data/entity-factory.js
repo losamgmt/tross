@@ -33,7 +33,7 @@ function entityNameFromTable(tableName) {
     roles: 'role',
     customers: 'customer',
     technicians: 'technician',
-    work_orders: 'workOrder',
+    work_orders: 'work_order',
     contracts: 'contract',
     invoices: 'invoice',
     inventory: 'inventory',
@@ -57,6 +57,9 @@ function generateFieldValue(entityName, fieldName) {
  * NOTE: FK fields are EXCLUDED from generation. They are resolved
  * by test-context.js which creates actual parent records.
  * This separation of concerns keeps the factory pure.
+ * 
+ * COMPUTED ENTITIES: Also includes the identity field (e.g., invoice_number)
+ * which is NOT in requiredFields but IS a NOT NULL database column.
  */
 function buildMinimal(entityName, overrides = {}) {
   const meta = getMetadata(entityName);
@@ -69,6 +72,18 @@ function buildMinimal(entityName, overrides = {}) {
     // Skip FK fields - test-context will resolve them by creating parents
     if (fkFields.has(field)) continue;
     payload[field] = generateFieldValue(entityName, field);
+  }
+
+  // For COMPUTED entities, include the identity field (auto-generated in production)
+  // These are NOT NULL in the database but not in requiredFields
+  if (meta.entityCategory === 'computed' && meta.identityField) {
+    if (!payload[meta.identityField] && !overrides[meta.identityField]) {
+      payload[meta.identityField] = generateFieldValue(entityName, meta.identityField);
+    }
+    // COMPUTED entities also have a NOT NULL 'name' field (computed from template)
+    if (!payload.name && !overrides.name) {
+      payload.name = `Test ${entityName} ${payload[meta.identityField] || 'record'}`;
+    }
   }
 
   return { ...payload, ...overrides };

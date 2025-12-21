@@ -375,8 +375,7 @@ class ApiClient {
   /// NOTE: baseUrl already includes '/api', so we don't add it here
   static String _entityEndpoint(String entityName) {
     // Explicit mapping to match backend routes exactly
-    // This ensures frontend and backend stay in sync
-    // Entity names use snake_case for consistency with backend
+    // All entity names use snake_case - NO camelCase allowed
     const endpointMap = <String, String>{
       'user': '/users',
       'role': '/roles',
@@ -389,12 +388,12 @@ class ApiClient {
       'preferences': '/preferences', // User preferences (1:1 with user)
     };
 
-    // Use explicit mapping if available
+    // Use explicit mapping - strict: must be in map
     if (endpointMap.containsKey(entityName)) {
       return endpointMap[entityName]!;
     }
 
-    // Fallback: standard pluralization for unknown entities
+    // Fallback for unknown entities: pluralize snake_case name
     final plural = entityName.endsWith('y')
         ? '${entityName.substring(0, entityName.length - 1)}ies'
         : entityName.endsWith('s')

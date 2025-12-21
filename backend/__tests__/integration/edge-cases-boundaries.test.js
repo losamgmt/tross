@@ -12,6 +12,7 @@
 const request = require('supertest');
 const app = require('../../server');
 const { createTestUser, cleanupTestDatabase } = require('../helpers/test-db');
+const { getUniqueValues } = require('../helpers/test-helpers');
 const GenericEntityService = require('../../services/generic-entity-service');
 
 describe('Boundary Condition Tests', () => {
@@ -177,9 +178,12 @@ describe('Boundary Condition Tests', () => {
     let testCustomerId;
 
     beforeAll(async () => {
+      const unique = getUniqueValues();
       const customer = await GenericEntityService.create('customer', {
-        email: `numeric-${Date.now()}@example.com`,
-        phone: '1234567890',
+        first_name: `NumericTest${unique.suffix}`,
+        last_name: 'Customer',
+        email: unique.email,
+        phone: unique.phone,
       });
       testCustomerId = customer.id;
     });
@@ -265,12 +269,14 @@ describe('Boundary Condition Tests', () => {
   describe('Date Boundaries', () => {
     let testContractIds = [];
     let testCustomerId;
-    const uniqueTimestamp = Date.now();
 
     beforeAll(async () => {
+      const unique = getUniqueValues();
       const customer = await GenericEntityService.create('customer', {
-        email: `datetest-${uniqueTimestamp}@example.com`,
-        phone: '1234567890',
+        first_name: `DateTest${unique.suffix}`,
+        last_name: 'Customer',
+        email: unique.email,
+        phone: unique.phone,
       });
       testCustomerId = customer.id;
     });
@@ -291,11 +297,12 @@ describe('Boundary Condition Tests', () => {
     });
 
     test('should reject invalid date formats', async () => {
+      const unique = getUniqueValues();
       const response = await request(app)
         .post('/api/contracts')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
-          contract_number: `CON-DATE-001-${uniqueTimestamp}`,
+          contract_number: `CON-DATE-001-${unique.id}`,
           customer_id: testCustomerId,
           start_date: 'not-a-date',
           end_date: '2025-12-31',
@@ -307,11 +314,12 @@ describe('Boundary Condition Tests', () => {
     });
 
     test('should reject end_date before start_date', async () => {
+      const unique = getUniqueValues();
       const response = await request(app)
         .post('/api/contracts')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
-          contract_number: `CON-DATE-002-${uniqueTimestamp}`,
+          contract_number: `CON-DATE-002-${unique.id}`,
           customer_id: testCustomerId,
           start_date: '2025-12-31',
           end_date: '2025-01-01',
@@ -327,11 +335,12 @@ describe('Boundary Condition Tests', () => {
     });
 
     test('should handle same start and end dates', async () => {
+      const unique = getUniqueValues();
       const response = await request(app)
         .post('/api/contracts')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
-          contract_number: `CON-SAME-DATE-${uniqueTimestamp}`,
+          contract_number: `CON-SAME-DATE-${unique.id}`,
           customer_id: testCustomerId,
           start_date: '2025-06-15',
           end_date: '2025-06-15',

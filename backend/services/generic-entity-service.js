@@ -31,8 +31,9 @@ const { cascadeDeleteDependents } = require('../db/helpers/cascade-helper');
 const { buildRLSFilter, buildRLSFilterForFindById } = require('../db/helpers/rls-filter-helper');
 const { filterOutput, filterOutputArray } = require('../db/helpers/output-filter-helper');
 const { logEntityAudit, isAuditEnabled } = require('../db/helpers/audit-helper');
-const { ENTITY_FIELDS } = require('../config/constants');
+const { ENTITY_FIELDS, ENTITY_CATEGORIES, ENTITY_CATEGORY_MAP } = require('../config/constants');
 const { sanitizeData } = require('../utils/data-hygiene');
+const { generateIdentifier, IDENTIFIER_FIELDS } = require('../utils/identifier-generator');
 
 /**
  * Table name to entity name mapping for related entity lookups
@@ -42,7 +43,7 @@ const TABLE_TO_ENTITY = {
   roles: 'role',
   customers: 'customer',
   technicians: 'technician',
-  work_orders: 'workOrder',
+  work_orders: 'work_order',
   contracts: 'contract',
   invoices: 'invoice',
   inventory: 'inventory',
@@ -149,7 +150,7 @@ class GenericEntityService {
       throw new Error('Entity name is required and must be a string');
     }
 
-    // Trim whitespace but preserve case (metadata uses camelCase: workOrder, not workorder)
+    // Trim whitespace but preserve case (metadata uses snake_case: work_order, not workorder)
     const normalizedName = entityName.trim();
 
     // Look up metadata
@@ -277,7 +278,7 @@ class GenericEntityService {
    *
    * @example
    *   // With RLS (API endpoints - customer viewing their work orders)
-   *   const result = await GenericEntityService.findAll('workOrder', { page: 1 }, {
+   *   const result = await GenericEntityService.findAll('work_order', { page: 1 }, {
    *     policy: 'own_work_orders_only',
    *     userId: customerId
    *   });
@@ -523,7 +524,7 @@ class GenericEntityService {
    *
    * USE CASES:
    * - count('user', { role_id: 5 }) → replaces Role.getUserCount()
-   * - count('workOrder', { status: 'pending' }) → count pending work orders
+   * - count('work_order', { status: 'pending' }) → count pending work orders
    * - count('customer', { is_active: true }) → count active customers
    *
    * @param {string} entityName - Entity name (e.g., 'user', 'role', 'customer')
@@ -644,7 +645,25 @@ class GenericEntityService {
     // =========================================================================
     const cleanData = sanitizeData(data, metadata);
 
-    // Validate required fields are present (after sanitization)
+    // =========================================================================
+    // AUTO-GENERATE IDENTIFIERS FOR COMPUTED ENTITIES
+    // COMPUTED entities (work_order, invoice, contract) have auto-generated
+    // identifiers in the format PREFIX-YYYY-NNNN (e.g., WO-2025-0001)
+    // =========================================================================
+    const category = ENTITY_CATEGORY_MAP[entityName];
+    if (category === ENTITY_CATEGORIES.COMPUTED) {
+      const identifierField = IDENTIFIER_FIELDS[entityName];
+      if (identifierField && !cleanData[identifierField]) {
+        cleanData[identifierField] = await generateIdentifier(entityName);
+        logger.debug('Auto-generated identifier for COMPUTED entity', {
+          entity: entityName,
+          field: identifierField,
+          value: cleanData[identifierField],
+        });
+      }
+    }
+
+    // Validate required fields are present (after sanitization and auto-generation)
     const missingFields = requiredFields.filter(
       (field) => cleanData[field] === undefined || cleanData[field] === null || cleanData[field] === '',
     );
@@ -790,7 +809,9 @@ class GenericEntityService {
         const record = await this.findById(entityName, safeId);
 
         if (record) {
-          const identityValue = record[identityField];
+          // Use protectedByField if specified, otherwise fall back to identityField
+          const protectionField = systemProtected.protectedByField || identityField;
+          const identityValue = record[protectionField];
 
           if (systemProtected.values.includes(identityValue)) {
             throw new Error(
@@ -916,7 +937,9 @@ class GenericEntityService {
       const record = await this.findById(entityName, safeId);
 
       if (record) {
-        const identityValue = record[identityField];
+        // Use protectedByField if specified, otherwise fall back to identityField
+        const protectionField = systemProtected.protectedByField || identityField;
+        const identityValue = record[protectionField];
 
         if (systemProtected.values.includes(identityValue)) {
           throw new Error(

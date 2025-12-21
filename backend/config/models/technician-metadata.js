@@ -1,6 +1,8 @@
 /**
  * Technician Model Metadata
  *
+ * Category: HUMAN (first_name + last_name, email identity)
+ *
  * SRP: ONLY defines Technician table structure and query capabilities
  * Used by QueryBuilderService to generate dynamic queries
  * Used by GenericEntityService for CRUD operations
@@ -11,6 +13,7 @@
 const {
   FIELD_ACCESS_LEVELS: FAL,
   UNIVERSAL_FIELD_ACCESS,
+  ENTITY_CATEGORIES,
 } = require('../constants');
 
 module.exports = {
@@ -21,6 +24,16 @@ module.exports = {
   primaryKey: 'id',
 
   // ============================================================================
+  // ENTITY CATEGORY (determines name handling pattern)
+  // ============================================================================
+
+  /**
+   * Entity category: HUMAN entities use first_name + last_name
+   * Display name computed as fullName = "{first_name} {last_name}"
+   */
+  entityCategory: ENTITY_CATEGORIES.HUMAN,
+
+  // ============================================================================
   // IDENTITY CONFIGURATION (Entity Contract v2.0)
   // ============================================================================
 
@@ -28,7 +41,7 @@ module.exports = {
    * The human-readable identifier field (not the PK)
    * Used for: Display names, search results, logging
    */
-  identityField: 'license_number',
+  identityField: 'email',
 
   /**
    * Whether the identity field has a UNIQUE constraint in the database
@@ -43,33 +56,60 @@ module.exports = {
   rlsResource: 'technicians',
 
   // ============================================================================
+  // FIELD ALIASING (for UI display names)
+  // ============================================================================
+
+  /**
+   * Field aliases for UI display. Key = field name, Value = display label
+   * Empty object = use field names as-is
+   */
+  fieldAliases: {},
+
+  // ============================================================================
   // CRUD CONFIGURATION (for GenericEntityService)
   // ============================================================================
 
   /**
    * Fields required when creating a new entity
    */
-  requiredFields: ['license_number'],
+  requiredFields: ['email', 'first_name', 'last_name'],
 
   /**
    * Fields that cannot be modified after creation (beyond universal immutables: id, created_at)
-   * Empty array = all fields are updateable
    */
   immutableFields: [],
 
   // ============================================================================
   // FIELD ACCESS CONTROL (role-based field-level CRUD permissions)
   // ============================================================================
-  // Each field specifies the MINIMUM role required for each CRUD operation.
-  // Permissions accumulate UPWARD: manager has all dispatcher + technician + customer permissions.
-  // Universal fields (id, is_active, created_at, updated_at, status) are in UNIVERSAL_FIELD_ACCESS.
-  // Use FAL shortcuts for common patterns, or define custom { create, read, update, delete }.
 
   fieldAccess: {
     // Entity Contract v2.0 fields (id, is_active, created_at, updated_at, status)
     ...UNIVERSAL_FIELD_ACCESS,
 
-    // License number - internal identifier, manager+ can manage
+    // HUMAN entity name fields
+    first_name: {
+      create: 'manager',
+      read: 'technician',
+      update: 'technician', // Self-editable with RLS
+      delete: 'none',
+    },
+    last_name: {
+      create: 'manager',
+      read: 'technician',
+      update: 'technician', // Self-editable with RLS
+      delete: 'none',
+    },
+
+    // Email - identity field, manager+ can create, technician can read own
+    email: {
+      create: 'manager',
+      read: 'technician',
+      update: 'none', // Immutable (synced from Auth0)
+      delete: 'none',
+    },
+
+    // License number - informational field, manager+ can manage
     license_number: {
       create: 'manager',
       read: 'technician', // Technicians can see own and peers' license numbers
@@ -85,32 +125,21 @@ module.exports = {
 
     // Skills - publicly visible, self-editable by technician
     skills: FAL.SELF_EDITABLE,
-
-    // Performance notes - manager internal notes, not visible to technician
-    performance_notes: FAL.MANAGER_MANAGED,
   },
 
   // ============================================================================
   // RELATIONSHIPS (for JOIN queries)
   // ============================================================================
 
-  /**
-   * Relationships to JOIN by default in all queries (findById, findAll, findByField)
-   * These are included automatically without needing to specify 'include' option
-   */
   defaultIncludes: [],
 
-  /**
-   * Foreign key relationships
-   * Used for JOIN generation and validation
-   */
   relationships: {
     // Technicians have many assigned work orders
     assignedWorkOrders: {
       type: 'hasMany',
       foreignKey: 'assigned_technician_id',
       table: 'work_orders',
-      fields: ['id', 'title', 'status', 'priority', 'scheduled_start', 'customer_id'],
+      fields: ['id', 'work_order_number', 'name', 'status', 'priority', 'scheduled_start', 'customer_id'],
       description: 'Work orders assigned to this technician',
     },
     // Optional: User account linked to this technician profile
@@ -127,13 +156,6 @@ module.exports = {
   // DELETE CONFIGURATION (for GenericEntityService.delete)
   // ============================================================================
 
-  /**
-   * Dependent records that must be cascade-deleted before this entity
-   * Only for relationships NOT handled by database ON DELETE CASCADE/SET NULL
-   *
-   * Note: work_orders.assigned_technician_id has ON DELETE SET NULL (DB handles it)
-   * For audit_logs: polymorphic FK via resource_type + resource_id
-   */
   dependents: [
     {
       table: 'audit_logs',
@@ -146,22 +168,17 @@ module.exports = {
   // SEARCH CONFIGURATION (Text Search with ILIKE)
   // ============================================================================
 
-  /**
-   * Fields that support text search (ILIKE %term%)
-   * These are concatenated with OR for full-text search
-   */
-  searchableFields: ['license_number'],
+  searchableFields: ['first_name', 'last_name', 'email', 'license_number'],
 
   // ============================================================================
   // FILTER CONFIGURATION (Exact Match & Operators)
   // ============================================================================
 
-  /**
-   * Fields that can be used in WHERE clauses
-   * Supports: exact match, gt, gte, lt, lte, in, not
-   */
   filterableFields: [
     'id',
+    'email',
+    'first_name',
+    'last_name',
     'license_number',
     'is_active',
     'status',
@@ -173,11 +190,11 @@ module.exports = {
   // SORT CONFIGURATION
   // ============================================================================
 
-  /**
-   * Fields that can be used in ORDER BY clauses
-   */
   sortableFields: [
     'id',
+    'email',
+    'first_name',
+    'last_name',
     'license_number',
     'is_active',
     'status',
@@ -186,9 +203,6 @@ module.exports = {
     'updated_at',
   ],
 
-  /**
-   * Default sort when no sortBy specified
-   */
   defaultSort: {
     field: 'created_at',
     order: 'DESC',
@@ -201,7 +215,7 @@ module.exports = {
   fields: {
     // TIER 1: Universal Entity Contract Fields
     id: { type: 'integer', readonly: true },
-    license_number: { type: 'string', required: true, maxLength: 100 },
+    email: { type: 'email', required: true, maxLength: 255 },
     is_active: { type: 'boolean', default: true },
     created_at: { type: 'timestamp', readonly: true },
     updated_at: { type: 'timestamp', readonly: true },
@@ -213,7 +227,12 @@ module.exports = {
       default: 'available',
     },
 
+    // HUMAN entity name fields
+    first_name: { type: 'string', required: true, maxLength: 100 },
+    last_name: { type: 'string', required: true, maxLength: 100 },
+
     // Entity-specific fields
+    license_number: { type: 'string', maxLength: 100 },
     certifications: { type: 'jsonb' },
     skills: { type: 'jsonb' },
     hourly_rate: { type: 'decimal' },

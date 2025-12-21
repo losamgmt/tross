@@ -604,6 +604,8 @@ class MetadataFieldConfigFactory {
       },
       valueField: 'id',
       asyncDisplayField: displayField,
+      asyncDisplayFields: fieldDef.displayFields,
+      asyncDisplayTemplate: fieldDef.displayTemplate,
       allowEmpty: !fieldDef.required,
     );
   }

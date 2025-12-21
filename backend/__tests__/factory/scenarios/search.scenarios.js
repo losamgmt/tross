@@ -19,9 +19,14 @@ function textSearch(meta, ctx) {
 
   // Find a searchable field that doesn't have strict pattern validation
   // Prefer fields without validation rules (like 'description', 'title')
+  // Skip COMPUTED entity identifiers (work_order_number, invoice_number, contract_number)
+  const strictPatternFields = [
+    'email', 'phone', 'first_name', 'last_name',
+    'work_order_number', 'invoice_number', 'contract_number'
+  ];
+  
   const searchField = searchableFields.find(f => 
-    !f.includes('email') && !f.includes('phone') && 
-    !f.includes('first_name') && !f.includes('last_name')
+    !strictPatternFields.some(pattern => f.includes(pattern))
   ) || searchableFields.find(f => 
     !f.includes('email') && !f.includes('phone')
   ) || searchableFields[0];
@@ -32,6 +37,8 @@ function textSearch(meta, ctx) {
   
   // Build override value based on field type and validation rules
   let overrideValue;
+  const year = new Date().getFullYear();
+  
   if (searchField.includes('email')) {
     overrideValue = `${uniqueToken.toLowerCase()}@example.com`;
   } else if (searchField.includes('phone')) {
@@ -39,6 +46,12 @@ function textSearch(meta, ctx) {
   } else if (searchField === 'first_name' || searchField === 'last_name') {
     // Human name fields: letters, spaces, hyphens, apostrophes only
     overrideValue = uniqueToken; // Already alphabetic
+  } else if (searchField === 'work_order_number') {
+    overrideValue = `WO-${year}-${String(num).padStart(4, '0')}`;
+  } else if (searchField === 'invoice_number') {
+    overrideValue = `INV-${year}-${String(num).padStart(4, '0')}`;
+  } else if (searchField === 'contract_number') {
+    overrideValue = `CTR-${year}-${String(num).padStart(4, '0')}`;
   } else {
     overrideValue = `Test ${uniqueToken} Entity`;
   }

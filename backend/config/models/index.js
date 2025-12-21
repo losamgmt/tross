@@ -20,7 +20,7 @@ module.exports = {
   role: roleMetadata,
   customer: customerMetadata,
   technician: technicianMetadata,
-  workOrder: workOrderMetadata,
+  work_order: workOrderMetadata,
   contract: contractMetadata,
   invoice: invoiceMetadata,
   inventory: inventoryMetadata,

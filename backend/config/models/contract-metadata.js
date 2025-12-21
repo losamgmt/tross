@@ -1,6 +1,8 @@
 /**
  * Contract Model Metadata
  *
+ * Category: COMPUTED (auto-generated contract_number identity, computed name)
+ *
  * SRP: ONLY defines Contract table structure and query capabilities
  * Used by QueryBuilderService to generate dynamic queries
  * Used by GenericEntityService for CRUD operations
@@ -11,6 +13,7 @@
 const {
   FIELD_ACCESS_LEVELS: FAL,
   UNIVERSAL_FIELD_ACCESS,
+  ENTITY_CATEGORIES,
 } = require('../constants');
 
 module.exports = {
@@ -21,14 +24,29 @@ module.exports = {
   primaryKey: 'id',
 
   // ============================================================================
+  // ENTITY CATEGORY (determines name handling pattern)
+  // ============================================================================
+
+  /**
+   * Entity category: COMPUTED entities have auto-generated identifiers
+   * and computed name from template: "{customer.fullName}: {summary}: {identifier}"
+   */
+  entityCategory: ENTITY_CATEGORIES.COMPUTED,
+
+  // ============================================================================
   // IDENTITY CONFIGURATION (Entity Contract v2.0)
   // ============================================================================
 
   /**
-   * The human-readable identifier field (not the PK)
-   * Used for: Display names, search results, logging
+   * The unique identifier field (auto-generated: CTR-YYYY-NNNN)
+   * Used for: Unique references, search results, logging
    */
   identityField: 'contract_number',
+
+  /**
+   * Whether the identity field has a UNIQUE constraint in the database
+   */
+  identityFieldUnique: true,
 
   /**
    * RLS resource name for permission checks
@@ -37,13 +55,38 @@ module.exports = {
   rlsResource: 'contracts',
 
   // ============================================================================
+  // FIELD ALIASING (for UI display names)
+  // ============================================================================
+
+  /**
+   * Field aliases for UI display. Key = field name, Value = display label
+   * Empty object = use field names as-is
+   */
+  fieldAliases: {},
+
+  // ============================================================================
+  // COMPUTED NAME CONFIGURATION
+  // ============================================================================
+
+  /**
+   * Configuration for computing the human-readable name
+   * Template: "{customer.fullName}: {summary}: {contract_number}"
+   */
+  computedName: {
+    template: '{customer.fullName}: {summary}: {contract_number}',
+    sources: ['customer_id', 'summary', 'contract_number'],
+    readOnly: false,
+  },
+
+  // ============================================================================
   // CRUD CONFIGURATION (for GenericEntityService)
   // ============================================================================
 
   /**
    * Fields required when creating a new entity
+   * contract_number is auto-generated
    */
-  requiredFields: ['contract_number', 'customer_id', 'start_date'],
+  requiredFields: ['customer_id', 'start_date'],
 
   /**
    * Fields that cannot be modified after creation (beyond universal immutables: id, created_at)
@@ -69,11 +112,27 @@ module.exports = {
     // Entity Contract v2.0 fields
     ...UNIVERSAL_FIELD_ACCESS,
 
-    // Identity field - audit trail, immutable after creation
+    // Identity field - auto-generated, immutable
     contract_number: {
-      create: 'manager',
+      create: 'none', // Auto-generated
       read: 'customer',
       update: 'none', // Immutable
+      delete: 'none',
+    },
+
+    // Computed name field (optional user override)
+    name: {
+      create: 'manager',
+      read: 'customer',
+      update: 'manager',
+      delete: 'none',
+    },
+
+    // Brief description of this contract
+    summary: {
+      create: 'manager',
+      read: 'customer',
+      update: 'manager',
       delete: 'none',
     },
 
@@ -135,7 +194,7 @@ module.exports = {
       type: 'belongsTo',
       foreignKey: 'customer_id',
       table: 'customers',
-      fields: ['id', 'email', 'company_name', 'phone'],
+      fields: ['id', 'email', 'first_name', 'last_name', 'organization_name', 'phone'],
       description: 'Customer this contract is with',
     },
   },
@@ -166,7 +225,7 @@ module.exports = {
    * Fields that support text search (ILIKE %term%)
    * These are concatenated with OR for full-text search
    */
-  searchableFields: ['contract_number'],
+  searchableFields: ['contract_number', 'name', 'summary'],
 
   // ============================================================================
   // FILTER CONFIGURATION (Exact Match & Operators)
@@ -233,6 +292,10 @@ module.exports = {
       values: ['draft', 'active', 'expired', 'cancelled'],
       default: 'draft',
     },
+
+    // COMPUTED entity fields
+    name: { type: 'string', maxLength: 255 },
+    summary: { type: 'string', maxLength: 255 },
 
     // Entity-specific fields
     customer_id: { type: 'integer', required: true },

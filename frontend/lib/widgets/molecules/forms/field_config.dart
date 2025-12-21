@@ -100,8 +100,15 @@ class FieldConfig<T, V> {
   /// Value field from loaded items (e.g., 'id')
   final String? valueField;
 
-  /// Display field from loaded items (e.g., 'name', 'email')
+  /// Display field from loaded items (e.g., 'name', 'email') - single field fallback
   final String? asyncDisplayField;
+
+  /// Multiple display fields for composite display (e.g., ['company_name', 'email'])
+  final List<String>? asyncDisplayFields;
+
+  /// Format template for display (e.g., '{company_name} - {email}')
+  /// If not provided but displayFields is, fields are joined with ' - '
+  final String? asyncDisplayTemplate;
 
   // Date field specific
   final DateTime? minDate;
@@ -139,6 +146,8 @@ class FieldConfig<T, V> {
     this.asyncItemsLoader,
     this.valueField,
     this.asyncDisplayField,
+    this.asyncDisplayFields,
+    this.asyncDisplayTemplate,
     // Date specific
     this.minDate,
     this.maxDate,

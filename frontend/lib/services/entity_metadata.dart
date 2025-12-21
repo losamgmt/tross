@@ -58,7 +58,11 @@ class FieldDefinition {
 
   // Foreign key relationship fields
   final String? relatedEntity; // e.g., 'role', 'customer'
-  final String? displayField; // e.g., 'name', 'email'
+  final String? displayField; // Single field fallback e.g., 'name', 'email'
+  final List<String>?
+  displayFields; // Multiple fields e.g., ['company_name', 'email']
+  final String?
+  displayTemplate; // Format string e.g., '{company_name} - {email}'
 
   /// Check if this is a foreign key field
   bool get isForeignKey =>
@@ -79,6 +83,8 @@ class FieldDefinition {
     this.description,
     this.relatedEntity,
     this.displayField,
+    this.displayFields,
+    this.displayTemplate,
   });
 
   factory FieldDefinition.fromJson(String name, Map<String, dynamic> json) {
@@ -97,6 +103,8 @@ class FieldDefinition {
       description: json['description'] as String?,
       relatedEntity: json['relatedEntity'] as String?,
       displayField: json['displayField'] as String?,
+      displayFields: (json['displayFields'] as List<dynamic>?)?.cast<String>(),
+      displayTemplate: json['displayTemplate'] as String?,
     );
   }
 
@@ -308,8 +316,8 @@ class EntityMetadata {
 ///
 /// Singleton that loads and caches all entity metadata.
 ///
-/// Entity names use camelCase (e.g., 'workOrder', 'preferences')
-/// matching the backend's canonical naming convention.
+/// Entity names use snake_case (e.g., 'work_order', 'preferences')
+/// matching the strict naming convention across all layers.
 class EntityMetadataRegistry {
   static final EntityMetadataRegistry _instance = EntityMetadataRegistry._();
   static EntityMetadataRegistry get instance => _instance;
@@ -386,9 +394,6 @@ class EntityMetadataRegistry {
     for (final entity in defaultEntities) {
       _metadata[entity] = _createDefaultMetadata(entity);
     }
-
-    // Also register camelCase aliases for backwards compatibility
-    _metadata['workOrder'] = _metadata['work_order']!;
 
     ErrorService.logInfo(
       '[EntityMetadataRegistry] Loaded defaults for ${defaultEntities.length} entities',
@@ -572,7 +577,7 @@ class EntityMetadataRegistry {
   /// Get metadata for an entity
   ///
   /// Throws if entity not found and no default available.
-  /// Entity names use camelCase: 'workOrder', 'preferences'
+  /// Entity names use snake_case: 'work_order', 'preferences'
   static EntityMetadata get(String entityName) {
     if (!_instance._initialized) {
       throw StateError(
@@ -587,7 +592,7 @@ class EntityMetadataRegistry {
   }
 
   /// Get metadata for an entity, or null if not found
-  /// Entity names use camelCase: 'workOrder', 'preferences'
+  /// Entity names use snake_case: 'work_order', 'preferences'
   static EntityMetadata? tryGet(String entityName) {
     if (!_instance._initialized) return null;
     return _instance._metadata[entityName];

@@ -4,6 +4,11 @@
  * SRP: Create the test context that scenarios receive.
  * Wraps supertest, db, factory, and auth helpers.
  *
+ * ARCHITECTURE:
+ * - FIXTURES: Shared entities created once per suite (beforeAll), reused by all tests
+ * - FACTORY: Creates test-specific entities, auto-resolves FK deps using fixtures
+ * - CLEANUP: Entities tracked and deleted in afterEach/afterAll
+ *
  * This is the "ctx" object passed to every scenario function.
  */
 
@@ -24,6 +29,12 @@ function buildTestContext(app, db) {
 
   // Cache for test users (created once per role)
   const testUsers = {};
+
+  // ==========================================================================
+  // FIXTURES: Shared entities for FK resolution
+  // Created once per suite, reused by all tests needing these dependencies
+  // ==========================================================================
+  const fixtures = {};
 
   /**
    * Get or create a test user for a role
@@ -75,6 +86,26 @@ function buildTestContext(app, db) {
   // Created entities cache for cleanup
   const createdEntities = [];
 
+  /**
+   * Resolve FK for a field using fixtures or by creating a new entity
+   * 
+   * @param {string} fkField - FK field name (e.g., 'customer_id')
+   * @param {Object} fkDef - FK definition from metadata
+   * @returns {Promise<number>} The ID to use for the FK
+   */
+  async function resolveFkDependency(fkField, fkDef) {
+    const parentEntityName = entityFactory.entityNameFromTable(fkDef.table);
+    
+    // Check if we have a fixture for this entity type
+    if (fixtures[parentEntityName]) {
+      return fixtures[parentEntityName].id;
+    }
+    
+    // No fixture - create the entity (which may recursively create its own deps)
+    const parent = await factory.create(parentEntityName);
+    return parent.id;
+  }
+
   // Factory methods that use the context's HTTP client
   const factory = {
     buildMinimal: entityFactory.buildMinimal,
@@ -84,44 +115,41 @@ function buildTestContext(app, db) {
 
     /**
      * Build minimal payload with FK dependencies resolved.
-     * Creates actual parent entities via HTTP and returns a payload
-     * ready to POST (with valid FK IDs).
-     *
-     * Use this instead of buildMinimal when the entity has FK dependencies.
+     * Uses fixtures when available, creates entities when not.
      */
     async buildMinimalWithFKs(entityName, overrides = {}) {
       const meta = entityFactory.getMetadata(entityName);
       const payload = entityFactory.buildMinimal(entityName, overrides);
 
-      // Handle required FK dependencies - create parents and get their IDs
+      // Handle required FK dependencies - use fixtures or create parents
       for (const [fkField, fkDef] of Object.entries(meta.foreignKeys || {})) {
         if (!meta.requiredFields?.includes(fkField)) continue;
         if (payload[fkField] || overrides[fkField]) continue; // Already provided
 
-        const parentName = entityFactory.entityNameFromTable(fkDef.table);
-        const parent = await this.create(parentName);
-        payload[fkField] = parent.id;
+        payload[fkField] = await resolveFkDependency(fkField, fkDef);
       }
 
       return { ...payload, ...overrides };
     },
 
     /**
-     * Create entity via HTTP and track for cleanup
+     * Create entity via HTTP and track for cleanup.
+     * Uses fixtures for FK dependencies when available.
      */
     async create(entityName, overrides = {}) {
       const meta = entityFactory.getMetadata(entityName);
       const payload = entityFactory.buildMinimal(entityName, overrides);
 
-      // Handle required FK dependencies
+      // Handle required FK dependencies - use fixtures or create parents
       for (const [fkField, fkDef] of Object.entries(meta.foreignKeys || {})) {
         if (!meta.requiredFields?.includes(fkField)) continue;
-        if (payload[fkField]) continue; // Already provided
+        if (payload[fkField] || overrides[fkField]) continue; // Already provided
 
-        const parentName = entityFactory.entityNameFromTable(fkDef.table);
-        const parent = await this.create(parentName);
-        payload[fkField] = parent.id;
+        payload[fkField] = await resolveFkDependency(fkField, fkDef);
       }
+
+      // Apply overrides after FK resolution
+      Object.assign(payload, overrides);
 
       const auth = await authHeader('admin');
       const response = await supertestRequest
@@ -215,6 +243,29 @@ function buildTestContext(app, db) {
       const child = await this.create(childName, { [fkField]: parent.id });
       return { parent, child };
     },
+
+    /**
+     * Create a shared fixture (call in beforeAll).
+     * Fixtures are cached and reused across tests in the suite.
+     * @param {string} entityName - The entity type to create
+     * @param {Object} [overrides] - Optional field overrides
+     * @returns {Promise<Object>} The created entity
+     */
+    async createFixture(entityName, overrides = {}) {
+      const entity = await this.create(entityName, overrides);
+      fixtures[entityName] = entity;
+      return entity;
+    },
+
+    /**
+     * Get a fixture by entity name.
+     * Returns undefined if fixture doesn't exist.
+     * @param {string} entityName - The entity type
+     * @returns {Object|undefined} The fixture entity or undefined
+     */
+    getFixture(entityName) {
+      return fixtures[entityName];
+    },
   };
 
   // Helper to get entities that have FK to a given entity
@@ -233,6 +284,7 @@ function buildTestContext(app, db) {
     request: supertestRequest,
     db,
     factory,
+    fixtures, // Expose fixtures for direct access
     authHeader,
     authHeaderForUser,
     entityNameFromTable: entityFactory.entityNameFromTable,
@@ -256,6 +308,14 @@ function buildTestContext(app, db) {
         }
       }
       createdEntities.length = 0;
+    },
+
+    /**
+     * Cleanup fixtures only (call in afterAll)
+     * Clears fixture references but actual entities cleaned up in cleanup()
+     */
+    clearFixtures() {
+      Object.keys(fixtures).forEach(key => delete fixtures[key]);
     },
   };
 }

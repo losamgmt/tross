@@ -1,6 +1,8 @@
 /**
  * Role Model Metadata
  *
+ * Category: SIMPLE (name field for display, priority as identity)
+ *
  * SRP: ONLY defines Role table structure and query capabilities
  * Used by QueryBuilderService to generate dynamic queries
  * Used by GenericEntityService for CRUD operations
@@ -11,6 +13,7 @@
 const {
   FIELD_ACCESS_LEVELS: FAL,
   UNIVERSAL_FIELD_ACCESS,
+  ENTITY_CATEGORIES,
 } = require('../constants');
 
 module.exports = {
@@ -21,14 +24,24 @@ module.exports = {
   primaryKey: 'id',
 
   // ============================================================================
+  // ENTITY CATEGORY (determines name handling pattern)
+  // ============================================================================
+
+  /**
+   * Entity category: SIMPLE entities have a direct name field
+   * and a unique identifier field (priority for roles)
+   */
+  entityCategory: ENTITY_CATEGORIES.SIMPLE,
+
+  // ============================================================================
   // IDENTITY CONFIGURATION (Entity Contract v2.0)
   // ============================================================================
 
   /**
-   * The human-readable identifier field (not the PK)
-   * Used for: Display names, search results, logging
+   * The unique identifier field - priority determines role hierarchy
+   * Used for: Unique identification, role hierarchy enforcement
    */
-  identityField: 'name',
+  identityField: 'priority',
 
   /**
    * Whether the identity field has a UNIQUE constraint in the database
@@ -41,6 +54,16 @@ module.exports = {
    * Maps to permissions.json resource names
    */
   rlsResource: 'roles',
+
+  // ============================================================================
+  // FIELD ALIASING (for UI display names)
+  // ============================================================================
+
+  /**
+   * Field aliases for UI display. Key = field name, Value = display label
+   * Empty object = use field names as-is
+   */
+  fieldAliases: {},
 
   // ============================================================================
   // CRUD CONFIGURATION (for GenericEntityService)
@@ -137,7 +160,13 @@ module.exports = {
    */
   systemProtected: {
     /**
-     * Values of identityField ('name') that are protected
+     * Field to check for protected values (may differ from identityField)
+     * For roles: name is the protected identifier, even though priority is the identity field
+     */
+    protectedByField: 'name',
+
+    /**
+     * Values of protectedByField that are protected
      */
     values: ['admin', 'manager', 'dispatcher', 'technician', 'customer'],
 

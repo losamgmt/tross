@@ -2,11 +2,16 @@
 -- TROSSAPP DATABASE SCHEMA
 -- ============================================================================
 -- IDEMPOTENT: Safe to run multiple times
--- VERSION: 2.2
--- LAST UPDATED: 2025-12-18
+-- VERSION: 3.0
+-- LAST UPDATED: 2025-12-20
 --
 -- PRE-PRODUCTION MODE: Full reset on each deploy
 -- When going live, remove the DROP TABLE section below
+--
+-- ENTITY CATEGORIES:
+--   HUMAN (user, customer, technician): first_name + last_name, email identity
+--   SIMPLE (role, inventory): name field, unique identifier (priority/sku)
+--   COMPUTED (work_order, invoice, contract): auto-generated identifier, computed name
 -- ============================================================================
 
 -- ============================================================================
@@ -15,8 +20,13 @@
 -- ============================================================================
 DROP TABLE IF EXISTS user_preferences CASCADE;
 DROP TABLE IF EXISTS audit_logs CASCADE;
+DROP TABLE IF EXISTS invoices CASCADE;
+DROP TABLE IF EXISTS contracts CASCADE;
 DROP TABLE IF EXISTS work_orders CASCADE;
+DROP TABLE IF EXISTS inventory CASCADE;
+DROP TABLE IF EXISTS technicians CASCADE;
 DROP TABLE IF EXISTS customers CASCADE;
+DROP TABLE IF EXISTS refresh_tokens CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS roles CASCADE;
 
@@ -27,12 +37,13 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- ROLES TABLE
 -- ============================================================================
 -- Business entity: System roles for RBAC
+-- Category: SIMPLE (name field, priority as identity)
 -- Contract compliance: ✓ FULL (TIER 1 + TIER 2)
 --
--- Identity field: name
+-- Identity field: priority (unique role hierarchy position)
+-- Human-readable: name
 -- Soft deletes: is_active
 -- Lifecycle: status (active, disabled)
--- Audit: audit_logs table (created_by/updated_by removed)
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS roles (
     -- TIER 1: Contract required fields
@@ -47,7 +58,7 @@ CREATE TABLE IF NOT EXISTS roles (
     
     -- Entity-specific fields
     description TEXT,
-    priority INTEGER NOT NULL CHECK (priority > 0)
+    priority INTEGER UNIQUE NOT NULL CHECK (priority > 0)  -- Identity field (unique)
 );
 
 -- Performance index on status for filtered queries
@@ -70,34 +81,34 @@ ON CONFLICT (name) DO UPDATE SET
 -- USERS TABLE
 -- ============================================================================
 -- Business entity: Application users
--- Contract compliance: ✓ FULL (email = identity field)
+-- Category: HUMAN (first_name + last_name, email identity)
+-- Contract compliance: ✓ FULL
 --
--- Identity field: email (name equivalent for user entities)
+-- Identity field: email
+-- Human-readable: fullName (computed from first_name + last_name)
 -- Soft deletes: is_active (TIER 1 - universal)
 -- Lifecycle states: status (TIER 2 - pending_activation → active → suspended)
--- Audit: audit_logs table (created_by/updated_by/deactivated_* removed)
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS users (
     -- TIER 1: Universal Entity Contract Fields
     id SERIAL PRIMARY KEY,
-    email VARCHAR(255) UNIQUE NOT NULL,  -- Identity field (name equivalent)
-    is_active BOOLEAN DEFAULT true NOT NULL,  -- Soft delete flag
+    email VARCHAR(255) UNIQUE NOT NULL,  -- Identity field
+    is_active BOOLEAN DEFAULT true NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     
     -- TIER 2: Entity-Specific Lifecycle Field
-    status VARCHAR(50) DEFAULT 'active'  -- User lifecycle state
+    status VARCHAR(50) DEFAULT 'active'
         CHECK (status IN ('pending_activation', 'active', 'suspended')),
+    
+    -- HUMAN entity name fields
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
     
     -- Entity-specific data fields
     auth0_id VARCHAR(255) UNIQUE,  -- Nullable for pending_activation users
-    first_name VARCHAR(100),
-    last_name VARCHAR(100),
     role_id INTEGER REFERENCES roles(id) ON DELETE SET NULL
 );
-
--- Remove deprecated deactivated_by from roles (now in audit_logs)
--- This was a circular dependency workaround - no longer needed
 
 -- ============================================================================
 -- AUDIT LOGS TABLE
@@ -274,41 +285,6 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- ============================================================================
--- TABLE COMMENTS (Documentation)
--- ============================================================================
-
-COMMENT ON TABLE roles IS 'System roles for RBAC (admin, manager, dispatcher, technician, client)';
-COMMENT ON TABLE users IS 'Application users with role-based permissions';
-COMMENT ON TABLE audit_logs IS 'Complete audit trail - source of truth for who/when/what changed';
-COMMENT ON TABLE refresh_tokens IS 'JWT refresh tokens for authentication';
-
--- Roles columns
-COMMENT ON COLUMN roles.id IS 'Unique identifier';
-COMMENT ON COLUMN roles.name IS 'Role name (admin, manager, etc) - primary identity field';
-COMMENT ON COLUMN roles.is_active IS 'Soft delete flag (true=active, false=deleted)';
-COMMENT ON COLUMN roles.created_at IS 'Creation timestamp (readonly, cached from audit_logs)';
-COMMENT ON COLUMN roles.updated_at IS 'Last update timestamp (auto-managed by trigger)';
-COMMENT ON COLUMN roles.description IS 'Human-readable role description';
-COMMENT ON COLUMN roles.priority IS 'Role hierarchy (1-5, higher = more permissions)';
-
--- Users columns
-COMMENT ON COLUMN users.id IS 'Unique identifier';
-COMMENT ON COLUMN users.email IS 'User email address - primary identity field (name equivalent)';
-COMMENT ON COLUMN users.is_active IS 'Soft delete flag (true=active, false=deleted)';
-COMMENT ON COLUMN users.created_at IS 'Creation timestamp (readonly, cached from audit_logs)';
-COMMENT ON COLUMN users.updated_at IS 'Last update timestamp (auto-managed by trigger)';
-COMMENT ON COLUMN users.role_id IS 'User has exactly ONE role (KISS principle)';
-COMMENT ON COLUMN users.auth0_id IS 'Auth0 user identifier for OAuth integration';
-
--- Audit logs columns
-COMMENT ON COLUMN audit_logs.resource_type IS 'Table name of affected entity (users, roles, etc)';
-COMMENT ON COLUMN audit_logs.resource_id IS 'ID of affected record';
-COMMENT ON COLUMN audit_logs.action IS 'Action performed (create, update, deactivate, delete)';
-COMMENT ON COLUMN audit_logs.user_id IS 'Who performed the action (NULL for system/dev users)';
-COMMENT ON COLUMN audit_logs.old_values IS 'Entity state before change (JSONB)';
-COMMENT ON COLUMN audit_logs.new_values IS 'Entity state after change (JSONB)';
-
--- ============================================================================
 -- WORK ORDER SYSTEM TABLES (Added: 2025-11-13)
 -- ============================================================================
 -- Run migration 008 to create these tables:
@@ -333,9 +309,11 @@ COMMENT ON COLUMN audit_logs.new_values IS 'Entity state after change (JSONB)';
 -- CUSTOMERS TABLE
 -- ============================================================================
 -- Business entity: Customer profiles (polymorphic profile for role_id=5)
+-- Category: HUMAN (first_name + last_name, email identity)
 -- Contract compliance: ✓ FULL
 --
 -- Identity field: email
+-- Human-readable: fullName (computed from first_name + last_name)
 -- Soft deletes: is_active
 -- Lifecycle states: status (pending → active → suspended)
 -- ============================================================================
@@ -343,7 +321,7 @@ CREATE TABLE IF NOT EXISTS customers (
     -- TIER 1: Universal Entity Contract Fields
     id SERIAL PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,  -- Identity field
-    is_active BOOLEAN DEFAULT true NOT NULL,  -- Soft delete flag
+    is_active BOOLEAN DEFAULT true NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     
@@ -351,9 +329,13 @@ CREATE TABLE IF NOT EXISTS customers (
     status VARCHAR(50) DEFAULT 'pending'
         CHECK (status IN ('pending', 'active', 'suspended')),
     
+    -- HUMAN entity name fields
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
+    
     -- Entity-specific data fields
     phone VARCHAR(50),
-    company_name VARCHAR(255),
+    organization_name VARCHAR(255),  -- Optional company/org they represent
     billing_address JSONB,  -- { street, city, state, zip, country }
     service_address JSONB   -- { street, city, state, zip, country }
 );
@@ -362,17 +344,19 @@ CREATE TABLE IF NOT EXISTS customers (
 -- TECHNICIANS TABLE
 -- ============================================================================
 -- Business entity: Technician profiles (polymorphic profile for role_id=2)
+-- Category: HUMAN (first_name + last_name, email identity)
 -- Contract compliance: ✓ FULL
 --
--- Identity field: license_number
+-- Identity field: email
+-- Human-readable: fullName (computed from first_name + last_name)
 -- Soft deletes: is_active
 -- Lifecycle states: status (available → on_job → off_duty → suspended)
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS technicians (
     -- TIER 1: Universal Entity Contract Fields
     id SERIAL PRIMARY KEY,
-    license_number VARCHAR(100) UNIQUE NOT NULL,  -- Identity field
-    is_active BOOLEAN DEFAULT true NOT NULL,  -- Soft delete flag
+    email VARCHAR(255) UNIQUE NOT NULL,  -- Identity field
+    is_active BOOLEAN DEFAULT true NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     
@@ -380,7 +364,12 @@ CREATE TABLE IF NOT EXISTS technicians (
     status VARCHAR(50) DEFAULT 'available'
         CHECK (status IN ('available', 'on_job', 'off_duty', 'suspended')),
     
+    -- HUMAN entity name fields
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
+    
     -- Entity-specific data fields
+    license_number VARCHAR(100),  -- Informational, not identity
     certifications JSONB,  -- [{ name, issued_by, expires_at }]
     skills JSONB,          -- ['plumbing', 'electrical', 'hvac']
     hourly_rate DECIMAL(10, 2)
@@ -390,17 +379,20 @@ CREATE TABLE IF NOT EXISTS technicians (
 -- WORK_ORDERS TABLE
 -- ============================================================================
 -- Business entity: Service work orders
+-- Category: COMPUTED (auto-generated identifier, computed name)
 -- Contract compliance: ✓ FULL
 --
--- Identity field: title
+-- Identity field: work_order_number (auto-generated: WO-YYYY-NNNN)
+-- Human-readable: name (computed, aliased as "Title" in UI)
+-- Computed name template: "{customer.fullName}: {summary}: {work_order_number}"
 -- Soft deletes: is_active
 -- Lifecycle states: status (pending → assigned → in_progress → completed → cancelled)
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS work_orders (
     -- TIER 1: Universal Entity Contract Fields
     id SERIAL PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,  -- Identity field
-    is_active BOOLEAN DEFAULT true NOT NULL,  -- Soft delete flag
+    work_order_number VARCHAR(100) UNIQUE NOT NULL,  -- Identity field (auto-generated)
+    is_active BOOLEAN DEFAULT true NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     
@@ -408,8 +400,11 @@ CREATE TABLE IF NOT EXISTS work_orders (
     status VARCHAR(50) DEFAULT 'pending'
         CHECK (status IN ('pending', 'assigned', 'in_progress', 'completed', 'cancelled')),
     
+    -- COMPUTED entity name field (aliased as "Title" in UI)
+    name VARCHAR(255) NOT NULL,  -- Computed: "{customer}: {summary}: {work_order_number}"
+    summary VARCHAR(255),        -- Brief description: "fix kitchen sink", "replace door"
+    
     -- Entity-specific data fields
-    description TEXT,
     priority VARCHAR(50) DEFAULT 'normal'
         CHECK (priority IN ('low', 'normal', 'high', 'urgent')),
     
@@ -427,23 +422,30 @@ CREATE TABLE IF NOT EXISTS work_orders (
 -- INVOICES TABLE
 -- ============================================================================
 -- Business entity: Billing invoices
+-- Category: COMPUTED (auto-generated identifier, computed name)
 -- Contract compliance: ✓ FULL
 --
--- Identity field: invoice_number
+-- Identity field: invoice_number (auto-generated: INV-YYYY-NNNN)
+-- Human-readable: name (computed)
+-- Computed name template: "{customer.fullName}: {summary}: {invoice_number}"
 -- Soft deletes: is_active
 -- Lifecycle states: status (draft → sent → paid → overdue → cancelled)
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS invoices (
     -- TIER 1: Universal Entity Contract Fields
     id SERIAL PRIMARY KEY,
-    invoice_number VARCHAR(100) UNIQUE NOT NULL,  -- Identity field
-    is_active BOOLEAN DEFAULT true NOT NULL,  -- Soft delete flag
+    invoice_number VARCHAR(100) UNIQUE NOT NULL,  -- Identity field (auto-generated)
+    is_active BOOLEAN DEFAULT true NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     
     -- TIER 2: Entity-Specific Lifecycle Field
     status VARCHAR(50) DEFAULT 'draft'
         CHECK (status IN ('draft', 'sent', 'paid', 'overdue', 'cancelled')),
+    
+    -- COMPUTED entity name field
+    name VARCHAR(255),  -- Computed: "{customer}: {summary}: {invoice_number}"
+    summary VARCHAR(255),  -- Brief description of invoiced work
     
     -- Entity-specific data fields
     work_order_id INTEGER REFERENCES work_orders(id) ON DELETE SET NULL,
@@ -463,23 +465,30 @@ CREATE TABLE IF NOT EXISTS invoices (
 -- CONTRACTS TABLE
 -- ============================================================================
 -- Business entity: Service contracts
+-- Category: COMPUTED (auto-generated identifier, computed name)
 -- Contract compliance: ✓ FULL
 --
--- Identity field: contract_number
+-- Identity field: contract_number (auto-generated: CTR-YYYY-NNNN)
+-- Human-readable: name (computed)
+-- Computed name template: "{customer.fullName}: {summary}: {contract_number}"
 -- Soft deletes: is_active
 -- Lifecycle states: status (draft → active → expired → cancelled)
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS contracts (
     -- TIER 1: Universal Entity Contract Fields
     id SERIAL PRIMARY KEY,
-    contract_number VARCHAR(100) UNIQUE NOT NULL,  -- Identity field
-    is_active BOOLEAN DEFAULT true NOT NULL,  -- Soft delete flag
+    contract_number VARCHAR(100) UNIQUE NOT NULL,  -- Identity field (auto-generated)
+    is_active BOOLEAN DEFAULT true NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     
     -- TIER 2: Entity-Specific Lifecycle Field
     status VARCHAR(50) DEFAULT 'draft'
         CHECK (status IN ('draft', 'active', 'expired', 'cancelled')),
+    
+    -- COMPUTED entity name field
+    name VARCHAR(255),  -- Computed: "{customer}: {summary}: {contract_number}"
+    summary VARCHAR(255),  -- Brief description: "annual maintenance", "HVAC service agreement"
     
     -- Entity-specific data fields
     customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE RESTRICT,
@@ -497,17 +506,19 @@ CREATE TABLE IF NOT EXISTS contracts (
 -- INVENTORY TABLE
 -- ============================================================================
 -- Business entity: Parts and supplies inventory
+-- Category: SIMPLE (name field, sku as identity)
 -- Contract compliance: ✓ FULL
 --
--- Identity field: name
+-- Identity field: sku (unique stock keeping unit)
+-- Human-readable: name (multiple items can share same name, distinguished by sku)
 -- Soft deletes: is_active
 -- Lifecycle states: status (in_stock → low_stock → out_of_stock → discontinued)
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS inventory (
     -- TIER 1: Universal Entity Contract Fields
     id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,  -- Identity field
-    is_active BOOLEAN DEFAULT true NOT NULL,  -- Soft delete flag
+    sku VARCHAR(100) UNIQUE NOT NULL,  -- Identity field
+    is_active BOOLEAN DEFAULT true NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     
@@ -515,8 +526,8 @@ CREATE TABLE IF NOT EXISTS inventory (
     status VARCHAR(50) DEFAULT 'in_stock'
         CHECK (status IN ('in_stock', 'low_stock', 'out_of_stock', 'discontinued')),
     
-    -- Entity-specific data fields
-    sku VARCHAR(100) UNIQUE NOT NULL,
+    -- SIMPLE entity name field
+    name VARCHAR(255) NOT NULL,  -- Human-readable (e.g., "Hammer", "Wrench")
     description TEXT,
     
     -- Inventory management
@@ -552,15 +563,17 @@ CREATE INDEX IF NOT EXISTS idx_customers_email ON customers(email);
 CREATE INDEX IF NOT EXISTS idx_customers_active ON customers(is_active) WHERE is_active = true;
 CREATE INDEX IF NOT EXISTS idx_customers_status ON customers(status);
 CREATE INDEX IF NOT EXISTS idx_customers_created ON customers(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_customers_company ON customers(company_name);
+CREATE INDEX IF NOT EXISTS idx_customers_organization ON customers(organization_name);
 
 -- Technicians indexes
-CREATE INDEX IF NOT EXISTS idx_technicians_license ON technicians(license_number);
+CREATE INDEX IF NOT EXISTS idx_technicians_email ON technicians(email);
 CREATE INDEX IF NOT EXISTS idx_technicians_active ON technicians(is_active) WHERE is_active = true;
 CREATE INDEX IF NOT EXISTS idx_technicians_status ON technicians(status);
 CREATE INDEX IF NOT EXISTS idx_technicians_created ON technicians(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_technicians_license ON technicians(license_number);
 
 -- Work orders indexes
+CREATE INDEX IF NOT EXISTS idx_work_orders_number ON work_orders(work_order_number);
 CREATE INDEX IF NOT EXISTS idx_work_orders_customer ON work_orders(customer_id);
 CREATE INDEX IF NOT EXISTS idx_work_orders_technician ON work_orders(assigned_technician_id);
 CREATE INDEX IF NOT EXISTS idx_work_orders_active ON work_orders(is_active) WHERE is_active = true;
@@ -638,6 +651,50 @@ CREATE TRIGGER update_inventory_updated_at
     BEFORE UPDATE ON inventory
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================================================
+-- TABLE COMMENTS (Documentation)
+-- ============================================================================
+-- NOTE: These must come AFTER all tables are created
+
+COMMENT ON TABLE roles IS 'System roles for RBAC - SIMPLE entity (priority=identity, name=display)';
+COMMENT ON TABLE users IS 'Application users - HUMAN entity (email=identity, first_name+last_name=display)';
+COMMENT ON TABLE customers IS 'Customer profiles - HUMAN entity (email=identity, first_name+last_name=display)';
+COMMENT ON TABLE technicians IS 'Technician profiles - HUMAN entity (email=identity, first_name+last_name=display)';
+COMMENT ON TABLE work_orders IS 'Service work orders - COMPUTED entity (work_order_number=identity, name=computed display)';
+COMMENT ON TABLE invoices IS 'Billing invoices - COMPUTED entity (invoice_number=identity, name=computed display)';
+COMMENT ON TABLE contracts IS 'Service contracts - COMPUTED entity (contract_number=identity, name=computed display)';
+COMMENT ON TABLE inventory IS 'Parts and supplies - SIMPLE entity (sku=identity, name=display)';
+COMMENT ON TABLE audit_logs IS 'Complete audit trail - source of truth for who/when/what changed';
+COMMENT ON TABLE refresh_tokens IS 'JWT refresh tokens for authentication';
+
+-- Roles columns
+COMMENT ON COLUMN roles.id IS 'Unique identifier';
+COMMENT ON COLUMN roles.name IS 'Human-readable role name (admin, manager, etc)';
+COMMENT ON COLUMN roles.priority IS 'Identity field - role hierarchy (1-5, higher = more permissions)';
+COMMENT ON COLUMN roles.is_active IS 'Soft delete flag (true=active, false=deleted)';
+COMMENT ON COLUMN roles.created_at IS 'Creation timestamp';
+COMMENT ON COLUMN roles.updated_at IS 'Last update timestamp (auto-managed by trigger)';
+COMMENT ON COLUMN roles.description IS 'Human-readable role description';
+
+-- Users columns
+COMMENT ON COLUMN users.id IS 'Unique identifier';
+COMMENT ON COLUMN users.email IS 'Identity field - user email address';
+COMMENT ON COLUMN users.first_name IS 'User first name (for fullName display)';
+COMMENT ON COLUMN users.last_name IS 'User last name (for fullName display)';
+COMMENT ON COLUMN users.is_active IS 'Soft delete flag (true=active, false=deleted)';
+COMMENT ON COLUMN users.created_at IS 'Creation timestamp';
+COMMENT ON COLUMN users.updated_at IS 'Last update timestamp (auto-managed by trigger)';
+COMMENT ON COLUMN users.role_id IS 'User has exactly ONE role (KISS principle)';
+COMMENT ON COLUMN users.auth0_id IS 'Auth0 user identifier for OAuth integration';
+
+-- Audit logs columns
+COMMENT ON COLUMN audit_logs.resource_type IS 'Table name of affected entity (users, roles, etc)';
+COMMENT ON COLUMN audit_logs.resource_id IS 'ID of affected record';
+COMMENT ON COLUMN audit_logs.action IS 'Action performed (create, update, deactivate, delete)';
+COMMENT ON COLUMN audit_logs.user_id IS 'Who performed the action (NULL for system/dev users)';
+COMMENT ON COLUMN audit_logs.old_values IS 'Entity state before change (JSONB)';
+COMMENT ON COLUMN audit_logs.new_values IS 'Entity state after change (JSONB)';
 
 -- ============================================================================
 -- CONTRACT VALIDATION

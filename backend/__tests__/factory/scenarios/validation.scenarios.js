@@ -14,13 +14,24 @@
  * Note: Not all identity fields have unique constraints.
  * For example, work order titles can be duplicated.
  * Set identityFieldUnique: true in metadata to enable this test.
+ *
+ * Note: COMPUTED entities (work_order, invoice, contract) have auto-generated
+ * identity fields that users cannot set (create: 'none'), so they are excluded
+ * from this test. The server guarantees uniqueness via auto-generation.
  */
 function uniqueConstraintViolation(meta, ctx) {
-  const { identityField, identityFieldUnique } = meta;
+  const { identityField, identityFieldUnique, fieldAccess } = meta;
 
   // Skip if no identity field or it's not marked as unique
   if (!identityField) return;
   if (!identityFieldUnique) return;
+
+  // Skip if identity field is auto-generated (create: 'none')
+  // COMPUTED entities have auto-generated identifiers that users cannot set
+  const identityFieldAccess = fieldAccess?.[identityField];
+  if (identityFieldAccess?.create === 'none') {
+    return; // Skip - server auto-generates unique values
+  }
 
   ctx.it(`POST /api/${meta.tableName} - rejects duplicate ${identityField}`, async () => {
     // Create first entity
