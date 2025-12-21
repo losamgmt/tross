@@ -129,9 +129,6 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
   List<TableColumn<T>> get _visibleColumns =>
       widget.columns.where((c) => !_hiddenColumnIds.contains(c.id)).toList();
 
-  /// Whether entity settings have been loaded
-  bool _settingsLoaded = false;
-
   @override
   void initState() {
     super.initState();
@@ -140,13 +137,9 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
 
   /// Load entity settings if entityName is provided
   Future<void> _loadEntitySettings() async {
-    if (widget.entityName == null) {
-      _settingsLoaded = true;
-      return;
-    }
+    if (widget.entityName == null) return;
 
     try {
-      // Import is at file level, use the service
       final settings = await EntitySettingsService.getForEntity(
         widget.entityName!,
       );
@@ -178,14 +171,9 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
               ? SortDirection.descending
               : SortDirection.ascending;
         }
-
-        _settingsLoaded = true;
       });
     } catch (e) {
       // Silently fail - settings are optional
-      if (mounted) {
-        setState(() => _settingsLoaded = true);
-      }
     }
   }
 
