@@ -5,6 +5,18 @@
 /// Actual widths are determined by content via IntrinsicColumnWidth.
 library;
 
+/// Table row density options
+enum TableDensity {
+  compact(28.0, 'Compact'),
+  standard(40.0, 'Standard'),
+  comfortable(56.0, 'Comfortable');
+
+  final double rowHeight;
+  final String label;
+
+  const TableDensity(this.rowHeight, this.label);
+}
+
 class TableConfig {
   // ============================================================
   // ROW CONSTRAINTS

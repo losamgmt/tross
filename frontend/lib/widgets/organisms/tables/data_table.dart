@@ -40,6 +40,7 @@ import '../../../config/constants.dart';
 import '../../../utils/helpers/pagination_helper.dart';
 import '../../atoms/typography/column_header.dart';
 import '../../molecules/feedback/empty_state.dart';
+import '../../molecules/menus/table_customization_menu.dart';
 import '../../molecules/pagination/pagination_display.dart';
 import 'table_toolbar.dart';
 import '../../atoms/indicators/loading_indicator.dart';
@@ -75,6 +76,9 @@ class AppDataTable<T> extends StatefulWidget {
   final String? emptyMessage;
   final Widget? emptyAction;
 
+  // Customization
+  final bool showCustomizationMenu;
+
   const AppDataTable({
     super.key,
     required this.columns,
@@ -92,6 +96,7 @@ class AppDataTable<T> extends StatefulWidget {
     this.totalItems,
     this.emptyMessage,
     this.emptyAction,
+    this.showCustomizationMenu = true,
   });
 
   @override
@@ -107,6 +112,16 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
   /// Tracks user-resized column widths by column id
   /// Columns not in this map use default width
   final Map<String, double> _columnWidths = {};
+
+  /// Hidden column IDs (session-only, not persisted)
+  Set<String> _hiddenColumnIds = {};
+
+  /// Table density (session-only, not persisted)
+  TableDensity _density = TableDensity.standard;
+
+  /// Get visible columns (filtered by hidden state)
+  List<TableColumn<T>> get _visibleColumns =>
+      widget.columns.where((c) => !_hiddenColumnIds.contains(c.id)).toList();
 
   @override
   void initState() {
@@ -188,6 +203,23 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
   Widget build(BuildContext context) {
     final spacing = context.spacing;
 
+    // Build combined toolbar actions (user actions + customization menu)
+    final List<Widget> combinedActions = [
+      ...?widget.toolbarActions,
+      if (widget.showCustomizationMenu)
+        TableCustomizationMenu<T>(
+          columns: widget.columns,
+          hiddenColumnIds: _hiddenColumnIds,
+          density: _density,
+          onHiddenColumnsChanged: (hidden) {
+            setState(() => _hiddenColumnIds = hidden);
+          },
+          onDensityChanged: (density) {
+            setState(() => _density = density);
+          },
+        ),
+    ];
+
     // No container - let the parent (DashboardCard) handle borders/shadows
     // This widget focuses purely on table layout and functionality
     return Column(
@@ -198,7 +230,7 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
         if (widget.title != null ||
             widget.titleWidget != null ||
             widget.onSearch != null ||
-            widget.toolbarActions != null)
+            combinedActions.isNotEmpty)
           Padding(
             padding: EdgeInsets.fromLTRB(
               spacing.md,
@@ -210,7 +242,7 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
               title: widget.title,
               titleWidget: widget.titleWidget,
               onSearch: widget.onSearch,
-              actions: widget.toolbarActions,
+              actions: combinedActions.isNotEmpty ? combinedActions : null,
             ),
           ),
 
@@ -321,12 +353,15 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
       alpha: 0.5,
     );
 
+    // Use visible columns (respects hidden state)
+    final visibleCols = _visibleColumns;
+
     // Determine which columns to render
     final List<dynamic> columnsToRender;
     if (includeActions) {
-      columnsToRender = ['__actions__', ...widget.columns];
+      columnsToRender = ['__actions__', ...visibleCols];
     } else {
-      columnsToRender = widget.columns;
+      columnsToRender = visibleCols;
     }
 
     // Column widths: Use tracked widths (resizable) or defaults
@@ -512,18 +547,32 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
     );
   }
 
-  /// Build a data cell with proper constraints and padding
+  /// Build a data cell with proper constraints, padding, and density-aware height
   Widget _buildDataCell({
     required Widget child,
     required AppSpacing spacing,
     VoidCallback? onTap,
   }) {
+    // Calculate padding based on density
+    final verticalPadding = switch (_density) {
+      TableDensity.compact => spacing.xs,
+      TableDensity.standard => spacing.sm,
+      TableDensity.comfortable => spacing.md,
+    };
+
     Widget content = ConstrainedBox(
-      constraints: const BoxConstraints(
+      constraints: BoxConstraints(
         minWidth: TableConfig.cellMinWidth,
         maxWidth: TableConfig.cellMaxWidth,
+        minHeight: _density.rowHeight,
       ),
-      child: Padding(padding: EdgeInsets.all(spacing.md), child: child),
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: spacing.md,
+          vertical: verticalPadding,
+        ),
+        child: Align(alignment: Alignment.centerLeft, child: child),
+      ),
     );
 
     if (onTap != null) {
