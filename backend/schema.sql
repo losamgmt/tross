@@ -206,6 +206,45 @@ CREATE TABLE IF NOT EXISTS user_preferences (
 );
 
 -- ============================================================================
+-- USER SAVED VIEWS TABLE
+-- ============================================================================
+-- Stores user's saved table views (filters, columns, sort, density)
+-- RLS: Each user can only see their own views (user_id filter)
+-- Category: N/A (system table, not a business entity)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS user_saved_view (
+    id SERIAL PRIMARY KEY,
+    
+    -- Owner of this saved view (RLS filter field)
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    
+    -- Which entity this view applies to (e.g., 'work_order', 'customer')
+    entity_name VARCHAR(50) NOT NULL,
+    
+    -- User-defined name for this view (e.g., "My Pending Orders")
+    view_name VARCHAR(100) NOT NULL,
+    
+    -- View configuration as JSONB
+    -- Structure: {
+    --   hiddenColumns: string[],
+    --   density: 'compact'|'standard'|'comfortable',
+    --   filters: { [field]: value },
+    --   sort: { field: string, direction: 'asc'|'desc' }
+    -- }
+    settings JSONB NOT NULL DEFAULT '{}',
+    
+    -- Whether this is the default view for this entity
+    is_default BOOLEAN DEFAULT false,
+    
+    -- Timestamps
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    
+    -- Each user can only have one view with a given name per entity
+    CONSTRAINT unique_user_entity_view_name UNIQUE (user_id, entity_name, view_name)
+);
+
+-- ============================================================================
 -- PERFORMANCE INDEXES
 -- ============================================================================
 
@@ -226,6 +265,10 @@ CREATE INDEX IF NOT EXISTS idx_users_status_active ON users(status, is_active) W
 
 -- User preferences indexes (user_id already has UNIQUE constraint which creates implicit index)
 -- No additional indexes needed - UNIQUE constraint handles fast lookups
+
+-- User saved views indexes
+CREATE INDEX IF NOT EXISTS idx_user_saved_view_user_entity ON user_saved_view(user_id, entity_name);
+CREATE INDEX IF NOT EXISTS idx_user_saved_view_default ON user_saved_view(user_id, entity_name, is_default) WHERE is_default = true;
 
 -- Audit logs indexes (critical for performance)
 CREATE INDEX IF NOT EXISTS idx_audit_logs_resource ON audit_logs(resource_type, resource_id);
@@ -268,6 +311,12 @@ CREATE TRIGGER update_users_updated_at
 DROP TRIGGER IF EXISTS update_user_preferences_updated_at ON user_preferences;
 CREATE TRIGGER update_user_preferences_updated_at
     BEFORE UPDATE ON user_preferences
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_user_saved_view_updated_at ON user_saved_view;
+CREATE TRIGGER update_user_saved_view_updated_at
+    BEFORE UPDATE ON user_saved_view
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 

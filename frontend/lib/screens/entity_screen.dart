@@ -100,6 +100,7 @@ class _EntityScreenState extends State<EntityScreen> {
             return DashboardCard(
               child: organisms.AppDataTable<Map<String, dynamic>>(
                 title: metadata.displayNamePlural,
+                entityName: widget.entityName,
                 columns: MetadataTableColumnFactory.forEntity(
                   widget.entityName,
                   onEntityUpdated: _refreshTable,

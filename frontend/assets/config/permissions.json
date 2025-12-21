@@ -365,6 +365,39 @@
       }
     },
 
+    "saved_views": {
+      "description": "User saved table views (filters, columns, sort, density)",
+      "rowLevelSecurity": {
+        "customer": "own_record_only",
+        "technician": "own_record_only",
+        "dispatcher": "own_record_only",
+        "manager": "own_record_only",
+        "admin": "all_records"
+      },
+      "permissions": {
+        "create": {
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "All users can create their own saved views"
+        },
+        "read": {
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Users can read their own saved views (RLS applies)"
+        },
+        "update": {
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Users can update their own saved views"
+        },
+        "delete": {
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Users can delete their own saved views"
+        }
+      }
+    },
+
     "dashboard": {
       "description": "Main dashboard view - role-driven overview of relevant data (synthetic resource for nav)",
       "rowLevelSecurity": {

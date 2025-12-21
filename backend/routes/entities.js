@@ -299,4 +299,5 @@ module.exports = {
   workOrdersRouter: createEntityRouter('work_order', { rlsResource: 'work_orders' }),
   invoicesRouter: createEntityRouter('invoice', { rlsResource: 'invoices' }),
   contractsRouter: createEntityRouter('contract', { rlsResource: 'contracts' }),
+  savedViewsRouter: createEntityRouter('saved_view', { rlsResource: 'saved_views' }),
 };

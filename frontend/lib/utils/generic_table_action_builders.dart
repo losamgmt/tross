@@ -14,6 +14,7 @@ import '../services/entity_metadata.dart';
 import '../services/metadata_field_config_factory.dart';
 import '../services/navigation_coordinator.dart';
 import '../services/error_service.dart';
+import '../services/export_service.dart';
 import '../widgets/atoms/buttons/app_button.dart';
 import '../widgets/organisms/modals/generic_modal.dart';
 import '../widgets/organisms/forms/generic_form.dart';
@@ -145,6 +146,15 @@ class GenericTableActionBuilders {
           ),
         ),
       );
+    }
+
+    // Export action - always visible for read permission
+    if (PermissionService.hasPermission(
+      userRole,
+      resource,
+      CrudOperation.read,
+    )) {
+      actions.add(_ExportButton(entityName: entityName));
     }
 
     return actions;
@@ -357,6 +367,82 @@ class _EntityFormDialogState extends State<_EntityFormDialog> {
               : Text(widget.isEdit ? 'Save' : 'Create'),
         ),
       ],
+    );
+  }
+}
+
+/// Export button with loading state
+class _ExportButton extends StatefulWidget {
+  final String entityName;
+
+  const _ExportButton({required this.entityName});
+
+  @override
+  State<_ExportButton> createState() => _ExportButtonState();
+}
+
+class _ExportButtonState extends State<_ExportButton> {
+  bool _isExporting = false;
+
+  Future<void> _handleExport() async {
+    if (_isExporting) return;
+
+    setState(() => _isExporting = true);
+
+    try {
+      final success = await ExportService.exportToCsv(
+        entityName: widget.entityName,
+      );
+
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Export downloaded successfully'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      ErrorService.logError(
+        'Export failed',
+        error: e,
+        context: {'entity': widget.entityName},
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Export failed: ${e.toString().replaceFirst('Exception: ', '')}',
+            ),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isExporting = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final metadata = EntityMetadataRegistry.get(widget.entityName);
+
+    return IconButton(
+      icon: _isExporting
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.download),
+      tooltip: _isExporting
+          ? 'Exporting...'
+          : 'Export ${metadata.displayNamePlural.toLowerCase()} to CSV',
+      onPressed: _isExporting ? null : _handleExport,
     );
   }
 }

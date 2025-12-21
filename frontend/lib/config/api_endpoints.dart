@@ -47,6 +47,17 @@ class ApiEndpoints {
   /// Get role by ID endpoint
   static String roleById(int id) => '/roles/$id';
 
+  // ============================================================================
+  // EXPORT ENDPOINTS
+  // ============================================================================
+
+  /// Export entity data as CSV
+  static String export(String entityName) => '/api/export/$entityName';
+
+  /// Get exportable fields for an entity
+  static String exportFields(String entityName) =>
+      '/api/export/$entityName/fields';
+
   /// Verify if a path is an authentication endpoint
   static bool isAuthEndpoint(String path) {
     return path.startsWith('/auth/');

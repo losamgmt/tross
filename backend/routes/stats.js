@@ -53,12 +53,12 @@ const statsMiddleware = [
 
 /**
  * GET /stats/:entity
- * 
+ *
  * Count records for an entity, respecting RLS.
- * 
+ *
  * Query params:
  *   - Any filterable field (e.g., ?status=pending)
- * 
+ *
  * @example GET /api/stats/work_order?status=pending
  * @returns { success: true, data: { count: 42 } }
  */
@@ -85,9 +85,9 @@ router.get('/:entity', statsMiddleware, async (req, res, next) => {
 
 /**
  * GET /stats/:entity/grouped/:field
- * 
+ *
  * Count records grouped by a field.
- * 
+ *
  * @example GET /api/stats/work_order/grouped/status
  * @returns { success: true, data: [{ value: 'pending', count: 5 }, ...] }
  */
@@ -108,12 +108,12 @@ router.get('/:entity/grouped/:field', statsMiddleware, async (req, res, next) =>
 
     return ResponseFormatter.get(res, grouped);
   } catch (error) {
-    logger.error('[Stats] Grouped count failed', { 
-      entity: req.params.entity, 
+    logger.error('[Stats] Grouped count failed', {
+      entity: req.params.entity,
       field: req.params.field,
-      error: error.message 
+      error: error.message,
     });
-    
+
     // Handle validation errors nicely
     if (error.message.includes('not a filterable field')) {
       return ResponseFormatter.badRequest(res, error.message);
@@ -124,9 +124,9 @@ router.get('/:entity/grouped/:field', statsMiddleware, async (req, res, next) =>
 
 /**
  * GET /stats/:entity/sum/:field
- * 
+ *
  * Sum a numeric field.
- * 
+ *
  * @example GET /api/stats/invoice/sum/total?status=paid
  * @returns { success: true, data: { sum: 12500.50 } }
  */
@@ -147,10 +147,10 @@ router.get('/:entity/sum/:field', statsMiddleware, async (req, res, next) => {
 
     return ResponseFormatter.get(res, { sum });
   } catch (error) {
-    logger.error('[Stats] Sum failed', { 
-      entity: req.params.entity, 
+    logger.error('[Stats] Sum failed', {
+      entity: req.params.entity,
       field: req.params.field,
-      error: error.message 
+      error: error.message,
     });
     next(error);
   }

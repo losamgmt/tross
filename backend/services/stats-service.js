@@ -52,14 +52,14 @@ class StatsService {
 
     // Build RLS filter
     const rlsResult = buildRLSFilter(req, metadata, 0);
-    let paramOffset = rlsResult.params.length;
+    const paramOffset = rlsResult.params.length;
 
     // Build filter clause
     const filterResult = QueryBuilderService.buildFilterClause(
       filters,
       filterableFields,
       paramOffset,
-      tableName
+      tableName,
     );
 
     // Combine clauses
@@ -109,14 +109,14 @@ class StatsService {
 
     // Build RLS filter
     const rlsResult = buildRLSFilter(req, metadata, 0);
-    let paramOffset = rlsResult.params.length;
+    const paramOffset = rlsResult.params.length;
 
     // Build filter clause
     const filterResult = QueryBuilderService.buildFilterClause(
       filters,
       filterableFields,
       paramOffset,
-      tableName
+      tableName,
     );
 
     // Combine clauses
@@ -169,14 +169,14 @@ class StatsService {
 
     // Build RLS filter
     const rlsResult = buildRLSFilter(req, metadata, 0);
-    let paramOffset = rlsResult.params.length;
+    const paramOffset = rlsResult.params.length;
 
     // Build filter clause
     const filterResult = QueryBuilderService.buildFilterClause(
       filters,
       filterableFields,
       paramOffset,
-      tableName
+      tableName,
     );
 
     // Combine clauses

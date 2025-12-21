@@ -14,6 +14,7 @@ const contractMetadata = require('./contract-metadata');
 const invoiceMetadata = require('./invoice-metadata');
 const inventoryMetadata = require('./inventory-metadata');
 const preferencesMetadata = require('./preferences-metadata');
+const savedViewMetadata = require('./saved-view-metadata');
 
 module.exports = {
   user: userMetadata,
@@ -25,4 +26,5 @@ module.exports = {
   invoice: invoiceMetadata,
   inventory: inventoryMetadata,
   preferences: preferencesMetadata,
+  saved_view: savedViewMetadata,
 };

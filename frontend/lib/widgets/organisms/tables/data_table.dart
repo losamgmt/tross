@@ -37,6 +37,7 @@ import '../../../config/app_spacing.dart';
 import '../../../config/table_column.dart';
 import '../../../config/table_config.dart';
 import '../../../config/constants.dart';
+// SavedViewService is used via TableCustomizationMenu
 import '../../../utils/helpers/pagination_helper.dart';
 import '../../atoms/typography/column_header.dart';
 import '../../molecules/feedback/empty_state.dart';
@@ -79,6 +80,9 @@ class AppDataTable<T> extends StatefulWidget {
   // Customization
   final bool showCustomizationMenu;
 
+  /// Entity name for saved views (enables save/load view feature)
+  final String? entityName;
+
   const AppDataTable({
     super.key,
     required this.columns,
@@ -97,6 +101,7 @@ class AppDataTable<T> extends StatefulWidget {
     this.emptyMessage,
     this.emptyAction,
     this.showCustomizationMenu = true,
+    this.entityName,
   });
 
   @override
@@ -216,6 +221,16 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
           },
           onDensityChanged: (density) {
             setState(() => _density = density);
+          },
+          entityName: widget.entityName,
+          onLoadView: (settings) {
+            setState(() {
+              _hiddenColumnIds = settings.hiddenColumns.toSet();
+              _density = TableDensity.values.firstWhere(
+                (d) => d.name == settings.density,
+                orElse: () => TableDensity.standard,
+              );
+            });
           },
         ),
     ];
