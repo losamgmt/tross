@@ -257,6 +257,8 @@ class NavConfig {
 /// Singleton service that loads and provides access to nav config.
 /// Initialize once at app startup, then access via static methods.
 class NavConfigService {
+  NavConfigService._(); // Private constructor - static class only
+
   static NavConfig? _config;
   static bool _isLoading = false;
   static bool _isInitialized = false;

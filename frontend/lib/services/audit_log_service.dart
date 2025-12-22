@@ -16,8 +16,7 @@
 library;
 
 import 'dart:convert';
-import 'package:http/http.dart' as http;
-import '../config/app_config.dart';
+import 'api_client.dart';
 import 'auth/token_manager.dart';
 import 'error_service.dart';
 
@@ -136,16 +135,10 @@ class AuditLogService {
         throw Exception('No authentication token');
       }
 
-      final uri = Uri.parse(
-        '${AppConfig.baseUrl}/audit/$resourceType/$resourceId?limit=$limit',
-      );
-
-      final response = await http.get(
-        uri,
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
+      final response = await ApiClient.authenticatedRequest(
+        'GET',
+        '/audit/$resourceType/$resourceId?limit=$limit',
+        token: token,
       );
 
       if (response.statusCode != 200) {
@@ -183,16 +176,10 @@ class AuditLogService {
         throw Exception('No authentication token');
       }
 
-      final uri = Uri.parse(
-        '${AppConfig.baseUrl}/audit/user/$userId?limit=$limit',
-      );
-
-      final response = await http.get(
-        uri,
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
+      final response = await ApiClient.authenticatedRequest(
+        'GET',
+        '/audit/user/$userId?limit=$limit',
+        token: token,
       );
 
       if (response.statusCode == 403) {

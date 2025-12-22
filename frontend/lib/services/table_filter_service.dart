@@ -12,6 +12,8 @@ import 'entity_metadata.dart';
 
 /// Generic table filter service
 class TableFilterService {
+  TableFilterService._(); // Private constructor - static class only
+
   /// Filter a list by search query across multiple fields
   ///
   /// Usage:
