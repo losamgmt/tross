@@ -65,4 +65,6 @@ export 'search/search_bar.dart';
 
 // Tables
 export 'tables/data_table.dart';
+export 'tables/editable_data_table.dart';
+export 'tables/filterable_data_table.dart';
 export 'tables/table_toolbar.dart';

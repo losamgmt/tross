@@ -11,6 +11,7 @@
 /// - MetadataTableColumnFactory for columns
 /// - GenericTableActionBuilders for actions
 /// - PermissionService for RBAC
+/// - FilterableDataTable organism for search/filter UI
 ///
 /// ZERO per-entity code. Purely metadata-driven.
 library;
@@ -41,12 +42,14 @@ class EntityScreen extends StatefulWidget {
 
 class _EntityScreenState extends State<EntityScreen> {
   /// GlobalKey to trigger refresh on CRUD operations
-  /// Uses late initialization to ensure key changes when entity changes
   GlobalKey<organisms.RefreshableDataProviderState<List<Map<String, dynamic>>>>
   _tableKey =
       GlobalKey<
         organisms.RefreshableDataProviderState<List<Map<String, dynamic>>>
       >();
+
+  /// Search query for client-side filtering
+  String _searchQuery = '';
 
   /// Refresh handler for CRUD callbacks
   void _refreshTable() {
@@ -56,15 +59,37 @@ class _EntityScreenState extends State<EntityScreen> {
   @override
   void didUpdateWidget(EntityScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // When entity changes, create a new key to force complete rebuild
+    // When entity changes, create a new key and reset search
     if (oldWidget.entityName != widget.entityName) {
       setState(() {
         _tableKey =
             GlobalKey<
               organisms.RefreshableDataProviderState<List<Map<String, dynamic>>>
             >();
+        _searchQuery = '';
       });
     }
+  }
+
+  /// Filter data based on search query
+  List<Map<String, dynamic>> _filterData(
+    List<Map<String, dynamic>> data,
+    EntityMetadata metadata,
+  ) {
+    if (_searchQuery.isEmpty) return data;
+
+    final query = _searchQuery.toLowerCase();
+    final searchableFields = metadata.searchableFields;
+
+    return data.where((item) {
+      for (final field in searchableFields) {
+        final value = item[field];
+        if (value != null && value.toString().toLowerCase().contains(query)) {
+          return true;
+        }
+      }
+      return false;
+    }).toList();
   }
 
   @override
@@ -87,7 +112,7 @@ class _EntityScreenState extends State<EntityScreen> {
     return AdaptiveShell(
       currentRoute: '/entity/${widget.entityName}',
       pageTitle: metadata.displayNamePlural,
-      body: ScrollableContent(
+      body: Padding(
         padding: EdgeInsets.all(spacing.lg),
         child: organisms.RefreshableDataProvider<List<Map<String, dynamic>>>(
           key: _tableKey,
@@ -97,19 +122,36 @@ class _EntityScreenState extends State<EntityScreen> {
           },
           errorTitle: 'Failed to Load ${metadata.displayNamePlural}',
           builder: (context, data) {
+            // Apply client-side filtering
+            final filteredData = _filterData(data, metadata);
+
             return DashboardCard(
-              child: organisms.AppDataTable<Map<String, dynamic>>(
+              child: organisms.FilterableDataTable<Map<String, dynamic>>(
+                // Filter bar props
+                searchValue: _searchQuery,
+                onSearchChanged: (value) {
+                  setState(() => _searchQuery = value);
+                },
+                searchPlaceholder:
+                    'Search ${metadata.displayNamePlural.toLowerCase()}...',
+                // Data table props
                 title: metadata.displayNamePlural,
                 entityName: widget.entityName,
                 columns: MetadataTableColumnFactory.forEntity(
                   widget.entityName,
                   onEntityUpdated: _refreshTable,
                 ),
-                data: data,
-                state: data.isEmpty
-                    ? organisms.AppDataTableState.empty
+                data: filteredData,
+                state: filteredData.isEmpty
+                    ? (data.isEmpty
+                          ? organisms.AppDataTableState.empty
+                          : organisms
+                                .AppDataTableState
+                                .empty) // No results from filter
                     : organisms.AppDataTableState.loaded,
-                emptyMessage: 'No ${metadata.displayNamePlural} found',
+                emptyMessage: _searchQuery.isEmpty
+                    ? 'No ${metadata.displayNamePlural} found'
+                    : 'No results for "$_searchQuery"',
                 toolbarActions: GenericTableActionBuilders.buildToolbarActions(
                   context,
                   entityName: widget.entityName,
@@ -126,7 +168,6 @@ class _EntityScreenState extends State<EntityScreen> {
                       onRefresh: _refreshTable,
                     ),
                 onRowTap: (entity) {
-                  // Navigate to detail screen using go_router
                   final id = entity['id'];
                   if (id != null) {
                     context.go(
