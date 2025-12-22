@@ -34,6 +34,7 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
 import '../utils/helpers/mime_helper.dart';
+import 'api_client.dart';
 import 'auth/token_manager.dart';
 import 'error_service.dart';
 
@@ -143,6 +144,8 @@ class FileService {
   ///
   /// Returns the created FileAttachment metadata.
   /// Uses raw binary upload with headers for metadata.
+  ///
+  /// NOTE: Uses raw http instead of ApiClient for binary body upload.
   static Future<FileAttachment> uploadFile({
     required String entityType,
     required int entityId,
@@ -219,17 +222,15 @@ class FileService {
       throw Exception('Not authenticated');
     }
 
-    var urlString = '${AppConfig.baseUrl}$_basePath/$entityType/$entityId';
+    var endpoint = '$_basePath/$entityType/$entityId';
     if (category != null) {
-      urlString += '?category=${Uri.encodeComponent(category)}';
+      endpoint += '?category=${Uri.encodeComponent(category)}';
     }
 
-    final response = await http.get(
-      Uri.parse(urlString),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
+    final response = await ApiClient.authenticatedRequest(
+      'GET',
+      endpoint,
+      token: token,
     );
 
     return _handleListResponse(response, entityType, entityId);
@@ -276,12 +277,10 @@ class FileService {
       throw Exception('Not authenticated');
     }
 
-    final response = await http.get(
-      Uri.parse('${AppConfig.baseUrl}$_basePath/$fileId/download'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
+    final response = await ApiClient.authenticatedRequest(
+      'GET',
+      '$_basePath/$fileId/download',
+      token: token,
     );
 
     return _handleDownloadResponse(response, fileId);
@@ -322,12 +321,10 @@ class FileService {
       throw Exception('Not authenticated');
     }
 
-    final response = await http.delete(
-      Uri.parse('${AppConfig.baseUrl}$_basePath/$fileId'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
+    final response = await ApiClient.authenticatedRequest(
+      'DELETE',
+      '$_basePath/$fileId',
+      token: token,
     );
 
     _handleDeleteResponse(response, fileId);
