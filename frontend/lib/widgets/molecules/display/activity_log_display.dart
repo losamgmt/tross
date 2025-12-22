@@ -145,11 +145,7 @@ class _ActivityLogDisplayState extends State<ActivityLogDisplay> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.error_outline,
-              size: 48,
-              color: theme.colorScheme.error,
-            ),
+            Icon(Icons.error_outline, size: 48, color: theme.colorScheme.error),
             const SizedBox(height: 8),
             Text(
               'Failed to load history',
@@ -158,10 +154,7 @@ class _ActivityLogDisplayState extends State<ActivityLogDisplay> {
               ),
             ),
             const SizedBox(height: 8),
-            TextButton(
-              onPressed: _loadHistory,
-              child: const Text('Try Again'),
-            ),
+            TextButton(onPressed: _loadHistory, child: const Text('Try Again')),
           ],
         ),
       ),
@@ -175,11 +168,7 @@ class _ActivityLogDisplayState extends State<ActivityLogDisplay> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.history,
-              size: 48,
-              color: theme.colorScheme.outline,
-            ),
+            Icon(Icons.history, size: 48, color: theme.colorScheme.outline),
             const SizedBox(height: 8),
             Text(
               'No activity recorded',
@@ -201,10 +190,7 @@ class _ActivityLogDisplayState extends State<ActivityLogDisplay> {
       itemBuilder: (context, index) {
         final entry = _entries![index];
         final isLast = index == _entries!.length - 1;
-        return _ActivityLogItem(
-          entry: entry,
-          isLast: isLast,
-        );
+        return _ActivityLogItem(entry: entry, isLast: isLast);
       },
     );
   }
@@ -215,10 +201,7 @@ class _ActivityLogItem extends StatelessWidget {
   final AuditLogEntry entry;
   final bool isLast;
 
-  const _ActivityLogItem({
-    required this.entry,
-    required this.isLast,
-  });
+  const _ActivityLogItem({required this.entry, required this.isLast});
 
   @override
   Widget build(BuildContext context) {
@@ -365,7 +348,20 @@ class _ActivityLogItem extends StatelessWidget {
       return '${diff.inDays}d ago';
     } else {
       // Simple date format without intl dependency
-      final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      final months = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ];
       return '${months[time.month - 1]} ${time.day}, ${time.year}';
     }
   }

@@ -77,11 +77,18 @@ app.use(
   cors({
     origin: getAllowedOrigins(), // Uses ALLOWED_ORIGINS env var with smart defaults
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Filename', 'X-Category', 'X-Description'],
     credentials: true,
     maxAge: 86400, // 24 hours preflight cache
   }),
 );
+
+// Raw body parser for file uploads (must be before JSON parser for /api/files routes)
+app.use('/api/files', express.raw({
+  type: ['image/*', 'application/pdf', 'text/*'],
+  limit: '10mb',
+}));
+
 app.use(express.json({ limit: SECURITY.REQUEST_LIMITS.JSON_BODY_SIZE }));
 app.use(
   express.urlencoded({
@@ -138,6 +145,7 @@ const rolesExtensions = require('./routes/roles-extensions');
 const statsRoutes = require('./routes/stats');
 const exportRoutes = require('./routes/export');
 const auditRoutes = require('./routes/audit');
+const filesRoutes = require('./routes/files');
 
 // Generic entity routes (replaces individual entity route files)
 const {
@@ -169,6 +177,7 @@ app.use('/api/preferences', apiLimiter, preferencesRoutes); // User preferences
 app.use('/api/stats', apiLimiter, statsRoutes); // Stats/aggregation endpoints
 app.use('/api/export', apiLimiter, exportRoutes); // CSV export endpoints
 app.use('/api/audit', apiLimiter, auditRoutes); // Audit log endpoints
+app.use('/api/files', apiLimiter, filesRoutes); // File attachment endpoints
 app.use('/api/dev', devAuthRoutes); // Development auth endpoints (no rate limit - dev only)
 app.use('/api/health', apiLimiter, healthRoutes); // Health monitoring endpoints
 app.use('/api/auth0', authLimiter, auth0Routes); // Auth0 OAuth endpoints - rate limited for brute force protection

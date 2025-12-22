@@ -18,6 +18,7 @@
 -- PRE-PRODUCTION: DROP ALL TABLES FOR CLEAN RESET
 -- Remove this section when you have production data to preserve
 -- ============================================================================
+DROP TABLE IF EXISTS file_attachments CASCADE;
 DROP TABLE IF EXISTS entity_settings CASCADE;
 DROP TABLE IF EXISTS user_saved_view CASCADE;
 DROP TABLE IF EXISTS user_preferences CASCADE;
@@ -276,6 +277,52 @@ CREATE TABLE IF NOT EXISTS entity_settings (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
+
+-- ============================================================================
+-- FILE ATTACHMENTS TABLE
+-- ============================================================================
+-- System table for storing file metadata (actual files in Cloudflare R2)
+-- Polymorphic attachment: can be attached to any entity type
+-- Category: N/A (system table, not a business entity)
+--
+-- Design notes:
+--   - Files stored in R2 with storage_key as the path
+--   - Metadata stored here for querying/permissions
+--   - Polymorphic: entity_type + entity_id links to any table
+--   - Soft delete: is_active flag
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS file_attachments (
+    id SERIAL PRIMARY KEY,
+    
+    -- What entity this file is attached to (polymorphic)
+    entity_type VARCHAR(50) NOT NULL,    -- 'work_order', 'customer', 'technician', etc.
+    entity_id INTEGER NOT NULL,          -- ID of the parent entity
+    
+    -- File metadata
+    original_filename VARCHAR(255) NOT NULL,  -- Original name uploaded by user
+    storage_key VARCHAR(500) NOT NULL UNIQUE, -- Path in R2: {entity_type}/{entity_id}/{uuid}.{ext}
+    mime_type VARCHAR(100) NOT NULL,          -- e.g., 'image/jpeg', 'application/pdf'
+    file_size INTEGER NOT NULL,               -- Size in bytes
+    
+    -- Optional categorization
+    category VARCHAR(50) DEFAULT 'attachment', -- 'photo', 'document', 'receipt', etc.
+    description TEXT,                          -- User-provided description
+    
+    -- Upload tracking
+    uploaded_by INTEGER REFERENCES users(id),
+    
+    -- Soft delete and timestamps
+    is_active BOOLEAN DEFAULT true NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+-- File attachments indexes
+CREATE INDEX IF NOT EXISTS idx_file_attachments_entity ON file_attachments(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_file_attachments_active ON file_attachments(is_active) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS idx_file_attachments_uploaded_by ON file_attachments(uploaded_by);
+CREATE INDEX IF NOT EXISTS idx_file_attachments_category ON file_attachments(entity_type, category);
+CREATE INDEX IF NOT EXISTS idx_file_attachments_created ON file_attachments(created_at DESC);
 
 -- ============================================================================
 -- PERFORMANCE INDEXES
