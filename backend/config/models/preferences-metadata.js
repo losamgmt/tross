@@ -16,7 +16,7 @@
 
 const {
   FIELD_ACCESS_LEVELS: FAL,
-  ENTITY_CATEGORIES,
+  // ENTITY_CATEGORIES not used - preferences is a system table
 } = require('../constants');
 
 module.exports = {

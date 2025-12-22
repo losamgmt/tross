@@ -52,7 +52,7 @@ const TABLE_TO_ENTITY = {
 /**
  * Get the display field for a related entity's table
  * Used in JOIN queries to select the appropriate display field
- * 
+ *
  * Prefers 'displayField' (human-readable) over 'identityField' (uniqueness)
  * Example: roles have identityField='priority' but displayField='name'
  *
