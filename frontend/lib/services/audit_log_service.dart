@@ -90,9 +90,11 @@ class AuditLogEntry {
         return action
             .replaceAll('_', ' ')
             .split(' ')
-            .map((w) => w.isNotEmpty 
-                ? '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}'
-                : '')
+            .map(
+              (w) => w.isNotEmpty
+                  ? '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}'
+                  : '',
+            )
             .join(' ');
     }
   }
@@ -100,7 +102,7 @@ class AuditLogEntry {
   /// Get list of changed fields (for updates)
   List<String> get changedFields {
     if (oldValues == null || newValues == null) return [];
-    
+
     final changed = <String>[];
     for (final key in newValues!.keys) {
       final oldVal = oldValues![key];
@@ -147,7 +149,9 @@ class AuditLogService {
       );
 
       if (response.statusCode != 200) {
-        throw Exception('Failed to fetch audit history: ${response.statusCode}');
+        throw Exception(
+          'Failed to fetch audit history: ${response.statusCode}',
+        );
       }
 
       final json = jsonDecode(response.body) as Map<String, dynamic>;

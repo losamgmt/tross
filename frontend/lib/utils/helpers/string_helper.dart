@@ -65,4 +65,20 @@ class StringHelper {
   static String trim(String? text) {
     return text?.trim() ?? '';
   }
+
+  /// Converts snake_case to Title Case
+  ///
+  /// Replaces underscores with spaces and capitalizes each word.
+  /// Examples:
+  ///   snakeToTitle('work_order') => 'Work Order'
+  ///   snakeToTitle('before_photo') => 'Before Photo'
+  ///   snakeToTitle(null) => ''
+  static String snakeToTitle(String? text) {
+    if (text == null || text.isEmpty) return '';
+    return text
+        .replaceAll('_', ' ')
+        .split(' ')
+        .map((word) => word.isNotEmpty ? capitalize(word) : '')
+        .join(' ');
+  }
 }
