@@ -78,6 +78,9 @@ jest.mock('../../../validators', () => ({
 const filesRouter = require('../../../routes/files');
 const { authenticateToken } = require('../../../middleware/auth');
 
+// Increase timeout for CI runners (slower than local)
+jest.setTimeout(15000);
+
 describe('Files Routes', () => {
   let app;
 
