@@ -30,6 +30,7 @@
 - **Frontend:** Flutter (web + mobile)
 - **Backend:** Node.js + Express + PostgreSQL
 - **Auth:** Auth0 OAuth2/OIDC
+- **Storage:** S3-compatible (Supabase Storage)
 - **Testing:** Jest + Flutter Test + Playwright
 - **Infrastructure:** Docker Compose
 
@@ -38,8 +39,8 @@
 Client (Flutter)
   ↓ HTTP/JSON
 API (Express) → Auth Middleware → RBAC → RLS
-  ↓ SQL
-Database (PostgreSQL)
+  ↓ SQL                              ↓ S3
+Database (PostgreSQL)        Object Storage
 ```
 
 ---
@@ -222,6 +223,7 @@ These patterns are frozen and battle-tested:
 6. ✅ Atomic Design System
 7. ✅ Schema-driven UI
 8. ✅ Testing pyramid
+9. ✅ Generic file storage (entity_type + entity_id pattern)
 
 **To modify a locked pattern:**
 1. Open GitHub issue with rationale

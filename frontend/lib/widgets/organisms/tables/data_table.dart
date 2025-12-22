@@ -40,6 +40,8 @@ import '../../../config/constants.dart';
 import '../../../services/entity_settings_service.dart';
 // SavedViewService is used via TableCustomizationMenu
 import '../../../utils/helpers/pagination_helper.dart';
+import '../../../services/saved_view_service.dart';
+import '../../../services/error_service.dart';
 import '../../atoms/typography/column_header.dart';
 import '../../molecules/feedback/empty_state.dart';
 import '../../molecules/menus/table_customization_menu.dart';
@@ -125,6 +127,10 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
   /// Table density (session-only, not persisted)
   TableDensity _density = TableDensity.standard;
 
+  /// Saved views (loaded on demand for dialog)
+  List<SavedView>? _savedViews;
+  bool _savedViewsLoading = false;
+
   /// Get visible columns (filtered by hidden state)
   List<TableColumn<T>> get _visibleColumns =>
       widget.columns.where((c) => !_hiddenColumnIds.contains(c.id)).toList();
@@ -174,6 +180,95 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
       });
     } catch (e) {
       // Silently fail - settings are optional
+    }
+  }
+
+  /// Load saved views for the entity
+  Future<void> _loadSavedViews() async {
+    if (widget.entityName == null) return;
+
+    setState(() => _savedViewsLoading = true);
+
+    try {
+      final views = await SavedViewService.getForEntity(widget.entityName!);
+      if (mounted) {
+        setState(() {
+          _savedViews = views;
+          _savedViewsLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _savedViewsLoading = false);
+      }
+    }
+  }
+
+  /// Save current view
+  Future<void> _saveView(String viewName) async {
+    if (widget.entityName == null) return;
+
+    try {
+      await SavedViewService.create(
+        entityName: widget.entityName!,
+        viewName: viewName,
+        settings: SavedViewSettings(
+          hiddenColumns: _hiddenColumnIds.toList(),
+          density: _density.name,
+        ),
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('View "$viewName" saved'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        // Refresh views list
+        _loadSavedViews();
+      }
+    } catch (e) {
+      ErrorService.logError('Failed to save view', error: e);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Failed to save view: ${e.toString().replaceFirst("Exception: ", "")}',
+            ),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Delete a saved view
+  Future<void> _deleteView(SavedView view) async {
+    try {
+      await SavedViewService.delete(view.id);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('View "${view.viewName}" deleted'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        // Refresh views list
+        _loadSavedViews();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Failed to delete view'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
     }
   }
 
@@ -267,6 +362,9 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
             setState(() => _density = density);
           },
           entityName: widget.entityName,
+          savedViews: _savedViews,
+          savedViewsLoading: _savedViewsLoading,
+          onSaveView: _saveView,
           onLoadView: (settings) {
             setState(() {
               _hiddenColumnIds = settings.hiddenColumns.toSet();
@@ -276,6 +374,8 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
               );
             });
           },
+          onDeleteView: _deleteView,
+          onRefreshViews: _loadSavedViews,
         ),
     ];
 

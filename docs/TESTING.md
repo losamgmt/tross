@@ -4,6 +4,18 @@ Philosophy, patterns, and best practices for testing TrossApp.
 
 ---
 
+## Current Coverage
+
+| Layer | Tests | Coverage | Target |
+|-------|-------|----------|--------|
+| **Backend** | 2,196+ | ~75% lines | 80% |
+| **Flutter** | 1,739+ | ~63% lines | 80% |
+| **E2E** | 30 | N/A | Smoke tests |
+
+*Last updated: December 2025*
+
+---
+
 ## Testing Philosophy
 
 **Why We Test:**
@@ -250,10 +262,44 @@ void main() {
 - Authentication flow (tokens work end-to-end)
 - Cross-entity business workflows (customer → work order → invoice)
 - Role-based permission enforcement
+- File storage API (upload, download, permissions)
 
 **Test Files:**
-- `e2e/smoke.spec.ts` - Health checks + business workflow
-- `e2e/roles-permissions.spec.ts` - Role CRUD + permission enforcement
+- `e2e/stack-health.spec.ts` - Health checks + CRUD connectivity (19 tests)
+- `e2e/file-storage.spec.ts` - File API smoke tests (11 tests)
+
+**Helper Modules:**
+- `e2e/helpers/auth.ts` - Token generation (`getDevToken`, `getDevTokenWithRequest`)
+- `e2e/helpers/users.ts` - Test user creation/cleanup
+- `e2e/helpers/cleanup.ts` - Post-test data cleanup
+- `e2e/config/constants.ts` - Centralized URLs and test data
+
+---
+
+### E2E Token Helpers
+
+**Two helpers for different contexts:**
+
+```typescript
+// In beforeAll (no request fixture available)
+import { getDevToken, DevRole } from './helpers';
+
+let adminToken: string;
+test.beforeAll(async () => {
+  adminToken = await getDevToken('admin');
+});
+
+// In test body (use Playwright's request fixture)
+import { getDevTokenWithRequest } from './helpers';
+
+test('manager can list users', async ({ request }) => {
+  const token = await getDevTokenWithRequest(request, 'manager');
+  const response = await request.get(`${URLS.API}/users`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  expect(response.ok()).toBe(true);
+});
+```
 
 ---
 

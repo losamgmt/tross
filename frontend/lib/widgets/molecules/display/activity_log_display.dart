@@ -1,13 +1,21 @@
 /// Activity Log Display - Shows audit/history timeline for an entity
 ///
 /// A molecule that displays a timeline of changes made to an entity.
-/// Fetches data from AuditLogService and presents it in a readable format.
+/// Completely GENERIC - works with any resource_type + resource_id.
+///
+/// ARCHITECTURE COMPLIANCE:
+/// - Receives data from parent (no service calls)
+/// - Exposes callbacks for actions (parent handles logic)
+/// - Pure presentation + composition of atoms
 ///
 /// USAGE:
 /// ```dart
 /// ActivityLogDisplay(
-///   resourceType: 'work_order',
-///   resourceId: 123,
+///   entries: auditEntries,         // Data from parent
+///   loading: isLoading,            // Loading state from parent
+///   error: errorMessage,           // Error from parent
+///   title: 'Activity History',
+///   onRefresh: () => controller.loadHistory(),
 /// )
 /// ```
 library;
@@ -16,129 +24,133 @@ import 'package:flutter/material.dart';
 import '../../../services/audit_log_service.dart';
 import '../../../config/app_spacing.dart';
 
-/// Displays activity/audit log for a resource
-class ActivityLogDisplay extends StatefulWidget {
-  /// Entity type (work_order, customer, user, etc.)
-  final String resourceType;
+// =============================================================================
+// MAIN WIDGET - Pure presentation, data received from parent
+// =============================================================================
 
-  /// ID of the resource
-  final int resourceId;
+/// Displays activity/audit log timeline
+///
+/// NOTE: This widget does NOT fetch data. Parent provides:
+/// - [entries]: List of audit log entries (null while loading)
+/// - [loading]: Whether data is loading
+/// - [error]: Error message if load failed
+/// - [onRefresh]: Callback for refresh action
+class ActivityLogDisplay extends StatelessWidget {
+  /// Audit log entries to display (null = loading, empty = no entries)
+  final List<AuditLogEntry>? entries;
 
-  /// Maximum entries to show (default 20)
-  final int maxEntries;
+  /// Whether data is loading
+  final bool loading;
 
-  /// Title to display (default "Activity History")
+  /// Error message (if load failed)
+  final String? error;
+
+  /// Title to display (default: "Activity History")
   final String? title;
+
+  /// Called when user taps refresh
+  final VoidCallback? onRefresh;
 
   const ActivityLogDisplay({
     super.key,
-    required this.resourceType,
-    required this.resourceId,
-    this.maxEntries = 20,
+    this.entries,
+    this.loading = false,
+    this.error,
     this.title,
+    this.onRefresh,
   });
 
   @override
-  State<ActivityLogDisplay> createState() => _ActivityLogDisplayState();
-}
-
-class _ActivityLogDisplayState extends State<ActivityLogDisplay> {
-  List<AuditLogEntry>? _entries;
-  bool _loading = true;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadHistory();
-  }
-
-  @override
-  void didUpdateWidget(ActivityLogDisplay oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.resourceType != widget.resourceType ||
-        oldWidget.resourceId != widget.resourceId) {
-      _loadHistory();
-    }
-  }
-
-  Future<void> _loadHistory() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-
-    try {
-      final entries = await AuditLogService.getResourceHistory(
-        resourceType: widget.resourceType,
-        resourceId: widget.resourceId,
-        limit: widget.maxEntries,
-      );
-
-      if (mounted) {
-        setState(() {
-          _entries = entries;
-          _loading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _error = e.toString();
-          _loading = false;
-        });
-      }
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final spacing = context.spacing;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Header with refresh
-        Row(
-          children: [
-            Text(
-              widget.title ?? 'Activity History',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const Spacer(),
-            IconButton(
-              icon: const Icon(Icons.refresh, size: 20),
-              onPressed: _loading ? null : _loadHistory,
-              tooltip: 'Refresh',
-              visualDensity: VisualDensity.compact,
-            ),
-          ],
+        _ActivityLogHeader(
+          title: title ?? 'Activity History',
+          loading: loading,
+          onRefresh: onRefresh,
         ),
         SizedBox(height: spacing.sm),
-
-        // Content
-        if (_loading)
-          const Center(
-            child: Padding(
-              padding: EdgeInsets.all(24),
-              child: CircularProgressIndicator(),
-            ),
-          )
-        else if (_error != null)
-          _buildErrorState(theme)
-        else if (_entries == null || _entries!.isEmpty)
-          _buildEmptyState(theme)
+        if (loading)
+          _LoadingState()
+        else if (error != null)
+          _ErrorState(error: error!, onRefresh: onRefresh)
+        else if (entries == null || entries!.isEmpty)
+          _EmptyState()
         else
-          _buildTimeline(theme, spacing),
+          _TimelineList(entries: entries!),
       ],
     );
   }
+}
 
-  Widget _buildErrorState(ThemeData theme) {
+// =============================================================================
+// COMPOSED SUB-WIDGETS (private, pure presentation)
+// =============================================================================
+
+/// Header with title and refresh button
+class _ActivityLogHeader extends StatelessWidget {
+  final String title;
+  final bool loading;
+  final VoidCallback? onRefresh;
+
+  const _ActivityLogHeader({
+    required this.title,
+    required this.loading,
+    this.onRefresh,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Row(
+      children: [
+        Text(
+          title,
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const Spacer(),
+        IconButton(
+          icon: const Icon(Icons.refresh, size: 20),
+          onPressed: loading ? null : onRefresh,
+          tooltip: 'Refresh',
+          visualDensity: VisualDensity.compact,
+        ),
+      ],
+    );
+  }
+}
+
+/// Loading state display
+class _LoadingState extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.all(24),
+        child: CircularProgressIndicator(),
+      ),
+    );
+  }
+}
+
+/// Error state with retry button
+class _ErrorState extends StatelessWidget {
+  final String error;
+  final VoidCallback? onRefresh;
+
+  const _ErrorState({required this.error, this.onRefresh});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -154,14 +166,21 @@ class _ActivityLogDisplayState extends State<ActivityLogDisplay> {
               ),
             ),
             const SizedBox(height: 8),
-            TextButton(onPressed: _loadHistory, child: const Text('Try Again')),
+            if (onRefresh != null)
+              TextButton(onPressed: onRefresh, child: const Text('Try Again')),
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildEmptyState(ThemeData theme) {
+/// Empty state display
+class _EmptyState extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -181,119 +200,54 @@ class _ActivityLogDisplayState extends State<ActivityLogDisplay> {
       ),
     );
   }
+}
 
-  Widget _buildTimeline(ThemeData theme, AppSpacing spacing) {
+/// Timeline list of entries
+class _TimelineList extends StatelessWidget {
+  final List<AuditLogEntry> entries;
+
+  const _TimelineList({required this.entries});
+
+  @override
+  Widget build(BuildContext context) {
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: _entries!.length,
+      itemCount: entries.length,
       itemBuilder: (context, index) {
-        final entry = _entries![index];
-        final isLast = index == _entries!.length - 1;
-        return _ActivityLogItem(entry: entry, isLast: isLast);
+        final entry = entries[index];
+        final isLast = index == entries.length - 1;
+        return ActivityLogItem(entry: entry, isLast: isLast);
       },
     );
   }
 }
 
+// =============================================================================
+// ACTIVITY LOG ITEM - Reusable, exported for other uses
+// =============================================================================
+
 /// Single activity log item with timeline connector
-class _ActivityLogItem extends StatelessWidget {
+class ActivityLogItem extends StatelessWidget {
   final AuditLogEntry entry;
   final bool isLast;
 
-  const _ActivityLogItem({required this.entry, required this.isLast});
+  const ActivityLogItem({super.key, required this.entry, this.isLast = true});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final spacing = context.spacing;
 
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Timeline indicator
-          SizedBox(
-            width: 32,
-            child: Column(
-              children: [
-                Container(
-                  width: 12,
-                  height: 12,
-                  decoration: BoxDecoration(
-                    color: _getActionColor(theme),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                if (!isLast)
-                  Expanded(
-                    child: Container(
-                      width: 2,
-                      color: theme.colorScheme.outline.withValues(alpha: 0.3),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-
-          // Content
+          _TimelineIndicator(color: _getActionColor(theme), isLast: isLast),
           Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(bottom: spacing.md),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Action and time
-                  Row(
-                    children: [
-                      Icon(
-                        _getActionIcon(),
-                        size: 16,
-                        color: _getActionColor(theme),
-                      ),
-                      SizedBox(width: spacing.xs),
-                      Text(
-                        entry.actionDescription,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        _formatTime(entry.createdAt),
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.outline,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  // Changed fields (for updates)
-                  if (entry.action.toLowerCase() == 'update' &&
-                      entry.changedFields.isNotEmpty)
-                    Padding(
-                      padding: EdgeInsets.only(top: spacing.xs),
-                      child: Text(
-                        'Changed: ${entry.changedFields.join(", ")}',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.outline,
-                        ),
-                      ),
-                    ),
-
-                  // User info if available
-                  if (entry.userId != null)
-                    Padding(
-                      padding: EdgeInsets.only(top: spacing.xs),
-                      child: Text(
-                        'By user #${entry.userId}',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.outline,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
+            child: _EntryContent(
+              entry: entry,
+              actionColor: _getActionColor(theme),
+              actionIcon: _getActionIcon(),
             ),
           ),
         ],
@@ -333,6 +287,112 @@ class _ActivityLogItem extends StatelessWidget {
         return Icons.history;
     }
   }
+}
+
+/// Timeline dot and connecting line
+class _TimelineIndicator extends StatelessWidget {
+  final Color color;
+  final bool isLast;
+
+  const _TimelineIndicator({required this.color, required this.isLast});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return SizedBox(
+      width: 32,
+      child: Column(
+        children: [
+          Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          if (!isLast)
+            Expanded(
+              child: Container(
+                width: 2,
+                color: theme.colorScheme.outline.withValues(alpha: 0.3),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Entry content with action, time, and details
+class _EntryContent extends StatelessWidget {
+  final AuditLogEntry entry;
+  final Color actionColor;
+  final IconData actionIcon;
+
+  const _EntryContent({
+    required this.entry,
+    required this.actionColor,
+    required this.actionIcon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final spacing = context.spacing;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: spacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Action and time
+          Row(
+            children: [
+              Icon(actionIcon, size: 16, color: actionColor),
+              SizedBox(width: spacing.xs),
+              Text(
+                entry.actionDescription,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                _formatTime(entry.createdAt),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.outline,
+                ),
+              ),
+            ],
+          ),
+
+          // Changed fields (for updates)
+          if (entry.action.toLowerCase() == 'update' &&
+              entry.changedFields.isNotEmpty)
+            Padding(
+              padding: EdgeInsets.only(top: spacing.xs),
+              child: Text(
+                'Changed: ${entry.changedFields.join(", ")}',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.outline,
+                ),
+              ),
+            ),
+
+          // User info if available
+          if (entry.userId != null)
+            Padding(
+              padding: EdgeInsets.only(top: spacing.xs),
+              child: Text(
+                'By user #${entry.userId}',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.outline,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 
   String _formatTime(DateTime time) {
     final now = DateTime.now();
@@ -347,7 +407,6 @@ class _ActivityLogItem extends StatelessWidget {
     } else if (diff.inDays < 7) {
       return '${diff.inDays}d ago';
     } else {
-      // Simple date format without intl dependency
       final months = [
         'Jan',
         'Feb',

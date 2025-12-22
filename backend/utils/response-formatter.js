@@ -51,6 +51,28 @@ class ResponseFormatter {
   }
 
   /**
+   * Generic success response
+   *
+   * @param {Object} res - Express response object
+   * @param {*} data - Response data (object, array, or primitive)
+   * @param {Object} [options] - Additional options
+   * @param {string} [options.message] - Optional success message
+   */
+  static success(res, data, options = {}) {
+    const response = {
+      success: true,
+      data,
+      timestamp: new Date().toISOString(),
+    };
+
+    if (options.message) {
+      response.message = options.message;
+    }
+
+    res.status(HTTP_STATUS.OK).json(response);
+  }
+
+  /**
    * Success response for CREATE operations
    *
    * @param {Object} res - Express response object

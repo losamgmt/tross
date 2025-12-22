@@ -7,6 +7,7 @@
 // Auth helpers
 export {
   getDevToken,
+  getDevTokenWithRequest,
   loginAsAdmin,
   loginAsTechnician,
   loginAsManager,
@@ -16,6 +17,7 @@ export {
   isAuthenticated,
   getAuthToken,
 } from './auth';
+export type { DevRole } from './auth';
 
 // User management helpers
 export {

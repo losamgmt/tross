@@ -1,37 +1,89 @@
 /**
  * E2E Test Helpers - Authentication
  * 
- * Provides reusable authentication helpers for Playwright tests
- * Uses dev mode token endpoint for test authentication
+ * Provides reusable authentication helpers for Playwright tests.
+ * Uses dev mode token endpoint for test authentication.
+ * 
+ * TOKEN HELPER USAGE:
+ * - In beforeAll/beforeEach: use getDevToken() with native fetch
+ * - In test body: use getDevTokenWithRequest(request, role) with Playwright's request fixture
+ * 
+ * Both return the same JWT token format.
  */
 
-import { Page } from '@playwright/test';
+import { Page, APIRequestContext } from '@playwright/test';
 import { URLS } from '../config/constants';
 
 const BACKEND_URL = URLS.BACKEND;
 const FRONTEND_URL = URLS.FRONTEND;
 
+/** Valid roles for dev token endpoint */
+export type DevRole = 'admin' | 'manager' | 'dispatcher' | 'technician' | 'customer';
+
 /**
- * Get dev mode authentication token
+ * Get dev mode authentication token using native fetch
  * 
  * Uses /api/dev/token endpoint to get a test token for specified role.
  * Only works in development mode.
  * 
- * @param role - Role to authenticate as (admin, manager, dispatcher, technician, client)
+ * USE THIS IN: beforeAll, beforeEach, or any setup code
+ * 
+ * @param role - Role to authenticate as
  * @returns JWT token string
  * 
  * @example
  * ```ts
- * const token = await getDevToken('admin');
+ * test.beforeAll(async () => {
+ *   adminToken = await getDevToken('admin');
+ * });
  * ```
  */
-export async function getDevToken(
-  role: 'admin' | 'manager' | 'dispatcher' | 'technician' | 'customer' = 'admin'
-): Promise<string> {
+export async function getDevToken(role: DevRole = 'admin'): Promise<string> {
   const response = await fetch(`${BACKEND_URL}/api/dev/token?role=${role}`);
   
   if (!response.ok) {
     throw new Error(`Failed to get dev token for role ${role}: ${response.statusText}`);
+  }
+  
+  const responseData = await response.json();
+  
+  // Handle ResponseFormatter wrapped response: { success, data: { token, user }, message }
+  const token = responseData.data?.token || responseData.token;
+  
+  if (!token) {
+    throw new Error(`No token in response for role ${role}`);
+  }
+  
+  return token;
+}
+
+/**
+ * Get dev mode authentication token using Playwright's request fixture
+ * 
+ * Uses /api/dev/token endpoint to get a test token for specified role.
+ * Only works in development mode.
+ * 
+ * USE THIS IN: test body when you have access to `request` fixture
+ * 
+ * @param request - Playwright APIRequestContext from test fixture
+ * @param role - Role to authenticate as
+ * @returns JWT token string
+ * 
+ * @example
+ * ```ts
+ * test('my test', async ({ request }) => {
+ *   const token = await getDevTokenWithRequest(request, 'technician');
+ * });
+ * ```
+ */
+export async function getDevTokenWithRequest(
+  request: APIRequestContext,
+  role: DevRole = 'admin'
+): Promise<string> {
+  const response = await request.get(`${BACKEND_URL}/api/dev/token?role=${role}`);
+  
+  if (!response.ok()) {
+    throw new Error(`Failed to get dev token for role ${role}: ${response.status()}`);
   }
   
   const responseData = await response.json();

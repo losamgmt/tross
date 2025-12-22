@@ -19,7 +19,6 @@ const { storageService } = require('../services/storage-service');
 const { query: db } = require('../db/connection');
 const ResponseFormatter = require('../utils/response-formatter');
 const { logger } = require('../config/logger');
-const { HTTP_STATUS } = require('../config/constants');
 
 const router = express.Router();
 
@@ -71,11 +70,7 @@ function hasEntityPermission(req, entityType, operation) {
  */
 function requireStorageConfigured(res) {
   if (!storageService.isConfigured()) {
-    ResponseFormatter.error(
-      res,
-      'File storage is not configured',
-      HTTP_STATUS.SERVICE_UNAVAILABLE,
-    );
+    ResponseFormatter.serviceUnavailable(res, 'File storage is not configured');
     return false;
   }
   return true;
@@ -178,7 +173,7 @@ router.use(authenticateToken);
  */
 router.post(
   '/:entityType/:entityId',
-  validateIdParam('entityId'),
+  validateIdParam({ paramName: 'entityId' }),
   async (req, res) => {
     const { entityType, entityId } = req.params;
 
@@ -298,69 +293,15 @@ router.post(
 );
 
 /**
- * GET /api/files/:entityType/:entityId
- *
- * List all files attached to an entity.
- * Requires read permission on the entity type.
- *
- * Query:
- * - category: Filter by category (optional)
- */
-router.get(
-  '/:entityType/:entityId',
-  validateIdParam('entityId'),
-  async (req, res) => {
-    const { entityType, entityId } = req.params;
-
-    try {
-      // Permission check
-      if (!hasEntityPermission(req, entityType, 'read')) {
-        return ResponseFormatter.forbidden(
-          res,
-          `You don't have permission to view ${entityType} files`,
-        );
-      }
-
-      // Build query
-      const category = req.query.category;
-      let query = `
-        SELECT id, entity_type, entity_id, original_filename, mime_type, 
-               file_size, category, description, uploaded_by, created_at
-        FROM file_attachments
-        WHERE entity_type = $1 AND entity_id = $2 AND is_active = true
-      `;
-      const params = [entityType, entityId];
-
-      if (category) {
-        query += ' AND category = $3';
-        params.push(category);
-      }
-
-      query += ' ORDER BY created_at DESC';
-
-      const result = await db(query, params);
-
-      return ResponseFormatter.success(res, result.rows, {
-        message: `Retrieved ${result.rows.length} files`,
-      });
-    } catch (error) {
-      logger.error('Error listing files', {
-        error: error.message,
-        entityType,
-        entityId,
-      });
-      return ResponseFormatter.internalError(res, error);
-    }
-  },
-);
-
-/**
  * GET /api/files/:id/download
  *
  * Get a signed URL to download a file.
  * Requires read permission on the parent entity type.
+ *
+ * NOTE: This route MUST be defined before /:entityType/:entityId to avoid
+ * route matching issues (e.g., /1/download matching entityType=1, entityId=download)
  */
-router.get('/:id/download', validateIdParam('id'), async (req, res) => {
+router.get('/:id/download', validateIdParam(), async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -410,8 +351,10 @@ router.get('/:id/download', validateIdParam('id'), async (req, res) => {
  * Soft delete a file (sets is_active = false).
  * Requires update permission on the parent entity type.
  * Does NOT delete from R2 (cleanup job can do that later).
+ *
+ * NOTE: This route MUST be defined before /:entityType/:entityId routes.
  */
-router.delete('/:id', validateIdParam('id'), async (req, res) => {
+router.delete('/:id', validateIdParam(), async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -451,5 +394,62 @@ router.delete('/:id', validateIdParam('id'), async (req, res) => {
     return ResponseFormatter.internalError(res, error);
   }
 });
+
+/**
+ * GET /api/files/:entityType/:entityId
+ *
+ * List all files attached to an entity.
+ * Requires read permission on the entity type.
+ *
+ * Query:
+ * - category: Filter by category (optional)
+ */
+router.get(
+  '/:entityType/:entityId',
+  validateIdParam({ paramName: 'entityId' }),
+  async (req, res) => {
+    const { entityType, entityId } = req.params;
+
+    try {
+      // Permission check
+      if (!hasEntityPermission(req, entityType, 'read')) {
+        return ResponseFormatter.forbidden(
+          res,
+          `You don't have permission to view ${entityType} files`,
+        );
+      }
+
+      // Build query
+      const category = req.query.category;
+      let query = `
+        SELECT id, entity_type, entity_id, original_filename, mime_type, 
+               file_size, category, description, uploaded_by, created_at
+        FROM file_attachments
+        WHERE entity_type = $1 AND entity_id = $2 AND is_active = true
+      `;
+      const params = [entityType, entityId];
+
+      if (category) {
+        query += ' AND category = $3';
+        params.push(category);
+      }
+
+      query += ' ORDER BY created_at DESC';
+
+      const result = await db(query, params);
+
+      return ResponseFormatter.success(res, result.rows, {
+        message: `Retrieved ${result.rows.length} files`,
+      });
+    } catch (error) {
+      logger.error('Error listing files', {
+        error: error.message,
+        entityType,
+        entityId,
+      });
+      return ResponseFormatter.internalError(res, error);
+    }
+  },
+);
 
 module.exports = router;

@@ -71,18 +71,33 @@ testLog('SETUP: Modules loaded successfully');
 
 describe('Health Routes', () => {
   let app;
+  let originalMemoryUsage;
 
   beforeAll(() => {
     testLog('SUITE: beforeAll - Starting health routes test suite');
+    // Save original process.memoryUsage
+    originalMemoryUsage = process.memoryUsage;
   });
 
   afterAll(() => {
     testLog('SUITE: afterAll - Cleaning up health routes test suite');
+    // Restore original process.memoryUsage
+    process.memoryUsage = originalMemoryUsage;
   });
 
   beforeEach(() => {
     testLog('TEST: beforeEach - Setting up test');
     jest.clearAllMocks();
+
+    // Mock process.memoryUsage to return healthy memory values
+    // This prevents environmental flakiness when Jest uses >400MB
+    process.memoryUsage = () => ({
+      rss: 100 * 1024 * 1024,      // 100MB RSS
+      heapUsed: 50 * 1024 * 1024,  // 50MB heap used (well under 400MB threshold)
+      heapTotal: 80 * 1024 * 1024, // 80MB heap total
+      external: 10 * 1024 * 1024,
+      arrayBuffers: 5 * 1024 * 1024,
+    });
 
     // Clear health cache to prevent test contamination
     clearCache();

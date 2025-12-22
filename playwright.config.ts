@@ -6,7 +6,8 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : 1, // Use single worker to prevent race conditions
-  reporter: 'html',
+  // Use 'list' for CI, 'html' only when explicitly requested via --reporter=html
+  reporter: process.env.CI ? 'list' : [['list'], ['html', { open: 'never' }]],
   use: {
     baseURL: process.env.BACKEND_URL || 'http://localhost:3001',
     trace: 'on-first-retry',

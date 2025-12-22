@@ -20,15 +20,9 @@
 
 import { test, expect } from '@playwright/test';
 import { URLS } from './config/constants';
+import { getDevToken, getDevTokenWithRequest } from './helpers';
 
 const BACKEND_URL = URLS.BACKEND;
-
-// Helper to get dev token
-async function getToken(request: any, role: string = 'admin'): Promise<string> {
-  const response = await request.get(`${BACKEND_URL}/api/dev/token?role=${role}`);
-  const data = await response.json();
-  return data.data?.token || data.token;
-}
 
 test.describe('E2E - System Health', () => {
   
@@ -89,7 +83,7 @@ test.describe('E2E - Authentication Flow', () => {
   });
 
   test('Valid token enables API read access', async ({ request }) => {
-    const token = await getToken(request, 'admin');
+    const token = await getDevTokenWithRequest(request, 'admin');
     
     const response = await request.get(`${BACKEND_URL}/api/users?page=1&limit=10`, {
       headers: { 'Authorization': `Bearer ${token}` }
@@ -146,8 +140,8 @@ test.describe('E2E - Security Headers', () => {
 test.describe('E2E - API Contract', () => {
   let adminToken: string;
 
-  test.beforeAll(async ({ request }) => {
-    adminToken = await getToken(request, 'admin');
+  test.beforeAll(async () => {
+    adminToken = await getDevToken('admin');
   });
 
   test('List endpoints return paginated data', async ({ request }) => {
@@ -207,7 +201,7 @@ test.describe('E2E - API Contract', () => {
 test.describe('E2E - Role-Based Access', () => {
   
   test('Admin can access all read endpoints', async ({ request }) => {
-    const adminToken = await getToken(request, 'admin');
+    const adminToken = await getDevTokenWithRequest(request, 'admin');
     
     const endpoints = [
       '/api/users?page=1&limit=1',
@@ -226,7 +220,7 @@ test.describe('E2E - Role-Based Access', () => {
   });
 
   test('Customer has restricted access', async ({ request }) => {
-    const customerToken = await getToken(request, 'customer');
+    const customerToken = await getDevTokenWithRequest(request, 'customer');
     
     // Customer CAN access /api/users but sees only their own record (or empty for dev users)
     // This is due to own_record_only RLS policy - not 403/500
@@ -242,7 +236,7 @@ test.describe('E2E - Role-Based Access', () => {
   });
 
   test('Technician has appropriate read access', async ({ request }) => {
-    const techToken = await getToken(request, 'technician');
+    const techToken = await getDevTokenWithRequest(request, 'technician');
     
     // Technician should be able to read work orders
     const response = await request.get(`${BACKEND_URL}/api/work_orders?page=1&limit=1`, {

@@ -325,6 +325,102 @@ DELETE /api/work_orders/:id
 
 ---
 
+### File Attachments
+
+Generic file storage for any entity (work orders, customers, invoices, etc.).
+
+**List Files for Entity**
+```http
+GET /api/files/:entityType/:entityId
+```
+
+**Query Parameters:**
+- `category` - Filter by category (e.g., `before_photo`, `after_photo`, `document`)
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "id": 42,
+      "entity_type": "work_order",
+      "entity_id": 123,
+      "original_filename": "before_photo.jpg",
+      "mime_type": "image/jpeg",
+      "file_size": 245760,
+      "category": "before_photo",
+      "description": "Kitchen sink before repair",
+      "uploaded_by": 7,
+      "created_at": "2025-12-15T10:30:00Z"
+    }
+  ]
+}
+```
+
+**Upload File**
+```http
+POST /api/files/:entityType/:entityId
+Content-Type: image/jpeg
+X-Filename: photo.jpg
+X-Category: before_photo
+X-Description: Before work started
+
+[binary file data]
+```
+
+**Response:**
+```json
+{
+  "data": {
+    "id": 42,
+    "entity_type": "work_order",
+    "entity_id": 123,
+    "original_filename": "photo.jpg",
+    "storage_key": "files/work_order/123/abc123-photo.jpg",
+    "mime_type": "image/jpeg",
+    "file_size": 245760,
+    "category": "before_photo",
+    "created_at": "2025-12-15T10:30:00Z"
+  }
+}
+```
+
+**Get Download URL** (Signed URL, 1 hour expiry)
+```http
+GET /api/files/:id/download
+```
+
+**Response:**
+```json
+{
+  "data": {
+    "download_url": "https://storage.example.com/files/...",
+    "filename": "photo.jpg",
+    "mime_type": "image/jpeg",
+    "expires_in": 3600
+  }
+}
+```
+
+**Delete File** (Soft delete)
+```http
+DELETE /api/files/:id
+```
+
+**Supported File Types:**
+- Images: JPEG, PNG, GIF, WebP
+- Documents: PDF
+- Max size: 10MB
+
+**File Categories:**
+- `before_photo` - Work order before photos
+- `after_photo` - Work order after photos
+- `document` - General documents
+- `signature` - Customer signatures
+- `attachment` - Generic attachments (default)
+
+---
+
 ## Error Handling
 
 ### Validation Errors
