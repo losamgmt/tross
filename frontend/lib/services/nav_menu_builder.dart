@@ -13,6 +13,8 @@
 /// AdaptiveShell, AppSidebar, and other nav components consume its output.
 library;
 
+import 'package:flutter/material.dart' show Icons;
+
 import '../models/permission.dart';
 import '../services/auth/auth_profile_service.dart';
 import '../services/entity_metadata.dart';
@@ -40,6 +42,33 @@ class NavMenuBuilder {
       return _fallbackSidebarItems;
     }
     return _buildSidebarFromConfig();
+  }
+
+  /// Build sidebar items for a specific strategy
+  ///
+  /// [strategyId] - The strategy ID ('app', 'admin', etc.) from nav-config.json
+  /// Returns items filtered by the strategy's groups.
+  static List<NavMenuItem> buildSidebarItemsForStrategy(String strategyId) {
+    if (!NavConfigService.isInitialized) {
+      return _getFallbackForStrategy(strategyId);
+    }
+    return _buildSidebarFromStrategy(strategyId);
+  }
+
+  /// Build sidebar items for the current route
+  ///
+  /// Automatically determines the strategy based on route path.
+  static List<NavMenuItem> buildSidebarItemsForRoute(String currentRoute) {
+    if (!NavConfigService.isInitialized) {
+      // Use known route patterns from fallback registry
+      final strategyId = _inferStrategyFromRoute(currentRoute);
+      return _getFallbackForStrategy(strategyId);
+    }
+    final strategy = NavConfigService.config.getStrategyForRoute(currentRoute);
+    if (strategy == null) {
+      return _buildSidebarFromConfig();
+    }
+    return _buildSidebarFromStrategy(strategy.id);
   }
 
   /// Build user menu items (account dropdown)
@@ -85,7 +114,152 @@ class NavMenuBuilder {
   }
 
   // ============================================================================
-  // SIDEBAR BUILDING
+  // STRATEGY-BASED SIDEBAR BUILDING
+  // ============================================================================
+
+  /// Build sidebar items for a specific strategy
+  ///
+  /// Supports collapsible sections: when a strategy has sections, each section
+  /// becomes a collapsible header with its items as children.
+  static List<NavMenuItem> _buildSidebarFromStrategy(String strategyId) {
+    final config = NavConfigService.config;
+    final strategy = config.getStrategy(strategyId);
+
+    if (strategy == null) {
+      ErrorService.logWarning(
+        '[NavMenu] Strategy not found, falling back to default',
+        context: {'strategyId': strategyId},
+      );
+      return _buildSidebarFromConfig();
+    }
+
+    final items = <NavMenuItem>[];
+
+    // If strategy has custom sections, build collapsible groups
+    if (strategy.hasSections) {
+      // Add Home link at top if strategy wants it (for admin to return to business)
+      if (strategy.showHome) {
+        items.add(
+          NavMenuItem(
+            id: 'home',
+            label: 'Back to App',
+            icon: Icons.home_outlined,
+            route: '/home',
+            requiresAuth: false,
+          ),
+        );
+        items.add(NavMenuItem.divider());
+      }
+
+      for (final section in strategy.sections) {
+        final sectionChildren = <NavMenuItem>[];
+
+        // Add entities for this section if it's "entities"
+        if (section.id == 'entities' && strategy.includeEntities) {
+          for (final groupId in strategy.groups) {
+            final placements = config.getEntityPlacementsForGroup(groupId);
+            for (final placement in placements) {
+              // Admin context: route to /admin/entity/:name for entity settings
+              final menuItem = _entityPlacementToNavMenuItem(
+                placement,
+                routePrefix: '/admin/entity',
+              );
+              if (menuItem != null) {
+                sectionChildren.add(menuItem);
+              }
+            }
+          }
+        }
+
+        // Add section as collapsible header with children
+        // If no children, add as clickable item (routes to "under construction")
+        items.add(
+          NavMenuItem(
+            id: 'section_${section.id}',
+            label: section.label,
+            icon: section.icon != null
+                ? EntityIconResolver.getStaticIcon(section.icon!)
+                : null,
+            isSectionHeader: sectionChildren.isNotEmpty,
+            children: sectionChildren.isNotEmpty ? sectionChildren : null,
+            // Non-entity sections get a route for "under construction"
+            route: sectionChildren.isEmpty ? '/admin/${section.id}' : null,
+            requiresAuth: false,
+          ),
+        );
+      }
+    } else {
+      // No custom sections - build from groups with collapsible headers
+      // Add dashboard if strategy wants it
+      if (strategy.showDashboard) {
+        final dashboardItem = config.staticItems.firstWhere(
+          (item) => item.id == 'dashboard',
+          orElse: () => const StaticNavItem(
+            id: 'dashboard',
+            label: 'Dashboard',
+            route: '/home',
+            group: 'main',
+            order: 0,
+          ),
+        );
+        items.add(_staticItemToNavMenuItem(dashboardItem));
+      }
+
+      // Process groups - each group becomes a collapsible section
+      for (final groupId in strategy.groups) {
+        final group = config.groups.firstWhere(
+          (g) => g.id == groupId,
+          orElse: () => NavGroup(id: groupId, label: groupId, order: 99),
+        );
+
+        final groupChildren = <NavMenuItem>[];
+
+        // Add static items for this group
+        final staticItems = config
+            .getStaticItemsForGroup(groupId)
+            .where((s) => s.menuType == NavMenuType.sidebar);
+
+        for (final staticItem in staticItems) {
+          groupChildren.add(_staticItemToNavMenuItem(staticItem));
+        }
+
+        // Add entities if strategy includes them
+        if (strategy.includeEntities) {
+          final placements = config.getEntityPlacementsForGroup(groupId);
+          for (final placement in placements) {
+            final menuItem = _entityPlacementToNavMenuItem(placement);
+            if (menuItem != null) {
+              groupChildren.add(menuItem);
+            }
+          }
+        }
+
+        // Only add group if it has children
+        if (groupChildren.isNotEmpty) {
+          // If only one group, add items directly without section header
+          if (strategy.groups.length == 1) {
+            items.addAll(groupChildren);
+          } else {
+            // Multiple groups - add as collapsible section
+            items.add(
+              NavMenuItem(
+                id: 'section_$groupId',
+                label: group.label,
+                isSectionHeader: true,
+                children: groupChildren,
+                requiresAuth: false,
+              ),
+            );
+          }
+        }
+      }
+    }
+
+    return items;
+  }
+
+  // ============================================================================
+  // SIDEBAR BUILDING (Legacy - builds from all groups)
   // ============================================================================
 
   static List<NavMenuItem> _buildSidebarFromConfig() {
@@ -176,7 +350,13 @@ class NavMenuBuilder {
   ///
   /// For entities, nav visibility uses the entity's `rlsResource` from metadata.
   /// This is intentional: if you can't read any records, hide the nav item.
-  static NavMenuItem? _entityPlacementToNavMenuItem(EntityPlacement placement) {
+  ///
+  /// [routePrefix] - Optional route prefix. Defaults to '/entity'.
+  ///   Use '/admin/entity' for admin entity settings routes.
+  static NavMenuItem? _entityPlacementToNavMenuItem(
+    EntityPlacement placement, {
+    String routePrefix = '/entity',
+  }) {
     // Get entity metadata for display name and icon
     if (!EntityMetadataRegistry.has(placement.entityName)) {
       return null;
@@ -190,7 +370,7 @@ class NavMenuBuilder {
         placement.entityName,
         metadataIcon: metadata.icon,
       ),
-      route: '/entity/${placement.entityName}',
+      route: '$routePrefix/${placement.entityName}',
       // Don't use requiresAuth - visibleWhen handles permission checks
       requiresAuth: false,
       // Entities use their rlsResource from metadata
@@ -282,7 +462,41 @@ class NavMenuBuilder {
   }
 
   // ============================================================================
-  // FALLBACKS
+  // FALLBACK REGISTRY
+  // ============================================================================
+
+  /// Fallback strategy registry - maps strategy IDs to fallback items
+  /// This replaces hardcoded conditionals with a lookup pattern.
+  static final Map<String, List<NavMenuItem> Function()> _fallbackRegistry = {
+    'app': () => _fallbackSidebarItems,
+    'admin': () => _fallbackAdminSidebarItems,
+  };
+
+  /// Known route patterns for strategy inference (when config not loaded)
+  /// Format: route prefix -> strategy ID
+  static const Map<String, String> _routeStrategyHints = {
+    '/admin': 'admin',
+    '/settings': 'app',
+  };
+
+  /// Get fallback items for a strategy
+  static List<NavMenuItem> _getFallbackForStrategy(String strategyId) {
+    final factory = _fallbackRegistry[strategyId];
+    return factory?.call() ?? _fallbackSidebarItems;
+  }
+
+  /// Infer strategy from route when config not available
+  static String _inferStrategyFromRoute(String route) {
+    for (final entry in _routeStrategyHints.entries) {
+      if (route.startsWith(entry.key)) {
+        return entry.value;
+      }
+    }
+    return 'app'; // Default strategy
+  }
+
+  // ============================================================================
+  // FALLBACK ITEMS
   // ============================================================================
 
   /// Fallback sidebar items when config not loaded
@@ -293,6 +507,27 @@ class NavMenuBuilder {
       icon: EntityIconResolver.getStaticIcon('dashboard'),
       route: AppRoutes.home,
       requiresAuth: false,
+    ),
+  ];
+
+  /// Fallback admin sidebar items when config not loaded
+  static List<NavMenuItem> get _fallbackAdminSidebarItems => [
+    NavMenuItem.section(id: 'section_entities', label: 'Entity Settings'),
+    NavMenuItem(
+      id: 'entity_user',
+      label: 'Users',
+      icon: EntityIconResolver.getIcon('user'),
+      route: '/admin/entity/user',
+      requiresAuth: false,
+      visibleWhen: (user) => AuthProfileService.isAdmin(user),
+    ),
+    NavMenuItem(
+      id: 'entity_role',
+      label: 'Roles',
+      icon: EntityIconResolver.getIcon('role'),
+      route: '/admin/entity/role',
+      requiresAuth: false,
+      visibleWhen: (user) => AuthProfileService.isAdmin(user),
     ),
   ];
 

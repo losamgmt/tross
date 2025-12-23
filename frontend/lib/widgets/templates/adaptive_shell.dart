@@ -9,6 +9,12 @@
 /// Navigation items are derived from nav-config.json via NavMenuBuilder.
 /// Uses centralized breakpoints from AppBreakpoints.
 ///
+/// Sidebar Strategy:
+/// - By default, sidebar items are determined by the currentRoute
+/// - Routes starting with /admin use 'admin' strategy
+/// - Other routes use 'app' strategy
+/// - Override with sidebarMenuItems prop for custom menus
+///
 /// Usage:
 /// ```dart
 /// AdaptiveShell(
@@ -41,7 +47,7 @@ class AdaptiveShell extends StatelessWidget {
   /// Page title for the app bar
   final String pageTitle;
 
-  /// Custom sidebar items (defaults to NavMenuBuilder.buildSidebarItems())
+  /// Custom sidebar items (defaults to route-based strategy from NavMenuBuilder)
   final List<NavMenuItem>? sidebarMenuItems;
 
   /// Custom user menu items (defaults to NavMenuBuilder.buildUserMenuItems())
@@ -49,6 +55,10 @@ class AdaptiveShell extends StatelessWidget {
 
   /// Whether to show the app bar
   final bool showAppBar;
+
+  /// Override the sidebar strategy ('app', 'admin', etc.)
+  /// If null, strategy is determined from currentRoute
+  final String? sidebarStrategy;
 
   const AdaptiveShell({
     super.key,
@@ -58,6 +68,7 @@ class AdaptiveShell extends StatelessWidget {
     this.sidebarMenuItems,
     this.userMenuItems,
     this.showAppBar = true,
+    this.sidebarStrategy,
   });
 
   @override
@@ -65,9 +76,12 @@ class AdaptiveShell extends StatelessWidget {
     final authProvider = context.watch<AuthProvider>();
     final user = authProvider.user;
 
-    // Get menu items from NavMenuBuilder and filter by permissions
+    // Get menu items: custom > strategy-based > default
     final sidebarItems = NavMenuBuilder.filterForUser(
-      sidebarMenuItems ?? NavMenuBuilder.buildSidebarItems(),
+      sidebarMenuItems ??
+          (sidebarStrategy != null
+              ? NavMenuBuilder.buildSidebarItemsForStrategy(sidebarStrategy!)
+              : NavMenuBuilder.buildSidebarItemsForRoute(currentRoute)),
       user,
     );
     final userItems = NavMenuBuilder.filterForUser(
@@ -190,7 +204,12 @@ class AdaptiveShell extends StatelessWidget {
 // ============================================================================
 
 /// Sidebar content - used by both drawer and persistent sidebar
-class _SidebarContent extends StatelessWidget {
+///
+/// Supports:
+/// - Scrollable content when items exceed viewport
+/// - Collapsible section headers with children
+/// - Regular nav items with active highlighting
+class _SidebarContent extends StatefulWidget {
   final List<NavMenuItem> items;
   final String currentRoute;
   final double width;
@@ -204,16 +223,53 @@ class _SidebarContent extends StatelessWidget {
   });
 
   @override
+  State<_SidebarContent> createState() => _SidebarContentState();
+}
+
+class _SidebarContentState extends State<_SidebarContent> {
+  // Track which sections are expanded (default: all expanded)
+  final Set<String> _expandedSections = {};
+  bool _initialized = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      // Auto-expand sections that contain the active route
+      for (final item in widget.items) {
+        if (item.isSectionHeader && item.children != null) {
+          // Expand if any child is active
+          final hasActiveChild = item.children!.any(
+            (child) => _isItemActive(child),
+          );
+          if (hasActiveChild) {
+            _expandedSections.add(item.id);
+          }
+        }
+      }
+      _initialized = true;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: width,
+      width: widget.width,
       child: Material(
-        color: isDrawer ? null : Theme.of(context).scaffoldBackgroundColor,
-        child: ListView(
-          padding: EdgeInsets.zero,
+        color: widget.isDrawer
+            ? null
+            : Theme.of(context).scaffoldBackgroundColor,
+        child: Column(
           children: [
             _buildHeader(context),
-            ...items.map((item) => _buildItem(context, item)),
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: widget.items
+                    .map((item) => _buildItem(context, item))
+                    .toList(),
+              ),
+            ),
           ],
         ),
       ),
@@ -244,10 +300,116 @@ class _SidebarContent extends StatelessWidget {
   }
 
   Widget _buildItem(BuildContext context, NavMenuItem item) {
+    // Divider
     if (item.isDivider) {
       return const Divider();
     }
 
+    // Section header with children - collapsible
+    if (item.isSectionHeader &&
+        item.children != null &&
+        item.children!.isNotEmpty) {
+      return _buildCollapsibleSection(context, item);
+    }
+
+    // Section header without children - just a label
+    if (item.isSectionHeader) {
+      return _buildSectionLabel(context, item);
+    }
+
+    // Regular nav item
+    return _buildNavItem(context, item);
+  }
+
+  Widget _buildCollapsibleSection(BuildContext context, NavMenuItem item) {
+    final isExpanded = _expandedSections.contains(item.id);
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Section header - clickable to expand/collapse
+        InkWell(
+          onTap: () {
+            setState(() {
+              if (isExpanded) {
+                _expandedSections.remove(item.id);
+              } else {
+                _expandedSections.add(item.id);
+              }
+            });
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                if (item.icon != null) ...[
+                  Icon(
+                    item.icon,
+                    size: 18,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                Expanded(
+                  child: Text(
+                    item.label.toUpperCase(),
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+                Icon(
+                  isExpanded ? Icons.expand_less : Icons.expand_more,
+                  size: 20,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ],
+            ),
+          ),
+        ),
+        // Children - only visible when expanded
+        if (isExpanded)
+          ...item.children!.map(
+            (child) => Padding(
+              padding: const EdgeInsets.only(left: 16),
+              child: _buildNavItem(context, child),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildSectionLabel(BuildContext context, NavMenuItem item) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Row(
+        children: [
+          if (item.icon != null) ...[
+            Icon(
+              item.icon,
+              size: 16,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: 8),
+          ],
+          Text(
+            item.label.toUpperCase(),
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNavItem(BuildContext context, NavMenuItem item) {
     final isActive = _isItemActive(item);
 
     return ListTile(
@@ -267,17 +429,17 @@ class _SidebarContent extends StatelessWidget {
   }
 
   bool _isItemActive(NavMenuItem item) {
-    return item.route == currentRoute ||
-        (item.route == '/' && currentRoute == AppRoutes.home);
+    return item.route == widget.currentRoute ||
+        (item.route == '/' && widget.currentRoute == AppRoutes.home);
   }
 
   void _handleTap(BuildContext context, NavMenuItem item) {
     // Close drawer if in drawer mode
-    if (isDrawer && Navigator.canPop(context)) {
+    if (widget.isDrawer && Navigator.canPop(context)) {
       Navigator.pop(context);
     }
     // Navigate if route is different
-    if (item.route != null && item.route != currentRoute) {
+    if (item.route != null && item.route != widget.currentRoute) {
       context.go(item.route!);
     }
   }

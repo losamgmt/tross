@@ -50,7 +50,9 @@ class LoginScreen extends StatelessWidget {
           return SafeArea(
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final isWideScreen = constraints.maxWidth > 800;
+                final isWideScreen = AppBreakpoints.isDesktop(
+                  constraints.maxWidth,
+                );
 
                 return Center(
                   child: Container(

@@ -244,21 +244,9 @@ class EntityDetailCard extends StatelessWidget {
   String _getDisplayName() {
     try {
       final metadata = EntityMetadataRegistry.tryGet(entityName);
-      return metadata?.displayName ?? _formatEntityName(entityName);
+      return metadata?.displayName ?? EntityMetadata.toDisplayName(entityName);
     } catch (_) {
-      return _formatEntityName(entityName);
+      return EntityMetadata.toDisplayName(entityName);
     }
-  }
-
-  /// Format entity name as fallback (snake_case to Title Case)
-  String _formatEntityName(String name) {
-    return name
-        .split('_')
-        .map(
-          (word) => word.isEmpty
-              ? word
-              : '${word[0].toUpperCase()}${word.substring(1)}',
-        )
-        .join(' ');
   }
 }

@@ -1,14 +1,28 @@
 /// Dashboard Content Widget
 ///
-/// The main dashboard view displaying statistics, charts, and activity.
-/// Uses fl_chart for visualizations.
+/// The main dashboard view displaying statistics from real backend data.
+/// Uses DashboardProvider for real-time data and AppBreakpoints for responsive behavior.
+///
+/// ARCHITECTURE:
+/// - Consumes DashboardProvider for all stats (no hardcoded data)
+/// - Uses StatCard molecules for stat display
+/// - Responsive grid layout via AppBreakpoints
+/// - Loading/error states handled gracefully
+///
+/// STATS DISPLAYED:
+/// - Row 1: Welcome banner (from AuthProvider)
+/// - Row 2: Work Order Stats (total, pending, in_progress, completed)
+/// - Row 3: Financial Stats (revenue, outstanding, active contracts)
+/// - Row 4: Resource Stats (customers, technicians, low stock, active users)
 library;
 
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart';
+import 'package:provider/provider.dart';
 import '../../config/app_colors.dart';
+import '../../config/app_spacing.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/dashboard_provider.dart';
 import '../molecules/cards/stat_card.dart';
-import 'charts/dashboard_charts.dart';
 
 /// Main dashboard content widget
 class DashboardContent extends StatelessWidget {
@@ -16,281 +30,347 @@ class DashboardContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return Consumer<DashboardProvider>(
+      builder: (context, dashboard, _) {
+        if (dashboard.isLoading && !dashboard.isLoaded) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        return RefreshIndicator(
+          onRefresh: dashboard.refresh,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildWelcomeBanner(context),
+                const SizedBox(height: 24),
+                _buildWorkOrderStats(context, dashboard),
+                const SizedBox(height: 24),
+                _buildFinancialStats(context, dashboard),
+                const SizedBox(height: 24),
+                _buildResourceStats(context, dashboard),
+                const SizedBox(height: 16),
+                if (dashboard.error != null)
+                  _buildErrorBanner(context, dashboard.error!),
+                if (dashboard.lastUpdated != null)
+                  _buildLastUpdated(context, dashboard.lastUpdated!),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Welcome banner with user name
+  Widget _buildWelcomeBanner(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context);
+    final userName = authProvider.userName.split(' ').first;
+    final theme = Theme.of(context);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.brandPrimary,
+            AppColors.brandPrimary.withValues(alpha: 0.8),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
         children: [
-          // Stats are in cards - good
-          _buildStatCards(context),
-          const SizedBox(height: 24),
-          // Charts are in cards - good
-          _buildCharts(context),
-          const SizedBox(height: 24),
-          // Activity is in a card - good
-          _buildRecentActivity(context),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.waving_hand, color: Colors.white, size: 32),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Welcome back, $userName!',
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "Here's what's happening with your maintenance system",
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.9),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
-  // REMOVED: _buildHeader - navbar title is sufficient, no loose text
+  /// Work order stats row
+  Widget _buildWorkOrderStats(
+    BuildContext context,
+    DashboardProvider dashboard,
+  ) {
+    final stats = dashboard.workOrderStats;
 
-  Widget _buildStatCards(BuildContext context) {
-    final stats = [
-      StatCard.dashboard(
-        label: 'Total Users',
-        value: '1,234',
-        icon: Icons.people_outline,
-        color: AppColors.brandPrimary,
-        trend: '+12%',
-        trendUp: true,
-      ),
-      StatCard.dashboard(
-        label: 'Active Sessions',
-        value: '856',
-        icon: Icons.trending_up,
-        color: AppColors.success,
-        trend: '+5%',
-        trendUp: true,
-      ),
-      StatCard.dashboard(
-        label: 'Pending Tasks',
-        value: '28',
-        icon: Icons.assignment_outlined,
-        color: AppColors.warning,
-        trend: '-8%',
-        trendUp: false,
-      ),
-      StatCard.dashboard(
-        label: 'Completed',
-        value: '94%',
-        icon: Icons.check_circle_outline,
-        color: AppColors.info,
-        trend: '+3%',
-        trendUp: true,
-      ),
-    ];
+    return _buildSection(
+      context,
+      title: 'Work Orders',
+      children: [
+        StatCard.dashboard(
+          label: 'Total',
+          value: _formatNumber(stats.total),
+          icon: Icons.assignment_outlined,
+          color: AppColors.brandPrimary,
+        ),
+        StatCard.dashboard(
+          label: 'Pending',
+          value: _formatNumber(stats.pending),
+          icon: Icons.hourglass_empty,
+          color: AppColors.warning,
+        ),
+        StatCard.dashboard(
+          label: 'In Progress',
+          value: _formatNumber(stats.inProgress),
+          icon: Icons.autorenew,
+          color: AppColors.info,
+        ),
+        StatCard.dashboard(
+          label: 'Completed',
+          value: _formatNumber(stats.completed),
+          icon: Icons.check_circle_outline,
+          color: AppColors.success,
+        ),
+      ],
+    );
+  }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final crossAxisCount = constraints.maxWidth > 1200
-            ? 4
-            : constraints.maxWidth > 800
-            ? 2
-            : 1;
+  /// Financial stats row
+  Widget _buildFinancialStats(
+    BuildContext context,
+    DashboardProvider dashboard,
+  ) {
+    final stats = dashboard.financialStats;
 
-        return GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            mainAxisSpacing: 16,
-            crossAxisSpacing: 16,
-            childAspectRatio: 1.5,
+    return _buildSection(
+      context,
+      title: 'Financial Overview',
+      children: [
+        StatCard.dashboard(
+          label: 'Revenue',
+          value: _formatCurrency(stats.revenue),
+          icon: Icons.attach_money,
+          color: AppColors.success,
+        ),
+        StatCard.dashboard(
+          label: 'Outstanding',
+          value: _formatCurrency(stats.outstanding),
+          icon: Icons.pending_actions,
+          color: AppColors.warning,
+        ),
+        StatCard.dashboard(
+          label: 'Active Contracts',
+          value: _formatNumber(stats.activeContracts),
+          icon: Icons.description_outlined,
+          color: AppColors.brandPrimary,
+        ),
+      ],
+    );
+  }
+
+  /// Resource stats row
+  Widget _buildResourceStats(
+    BuildContext context,
+    DashboardProvider dashboard,
+  ) {
+    final stats = dashboard.resourceStats;
+
+    return _buildSection(
+      context,
+      title: 'Resources',
+      children: [
+        StatCard.dashboard(
+          label: 'Customers',
+          value: _formatNumber(stats.customers),
+          icon: Icons.people_outline,
+          color: AppColors.brandPrimary,
+        ),
+        StatCard.dashboard(
+          label: 'Available Technicians',
+          value: _formatNumber(stats.availableTechnicians),
+          icon: Icons.engineering_outlined,
+          color: AppColors.success,
+        ),
+        StatCard.dashboard(
+          label: 'Low Stock Items',
+          value: _formatNumber(stats.lowStockItems),
+          icon: Icons.inventory_2_outlined,
+          color: stats.lowStockItems > 0
+              ? AppColors.warning
+              : AppColors.success,
+        ),
+        StatCard.dashboard(
+          label: 'Active Users',
+          value: _formatNumber(stats.activeUsers),
+          icon: Icons.person_outline,
+          color: AppColors.info,
+        ),
+      ],
+    );
+  }
+
+  /// Section with title and responsive grid
+  Widget _buildSection(
+    BuildContext context, {
+    required String title,
+    required List<Widget> children,
+  }) {
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
           ),
-          itemCount: stats.length,
-          itemBuilder: (context, index) {
-            return stats[index];
+        ),
+        const SizedBox(height: 12),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final crossAxisCount = AppBreakpoints.getDashboardColumns(
+              constraints.maxWidth,
+            );
+
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
+                mainAxisSpacing: 16,
+                crossAxisSpacing: 16,
+                childAspectRatio: 1.5,
+              ),
+              itemCount: children.length,
+              itemBuilder: (context, index) => children[index],
+            );
           },
-        );
-      },
-    );
-  }
-
-  Widget _buildCharts(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isWide = constraints.maxWidth > 800;
-
-        if (isWide) {
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(child: _buildLineChart(context)),
-              const SizedBox(width: 16),
-              Expanded(child: _buildPieChart(context)),
-            ],
-          );
-        }
-
-        return Column(
-          children: [
-            _buildLineChart(context),
-            const SizedBox(height: 16),
-            _buildPieChart(context),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildLineChart(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: TrendLineChart(
-          title: 'Activity Over Time',
-          xLabels: const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-          series: [
-            LineChartSeries(
-              label: 'This Week',
-              color: AppColors.brandPrimary,
-              data: const [
-                FlSpot(0, 30),
-                FlSpot(1, 45),
-                FlSpot(2, 38),
-                FlSpot(3, 65),
-                FlSpot(4, 55),
-                FlSpot(5, 40),
-                FlSpot(6, 50),
-              ],
-            ),
-            LineChartSeries(
-              label: 'Last Week',
-              color: AppColors.info,
-              data: const [
-                FlSpot(0, 20),
-                FlSpot(1, 35),
-                FlSpot(2, 42),
-                FlSpot(3, 50),
-                FlSpot(4, 45),
-                FlSpot(5, 35),
-                FlSpot(6, 40),
-              ],
-            ),
-          ],
         ),
+      ],
+    );
+  }
+
+  /// Error banner
+  Widget _buildErrorBanner(BuildContext context, String error) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(top: 8),
+      decoration: BoxDecoration(
+        color: AppColors.error.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.error_outline, color: AppColors.error, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(error, style: TextStyle(color: AppColors.error)),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildPieChart(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: DistributionPieChart(
-          title: 'User Distribution',
-          items: [
-            PieChartItem(
-              label: 'Admin',
-              value: 15,
-              color: AppColors.brandPrimary,
-            ),
-            PieChartItem(
-              label: 'Manager',
-              value: 25,
-              color: AppColors.brandSecondary,
-            ),
-            PieChartItem(label: 'User', value: 45, color: AppColors.info),
-            PieChartItem(label: 'Guest', value: 15, color: AppColors.success),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRecentActivity(BuildContext context) {
+  /// Last updated timestamp
+  Widget _buildLastUpdated(BuildContext context, DateTime lastUpdated) {
     final theme = Theme.of(context);
+    final formatted = _formatDateTime(lastUpdated);
 
-    final activities = [
-      _ActivityItem(
-        icon: Icons.person_add,
-        title: 'New user registered',
-        subtitle: 'John Doe joined the platform',
-        time: '2 min ago',
-        color: AppColors.success,
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.sync,
+            size: 14,
+            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            'Updated $formatted',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+            ),
+          ),
+        ],
       ),
-      _ActivityItem(
-        icon: Icons.edit,
-        title: 'Profile updated',
-        subtitle: 'Jane Smith updated their profile',
-        time: '15 min ago',
-        color: AppColors.info,
-      ),
-      _ActivityItem(
-        icon: Icons.security,
-        title: 'Role changed',
-        subtitle: 'Mike Johnson promoted to Manager',
-        time: '1 hour ago',
-        color: AppColors.warning,
-      ),
-      _ActivityItem(
-        icon: Icons.login,
-        title: 'New session',
-        subtitle: 'Sarah Williams logged in',
-        time: '2 hours ago',
-        color: AppColors.brandPrimary,
-      ),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // FORMATTERS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Format number with thousand separators
+  String _formatNumber(int value) {
+    if (value < 1000) return value.toString();
+    if (value < 1000000) {
+      final thousands = value / 1000;
+      return '${thousands.toStringAsFixed(thousands.truncate() == thousands ? 0 : 1)}k';
+    }
+    final millions = value / 1000000;
+    return '${millions.toStringAsFixed(millions.truncate() == millions ? 0 : 1)}M';
+  }
+
+  /// Format currency
+  String _formatCurrency(double value) {
+    if (value >= 1000000) {
+      return '\$${(value / 1000000).toStringAsFixed(1)}M';
+    }
+    if (value >= 1000) {
+      return '\$${(value / 1000).toStringAsFixed(1)}k';
+    }
+    return '\$${value.toStringAsFixed(2)}';
+  }
+
+  /// Format date time
+  String _formatDateTime(DateTime dt) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Recent Activity', style: theme.textTheme.titleMedium),
-                TextButton(onPressed: () {}, child: const Text('View All')),
-              ],
-            ),
-            const SizedBox(height: 8),
-            const Divider(),
-            ...activities.map((activity) {
-              return _buildActivityTile(context, activity);
-            }),
-          ],
-        ),
-      ),
-    );
+    final month = months[dt.month - 1];
+    final hour = dt.hour > 12 ? dt.hour - 12 : (dt.hour == 0 ? 12 : dt.hour);
+    final period = dt.hour >= 12 ? 'PM' : 'AM';
+    return '$month ${dt.day}, $hour:${dt.minute.toString().padLeft(2, '0')} $period';
   }
-
-  Widget _buildActivityTile(BuildContext context, _ActivityItem activity) {
-    final theme = Theme.of(context);
-
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: activity.color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(activity.icon, color: activity.color, size: 20),
-      ),
-      title: Text(activity.title),
-      subtitle: Text(
-        activity.subtitle,
-        style: theme.textTheme.bodySmall?.copyWith(
-          color: theme.colorScheme.onSurfaceVariant,
-        ),
-      ),
-      trailing: Text(
-        activity.time,
-        style: theme.textTheme.labelSmall?.copyWith(
-          color: theme.colorScheme.onSurfaceVariant,
-        ),
-      ),
-    );
-  }
-}
-
-/// Activity item model
-class _ActivityItem {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final String time;
-  final Color color;
-
-  const _ActivityItem({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.time,
-    required this.color,
-  });
 }

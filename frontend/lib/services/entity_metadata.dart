@@ -228,7 +228,7 @@ class EntityMetadata {
         : const SortConfig(field: 'created_at', order: 'DESC');
 
     // Generate display names from entity name if not provided
-    final displayName = json['displayName'] as String? ?? _toDisplayName(name);
+    final displayName = json['displayName'] as String? ?? toDisplayName(name);
     final displayNamePlural =
         json['displayNamePlural'] as String? ??
         _toDisplayNamePlural(displayName);
@@ -268,7 +268,10 @@ class EntityMetadata {
   }
 
   /// Convert entity name to display name (e.g., 'work_order' -> 'Work Order')
-  static String _toDisplayName(String name) {
+  ///
+  /// This is the canonical method for formatting entity names.
+  /// Use this instead of duplicating the logic elsewhere.
+  static String toDisplayName(String name) {
     return name
         .split('_')
         .map(
@@ -432,9 +435,9 @@ class EntityMetadataRegistry {
       sortableFields: const ['id', 'created_at', 'updated_at'],
       defaultSort: const SortConfig(field: 'created_at', order: 'DESC'),
       fields: _getDefaultFields(name),
-      displayName: EntityMetadata._toDisplayName(name),
+      displayName: EntityMetadata.toDisplayName(name),
       displayNamePlural: EntityMetadata._toDisplayNamePlural(
-        EntityMetadata._toDisplayName(name),
+        EntityMetadata.toDisplayName(name),
       ),
     );
   }

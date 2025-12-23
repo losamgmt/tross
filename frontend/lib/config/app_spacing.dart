@@ -110,8 +110,18 @@ class AppSpacingConst {
 ///
 /// Centralized breakpoint values for consistent responsive behavior.
 /// Use with LayoutBuilder or MediaQuery.
+///
+/// Breakpoint tiers:
+/// - Mobile: 0 - 599px (single column, drawer nav)
+/// - Tablet: 600 - 899px (2 columns, drawer nav)
+/// - Desktop: 900 - 1199px (multi-column, persistent sidebar)
+/// - Wide Desktop: 1200px+ (expanded layouts, more columns)
 class AppBreakpoints {
   AppBreakpoints._();
+
+  // ============================================================================
+  // CORE BREAKPOINTS (width thresholds)
+  // ============================================================================
 
   /// Mobile: 0 - 599px
   static const double mobile = 600;
@@ -119,14 +129,23 @@ class AppBreakpoints {
   /// Tablet: 600 - 899px
   static const double tablet = 900;
 
-  /// Desktop: 900px+
+  /// Desktop: 900px+ (persistent sidebar appears here)
   static const double desktop = 900;
 
-  /// Wide desktop: 1200px+
+  /// Wide desktop: 1200px+ (expanded grid layouts)
   static const double wideDesktop = 1200;
 
+  // ============================================================================
+  // COMPONENT-SPECIFIC VALUES
+  // ============================================================================
+
   /// Sidebar/navigation breakpoint (show persistent sidebar)
-  static const double sidebarBreakpoint = 900;
+  /// Same as desktop - this is THE breakpoint for nav behavior
+  static const double sidebarBreakpoint = desktop;
+
+  /// Master-detail layout breakpoint (side-by-side vs stacked)
+  /// Same as desktop for consistency with sidebar
+  static const double masterDetailBreakpoint = desktop;
 
   /// Default sidebar width
   static const double sidebarWidth = 240;
@@ -134,16 +153,56 @@ class AppBreakpoints {
   /// Collapsed sidebar width (icon-only)
   static const double sidebarCollapsedWidth = 72;
 
-  /// Check if width is mobile
+  /// Master panel width in master-detail layout
+  static const double masterPanelWidth = 300;
+
+  // ============================================================================
+  // BOOLEAN CHECKS
+  // ============================================================================
+
+  /// Check if width is mobile (< 600px)
   static bool isMobile(double width) => width < mobile;
 
-  /// Check if width is tablet
+  /// Check if width is tablet (600 - 899px)
   static bool isTablet(double width) => width >= mobile && width < desktop;
 
-  /// Check if width is desktop or wider
+  /// Check if width is desktop or wider (>= 900px)
   static bool isDesktop(double width) => width >= desktop;
+
+  /// Check if width is wide desktop (>= 1200px)
+  static bool isWideDesktop(double width) => width >= wideDesktop;
 
   /// Check if sidebar should be persistent (not drawer)
   static bool shouldShowPersistentSidebar(double width) =>
       width >= sidebarBreakpoint;
+
+  /// Check if master-detail should be side-by-side
+  static bool shouldShowSideBySide(double width) =>
+      width >= masterDetailBreakpoint;
+
+  // ============================================================================
+  // GRID HELPERS
+  // ============================================================================
+
+  /// Get grid column count based on width
+  /// - Mobile: 1 column
+  /// - Tablet: 2 columns
+  /// - Desktop: 3 columns
+  /// - Wide: 4 columns
+  static int getGridColumns(double width) {
+    if (width >= wideDesktop) return 4;
+    if (width >= desktop) return 3;
+    if (width >= mobile) return 2;
+    return 1;
+  }
+
+  /// Get dashboard grid column count (slightly different for dashboard cards)
+  /// - < 800: 1 column
+  /// - 800 - 1199: 2 columns
+  /// - >= 1200: 3 columns
+  static int getDashboardColumns(double width) {
+    if (width >= wideDesktop) return 3;
+    if (width >= 800) return 2;
+    return 1;
+  }
 }

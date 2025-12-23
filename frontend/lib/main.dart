@@ -11,6 +11,7 @@ import 'utils/browser_utils_stub.dart'
 import 'widgets/organisms/feedback/error_display.dart';
 import 'providers/auth_provider.dart';
 import 'providers/app_provider.dart';
+import 'providers/dashboard_provider.dart';
 import 'providers/preferences_provider.dart';
 import 'core/routing/app_routes.dart';
 import 'core/routing/app_router.dart';
@@ -139,6 +140,7 @@ class TrossApp extends StatelessWidget {
         ChangeNotifierProvider(create: (context) => AppProvider()),
         ChangeNotifierProvider(create: (context) => AuthProvider()),
         ChangeNotifierProvider(create: (context) => PreferencesProvider()),
+        ChangeNotifierProvider(create: (context) => DashboardProvider()),
       ],
       child: const _AppWithRouter(),
     );
@@ -180,9 +182,14 @@ class _AppWithRouterState extends State<_AppWithRouter> {
       context,
       listen: false,
     );
+    final dashboardProvider = Provider.of<DashboardProvider>(
+      context,
+      listen: false,
+    );
 
-    // Connect preferences to auth - will auto-load on login and clear on logout
+    // Connect providers to auth - will auto-load on login and clear on logout
     preferencesProvider.connectToAuth(authProvider);
+    dashboardProvider.connectToAuth(authProvider);
 
     // Initialize auth state (checks for stored session)
     // If session exists, this triggers auth state change → preferences load

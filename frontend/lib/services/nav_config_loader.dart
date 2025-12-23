@@ -125,6 +125,80 @@ class EntityPlacement {
   }
 }
 
+// ============================================================================
+// SIDEBAR STRATEGY MODELS
+// ============================================================================
+
+/// Section within a sidebar strategy (e.g., "Entity Settings", "Platform")
+class SidebarSection {
+  final String id;
+  final String label;
+  final String? icon;
+  final int order;
+
+  const SidebarSection({
+    required this.id,
+    required this.label,
+    this.icon,
+    required this.order,
+  });
+
+  factory SidebarSection.fromJson(Map<String, dynamic> json) {
+    return SidebarSection(
+      id: json['id'] as String,
+      label: json['label'] as String,
+      icon: json['icon'] as String?,
+      order: json['order'] as int? ?? 0,
+    );
+  }
+}
+
+/// Sidebar strategy - defines what content appears in the sidebar
+/// for a given route context (e.g., "app" vs "admin")
+class SidebarStrategy {
+  final String id;
+  final String label;
+  final List<String> groups;
+  final bool includeEntities;
+  final bool showDashboard;
+  final bool showHome;
+  final List<SidebarSection> sections;
+
+  const SidebarStrategy({
+    required this.id,
+    required this.label,
+    required this.groups,
+    this.includeEntities = true,
+    this.showDashboard = false,
+    this.showHome = false,
+    this.sections = const [],
+  });
+
+  factory SidebarStrategy.fromJson(String id, Map<String, dynamic> json) {
+    final sectionsJson = json['sections'] as List<dynamic>? ?? [];
+    return SidebarStrategy(
+      id: id,
+      label: json['label'] as String? ?? id,
+      groups:
+          (json['groups'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          [],
+      includeEntities: json['includeEntities'] as bool? ?? true,
+      showDashboard: json['showDashboard'] as bool? ?? false,
+      showHome: json['showHome'] as bool? ?? false,
+      sections: sectionsJson
+          .map(
+            (e) => SidebarSection.fromJson(Map<String, dynamic>.from(e as Map)),
+          )
+          .toList(),
+    );
+  }
+
+  /// Check if this strategy has custom sections
+  bool get hasSections => sections.isNotEmpty;
+}
+
 /// Complete navigation configuration
 class NavConfig {
   final String version;
@@ -132,6 +206,8 @@ class NavConfig {
   final List<NavGroup> groups;
   final List<StaticNavItem> staticItems;
   final Map<String, EntityPlacement> entityPlacements;
+  final Map<String, SidebarStrategy> sidebarStrategies;
+  final Map<String, String> routeStrategies;
 
   const NavConfig({
     required this.version,
@@ -139,6 +215,8 @@ class NavConfig {
     required this.groups,
     required this.staticItems,
     required this.entityPlacements,
+    this.sidebarStrategies = const {},
+    this.routeStrategies = const {},
   });
 
   factory NavConfig.fromJson(Map<String, dynamic> json) {
@@ -180,13 +258,65 @@ class NavConfig {
       }
     }
 
+    // Parse sidebar strategies
+    final sidebarStrategies = <String, SidebarStrategy>{};
+    final strategiesJson = json['sidebarStrategies'] as Map?;
+    if (strategiesJson != null) {
+      for (final entry in strategiesJson.entries) {
+        sidebarStrategies[entry.key as String] = SidebarStrategy.fromJson(
+          entry.key as String,
+          Map<String, dynamic>.from(entry.value as Map),
+        );
+      }
+    }
+
+    // Parse route strategies
+    final routeStrategies = <String, String>{};
+    final routeStrategiesJson = json['routeStrategies'] as Map?;
+    if (routeStrategiesJson != null) {
+      for (final entry in routeStrategiesJson.entries) {
+        routeStrategies[entry.key as String] = entry.value as String;
+      }
+    }
+
     return NavConfig(
       version: json['version'] as String? ?? '1.0.0',
       publicRoutes: publicRoutes,
       groups: groups,
       staticItems: staticItems,
       entityPlacements: entityPlacements,
+      sidebarStrategies: sidebarStrategies,
+      routeStrategies: routeStrategies,
     );
+  }
+
+  /// Get sidebar strategy for a route
+  /// Supports wildcard matching (e.g., "/admin/*" matches "/admin/users")
+  SidebarStrategy? getStrategyForRoute(String route) {
+    // First try exact match
+    if (routeStrategies.containsKey(route)) {
+      final strategyId = routeStrategies[route]!;
+      return sidebarStrategies[strategyId];
+    }
+
+    // Then try wildcard matches
+    for (final entry in routeStrategies.entries) {
+      final pattern = entry.key;
+      if (pattern.endsWith('/*')) {
+        final prefix = pattern.substring(0, pattern.length - 2);
+        if (route.startsWith(prefix)) {
+          return sidebarStrategies[entry.value];
+        }
+      }
+    }
+
+    // Default to 'app' strategy
+    return sidebarStrategies['app'];
+  }
+
+  /// Get strategy by ID
+  SidebarStrategy? getStrategy(String strategyId) {
+    return sidebarStrategies[strategyId];
   }
 
   /// Get groups sorted by order

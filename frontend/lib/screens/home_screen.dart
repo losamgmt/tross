@@ -1,8 +1,12 @@
 /// Home Screen - Main Dashboard
 ///
-/// Currently shows under construction while dashboard features are developed.
-/// Dashboard content is ready but uses placeholder data - will be enabled
-/// when backend data sources are connected.
+/// Displays the main dashboard with real-time statistics from the backend.
+/// Uses DashboardProvider for data and DashboardContent for display.
+///
+/// STATS DISPLAYED:
+/// - Work Orders: total, pending, in_progress, completed
+/// - Financial: revenue, outstanding, active contracts
+/// - Resources: customers, technicians, low stock, active users
 library;
 
 import 'package:flutter/material.dart';
@@ -15,15 +19,10 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AdaptiveShell(
+    return const AdaptiveShell(
       currentRoute: AppRoutes.home,
-      pageTitle: 'Home',
-      body: const UnderConstructionDisplay(
-        title: 'Dashboard Coming Soon!',
-        message:
-            'We\'re building an amazing dashboard with analytics, charts, and insights. Stay tuned!',
-        icon: Icons.dashboard,
-      ),
+      pageTitle: 'Dashboard',
+      body: DashboardContent(),
     );
   }
 }

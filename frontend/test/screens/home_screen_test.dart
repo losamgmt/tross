@@ -24,6 +24,7 @@ import 'package:provider/provider.dart';
 import 'package:tross_app/screens/home_screen.dart';
 import 'package:tross_app/providers/auth_provider.dart';
 import 'package:tross_app/providers/app_provider.dart';
+import 'package:tross_app/providers/dashboard_provider.dart';
 import '../helpers/helpers.dart';
 
 void main() {
@@ -33,6 +34,7 @@ void main() {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => AppProvider()),
+        ChangeNotifierProvider(create: (_) => DashboardProvider()),
       ],
       child: const HomeScreen(),
     );
