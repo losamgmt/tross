@@ -614,6 +614,120 @@
         "type": "Tax must be a number",
         "min": "Tax cannot be negative"
       }
+    },
+    "entity_type": {
+      "type": "string",
+      "required": true,
+      "maxLength": 50,
+      "pattern": "^[a-z_]+$",
+      "errorMessages": {
+        "required": "Entity type is required",
+        "maxLength": "Entity type cannot exceed 50 characters",
+        "pattern": "Entity type must be lowercase with underscores only"
+      },
+      "examples": {
+        "valid": ["customer", "work_order", "invoice", "technician"],
+        "invalid": ["Customer", "work-order", "123", ""]
+      }
+    },
+    "original_filename": {
+      "type": "string",
+      "required": true,
+      "maxLength": 255,
+      "trim": true,
+      "errorMessages": {
+        "required": "Filename is required",
+        "maxLength": "Filename cannot exceed 255 characters"
+      },
+      "examples": {
+        "valid": ["document.pdf", "photo_2025.jpg", "report.csv"],
+        "invalid": ["", null]
+      }
+    },
+    "storage_key": {
+      "type": "string",
+      "required": true,
+      "maxLength": 500,
+      "errorMessages": {
+        "required": "Storage key is required",
+        "maxLength": "Storage key cannot exceed 500 characters"
+      }
+    },
+    "mime_type": {
+      "type": "string",
+      "required": true,
+      "maxLength": 100,
+      "pattern": "^[a-z]+/[a-z0-9.+-]+$",
+      "errorMessages": {
+        "required": "MIME type is required",
+        "maxLength": "MIME type cannot exceed 100 characters",
+        "pattern": "Invalid MIME type format"
+      },
+      "examples": {
+        "valid": ["image/jpeg", "application/pdf", "text/plain"],
+        "invalid": ["jpeg", "image", "JPEG", ""]
+      },
+      "allowedValues": [
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+        "application/pdf",
+        "text/plain",
+        "text/csv"
+      ]
+    },
+    "file_size": {
+      "type": "integer",
+      "required": true,
+      "min": 1,
+      "max": 10485760,
+      "errorMessages": {
+        "required": "File size is required",
+        "type": "File size must be a number",
+        "min": "File size must be positive",
+        "max": "File size cannot exceed 10MB"
+      }
+    },
+    "file_category": {
+      "type": "string",
+      "required": false,
+      "maxLength": 50,
+      "defaultValue": "attachment",
+      "errorMessages": {
+        "maxLength": "Category cannot exceed 50 characters"
+      },
+      "examples": {
+        "valid": ["attachment", "photo", "document", "receipt", "contract", "signature"],
+        "invalid": [""]
+      },
+      "allowedValues": [
+        "attachment",
+        "photo",
+        "document",
+        "receipt",
+        "contract",
+        "signature"
+      ]
+    },
+    "is_active": {
+      "type": "boolean",
+      "required": false,
+      "defaultValue": true,
+      "errorMessages": {
+        "type": "Active status must be true or false"
+      }
+    },
+    "uploaded_by": {
+      "type": "integer",
+      "required": false,
+      "min": 1,
+      "max": 2147483647,
+      "errorMessages": {
+        "type": "Uploaded by must be a number",
+        "min": "Uploaded by must be positive",
+        "max": "Uploaded by exceeds maximum value"
+      }
     }
   },
   "compositeValidations": {
