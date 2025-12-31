@@ -207,7 +207,15 @@ function createEntityRouter(entityName, options = {}) {
         throw new Error(`${displayName} creation failed unexpectedly`);
       }
 
-      return ResponseFormatter.created(res, created, `${displayName} created successfully`);
+      // SECURITY: Filter response to only include fields user can read
+      const sanitizedData = filterDataByRole(
+        created,
+        metadata,
+        req.dbUser.role,
+        'read',
+      );
+
+      return ResponseFormatter.created(res, sanitizedData, `${displayName} created successfully`);
     }),
   );
 
@@ -246,7 +254,15 @@ function createEntityRouter(entityName, options = {}) {
         return ResponseFormatter.notFound(res, `${displayName} not found`);
       }
 
-      return ResponseFormatter.updated(res, updated, `${displayName} updated successfully`);
+      // SECURITY: Filter response to only include fields user can read
+      const sanitizedData = filterDataByRole(
+        updated,
+        metadata,
+        req.dbUser.role,
+        'read',
+      );
+
+      return ResponseFormatter.updated(res, sanitizedData, `${displayName} updated successfully`);
     }),
   );
 

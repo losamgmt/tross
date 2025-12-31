@@ -35,13 +35,14 @@ const { logSecurityEvent } = require('../../../config/logger');
 
 /**
  * Create mock Express request
+ * NOTE: dbUser.role is REQUIRED for genericValidateBody (field-level security)
  */
 const createMockReq = (overrides = {}) => ({
   params: {},
   body: {},
   headers: {},
   url: '/api/v2/test',
-  dbUser: null,
+  dbUser: { id: 1, role: 'admin' }, // Default to admin for test flexibility
   ...overrides,
 });
 

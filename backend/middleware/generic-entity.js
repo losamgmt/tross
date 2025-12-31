@@ -29,32 +29,6 @@ const { toSafeInteger } = require('../validators/type-coercion');
 const { buildEntitySchema } = require('../utils/validation-schema-builder');
 
 // =============================================================================
-// FIELD ACCESS HELPERS
-// =============================================================================
-
-/**
- * Derive updateable fields from fieldAccess metadata
- * A field is updateable if its update access is NOT 'none'
- *
- * @param {Object} metadata - Entity metadata
- * @returns {string[]} List of updateable field names
- */
-function deriveUpdateableFields(metadata) {
-  const fieldAccess = metadata.fieldAccess || {};
-  const immutableFields = new Set(metadata.immutableFields || []);
-
-  return Object.keys(fieldAccess).filter((field) => {
-    // Skip immutable fields
-    if (immutableFields.has(field)) {
-      return false;
-    }
-
-    const access = fieldAccess[field];
-    return access && access.update && access.update !== 'none';
-  });
-}
-
-// =============================================================================
 // ERROR RESPONSE HELPERS
 // =============================================================================
 
@@ -410,10 +384,12 @@ const genericEnforceRLS = (req, res, next) => {
 /**
  * Generic request body validation using entity metadata
  *
- * For CREATE: Validates requiredFields are present
- * For UPDATE: Validates at least one updateableField is present
+ * SECURITY: Role-aware field filtering ensures users can only set fields
+ * their role has permission to write. Fields requiring higher permissions
+ * are silently stripped from the request body.
  *
- * Also filters body to only include allowed fields (security: strips unknown fields)
+ * For CREATE: Validates requiredFields are present (that user can set)
+ * For UPDATE: Validates at least one updateableField is present
  *
  * @param {'create'|'update'} operation - Which operation to validate for
  * @returns {Function} Express middleware
@@ -429,6 +405,7 @@ const genericEnforceRLS = (req, res, next) => {
 const genericValidateBody = (operation) => (req, res, next) => {
   const { entityName, entityMetadata } = req;
   const body = req.body;
+  const userRole = req.dbUser?.role;
 
   // Defense-in-depth: Verify extractEntity ran
   if (!entityName || !entityMetadata) {
@@ -437,6 +414,16 @@ const genericValidateBody = (operation) => (req, res, next) => {
       HTTP_STATUS.INTERNAL_SERVER_ERROR,
       'Internal Error',
       'Entity not extracted',
+    );
+  }
+
+  // Defense-in-depth: Verify user is authenticated (should be caught by auth middleware)
+  if (!userRole) {
+    return sendError(
+      res,
+      HTTP_STATUS.FORBIDDEN,
+      'Forbidden',
+      'User role not available for field access control',
     );
   }
 
@@ -450,8 +437,9 @@ const genericValidateBody = (operation) => (req, res, next) => {
     );
   }
 
-  // Build Joi schema for this entity/operation
-  const schema = buildEntitySchema(entityName, operation, entityMetadata);
+  // Build role-aware Joi schema for this entity/operation/role
+  // This ensures only fields the user's role can write are accepted
+  const schema = buildEntitySchema(entityName, operation, entityMetadata, userRole);
 
   // Validate with Joi - stripUnknown removes fields not in schema
   const { error, value } = schema.validate(body, {
@@ -472,11 +460,20 @@ const genericValidateBody = (operation) => (req, res, next) => {
 
   // Additional operation-specific checks
   if (operation === 'create') {
-    // Check required fields (Joi handles this, but belt-and-suspenders)
+    // Required fields check is now role-aware (handled in schema builder)
+    // But we do belt-and-suspenders check here for fields the user CAN set
     const requiredFields = entityMetadata.requiredFields || [];
-    const missingFields = requiredFields.filter(
-      (field) => value[field] === undefined || value[field] === null || value[field] === '',
-    );
+    // Only check required fields that user's role can create
+    const { deriveCreatableFields } = require('../utils/validation-schema-builder');
+    const creatableByRole = new Set(deriveCreatableFields(entityMetadata, userRole));
+
+    const missingFields = requiredFields.filter((field) => {
+      // Only enforce required if user can create this field
+      if (!creatableByRole.has(field)) {
+        return false;
+      }
+      return value[field] === undefined || value[field] === null || value[field] === '';
+    });
 
     if (missingFields.length > 0) {
       return sendError(
@@ -489,14 +486,14 @@ const genericValidateBody = (operation) => (req, res, next) => {
   } else if (operation === 'update') {
     // Ensure at least one valid field
     if (Object.keys(value).length === 0) {
-      // Derive updateable fields from fieldAccess if not explicitly defined
-      const updateableFields = entityMetadata.updateableFields ||
-        deriveUpdateableFields(entityMetadata);
+      // Derive updateable fields from fieldAccess for this role
+      const { deriveUpdateableFields } = require('../utils/validation-schema-builder');
+      const updateableFields = deriveUpdateableFields(entityMetadata, userRole);
       return sendError(
         res,
         HTTP_STATUS.BAD_REQUEST,
         'Validation Error',
-        `No valid updateable fields provided. Allowed: ${updateableFields.join(', ')}`,
+        `No valid updateable fields provided. Allowed for your role: ${updateableFields.join(', ')}`,
       );
     }
   }

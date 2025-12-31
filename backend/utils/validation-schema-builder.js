@@ -5,24 +5,37 @@
  *
  * PHILOSOPHY:
  * - METADATA-DRIVEN: Uses entity metadata + validation-rules.json
+ * - ROLE-AWARE: Filters fields by user's role permissions (SECURITY)
  * - COMPOSABLE: Builds schemas for create/update operations
- * - CACHED: Schemas are built once per entity/operation pair
+ * - CACHED: Schemas are built once per entity/operation/role triplet
  * - TYPE-SAFE: Full Joi validation (types, formats, ranges, patterns)
+ *
+ * SECURITY:
+ * - Field-level access control: Only fields the user's role can write are accepted
+ * - Uses ROLE_HIERARCHY from constants.js to determine permission levels
+ * - Customers cannot set fields requiring dispatcher+ permissions
  *
  * INTEGRATION:
  * - Uses validation-loader.js for field definitions
  * - Uses entity metadata for field lists
+ * - Uses response-transform.js for role permission checks
  * - Returns Joi schemas for middleware to validate against
  *
  * USAGE:
- *   const schema = buildEntitySchema('user', 'create');
+ *   // Role-aware (RECOMMENDED for security):
+ *   const schema = buildEntitySchema('work_order', 'create', metadata, 'customer');
+ *
+ *   // Without role (backward compatible, allows all writable fields):
+ *   const schema = buildEntitySchema('user', 'create', metadata);
  *   const { error, value } = schema.validate(req.body);
  */
 
 const Joi = require('joi');
 const { loadValidationRules, buildFieldSchema } = require('./validation-loader');
+const { hasFieldPermission, normalizeRoleName } = require('./response-transform');
 
-// Cache for built schemas (entityName:operation -> Joi schema)
+// Cache for built schemas (entityName:operation:role -> Joi schema)
+// Role is included in cache key for role-aware schemas
 const schemaCache = new Map();
 
 /**
@@ -159,13 +172,22 @@ function buildSingleFieldSchema(fieldName, entityName, isRequired, rules) {
  * A field is creatable if its create access is NOT 'none'
  *
  * @param {Object} metadata - Entity metadata
+ * @param {string} [userRole] - User's role for role-aware filtering (optional)
  * @returns {string[]} List of creatable field names
  */
-function deriveCreatableFields(metadata) {
+function deriveCreatableFields(metadata, userRole) {
   const fieldAccess = metadata.fieldAccess || {};
   return Object.keys(fieldAccess).filter((field) => {
     const access = fieldAccess[field];
-    return access && access.create && access.create !== 'none';
+    if (!access || !access.create || access.create === 'none') {
+      return false;
+    }
+    // If userRole provided, check if user's role meets the minimum requirement
+    if (userRole) {
+      return hasFieldPermission(userRole, access.create);
+    }
+    // Backward compatible: if no role, allow all creatable fields
+    return true;
   });
 }
 
@@ -174,9 +196,10 @@ function deriveCreatableFields(metadata) {
  * A field is updateable if its update access is NOT 'none'
  *
  * @param {Object} metadata - Entity metadata
+ * @param {string} [userRole] - User's role for role-aware filtering (optional)
  * @returns {string[]} List of updateable field names
  */
-function deriveUpdateableFields(metadata) {
+function deriveUpdateableFields(metadata, userRole) {
   const fieldAccess = metadata.fieldAccess || {};
   const immutableFields = new Set(metadata.immutableFields || []);
 
@@ -185,27 +208,47 @@ function deriveUpdateableFields(metadata) {
     if (immutableFields.has(field)) {
       return false;
     }
-
     const access = fieldAccess[field];
-    return access && access.update && access.update !== 'none';
+    if (!access || !access.update || access.update === 'none') {
+      return false;
+    }
+    // If userRole provided, check if user's role meets the minimum requirement
+    if (userRole) {
+      return hasFieldPermission(userRole, access.update);
+    }
+    // Backward compatible: if no role, allow all updateable fields
+    return true;
   });
 }
 
 /**
  * Build a complete Joi object schema for an entity operation
  *
+ * SECURITY: When userRole is provided, only fields the user's role can write
+ * are included in the schema. Fields requiring higher permissions are stripped.
+ *
  * @param {string} entityName - Entity name (e.g., 'user', 'work_order')
  * @param {string} operation - 'create' or 'update'
  * @param {Object} metadata - Entity metadata from config/models
+ * @param {string} [userRole] - User's role for role-aware field filtering (RECOMMENDED)
  * @returns {Joi.ObjectSchema} Complete Joi validation schema
  *
  * @example
- *   const schema = buildEntitySchema('user', 'create', userMetadata);
- *   const { error, value } = schema.validate({ email: 'test@example.com', ... });
+ *   // Role-aware (SECURE - filters fields by permission):
+ *   const schema = buildEntitySchema('work_order', 'create', metadata, 'customer');
+ *   // Customer can only set fields where create permission <= 'customer'
+ *
+ *   // Backward compatible (allows all writable fields):
+ *   const schema = buildEntitySchema('user', 'create', metadata);
  */
-function buildEntitySchema(entityName, operation, metadata) {
-  // Check cache first
-  const cacheKey = `${entityName}:${operation}`;
+function buildEntitySchema(entityName, operation, metadata, userRole) {
+  // Normalize role for consistent cache keys
+  const normalizedRole = userRole ? normalizeRoleName(userRole) : null;
+
+  // Check cache first - include role in cache key for role-aware schemas
+  const cacheKey = normalizedRole
+    ? `${entityName}:${operation}:${normalizedRole}`
+    : `${entityName}:${operation}`;
   if (schemaCache.has(cacheKey)) {
     return schemaCache.get(cacheKey);
   }
@@ -214,8 +257,17 @@ function buildEntitySchema(entityName, operation, metadata) {
   const schemaFields = {};
 
   if (operation === 'create') {
+    // Derive creatable fields - role-aware if userRole provided
+    const createableFields = metadata.createableFields || deriveCreatableFields(metadata, normalizedRole);
+    const createableSet = new Set(createableFields);
+
     // Required fields must be present and valid
-    const requiredFields = metadata.requiredFields || [];
+    // BUT only if the user's role can create them
+    const requiredFields = (metadata.requiredFields || []).filter((field) => {
+      // If role-aware, only require fields user can create
+      return !normalizedRole || createableSet.has(field);
+    });
+
     for (const field of requiredFields) {
       const fieldSchema = buildSingleFieldSchema(field, entityName, true, rules);
       if (fieldSchema) {
@@ -223,8 +275,7 @@ function buildEntitySchema(entityName, operation, metadata) {
       }
     }
 
-    // Derive creatable fields from fieldAccess (or use explicit list if provided)
-    const createableFields = metadata.createableFields || deriveCreatableFields(metadata);
+    // Add remaining creatable fields as optional
     for (const field of createableFields) {
       // Skip if already added as required
       if (schemaFields[field]) {
@@ -237,8 +288,8 @@ function buildEntitySchema(entityName, operation, metadata) {
       }
     }
   } else if (operation === 'update') {
-    // Derive updateable fields from fieldAccess (or use explicit list if provided)
-    const updateableFields = metadata.updateableFields || deriveUpdateableFields(metadata);
+    // Derive updateable fields - role-aware if userRole provided
+    const updateableFields = metadata.updateableFields || deriveUpdateableFields(metadata, normalizedRole);
     for (const field of updateableFields) {
       const fieldSchema = buildSingleFieldSchema(field, entityName, false, rules);
       if (fieldSchema) {
