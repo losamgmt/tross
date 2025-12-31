@@ -520,6 +520,10 @@
         "minLength": "Invoice number cannot be empty",
         "maxLength": "Invoice number cannot exceed 100 characters",
         "pattern": "Invoice number must be in format INV-YYYY-NNNN"
+      },
+      "examples": {
+        "valid": ["INV-2025-0001", "INV-2024-1234"],
+        "invalid": ["INV-25-001", "INVOICE-2025-0001", "2025-0001"]
       }
     },
     "contract_number": {
@@ -534,6 +538,10 @@
         "minLength": "Contract number cannot be empty",
         "maxLength": "Contract number cannot exceed 100 characters",
         "pattern": "Contract number must be in format CTR-YYYY-NNNN"
+      },
+      "examples": {
+        "valid": ["CTR-2025-0001", "CTR-2024-1234"],
+        "invalid": ["CTR-25-001", "CONTRACT-2025-0001", "2025-0001"]
       }
     },
     "work_order_number": {
@@ -548,6 +556,10 @@
         "minLength": "Work order number cannot be empty",
         "maxLength": "Work order number cannot exceed 100 characters",
         "pattern": "Work order number must be in format WO-YYYY-NNNN"
+      },
+      "examples": {
+        "valid": ["WO-2025-0001", "WO-2024-1234"],
+        "invalid": ["WO-25-001", "WORKORDER-2025-0001", "2025-0001"]
       }
     },
     "organization_name": {
