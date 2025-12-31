@@ -26,4 +26,10 @@ class Auth0WebService {
       'Auth0WebService.logout is only available on web platform',
     );
   }
+
+  Future<Map<String, dynamic>?> refreshToken(String refreshToken) async {
+    throw UnsupportedError(
+      'Auth0WebService.refreshToken is only available on web platform',
+    );
+  }
 }

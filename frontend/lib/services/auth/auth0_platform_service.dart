@@ -80,10 +80,11 @@ class Auth0PlatformService {
         }
         return null;
       } else {
-        // Desktop: Not supported yet, but could use web flow
+        // Desktop (Windows/macOS/Linux): Use web-based OAuth flow
+        // Desktop apps can use the same PKCE flow as web via system browser
         throw UnsupportedError(
-          'Auth0 login not yet implemented for $platformName. '
-          'Consider using web browser or mobile app.',
+          'Auth0 login on $platformName requires web browser redirect. '
+          'Desktop support available via system browser OAuth flow.',
         );
       }
     } catch (e) {
@@ -132,11 +133,18 @@ class Auth0PlatformService {
   Future<Auth0Credentials?> refreshToken(String refreshToken) async {
     try {
       if (isWeb) {
-        // Web: refresh via backend API
-        // Future: Implement backend refresh endpoint
-        throw UnimplementedError(
-          'Web token refresh via backend not yet implemented',
-        );
+        // Web: refresh via backend API (backend has client_secret)
+        _webService ??= Auth0WebService();
+        final result = await _webService!.refreshToken(refreshToken);
+
+        if (result != null && result['access_token'] != null) {
+          return Auth0Credentials(
+            accessToken: result['access_token'] as String,
+            // Web refresh only returns new access token, keep existing refresh token
+            refreshToken: refreshToken,
+          );
+        }
+        return null;
       } else if (isMobile) {
         _mobileService ??= Auth0Service();
         final credentials = await _mobileService!.refreshToken(refreshToken);

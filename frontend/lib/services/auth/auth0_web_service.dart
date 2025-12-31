@@ -233,4 +233,42 @@ class Auth0WebService {
     );
     web.window.location.href = logoutUrl;
   }
+
+  /// Refresh access token via backend API
+  ///
+  /// Web PKCE clients cannot refresh tokens directly with Auth0 (no client_secret).
+  /// Instead, we call the backend's /api/auth0/refresh endpoint which has
+  /// the client_secret and can perform the refresh on our behalf.
+  Future<Map<String, dynamic>?> refreshToken(String refreshToken) async {
+    try {
+      ErrorService.logInfo('Refreshing token via backend (web)');
+
+      final response = await http.post(
+        Uri.parse('${AppConfig.baseUrl}/auth0/refresh'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'refresh_token': refreshToken}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        // Unwrap standard response envelope if present
+        final result = data['data'] ?? data;
+
+        ErrorService.logInfo('Web token refresh successful');
+        return {
+          'access_token': result['access_token'],
+          'expires_in': result['expires_in'],
+        };
+      } else {
+        ErrorService.logError(
+          'Web token refresh failed',
+          context: {'status': response.statusCode, 'body': response.body},
+        );
+        return null;
+      }
+    } catch (e) {
+      ErrorService.logError('Web token refresh error', error: e);
+      return null;
+    }
+  }
 }
