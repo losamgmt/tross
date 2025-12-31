@@ -11,12 +11,17 @@
  * - DELETE /api/files/:id                   - Soft delete file
  *
  * All endpoints require authentication and permissions on parent entity.
+ *
+ * ARCHITECTURE:
+ * - This route: HTTP concerns, permission checks, request/response formatting
+ * - FileAttachmentService: Database operations for file_attachments table
+ * - StorageService: Cloud storage operations (R2/S3)
  */
 const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
 const { validateIdParam } = require('../validators');
 const { storageService } = require('../services/storage-service');
-const { query: db } = require('../db/connection');
+const FileAttachmentService = require('../services/file-attachment-service');
 const ResponseFormatter = require('../utils/response-formatter');
 const { logger } = require('../config/logger');
 
@@ -76,77 +81,6 @@ function requireStorageConfigured(res) {
   return true;
 }
 
-/**
- * Validate entity exists in database
- * @param {string} entityType - Table name
- * @param {number} entityId - Row ID
- * @returns {Promise<boolean>}
- */
-async function entityExists(entityType, entityId) {
-  try {
-    // Check table exists
-    const tableCheck = await db(
-      `SELECT EXISTS(
-        SELECT 1 FROM information_schema.tables 
-        WHERE table_name = $1 AND table_schema = 'public'
-      ) as table_exists`,
-      [entityType],
-    );
-
-    if (!tableCheck.rows[0]?.table_exists) {
-      return false;
-    }
-
-    // Check entity exists
-    const entityCheck = await db(
-      `SELECT id FROM "${entityType}" WHERE id = $1 LIMIT 1`,
-      [entityId],
-    );
-
-    return entityCheck.rows.length > 0;
-  } catch (error) {
-    logger.error('Error checking entity existence', {
-      entityType,
-      entityId,
-      error: error.message,
-    });
-    return false;
-  }
-}
-
-/**
- * Get file by ID with active check
- * @param {number} id - File ID
- * @returns {Promise<Object|null>}
- */
-async function getActiveFile(id) {
-  const result = await db(
-    'SELECT * FROM file_attachments WHERE id = $1 AND is_active = true',
-    [id],
-  );
-  return result.rows[0] || null;
-}
-
-/**
- * Format file record for API response
- * @param {Object} row - Database row
- * @returns {Object} Formatted response
- */
-function formatFileResponse(row) {
-  return {
-    id: row.id,
-    entity_type: row.entity_type,
-    entity_id: row.entity_id,
-    original_filename: row.original_filename,
-    mime_type: row.mime_type,
-    file_size: row.file_size,
-    category: row.category,
-    description: row.description,
-    uploaded_by: row.uploaded_by,
-    created_at: row.created_at,
-  };
-}
-
 // =============================================================================
 // MIDDLEWARE
 // =============================================================================
@@ -191,8 +125,8 @@ router.post(
         return;
       }
 
-      // Entity existence check
-      const exists = await entityExists(entityType, entityId);
+      // Entity existence check (via service)
+      const exists = await FileAttachmentService.entityExists(entityType, entityId);
       if (!exists) {
         return ResponseFormatter.notFound(
           res,
@@ -250,37 +184,23 @@ router.post(
         },
       });
 
-      // Save to database
-      const insertResult = await db(
-        `INSERT INTO file_attachments 
-         (entity_type, entity_id, original_filename, storage_key, mime_type, 
-          file_size, category, description, uploaded_by)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-         RETURNING *`,
-        [
-          entityType,
-          entityId,
-          originalFilename,
-          storageKey,
-          mimeType,
-          uploadResult.size,
-          category,
-          description,
-          req.user?.id || null,
-        ],
-      );
-
-      const attachment = insertResult.rows[0];
-
-      logger.info('File uploaded', {
-        id: attachment.id,
+      // Save to database (via service)
+      const attachment = await FileAttachmentService.createAttachment({
         entityType,
         entityId,
+        originalFilename,
         storageKey,
-        size: uploadResult.size,
+        mimeType,
+        fileSize: uploadResult.size,
+        category,
+        description,
+        uploadedBy: req.user?.id || null,
       });
 
-      return ResponseFormatter.created(res, formatFileResponse(attachment));
+      return ResponseFormatter.created(
+        res,
+        FileAttachmentService.formatForResponse(attachment),
+      );
     } catch (error) {
       logger.error('Error uploading file', {
         error: error.message,
@@ -305,8 +225,8 @@ router.get('/:id/download', validateIdParam(), async (req, res) => {
   const { id } = req.params;
 
   try {
-    // Get file
-    const file = await getActiveFile(id);
+    // Get file (via service)
+    const file = await FileAttachmentService.getActiveFile(id);
     if (!file) {
       return ResponseFormatter.notFound(res, 'File not found');
     }
@@ -358,8 +278,8 @@ router.delete('/:id', validateIdParam(), async (req, res) => {
   const { id } = req.params;
 
   try {
-    // Get file
-    const file = await getActiveFile(id);
+    // Get file (via service)
+    const file = await FileAttachmentService.getActiveFile(id);
     if (!file) {
       return ResponseFormatter.notFound(res, 'File not found');
     }
@@ -372,17 +292,14 @@ router.delete('/:id', validateIdParam(), async (req, res) => {
       );
     }
 
-    // Soft delete
-    await db(
-      'UPDATE file_attachments SET is_active = false, updated_at = NOW() WHERE id = $1',
-      [id],
-    );
+    // Soft delete (via service)
+    await FileAttachmentService.softDelete(id);
 
-    logger.info('File soft-deleted', {
+    logger.info('File deleted by user', {
       id,
       entityType: file.entity_type,
       entityId: file.entity_id,
-      storageKey: file.storage_key,
+      deletedBy: req.user?.id,
     });
 
     return ResponseFormatter.success(res, { deleted: true });
@@ -419,27 +336,15 @@ router.get(
         );
       }
 
-      // Build query
-      const category = req.query.category;
-      let query = `
-        SELECT id, entity_type, entity_id, original_filename, mime_type, 
-               file_size, category, description, uploaded_by, created_at
-        FROM file_attachments
-        WHERE entity_type = $1 AND entity_id = $2 AND is_active = true
-      `;
-      const params = [entityType, entityId];
+      // List files (via service)
+      const files = await FileAttachmentService.listFilesForEntity(
+        entityType,
+        entityId,
+        { category: req.query.category },
+      );
 
-      if (category) {
-        query += ' AND category = $3';
-        params.push(category);
-      }
-
-      query += ' ORDER BY created_at DESC';
-
-      const result = await db(query, params);
-
-      return ResponseFormatter.success(res, result.rows, {
-        message: `Retrieved ${result.rows.length} files`,
+      return ResponseFormatter.success(res, files, {
+        message: `Retrieved ${files.length} files`,
       });
     } catch (error) {
       logger.error('Error listing files', {
