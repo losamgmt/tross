@@ -224,10 +224,10 @@ function buildFieldSchema(fieldDef, fieldName) {
 
 /**
  * Build a composite Joi schema for operations like "createUser" or "updateRole"
- * 
+ *
  * METADATA-DRIVEN: Uses entityName from composite definition to load entity metadata.
  * No string parsing or hardcoded mappings - everything derived from configuration.
- * 
+ *
  * @param {string} operationName - Name of the composite validation (e.g., "createUser")
  * @returns {Joi.ObjectSchema} Complete Joi object schema
  */
@@ -254,11 +254,11 @@ function buildCompositeSchema(operationName) {
 
   /**
    * Get field definition for a field name
-   * 
+   *
    * PRIORITY ORDER (entity metadata is source of truth):
    * 1. Entity metadata fields (if entity context available)
    * 2. Fallback to validation-rules.json for universal fields (email, phone, etc.)
-   * 
+   *
    * This ensures fields like 'priority' are correctly resolved per-entity:
    * - role.priority = integer (1-100)
    * - work_order.priority = enum ("low", "normal", "high", "urgent")
@@ -301,15 +301,15 @@ function buildCompositeSchema(operationName) {
       case 'decimal':
       case 'currency':
         fieldDef.type = 'number';
-        if (metaField.min !== undefined) fieldDef.min = metaField.min;
-        if (metaField.max !== undefined) fieldDef.max = metaField.max;
+        if (metaField.min !== undefined) {fieldDef.min = metaField.min;}
+        if (metaField.max !== undefined) {fieldDef.max = metaField.max;}
         break;
       case 'integer':
-      case 'foreignKey':  // Foreign keys are integer IDs
+      case 'foreignKey': // Foreign keys are integer IDs
         fieldDef.type = 'integer';
-        fieldDef.min = 1;  // FK IDs must be positive
-        if (metaField.min !== undefined) fieldDef.min = metaField.min;
-        if (metaField.max !== undefined) fieldDef.max = metaField.max;
+        fieldDef.min = 1; // FK IDs must be positive
+        if (metaField.min !== undefined) {fieldDef.min = metaField.min;}
+        if (metaField.max !== undefined) {fieldDef.max = metaField.max;}
         break;
       case 'boolean':
         fieldDef.type = 'boolean';
@@ -326,9 +326,9 @@ function buildCompositeSchema(operationName) {
       case 'string':
       default:
         fieldDef.type = 'string';
-        if (metaField.minLength !== undefined) fieldDef.minLength = metaField.minLength;
-        if (metaField.maxLength !== undefined) fieldDef.maxLength = metaField.maxLength;
-        if (metaField.pattern) fieldDef.pattern = metaField.pattern;
+        if (metaField.minLength !== undefined) {fieldDef.minLength = metaField.minLength;}
+        if (metaField.maxLength !== undefined) {fieldDef.maxLength = metaField.maxLength;}
+        if (metaField.pattern) {fieldDef.pattern = metaField.pattern;}
         break;
     }
 
