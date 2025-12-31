@@ -25,20 +25,19 @@ function getMetadata(entityName) {
 }
 
 /**
+ * Build table-to-entity mapping dynamically from metadata
+ * METADATA-DRIVEN: No hardcoding, derived from single source of truth
+ */
+const TABLE_TO_ENTITY = Object.fromEntries(
+  Object.entries(allMetadata).map(([entityName, meta]) => [meta.tableName, entityName])
+);
+
+/**
  * Map table name to entity name
+ * METADATA-DRIVEN: Uses the dynamically built mapping from entity metadata
  */
 function entityNameFromTable(tableName) {
-  const mapping = {
-    users: 'user',
-    roles: 'role',
-    customers: 'customer',
-    technicians: 'technician',
-    work_orders: 'work_order',
-    contracts: 'contract',
-    invoices: 'invoice',
-    inventory: 'inventory',
-  };
-  return mapping[tableName] || tableName;
+  return TABLE_TO_ENTITY[tableName] || tableName;
 }
 
 /**

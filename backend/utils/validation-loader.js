@@ -47,7 +47,8 @@ function loadValidationRules() {
 
     return validationRules;
   } catch (error) {
-    console.error('[ValidationLoader] Failed to load validation rules:', error.message);
+    const { logger } = require('../config/logger');
+    logger.error('[ValidationLoader] Failed to load validation rules:', { error: error.message });
     throw new Error('Cannot load validation rules. Check config/validation-rules.json');
   }
 }
@@ -223,6 +224,10 @@ function buildFieldSchema(fieldDef, fieldName) {
 
 /**
  * Build a composite Joi schema for operations like "createUser" or "updateRole"
+ * 
+ * METADATA-DRIVEN: Uses entityName from composite definition to load entity metadata.
+ * No string parsing or hardcoded mappings - everything derived from configuration.
+ * 
  * @param {string} operationName - Name of the composite validation (e.g., "createUser")
  * @returns {Joi.ObjectSchema} Complete Joi object schema
  */
@@ -234,115 +239,122 @@ function buildCompositeSchema(operationName) {
     throw new Error(`Unknown composite validation: ${operationName}`);
   }
 
-  const schemaFields = {};
-
-  // Context-aware field mapping for different operation types
-  const isRoleOperation = operationName === 'createRole' || operationName === 'updateRole';
-  const isUserOperation = operationName.toLowerCase().includes('user');
-  const isCustomerOperation = operationName.toLowerCase().includes('customer');
-  const isTechnicianOperation = operationName.toLowerCase().includes('technician');
-  const isWorkOrderOperation = operationName.toLowerCase().includes('workorder') || operationName.toLowerCase().includes('work_order');
-  const isInvoiceOperation = operationName.toLowerCase().includes('invoice');
-  const isContractOperation = operationName.toLowerCase().includes('contract');
-  const isInventoryOperation = operationName.toLowerCase().includes('inventory');
-
-  // Determine context-aware status field
-  let statusField = 'status'; // Default
-  if (isRoleOperation) {
-    statusField = 'roleStatus';
-  } else if (isUserOperation) {
-    statusField = 'userStatus';
-  } else if (isCustomerOperation) {
-    statusField = 'customerStatus';
-  } else if (isTechnicianOperation) {
-    statusField = 'technicianStatus';
-  } else if (isWorkOrderOperation) {
-    statusField = 'workOrderStatus';
-  } else if (isInvoiceOperation) {
-    statusField = 'invoiceStatus';
-  } else if (isContractOperation) {
-    statusField = 'contractStatus';
-  } else if (isInventoryOperation) {
-    statusField = 'inventoryStatus';
+  // Get entity metadata for status field validation (if entity context available)
+  let entityMetadata = null;
+  if (composite.entityName) {
+    try {
+      const allMetadata = require('../config/models');
+      entityMetadata = allMetadata[composite.entityName];
+    } catch {
+      // Entity metadata not available - will use generic status validation
+    }
   }
 
-  // Map field names to their definitions
-  const fieldMapping = {
-    email: 'email',
-    first_name: 'first_name',
-    firstName: 'firstName',
-    last_name: 'last_name',
-    lastName: 'lastName',
-    role_id: 'role_id',
-    roleId: 'roleId',
-    is_active: 'is_active',
-    isActive: 'isActive',
-    customer_profile_id: 'customerProfileId',
-    customerProfileId: 'customerProfileId',
-    technician_profile_id: 'technicianProfileId',
-    technicianProfileId: 'technicianProfileId',
-    name: isRoleOperation ? 'roleName' : 'name', // Context-aware: role uses roleName, others use name
-    roleName: 'roleName',
-    summary: 'summary', // Brief description field for COMPUTED entities
-    organization_name: 'organization_name', // Customer organization field
-    organizationName: 'organization_name',
-    priority: isRoleOperation ? 'rolePriority' : 'priority', // Context-aware
-    rolePriority: 'rolePriority',
-    description: isRoleOperation ? 'roleDescription' : 'description', // Context-aware
-    roleDescription: 'roleDescription',
-    phone: 'phone',
-    url: 'url',
-    company_name: 'company_name',
-    companyName: 'companyName',
-    license_number: 'license_number',
-    licenseNumber: 'licenseNumber',
-    hourly_rate: 'hourly_rate',
-    hourlyRate: 'hourlyRate',
-    customer_id: 'customer_id',
-    customerId: 'customerId',
-    technician_id: 'technicianId',
-    technicianId: 'technicianId',
-    assigned_technician_id: 'assigned_technician_id',
-    assignedTechnicianId: 'assigned_technician_id',
-    work_order_id: 'work_order_id',
-    workOrderId: 'workOrderId',
-    invoice_number: 'invoice_number',
-    invoiceNumber: 'invoiceNumber',
-    contract_number: 'contract_number',
-    contractNumber: 'contractNumber',
-    title: 'title',
-    amount: 'amount',
-    total: 'total',
-    tax: 'tax',
-    sku: 'sku',
-    quantity: 'quantity',
-    status: statusField, // Context-aware status mapping
-    start_date: 'start_date',
-    startDate: 'startDate',
-    end_date: 'end_date',
-    endDate: 'endDate',
-    due_date: 'due_date',
-    dueDate: 'dueDate',
-    value: 'value',
+  const schemaFields = {};
+
+  /**
+   * Get field definition for a field name
+   * 
+   * PRIORITY ORDER (entity metadata is source of truth):
+   * 1. Entity metadata fields (if entity context available)
+   * 2. Fallback to validation-rules.json for universal fields (email, phone, etc.)
+   * 
+   * This ensures fields like 'priority' are correctly resolved per-entity:
+   * - role.priority = integer (1-100)
+   * - work_order.priority = enum ("low", "normal", "high", "urgent")
+   */
+  const getFieldDef = (fieldName) => {
+    // First: Try entity metadata (source of truth for entity-specific fields)
+    if (entityMetadata?.fields?.[fieldName]) {
+      const metaField = entityMetadata.fields[fieldName];
+      return convertMetadataToFieldDef(metaField, fieldName);
+    }
+
+    // Fallback: Universal fields from validation-rules.json
+    return rules.fields[fieldName];
   };
 
-  // Add required fields
+  /**
+   * Convert entity metadata field format to validation-rules.json field format
+   * Entity metadata uses: { type, values, required, min, max, maxLength, default }
+   * Validation rules use: { type, enum, required, min, max, maxLength, errorMessages }
+   */
+  const convertMetadataToFieldDef = (metaField, fieldName) => {
+    const fieldDef = {
+      required: metaField.required || false,
+    };
+
+    // Handle type mapping
+    switch (metaField.type) {
+      case 'enum':
+        fieldDef.type = 'string';
+        fieldDef.enum = metaField.values;
+        fieldDef.errorMessages = {
+          enum: `${fieldName} must be one of: ${metaField.values.join(', ')}`,
+        };
+        break;
+      case 'email':
+        fieldDef.type = 'string';
+        fieldDef.format = 'email';
+        fieldDef.maxLength = metaField.maxLength || 255;
+        break;
+      case 'decimal':
+      case 'currency':
+        fieldDef.type = 'number';
+        if (metaField.min !== undefined) fieldDef.min = metaField.min;
+        if (metaField.max !== undefined) fieldDef.max = metaField.max;
+        break;
+      case 'integer':
+      case 'foreignKey':  // Foreign keys are integer IDs
+        fieldDef.type = 'integer';
+        fieldDef.min = 1;  // FK IDs must be positive
+        if (metaField.min !== undefined) fieldDef.min = metaField.min;
+        if (metaField.max !== undefined) fieldDef.max = metaField.max;
+        break;
+      case 'boolean':
+        fieldDef.type = 'boolean';
+        break;
+      case 'date':
+      case 'timestamp':
+        fieldDef.type = 'date';
+        fieldDef.format = 'date';
+        break;
+      case 'uuid':
+        fieldDef.type = 'string';
+        fieldDef.pattern = '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
+        break;
+      case 'string':
+      default:
+        fieldDef.type = 'string';
+        if (metaField.minLength !== undefined) fieldDef.minLength = metaField.minLength;
+        if (metaField.maxLength !== undefined) fieldDef.maxLength = metaField.maxLength;
+        if (metaField.pattern) fieldDef.pattern = metaField.pattern;
+        break;
+    }
+
+    return fieldDef;
+  };
+
+  // Add required fields - force required: true regardless of metadata
   composite.requiredFields?.forEach(fieldName => {
-    const defKey = fieldMapping[fieldName];
-    const fieldDef = rules.fields[defKey];
+    const fieldDef = getFieldDef(fieldName);
     if (!fieldDef) {
-      console.warn(`[ValidationLoader] ⚠️  Field definition not found: ${fieldName} (${defKey})`);
+      // Log warning but don't fail - field might be entity-specific
+      const { logger } = require('../config/logger');
+      logger.warn(`[ValidationLoader] Field definition not found: ${fieldName}`);
       return;
     }
-    schemaFields[fieldName] = buildFieldSchema(fieldDef, fieldName);
+    // Force required even if definition says optional
+    const requiredDef = { ...fieldDef, required: true };
+    schemaFields[fieldName] = buildFieldSchema(requiredDef, fieldName);
   });
 
   // Add optional fields
   composite.optionalFields?.forEach(fieldName => {
-    const defKey = fieldMapping[fieldName];
-    const fieldDef = rules.fields[defKey];
+    const fieldDef = getFieldDef(fieldName);
     if (!fieldDef) {
-      console.warn(`[ValidationLoader] ⚠️  Field definition not found: ${fieldName} (${defKey})`);
+      const { logger } = require('../config/logger');
+      logger.warn(`[ValidationLoader] Field definition not found: ${fieldName}`);
       return;
     }
     // Force optional even if definition says required

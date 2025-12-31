@@ -259,23 +259,23 @@ class CentralizedValidators {
     if (value == null) return null; // Optional
 
     final rules = ValidationRules.instance;
-    final fieldRules = rules.getField('roleId');
+    final fieldRules = rules.getField('role_id');
     if (fieldRules == null) return null;
 
     if (value is! int) {
-      return rules.getErrorMessages('roleId')['type'] ??
+      return rules.getErrorMessages('role_id')['type'] ??
           'Role ID must be a number';
     }
 
     final min = fieldRules['min'] as int?;
     if (min != null && value < min) {
-      return rules.getErrorMessages('roleId')['min'] ??
+      return rules.getErrorMessages('role_id')['min'] ??
           'Role ID must be at least $min';
     }
 
     final max = fieldRules['max'] as int?;
     if (max != null && value > max) {
-      return rules.getErrorMessages('roleId')['max'] ??
+      return rules.getErrorMessages('role_id')['max'] ??
           'Role ID cannot exceed $max';
     }
 

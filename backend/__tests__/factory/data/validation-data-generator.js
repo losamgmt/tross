@@ -44,90 +44,104 @@ function numberToLetters(num) {
 }
 
 /**
- * Field name mapping: API snake_case -> validation-rules.json camelCase
- * This mirrors the mapping in validation-loader.js
- */
-const FIELD_NAME_MAP = {
-  // User fields
-  first_name: 'firstName',
-  last_name: 'lastName',
-  role_id: 'roleId',
-  is_active: 'isActive',
-  customer_profile_id: 'customerProfileId',
-  technician_profile_id: 'technicianProfileId',
-  
-  // Customer fields
-  company_name: 'companyName',
-  
-  // Technician fields
-  license_number: 'licenseNumber',
-  hourly_rate: 'hourlyRate',
-  
-  // Work Order fields
-  customer_id: 'customerId',
-  assigned_technician_id: 'assignedTechnicianId',
-  work_order_id: 'workOrderId',
-  
-  // Invoice fields
-  invoice_number: 'invoiceNumber',
-  
-  // Contract fields
-  contract_number: 'contractNumber',
-  start_date: 'startDate',
-  end_date: 'endDate',
-  
-  // Direct mappings (no transformation needed)
-  email: 'email',
-  phone: 'phone',
-  name: 'roleName',
-  priority: 'rolePriority',
-  description: 'roleDescription',
-  title: 'title',
-  amount: 'amount',
-  total: 'total',
-  tax: 'tax',
-  sku: 'sku',
-  quantity: 'quantity',
-  value: 'value',
-  status: 'status', // Will be context-aware
-};
-
-/**
- * Context-aware field mapping based on entity
- */
-function getFieldDefKey(fieldName, entityName) {
-  // Status fields are entity-specific
-  if (fieldName === 'status') {
-    const statusMap = {
-      role: 'roleStatus',
-      user: 'userStatus',
-      customer: 'customerStatus',
-      technician: 'technicianStatus',
-      workOrder: 'workOrderStatus',
-      invoice: 'invoiceStatus',
-      contract: 'contractStatus',
-      inventory: 'inventoryStatus',
-    };
-    return statusMap[entityName] || 'status';
-  }
-  
-  // Role-specific mappings
-  if (entityName === 'role') {
-    if (fieldName === 'name') return 'roleName';
-    if (fieldName === 'priority') return 'rolePriority';
-    if (fieldName === 'description') return 'roleDescription';
-  }
-  
-  return FIELD_NAME_MAP[fieldName] || fieldName;
-}
-
-/**
- * Get field definition from validation rules
+ * Get field definition from entity metadata or validation rules
+ * 
+ * METADATA-DRIVEN PRIORITY:
+ * 1. FIRST: Check entity metadata (authoritative per-entity definitions)
+ * 2. FALLBACK: validation-rules.json (shared field definitions)
+ * 
+ * This handles fields like 'priority' that have different types per entity:
+ * - role.priority = integer
+ * - work_order.priority = enum
+ * 
+ * @param {string} fieldName - Field name (snake_case)
+ * @param {string} entityName - Entity name for metadata lookup
+ * @returns {Object|null} Field definition
  */
 function getFieldDef(fieldName, entityName) {
   const rules = loadValidationRules();
-  const defKey = getFieldDefKey(fieldName, entityName);
-  return rules.fields[defKey];
+  
+  // FIRST: Try entity metadata (most specific, per-entity definitions)
+  if (entityName) {
+    try {
+      const allMetadata = require('../../../config/models');
+      const entityMeta = allMetadata[entityName];
+      if (entityMeta?.fields?.[fieldName]) {
+        const metaField = entityMeta.fields[fieldName];
+        return convertMetadataToFieldDef(metaField, fieldName);
+      }
+    } catch {
+      // Fall through to validation-rules.json
+    }
+  }
+  
+  // FALLBACK: Direct lookup in validation-rules.json
+  return rules.fields[fieldName];
+}
+
+/**
+ * Convert entity metadata field format to validation-rules.json format
+ * 
+ * @param {Object} metaField - Field from entity metadata
+ * @param {string} fieldName - Field name for context
+ * @returns {Object} Field definition in validation-rules.json format
+ */
+function convertMetadataToFieldDef(metaField, fieldName) {
+  const fieldDef = {};
+  
+  // Handle type mapping
+  switch (metaField.type) {
+    case 'enum':
+      fieldDef.type = 'string';
+      fieldDef.enum = metaField.values;
+      break;
+    case 'email':
+      fieldDef.type = 'string';
+      fieldDef.format = 'email';
+      break;
+    case 'decimal':
+    case 'currency':
+      fieldDef.type = 'number';
+      if (metaField.min !== undefined) fieldDef.min = metaField.min;
+      if (metaField.max !== undefined) fieldDef.max = metaField.max;
+      break;
+    case 'integer':
+      fieldDef.type = 'integer';
+      if (metaField.min !== undefined) fieldDef.min = metaField.min;
+      if (metaField.max !== undefined) fieldDef.max = metaField.max;
+      break;
+    case 'foreignKey':
+      fieldDef.type = 'integer';
+      fieldDef.min = 1;
+      break;
+    case 'boolean':
+      fieldDef.type = 'boolean';
+      break;
+    case 'date':
+      fieldDef.type = 'string';
+      fieldDef.format = 'date';
+      break;
+    case 'timestamp':
+      fieldDef.type = 'string';
+      fieldDef.format = 'timestamp';
+      break;
+    case 'uuid':
+      fieldDef.type = 'string';
+      fieldDef.format = 'uuid';
+      break;
+    default:
+      fieldDef.type = metaField.type || 'string';
+      if (metaField.pattern) fieldDef.pattern = metaField.pattern;
+      if (metaField.minLength !== undefined) fieldDef.minLength = metaField.minLength;
+      if (metaField.maxLength !== undefined) fieldDef.maxLength = metaField.maxLength;
+  }
+  
+  // Pass through examples if present
+  if (metaField.examples) {
+    fieldDef.examples = metaField.examples;
+  }
+  
+  return fieldDef;
 }
 
 /**
@@ -249,6 +263,14 @@ function generateFromConstraints(fieldDef, fieldName, uniqueId, uniqueSuffix) {
       // Email format
       if (fieldDef.format === 'email') {
         return `test_${uniqueId}@example.com`;
+      }
+      // Date format (type: string, format: date)
+      if (fieldDef.format === 'date') {
+        return new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      }
+      // Timestamp format (type: string, format: timestamp)
+      if (fieldDef.format === 'timestamp' || fieldDef.format === 'date-time') {
+        return new Date().toISOString();
       }
       // Pattern-based
       if (fieldDef.pattern) {

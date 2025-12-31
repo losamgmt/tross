@@ -33,9 +33,9 @@ describe('utils/validation-sync-checker.js', () => {
     // Default mock for validation rules
     mockLoadValidationRules.mockReturnValue({
       fields: {
-        roleStatus: { enum: ['active', 'inactive'] },
-        userStatus: { enum: ['active', 'inactive', 'suspended'] },
-        workOrderStatus: { enum: ['pending', 'in_progress', 'completed', 'cancelled'] },
+        role_status: { enum: ['active', 'inactive'] },
+        user_status: { enum: ['active', 'inactive', 'suspended'] },
+        work_order_status: { enum: ['pending', 'in_progress', 'completed', 'cancelled'] },
       },
     });
 
@@ -175,7 +175,7 @@ describe('utils/validation-sync-checker.js', () => {
         // Arrange - Joi has 'extra' but DB doesn't
         mockLoadValidationRules.mockReturnValue({
           fields: {
-            roleStatus: { enum: ['active', 'inactive', 'extra'] },
+            role_status: { enum: ['active', 'inactive', 'extra'] },
           },
         });
         mockPool.query.mockResolvedValue({
@@ -196,7 +196,7 @@ describe('utils/validation-sync-checker.js', () => {
         // Arrange - DB has value that Joi doesn't
         mockLoadValidationRules.mockReturnValue({
           fields: {
-            roleStatus: { enum: ['active'] },
+            role_status: { enum: ['active'] },
           },
         });
         mockPool.query.mockResolvedValue({
@@ -233,7 +233,7 @@ describe('utils/validation-sync-checker.js', () => {
         // Arrange - field exists but no enum
         mockLoadValidationRules.mockReturnValue({
           fields: {
-            roleStatus: { type: 'string' }, // No enum
+            role_status: { type: 'string' }, // No enum
           },
         });
         mockPool.query.mockResolvedValue({ rows: [] });
@@ -249,7 +249,7 @@ describe('utils/validation-sync-checker.js', () => {
         // Arrange
         mockLoadValidationRules.mockReturnValue({
           fields: {
-            roleStatus: { enum: ['active', 'inactive'] },
+            role_status: { enum: ['active', 'inactive'] },
           },
         });
         mockPool.query.mockResolvedValue({ rows: [] }); // No constraints
@@ -290,9 +290,9 @@ describe('utils/validation-sync-checker.js', () => {
 
     test('should include core status fields', () => {
       // Assert
-      expect(FIELD_TO_DB_MAPPING).toHaveProperty('roleStatus');
-      expect(FIELD_TO_DB_MAPPING).toHaveProperty('userStatus');
-      expect(FIELD_TO_DB_MAPPING).toHaveProperty('workOrderStatus');
+      expect(FIELD_TO_DB_MAPPING).toHaveProperty('role_status');
+      expect(FIELD_TO_DB_MAPPING).toHaveProperty('user_status');
+      expect(FIELD_TO_DB_MAPPING).toHaveProperty('work_order_status');
     });
   });
 });

@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "version": "2.0.0",
+  "version": "2.2.0",
   "description": "Centralized validation rules for TrossApp - shared across frontend and backend",
-  "lastUpdated": "2025-11-13",
+  "lastUpdated": "2025-12-30",
   "policy": {
     "email": {
       "tldValidation": "permissive",
@@ -39,58 +39,7 @@
         ]
       }
     },
-    "firstName": {
-      "type": "string",
-      "required": true,
-      "minLength": 1,
-      "maxLength": 100,
-      "trim": true,
-      "pattern": "^[a-zA-Z\\s'-]+$",
-      "errorMessages": {
-        "required": "First name is required",
-        "minLength": "First name cannot be empty",
-        "maxLength": "First name cannot exceed 100 characters",
-        "pattern": "First name can only contain letters, spaces, hyphens, and apostrophes"
-      },
-      "examples": {
-        "valid": ["John", "Mary-Anne", "O'Brien", "Laura Jane"],
-        "invalid": ["J0hn", "Mary@", "", "   "]
-      }
-    },
-    "lastName": {
-      "type": "string",
-      "required": true,
-      "minLength": 1,
-      "maxLength": 100,
-      "trim": true,
-      "pattern": "^[a-zA-Z\\s'-]+$",
-      "errorMessages": {
-        "required": "Last name is required",
-        "minLength": "Last name cannot be empty",
-        "maxLength": "Last name cannot exceed 100 characters",
-        "pattern": "Last name can only contain letters, spaces, hyphens, and apostrophes"
-      },
-      "examples": {
-        "valid": ["Smith", "Van Der Berg", "O'Malley", "Grace"],
-        "invalid": ["Sm1th", "Smith!", "", "   "]
-      }
-    },
-    "roleId": {
-      "type": "integer",
-      "required": false,
-      "min": 1,
-      "max": 2147483647,
-      "errorMessages": {
-        "type": "Role ID must be a number",
-        "min": "Role ID must be positive",
-        "max": "Role ID exceeds maximum value"
-      },
-      "examples": {
-        "valid": [1, 5, 100],
-        "invalid": [0, -1, 2147483648, "abc"]
-      }
-    },
-    "customerProfileId": {
+    "customer_profile_id": {
       "type": "integer",
       "required": false,
       "min": 1,
@@ -101,11 +50,19 @@
         "max": "Customer profile ID exceeds maximum value"
       },
       "examples": {
-        "valid": [1, 5, 100],
-        "invalid": [0, -1, "abc"]
+        "valid": [
+          1,
+          5,
+          100
+        ],
+        "invalid": [
+          0,
+          -1,
+          "abc"
+        ]
       }
     },
-    "technicianProfileId": {
+    "technician_profile_id": {
       "type": "integer",
       "required": false,
       "min": 1,
@@ -116,22 +73,19 @@
         "max": "Technician profile ID exceeds maximum value"
       },
       "examples": {
-        "valid": [1, 5, 100],
-        "invalid": [0, -1, "abc"]
+        "valid": [
+          1,
+          5,
+          100
+        ],
+        "invalid": [
+          0,
+          -1,
+          "abc"
+        ]
       }
     },
-    "isActive": {
-      "type": "boolean",
-      "required": false,
-      "errorMessages": {
-        "type": "is_active must be true or false"
-      },
-      "examples": {
-        "valid": [true, false],
-        "invalid": ["yes", "no", 1, 0, "active"]
-      }
-    },
-    "roleName": {
+    "role_name": {
       "type": "string",
       "required": true,
       "minLength": 2,
@@ -145,11 +99,21 @@
         "pattern": "Role name can only contain letters, numbers, spaces, underscores, and hyphens"
       },
       "examples": {
-        "valid": ["admin", "project_manager", "client", "super-admin"],
-        "invalid": ["a", "role!", "", "   "]
+        "valid": [
+          "admin",
+          "project_manager",
+          "client",
+          "super-admin"
+        ],
+        "invalid": [
+          "a",
+          "role!",
+          "",
+          "   "
+        ]
       }
     },
-    "rolePriority": {
+    "role_priority": {
       "type": "integer",
       "required": false,
       "min": 1,
@@ -161,11 +125,20 @@
         "max": "Priority cannot exceed 100"
       },
       "examples": {
-        "valid": [10, 50, 100],
-        "invalid": [0, -1, 101, "high"]
+        "valid": [
+          10,
+          50,
+          100
+        ],
+        "invalid": [
+          0,
+          -1,
+          101,
+          "high"
+        ]
       }
     },
-    "roleDescription": {
+    "role_description": {
       "type": "string",
       "required": false,
       "maxLength": 500,
@@ -180,7 +153,9 @@
           "Client with limited project access",
           null
         ],
-        "invalid": [""]
+        "invalid": [
+          ""
+        ]
       }
     },
     "phone": {
@@ -192,8 +167,16 @@
         "pattern": "Phone number must be in international format (E.164)"
       },
       "examples": {
-        "valid": ["+14155552671", "+442071838750", "14155552671"],
-        "invalid": ["123", "not-a-phone", "+1234567890123456"]
+        "valid": [
+          "+14155552671",
+          "+442071838750",
+          "14155552671"
+        ],
+        "invalid": [
+          "123",
+          "not-a-phone",
+          "+1234567890123456"
+        ]
       }
     },
     "url": {
@@ -210,39 +193,11 @@
           "https://example.com",
           "http://my-site.co.uk/path?query=value"
         ],
-        "invalid": ["not-a-url", "ftp://example.com", "example.com"]
-      }
-    },
-    "companyName": {
-      "type": "string",
-      "required": false,
-      "maxLength": 255,
-      "trim": true,
-      "errorMessages": {
-        "maxLength": "Company name cannot exceed 255 characters"
-      }
-    },
-    "licenseNumber": {
-      "type": "string",
-      "required": true,
-      "minLength": 3,
-      "maxLength": 100,
-      "trim": true,
-      "errorMessages": {
-        "required": "License number is required",
-        "minLength": "License number must be at least 3 characters",
-        "maxLength": "License number cannot exceed 100 characters"
-      }
-    },
-    "hourlyRate": {
-      "type": "number",
-      "required": false,
-      "min": 0,
-      "max": 9999.99,
-      "errorMessages": {
-        "type": "Hourly rate must be a number",
-        "min": "Hourly rate cannot be negative",
-        "max": "Hourly rate cannot exceed 9999.99"
+        "invalid": [
+          "not-a-url",
+          "ftp://example.com",
+          "example.com"
+        ]
       }
     },
     "sku": {
@@ -277,34 +232,6 @@
         "min": "Amount cannot be negative"
       }
     },
-    "invoiceNumber": {
-      "type": "string",
-      "required": true,
-      "minLength": 1,
-      "maxLength": 100,
-      "trim": true,
-      "pattern": "^INV-[0-9]{4}-[0-9]+$",
-      "errorMessages": {
-        "required": "Invoice number is required",
-        "minLength": "Invoice number cannot be empty",
-        "maxLength": "Invoice number cannot exceed 100 characters",
-        "pattern": "Invoice number must be in format INV-YYYY-NNNN"
-      }
-    },
-    "contractNumber": {
-      "type": "string",
-      "required": true,
-      "minLength": 1,
-      "maxLength": 100,
-      "trim": true,
-      "pattern": "^CTR-[0-9]{4}-[0-9]+$",
-      "errorMessages": {
-        "required": "Contract number is required",
-        "minLength": "Contract number cannot be empty",
-        "maxLength": "Contract number cannot exceed 100 characters",
-        "pattern": "Contract number must be in format CTR-YYYY-NNNN"
-      }
-    },
     "name": {
       "type": "string",
       "required": true,
@@ -335,32 +262,13 @@
         "maxLength": "Description cannot exceed 5000 characters"
       }
     },
-    "customerId": {
-      "type": "integer",
-      "required": true,
-      "min": 1,
-      "errorMessages": {
-        "required": "Customer ID is required",
-        "type": "Customer ID must be an integer",
-        "min": "Customer ID must be positive"
-      }
-    },
-    "technicianId": {
+    "technician_id": {
       "type": "integer",
       "required": false,
       "min": 1,
       "errorMessages": {
         "type": "Technician ID must be an integer",
         "min": "Technician ID must be positive"
-      }
-    },
-    "workOrderId": {
-      "type": "integer",
-      "required": false,
-      "min": 1,
-      "errorMessages": {
-        "type": "Work order ID must be an integer",
-        "min": "Work order ID must be positive"
       }
     },
     "status": {
@@ -372,66 +280,104 @@
         "maxLength": "Status cannot exceed 50 characters"
       }
     },
-    "roleStatus": {
+    "role_status": {
       "type": "string",
       "required": false,
-      "enum": ["active", "disabled"],
+      "enum": [
+        "active",
+        "disabled"
+      ],
       "errorMessages": {
         "enum": "Role status must be one of: active, disabled"
       }
     },
-    "userStatus": {
+    "user_status": {
       "type": "string",
       "required": false,
-      "enum": ["pending_activation", "active", "suspended"],
+      "enum": [
+        "pending_activation",
+        "active",
+        "suspended"
+      ],
       "errorMessages": {
         "enum": "User status must be one of: pending_activation, active, suspended"
       }
     },
-    "customerStatus": {
+    "customer_status": {
       "type": "string",
       "required": false,
-      "enum": ["pending", "active", "suspended"],
+      "enum": [
+        "pending",
+        "active",
+        "suspended"
+      ],
       "errorMessages": {
         "enum": "Customer status must be one of: pending, active, suspended"
       }
     },
-    "technicianStatus": {
+    "technician_status": {
       "type": "string",
       "required": false,
-      "enum": ["available", "on_job", "off_duty", "suspended"],
+      "enum": [
+        "available",
+        "on_job",
+        "off_duty",
+        "suspended"
+      ],
       "errorMessages": {
         "enum": "Technician status must be one of: available, on_job, off_duty, suspended"
       }
     },
-    "workOrderStatus": {
+    "work_order_status": {
       "type": "string",
       "required": false,
-      "enum": ["pending", "assigned", "in_progress", "completed", "cancelled"],
+      "enum": [
+        "pending",
+        "assigned",
+        "in_progress",
+        "completed",
+        "cancelled"
+      ],
       "errorMessages": {
         "enum": "Work order status must be one of: pending, assigned, in_progress, completed, cancelled"
       }
     },
-    "invoiceStatus": {
+    "invoice_status": {
       "type": "string",
       "required": false,
-      "enum": ["draft", "sent", "paid", "overdue", "cancelled"],
+      "enum": [
+        "draft",
+        "sent",
+        "paid",
+        "overdue",
+        "cancelled"
+      ],
       "errorMessages": {
         "enum": "Invoice status must be one of: draft, sent, paid, overdue, cancelled"
       }
     },
-    "contractStatus": {
+    "contract_status": {
       "type": "string",
       "required": false,
-      "enum": ["draft", "active", "expired", "cancelled"],
+      "enum": [
+        "draft",
+        "active",
+        "expired",
+        "cancelled"
+      ],
       "errorMessages": {
         "enum": "Contract status must be one of: draft, active, expired, cancelled"
       }
     },
-    "inventoryStatus": {
+    "inventory_status": {
       "type": "string",
       "required": false,
-      "enum": ["in_stock", "low_stock", "out_of_stock", "discontinued"],
+      "enum": [
+        "in_stock",
+        "low_stock",
+        "out_of_stock",
+        "discontinued"
+      ],
       "errorMessages": {
         "enum": "Inventory status must be one of: in_stock, low_stock, out_of_stock, discontinued"
       }
@@ -439,7 +385,12 @@
     "priority": {
       "type": "string",
       "required": false,
-      "enum": ["low", "normal", "high", "urgent"],
+      "enum": [
+        "low",
+        "normal",
+        "high",
+        "urgent"
+      ],
       "errorMessages": {
         "enum": "Priority must be one of: low, normal, high, urgent"
       }
@@ -451,32 +402,6 @@
       "trim": true,
       "errorMessages": {
         "maxLength": "Company name cannot exceed 255 characters"
-      }
-    },
-    "startDate": {
-      "type": "date",
-      "format": "date",
-      "required": false,
-      "errorMessages": {
-        "required": "Start date is required",
-        "format": "Start date must be a valid date in ISO format (YYYY-MM-DD)"
-      }
-    },
-    "endDate": {
-      "type": "date",
-      "format": "date",
-      "required": false,
-      "errorMessages": {
-        "required": "End date is required",
-        "format": "End date must be a valid date in ISO format (YYYY-MM-DD)"
-      }
-    },
-    "dueDate": {
-      "type": "date",
-      "format": "date",
-      "required": false,
-      "errorMessages": {
-        "format": "Due date must be a valid date in ISO format (YYYY-MM-DD)"
       }
     },
     "due_date": {
@@ -625,15 +550,6 @@
         "pattern": "Work order number must be in format WO-YYYY-NNNN"
       }
     },
-    "summary": {
-      "type": "string",
-      "required": false,
-      "maxLength": 255,
-      "trim": true,
-      "errorMessages": {
-        "maxLength": "Summary cannot exceed 255 characters"
-      }
-    },
     "organization_name": {
       "type": "string",
       "required": false,
@@ -690,83 +606,222 @@
   },
   "compositeValidations": {
     "createUser": {
-      "requiredFields": ["email", "first_name", "last_name"],
-      "optionalFields": ["role_id", "customer_profile_id", "technician_profile_id"],
+      "entityName": "user",
+      "requiredFields": [
+        "email",
+        "first_name",
+        "last_name"
+      ],
+      "optionalFields": [
+        "role_id",
+        "customer_profile_id",
+        "technician_profile_id"
+      ],
       "description": "Validation rules for creating a new user"
     },
     "updateUser": {
+      "entityName": "user",
       "requiredFields": [],
-      "optionalFields": ["email", "first_name", "last_name", "role_id", "is_active", "customer_profile_id", "technician_profile_id"],
+      "optionalFields": [
+        "email",
+        "first_name",
+        "last_name",
+        "role_id",
+        "is_active",
+        "customer_profile_id",
+        "technician_profile_id"
+      ],
       "description": "Validation rules for updating an existing user (all fields optional)"
     },
     "createRole": {
-      "requiredFields": ["name"],
-      "optionalFields": ["priority", "description", "status"],
+      "entityName": "role",
+      "requiredFields": [
+        "name"
+      ],
+      "optionalFields": [
+        "priority",
+        "description",
+        "status"
+      ],
       "description": "Validation rules for creating a new role"
     },
     "updateRole": {
+      "entityName": "role",
       "requiredFields": [],
-      "optionalFields": ["name", "priority", "description", "status", "is_active"],
+      "optionalFields": [
+        "name",
+        "priority",
+        "description",
+        "status",
+        "is_active"
+      ],
       "description": "Validation rules for updating an existing role"
     },
     "createCustomer": {
-      "requiredFields": ["first_name", "last_name", "email"],
-      "optionalFields": ["phone", "organization_name"],
+      "entityName": "customer",
+      "requiredFields": [
+        "first_name",
+        "last_name",
+        "email"
+      ],
+      "optionalFields": [
+        "phone",
+        "organization_name"
+      ],
       "description": "Validation rules for creating a customer profile"
     },
     "updateCustomer": {
+      "entityName": "customer",
       "requiredFields": [],
-      "optionalFields": ["first_name", "last_name", "email", "phone", "organization_name", "is_active", "status"],
+      "optionalFields": [
+        "first_name",
+        "last_name",
+        "email",
+        "phone",
+        "organization_name",
+        "is_active",
+        "status"
+      ],
       "description": "Validation rules for updating a customer profile"
     },
     "createTechnician": {
-      "requiredFields": ["first_name", "last_name", "email"],
-      "optionalFields": ["license_number", "hourly_rate", "status"],
+      "entityName": "technician",
+      "requiredFields": [
+        "first_name",
+        "last_name",
+        "email"
+      ],
+      "optionalFields": [
+        "license_number",
+        "hourly_rate",
+        "status"
+      ],
       "description": "Validation rules for creating a technician profile"
     },
     "updateTechnician": {
+      "entityName": "technician",
       "requiredFields": [],
-      "optionalFields": ["first_name", "last_name", "email", "license_number", "hourly_rate", "is_active", "status"],
+      "optionalFields": [
+        "first_name",
+        "last_name",
+        "email",
+        "license_number",
+        "hourly_rate",
+        "is_active",
+        "status"
+      ],
       "description": "Validation rules for updating a technician profile"
     },
     "createWorkOrder": {
-      "requiredFields": ["customer_id"],
-      "optionalFields": ["name", "summary", "assigned_technician_id", "priority", "status"],
+      "entityName": "work_order",
+      "requiredFields": [
+        "customer_id"
+      ],
+      "optionalFields": [
+        "name",
+        "summary",
+        "assigned_technician_id",
+        "priority",
+        "status"
+      ],
       "description": "Validation rules for creating a work order"
     },
     "updateWorkOrder": {
+      "entityName": "work_order",
       "requiredFields": [],
-      "optionalFields": ["name", "summary", "assigned_technician_id", "priority", "status", "is_active"],
+      "optionalFields": [
+        "name",
+        "summary",
+        "assigned_technician_id",
+        "priority",
+        "status",
+        "is_active"
+      ],
       "description": "Validation rules for updating a work order"
     },
     "createInvoice": {
-      "requiredFields": ["customer_id", "amount", "total"],
-      "optionalFields": ["work_order_id", "name", "summary", "tax", "status"],
+      "entityName": "invoice",
+      "requiredFields": [
+        "customer_id",
+        "amount",
+        "total"
+      ],
+      "optionalFields": [
+        "work_order_id",
+        "name",
+        "summary",
+        "tax",
+        "status"
+      ],
       "description": "Validation rules for creating an invoice"
     },
     "updateInvoice": {
+      "entityName": "invoice",
       "requiredFields": [],
-      "optionalFields": ["name", "summary", "amount", "tax", "total", "status", "is_active"],
+      "optionalFields": [
+        "name",
+        "summary",
+        "amount",
+        "tax",
+        "total",
+        "status",
+        "is_active"
+      ],
       "description": "Validation rules for updating an invoice"
     },
     "createContract": {
-      "requiredFields": ["customer_id", "start_date"],
-      "optionalFields": ["name", "summary", "end_date", "value", "status"],
+      "entityName": "contract",
+      "requiredFields": [
+        "customer_id",
+        "start_date"
+      ],
+      "optionalFields": [
+        "name",
+        "summary",
+        "end_date",
+        "value",
+        "status"
+      ],
       "description": "Validation rules for creating a contract"
     },
     "updateContract": {
+      "entityName": "contract",
       "requiredFields": [],
-      "optionalFields": ["name", "summary", "start_date", "end_date", "value", "status", "is_active"],
+      "optionalFields": [
+        "name",
+        "summary",
+        "start_date",
+        "end_date",
+        "value",
+        "status",
+        "is_active"
+      ],
       "description": "Validation rules for updating a contract"
     },
     "createInventory": {
-      "requiredFields": ["name", "sku"],
-      "optionalFields": ["description", "quantity", "status"],
+      "entityName": "inventory",
+      "requiredFields": [
+        "name",
+        "sku"
+      ],
+      "optionalFields": [
+        "description",
+        "quantity",
+        "status"
+      ],
       "description": "Validation rules for creating an inventory item"
     },
     "updateInventory": {
+      "entityName": "inventory",
       "requiredFields": [],
-      "optionalFields": ["name", "sku", "description", "quantity", "status", "is_active"],
+      "optionalFields": [
+        "name",
+        "sku",
+        "description",
+        "quantity",
+        "status",
+        "is_active"
+      ],
       "description": "Validation rules for updating an inventory item"
     }
   },
@@ -774,6 +829,25 @@
     "maintainer": "TrossApp Team",
     "documentation": "docs/VALIDATION_ARCHITECTURE.md",
     "changelog": [
+      {
+        "version": "2.2.0",
+        "date": "2025-12-30",
+        "changes": [
+          "Added entityName to all compositeValidations",
+          "Enables metadata-driven validation without string parsing",
+          "Status field validation now uses entity metadata enum values"
+        ]
+      },
+      {
+        "version": "2.1.1",
+        "date": "2025-12-30",
+        "changes": [
+          "BREAKING: Converted all field keys to snake_case",
+          "Removed duplicate camelCase field definitions",
+          "Eliminated need for field name mapping in validation-loader.js",
+          "Single naming convention across entire stack"
+        ]
+      },
       {
         "version": "2.1.0",
         "date": "2025-01-14",

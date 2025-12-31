@@ -7,6 +7,7 @@
  */
 
 const { ENVIRONMENTS, DATABASE, REDIS } = require('./constants');
+const { logger } = require('./logger');
 
 /**
  * Get current environment from NODE_ENV
@@ -253,8 +254,8 @@ if (!isTest()) {
   try {
     AppConfig.validate();
   } catch (error) {
-    // Console is appropriate for bootstrap/startup errors
-    console.error('Configuration Error:', error.message);
+    // Logger handles all output consistently
+    logger.error('Configuration Error:', { error: error.message });
     if (isProduction()) {
       // In production, fail fast if configuration is invalid
       process.exit(1);

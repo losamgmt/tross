@@ -331,6 +331,7 @@ module.exports = {
 
     // Entity-specific fields
     description: { type: 'text' },
-    priority: { type: 'integer', required: true, min: 1 },
+    // Priority starts at 10 in examples to avoid seed data (priorities 1-5)
+    priority: { type: 'integer', required: true, min: 1, examples: { valid: [10, 20, 30] } },
   },
 };
