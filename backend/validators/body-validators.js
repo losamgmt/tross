@@ -12,13 +12,14 @@
 const Joi = require('joi');
 const { buildCompositeSchema, getValidationMetadata } = require('../utils/validation-loader');
 const ResponseFormatter = require('../utils/response-formatter');
+const { logger } = require('../config/logger');
 
-// Log validation metadata on startup (console is appropriate for module initialization)
+// Log validation metadata on startup
 try {
   const metadata = getValidationMetadata();
-  console.log(`[ValidationLoader] Loaded validation rules v${metadata.version}`);
+  logger.info(`[ValidationLoader] Loaded validation rules v${metadata.version}`);
 } catch (error) {
-  console.error('[ValidationLoader] Failed to load validation metadata:', error.message);
+  logger.error('[ValidationLoader] Failed to load validation metadata:', { error: error.message });
 }
 
 /**

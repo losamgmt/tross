@@ -62,14 +62,14 @@ async function getDbCheckConstraints(pool) {
  * Map validation-rules.json field names to database table.column names
  */
 const FIELD_TO_DB_MAPPING = {
-  roleStatus: 'roles.status',
-  userStatus: 'users.status',
-  customerStatus: 'customers.status',
-  technicianStatus: 'technicians.status',
-  workOrderStatus: 'work_orders.status',
-  invoiceStatus: 'invoices.status',
-  contractStatus: 'contracts.status',
-  inventoryStatus: 'inventory.status',
+  role_status: 'roles.status',
+  user_status: 'users.status',
+  customer_status: 'customers.status',
+  technician_status: 'technicians.status',
+  work_order_status: 'work_orders.status',
+  invoice_status: 'invoices.status',
+  contract_status: 'contracts.status',
+  inventory_status: 'inventory.status',
   priority: 'work_orders.priority', // Note: priority only exists on work_orders
 };
 

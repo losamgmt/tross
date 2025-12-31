@@ -13,6 +13,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { logger } = require('./logger');
 
 // Path to shared permission config
 const PERMISSIONS_CONFIG_PATH = path.join(__dirname, '../../config/permissions.json');
@@ -49,14 +50,14 @@ function loadPermissions(forceReload = false) {
     permissionCache = config;
     lastModified = fileModified;
 
-    // Console is appropriate for module initialization logging
+    // Log initialization info (logger respects test silence)
     if (process.env.NODE_ENV !== 'test') {
-      console.log('[Permissions] Loaded config:', Object.keys(config.roles).length, 'roles,', Object.keys(config.resources).length, 'resources');
+      logger.info('[Permissions] Loaded config:', { roles: Object.keys(config.roles).length, resources: Object.keys(config.resources).length });
     }
 
     return config;
   } catch (error) {
-    console.error('[Permissions] Failed to load:', error.message);
+    logger.error('[Permissions] Failed to load:', { error: error.message });
     throw new Error(`Permission config error: ${error.message}`);
   }
 }
@@ -266,7 +267,7 @@ function getRowLevelSecurity(roleName, resource) {
  * @returns {Object} New permission configuration
  */
 function reloadPermissions() {
-  console.log('[Permissions] Hot-reloading...');
+  logger.info('[Permissions] Hot-reloading...');
   return loadPermissions(true);
 }
 

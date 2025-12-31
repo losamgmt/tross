@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "version": "2.2.0",
+  "version": "2.1.1",
   "description": "Centralized validation rules for TrossApp - shared across frontend and backend",
   "lastUpdated": "2025-12-30",
   "policy": {
@@ -606,7 +606,6 @@
   },
   "compositeValidations": {
     "createUser": {
-      "entityName": "user",
       "requiredFields": [
         "email",
         "first_name",
@@ -620,7 +619,6 @@
       "description": "Validation rules for creating a new user"
     },
     "updateUser": {
-      "entityName": "user",
       "requiredFields": [],
       "optionalFields": [
         "email",
@@ -634,7 +632,6 @@
       "description": "Validation rules for updating an existing user (all fields optional)"
     },
     "createRole": {
-      "entityName": "role",
       "requiredFields": [
         "name"
       ],
@@ -646,7 +643,6 @@
       "description": "Validation rules for creating a new role"
     },
     "updateRole": {
-      "entityName": "role",
       "requiredFields": [],
       "optionalFields": [
         "name",
@@ -658,7 +654,6 @@
       "description": "Validation rules for updating an existing role"
     },
     "createCustomer": {
-      "entityName": "customer",
       "requiredFields": [
         "first_name",
         "last_name",
@@ -671,7 +666,6 @@
       "description": "Validation rules for creating a customer profile"
     },
     "updateCustomer": {
-      "entityName": "customer",
       "requiredFields": [],
       "optionalFields": [
         "first_name",
@@ -685,7 +679,6 @@
       "description": "Validation rules for updating a customer profile"
     },
     "createTechnician": {
-      "entityName": "technician",
       "requiredFields": [
         "first_name",
         "last_name",
@@ -699,7 +692,6 @@
       "description": "Validation rules for creating a technician profile"
     },
     "updateTechnician": {
-      "entityName": "technician",
       "requiredFields": [],
       "optionalFields": [
         "first_name",
@@ -713,7 +705,6 @@
       "description": "Validation rules for updating a technician profile"
     },
     "createWorkOrder": {
-      "entityName": "work_order",
       "requiredFields": [
         "customer_id"
       ],
@@ -727,7 +718,6 @@
       "description": "Validation rules for creating a work order"
     },
     "updateWorkOrder": {
-      "entityName": "work_order",
       "requiredFields": [],
       "optionalFields": [
         "name",
@@ -740,7 +730,6 @@
       "description": "Validation rules for updating a work order"
     },
     "createInvoice": {
-      "entityName": "invoice",
       "requiredFields": [
         "customer_id",
         "amount",
@@ -756,7 +745,6 @@
       "description": "Validation rules for creating an invoice"
     },
     "updateInvoice": {
-      "entityName": "invoice",
       "requiredFields": [],
       "optionalFields": [
         "name",
@@ -770,7 +758,6 @@
       "description": "Validation rules for updating an invoice"
     },
     "createContract": {
-      "entityName": "contract",
       "requiredFields": [
         "customer_id",
         "start_date"
@@ -785,7 +772,6 @@
       "description": "Validation rules for creating a contract"
     },
     "updateContract": {
-      "entityName": "contract",
       "requiredFields": [],
       "optionalFields": [
         "name",
@@ -799,7 +785,6 @@
       "description": "Validation rules for updating a contract"
     },
     "createInventory": {
-      "entityName": "inventory",
       "requiredFields": [
         "name",
         "sku"
@@ -812,7 +797,6 @@
       "description": "Validation rules for creating an inventory item"
     },
     "updateInventory": {
-      "entityName": "inventory",
       "requiredFields": [],
       "optionalFields": [
         "name",
@@ -829,15 +813,6 @@
     "maintainer": "TrossApp Team",
     "documentation": "docs/VALIDATION_ARCHITECTURE.md",
     "changelog": [
-      {
-        "version": "2.2.0",
-        "date": "2025-12-30",
-        "changes": [
-          "Added entityName to all compositeValidations",
-          "Enables metadata-driven validation without string parsing",
-          "Status field validation now uses entity metadata enum values"
-        ]
-      },
       {
         "version": "2.1.1",
         "date": "2025-12-30",

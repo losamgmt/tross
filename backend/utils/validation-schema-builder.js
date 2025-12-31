@@ -94,14 +94,14 @@ const FIELD_TO_RULE_MAP = {
  */
 function getStatusRuleKey(entityName) {
   const statusMap = {
-    user: 'userStatus',
-    role: 'roleStatus',
-    customer: 'customerStatus',
-    technician: 'technicianStatus',
-    workOrder: 'workOrderStatus',
-    invoice: 'invoiceStatus',
-    contract: 'contractStatus',
-    inventory: 'inventoryStatus',
+    user: 'user_status',
+    role: 'role_status',
+    customer: 'customer_status',
+    technician: 'technician_status',
+    work_order: 'work_order_status',
+    invoice: 'invoice_status',
+    contract: 'contract_status',
+    inventory: 'inventory_status',
   };
   return statusMap[entityName] || 'status';
 }
