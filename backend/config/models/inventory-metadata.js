@@ -84,6 +84,12 @@ module.exports = {
    */
   immutableFields: ['sku'],
 
+  /**
+   * Default columns to display in table views (ordered)
+   * Used by admin panel and frontend table widgets
+   */
+  displayColumns: ['sku', 'name', 'category', 'quantity', 'unit_price', 'status'],
+
   // ============================================================================
   // FIELD-LEVEL ACCESS CONTROL (for response-transform.js)
   // ============================================================================

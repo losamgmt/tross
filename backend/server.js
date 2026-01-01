@@ -146,6 +146,7 @@ const statsRoutes = require('./routes/stats');
 const exportRoutes = require('./routes/export');
 const auditRoutes = require('./routes/audit');
 const filesRoutes = require('./routes/files');
+const adminRoutes = require('./routes/admin');
 
 // Generic entity routes (replaces individual entity route files)
 const {
@@ -158,7 +159,6 @@ const {
   invoicesRouter,
   contractsRouter,
   savedViewsRouter,
-  entitySettingsRouter,
 } = require('./routes/entities');
 
 app.use('/api/auth', authLimiter, authRoutes);
@@ -172,12 +172,12 @@ app.use('/api/invoices', apiLimiter, invoicesRouter);
 app.use('/api/contracts', apiLimiter, contractsRouter);
 app.use('/api/inventory', apiLimiter, inventoryRouter);
 app.use('/api/saved_views', apiLimiter, savedViewsRouter); // User saved table views
-app.use('/api/entity_settings', apiLimiter, entitySettingsRouter); // Admin entity settings
 app.use('/api/preferences', apiLimiter, preferencesRoutes); // User preferences
 app.use('/api/stats', apiLimiter, statsRoutes); // Stats/aggregation endpoints
 app.use('/api/export', apiLimiter, exportRoutes); // CSV export endpoints
 app.use('/api/audit', apiLimiter, auditRoutes); // Audit log endpoints
 app.use('/api/files', apiLimiter, filesRoutes); // File attachment endpoints
+app.use('/api/admin', apiLimiter, adminRoutes); // Admin system management endpoints
 app.use('/api/dev', devAuthRoutes); // Development auth endpoints (no rate limit - dev only)
 app.use('/api/health', apiLimiter, healthRoutes); // Health monitoring endpoints
 app.use('/api/auth0', authLimiter, auth0Routes); // Auth0 OAuth endpoints - rate limited for brute force protection

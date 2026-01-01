@@ -64,7 +64,6 @@ enum ResourceType {
   technicians,
   preferences,
   savedViews('saved_views'),
-  entitySettings('entity_settings'),
   // Synthetic resources (nav visibility, not entity CRUD)
   dashboard,
   adminPanel('admin_panel');

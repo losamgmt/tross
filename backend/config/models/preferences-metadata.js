@@ -12,6 +12,17 @@
  * - Preferences stored as JSONB for flexibility
  * - Preference keys/types validated at application layer
  * - RLS ensures users only access their own preferences (WHERE id = userId)
+ *
+ * PREFERENCE KEYS (schema-on-read, validated at application layer):
+ * - theme: 'system' | 'light' | 'dark' (UI theme preference)
+ * - notificationsEnabled: boolean (notification preferences)
+ * - pageSize: integer (default table page size: 10, 25, 50, 100)
+ * - tableDensity: 'compact' | 'standard' | 'comfortable' (table row spacing)
+ *
+ * UI Settings vs Entity Metadata:
+ * - pageSize/tableDensity are USER preferences (accessibility, personal comfort)
+ * - displayColumns are ENTITY metadata (defined in entity files, not user-specific)
+ * - This separation follows the architecture audit recommendations
  */
 
 const {
@@ -92,6 +103,12 @@ module.exports = {
    * id is immutable (it's the PK and FK to users)
    */
   immutableFields: ['id'],
+
+  /**
+   * Default columns to display in table views (ordered)
+   * Used by admin panel for viewing user preferences
+   */
+  displayColumns: ['id', 'theme', 'notifications_enabled', 'updated_at'],
 
   // ============================================================================
   // FIELD ACCESS CONTROL

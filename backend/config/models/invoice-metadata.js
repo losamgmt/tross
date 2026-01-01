@@ -94,6 +94,12 @@ module.exports = {
    */
   immutableFields: ['invoice_number'],
 
+  /**
+   * Default columns to display in table views (ordered)
+   * Used by admin panel and frontend table widgets
+   */
+  displayColumns: ['invoice_number', 'customer_id', 'status', 'total', 'due_date', 'created_at'],
+
   // ============================================================================
   // FIELD-LEVEL ACCESS CONTROL (for response-transform.js)
   // ============================================================================

@@ -106,6 +106,12 @@ module.exports = {
    */
   immutableFields: ['email', 'auth0_id'],
 
+  /**
+   * Default columns to display in table views (ordered)
+   * Used by admin panel and frontend table widgets
+   */
+  displayColumns: ['first_name', 'last_name', 'email', 'role', 'status', 'created_at'],
+
   // ============================================================================
   // FIELD ACCESS CONTROL (role-based field-level CRUD permissions)
   // ============================================================================
