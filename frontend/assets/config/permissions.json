@@ -398,39 +398,6 @@
       }
     },
 
-    "entity_settings": {
-      "description": "Admin-level default settings for each entity (applies to all users)",
-      "rowLevelSecurity": {
-        "customer": "all_records",
-        "technician": "all_records",
-        "dispatcher": "all_records",
-        "manager": "all_records",
-        "admin": "all_records"
-      },
-      "permissions": {
-        "create": {
-          "minimumRole": "admin",
-          "minimumPriority": 5,
-          "description": "Only admins can create entity settings"
-        },
-        "read": {
-          "minimumRole": "customer",
-          "minimumPriority": 1,
-          "description": "All users can read entity settings (needed for defaults)"
-        },
-        "update": {
-          "minimumRole": "admin",
-          "minimumPriority": 5,
-          "description": "Only admins can update entity settings"
-        },
-        "delete": {
-          "minimumRole": "admin",
-          "minimumPriority": 5,
-          "description": "Only admins can delete entity settings"
-        }
-      }
-    },
-
     "dashboard": {
       "description": "Main dashboard view - role-driven overview of relevant data (synthetic resource for nav)",
       "rowLevelSecurity": {

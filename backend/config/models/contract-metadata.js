@@ -94,6 +94,12 @@ module.exports = {
    */
   immutableFields: ['contract_number'],
 
+  /**
+   * Default columns to display in table views (ordered)
+   * Used by admin panel and frontend table widgets
+   */
+  displayColumns: ['contract_number', 'customer_id', 'status', 'start_date', 'end_date', 'value'],
+
   // ============================================================================
   // FIELD-LEVEL ACCESS CONTROL (for response-transform.js)
   // ============================================================================

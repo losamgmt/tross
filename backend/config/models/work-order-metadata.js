@@ -95,6 +95,12 @@ module.exports = {
    */
   immutableFields: ['work_order_number'],
 
+  /**
+   * Default columns to display in table views (ordered)
+   * Used by admin panel and frontend table widgets
+   */
+  displayColumns: ['work_order_number', 'name', 'customer_id', 'status', 'priority', 'assigned_technician_id', 'scheduled_start'],
+
   // ============================================================================
   // FIELD-LEVEL ACCESS CONTROL (for response-transform.js)
   // ============================================================================

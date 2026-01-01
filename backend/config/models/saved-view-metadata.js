@@ -95,6 +95,12 @@ module.exports = {
    */
   immutableFields: ['id', 'user_id'],
 
+  /**
+   * Default columns to display in table views (ordered)
+   * Used by admin panel for viewing saved views
+   */
+  displayColumns: ['view_name', 'entity_name', 'is_default', 'user_id', 'updated_at'],
+
   // ============================================================================
   // FIELD ACCESS CONTROL
   // ============================================================================

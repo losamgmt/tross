@@ -19,7 +19,7 @@
 -- Remove this section when you have production data to preserve
 -- ============================================================================
 DROP TABLE IF EXISTS file_attachments CASCADE;
-DROP TABLE IF EXISTS entity_settings CASCADE;
+DROP TABLE IF EXISTS system_settings CASCADE;
 DROP TABLE IF EXISTS user_saved_view CASCADE;
 DROP TABLE IF EXISTS user_preferences CASCADE;
 DROP TABLE IF EXISTS audit_logs CASCADE;
@@ -191,9 +191,11 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
 --   - CASCADE delete when user is deleted
 --   - Trigger-managed updated_at for consistency
 --
--- Initial preference keys:
---   - theme: 'system' | 'light' | 'dark'
---   - notificationsEnabled: boolean
+-- Preference keys (documented but schema-on-read):
+--   - theme: 'system' | 'light' | 'dark' (UI theme preference)
+--   - notificationsEnabled: boolean (notification preferences)
+--   - pageSize: integer (default table page size, e.g., 10, 25, 50, 100)
+--   - tableDensity: 'compact' | 'standard' | 'comfortable' (table row spacing)
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS user_preferences (
     -- Primary key = users.id (shared PK pattern for 1:1)
@@ -245,37 +247,6 @@ CREATE TABLE IF NOT EXISTS user_saved_view (
     
     -- Each user can only have one view with a given name per entity
     CONSTRAINT unique_user_entity_view_name UNIQUE (user_id, entity_name, view_name)
-);
-
--- ============================================================================
--- ENTITY SETTINGS TABLE
--- ============================================================================
--- Admin-level default settings for each entity (applies to all users)
--- Only one settings record per entity_name (singleton per entity)
--- Category: N/A (system table, not a business entity)
--- ============================================================================
-CREATE TABLE IF NOT EXISTS entity_settings (
-    id SERIAL PRIMARY KEY,
-    
-    -- Which entity this settings applies to (e.g., 'work_order', 'customer')
-    entity_name VARCHAR(50) UNIQUE NOT NULL,
-    
-    -- Display settings as JSONB
-    -- Structure: {
-    --   defaultSort: { field: string, direction: 'asc'|'desc' },
-    --   defaultColumns: string[] (columns shown by default),
-    --   columnLabels: { [field]: string } (custom labels),
-    --   defaultDensity: 'compact'|'standard'|'comfortable',
-    --   defaultPageSize: number
-    -- }
-    settings JSONB NOT NULL DEFAULT '{}',
-    
-    -- Who last modified these settings
-    updated_by INTEGER REFERENCES users(id),
-    
-    -- Timestamps
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 -- ============================================================================
@@ -397,12 +368,6 @@ CREATE TRIGGER update_user_preferences_updated_at
 DROP TRIGGER IF EXISTS update_user_saved_view_updated_at ON user_saved_view;
 CREATE TRIGGER update_user_saved_view_updated_at
     BEFORE UPDATE ON user_saved_view
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-
-DROP TRIGGER IF EXISTS update_entity_settings_updated_at ON entity_settings;
-CREATE TRIGGER update_entity_settings_updated_at
-    BEFORE UPDATE ON entity_settings
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
@@ -786,6 +751,56 @@ CREATE TRIGGER update_inventory_updated_at
     BEFORE UPDATE ON inventory
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================================================
+-- SYSTEM SETTINGS TABLE
+-- ============================================================================
+-- Key-value store for system-wide configuration
+-- Used for: maintenance mode, feature flags, system preferences
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS system_settings (
+    -- Primary key is the setting key itself (unique, human-readable)
+    key VARCHAR(100) PRIMARY KEY,
+    
+    -- JSONB value allows any structure
+    value JSONB NOT NULL DEFAULT '{}',
+    
+    -- Human-readable description
+    description TEXT,
+    
+    -- Audit trail
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- Trigger to auto-update updated_at
+CREATE OR REPLACE FUNCTION update_system_settings_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_system_settings_updated_at ON system_settings;
+CREATE TRIGGER trigger_system_settings_updated_at
+    BEFORE UPDATE ON system_settings
+    FOR EACH ROW
+    EXECUTE FUNCTION update_system_settings_timestamp();
+
+-- Seed default settings
+INSERT INTO system_settings (key, value, description) VALUES 
+(
+    'maintenance_mode',
+    '{"enabled": false, "message": "System is under maintenance. Please try again later.", "allowed_roles": ["admin"], "estimated_end": null}',
+    'Controls system-wide maintenance mode. When enabled, only allowed_roles can access the system.'
+),
+(
+    'feature_flags',
+    '{"dark_mode": true, "file_attachments": true, "audit_logging": true}',
+    'Feature flags for enabling/disabling system features.'
+)
+ON CONFLICT (key) DO NOTHING;
 
 -- ============================================================================
 -- TABLE COMMENTS (Documentation)

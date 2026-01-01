@@ -119,6 +119,12 @@ module.exports = {
     'uploaded_by',
   ],
 
+  /**
+   * Default columns to display in table views (ordered)
+   * Used by admin panel for viewing file attachments
+   */
+  displayColumns: ['original_filename', 'mime_type', 'file_size', 'entity_type', 'uploaded_by', 'created_at'],
+
   // ============================================================================
   // FIELD-LEVEL ACCESS CONTROL
   // ============================================================================
