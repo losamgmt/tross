@@ -20,6 +20,7 @@
 -- ============================================================================
 DROP TABLE IF EXISTS file_attachments CASCADE;
 DROP TABLE IF EXISTS system_settings CASCADE;
+DROP TABLE IF EXISTS entity_settings CASCADE;  -- Legacy table cleanup
 DROP TABLE IF EXISTS user_saved_view CASCADE;
 DROP TABLE IF EXISTS user_preferences CASCADE;
 DROP TABLE IF EXISTS audit_logs CASCADE;
