@@ -56,11 +56,8 @@ class DataMatrixRow {
 }
 
 /// Callback for cell changes in editable mode
-typedef CellChangeCallback = void Function(
-  int rowIndex,
-  int colIndex,
-  dynamic newValue,
-);
+typedef CellChangeCallback =
+    void Function(int rowIndex, int colIndex, dynamic newValue);
 
 /// DataMatrix - Grid display with row and column headers
 class DataMatrix extends StatelessWidget {
@@ -129,7 +126,7 @@ class DataMatrix extends StatelessWidget {
           children: [
             // Header row
             _buildHeaderRow(context, theme, needsScroll),
-            
+
             // Data rows
             if (needsScroll)
               SingleChildScrollView(
@@ -144,7 +141,11 @@ class DataMatrix extends StatelessWidget {
     );
   }
 
-  Widget _buildHeaderRow(BuildContext context, ThemeData theme, bool needsScroll) {
+  Widget _buildHeaderRow(
+    BuildContext context,
+    ThemeData theme,
+    bool needsScroll,
+  ) {
     final headerStyle = theme.textTheme.labelMedium?.copyWith(
       fontWeight: FontWeight.w600,
       color: theme.colorScheme.onSurfaceVariant,
@@ -155,9 +156,7 @@ class DataMatrix extends StatelessWidget {
         color: theme.colorScheme.surfaceContainerHighest,
         border: showGridLines
             ? Border(
-                bottom: BorderSide(
-                  color: theme.colorScheme.outlineVariant,
-                ),
+                bottom: BorderSide(color: theme.colorScheme.outlineVariant),
               )
             : null,
       ),
@@ -191,10 +190,7 @@ class DataMatrix extends StatelessWidget {
     );
 
     return needsScroll
-        ? SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: header,
-          )
+        ? SingleChildScrollView(scrollDirection: Axis.horizontal, child: header)
         : header;
   }
 
@@ -230,7 +226,9 @@ class DataMatrix extends StatelessWidget {
         border: showGridLines
             ? Border(
                 bottom: BorderSide(
-                  color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                  color: theme.colorScheme.outlineVariant.withValues(
+                    alpha: 0.5,
+                  ),
                 ),
               )
             : null,
@@ -261,7 +259,13 @@ class DataMatrix extends StatelessWidget {
           ),
           // Data cells
           for (int colIndex = 0; colIndex < row.cells.length; colIndex++)
-            _buildDataCell(context, theme, rowIndex, colIndex, row.cells[colIndex]),
+            _buildDataCell(
+              context,
+              theme,
+              rowIndex,
+              colIndex,
+              row.cells[colIndex],
+            ),
         ],
       ),
     );
@@ -341,7 +345,9 @@ class DataMatrix extends StatelessWidget {
           ? BoxDecoration(
               border: Border(
                 right: BorderSide(
-                  color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                  color: theme.colorScheme.outlineVariant.withValues(
+                    alpha: 0.5,
+                  ),
                 ),
               ),
             )

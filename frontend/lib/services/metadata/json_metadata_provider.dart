@@ -57,9 +57,13 @@ class JsonMetadataProvider implements MetadataProvider {
     final json = await _loadPermissions();
     final roles = json['roles'] as Map<String, dynamic>? ?? {};
     return roles.entries
-        .map((e) => RoleSummary.fromJson(e.key, e.value as Map<String, dynamic>))
+        .map(
+          (e) => RoleSummary.fromJson(e.key, e.value as Map<String, dynamic>),
+        )
         .toList()
-      ..sort((a, b) => b.priority.compareTo(a.priority)); // Highest priority first
+      ..sort(
+        (a, b) => b.priority.compareTo(a.priority),
+      ); // Highest priority first
   }
 
   @override
@@ -73,10 +77,11 @@ class JsonMetadataProvider implements MetadataProvider {
   Future<List<ResourceSummary>> getResourceSummaries() async {
     final json = await _loadPermissions();
     final resources = json['resources'] as Map<String, dynamic>? ?? {};
-    
+
     return resources.entries.map((e) {
       final resourceJson = e.value as Map<String, dynamic>;
-      final permissionsJson = resourceJson['permissions'] as Map<String, dynamic>? ?? {};
+      final permissionsJson =
+          resourceJson['permissions'] as Map<String, dynamic>? ?? {};
       return ResourceSummary(
         name: e.key,
         description: resourceJson['description'] as String? ?? '',
@@ -90,7 +95,7 @@ class JsonMetadataProvider implements MetadataProvider {
     final json = await _loadPermissions();
     final resources = json['resources'] as Map<String, dynamic>? ?? {};
     final resourceJson = resources[resource] as Map<String, dynamic>?;
-    
+
     if (resourceJson == null) return null;
 
     final roles = await getRoles();
@@ -108,14 +113,14 @@ class JsonMetadataProvider implements MetadataProvider {
   Future<Map<String, PermissionMatrix>> getAllPermissionMatrices() async {
     final resources = await getResources();
     final result = <String, PermissionMatrix>{};
-    
+
     for (final resource in resources) {
       final matrix = await getPermissionMatrix(resource);
       if (matrix != null) {
         result[resource] = matrix;
       }
     }
-    
+
     return result;
   }
 
@@ -128,12 +133,12 @@ class JsonMetadataProvider implements MetadataProvider {
     final json = await _loadPermissions();
     final roles = json['roles'] as Map<String, dynamic>? ?? {};
     final priorities = <String, int>{};
-    
+
     for (final entry in roles.entries) {
       final roleJson = entry.value as Map<String, dynamic>;
       priorities[entry.key] = roleJson['priority'] as int? ?? 0;
     }
-    
+
     return priorities;
   }
 
@@ -153,7 +158,7 @@ class JsonMetadataProvider implements MetadataProvider {
     final json = await _loadValidation();
     final fields = json['fields'] as Map<String, dynamic>? ?? {};
     final fieldJson = fields[fieldName] as Map<String, dynamic>?;
-    
+
     if (fieldJson == null) return null;
     return FieldValidation.fromJson(fieldName, fieldJson);
   }
@@ -163,14 +168,14 @@ class JsonMetadataProvider implements MetadataProvider {
     final json = await _loadValidation();
     final fields = json['fields'] as Map<String, dynamic>? ?? {};
     final result = <String, FieldValidation>{};
-    
+
     for (final entry in fields.entries) {
       result[entry.key] = FieldValidation.fromJson(
         entry.key,
         entry.value as Map<String, dynamic>,
       );
     }
-    
+
     return result;
   }
 
@@ -188,7 +193,14 @@ class JsonMetadataProvider implements MetadataProvider {
     final json = await _loadEntityMetadata();
     // Filter out schema metadata keys
     return json.keys
-        .where((k) => !k.startsWith(r'$') && k != 'title' && k != 'description' && k != 'version' && k != 'lastModified')
+        .where(
+          (k) =>
+              !k.startsWith(r'$') &&
+              k != 'title' &&
+              k != 'description' &&
+              k != 'version' &&
+              k != 'lastModified',
+        )
         .toList();
   }
 

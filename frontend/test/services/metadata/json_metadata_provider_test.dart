@@ -80,14 +80,17 @@ void main() {
         expect(resources, contains('users'));
       });
 
-      test('getResourceSummaries includes description and operations', () async {
-        final summaries = await provider.getResourceSummaries();
+      test(
+        'getResourceSummaries includes description and operations',
+        () async {
+          final summaries = await provider.getResourceSummaries();
 
-        expect(summaries, isNotEmpty);
-        final userResource = summaries.firstWhere((r) => r.name == 'users');
-        expect(userResource.description, isNotEmpty);
-        expect(userResource.operations, contains('read'));
-      });
+          expect(summaries, isNotEmpty);
+          final userResource = summaries.firstWhere((r) => r.name == 'users');
+          expect(userResource.description, isNotEmpty);
+          expect(userResource.operations, contains('read'));
+        },
+      );
 
       test('getPermissionMatrix returns matrix for valid resource', () async {
         final matrix = await provider.getPermissionMatrix('users');
@@ -100,7 +103,9 @@ void main() {
       });
 
       test('getPermissionMatrix returns null for unknown resource', () async {
-        final matrix = await provider.getPermissionMatrix('nonexistent_resource');
+        final matrix = await provider.getPermissionMatrix(
+          'nonexistent_resource',
+        );
 
         expect(matrix, isNull);
       });
@@ -153,7 +158,9 @@ void main() {
       });
 
       test('getFieldValidation returns null for unknown field', () async {
-        final validation = await provider.getFieldValidation('nonexistent_field');
+        final validation = await provider.getFieldValidation(
+          'nonexistent_field',
+        );
 
         expect(validation, isNull);
       });
@@ -268,7 +275,11 @@ void main() {
         const rules = EntityValidationRules(
           entity: 'test',
           fields: {
-            'email': FieldValidation(fieldName: 'email', type: 'string', required: true),
+            'email': FieldValidation(
+              fieldName: 'email',
+              type: 'string',
+              required: true,
+            ),
             'name': FieldValidation(fieldName: 'name', type: 'string'),
           },
         );
@@ -282,9 +293,17 @@ void main() {
         const rules = EntityValidationRules(
           entity: 'test',
           fields: {
-            'email': FieldValidation(fieldName: 'email', type: 'string', required: true),
+            'email': FieldValidation(
+              fieldName: 'email',
+              type: 'string',
+              required: true,
+            ),
             'name': FieldValidation(fieldName: 'name', type: 'string'),
-            'phone': FieldValidation(fieldName: 'phone', type: 'string', required: true),
+            'phone': FieldValidation(
+              fieldName: 'phone',
+              type: 'string',
+              required: true,
+            ),
           },
         );
 
@@ -317,10 +336,7 @@ void main() {
       });
 
       test('toDisplayMap excludes unset properties', () {
-        const validation = FieldValidation(
-          fieldName: 'test',
-          type: 'string',
-        );
+        const validation = FieldValidation(fieldName: 'test', type: 'string');
 
         final display = validation.toDisplayMap();
         expect(display.containsKey('Min Length'), isFalse);

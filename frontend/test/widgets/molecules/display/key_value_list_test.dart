@@ -42,9 +42,7 @@ void main() {
       });
 
       testWidgets('user sees nothing when list is empty', (tester) async {
-        await tester.pumpTestWidget(
-          const KeyValueList(items: []),
-        );
+        await tester.pumpTestWidget(const KeyValueList(items: []));
 
         // Empty state - should render minimal
         expect(find.byType(KeyValueList), findsOneWidget);
@@ -78,9 +76,7 @@ void main() {
       testWidgets('text factory displays text value', (tester) async {
         await tester.pumpTestWidget(
           KeyValueList(
-            items: [
-              KeyValueItem.text(label: 'Field', value: 'Text Value'),
-            ],
+            items: [KeyValueItem.text(label: 'Field', value: 'Text Value')],
           ),
         );
 
@@ -91,9 +87,7 @@ void main() {
       testWidgets('boolean true shows check icon', (tester) async {
         await tester.pumpTestWidget(
           KeyValueList(
-            items: [
-              KeyValueItem.boolean(label: 'Enabled', value: true),
-            ],
+            items: [KeyValueItem.boolean(label: 'Enabled', value: true)],
           ),
         );
 
@@ -104,9 +98,7 @@ void main() {
       testWidgets('boolean false shows cancel icon', (tester) async {
         await tester.pumpTestWidget(
           KeyValueList(
-            items: [
-              KeyValueItem.boolean(label: 'Enabled', value: false),
-            ],
+            items: [KeyValueItem.boolean(label: 'Enabled', value: false)],
           ),
         );
 
@@ -118,11 +110,7 @@ void main() {
         await tester.pumpTestWidget(
           KeyValueList(
             items: [
-              KeyValueItem.number(
-                label: 'Price',
-                value: 99.99,
-                prefix: r'$',
-              ),
+              KeyValueItem.number(label: 'Price', value: 99.99, prefix: r'$'),
             ],
           ),
         );
@@ -174,9 +162,7 @@ void main() {
             width: 400,
             child: KeyValueList(
               labelWidth: 200,
-              items: [
-                KeyValueItem.text(label: 'Wide Label', value: 'Value'),
-              ],
+              items: [KeyValueItem.text(label: 'Wide Label', value: 'Value')],
             ),
           ),
         );
@@ -261,9 +247,7 @@ void main() {
 
         await tester.pumpTestWidget(
           KeyValueList(
-            items: [
-              KeyValueItem.text(label: 'Label', value: 'Value'),
-            ],
+            items: [KeyValueItem.text(label: 'Label', value: 'Value')],
           ),
         );
 
@@ -283,9 +267,7 @@ void main() {
 
         await tester.pumpTestWidget(
           KeyValueList(
-            items: [
-              KeyValueItem.text(label: 'Label', value: 'Value'),
-            ],
+            items: [KeyValueItem.text(label: 'Label', value: 'Value')],
           ),
         );
 

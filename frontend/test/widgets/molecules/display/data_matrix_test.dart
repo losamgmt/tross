@@ -60,22 +60,19 @@ void main() {
 
       testWidgets('empty matrix renders without error', (tester) async {
         await tester.pumpTestWidget(
-          const DataMatrix(
-            columnHeaders: ['Col1', 'Col2'],
-            rows: [],
-          ),
+          const DataMatrix(columnHeaders: ['Col1', 'Col2'], rows: []),
         );
 
         expect(find.byType(DataMatrix), findsOneWidget);
       });
 
-      testWidgets('matrix with no columns renders without error', (tester) async {
+      testWidgets('matrix with no columns renders without error', (
+        tester,
+      ) async {
         await tester.pumpTestWidget(
           DataMatrix(
             columnHeaders: const [],
-            rows: const [
-              DataMatrixRow(header: 'Row', cells: []),
-            ],
+            rows: const [DataMatrixRow(header: 'Row', cells: [])],
           ),
         );
 
@@ -155,7 +152,9 @@ void main() {
     // Editable Mode Behavior
     // =========================================================================
     group('Editable Mode Behavior', () {
-      testWidgets('editable mode shows checkbox for boolean cells', (tester) async {
+      testWidgets('editable mode shows checkbox for boolean cells', (
+        tester,
+      ) async {
         await tester.pumpTestWidget(
           DataMatrix(
             columnHeaders: const ['Permission'],
@@ -170,7 +169,9 @@ void main() {
         expect(find.byType(Checkbox), findsWidgets);
       });
 
-      testWidgets('tapping checkbox fires onCellChanged callback', (tester) async {
+      testWidgets('tapping checkbox fires onCellChanged callback', (
+        tester,
+      ) async {
         int? changedRow;
         int? changedCol;
         dynamic changedValue;
@@ -242,7 +243,11 @@ void main() {
             columnHeaders: const ['Col'],
             rows: const [
               DataMatrixRow(header: 'Normal', cells: ['A']),
-              DataMatrixRow(header: 'Highlighted', cells: ['B'], isHighlighted: true),
+              DataMatrixRow(
+                header: 'Highlighted',
+                cells: ['B'],
+                isHighlighted: true,
+              ),
             ],
           ),
         );
@@ -320,7 +325,9 @@ void main() {
     // Horizontal Scroll
     // =========================================================================
     group('Horizontal Scroll', () {
-      testWidgets('scrolls horizontally when content exceeds width', (tester) async {
+      testWidgets('scrolls horizontally when content exceeds width', (
+        tester,
+      ) async {
         await tester.pumpTestWidget(
           SizedBox(
             width: 300,
@@ -344,10 +351,7 @@ void main() {
     // =========================================================================
     group('DataMatrixRow Model', () {
       test('creates row with required fields', () {
-        const row = DataMatrixRow(
-          header: 'Test',
-          cells: ['A', 'B', 'C'],
-        );
+        const row = DataMatrixRow(header: 'Test', cells: ['A', 'B', 'C']);
 
         expect(row.header, 'Test');
         expect(row.cells, ['A', 'B', 'C']);

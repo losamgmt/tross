@@ -166,11 +166,7 @@ class KeyValueList extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         for (int i = 0; i < items.length; i++) ...[
-          _KeyValueRow(
-            item: items[i],
-            labelWidth: labelWidth,
-            dense: dense,
-          ),
+          _KeyValueRow(item: items[i], labelWidth: labelWidth, dense: dense),
           if (showDividers && i < items.length - 1)
             Divider(height: spacing.md, thickness: 1),
           if (!showDividers && i < items.length - 1)
@@ -187,11 +183,7 @@ class _KeyValueRow extends StatelessWidget {
   final double? labelWidth;
   final bool dense;
 
-  const _KeyValueRow({
-    required this.item,
-    this.labelWidth,
-    this.dense = false,
-  });
+  const _KeyValueRow({required this.item, this.labelWidth, this.dense = false});
 
   @override
   Widget build(BuildContext context) {
@@ -214,11 +206,7 @@ class _KeyValueRow extends StatelessWidget {
       labelWidget = Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            item.icon,
-            size: 16,
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
+          Icon(item.icon, size: 16, color: theme.colorScheme.onSurfaceVariant),
           SizedBox(width: spacing.xs),
           Flexible(child: labelWidget),
         ],
@@ -241,7 +229,9 @@ class _KeyValueRow extends StatelessWidget {
               labelWidget,
               SizedBox(height: spacing.xxs),
               Padding(
-                padding: EdgeInsets.only(left: item.icon != null ? spacing.md : 0),
+                padding: EdgeInsets.only(
+                  left: item.icon != null ? spacing.md : 0,
+                ),
                 child: item.value,
               ),
             ],
@@ -252,10 +242,7 @@ class _KeyValueRow extends StatelessWidget {
         return Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(
-              width: labelWidth ?? 120,
-              child: labelWidget,
-            ),
+            SizedBox(width: labelWidth ?? 120, child: labelWidget),
             SizedBox(width: spacing.md),
             Expanded(child: item.value),
           ],

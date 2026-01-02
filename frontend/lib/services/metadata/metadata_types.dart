@@ -53,7 +53,8 @@ class PermissionMatrix {
     final rowLevelSecurity = <String, String>{};
 
     // Extract operations and minimum priorities
-    final permissionsJson = resourceJson['permissions'] as Map<String, dynamic>?;
+    final permissionsJson =
+        resourceJson['permissions'] as Map<String, dynamic>?;
     if (permissionsJson != null) {
       for (final op in permissionsJson.keys) {
         operations.add(op);
@@ -97,10 +98,7 @@ class EntityValidationRules {
   /// Field validations keyed by field name
   final Map<String, FieldValidation> fields;
 
-  const EntityValidationRules({
-    required this.entity,
-    required this.fields,
-  });
+  const EntityValidationRules({required this.entity, required this.fields});
 
   /// Get validation for a specific field
   FieldValidation? getField(String fieldName) => fields[fieldName];
