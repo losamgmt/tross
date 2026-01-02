@@ -3,7 +3,8 @@
 /// **SOLE RESPONSIBILITY:** Display paginated list of ANY entity based on route param
 ///
 /// This is THE generic entity list screen. ONE screen, ALL entities.
-/// Entity name comes from route: /entity/users, /entity/customers, /entity/work_orders
+/// Entity name comes from route: /customers, /work_orders, /users
+/// Routes match backend API structure: /api/customers, /api/work_orders
 ///
 /// Uses:
 /// - EntityMetadataRegistry for field config
@@ -103,14 +104,14 @@ class _EntityScreenState extends State<EntityScreen> {
     final metadata = EntityMetadataRegistry.tryGet(widget.entityName);
     if (metadata == null) {
       return AdaptiveShell(
-        currentRoute: '/entity/${widget.entityName}',
+        currentRoute: '/${widget.entityName}',
         pageTitle: 'Entity Not Found',
         body: Center(child: Text('Unknown entity: ${widget.entityName}')),
       );
     }
 
     return AdaptiveShell(
-      currentRoute: '/entity/${widget.entityName}',
+      currentRoute: '/${widget.entityName}',
       pageTitle: metadata.displayNamePlural,
       body: Padding(
         padding: EdgeInsets.all(spacing.lg),

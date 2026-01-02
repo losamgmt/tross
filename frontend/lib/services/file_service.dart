@@ -134,7 +134,7 @@ class FileDownloadInfo {
 class FileService {
   FileService._(); // Private constructor - static class only
 
-  static const String _basePath = '/api/files';
+  static const String _basePath = '/files';
 
   // ===========================================================================
   // UPLOAD

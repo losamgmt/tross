@@ -52,11 +52,10 @@ class ApiEndpoints {
   // ============================================================================
 
   /// Export entity data as CSV
-  static String export(String entityName) => '/api/export/$entityName';
+  static String export(String entityName) => '/export/$entityName';
 
   /// Get exportable fields for an entity
-  static String exportFields(String entityName) =>
-      '/api/export/$entityName/fields';
+  static String exportFields(String entityName) => '/export/$entityName/fields';
 
   /// Verify if a path is an authentication endpoint
   static bool isAuthEndpoint(String path) {

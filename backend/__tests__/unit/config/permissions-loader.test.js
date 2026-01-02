@@ -291,6 +291,7 @@ describe('Permission System - Data-Driven Tests', () => {
         'all_records',
         'deny_all',
         'public_resource',
+        'parent_entity_access', // For polymorphic entities like file_attachments
         null,
       ];
 

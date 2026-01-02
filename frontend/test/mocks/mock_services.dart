@@ -3,6 +3,138 @@
 library;
 
 import 'dart:async';
+import 'package:flutter/foundation.dart';
+import 'package:tross_app/models/permission.dart';
+import 'package:tross_app/providers/auth_provider.dart';
+
+/// Mock AuthProvider for testing components that need authenticated state
+/// without requiring actual authentication or backend connectivity
+class MockAuthProvider extends ChangeNotifier implements AuthProvider {
+  bool _isAuthenticated;
+  Map<String, dynamic>? _user;
+  bool _isLoading;
+  bool _isRedirecting;
+  String? _error;
+  String? _token;
+  String? _provider;
+
+  MockAuthProvider({
+    bool isAuthenticated = false,
+    Map<String, dynamic>? user,
+    bool isLoading = false,
+    bool isRedirecting = false,
+    String? error,
+    String? token,
+    String? provider,
+  }) : _isAuthenticated = isAuthenticated,
+       _user = user,
+       _isLoading = isLoading,
+       _isRedirecting = isRedirecting,
+       _error = error,
+       _token = token,
+       _provider = provider;
+
+  /// Create an authenticated mock user with admin role
+  factory MockAuthProvider.authenticated({
+    String role = 'admin',
+    String? email,
+    String? name,
+  }) {
+    return MockAuthProvider(
+      isAuthenticated: true,
+      token: 'mock-token-${DateTime.now().millisecondsSinceEpoch}',
+      provider: 'mock',
+      user: {
+        'id': 1,
+        'email': email ?? 'test@example.com',
+        'name': name ?? 'Test User',
+        'role': role,
+        'role_priority': _rolePriority(role),
+      },
+    );
+  }
+
+  static int _rolePriority(String role) {
+    switch (role) {
+      case 'admin':
+        return 5;
+      case 'manager':
+        return 4;
+      case 'dispatcher':
+        return 3;
+      case 'technician':
+        return 2;
+      case 'customer':
+        return 1;
+      default:
+        return 0;
+    }
+  }
+
+  @override
+  bool get isAuthenticated => _isAuthenticated;
+
+  @override
+  Map<String, dynamic>? get user => _user;
+
+  @override
+  bool get isLoading => _isLoading;
+
+  @override
+  bool get isRedirecting => _isRedirecting;
+
+  @override
+  String? get error => _error;
+
+  @override
+  String? get token => _token;
+
+  @override
+  String? get provider => _provider;
+
+  @override
+  String get userRole => _user?['role'] as String? ?? 'unknown';
+
+  @override
+  String get userName => _user?['name'] as String? ?? 'User';
+
+  @override
+  String get userEmail => _user?['email'] as String? ?? '';
+
+  @override
+  int? get userId => _user?['id'] as int?;
+
+  // Stub implementations for other AuthProvider methods
+  @override
+  Future<bool> loginWithTestToken({String role = 'admin'}) async => true;
+
+  @override
+  Future<bool> loginWithAuth0() async => true;
+
+  @override
+  Future<bool> handleAuth0Callback() async => true;
+
+  @override
+  Future<void> logout() async {
+    _isAuthenticated = false;
+    _user = null;
+    _token = null;
+    notifyListeners();
+  }
+
+  @override
+  Future<void> initialize() async {}
+
+  @override
+  Future<bool> updateProfile(Map<String, dynamic> updates) async => true;
+
+  @override
+  bool hasPermission(ResourceType resource, CrudOperation operation) => true;
+
+  // noSuchMethod handles any other AuthProvider members we haven't stubbed
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 /// Mock implementation of secure storage for testing
 /// Replaces flutter_secure_storage in tests

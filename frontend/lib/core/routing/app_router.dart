@@ -23,8 +23,8 @@ import '../../widgets/organisms/feedback/error_display.dart';
 import '../../widgets/organisms/feedback/under_construction_display.dart';
 import '../../widgets/templates/templates.dart';
 import '../../services/entity_metadata.dart';
-import '../../services/auth/auth_profile_service.dart';
 import 'app_routes.dart';
+import 'route_guard.dart';
 
 /// Global navigator key for accessing navigation from anywhere
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -56,13 +56,23 @@ class AppRouter {
           return null;
         }
 
-        // Use metadata-driven public route check
-        final isPublicRoute = AppRoutes.isPublicPath(currentPath);
+        // ══════════════════════════════════════════════════════════════════
+        // CENTRALIZED ROUTE GUARD - Single source of truth for access control
+        // Handles: public routes, auth required, admin required
+        // ══════════════════════════════════════════════════════════════════
+        final guardResult = RouteGuard.checkAccess(
+          route: currentPath,
+          isAuthenticated: isAuthenticated,
+          user: user,
+        );
 
-        // If not authenticated and trying to access protected route
-        if (!isAuthenticated && !isPublicRoute) {
-          return AppRoutes.login;
+        if (!guardResult.canAccess) {
+          return guardResult.redirectRoute;
         }
+
+        // ══════════════════════════════════════════════════════════════════
+        // CONVENIENCE REDIRECTS (not security - just UX)
+        // ══════════════════════════════════════════════════════════════════
 
         // If authenticated and on login page, redirect to home
         if (isAuthenticated && currentPath == AppRoutes.login) {
@@ -75,15 +85,9 @@ class AppRouter {
         }
 
         // If NOT authenticated and on root, redirect to login
+        // (root shows blank _AuthWrapper, so we need explicit redirect)
         if (!isAuthenticated && currentPath == AppRoutes.root) {
           return AppRoutes.login;
-        }
-
-        // Admin route guard
-        if (currentPath == AppRoutes.admin) {
-          if (!AuthProfileService.isAdmin(user)) {
-            return AppRoutes.unauthorized;
-          }
         }
 
         // No redirect needed
@@ -128,7 +132,7 @@ class AppRouter {
           ),
         ),
 
-        // Admin - with entity settings and catch-all for unimplemented sections
+        // Admin - Home, Logs (under /system/ for collision-avoidance), Entity settings
         GoRoute(
           path: AppRoutes.admin,
           name: 'admin',
@@ -138,16 +142,31 @@ class AppRouter {
             transitionsBuilder: _slideTransition,
           ),
           routes: [
-            // Catch-all for admin sub-routes (security, platform, system, etc.)
-            // Shows "Under Construction" for any unimplemented admin feature
+            // ══════════════════════════════════════════════════════════════
+            // SYSTEM ROUTES - Defined FIRST to avoid :entity catch-all
+            // Uses /system/ prefix for collision-avoidance (mirrors backend)
+            // ══════════════════════════════════════════════════════════════
             GoRoute(
-              path: ':section',
-              name: 'adminSection',
+              path: 'system/logs',
+              name: 'adminLogs',
+              pageBuilder: (context, state) => CustomTransitionPage(
+                key: state.pageKey,
+                child: _AdminSectionScreen(section: 'logs'),
+                transitionsBuilder: _slideTransition,
+              ),
+            ),
+
+            // ══════════════════════════════════════════════════════════════
+            // ENTITY ROUTES - Catch-all LAST (entity metadata/settings)
+            // ══════════════════════════════════════════════════════════════
+            GoRoute(
+              path: ':entity',
+              name: 'adminEntity',
               pageBuilder: (context, state) {
-                final section = state.pathParameters['section'] ?? 'unknown';
+                final entity = state.pathParameters['entity'] ?? 'unknown';
                 return CustomTransitionPage(
                   key: state.pageKey,
-                  child: _AdminSectionScreen(section: section),
+                  child: _AdminSectionScreen(section: entity),
                   transitionsBuilder: _slideTransition,
                 );
               },
@@ -168,11 +187,14 @@ class AppRouter {
 
         // ════════════════════════════════════════════════════════════════════
         // GENERIC ENTITY ROUTES - ONE route handles ALL entities
+        // Entities sit directly under root, matching backend /api/:entity
+        // MUST be defined AFTER specific routes (/home, /settings, /admin)
+        // GoRouter matches in definition order, so specific routes win
         // ════════════════════════════════════════════════════════════════════
 
-        // Entity list: /entity/:entityName (e.g., /entity/users, /entity/customers)
+        // Entity list: /:entityName (e.g., /customers, /work_orders, /users)
         GoRoute(
-          path: '/entity/:entityName',
+          path: '/:entityName',
           name: 'entityList',
           pageBuilder: (context, state) {
             final entityName = state.pathParameters['entityName'] ?? 'user';
@@ -183,7 +205,7 @@ class AppRouter {
             );
           },
           routes: [
-            // Entity detail: /entity/:entityName/:id (e.g., /entity/users/42)
+            // Entity detail: /:entityName/:id (e.g., /customers/42)
             GoRoute(
               path: ':id',
               name: 'entityDetail',

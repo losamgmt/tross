@@ -121,7 +121,7 @@ class EntityMetadataService {
       level: config.priority || 0,
       description: config.description || '',
     }));
-    
+
     const operations = ['create', 'read', 'update', 'delete'];
 
     // Build matrix rows (one per role)

@@ -1,9 +1,15 @@
+/// PreferencesProvider Unit Tests (Metadata-Driven)
+///
+/// Tests verify the provider works with Map-based, metadata-driven preferences.
+/// No hardcoded preference fields are tested - all values come from metadata.
+library;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tross_app/config/preference_keys.dart';
 import 'package:tross_app/providers/preferences_provider.dart';
 
 void main() {
-  group('PreferencesProvider', () {
+  group('PreferencesProvider (Metadata-Driven)', () {
     late PreferencesProvider provider;
 
     setUp(() {
@@ -11,11 +17,6 @@ void main() {
     });
 
     group('Initial State', () {
-      test('should start with default preferences', () {
-        expect(provider.theme, ThemePreference.system);
-        expect(provider.notificationsEnabled, isTrue);
-      });
-
       test('should not be loading initially', () {
         expect(provider.isLoading, isFalse);
       });
@@ -28,11 +29,9 @@ void main() {
         expect(provider.error, isNull);
       });
 
-      test('preferences object should have defaults', () {
-        expect(provider.preferences.theme, ThemePreference.system);
-        expect(provider.preferences.notificationsEnabled, isTrue);
-        expect(provider.preferences.id, isNull);
-        expect(provider.preferences.userId, isNull);
+      test('theme should default to system', () {
+        // ThemePreference.system is the metadata default
+        expect(provider.theme, ThemePreference.system);
       });
     });
 
@@ -40,20 +39,26 @@ void main() {
       test('theme getter returns ThemePreference enum', () {
         expect(provider.theme, isA<ThemePreference>());
       });
+    });
 
-      test('notificationsEnabled getter returns bool', () {
-        expect(provider.notificationsEnabled, isA<bool>());
+    group('getPreference (Metadata-Driven)', () {
+      test('returns null for unknown key when metadata not loaded', () {
+        // Unknown keys return null (no metadata default)
+        final value = provider.getPreference('nonexistent_key');
+        expect(value, isNull);
+      });
+
+      test('returns null when metadata registry not initialized', () {
+        // Without EntityMetadataRegistry.initialize(), schema is empty
+        // This is expected behavior in unit tests without full setup
+        final theme = provider.getPreference('theme');
+        expect(theme, isNull);
       });
     });
 
     group('clear()', () {
-      test('should reset to defaults', () {
-        // Note: Without mocking we can't test after load
-        // This tests the clear method in initial state
+      test('should reset preferences map', () {
         provider.clear();
-
-        expect(provider.preferences.theme, ThemePreference.system);
-        expect(provider.preferences.notificationsEnabled, isTrue);
         expect(provider.error, isNull);
         expect(provider.isLoaded, isFalse);
       });
@@ -81,89 +86,62 @@ void main() {
       });
     });
 
-    group('Default Values Match Config', () {
-      test('default theme matches PreferenceDefaults', () {
-        final prefs = UserPreferences.defaults();
-        expect(prefs.theme.value, PreferenceDefaults.theme);
-      });
-
-      test('default notificationsEnabled matches PreferenceDefaults', () {
-        final prefs = UserPreferences.defaults();
-        expect(
-          prefs.notificationsEnabled,
-          PreferenceDefaults.notificationsEnabled,
-        );
-      });
-    });
-
-    group('Preferences Access', () {
-      test('preferences property returns current state', () {
-        final prefs = provider.preferences;
-
-        expect(prefs, isA<UserPreferences>());
-        expect(prefs.theme, provider.theme);
-        expect(prefs.notificationsEnabled, provider.notificationsEnabled);
-      });
-    });
-
-    // Note: The following tests would require mocking PreferencesService
-    // or running integration tests with actual backend
-    group('Load/Update (requires backend)', () {
-      test('load requires token - guard works without mocking', () async {
-        // With no token, load should set loading then complete
-        // This tests the guard pattern even without mocking
-        expect(provider.isLoading, isFalse);
-      });
-
-      test('updateTheme requires authentication - guard works', () async {
+    group('updatePreference (requires backend)', () {
+      test('updatePreference requires authentication - guard works', () async {
         // Without authentication (no token), update should log warning
         // The guard prevents actual update
-        await provider.updateTheme(ThemePreference.dark);
+        await provider.updatePreference('theme', 'dark');
 
         // Since no token is set, the update is blocked
         // Theme should remain default
         expect(provider.theme, ThemePreference.system);
       });
 
-      test('updateNotificationsEnabled requires authentication', () async {
-        await provider.updateNotificationsEnabled(false);
-
-        // Since no token is set, the update is blocked
-        expect(provider.notificationsEnabled, isTrue);
-      });
-
       test('reset requires authentication', () async {
         await provider.reset();
 
         // Since no token is set, reset is blocked (but doesn't error)
-        expect(provider.preferences.theme, ThemePreference.system);
-      });
-
-      test('updateAll requires authentication', () async {
-        await provider.updateAll({
-          PreferenceKeys.theme: 'dark',
-          PreferenceKeys.notificationsEnabled: false,
-        });
-
-        // Since no token is set, updates are blocked
         expect(provider.theme, ThemePreference.system);
-        expect(provider.notificationsEnabled, isTrue);
       });
     });
+  });
 
-    group('Immutability', () {
-      test('preferences object is replaced not mutated', () {
-        final originalId = identityHashCode(provider.preferences);
+  group('ThemePreference', () {
+    test('has all expected values', () {
+      expect(
+        ThemePreference.values,
+        containsAll([
+          ThemePreference.system,
+          ThemePreference.light,
+          ThemePreference.dark,
+        ]),
+      );
+    });
 
-        // Call clear to get new defaults
-        provider.clear();
+    test('value property returns correct strings', () {
+      expect(ThemePreference.system.value, equals('system'));
+      expect(ThemePreference.light.value, equals('light'));
+      expect(ThemePreference.dark.value, equals('dark'));
+    });
 
-        final afterClearId = identityHashCode(provider.preferences);
+    test('fromString parses valid values', () {
+      expect(
+        ThemePreference.fromString('system'),
+        equals(ThemePreference.system),
+      );
+      expect(
+        ThemePreference.fromString('light'),
+        equals(ThemePreference.light),
+      );
+      expect(ThemePreference.fromString('dark'), equals(ThemePreference.dark));
+    });
 
-        // Should be a different object instance after clear
-        // (Even if values are the same, identity should differ)
-        expect(afterClearId, isNot(equals(originalId)));
-      });
+    test('fromString returns default for invalid value', () {
+      expect(
+        ThemePreference.fromString('invalid'),
+        equals(ThemePreference.system),
+      );
+      expect(ThemePreference.fromString(''), equals(ThemePreference.system));
     });
   });
 }

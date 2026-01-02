@@ -64,6 +64,8 @@ enum ResourceType {
   technicians,
   preferences,
   savedViews('saved_views'),
+  // Polymorphic entities (permissions tied to parent entity context)
+  fileAttachments('file_attachments'),
   // Synthetic resources (nav visibility, not entity CRUD)
   dashboard,
   adminPanel('admin_panel');

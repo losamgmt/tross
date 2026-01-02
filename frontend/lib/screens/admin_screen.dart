@@ -1,7 +1,7 @@
 /// Admin Screen - Administration Landing Page
 ///
 /// Simple landing page for the admin section.
-/// Entity management is accessed via sidebar navigation to /admin/entity/:name
+/// Entity management is accessed via sidebar navigation to /admin/:name
 ///
 /// Sidebar navigation uses 'admin' strategy from nav-config.json,
 /// providing admin-specific menu items instead of business navigation.

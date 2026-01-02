@@ -1,44 +1,48 @@
-/// PreferencesProvider - Reactive State Management for User Preferences
+/// PreferencesProvider - 100% Metadata-Driven User Preferences
 ///
 /// SOLE RESPONSIBILITY: Provide reactive preference state to UI
 ///
-/// This provider:
-/// - Loads preferences from backend via PreferencesService
-/// - Provides reactive access to preference values
-/// - Handles preference updates with optimistic UI
-/// - Syncs preferences across sessions via backend
-/// - Listens to AuthProvider to auto-load on login
+/// This provider is FULLY METADATA-DRIVEN:
+/// - Stores preferences as Map (no hardcoded fields)
+/// - Gets defaults from preferenceSchema in entity-metadata.json
+/// - Handles ANY preference key without code changes
+/// - Only ThemePreference enum exists for MaterialApp binding
+///
+/// To add a new preference:
+/// 1. Add it to backend/config/models/preferences-metadata.js preferenceSchema
+/// 2. Run: node scripts/sync-entity-metadata.js
+/// 3. Done! It appears in the UI automatically. No provider changes needed.
 ///
 /// USAGE:
 /// ```dart
-/// // In main.dart MultiProvider:
-/// ChangeNotifierProvider(create: (_) => PreferencesProvider())
+/// // Get any preference value (reads from map, falls back to metadata default)
+/// final pageSize = prefs.getPreference('defaultPageSize');
 ///
-/// // Connect to auth provider (in _AppWithRouter):
-/// preferencesProvider.connectToAuth(authProvider);
+/// // Update any preference (generic, works with any key)
+/// prefs.updatePreference('tableDensity', 'compact');
 ///
-/// // In widgets:
-/// Consumer<PreferencesProvider>(
-///   builder: (context, prefs, _) {
-///     final theme = prefs.theme;
-///     return ThemeSelector(
-///       value: theme,
-///       onChanged: (t) => prefs.updateTheme(t),
-///     );
-///   }
-/// )
+/// // Theme specifically (for MaterialApp binding)
+/// final theme = prefs.theme; // Returns ThemePreference enum
 /// ```
 library;
 
 import 'package:flutter/foundation.dart';
 import '../config/preference_keys.dart';
 import '../services/preferences_service.dart';
+import '../services/entity_metadata.dart';
 import '../services/error_service.dart';
 import 'auth_provider.dart';
 
 /// Provider for reactive preference state management
+///
+/// Stores preferences as a simple Map, driven by metadata.
 class PreferencesProvider extends ChangeNotifier {
-  UserPreferences _preferences = UserPreferences.defaults();
+  /// Raw preferences map from API
+  Map<String, dynamic> _preferences = {};
+
+  /// Preference schema from metadata (for defaults)
+  Map<String, PreferenceFieldDefinition>? _schema;
+
   bool _isLoading = false;
   String? _error;
   String? _token;
@@ -51,27 +55,133 @@ class PreferencesProvider extends ChangeNotifier {
   // PUBLIC GETTERS
   // ═══════════════════════════════════════════════════════════════════════════
 
-  /// Current preferences
-  UserPreferences get preferences => _preferences;
-
   /// Whether preferences are being loaded
   bool get isLoading => _isLoading;
 
   /// Whether preferences have been loaded from backend
-  bool get isLoaded => _preferences.id != null;
+  bool get isLoaded => _preferences.isNotEmpty;
 
   /// Current error message (null if no error)
   String? get error => _error;
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // TYPE-SAFE PREFERENCE ACCESS
+  // THEME ACCESS (Only typed getter - needed for MaterialApp)
   // ═══════════════════════════════════════════════════════════════════════════
 
   /// Current theme preference
-  ThemePreference get theme => _preferences.theme;
+  ///
+  /// This is the ONLY typed getter because MaterialApp needs ThemeMode.
+  /// All other preferences use getPreference(key).
+  ThemePreference get theme {
+    final value = getPreference('theme');
+    return ThemePreference.fromString(value as String?);
+  }
 
-  /// Whether notifications are enabled
-  bool get notificationsEnabled => _preferences.notificationsEnabled;
+  // ═══════════════════════════════════════════════════════════════════════════
+  // GENERIC PREFERENCE ACCESS (100% Metadata-Driven)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Get preference value by key
+  ///
+  /// Returns current value from preferences map, or default from metadata schema.
+  /// Works with ANY preference key defined in preferenceSchema.
+  dynamic getPreference(String key) {
+    // Return current value if set
+    if (_preferences.containsKey(key)) {
+      return _preferences[key];
+    }
+
+    // Fall back to default from metadata schema
+    _ensureSchemaLoaded();
+    final fieldDef = _schema?[key];
+    if (fieldDef != null) {
+      return fieldDef.defaultValue;
+    }
+
+    // Unknown key
+    ErrorService.logWarning(
+      '[PreferencesProvider] Unknown preference key: $key',
+    );
+    return null;
+  }
+
+  /// Update preference by key
+  ///
+  /// Generic update with optimistic UI. Works with ANY preference key.
+  /// [key] is the preference key from preferenceSchema.
+  /// [value] is the new value (type must match schema).
+  Future<void> updatePreference(String key, dynamic value) async {
+    if (_token == null) {
+      ErrorService.logWarning(
+        '[PreferencesProvider] Cannot update - not authenticated',
+      );
+      return;
+    }
+
+    // Store old value for rollback
+    final oldValue = _preferences[key];
+
+    // Optimistic update
+    _preferences[key] = value;
+    notifyListeners();
+
+    try {
+      final updated = await PreferencesService.updatePreference(
+        _token!,
+        key,
+        value,
+      );
+      if (updated != null) {
+        // Merge updated preferences from backend
+        _preferences = updated;
+        _error = null;
+        ErrorService.logInfo(
+          '[PreferencesProvider] Preference saved to database',
+          context: {'key': key, 'value': value},
+        );
+      } else {
+        // Service returned null - backend save failed, rollback
+        ErrorService.logWarning(
+          '[PreferencesProvider] Preference save failed - rolling back',
+        );
+        if (oldValue != null) {
+          _preferences[key] = oldValue;
+        } else {
+          _preferences.remove(key);
+        }
+        _error = 'Failed to save preference';
+      }
+      notifyListeners();
+    } catch (e) {
+      // Rollback on failure
+      ErrorService.logError(
+        '[PreferencesProvider] Failed to persist preference',
+        error: e,
+      );
+      if (oldValue != null) {
+        _preferences[key] = oldValue;
+      } else {
+        _preferences.remove(key);
+      }
+      _error = 'Failed to save preference';
+      notifyListeners();
+    }
+  }
+
+  /// Ensure preference schema is loaded from metadata
+  void _ensureSchemaLoaded() {
+    if (_schema != null) return;
+
+    try {
+      final metadata = EntityMetadataRegistry.get('preferences');
+      _schema = metadata.preferenceSchema;
+    } catch (e) {
+      ErrorService.logError(
+        '[PreferencesProvider] Failed to load preference schema from metadata',
+        error: e,
+      );
+    }
+  }
 
   // ═══════════════════════════════════════════════════════════════════════════
   // AUTH INTEGRATION
@@ -139,15 +249,13 @@ class PreferencesProvider extends ChangeNotifier {
     try {
       ErrorService.logInfo('[PreferencesProvider] Loading preferences');
 
-      _preferences = await PreferencesService.load(token);
+      final result = await PreferencesService.loadRaw(token);
+      _preferences = result;
       _error = null;
 
       ErrorService.logInfo(
         '[PreferencesProvider] Preferences loaded',
-        context: {
-          'theme': _preferences.theme.value,
-          'notifications': _preferences.notificationsEnabled,
-        },
+        context: {'keys': _preferences.keys.toList()},
       );
     } catch (e) {
       ErrorService.logError(
@@ -155,8 +263,7 @@ class PreferencesProvider extends ChangeNotifier {
         error: e,
       );
       _error = 'Failed to load preferences';
-      // Keep defaults if load fails
-      _preferences = UserPreferences.defaults();
+      _preferences = {};
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -165,159 +272,10 @@ class PreferencesProvider extends ChangeNotifier {
 
   /// Clear preferences (on logout)
   void clear() {
-    _preferences = UserPreferences.defaults();
+    _preferences = {};
     _error = null;
     _token = null;
     notifyListeners();
-  }
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // UPDATE METHODS (Type-Safe)
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  /// Update theme preference
-  ///
-  /// Uses optimistic UI - updates local state immediately,
-  /// then persists to backend asynchronously.
-  Future<void> updateTheme(ThemePreference theme) async {
-    if (_token == null) {
-      ErrorService.logWarning(
-        '[PreferencesProvider] Cannot update - not authenticated',
-      );
-      return;
-    }
-
-    // Optimistic update
-    final oldTheme = _preferences.theme;
-    _preferences = _preferences.copyWith(theme: theme);
-    notifyListeners();
-
-    try {
-      final updated = await PreferencesService.updateTheme(_token!, theme);
-      if (updated != null) {
-        _preferences = updated;
-        _error = null;
-        ErrorService.logInfo(
-          '[PreferencesProvider] Theme saved to database',
-          context: {'theme': theme.value},
-        );
-      } else {
-        // Service returned null - backend save failed, rollback
-        ErrorService.logWarning(
-          '[PreferencesProvider] Theme save failed - rolling back',
-        );
-        _preferences = _preferences.copyWith(theme: oldTheme);
-        _error = 'Failed to save theme preference';
-      }
-      notifyListeners();
-    } catch (e) {
-      // Rollback on failure
-      ErrorService.logError(
-        '[PreferencesProvider] Failed to persist theme',
-        error: e,
-      );
-      _preferences = _preferences.copyWith(theme: oldTheme);
-      _error = 'Failed to save theme preference';
-      notifyListeners();
-    }
-  }
-
-  /// Update notifications enabled preference
-  Future<void> updateNotificationsEnabled(bool enabled) async {
-    if (_token == null) {
-      ErrorService.logWarning(
-        '[PreferencesProvider] Cannot update - not authenticated',
-      );
-      return;
-    }
-
-    // Optimistic update
-    final oldValue = _preferences.notificationsEnabled;
-    _preferences = _preferences.copyWith(notificationsEnabled: enabled);
-    notifyListeners();
-
-    try {
-      final updated = await PreferencesService.updateNotificationsEnabled(
-        _token!,
-        enabled,
-      );
-      if (updated != null) {
-        _preferences = updated;
-        _error = null;
-        ErrorService.logInfo(
-          '[PreferencesProvider] Notifications setting saved to database',
-          context: {'enabled': enabled},
-        );
-      } else {
-        // Service returned null - backend save failed, rollback
-        ErrorService.logWarning(
-          '[PreferencesProvider] Notifications save failed - rolling back',
-        );
-        _preferences = _preferences.copyWith(notificationsEnabled: oldValue);
-        _error = 'Failed to save notifications preference';
-      }
-      notifyListeners();
-    } catch (e) {
-      // Rollback on failure
-      ErrorService.logError(
-        '[PreferencesProvider] Failed to persist notifications setting',
-        error: e,
-      );
-      _preferences = _preferences.copyWith(notificationsEnabled: oldValue);
-      _error = 'Failed to save notifications preference';
-      notifyListeners();
-    }
-  }
-
-  /// Update multiple preferences at once
-  Future<void> updateAll(Map<String, dynamic> values) async {
-    if (_token == null) {
-      ErrorService.logWarning(
-        '[PreferencesProvider] Cannot update - not authenticated',
-      );
-      return;
-    }
-
-    // Store old preferences for rollback
-    final oldPreferences = _preferences;
-
-    // Optimistic update
-    UserPreferences newPrefs = _preferences;
-    if (values.containsKey(PreferenceKeys.theme)) {
-      newPrefs = newPrefs.copyWith(
-        theme: ThemePreference.fromString(
-          values[PreferenceKeys.theme] as String,
-        ),
-      );
-    }
-    if (values.containsKey(PreferenceKeys.notificationsEnabled)) {
-      newPrefs = newPrefs.copyWith(
-        notificationsEnabled:
-            values[PreferenceKeys.notificationsEnabled] as bool,
-      );
-    }
-    _preferences = newPrefs;
-    notifyListeners();
-
-    try {
-      final updated = await PreferencesService.updatePreferences(
-        _token!,
-        values,
-      );
-      if (updated != null) {
-        _preferences = updated;
-        notifyListeners();
-      }
-    } catch (e) {
-      // Rollback on failure
-      ErrorService.logError(
-        '[PreferencesProvider] Failed to persist preferences',
-        error: e,
-      );
-      _preferences = oldPreferences;
-      _error = 'Failed to save preferences';
-      notifyListeners();
-    }
   }
 
   /// Reset all preferences to defaults
@@ -328,12 +286,8 @@ class PreferencesProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final reset = await PreferencesService.reset(_token!);
-      if (reset != null) {
-        _preferences = reset;
-      } else {
-        _preferences = UserPreferences.defaults();
-      }
+      final result = await PreferencesService.resetRaw(_token!);
+      _preferences = result ?? {};
       _error = null;
     } catch (e) {
       ErrorService.logError(

@@ -54,7 +54,7 @@ class ExportService {
 
       final response = await ApiClient.authenticatedRequest(
         'GET',
-        '/api/export/$entityName/fields',
+        '/export/$entityName/fields',
         token: token,
       );
 
@@ -117,7 +117,7 @@ class ExportService {
       }
 
       final uri = Uri.parse(
-        '${AppConfig.baseUrl}/api/export/$entityName',
+        '${AppConfig.baseUrl}/export/$entityName',
       ).replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
 
       final response = await http

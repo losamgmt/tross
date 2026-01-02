@@ -464,6 +464,39 @@
       }
     },
 
+    "file_attachments": {
+      "description": "Polymorphic file attachments - actual access controlled by parent entity (work_order, customer, etc.)",
+      "rowLevelSecurity": {
+        "customer": "parent_entity_access",
+        "technician": "parent_entity_access",
+        "dispatcher": "parent_entity_access",
+        "manager": "parent_entity_access",
+        "admin": "all_records"
+      },
+      "permissions": {
+        "create": {
+          "minimumRole": "technician",
+          "minimumPriority": 2,
+          "description": "Technicians and above can upload files to entities they have access to"
+        },
+        "read": {
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Users can read attachments on entities they have access to"
+        },
+        "update": {
+          "minimumRole": "technician",
+          "minimumPriority": 2,
+          "description": "Technicians and above can update file metadata"
+        },
+        "delete": {
+          "minimumRole": "dispatcher",
+          "minimumPriority": 3,
+          "description": "Dispatchers and above can delete file attachments"
+        }
+      }
+    },
+
     "system_settings": {
       "description": "System-wide configuration (maintenance mode, feature flags, etc.)",
       "rowLevelSecurity": {
@@ -501,7 +534,7 @@
   "_comments": {
     "usage": "This file is the single source of truth for permissions. Both backend and frontend load this file dynamically.",
     "rowLevelSecurity": "Defines what records a role can see. Frontend uses this for UI, backend enforces in queries.",
-    "syntheticResources": "dashboard and admin_panel are synthetic (non-entity) resources for nav visibility. They use the same permission structure as entities.",
+    "syntheticResources": "dashboard and admin_panel are synthetic (non-entity) resources for nav visibility. file_attachments is a polymorphic resource - permissions are defined here but actual access is controlled by the parent entity context. All use the same permission structure as entities.",
     "rlsPolicies": {
       "all_records": "No filtering - role can see all records (applied: false)",
       "own_record_only": "Filter by user ID - user sees only their own record (applied: true)",

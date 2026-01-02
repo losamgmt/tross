@@ -137,6 +137,42 @@ function transformRelationships(foreignKeys, relationships) {
 }
 
 /**
+ * Transform preferenceSchema to frontend format
+ * Adds UI-friendly properties: label, displayLabels, order
+ */
+function transformPreferenceSchema(schema) {
+  const result = {};
+  let order = 0;
+
+  for (const [key, def] of Object.entries(schema)) {
+    result[key] = {
+      ...def,
+      // Generate label from camelCase key if not provided
+      label: def.label || key
+        .replace(/([A-Z])/g, ' $1')
+        .replace(/^./, s => s.toUpperCase())
+        .trim(),
+      // Add order if not specified
+      order: def.order !== undefined ? def.order : order++,
+    };
+
+    // For enum types, generate displayLabels if not provided
+    if (def.type === 'enum' && def.values && !def.displayLabels) {
+      result[key].displayLabels = {};
+      for (const val of def.values) {
+        // Convert value to display label (e.g., 'system' -> 'System')
+        result[key].displayLabels[val] = val
+          .replace(/([A-Z])/g, ' $1')
+          .replace(/^./, s => s.toUpperCase())
+          .trim();
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
  * Transform a single backend model to frontend format
  */
 function transformModel(entityName, backendMeta) {
@@ -201,6 +237,12 @@ function transformModel(entityName, backendMeta) {
       backendMeta.foreignKeys,
       backendMeta.relationships
     );
+  }
+
+  // Preference schema (for preferences entity)
+  // Copy as-is with frontend-friendly additions (label, displayLabels, order)
+  if (backendMeta.preferenceSchema) {
+    result.preferenceSchema = transformPreferenceSchema(backendMeta.preferenceSchema);
   }
   
   return result;

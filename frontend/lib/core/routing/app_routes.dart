@@ -21,16 +21,22 @@ class AppRoutes {
   // Admin Routes (admin role required)
   static const String admin = '/admin';
 
+  // Admin sub-routes (mirror backend /api/admin/* structure)
+  // Uses /system/ prefix for collision-avoidance with entity names
+  static const String adminLogs = '/admin/system/logs';
+
+  /// Build admin entity route (entity metadata/settings)
+  static String adminEntity(String entityName) => '/admin/$entityName';
+
   // Generic Entity Routes (dynamic - one route for ALL entities)
-  // Usage: /entity/users, /entity/customers, /entity/work_orders
-  static const String entity = '/entity';
+  // Entities sit directly under root, matching backend /api/:entity structure
+  // Usage: /customers, /work_orders, /users
 
-  /// Build entity list route
-  static String entityList(String entityName) => '/entity/$entityName';
+  /// Build entity list route (e.g., /customers, /work_orders)
+  static String entityList(String entityName) => '/$entityName';
 
-  /// Build entity detail route
-  static String entityDetail(String entityName, int id) =>
-      '/entity/$entityName/$id';
+  /// Build entity detail route (e.g., /customers/42)
+  static String entityDetail(String entityName, int id) => '/$entityName/$id';
 
   // Status/Error Routes (public, no auth required)
   static const String error = '/error';

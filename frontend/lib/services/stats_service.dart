@@ -95,7 +95,7 @@ class StatsService {
 
       final response = await ApiClient.authenticatedRequest(
         'GET',
-        '/api/stats/$entityName$queryString',
+        '/stats/$entityName$queryString',
         token: token,
       );
 
@@ -159,7 +159,7 @@ class StatsService {
 
       final response = await ApiClient.authenticatedRequest(
         'GET',
-        '/api/stats/$entityName/grouped/$groupByField$queryString',
+        '/stats/$entityName/grouped/$groupByField$queryString',
         token: token,
       );
 
@@ -233,7 +233,7 @@ class StatsService {
 
       final response = await ApiClient.authenticatedRequest(
         'GET',
-        '/api/stats/$entityName/sum/$field$queryString',
+        '/stats/$entityName/sum/$field$queryString',
         token: token,
       );
 

@@ -2,8 +2,8 @@
 ///
 /// **SOLE RESPONSIBILITY:** Display/edit a single entity based on route params
 ///
-/// Route: /entity/:entityName/:id
-/// Example: /entity/customer/42, /entity/work_order/100
+/// Route: /:entityName/:id
+/// Example: /customers/42, /work_orders/100
 ///
 /// Uses:
 /// - EntityMetadataRegistry for field config
@@ -125,7 +125,7 @@ class _EntityDetailScreenState extends State<EntityDetailScreen> {
     final metadata = EntityMetadataRegistry.tryGet(widget.entityName);
     if (metadata == null) {
       return AdaptiveShell(
-        currentRoute: '/entity/${widget.entityName}/${widget.entityId}',
+        currentRoute: '/${widget.entityName}/${widget.entityId}',
         pageTitle: 'Entity Not Found',
         body: Center(child: Text('Unknown entity: ${widget.entityName}')),
       );
@@ -151,7 +151,7 @@ class _EntityDetailScreenState extends State<EntityDetailScreen> {
         : identityValue;
 
     return AdaptiveShell(
-      currentRoute: '/entity/${widget.entityName}/${widget.entityId}',
+      currentRoute: '/${widget.entityName}/${widget.entityId}',
       pageTitle: pageTitle,
       body: _buildBody(
         context,

@@ -13,8 +13,6 @@
 /// AdaptiveShell, AppSidebar, and other nav components consume its output.
 library;
 
-import 'package:flutter/material.dart' show Icons;
-
 import '../models/permission.dart';
 import '../services/auth/auth_profile_service.dart';
 import '../services/entity_metadata.dart';
@@ -119,8 +117,10 @@ class NavMenuBuilder {
 
   /// Build sidebar items for a specific strategy
   ///
-  /// Supports collapsible sections: when a strategy has sections, each section
-  /// becomes a collapsible header with its items as children.
+  /// Supports three section types:
+  /// 1. Clickable items (have route) - e.g., "Home" → /admin
+  /// 2. Entity groupers (id == 'entities') - dynamic children from metadata
+  /// 3. Static groupers (have children) - e.g., "Logs" with Data/Auth children
   static List<NavMenuItem> _buildSidebarFromStrategy(String strategyId) {
     final config = NavConfigService.config;
     final strategy = config.getStrategy(strategyId);
@@ -135,57 +135,90 @@ class NavMenuBuilder {
 
     final items = <NavMenuItem>[];
 
-    // If strategy has custom sections, build collapsible groups
+    // If strategy has custom sections, build from section definitions
     if (strategy.hasSections) {
-      // Add Home link at top if strategy wants it (for admin to return to business)
-      if (strategy.showHome) {
-        items.add(
-          NavMenuItem(
-            id: 'home',
-            label: 'Back to App',
-            icon: Icons.home_outlined,
-            route: '/home',
-            requiresAuth: false,
-          ),
-        );
-        items.add(NavMenuItem.divider());
-      }
-
       for (final section in strategy.sections) {
-        final sectionChildren = <NavMenuItem>[];
+        // Type 1: Clickable item (has route, not a grouper)
+        if (section.hasRoute && !section.isGrouper) {
+          items.add(
+            NavMenuItem(
+              id: 'section_${section.id}',
+              label: section.label,
+              icon: section.icon != null
+                  ? EntityIconResolver.getStaticIcon(section.icon!)
+                  : null,
+              route: section.route,
+              requiresAuth: false,
+            ),
+          );
+          continue;
+        }
 
-        // Add entities for this section if it's "entities"
+        // Type 2: Entity grouper (dynamic children from metadata)
         if (section.id == 'entities' && strategy.includeEntities) {
+          final entityChildren = <NavMenuItem>[];
           for (final groupId in strategy.groups) {
             final placements = config.getEntityPlacementsForGroup(groupId);
             for (final placement in placements) {
-              // Admin context: route to /admin/entity/:name for entity settings
+              // Admin context: route to /admin/:entity for entity settings
               final menuItem = _entityPlacementToNavMenuItem(
                 placement,
-                routePrefix: '/admin/entity',
+                routePrefix: '/admin',
               );
               if (menuItem != null) {
-                sectionChildren.add(menuItem);
+                entityChildren.add(menuItem);
               }
             }
           }
+
+          items.add(
+            NavMenuItem(
+              id: 'section_${section.id}',
+              label: section.label,
+              icon: section.icon != null
+                  ? EntityIconResolver.getStaticIcon(section.icon!)
+                  : null,
+              isSectionHeader: entityChildren.isNotEmpty,
+              children: entityChildren.isNotEmpty ? entityChildren : null,
+              requiresAuth: false,
+            ),
+          );
+          continue;
         }
 
-        // Add section as collapsible header with children
-        // If no children, add as clickable item (routes to "under construction")
-        items.add(
-          NavMenuItem(
-            id: 'section_${section.id}',
-            label: section.label,
-            icon: section.icon != null
-                ? EntityIconResolver.getStaticIcon(section.icon!)
-                : null,
-            isSectionHeader: sectionChildren.isNotEmpty,
-            children: sectionChildren.isNotEmpty ? sectionChildren : null,
-            // Non-entity sections get a route for "under construction"
-            route: sectionChildren.isEmpty ? '/admin/${section.id}' : null,
-            requiresAuth: false,
-          ),
+        // Type 3: Static grouper (has children defined in config)
+        if (section.hasChildren) {
+          final staticChildren = section.children.map((child) {
+            return NavMenuItem(
+              id: 'section_${section.id}_${child.id}',
+              label: child.label,
+              icon: child.icon != null
+                  ? EntityIconResolver.getStaticIcon(child.icon!)
+                  : null,
+              route: child.route,
+              requiresAuth: false,
+            );
+          }).toList();
+
+          items.add(
+            NavMenuItem(
+              id: 'section_${section.id}',
+              label: section.label,
+              icon: section.icon != null
+                  ? EntityIconResolver.getStaticIcon(section.icon!)
+                  : null,
+              isSectionHeader: true,
+              children: staticChildren,
+              requiresAuth: false,
+            ),
+          );
+          continue;
+        }
+
+        // Fallback: Clickable item with no route (shouldn't happen with good config)
+        ErrorService.logWarning(
+          '[NavMenu] Section has no route, children, or entity flag',
+          context: {'sectionId': section.id},
         );
       }
     } else {
@@ -351,11 +384,12 @@ class NavMenuBuilder {
   /// For entities, nav visibility uses the entity's `rlsResource` from metadata.
   /// This is intentional: if you can't read any records, hide the nav item.
   ///
-  /// [routePrefix] - Optional route prefix. Defaults to '/entity'.
-  ///   Use '/admin/entity' for admin entity settings routes.
+  /// [routePrefix] - Optional route prefix. Defaults to '' (root level).
+  ///   Entities sit directly under root, matching backend /api/:entity structure.
+  ///   Use '/admin' for admin entity settings routes.
   static NavMenuItem? _entityPlacementToNavMenuItem(
     EntityPlacement placement, {
-    String routePrefix = '/entity',
+    String routePrefix = '',
   }) {
     // Get entity metadata for display name and icon
     if (!EntityMetadataRegistry.has(placement.entityName)) {
@@ -512,12 +546,22 @@ class NavMenuBuilder {
 
   /// Fallback admin sidebar items when config not loaded
   static List<NavMenuItem> get _fallbackAdminSidebarItems => [
-    NavMenuItem.section(id: 'section_entities', label: 'Entity Settings'),
+    // Home (clickable)
+    NavMenuItem(
+      id: 'section_home',
+      label: 'Home',
+      icon: EntityIconResolver.getStaticIcon('dashboard'),
+      route: AppRoutes.admin,
+      requiresAuth: false,
+      visibleWhen: (user) => AuthProfileService.isAdmin(user),
+    ),
+    // Entities (grouper with children)
+    NavMenuItem.section(id: 'section_entities', label: 'Entities'),
     NavMenuItem(
       id: 'entity_user',
       label: 'Users',
       icon: EntityIconResolver.getIcon('user'),
-      route: '/admin/entity/user',
+      route: '/admin/user',
       requiresAuth: false,
       visibleWhen: (user) => AuthProfileService.isAdmin(user),
     ),
@@ -525,7 +569,16 @@ class NavMenuBuilder {
       id: 'entity_role',
       label: 'Roles',
       icon: EntityIconResolver.getIcon('role'),
-      route: '/admin/entity/role',
+      route: '/admin/role',
+      requiresAuth: false,
+      visibleWhen: (user) => AuthProfileService.isAdmin(user),
+    ),
+    // Logs (single item - tabs inside the screen)
+    NavMenuItem(
+      id: 'logs',
+      label: 'Logs',
+      icon: EntityIconResolver.getStaticIcon('history'),
+      route: AppRoutes.adminLogs,
       requiresAuth: false,
       visibleWhen: (user) => AuthProfileService.isAdmin(user),
     ),

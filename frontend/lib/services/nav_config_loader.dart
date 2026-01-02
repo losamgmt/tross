@@ -129,26 +129,69 @@ class EntityPlacement {
 // SIDEBAR STRATEGY MODELS
 // ============================================================================
 
-/// Section within a sidebar strategy (e.g., "Entity Settings", "Platform")
+/// Section within a sidebar strategy (e.g., "Home", "Entities", "Logs")
+/// Can be a clickable item (has route) or a grouper (has children)
 class SidebarSection {
   final String id;
   final String label;
   final String? icon;
   final int order;
+  final String? route; // If set, section is clickable
+  final bool isGrouper; // If true, section is a collapsible grouper
+  final List<SidebarSectionChild> children; // Static children (for logs, etc.)
 
   const SidebarSection({
     required this.id,
     required this.label,
     this.icon,
     required this.order,
+    this.route,
+    this.isGrouper = false,
+    this.children = const [],
   });
 
+  /// Check if this section has a direct route (clickable)
+  bool get hasRoute => route != null;
+
+  /// Check if this section has static children
+  bool get hasChildren => children.isNotEmpty;
+
   factory SidebarSection.fromJson(Map<String, dynamic> json) {
+    final childrenJson = json['children'] as List<dynamic>? ?? [];
     return SidebarSection(
       id: json['id'] as String,
       label: json['label'] as String,
       icon: json['icon'] as String?,
       order: json['order'] as int? ?? 0,
+      route: json['route'] as String?,
+      isGrouper: json['isGrouper'] as bool? ?? false,
+      children: childrenJson
+          .map((e) => SidebarSectionChild.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+}
+
+/// Child item within a sidebar section (e.g., "Data" and "Auth" under "Logs")
+class SidebarSectionChild {
+  final String id;
+  final String label;
+  final String? icon;
+  final String route;
+
+  const SidebarSectionChild({
+    required this.id,
+    required this.label,
+    this.icon,
+    required this.route,
+  });
+
+  factory SidebarSectionChild.fromJson(Map<String, dynamic> json) {
+    return SidebarSectionChild(
+      id: json['id'] as String,
+      label: json['label'] as String,
+      icon: json['icon'] as String?,
+      route: json['route'] as String,
     );
   }
 }

@@ -143,6 +143,78 @@ class SortConfig {
   }
 }
 
+/// Preference field definition for JSONB preferences schema
+/// Used to dynamically generate preference forms
+class PreferenceFieldDefinition {
+  final String key;
+  final PreferenceFieldType type;
+  final String label;
+  final String? description;
+  final dynamic defaultValue;
+  final List<String>? enumValues;
+  final Map<String, String>? displayLabels; // Maps enum values to display text
+  final int order;
+
+  const PreferenceFieldDefinition({
+    required this.key,
+    required this.type,
+    required this.label,
+    this.description,
+    this.defaultValue,
+    this.enumValues,
+    this.displayLabels,
+    this.order = 0,
+  });
+
+  factory PreferenceFieldDefinition.fromJson(
+    String key,
+    Map<String, dynamic> json,
+  ) {
+    return PreferenceFieldDefinition(
+      key: key,
+      type: _parsePreferenceFieldType(json['type'] as String? ?? 'string'),
+      label: json['label'] as String? ?? _formatLabel(key),
+      description: json['description'] as String?,
+      defaultValue: json['default'],
+      enumValues: (json['values'] as List<dynamic>?)?.cast<String>(),
+      displayLabels: (json['displayLabels'] as Map<String, dynamic>?)?.map(
+        (k, v) => MapEntry(k, v.toString()),
+      ),
+      order: json['order'] as int? ?? 0,
+    );
+  }
+
+  static PreferenceFieldType _parsePreferenceFieldType(String type) {
+    return switch (type.toLowerCase()) {
+      'boolean' || 'bool' => PreferenceFieldType.boolean,
+      'enum' => PreferenceFieldType.enumType,
+      'string' => PreferenceFieldType.string,
+      'integer' || 'int' => PreferenceFieldType.integer,
+      _ => PreferenceFieldType.string,
+    };
+  }
+
+  /// Format key to display label (e.g., 'notificationsEnabled' -> 'Notifications Enabled')
+  static String _formatLabel(String key) {
+    // Split on camelCase
+    final words = key.replaceAllMapped(
+      RegExp(r'([a-z])([A-Z])'),
+      (match) => '${match.group(1)} ${match.group(2)}',
+    );
+    // Capitalize first letter
+    if (words.isEmpty) return key;
+    return '${words[0].toUpperCase()}${words.substring(1)}';
+  }
+
+  /// Get display text for an enum value
+  String getDisplayText(String value) {
+    return displayLabels?[value] ?? _formatLabel(value);
+  }
+}
+
+/// Preference field types supported by the form builder
+enum PreferenceFieldType { boolean, enumType, string, integer }
+
 /// Entity metadata - complete definition of an entity
 class EntityMetadata {
   /// Entity name (e.g., 'customer', 'work_order')
@@ -159,6 +231,7 @@ class EntityMetadata {
 
   /// Resource type for RLS (row-level security) - determines which RECORDS user can access.
   /// This is distinct from nav visibility (which uses permissions.json resource.read).
+  /// Every entity MUST have an rlsResource for defense-in-depth security.
   final ResourceType rlsResource;
 
   /// Icon name for Material Icons (e.g., 'people_outlined', 'business_outlined').
@@ -192,6 +265,10 @@ class EntityMetadata {
   /// Display label for this entity (plural)
   final String displayNamePlural;
 
+  /// Preference schema for entities with JSONB preferences field
+  /// Contains field definitions for the preferences JSON keys
+  final Map<String, PreferenceFieldDefinition>? preferenceSchema;
+
   const EntityMetadata({
     required this.name,
     required this.tableName,
@@ -208,6 +285,7 @@ class EntityMetadata {
     required this.fields,
     required this.displayName,
     required this.displayNamePlural,
+    this.preferenceSchema,
   });
 
   factory EntityMetadata.fromJson(String name, Map<String, dynamic> json) {
@@ -233,7 +311,8 @@ class EntityMetadata {
         json['displayNamePlural'] as String? ??
         _toDisplayNamePlural(displayName);
 
-    // Parse rlsResource string to ResourceType enum (fail-fast if invalid)
+    // Parse rlsResource string to ResourceType enum
+    // Every entity MUST have a valid rlsResource for defense-in-depth
     final rlsResourceString = json['rlsResource'] as String? ?? '${name}s';
     final rlsResource = ResourceType.fromString(rlsResourceString);
     if (rlsResource == null) {
@@ -264,7 +343,26 @@ class EntityMetadata {
       fields: fields,
       displayName: displayName,
       displayNamePlural: displayNamePlural,
+      preferenceSchema: _parsePreferenceSchema(json['preferenceSchema']),
     );
+  }
+
+  /// Parse preferenceSchema JSON into PreferenceFieldDefinition map
+  static Map<String, PreferenceFieldDefinition>? _parsePreferenceSchema(
+    dynamic schemaJson,
+  ) {
+    if (schemaJson == null) return null;
+    final schema = schemaJson as Map<String, dynamic>;
+    if (schema.isEmpty) return null;
+
+    final result = <String, PreferenceFieldDefinition>{};
+    for (final entry in schema.entries) {
+      result[entry.key] = PreferenceFieldDefinition.fromJson(
+        entry.key,
+        entry.value as Map<String, dynamic>,
+      );
+    }
+    return result;
   }
 
   /// Convert entity name to display name (e.g., 'work_order' -> 'Work Order')

@@ -32,6 +32,7 @@ import '../../config/app_colors.dart';
 import '../../config/app_spacing.dart';
 import '../../config/constants.dart';
 import '../../core/routing/app_routes.dart';
+import '../../core/routing/route_guard.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/nav_menu_builder.dart';
 import '../organisms/navigation/nav_menu_item.dart';
@@ -76,6 +77,41 @@ class AdaptiveShell extends StatelessWidget {
     final authProvider = context.watch<AuthProvider>();
     final user = authProvider.user;
 
+    // ══════════════════════════════════════════════════════════════════════
+    // DEFENSE-IN-DEPTH: Shell-level guard (second tier after router guard)
+    // If somehow the router guard is bypassed, prevent rendering protected content
+    // ══════════════════════════════════════════════════════════════════════
+    final guardResult = RouteGuard.checkAccess(
+      route: currentRoute,
+      isAuthenticated: authProvider.isAuthenticated,
+      user: user,
+    );
+
+    if (!guardResult.canAccess) {
+      // Don't render protected content - show access denied inline
+      // The router SHOULD have redirected, but this is a safety net
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.lock, size: 64, color: Colors.grey),
+              const SizedBox(height: 16),
+              Text(
+                guardResult.reason ?? 'Access denied',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => context.go(AppRoutes.home),
+                child: const Text('Go to Home'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     // Get menu items: custom > strategy-based > default
     final sidebarItems = NavMenuBuilder.filterForUser(
       sidebarMenuItems ??
@@ -95,98 +131,108 @@ class AdaptiveShell extends StatelessWidget {
           constraints.maxWidth,
         );
 
-        if (isWideScreen) {
-          return _buildWideLayout(
-            context,
-            authProvider,
-            sidebarItems,
-            userItems,
-          );
-        } else {
-          return _buildNarrowLayout(
-            context,
-            authProvider,
-            sidebarItems,
-            userItems,
-          );
-        }
+        // HEADER-OUTER PATTERN: Full-width header, then sidebar + content below
+        return Scaffold(
+          appBar: showAppBar
+              ? _buildGlobalAppBar(
+                  context,
+                  authProvider,
+                  userItems,
+                  isWideScreen,
+                )
+              : null,
+          drawer: isWideScreen
+              ? null
+              : Drawer(
+                  width: AppBreakpoints.sidebarWidth,
+                  child: _SidebarContent(
+                    items: sidebarItems,
+                    currentRoute: currentRoute,
+                    width: AppBreakpoints.sidebarWidth,
+                    isDrawer: true,
+                    showHeader: false, // Header is global now
+                  ),
+                ),
+          body: isWideScreen
+              ? Row(
+                  children: [
+                    // Persistent sidebar (no header - it's global)
+                    _SidebarContent(
+                      items: sidebarItems,
+                      currentRoute: currentRoute,
+                      width: AppBreakpoints.sidebarWidth,
+                      isDrawer: false,
+                      showHeader: false, // Header is global now
+                    ),
+                    const VerticalDivider(width: 1, thickness: 1),
+                    Expanded(child: body),
+                  ],
+                )
+              : body,
+        );
       },
     );
   }
 
-  /// Wide screen layout: persistent sidebar + main content
-  Widget _buildWideLayout(
+  /// Build the global app bar with logo (always routes to /home), title, and user menu
+  PreferredSizeWidget _buildGlobalAppBar(
     BuildContext context,
     AuthProvider authProvider,
-    List<NavMenuItem> sidebarItems,
     List<NavMenuItem> userItems,
+    bool isWideScreen,
   ) {
-    return Row(
-      children: [
-        // Persistent sidebar
-        _SidebarContent(
-          items: sidebarItems,
-          currentRoute: currentRoute,
-          width: AppBreakpoints.sidebarWidth,
-          isDrawer: false,
-        ),
-        // Vertical divider
-        const VerticalDivider(width: 1, thickness: 1),
-        // Main content area
-        Expanded(
-          child: Scaffold(
-            appBar: showAppBar
-                ? _buildAppBar(
-                    context,
-                    authProvider,
-                    userItems,
-                    showMenuButton: false,
-                  )
-                : null,
-            body: body,
-          ),
-        ),
-      ],
-    );
-  }
-
-  /// Narrow screen layout: drawer-based navigation
-  Widget _buildNarrowLayout(
-    BuildContext context,
-    AuthProvider authProvider,
-    List<NavMenuItem> sidebarItems,
-    List<NavMenuItem> userItems,
-  ) {
-    return Scaffold(
-      appBar: showAppBar
-          ? _buildAppBar(context, authProvider, userItems)
-          : null,
-      drawer: Drawer(
-        width: AppBreakpoints.sidebarWidth,
-        child: _SidebarContent(
-          items: sidebarItems,
-          currentRoute: currentRoute,
-          width: AppBreakpoints.sidebarWidth,
-          isDrawer: true,
-        ),
-      ),
-      body: body,
-    );
-  }
-
-  /// Build the app bar with optional hamburger menu and user menu
-  PreferredSizeWidget _buildAppBar(
-    BuildContext context,
-    AuthProvider authProvider,
-    List<NavMenuItem> userItems, {
-    bool showMenuButton = true,
-  }) {
     return AppBar(
       backgroundColor: AppColors.brandPrimary,
       foregroundColor: AppColors.white,
-      title: Text(pageTitle),
-      centerTitle: true,
-      automaticallyImplyLeading: showMenuButton,
+      // Logo + App name as home link (always routes to business home)
+      leading: isWideScreen
+          ? null // No hamburger on wide screens
+          : null, // Let automaticallyImplyLeading handle hamburger
+      title: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Clickable logo - always routes to /home
+          InkWell(
+            onTap: () => context.go(AppRoutes.home),
+            borderRadius: BorderRadius.circular(4),
+            child: Padding(
+              padding: const EdgeInsets.all(4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.home, color: AppColors.white, size: 28),
+                  const SizedBox(width: 8),
+                  Text(
+                    AppConstants.appName,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: AppColors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Separator and page title
+          if (pageTitle.isNotEmpty) ...[
+            const SizedBox(width: 16),
+            Container(
+              height: 24,
+              width: 1,
+              color: AppColors.white.withValues(alpha: 0.3),
+            ),
+            const SizedBox(width: 16),
+            Text(
+              pageTitle,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: AppColors.white.withValues(alpha: 0.9),
+              ),
+            ),
+          ],
+        ],
+      ),
+      centerTitle: false,
+      automaticallyImplyLeading: !isWideScreen, // Hamburger on narrow screens
       actions: [
         _UserMenuButton(
           authProvider: authProvider,
@@ -214,12 +260,14 @@ class _SidebarContent extends StatefulWidget {
   final String currentRoute;
   final double width;
   final bool isDrawer;
+  final bool showHeader;
 
   const _SidebarContent({
     required this.items,
     required this.currentRoute,
     required this.width,
     required this.isDrawer,
+    this.showHeader = true,
   });
 
   @override
@@ -261,7 +309,7 @@ class _SidebarContentState extends State<_SidebarContent> {
             : Theme.of(context).scaffoldBackgroundColor,
         child: Column(
           children: [
-            _buildHeader(context),
+            if (widget.showHeader) _buildHeader(context),
             Expanded(
               child: ListView(
                 padding: EdgeInsets.zero,

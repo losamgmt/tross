@@ -19,19 +19,34 @@
       "label": "Administration",
       "groups": ["crm", "operations", "finance", "admin"],
       "includeEntities": true,
-      "showHome": true,
       "sections": [
-        { "id": "entities", "label": "Entity Settings", "icon": "dataset_outlined", "order": 0 },
-        { "id": "platform", "label": "Platform", "icon": "tune_outlined", "order": 1 },
-        { "id": "security", "label": "Security", "icon": "security_outlined", "order": 2 },
-        { "id": "system", "label": "System", "icon": "monitor_heart_outlined", "order": 3 }
+        { 
+          "id": "home", 
+          "label": "Home", 
+          "icon": "dashboard_outlined", 
+          "route": "/admin",
+          "order": 0 
+        },
+        { 
+          "id": "entities", 
+          "label": "Entities", 
+          "icon": "dataset_outlined", 
+          "order": 1,
+          "isGrouper": true
+        },
+        { 
+          "id": "logs", 
+          "label": "Logs", 
+          "icon": "history_outlined", 
+          "order": 2,
+          "route": "/admin/system/logs"
+        }
       ]
     }
   },
 
   "routeStrategies": {
     "/home": "app",
-    "/entity/*": "app",
     "/admin": "admin",
     "/admin/*": "admin",
     "/settings": "app"
