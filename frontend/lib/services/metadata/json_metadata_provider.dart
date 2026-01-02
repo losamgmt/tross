@@ -26,11 +26,13 @@ import 'metadata_types.dart';
 
 /// Implementation that reads from JSON asset files
 class JsonMetadataProvider implements MetadataProvider {
-  // Cache for loaded JSON data
+  // Cache for loaded JSON data with per-cache timestamps
   Map<String, dynamic>? _permissionsCache;
   Map<String, dynamic>? _validationCache;
   Map<String, dynamic>? _entityMetadataCache;
-  DateTime? _lastLoaded;
+  DateTime? _permissionsLoadedAt;
+  DateTime? _validationLoadedAt;
+  DateTime? _entityMetadataLoadedAt;
 
   // Cache duration (5 minutes)
   static const _cacheDuration = Duration(minutes: 5);
@@ -184,6 +186,49 @@ class JsonMetadataProvider implements MetadataProvider {
     return await _loadValidation();
   }
 
+  @override
+  Future<EntityValidationRules?> getEntityValidationRules(String entity) async {
+    // Get entity metadata to find entity's fields
+    final entityMetadata = await _loadEntityMetadata();
+    final entityJson = entityMetadata[entity] as Map<String, dynamic>?;
+
+    if (entityJson == null) return null;
+
+    // Get entity's field definitions
+    final entityFields = entityJson['fields'] as Map<String, dynamic>? ?? {};
+
+    // Get global validation rules
+    final validationJson = await _loadValidation();
+    final globalFields =
+        validationJson['fields'] as Map<String, dynamic>? ?? {};
+
+    // Build field validations by merging entity fields with global rules
+    final fields = <String, FieldValidation>{};
+
+    for (final fieldEntry in entityFields.entries) {
+      final fieldName = fieldEntry.key;
+      final entityFieldJson = fieldEntry.value as Map<String, dynamic>;
+
+      // Start with entity field definition
+      final mergedJson = Map<String, dynamic>.from(entityFieldJson);
+
+      // Merge in global validation rules if they exist for this field
+      final globalFieldJson = globalFields[fieldName] as Map<String, dynamic>?;
+      if (globalFieldJson != null) {
+        // Global rules override entity-level rules
+        for (final entry in globalFieldJson.entries) {
+          if (!mergedJson.containsKey(entry.key)) {
+            mergedJson[entry.key] = entry.value;
+          }
+        }
+      }
+
+      fields[fieldName] = FieldValidation.fromJson(fieldName, mergedJson);
+    }
+
+    return EntityValidationRules(entity: entity, fields: fields);
+  }
+
   // ===========================================================================
   // Entity Metadata
   // ===========================================================================
@@ -218,7 +263,9 @@ class JsonMetadataProvider implements MetadataProvider {
     _permissionsCache = null;
     _validationCache = null;
     _entityMetadataCache = null;
-    _lastLoaded = null;
+    _permissionsLoadedAt = null;
+    _validationLoadedAt = null;
+    _entityMetadataLoadedAt = null;
     ErrorService.logDebug('[$providerName] Cache cleared');
   }
 
@@ -233,9 +280,9 @@ class JsonMetadataProvider implements MetadataProvider {
     ErrorService.logDebug('[$providerName] All data reloaded');
   }
 
-  bool get _isCacheValid {
-    if (_lastLoaded == null) return false;
-    return DateTime.now().difference(_lastLoaded!) < _cacheDuration;
+  bool _isCacheValid(DateTime? loadedAt) {
+    if (loadedAt == null) return false;
+    return DateTime.now().difference(loadedAt) < _cacheDuration;
   }
 
   // ===========================================================================
@@ -243,7 +290,7 @@ class JsonMetadataProvider implements MetadataProvider {
   // ===========================================================================
 
   Future<Map<String, dynamic>> _loadPermissions() async {
-    if (_permissionsCache != null && _isCacheValid) {
+    if (_permissionsCache != null && _isCacheValid(_permissionsLoadedAt)) {
       return _permissionsCache!;
     }
 
@@ -252,7 +299,7 @@ class JsonMetadataProvider implements MetadataProvider {
         'assets/config/permissions.json',
       );
       _permissionsCache = json.decode(jsonString) as Map<String, dynamic>;
-      _lastLoaded = DateTime.now();
+      _permissionsLoadedAt = DateTime.now();
       ErrorService.logDebug('[$providerName] Loaded permissions.json');
       return _permissionsCache!;
     } catch (e, stackTrace) {
@@ -266,7 +313,7 @@ class JsonMetadataProvider implements MetadataProvider {
   }
 
   Future<Map<String, dynamic>> _loadValidation() async {
-    if (_validationCache != null && _isCacheValid) {
+    if (_validationCache != null && _isCacheValid(_validationLoadedAt)) {
       return _validationCache!;
     }
 
@@ -275,7 +322,7 @@ class JsonMetadataProvider implements MetadataProvider {
         'assets/config/validation-rules.json',
       );
       _validationCache = json.decode(jsonString) as Map<String, dynamic>;
-      _lastLoaded = DateTime.now();
+      _validationLoadedAt = DateTime.now();
       ErrorService.logDebug('[$providerName] Loaded validation-rules.json');
       return _validationCache!;
     } catch (e, stackTrace) {
@@ -289,7 +336,8 @@ class JsonMetadataProvider implements MetadataProvider {
   }
 
   Future<Map<String, dynamic>> _loadEntityMetadata() async {
-    if (_entityMetadataCache != null && _isCacheValid) {
+    if (_entityMetadataCache != null &&
+        _isCacheValid(_entityMetadataLoadedAt)) {
       return _entityMetadataCache!;
     }
 
@@ -298,7 +346,7 @@ class JsonMetadataProvider implements MetadataProvider {
         'assets/config/entity-metadata.json',
       );
       _entityMetadataCache = json.decode(jsonString) as Map<String, dynamic>;
-      _lastLoaded = DateTime.now();
+      _entityMetadataLoadedAt = DateTime.now();
       ErrorService.logDebug('[$providerName] Loaded entity-metadata.json');
       return _entityMetadataCache!;
     } catch (e, stackTrace) {
