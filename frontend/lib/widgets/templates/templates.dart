@@ -13,6 +13,10 @@ library;
 export 'adaptive_shell.dart';
 export 'master_detail_layout.dart';
 
+// Page templates
+export 'tabbed_page.dart';
+export 'dashboard_page.dart';
+
 // Re-export navigation types for convenience
 export '../organisms/navigation/nav_menu_item.dart';
 export '../../services/nav_menu_builder.dart';

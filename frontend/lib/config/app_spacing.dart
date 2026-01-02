@@ -156,6 +156,9 @@ class AppBreakpoints {
   /// Master panel width in master-detail layout
   static const double masterPanelWidth = 300;
 
+  /// Vertical tab panel width (TabbedPage template)
+  static const double verticalTabWidth = 180;
+
   // ============================================================================
   // BOOLEAN CHECKS
   // ============================================================================
