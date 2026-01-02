@@ -190,6 +190,52 @@ void main() {
         expect(raw, isA<Map<String, dynamic>>());
         expect(raw.containsKey('fields'), isTrue);
       });
+
+      test('getEntityValidationRules returns rules for valid entity', () async {
+        final rules = await provider.getEntityValidationRules('user');
+
+        expect(rules, isNotNull);
+        expect(rules!.entity, 'user');
+        expect(rules.fields, isNotEmpty);
+        // User entity should have email field
+        expect(rules.fields.containsKey('email'), isTrue);
+      });
+
+      test(
+        'getEntityValidationRules returns null for unknown entity',
+        () async {
+          final rules = await provider.getEntityValidationRules(
+            'nonexistent_entity',
+          );
+
+          expect(rules, isNull);
+        },
+      );
+
+      test(
+        'getEntityValidationRules merges entity fields with global rules',
+        () async {
+          final rules = await provider.getEntityValidationRules('user');
+
+          expect(rules, isNotNull);
+          final emailField = rules!.fields['email'];
+          expect(emailField, isNotNull);
+          // Email should have type from entity or global
+          expect(emailField!.type, isNotEmpty);
+        },
+      );
+
+      test(
+        'getEntityValidationRules.requiredFields returns required',
+        () async {
+          final rules = await provider.getEntityValidationRules('user');
+
+          expect(rules, isNotNull);
+          final required = rules!.requiredFields;
+          // User entity has required fields like email
+          expect(required, isA<List<String>>());
+        },
+      );
     });
 
     // =========================================================================

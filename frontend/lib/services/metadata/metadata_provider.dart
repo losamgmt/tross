@@ -74,6 +74,12 @@ abstract class MetadataProvider {
   /// Get all validation rules grouped by field
   Future<Map<String, FieldValidation>> getAllFieldValidations();
 
+  /// Get validation rules for a specific entity
+  ///
+  /// Combines entity field definitions with global validation rules.
+  /// Returns null if entity not found.
+  Future<EntityValidationRules?> getEntityValidationRules(String entity);
+
   /// Get raw validation config (for admin display)
   Future<Map<String, dynamic>> getRawValidation();
 
