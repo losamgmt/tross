@@ -281,7 +281,26 @@ function syncMetadata() {
   console.log(`\n✅ Synced ${entities.length} entities to:`);
   console.log(`   ${FRONTEND_METADATA_PATH}`);
   console.log(`\nEntities: ${entities.join(', ')}`);
+
+  return frontendMetadata;
 }
 
-// Run
-syncMetadata();
+// ============================================================================
+// EXPORTS (for testing)
+// ============================================================================
+module.exports = {
+  getPluralForm,
+  transformField,
+  transformRelationships,
+  transformPreferenceSchema,
+  transformModel,
+  syncMetadata,
+  PLURAL_OVERRIDES,
+};
+
+// ============================================================================
+// CLI ENTRYPOINT
+// ============================================================================
+if (require.main === module) {
+  syncMetadata();
+}
