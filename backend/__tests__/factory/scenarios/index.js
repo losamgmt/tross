@@ -16,6 +16,10 @@ const rlsScenarios = require('./rls.scenarios');
 const searchScenarios = require('./search.scenarios');
 const lifecycleScenarios = require('./lifecycle.scenarios');
 const responseScenarios = require('./response.scenarios');
+const auditScenarios = require('./audit.scenarios');
+const fieldAccessScenarios = require('./field-access.scenarios');
+const rlsFilterScenarios = require('./rls-filter.scenarios');
+const computedScenarios = require('./computed.scenarios');
 
 module.exports = {
   crud: crudScenarios,
@@ -25,4 +29,8 @@ module.exports = {
   search: searchScenarios,
   lifecycle: lifecycleScenarios,
   response: responseScenarios,
+  audit: auditScenarios,
+  fieldAccess: fieldAccessScenarios,
+  rlsFilter: rlsFilterScenarios,
+  computed: computedScenarios,
 };

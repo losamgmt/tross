@@ -132,42 +132,53 @@ async function resetDatabase(config, envName) {
 }
 
 async function main() {
+  const args = process.argv.slice(2);
+  const devOnly = args.includes('--dev-only');
+  const testOnly = args.includes('--test-only');
+
+  const targets = devOnly ? 'DEVELOPMENT only' : testOnly ? 'TEST only' : 'BOTH databases';
+
   console.log('╔════════════════════════════════════════════════════════════╗');
   console.log('║         🔥 NUCLEAR DATABASE RESET 🔥                      ║');
-  console.log('║  WARNING: This will DESTROY ALL data in both databases!  ║');
+  console.log(`║  WARNING: This will DESTROY ALL data in ${targets.padEnd(16)}║`);
   console.log('╚════════════════════════════════════════════════════════════╝');
 
   log('\n⏳ Starting in 3 seconds... (Ctrl+C to cancel)', 'yellow');
   await new Promise((resolve) => setTimeout(resolve, 3000));
 
   try {
-    // Reset both databases
-    await resetDatabase(
-      {
-        host: DATABASE.DEV.HOST,
-        port: DATABASE.DEV.PORT,
-        database: DATABASE.DEV.NAME,
-        user: DATABASE.DEV.USER,
-        password: DATABASE.DEV.PASSWORD,
-      },
-      'DEVELOPMENT',
-    );
+    // Reset dev database (unless test-only)
+    if (!testOnly) {
+      await resetDatabase(
+        {
+          host: DATABASE.DEV.HOST,
+          port: DATABASE.DEV.PORT,
+          database: DATABASE.DEV.NAME,
+          user: DATABASE.DEV.USER,
+          password: DATABASE.DEV.PASSWORD,
+        },
+        'DEVELOPMENT',
+      );
+    }
 
-    await resetDatabase(
-      {
-        host: DATABASE.TEST.HOST,
-        port: DATABASE.TEST.PORT,
-        database: DATABASE.TEST.NAME,
-        user: DATABASE.TEST.USER,
-        password: DATABASE.TEST.PASSWORD,
-      },
-      'TEST',
-    );
+    // Reset test database (unless dev-only)
+    if (!devOnly) {
+      await resetDatabase(
+        {
+          host: DATABASE.TEST.HOST,
+          port: DATABASE.TEST.PORT,
+          database: DATABASE.TEST.NAME,
+          user: DATABASE.TEST.USER,
+          password: DATABASE.TEST.PASSWORD,
+        },
+        'TEST',
+      );
+    }
 
     console.log('╔════════════════════════════════════════════════════════════╗');
-    console.log('║            ✅ DATABASES RESET SUCCESSFULLY ✅             ║');
+    console.log('║            ✅ DATABASE(S) RESET SUCCESSFULLY ✅            ║');
     console.log('║                                                            ║');
-    console.log('║  Both databases now have:                                 ║');
+    console.log('║  Database(s) now have:                                    ║');
     console.log('║  - Clean schema with 5 core roles (IDs 1-5)               ║');
     console.log('║  - No test garbage                                        ║');
     console.log('║  - Consistent structure                                   ║');

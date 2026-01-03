@@ -53,7 +53,7 @@ ON CONFLICT (email) DO UPDATE SET
 -- ============================================================================
 -- USER PREFERENCES (linked to admin user)
 -- ============================================================================
-INSERT INTO user_preferences (
+INSERT INTO preferences (
     id,
     preferences
 ) VALUES (
@@ -71,5 +71,5 @@ BEGIN
     RAISE NOTICE '✅ Seed data applied successfully';
     RAISE NOTICE '   - Roles: %', (SELECT COUNT(*) FROM roles);
     RAISE NOTICE '   - Users: %', (SELECT COUNT(*) FROM users);
-    RAISE NOTICE '   - Preferences: %', (SELECT COUNT(*) FROM user_preferences);
+    RAISE NOTICE '   - Preferences: %', (SELECT COUNT(*) FROM preferences);
 END $$;

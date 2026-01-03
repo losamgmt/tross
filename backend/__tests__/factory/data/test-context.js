@@ -287,6 +287,7 @@ function buildTestContext(app, db) {
     fixtures, // Expose fixtures for direct access
     authHeader,
     authHeaderForUser,
+    getTestUser,
     entityNameFromTable: entityFactory.entityNameFromTable,
     entitiesWithFkTo,
     createdEntities,

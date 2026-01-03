@@ -73,6 +73,7 @@ function runEntityTests(entityName, options = {}) {
             get factory() { return ctx.factory; },
             get authHeader() { return ctx.authHeader; },
             get authHeaderForUser() { return ctx.authHeaderForUser; },
+            get getTestUser() { return ctx.getTestUser; },
             get entityNameFromTable() { return ctx.entityNameFromTable; },
             it: (name, fn) => it(name, fn),
             expect: expect,

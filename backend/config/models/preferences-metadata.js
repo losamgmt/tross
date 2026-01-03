@@ -31,8 +31,8 @@ const {
 } = require('../constants');
 
 module.exports = {
-  // Table name in database
-  tableName: 'user_preferences',
+  // Table name in database (matches route: /api/preferences)
+  tableName: 'preferences',
 
   // Primary key (shared with users.id)
   primaryKey: 'id',

@@ -4,9 +4,9 @@
  * Tests preference endpoints with real server and database
  * Validates authentication, CRUD operations, and validation
  *
- * IMPORTANT: These tests require the user_preferences table to exist.
+ * IMPORTANT: These tests require the preferences table to exist.
  * Run migrations 013 and 014 before running these tests.
- * Uses shared PK pattern: user_preferences.id = users.id
+ * Uses shared PK pattern: preferences.id = users.id
  */
 
 const request = require('supertest');

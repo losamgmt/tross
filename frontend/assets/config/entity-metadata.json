@@ -965,7 +965,7 @@
     }
   },
   "preferences": {
-    "tableName": "user_preferences",
+    "tableName": "preferences",
     "primaryKey": "id",
     "identityField": "id",
     "rlsResource": "preferences",
@@ -1083,7 +1083,7 @@
     }
   },
   "saved_view": {
-    "tableName": "user_saved_view",
+    "tableName": "saved_views",
     "primaryKey": "id",
     "identityField": "view_name",
     "rlsResource": "saved_views",

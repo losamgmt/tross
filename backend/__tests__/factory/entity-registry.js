@@ -185,6 +185,58 @@ function assertValidMetadata() {
 }
 
 // ============================================================================
+// GENERIC CRUD SUPPORT
+// ============================================================================
+
+/**
+ * Entities that use specialized routes (not GenericEntityService).
+ * These entities cannot be tested with standard CRUD factory scenarios.
+ *
+ * - preferences: Uses /api/preferences with GET/PUT pattern (no POST/DELETE)
+ * - file_attachment: Uses /api/:entityType/:entityId/files (polymorphic)
+ */
+/**
+ * Entities that use specialized routes (not the generic CRUD factory).
+ * 
+ * These entities require custom route handling:
+ * - preferences: Uses shared PK pattern (id = user.id), specialized service
+ * - file_attachment: Polymorphic S3-based storage, specialized upload flow
+ * - saved_view: User-owned entity (user_id auto-injected from auth context)
+ * 
+ * They should have their own dedicated tests, not run through all-entities.test.js
+ */
+const SPECIALIZED_ROUTE_ENTITIES = ['preferences', 'file_attachment', 'saved_view'];
+
+/**
+ * Check if an entity uses generic CRUD routes (testable by factory).
+ *
+ * @param {string} entityName - Entity name
+ * @returns {boolean} True if uses generic CRUD
+ */
+function usesGenericCrud(entityName) {
+  return !SPECIALIZED_ROUTE_ENTITIES.includes(entityName);
+}
+
+/**
+ * Get all entities that use generic CRUD routes.
+ * These are the entities that can be tested by the factory.
+ *
+ * @returns {string[]} Entity names with generic CRUD
+ */
+function getGenericCrudEntityNames() {
+  return getAllEntityNames().filter(usesGenericCrud);
+}
+
+/**
+ * Get entities with specialized routes (not testable by standard factory).
+ *
+ * @returns {string[]} Entity names with specialized routes
+ */
+function getSpecializedRouteEntityNames() {
+  return SPECIALIZED_ROUTE_ENTITIES.filter(name => getAllEntityNames().includes(name));
+}
+
+// ============================================================================
 // ENTITY CATEGORIZATION (for selective test running)
 // ============================================================================
 
@@ -256,6 +308,11 @@ module.exports = {
   getEntitiesByCategory,
   getEntitiesWithFeature,
 
+  // Generic CRUD support
+  usesGenericCrud,
+  getGenericCrudEntityNames,
+  getSpecializedRouteEntityNames,
+
   // Validation
   validateEntityMetadata,
   assertValidMetadata,
@@ -264,4 +321,5 @@ module.exports = {
   REQUIRED_FIELDS,
   RLS_REQUIRED_FIELDS,
   BUSINESS_ENTITY_CATEGORIES,
+  SPECIALIZED_ROUTE_ENTITIES,
 };

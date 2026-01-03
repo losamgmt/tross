@@ -18,8 +18,8 @@ const {
 } = require('../constants');
 
 module.exports = {
-  // Table name in database
-  tableName: 'user_saved_view',
+  // Table name in database (matches route: /api/saved_views)
+  tableName: 'saved_views',
 
   // Primary key
   primaryKey: 'id',

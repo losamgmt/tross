@@ -9,7 +9,7 @@
  *
  * DESIGN:
  * - 1:1 relationship with users via SHARED PRIMARY KEY pattern
- * - user_preferences.id = users.id (identifying relationship)
+ * - preferences.id = users.id (identifying relationship)
  * - JSONB storage for flexible schema evolution
  * - Application-level validation using preferenceSchema from metadata
  * - Automatic preference row creation on first access (upsert pattern)
@@ -53,7 +53,7 @@ class PreferencesService {
     // Try to get existing preferences (id = userId in shared PK pattern)
     const result = await db(
       `SELECT id, preferences, created_at, updated_at
-       FROM user_preferences
+       FROM preferences
        WHERE id = $1`,
       [safeUserId],
     );
@@ -88,7 +88,7 @@ class PreferencesService {
 
     // Shared PK: id = userId
     const result = await db(
-      `INSERT INTO user_preferences (id, preferences)
+      `INSERT INTO preferences (id, preferences)
        VALUES ($1, $2)
        ON CONFLICT (id) DO UPDATE SET updated_at = CURRENT_TIMESTAMP
        RETURNING id, preferences, created_at, updated_at`,
@@ -131,7 +131,7 @@ class PreferencesService {
     // Update using JSONB merge (preserves existing keys not in updates)
     // Shared PK: id = userId
     const result = await db(
-      `UPDATE user_preferences
+      `UPDATE preferences
        SET preferences = preferences || $2::jsonb,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $1
@@ -184,7 +184,7 @@ class PreferencesService {
 
     // Shared PK: id = userId
     const result = await db(
-      `UPDATE user_preferences
+      `UPDATE preferences
        SET preferences = $2::jsonb,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $1

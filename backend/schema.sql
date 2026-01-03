@@ -21,8 +21,8 @@
 DROP TABLE IF EXISTS file_attachments CASCADE;
 DROP TABLE IF EXISTS system_settings CASCADE;
 DROP TABLE IF EXISTS entity_settings CASCADE;  -- Legacy table cleanup
-DROP TABLE IF EXISTS user_saved_view CASCADE;
-DROP TABLE IF EXISTS user_preferences CASCADE;
+DROP TABLE IF EXISTS saved_views CASCADE;
+DROP TABLE IF EXISTS preferences CASCADE;
 DROP TABLE IF EXISTS audit_logs CASCADE;
 DROP TABLE IF EXISTS invoices CASCADE;
 DROP TABLE IF EXISTS contracts CASCADE;
@@ -198,7 +198,7 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
 --   - pageSize: integer (default table page size, e.g., 10, 25, 50, 100)
 --   - tableDensity: 'compact' | 'standard' | 'comfortable' (table row spacing)
 -- ============================================================================
-CREATE TABLE IF NOT EXISTS user_preferences (
+CREATE TABLE IF NOT EXISTS preferences (
     -- Primary key = users.id (shared PK pattern for 1:1)
     -- NOT SERIAL - id is provided, not auto-generated
     id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
@@ -218,7 +218,7 @@ CREATE TABLE IF NOT EXISTS user_preferences (
 -- RLS: Each user can only see their own views (user_id filter)
 -- Category: N/A (system table, not a business entity)
 -- ============================================================================
-CREATE TABLE IF NOT EXISTS user_saved_view (
+CREATE TABLE IF NOT EXISTS saved_views (
     id SERIAL PRIMARY KEY,
     
     -- Owner of this saved view (RLS filter field)
@@ -319,8 +319,8 @@ CREATE INDEX IF NOT EXISTS idx_users_status_active ON users(status, is_active) W
 -- No additional indexes needed - UNIQUE constraint handles fast lookups
 
 -- User saved views indexes
-CREATE INDEX IF NOT EXISTS idx_user_saved_view_user_entity ON user_saved_view(user_id, entity_name);
-CREATE INDEX IF NOT EXISTS idx_user_saved_view_default ON user_saved_view(user_id, entity_name, is_default) WHERE is_default = true;
+CREATE INDEX IF NOT EXISTS idx_saved_views_user_entity ON saved_views(user_id, entity_name);
+CREATE INDEX IF NOT EXISTS idx_saved_views_default ON saved_views(user_id, entity_name, is_default) WHERE is_default = true;
 
 -- Audit logs indexes (critical for performance)
 CREATE INDEX IF NOT EXISTS idx_audit_logs_resource ON audit_logs(resource_type, resource_id);
@@ -360,15 +360,15 @@ CREATE TRIGGER update_users_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
-DROP TRIGGER IF EXISTS update_user_preferences_updated_at ON user_preferences;
-CREATE TRIGGER update_user_preferences_updated_at
-    BEFORE UPDATE ON user_preferences
+DROP TRIGGER IF EXISTS update_preferences_updated_at ON preferences;
+CREATE TRIGGER update_preferences_updated_at
+    BEFORE UPDATE ON preferences
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
-DROP TRIGGER IF EXISTS update_user_saved_view_updated_at ON user_saved_view;
-CREATE TRIGGER update_user_saved_view_updated_at
-    BEFORE UPDATE ON user_saved_view
+DROP TRIGGER IF EXISTS update_saved_views_updated_at ON saved_views;
+CREATE TRIGGER update_saved_views_updated_at
+    BEFORE UPDATE ON saved_views
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
