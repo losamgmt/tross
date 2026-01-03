@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../config/app_colors.dart';
 import '../../../config/app_spacing.dart';
 
 /// Display type for FieldDisplay - determines formatting
@@ -110,7 +111,9 @@ class FieldDisplay extends StatelessWidget {
           color:
               displayColor ??
               (isEmptyState
-                  ? theme.colorScheme.onSurface.withValues(alpha: 0.5)
+                  ? theme.colorScheme.onSurface.withValues(
+                      alpha: AppColors.opacityHint,
+                    )
                   : theme.colorScheme.onSurface),
         );
 
@@ -121,10 +124,12 @@ class FieldDisplay extends StatelessWidget {
         children: [
           Icon(
             displayIcon ?? icon,
-            size: 16,
+            size: spacing.iconSizeMD,
             color:
                 displayColor ??
-                theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                theme.colorScheme.onSurface.withValues(
+                  alpha: AppColors.opacitySecondary,
+                ),
           ),
           SizedBox(width: spacing.xs),
           Flexible(

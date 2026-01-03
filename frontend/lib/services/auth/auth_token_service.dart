@@ -17,10 +17,10 @@ class AuthTokenService {
     try {
       final profile = await ApiClient.getUserProfile(token);
       if (profile != null) {
-        ErrorService.logInfo('Token is valid');
+        ErrorService.logDebug('Token validated successfully');
         return profile;
       } else {
-        ErrorService.logInfo('Token is invalid');
+        // Not an error - token is invalid/expired, normal flow
         return null;
       }
     } catch (e) {
@@ -70,7 +70,7 @@ class AuthTokenService {
         ErrorService.logInfo('Auth data loaded from storage');
         return storedData;
       } else {
-        ErrorService.logInfo('No stored auth data found');
+        ErrorService.logDebug('No stored auth data found');
         return null;
       }
     } catch (e) {
@@ -92,10 +92,6 @@ class AuthTokenService {
         user: user,
         refreshToken: refreshToken,
         provider: provider,
-      );
-      ErrorService.logInfo(
-        'Auth data stored successfully',
-        context: {'provider': provider},
       );
     } catch (e) {
       ErrorService.logError('Failed to store auth data', error: e);

@@ -4,12 +4,33 @@ import 'package:flutter/foundation.dart';
 import '../config/constants.dart';
 import '../utils/helpers/string_helper.dart';
 
+/// Log level enum for controlling output verbosity
+enum LogLevel {
+  debug(0), // Most verbose - development tracing
+  info(1), // Normal operations
+  warning(2), // Potential issues
+  error(3); // Errors only
+
+  const LogLevel(this.value);
+  final int value;
+}
+
 /// Centralized Error Service for Tross
 /// KISS Principle: Simple, consistent error handling across the app
+///
+/// Log Level Control:
+/// - Set `minLogLevel` to filter console output
+/// - Default: LogLevel.warning (only warnings and errors in console)
+/// - DEBUG/INFO still go to developer.log for DevTools
 ///
 /// Test-Aware: Automatically silent during test execution to prevent noise
 class ErrorService {
   static String get _appName => AppConstants.appName;
+
+  /// Minimum log level for console output
+  /// Default: warning (cleaner console, still captures important events)
+  /// Change to LogLevel.debug or LogLevel.info for verbose debugging
+  static LogLevel minLogLevel = LogLevel.warning;
 
   /// Test mode detection - true when running in test environment
   /// This is automatically detected by checking for test framework presence
@@ -31,15 +52,17 @@ class ErrorService {
   static bool get isInTestMode => _manualTestMode || _isTestMode;
 
   /// Log errors with structured format
-  /// Automatically silent during test execution
+  /// Always logs to developer.log, console output respects minLogLevel
   static void logError(
     String message, {
     dynamic error,
     StackTrace? stackTrace,
     Map<String, dynamic>? context,
   }) {
-    // Browser console output (works everywhere) - but NOT during tests
-    if (kDebugMode && !isInTestMode) {
+    // Console output respects minLogLevel
+    if (kDebugMode &&
+        !isInTestMode &&
+        minLogLevel.value <= LogLevel.error.value) {
       // ignore: avoid_print
       print('❌ ERROR: $message ${error != null ? "| $error" : ""}');
       if (context != null) {
@@ -62,9 +85,12 @@ class ErrorService {
   }
 
   /// Log warnings
-  /// Automatically silent during test execution
+  /// Always logs to developer.log, console output respects minLogLevel
   static void logWarning(String message, {Map<String, dynamic>? context}) {
-    if (kDebugMode && !isInTestMode) {
+    // Console output respects minLogLevel
+    if (kDebugMode &&
+        !isInTestMode &&
+        minLogLevel.value <= LogLevel.warning.value) {
       // ignore: avoid_print
       print('⚠️  WARNING: $message');
       if (context != null) {
@@ -81,9 +107,12 @@ class ErrorService {
   }
 
   /// Log info messages
-  /// Automatically silent during test execution
+  /// Always logs to developer.log, console output respects minLogLevel
   static void logInfo(String message, {Map<String, dynamic>? context}) {
-    if (kDebugMode && !isInTestMode) {
+    // Console output respects minLogLevel
+    if (kDebugMode &&
+        !isInTestMode &&
+        minLogLevel.value <= LogLevel.info.value) {
       // ignore: avoid_print
       print('ℹ️  INFO: $message');
       if (context != null) {
@@ -132,13 +161,18 @@ class ErrorService {
   /// COMPLETELY SILENT in:
   /// - Production builds (kDebugMode = false)
   /// - Test execution (isInTestMode = true)
+  /// - When minLogLevel > LogLevel.debug
   ///
-  /// Only outputs to console during local development.
+  /// Only outputs to console during local development with debug level enabled.
   /// Use this for detailed tracing that helps during development
   /// but would be noise in production console.
   static void logDebug(String message, {Map<String, dynamic>? context}) {
-    // Debug logging ONLY in local development, not in prod builds or tests
-    if (!kDebugMode || isInTestMode) return;
+    // Debug logging ONLY when explicitly enabled via minLogLevel
+    if (!kDebugMode ||
+        isInTestMode ||
+        minLogLevel.value > LogLevel.debug.value) {
+      return;
+    }
 
     // ignore: avoid_print
     print('🔍 DEBUG: $message');
@@ -146,5 +180,11 @@ class ErrorService {
       // ignore: avoid_print
       print('   Context: $context');
     }
+
+    developer.log(
+      message,
+      name: _appName,
+      level: 500, // Debug level
+    );
   }
 }

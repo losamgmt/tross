@@ -23,7 +23,10 @@
 library;
 
 import 'package:flutter/material.dart';
+import '../../../config/app_borders.dart';
+import '../../../config/app_colors.dart';
 import '../../../config/app_spacing.dart';
+import '../../../config/app_typography.dart';
 
 /// Button styles - semantic only
 enum AppButtonStyle { primary, secondary, danger, ghost }
@@ -68,8 +71,8 @@ class AppButton extends StatelessWidget {
         label!,
         style: theme.textTheme.titleMedium?.copyWith(
           color: colors.icon,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 0.5,
+          fontWeight: AppTypography.bold,
+          letterSpacing: AppTypography.letterSpacingWide,
         ),
         overflow: TextOverflow.clip,
         maxLines: 1,
@@ -104,7 +107,10 @@ class AppButton extends StatelessWidget {
             width: size,
             height: size,
             decoration: BoxDecoration(
-              border: Border.all(color: colors.border, width: 1),
+              border: Border.all(
+                color: colors.border,
+                width: AppBorders.widthThin,
+              ),
               borderRadius: spacing.radiusSM,
             ),
             child: Icon(
@@ -122,27 +128,43 @@ class AppButton extends StatelessWidget {
     return switch (style) {
       AppButtonStyle.primary => _ButtonColors(
         background: theme.colorScheme.primaryContainer,
-        border: theme.colorScheme.primary.withValues(alpha: 0.3),
+        border: theme.colorScheme.primary.withValues(
+          alpha: AppColors.opacityDisabled,
+        ),
         icon: theme.colorScheme.primary,
-        disabled: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+        disabled: theme.colorScheme.onSurface.withValues(
+          alpha: AppColors.opacityDisabled,
+        ),
       ),
       AppButtonStyle.danger => _ButtonColors(
         background: theme.colorScheme.errorContainer,
-        border: theme.colorScheme.error.withValues(alpha: 0.3),
+        border: theme.colorScheme.error.withValues(
+          alpha: AppColors.opacityDisabled,
+        ),
         icon: theme.colorScheme.error,
-        disabled: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+        disabled: theme.colorScheme.onSurface.withValues(
+          alpha: AppColors.opacityDisabled,
+        ),
       ),
       AppButtonStyle.ghost => _ButtonColors(
         background: Colors.transparent,
-        border: theme.colorScheme.outline.withValues(alpha: 0.2),
+        border: theme.colorScheme.outline.withValues(
+          alpha: AppColors.opacityBorder,
+        ),
         icon: theme.colorScheme.onSurfaceVariant,
-        disabled: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+        disabled: theme.colorScheme.onSurface.withValues(
+          alpha: AppColors.opacityDisabled,
+        ),
       ),
       AppButtonStyle.secondary => _ButtonColors(
         background: theme.colorScheme.surfaceContainerHighest,
-        border: theme.colorScheme.outline.withValues(alpha: 0.3),
+        border: theme.colorScheme.outline.withValues(
+          alpha: AppColors.opacityDisabled,
+        ),
         icon: theme.colorScheme.onSurfaceVariant,
-        disabled: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+        disabled: theme.colorScheme.onSurface.withValues(
+          alpha: AppColors.opacityDisabled,
+        ),
       ),
     };
   }

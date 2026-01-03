@@ -14,14 +14,13 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
-import 'package:tross_app/providers/auth_provider.dart';
 import 'package:tross_app/providers/dashboard_provider.dart';
 import 'package:tross_app/widgets/organisms/dashboard_content.dart';
 
 /// Creates a widget wrapped with required providers
 Widget createTestWidget({
   required DashboardProvider dashboardProvider,
-  AuthProvider? authProvider,
+  String userName = 'Test User',
 }) {
   return MaterialApp(
     home: MultiProvider(
@@ -29,11 +28,8 @@ Widget createTestWidget({
         ChangeNotifierProvider<DashboardProvider>.value(
           value: dashboardProvider,
         ),
-        ChangeNotifierProvider<AuthProvider>(
-          create: (_) => authProvider ?? AuthProvider(),
-        ),
       ],
-      child: const Scaffold(body: DashboardContent()),
+      child: Scaffold(body: DashboardContent(userName: userName)),
     ),
   );
 }

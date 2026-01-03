@@ -208,6 +208,15 @@ class AuthProvider extends ChangeNotifier {
       final success = await _authService.loginWithAuth0();
 
       if (success) {
+        // On web, success just means redirect started - NOT authenticated yet
+        // Auth completes in handleAuth0Callback() after redirect
+        if (Auth0PlatformService.isWeb) {
+          // Don't set _isAuthenticated here - browser is navigating away
+          // The callback handler will complete authentication
+          return true;
+        }
+
+        // Mobile: credentials returned immediately, we're fully authenticated
         _user = _authService.user;
         _isAuthenticated = true;
         ErrorService.logInfo(

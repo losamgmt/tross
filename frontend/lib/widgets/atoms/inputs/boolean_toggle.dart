@@ -1,42 +1,11 @@
 /// BooleanToggle - Generic toggle button for boolean values
 ///
 /// SINGLE RESPONSIBILITY: Display boolean state and emit toggle event
-///
-/// GENERIC: Works for ANY boolean field (isActive, isPublished, isEnabled, etc.)
-/// NOT specific to activation - fully parameterized
-///
-/// Visual Design:
-/// - True: Configurable icon + color (default: green check_circle)
-/// - False: Configurable icon + color (default: red cancel)
-/// - Disabled: Gray icon with gray border
-///
-/// TESTABLE: Widget test verifies icon, color, tooltip, onToggle callback
-///
-/// Usage:
-/// ```dart
-/// // For isActive field
-/// BooleanToggle(
-///   value: user.isActive,
-///   onToggle: () => _handleToggle(),
-///   trueIcon: Icons.check_circle,
-///   falseIcon: Icons.cancel,
-///   tooltipTrue: 'Active',
-///   tooltipFalse: 'Inactive',
-/// )
-///
-/// // For isPublished field
-/// BooleanToggle(
-///   value: post.isPublished,
-///   onToggle: () => _handleToggle(),
-///   trueIcon: Icons.public,
-///   falseIcon: Icons.public_off,
-///   tooltipTrue: 'Published',
-///   tooltipFalse: 'Draft',
-/// )
-/// ```
 library;
 
 import 'package:flutter/material.dart';
+import '../../../config/app_borders.dart';
+import '../../../config/app_colors.dart';
 import '../../../config/app_spacing.dart';
 
 class BooleanToggle extends StatelessWidget {
@@ -161,9 +130,11 @@ class BooleanToggle extends StatelessWidget {
             decoration: BoxDecoration(
               border: Border.all(
                 color: onToggle == null
-                    ? theme.disabledColor.withValues(alpha: 0.5)
-                    : color.withValues(alpha: 0.5),
-                width: 1.5,
+                    ? theme.disabledColor.withValues(
+                        alpha: AppColors.opacityHint,
+                      )
+                    : color.withValues(alpha: AppColors.opacityHint),
+                width: AppBorders.widthMedium,
               ),
               borderRadius: spacing.radiusSM,
             ),

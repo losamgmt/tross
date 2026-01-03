@@ -5,7 +5,9 @@
 library;
 
 import 'package:flutter/material.dart';
+import '../../../config/app_colors.dart';
 import '../../../config/app_spacing.dart';
+import '../../../config/app_typography.dart';
 
 enum SortDirection { none, ascending, descending }
 
@@ -38,9 +40,9 @@ class ColumnHeader extends StatelessWidget {
     final textWidget = Text(
       label,
       style: theme.textTheme.labelLarge?.copyWith(
-        fontWeight: FontWeight.w700,
+        fontWeight: AppTypography.bold,
         color: theme.colorScheme.onSurface,
-        letterSpacing: 0.5,
+        letterSpacing: AppTypography.letterSpacingWide,
       ),
       textAlign: textAlign,
       overflow: TextOverflow.ellipsis,
@@ -112,8 +114,11 @@ class _SortIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final spacing = context.spacing;
     final color = direction == SortDirection.none
-        ? theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4)
+        ? theme.colorScheme.onSurfaceVariant.withValues(
+            alpha: AppColors.opacityDisabled,
+          )
         : theme.colorScheme.primary;
 
     IconData icon;
@@ -129,6 +134,6 @@ class _SortIcon extends StatelessWidget {
         break;
     }
 
-    return Icon(icon, size: 16, color: color);
+    return Icon(icon, size: spacing.iconSizeMD, color: color);
   }
 }

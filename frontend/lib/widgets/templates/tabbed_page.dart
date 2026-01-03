@@ -353,10 +353,9 @@ class TabbedPage extends StatelessWidget {
   }
 
   void _navigateToTab(BuildContext context, String tabId) {
-    // Navigate to tab route: baseRoute/tabId
-    final route = baseRoute.endsWith('/')
-        ? '$baseRoute$tabId'
-        : '$baseRoute/$tabId';
+    // Navigate using query parameter: baseRoute?tab=tabId
+    // This matches the GoRouter pattern that extracts tab from queryParameters
+    final route = '$baseRoute?tab=$tabId';
     context.go(route);
   }
 }

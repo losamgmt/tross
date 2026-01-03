@@ -25,7 +25,7 @@
 library;
 
 import 'package:flutter/material.dart';
-import '../../../services/file_service.dart';
+import '../../../models/file_attachment.dart';
 import '../../../utils/helpers/string_helper.dart';
 import '../../../config/app_spacing.dart';
 

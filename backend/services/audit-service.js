@@ -170,6 +170,87 @@ class AuditService {
   }
 
   /**
+   * Get all recent audit logs (admin only)
+   * Used for admin dashboard - shows all system activity
+   *
+   * @param {Object} options - Query options
+   * @param {number} options.limit - Maximum records to return (default 100, max 500)
+   * @param {number} options.offset - Offset for pagination (default 0)
+   * @param {string} options.actionFilter - Filter by action type ('data' or 'auth')
+   * @returns {Promise<{logs: Array, total: number}>}
+   */
+  async getAllRecentLogs({ limit = 100, offset = 0, actionFilter = null } = {}) {
+    try {
+      const safeLimit = Math.min(Math.max(1, parseInt(limit) || 100), 500);
+      const safeOffset = Math.max(0, parseInt(offset) || 0);
+
+      // Build WHERE clause based on filter
+      let whereClause = '';
+      const params = [];
+
+      if (actionFilter === 'auth') {
+        // Auth events: login, logout, token, session management
+        whereClause = 'WHERE action IN ($1, $2, $3, $4, $5, $6, $7, $8)';
+        params.push(
+          AuditActions.LOGIN,
+          AuditActions.LOGIN_FAILED,
+          AuditActions.LOGOUT,
+          AuditActions.LOGOUT_ALL_DEVICES,
+          AuditActions.ADMIN_REVOKE_SESSIONS,
+          AuditActions.TOKEN_REFRESH,
+          AuditActions.PASSWORD_RESET,
+          AuditActions.UNAUTHORIZED_ACCESS,
+        );
+      } else if (actionFilter === 'data') {
+        // Data events: all CRUD operations (NOT auth events)
+        whereClause = 'WHERE action NOT IN ($1, $2, $3, $4, $5, $6, $7, $8)';
+        params.push(
+          AuditActions.LOGIN,
+          AuditActions.LOGIN_FAILED,
+          AuditActions.LOGOUT,
+          AuditActions.LOGOUT_ALL_DEVICES,
+          AuditActions.ADMIN_REVOKE_SESSIONS,
+          AuditActions.TOKEN_REFRESH,
+          AuditActions.PASSWORD_RESET,
+          AuditActions.UNAUTHORIZED_ACCESS,
+        );
+      }
+
+      // Get total count
+      const countResult = await db(
+        `SELECT COUNT(*) as total FROM audit_logs ${whereClause}`,
+        params,
+      );
+      const total = parseInt(countResult.rows[0].total, 10);
+
+      // Get paginated logs with user info
+      const logsResult = await db(
+        `SELECT 
+           al.*,
+           u.email as user_email,
+           u.first_name as user_first_name,
+           u.last_name as user_last_name
+         FROM audit_logs al
+         LEFT JOIN users u ON al.user_id = u.id
+         ${whereClause}
+         ORDER BY al.created_at DESC
+         LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+        [...params, safeLimit, safeOffset],
+      );
+
+      return {
+        logs: logsResult.rows,
+        total,
+        limit: safeLimit,
+        offset: safeOffset,
+      };
+    } catch (error) {
+      logger.error('Error fetching all recent logs', { error: error.message });
+      throw error;
+    }
+  }
+
+  /**
    * Get audit logs for a specific resource
    * @param {string} resourceType - Resource type (use ResourceTypes constants)
    * @param {number|string} resourceId - Resource ID (will be validated)

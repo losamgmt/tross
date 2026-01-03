@@ -68,7 +68,7 @@ class Auth0WebService {
   /// Handle callback from Auth0 (extract code from URL)
   static String? getAuthorizationCode() {
     final uri = Uri.parse(web.window.location.href);
-    ErrorService.logInfo(
+    ErrorService.logDebug(
       'Checking for auth code',
       context: {
         'path': uri.path,
@@ -79,7 +79,7 @@ class Auth0WebService {
 
     if (uri.path == '/callback' && uri.queryParameters.containsKey('code')) {
       final code = uri.queryParameters['code']!;
-      ErrorService.logInfo(
+      ErrorService.logDebug(
         'Auth code found!',
         context: {'codePrefix': '${code.substring(0, 10)}...'},
       );
@@ -107,7 +107,7 @@ class Auth0WebService {
         throw Exception('Code verifier not found - session may have expired');
       }
 
-      ErrorService.logInfo(
+      ErrorService.logDebug(
         'Exchanging code with Auth0 (PKCE)',
         context: {
           'codePrefix': '${code.substring(0, 10)}...',
@@ -134,7 +134,7 @@ class Auth0WebService {
       if (response.statusCode == 200) {
         final tokens = json.decode(response.body);
 
-        ErrorService.logInfo('Auth0 token exchange successful');
+        ErrorService.logDebug('Auth0 token exchange successful');
 
         // Validate token with backend and get user profile
         final userProfile = await _validateTokenAndGetProfile(
@@ -194,7 +194,7 @@ class Auth0WebService {
         final responseBody = json.decode(response.body);
         // Unwrap standard response envelope: { success, data, timestamp }
         final data = responseBody['data'] ?? responseBody;
-        ErrorService.logInfo('Backend validation successful');
+        ErrorService.logDebug('Backend validation successful');
         return data;
       } else {
         ErrorService.logError(

@@ -1,25 +1,24 @@
 /// AppHeader - Organism for main application navigation bar
 ///
 /// Shared header across all authenticated pages
-/// Composes: AppButton (for logo), UserAvatar, UserInfoHeader (molecules)
+/// Composes: AppButton (for logo), InitialsAvatar, UserInfoHeader (molecules)
 ///
-/// **PROP-DRIVEN WITH OPTIONAL PROVIDER FALLBACK:**
-/// - If userName/userEmail/user provided: uses props (pure, testable)
-/// - If not provided: falls back to AuthProvider context (convenient)
+/// **FULLY PROP-DRIVEN:**
+/// - userName, userEmail are required props
+/// - onNavigate, onLogout callbacks for navigation/auth actions
+/// - No Provider access - pure, testable component
 ///
 /// GENERIC: Menu items are fully configurable via menuItems parameter.
 library;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 import '../../../config/app_spacing.dart';
 import '../../../config/app_colors.dart';
 import '../../../config/constants.dart';
-import '../../../providers/auth_provider.dart';
 import '../../../services/auth/auth_profile_service.dart';
 import '../../atoms/buttons/app_button.dart';
-import '../../molecules/display/user_avatar.dart';
+import '../../molecules/display/initials_avatar.dart';
 import '../../molecules/display/user_info_header.dart';
 import '../../../core/routing/app_routes.dart';
 
@@ -30,7 +29,7 @@ class AppHeaderMenuItem {
   final IconData icon;
   final String? route;
   final bool Function(Map<String, dynamic>? user)? visibleWhen;
-  final Future<void> Function(BuildContext context, AuthProvider auth)? onTap;
+  final Future<void> Function(BuildContext context)? onTap;
 
   const AppHeaderMenuItem({
     required this.id,
@@ -74,24 +73,32 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
   final List<AppHeaderMenuItem>? menuItems;
   final VoidCallback? onLogoPressed;
 
-  // Optional prop-driven user data (falls back to AuthProvider if not provided)
-  final String? userName;
-  final String? userEmail;
-  final String? userRole;
+  /// Required user display name
+  final String userName;
+
+  /// Required user email
+  final String userEmail;
+
+  /// User role for display
+  final String userRole;
+
+  /// User data map for permission checks
   final Map<String, dynamic>? user;
 
-  // Optional prop-driven callbacks (falls back to defaults if not provided)
+  /// Navigation callback (defaults to context.go)
   final void Function(String route)? onNavigate;
+
+  /// Logout callback - required for logout to work
   final Future<void> Function()? onLogout;
 
   const AppHeader({
     super.key,
     required this.pageTitle,
+    required this.userName,
+    required this.userEmail,
+    this.userRole = '',
     this.menuItems,
     this.onLogoPressed,
-    this.userName,
-    this.userEmail,
-    this.userRole,
     this.user,
     this.onNavigate,
     this.onLogout,
@@ -105,13 +112,6 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Use props if provided, otherwise fall back to AuthProvider
-    final authProvider = Provider.of<AuthProvider>(context);
-    final effectiveUserName = userName ?? authProvider.userName;
-    final effectiveUserEmail = userEmail ?? authProvider.userEmail;
-    final effectiveUserRole = userRole ?? authProvider.userRole;
-    final effectiveUser = user ?? authProvider.user;
-
     final theme = Theme.of(context);
     final spacing = context.spacing;
 
@@ -150,23 +150,19 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
           child: PopupMenuButton<String>(
             offset: Offset(0, spacing.xxl * 1.75),
             tooltip: 'User Menu',
-            icon: UserAvatar(
-              name: effectiveUserName,
-              email: effectiveUserEmail,
-            ),
+            icon: InitialsAvatar(name: userName, email: userEmail),
             itemBuilder: (context) => _buildMenuItems(
               context,
-              effectiveUserName: effectiveUserName,
-              effectiveUserEmail: effectiveUserEmail,
-              effectiveUserRole: effectiveUserRole,
-              user: effectiveUser,
+              effectiveUserName: userName,
+              effectiveUserEmail: userEmail,
+              effectiveUserRole: userRole,
+              user: user,
             ),
             onSelected: (value) => _handleMenuSelection(
               context,
               value,
-              authProvider: authProvider,
               navigateTo: navigateTo,
-              user: effectiveUser,
+              user: user,
             ),
           ),
         ),
@@ -235,7 +231,6 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
   void _handleMenuSelection(
     BuildContext context,
     String value, {
-    required AuthProvider authProvider,
     required void Function(String route) navigateTo,
     required Map<String, dynamic>? user,
   }) async {
@@ -253,7 +248,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
 
     // Custom handler
     if (menuItem.onTap != null) {
-      await menuItem.onTap!(context, authProvider);
+      await menuItem.onTap!(context);
       return;
     }
 
@@ -261,8 +256,6 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
     if (value == 'logout') {
       if (onLogout != null) {
         await onLogout!();
-      } else {
-        await authProvider.logout();
       }
       await Future.delayed(const Duration(milliseconds: 2));
       if (context.mounted) {

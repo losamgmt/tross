@@ -10,6 +10,7 @@
 /// Business logic: Handled via callbacks to AuthProvider
 library;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -74,7 +75,14 @@ class LoginScreen extends StatelessWidget {
                           spacing.gapXXXL,
 
                           // Production Auth0 login
-                          const ProductionLoginCard(),
+                          Consumer<AuthProvider>(
+                            builder: (context, authProvider, child) {
+                              return ProductionLoginCard(
+                                isLoading: authProvider.isLoading,
+                                onLogin: () => _handleAuth0Login(context),
+                              );
+                            },
+                          ),
 
                           // Dev authentication (conditional)
                           if (AppConfig.devAuthEnabled) ...[
@@ -135,6 +143,35 @@ class LoginScreen extends StatelessWidget {
         },
       ),
     );
+  }
+
+  /// Handle Auth0 authentication
+  Future<void> _handleAuth0Login(BuildContext context) async {
+    if (!context.mounted) return;
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+    try {
+      final success = await authProvider.loginWithAuth0();
+
+      if (!context.mounted) return;
+
+      if (success) {
+        // On web, Auth0 redirects the browser to Auth0 login page
+        // The callback handler will navigate to home after successful login
+        if (!kIsWeb) {
+          // On mobile platforms, credentials are returned immediately
+          context.go(AppRoutes.home);
+        }
+        // On web, do nothing - browser is redirecting to Auth0
+      } else {
+        NotificationService.showError(context, 'Auth0 login failed');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        NotificationService.showError(context, 'Auth0 login failed: $e');
+      }
+    }
   }
 
   /// Handle dev authentication (any role)

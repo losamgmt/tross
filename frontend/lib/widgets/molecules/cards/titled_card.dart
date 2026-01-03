@@ -10,6 +10,7 @@ import '../../../config/constants.dart';
 /// ```dart
 /// TitledCard(
 ///   title: 'Primary Database',
+///   actions: [IconButton(...)],  // Optional: inline with title
 ///   child: DatabaseHealthMetrics(...),
 /// )
 /// ```
@@ -21,6 +22,14 @@ class TitledCard extends StatelessWidget {
   final EdgeInsetsGeometry? margin;
   final Color? color;
 
+  /// Optional action widgets displayed inline with the title (right side).
+  /// For a single action, use [trailing] instead.
+  final List<Widget>? actions;
+
+  /// Optional single trailing widget (right side of title).
+  /// For multiple actions, use [actions] instead.
+  final Widget? trailing;
+
   const TitledCard({
     super.key,
     required this.title,
@@ -29,11 +38,46 @@ class TitledCard extends StatelessWidget {
     this.padding,
     this.margin,
     this.color,
+    this.actions,
+    this.trailing,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    // Build the title widget
+    final titleText = Text(
+      title,
+      style:
+          titleStyle ??
+          theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+    );
+
+    // Build header: Row if actions/trailing present, otherwise just Text
+    final bool hasActions =
+        (actions != null && actions!.isNotEmpty) || trailing != null;
+
+    final Widget header = hasActions
+        ? Row(
+            children: [
+              Expanded(child: titleText),
+              if (actions != null)
+                ...actions!.map(
+                  (action) => Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: action,
+                  ),
+                ),
+              if (trailing != null)
+                Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: trailing,
+                ),
+            ],
+          )
+        : titleText;
+
     return Card(
       margin: margin ?? StyleConstants.dbCardMargin,
       shape: RoundedRectangleBorder(
@@ -47,14 +91,7 @@ class TitledCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style:
-                  titleStyle ??
-                  theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
+            header,
             if (child != null) ...[
               SizedBox(height: StyleConstants.dbCardSpacing),
               child!,
@@ -65,7 +102,3 @@ class TitledCard extends StatelessWidget {
     );
   }
 }
-
-/// Backwards compatibility alias
-@Deprecated('Use TitledCard instead')
-typedef DatabaseCard = TitledCard;

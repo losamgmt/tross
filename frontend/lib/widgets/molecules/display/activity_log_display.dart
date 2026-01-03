@@ -21,7 +21,7 @@
 library;
 
 import 'package:flutter/material.dart';
-import '../../../services/audit_log_service.dart';
+import '../../../models/audit_log_entry.dart';
 import '../../../config/app_spacing.dart';
 
 // =============================================================================
@@ -150,22 +150,23 @@ class _ErrorState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final spacing = context.spacing;
 
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: spacing.paddingXL,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.error_outline, size: 48, color: theme.colorScheme.error),
-            const SizedBox(height: 8),
+            spacing.gapSM,
             Text(
               'Failed to load history',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.error,
               ),
             ),
-            const SizedBox(height: 8),
+            spacing.gapSM,
             if (onRefresh != null)
               TextButton(onPressed: onRefresh, child: const Text('Try Again')),
           ],
@@ -180,15 +181,16 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final spacing = context.spacing;
 
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: spacing.paddingXL,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.history, size: 48, color: theme.colorScheme.outline),
-            const SizedBox(height: 8),
+            spacing.gapSM,
             Text(
               'No activity recorded',
               style: theme.textTheme.bodyMedium?.copyWith(

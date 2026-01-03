@@ -178,6 +178,37 @@ class AppColors {
   static const Color overlayDark = Color(0x4D000000); // 30% black
 
   // ============================================================================
+  // STANDARD OPACITY VALUES - Use these instead of inline alpha values
+  // ============================================================================
+
+  /// Disabled state opacity
+  static const double opacityDisabled = 0.38;
+
+  /// Secondary/muted content opacity
+  static const double opacitySecondary = 0.6;
+
+  /// Hint/placeholder opacity
+  static const double opacityHint = 0.5;
+
+  /// Subtle background opacity
+  static const double opacitySubtle = 0.05;
+
+  /// Light border/divider opacity
+  static const double opacityBorder = 0.12;
+
+  /// Hover state opacity
+  static const double opacityHover = 0.08;
+
+  /// Focus state opacity
+  static const double opacityFocus = 0.12;
+
+  /// Pressed state opacity
+  static const double opacityPressed = 0.16;
+
+  /// Selected state opacity
+  static const double opacitySelected = 0.16;
+
+  // ============================================================================
   // HELPER METHODS
   // ============================================================================
 

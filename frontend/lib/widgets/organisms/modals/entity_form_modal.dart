@@ -5,11 +5,14 @@
 /// **CONTEXT-AGNOSTIC:** Works anywhere - called from screen, tab, card, etc.
 /// **ENTITY-GENERIC:** Works with any entity via metadata
 /// **FUNCTION-GENERIC:** Works for both CREATE and EDIT via FormMode
+/// **DIRTY STATE AWARE:** Tracks unsaved changes and warns before discard
 ///
 /// This organism:
 /// - Uses MetadataFieldConfigFactory to generate form fields
 /// - Adapts title/buttons based on FormMode (create vs edit)
 /// - Handles form validation
+/// - **Tracks dirty state via EditableFormNotifier (composition)**
+/// - **Shows UnsavedChangesDialog on cancel if dirty**
 /// - Returns the entity data on submit (caller handles persistence)
 ///
 /// USAGE:
@@ -21,7 +24,7 @@
 ///   mode: FormMode.create,
 /// );
 ///
-/// // Show edit modal
+/// // Show edit modal (warns if user tries to close with unsaved changes)
 /// final updatedUser = await EntityFormModal.show<Map<String, dynamic>>(
 ///   context: context,
 ///   entityName: 'user',
@@ -39,9 +42,11 @@ library;
 import 'package:flutter/material.dart';
 import '../../../config/app_spacing.dart';
 import '../../../models/form_mode.dart';
+import '../../../providers/editable_form_notifier.dart';
 import '../../../services/metadata_field_config_factory.dart';
 import '../../../services/entity_metadata.dart';
 import '../../atoms/buttons/app_button.dart';
+import '../../molecules/dialogs/unsaved_changes_dialog.dart';
 import '../forms/generic_form.dart';
 import 'generic_modal.dart';
 
@@ -110,12 +115,21 @@ class EntityFormModal extends StatefulWidget {
 class _EntityFormModalState extends State<EntityFormModal> {
   final _formKey = GlobalKey<GenericFormState<Map<String, dynamic>>>();
   late Map<String, dynamic> _currentValue;
+  late EditableFormNotifier _dirtyNotifier;
   bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
     _currentValue = Map<String, dynamic>.from(widget.initialValue);
+    // Initialize dirty state notifier for tracking unsaved changes
+    _dirtyNotifier = EditableFormNotifier(initialValues: widget.initialValue);
+  }
+
+  @override
+  void dispose() {
+    _dirtyNotifier.dispose();
+    super.dispose();
   }
 
   String get _title {
@@ -135,6 +149,8 @@ class _EntityFormModalState extends State<EntityFormModal> {
 
   void _handleFormChange(Map<String, dynamic> value) {
     setState(() => _currentValue = value);
+    // Sync with dirty notifier for tracking unsaved changes
+    _dirtyNotifier.setCurrent(value);
   }
 
   Future<void> _handleSubmit() async {
@@ -159,8 +175,20 @@ class _EntityFormModalState extends State<EntityFormModal> {
     }
   }
 
-  void _handleCancel() {
-    Navigator.of(context).pop(null);
+  Future<void> _handleCancel() async {
+    // Warn if there are unsaved changes
+    if (_dirtyNotifier.isDirty) {
+      final shouldDiscard = await UnsavedChangesDialog.show(
+        context: context,
+        changeCount: _dirtyNotifier.changeCount,
+      );
+
+      if (shouldDiscard != true) return; // User chose to keep editing
+    }
+
+    if (mounted) {
+      Navigator.of(context).pop(null);
+    }
   }
 
   @override

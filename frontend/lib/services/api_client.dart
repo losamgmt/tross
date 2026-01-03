@@ -145,41 +145,27 @@ class ApiClient {
 
   /// Get user profile from backend
   static Future<Map<String, dynamic>?> getUserProfile(String token) async {
-    ErrorService.logInfo('Getting user profile from backend');
     try {
-      ErrorService.logInfo('Making GET request to ${ApiEndpoints.authMe}');
       final response = await authenticatedRequest(
         'GET',
         ApiEndpoints.authMe,
         token: token,
       );
 
-      ErrorService.logInfo(
-        'User profile response received',
-        context: {'statusCode': response.statusCode},
-      );
-
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-
-        ErrorService.logInfo(
-          'Profile data decoded',
-          context: {
-            'dataKeys': data.keys.toList(),
-            'hasData': data['data'] != null,
-          },
+        return data['data'];
+      } else if (response.statusCode == 401 || response.statusCode == 403) {
+        // Expected when not authenticated - not an error
+        ErrorService.logDebug(
+          'No active session',
+          context: {'statusCode': response.statusCode},
         );
-
-        final result = data['data'];
-        ErrorService.logInfo(
-          'Returning profile',
-          context: {'hasProfile': result != null},
-        );
-        return result;
+        return null;
       } else {
-        ErrorService.logError(
-          'Failed to fetch user profile',
-          error: 'HTTP ${response.statusCode}',
+        ErrorService.logWarning(
+          'Unexpected response from /auth/me',
+          context: {'statusCode': response.statusCode},
         );
         return null;
       }

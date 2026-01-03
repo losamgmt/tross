@@ -49,6 +49,28 @@ class AppTypography {
   static const FontWeight black = FontWeight.w900;
 
   // ============================================================================
+  // LETTER SPACING - Standard values for consistency
+  // ============================================================================
+
+  /// Tight letter spacing (negative) for large display text
+  static const double letterSpacingTight = -0.25;
+
+  /// Normal letter spacing
+  static const double letterSpacingNormal = 0.0;
+
+  /// Slightly loose for readability
+  static const double letterSpacingLoose = 0.15;
+
+  /// Medium spacing for labels
+  static const double letterSpacingMedium = 0.25;
+
+  /// Wide spacing for buttons and labels
+  static const double letterSpacingWide = 0.5;
+
+  /// Extra wide for uppercase text
+  static const double letterSpacingExtraWide = 1.5;
+
+  // ============================================================================
   // DISPLAY STYLES - Largest text (hero sections, landing pages)
   // ============================================================================
 

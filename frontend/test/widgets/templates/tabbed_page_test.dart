@@ -36,12 +36,12 @@ void main() {
     }) {
       return MaterialApp.router(
         routerConfig: GoRouter(
-          initialLocation: '/admin/system/$currentTabId',
+          initialLocation: '/admin/system?tab=$currentTabId',
           routes: [
             GoRoute(
-              path: '/admin/system/:tab',
+              path: '/admin/system',
               builder: (context, state) {
-                final tabId = state.pathParameters['tab'] ?? 'health';
+                final tabId = state.uri.queryParameters['tab'] ?? 'health';
                 return Scaffold(
                   body: TabbedPage(
                     currentTabId: tabId,

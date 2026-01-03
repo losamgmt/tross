@@ -1,6 +1,6 @@
-/// UserAvatar - Molecule for user profile picture/initials
+/// InitialsAvatar - Molecule for displaying initials in a circular avatar
 ///
-/// Displays user initials in a circular avatar
+/// Generic, context-agnostic - works for any name/email combination
 library;
 
 import 'package:flutter/material.dart';
@@ -8,13 +8,13 @@ import '../../../config/app_spacing.dart';
 import '../../../config/app_colors.dart';
 import '../../../utils/helpers/string_helper.dart';
 
-class UserAvatar extends StatelessWidget {
+class InitialsAvatar extends StatelessWidget {
   final String name;
   final String? email;
   final double? size;
   final VoidCallback? onTap;
 
-  const UserAvatar({
+  const InitialsAvatar({
     super.key,
     required this.name,
     this.email,

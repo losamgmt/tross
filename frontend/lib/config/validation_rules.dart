@@ -37,7 +37,7 @@ class ValidationRules {
 
       final version = _rules!['version'];
       final policy = _rules!['policy'];
-      ErrorService.logInfo(
+      ErrorService.logDebug(
         '[ValidationRules] Loaded',
         context: {'version': version, 'policy': policy},
       );

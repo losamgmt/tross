@@ -42,7 +42,9 @@ class PreferencesService {
   /// Returns empty map on error (provider uses metadata defaults).
   static Future<Map<String, dynamic>> loadRaw(String token) async {
     try {
-      ErrorService.logInfo('[PreferencesService] Loading preferences from API');
+      ErrorService.logDebug(
+        '[PreferencesService] Loading preferences from API',
+      );
 
       final response = await ApiClient.authenticatedRequest(
         'GET',
@@ -57,7 +59,7 @@ class PreferencesService {
         if (data != null) {
           // Extract just the preferences JSONB, not the wrapper
           final prefs = data['preferences'] as Map<String, dynamic>? ?? {};
-          ErrorService.logInfo(
+          ErrorService.logDebug(
             '[PreferencesService] Preferences loaded successfully',
             context: {'keys': prefs.keys.toList()},
           );

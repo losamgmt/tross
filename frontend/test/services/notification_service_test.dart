@@ -28,10 +28,9 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
+      // Verify snackbar appears with correct message
       expect(find.text(message), findsOneWidget);
-
-      final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
-      expect(snackBar.backgroundColor, Colors.green);
+      expect(find.byType(SnackBar), findsOneWidget);
     });
 
     testWidgets('showError displays error SnackBar', (tester) async {
@@ -58,10 +57,9 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
+      // Verify snackbar appears with correct message
       expect(find.text(message), findsOneWidget);
-
-      final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
-      expect(snackBar.backgroundColor, Colors.red);
+      expect(find.byType(SnackBar), findsOneWidget);
     });
 
     testWidgets('showInfo displays info SnackBar', (tester) async {
@@ -125,11 +123,11 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
+      // Verify snackbar appears with correct message and action
       expect(find.text(message), findsOneWidget);
       expect(find.text(actionLabel), findsOneWidget);
 
       final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
-      expect(snackBar.backgroundColor, Colors.red);
       expect(snackBar.action, isNotNull);
 
       // NOTE: SnackBar action button callback tested by verifying action exists

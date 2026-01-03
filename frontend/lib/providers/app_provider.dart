@@ -193,7 +193,7 @@ class AppProvider extends ChangeNotifier {
           connectivityResult.isNotEmpty &&
           !connectivityResult.contains(ConnectivityResult.none);
 
-      ErrorService.logInfo(
+      ErrorService.logDebug(
         'Network connectivity check',
         context: {
           'hasConnection': _hasNetworkConnection,
@@ -278,7 +278,7 @@ class AppProvider extends ChangeNotifier {
       _isConnected = status == ServiceStatus.healthy;
       _connectionError = _isConnected ? null : 'Backend service unavailable';
 
-      ErrorService.logInfo(
+      ErrorService.logDebug(
         'Service health check completed',
         context: {'status': status.name, 'isConnected': _isConnected},
       );

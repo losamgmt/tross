@@ -22,26 +22,13 @@ class AuthProfileService {
   ///
   /// DEFENSIVE: Validates all profile fields from API response
   Future<Map<String, dynamic>?> getUserProfile(String token) async {
-    ErrorService.logInfo('Getting user profile');
+    ErrorService.logDebug('Getting user profile');
     try {
-      ErrorService.logInfo('Calling ApiClient.getUserProfile');
       final profile = await ApiClient.getUserProfile(token);
 
-      ErrorService.logInfo(
-        'ApiClient response received',
-        context: {'hasProfile': profile != null},
-      );
-
       if (profile != null) {
-        ErrorService.logInfo(
-          'Validating profile data',
-          context: {'profileKeys': profile.keys.toList()},
-        );
-
         // VALIDATE: API response data before using it
         final validatedProfile = _validateProfileData(profile);
-
-        ErrorService.logInfo('Profile validated successfully');
         return validatedProfile;
       } else {
         ErrorService.logWarning('ApiClient returned null profile');

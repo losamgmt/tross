@@ -1,26 +1,8 @@
 import 'package:flutter/material.dart';
+import '../../../config/app_spacing.dart';
+import '../../../config/app_typography.dart';
 
 /// SectionHeader - Atom for section titles in forms and settings
-///
-/// **SOLE RESPONSIBILITY:** Render a styled section title text
-///
-/// Features:
-/// - Consistent section title styling across app
-/// - Optional icon prefix
-/// - Optional action widget suffix
-/// - Configurable text style
-/// - Zero logic, pure presentation
-///
-/// Usage:
-/// ```dart
-/// SectionHeader(text: 'General Settings')
-///
-/// SectionHeader(
-///   text: 'Labor Rate Groups',
-///   icon: Icons.group,
-///   action: TextButton(onPressed: _add, child: Text('ADD')),
-/// )
-/// ```
 class SectionHeader extends StatelessWidget {
   final String text;
   final IconData? icon;
@@ -42,16 +24,21 @@ class SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final spacing = context.spacing;
     final defaultStyle = theme.textTheme.titleMedium?.copyWith(
-      fontWeight: FontWeight.w600,
+      fontWeight: AppTypography.semiBold,
       color: color ?? theme.colorScheme.primary,
     );
 
     final content = Row(
       children: [
         if (icon != null) ...[
-          Icon(icon, size: 20, color: color ?? theme.colorScheme.primary),
-          const SizedBox(width: 8),
+          Icon(
+            icon,
+            size: spacing.iconSizeLG,
+            color: color ?? theme.colorScheme.primary,
+          ),
+          SizedBox(width: spacing.sm),
         ],
         Expanded(child: Text(text, style: style ?? defaultStyle)),
         if (action != null) action!,

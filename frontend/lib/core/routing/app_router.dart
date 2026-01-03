@@ -20,9 +20,19 @@ import '../../screens/settings_screen.dart';
 import '../../screens/entity_screen.dart';
 import '../../screens/entity_detail_screen.dart';
 import '../../widgets/organisms/feedback/error_display.dart';
-import '../../widgets/organisms/feedback/under_construction_display.dart';
+import '../../widgets/organisms/dashboards/db_health_dashboard.dart';
+import '../../widgets/organisms/layout/tabbed_container.dart';
 import '../../widgets/templates/templates.dart';
 import '../../services/entity_metadata.dart';
+import '../../services/auth/token_manager.dart';
+import '../../services/metadata/metadata.dart';
+import '../../services/audit_log_service.dart';
+import '../../models/audit_log_entry.dart';
+import '../../widgets/molecules/display/data_matrix.dart';
+import '../../widgets/molecules/display/key_value_list.dart';
+import '../../widgets/organisms/providers/async_data_provider.dart';
+import '../../widgets/organisms/tables/data_table.dart';
+import '../../config/config.dart';
 import 'app_routes.dart';
 import 'route_guard.dart';
 
@@ -146,12 +156,27 @@ class AppRouter {
             // SYSTEM ROUTES - Defined FIRST to avoid :entity catch-all
             // Uses /system/ prefix for collision-avoidance (mirrors backend)
             // ══════════════════════════════════════════════════════════════
+
+            // System Health - Composes DbHealthDashboard organism
+            GoRoute(
+              path: 'system/health',
+              name: 'adminHealth',
+              pageBuilder: (context, state) => CustomTransitionPage(
+                key: state.pageKey,
+                child: _AdminHealthScreen(),
+                transitionsBuilder: _slideTransition,
+              ),
+            ),
+
+            // System Logs - Composes TabbedPage with audit log tables
             GoRoute(
               path: 'system/logs',
               name: 'adminLogs',
               pageBuilder: (context, state) => CustomTransitionPage(
                 key: state.pageKey,
-                child: _AdminSectionScreen(section: 'logs'),
+                child: _AdminLogsScreen(
+                  activeTab: state.uri.queryParameters['tab'] ?? 'data',
+                ),
                 transitionsBuilder: _slideTransition,
               ),
             ),
@@ -166,7 +191,7 @@ class AppRouter {
                 final entity = state.pathParameters['entity'] ?? 'unknown';
                 return CustomTransitionPage(
                   key: state.pageKey,
-                  child: _AdminSectionScreen(section: entity),
+                  child: _AdminEntityScreen(entityName: entity),
                   transitionsBuilder: _slideTransition,
                 );
               },
@@ -376,33 +401,321 @@ class _Auth0CallbackHandlerState extends State<_Auth0CallbackHandler> {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// ADMIN SECTION PLACEHOLDER
+// ADMIN ROUTE COMPOSITIONS - Pure composition of generic components
 // ══════════════════════════════════════════════════════════════════════════════
 
-/// Placeholder for unimplemented admin sections
+/// Admin Health Screen - Composes DbHealthDashboard organism
 ///
-/// This is NOT a special "under construction screen" - it's just a normal
-/// page that composes AdaptiveShell with UnderConstructionDisplay as body.
-/// When we implement the actual feature, we replace the body widget.
-///
-/// Pure composition: AdaptiveShell + UnderConstructionDisplay
-class _AdminSectionScreen extends StatelessWidget {
-  final String section;
+/// ZERO SPECIFICITY: Uses generic DbHealthDashboard organism.
+/// Specificity is injecting the service configuration.
+class _AdminHealthScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return AdaptiveShell(
+      currentRoute: '/admin/system/health',
+      pageTitle: 'System Health',
+      sidebarStrategy: 'admin',
+      body: FutureBuilder<String?>(
+        future: TokenManager.getStoredToken(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData || snapshot.data == null) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          return DbHealthDashboard.api(
+            apiBaseUrl: AppConfig.backendUrl,
+            authToken: snapshot.data!,
+            autoRefresh: true,
+          );
+        },
+      ),
+    );
+  }
+}
 
-  const _AdminSectionScreen({required this.section});
+/// Admin Logs Screen - Composes TabbedPage with audit data
+///
+/// ZERO SPECIFICITY: Uses generic TabbedPage template.
+/// Tab content uses generic table + async provider.
+class _AdminLogsScreen extends StatelessWidget {
+  final String activeTab;
+
+  const _AdminLogsScreen({required this.activeTab});
 
   @override
   Widget build(BuildContext context) {
-    final sectionTitle = EntityMetadata.toDisplayName(section);
-
     return AdaptiveShell(
-      currentRoute: '/admin/$section',
-      pageTitle: sectionTitle,
+      currentRoute: '/admin/system/logs',
+      pageTitle: 'System Logs',
       sidebarStrategy: 'admin',
-      body: UnderConstructionDisplay(
-        title: '$sectionTitle Settings',
-        message: '$sectionTitle configuration is coming soon!',
+      body: TabbedPage(
+        currentTabId: activeTab,
+        baseRoute: '/admin/system/logs',
+        tabs: const [
+          TabDefinition(
+            id: 'data',
+            label: 'Data Changes',
+            icon: Icons.storage_outlined,
+          ),
+          TabDefinition(
+            id: 'auth',
+            label: 'Auth Events',
+            icon: Icons.security_outlined,
+          ),
+        ],
+        contentBuilder: (tabId) => AsyncDataProvider<AuditLogResult>(
+          future: AuditLogService.getAllLogs(filter: tabId),
+          builder: (context, result) => AppDataTable<AuditLogEntry>(
+            data: result.logs,
+            columns: [
+              TableColumn<AuditLogEntry>(
+                id: 'timestamp',
+                label: 'Time',
+                cellBuilder: (log) => Text(
+                  _formatTimestamp(log.createdAt),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+              TableColumn<AuditLogEntry>(
+                id: 'user',
+                label: 'User',
+                cellBuilder: (log) => Text(log.userDisplayName),
+              ),
+              TableColumn<AuditLogEntry>(
+                id: 'action',
+                label: 'Action',
+                cellBuilder: (log) => _ActionChip(action: log.action),
+              ),
+              TableColumn<AuditLogEntry>(
+                id: 'resource',
+                label: 'Resource',
+                cellBuilder: (log) => Text(
+                  '${log.resourceType}/${log.resourceId}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+              TableColumn<AuditLogEntry>(
+                id: 'result',
+                label: 'Result',
+                cellBuilder: (log) => _ResultBadge(result: log.result),
+              ),
+            ],
+          ),
+        ),
       ),
     );
+  }
+}
+
+/// Format timestamp for audit log display
+String _formatTimestamp(DateTime dt) {
+  final now = DateTime.now();
+  final diff = now.difference(dt);
+  if (diff.inMinutes < 1) return 'Just now';
+  if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+  if (diff.inHours < 24) return '${diff.inHours}h ago';
+  return '${dt.month}/${dt.day} ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
+}
+
+/// Action chip with color coding based on action type
+class _ActionChip extends StatelessWidget {
+  final String action;
+
+  const _ActionChip({required this.action});
+
+  @override
+  Widget build(BuildContext context) {
+    final (color, icon) = switch (action.toLowerCase()) {
+      'create' => (Colors.green, Icons.add_circle_outline),
+      'update' => (Colors.blue, Icons.edit_outlined),
+      'delete' => (Colors.red, Icons.remove_circle_outline),
+      'login' => (Colors.teal, Icons.login),
+      'logout' => (Colors.orange, Icons.logout),
+      _ => (Colors.grey, Icons.info_outline),
+    };
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: color),
+        const SizedBox(width: 4),
+        Text(
+          action,
+          style: TextStyle(color: color, fontWeight: FontWeight.w500),
+        ),
+      ],
+    );
+  }
+}
+
+/// Result badge showing success/failure based on result string
+class _ResultBadge extends StatelessWidget {
+  final String? result;
+
+  const _ResultBadge({required this.result});
+
+  @override
+  Widget build(BuildContext context) {
+    final isSuccess = result == 'success' || result == null;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: isSuccess
+            ? Colors.green.withValues(alpha: 0.1)
+            : Colors.red.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        isSuccess ? 'OK' : 'FAIL',
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          color: isSuccess ? Colors.green : Colors.red,
+        ),
+      ),
+    );
+  }
+}
+
+/// Admin Entity Screen - Shows entity configuration
+///
+/// ZERO SPECIFICITY: Uses generic components for any entity.
+/// Displays permissions, validation rules, metadata using DataMatrix/KeyValueList.
+class _AdminEntityScreen extends StatelessWidget {
+  final String entityName;
+
+  const _AdminEntityScreen({required this.entityName});
+
+  @override
+  Widget build(BuildContext context) {
+    final displayName = EntityMetadata.toDisplayName(entityName);
+
+    return AdaptiveShell(
+      currentRoute: '/admin/$entityName',
+      pageTitle: '$displayName Settings',
+      sidebarStrategy: 'admin',
+      body: TabbedContainer(
+        tabs: [
+          TabConfig(
+            label: 'Permissions',
+            icon: Icons.lock,
+            content: _PermissionsTab(entityName: entityName),
+          ),
+          TabConfig(
+            label: 'Validation',
+            icon: Icons.rule,
+            content: _ValidationTab(entityName: entityName),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Permissions tab content - displays role × operation matrix
+class _PermissionsTab extends StatelessWidget {
+  final String entityName;
+  static final _provider = JsonMetadataProvider();
+
+  const _PermissionsTab({required this.entityName});
+
+  @override
+  Widget build(BuildContext context) {
+    // Get the permission resource name from entity metadata
+    // Entity metadata uses singular names (user, work_order)
+    // Permissions.json uses rlsResource names (users, work_orders)
+    final metadata = EntityMetadataRegistry.tryGet(entityName);
+    final permissionResource =
+        metadata?.rlsResource.toBackendString() ?? entityName;
+
+    return AsyncDataProvider<PermissionMatrix?>(
+      future: _provider.getPermissionMatrix(permissionResource),
+      builder: (context, matrix) {
+        if (matrix == null) {
+          return Center(
+            child: Text('No permissions configured for $entityName'),
+          );
+        }
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: DataMatrix(
+            columnHeaders: matrix.operations.map(_formatHeader).toList(),
+            rows: matrix.roles.map((role) {
+              return DataMatrixRow(
+                header: _formatHeader(role),
+                cells: matrix.operations
+                    .map((op) => matrix.hasPermission(role, op))
+                    .toList(),
+              );
+            }).toList(),
+          ),
+        );
+      },
+    );
+  }
+
+  static String _formatHeader(String raw) {
+    return raw
+        .split('_')
+        .map(
+          (w) => w.isNotEmpty
+              ? '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}'
+              : '',
+        )
+        .join(' ');
+  }
+}
+
+/// Validation tab content - displays field validation rules
+class _ValidationTab extends StatelessWidget {
+  final String entityName;
+  static final _provider = JsonMetadataProvider();
+
+  const _ValidationTab({required this.entityName});
+
+  @override
+  Widget build(BuildContext context) {
+    return AsyncDataProvider<EntityValidationRules?>(
+      future: _provider.getEntityValidationRules(entityName),
+      builder: (context, rules) {
+        if (rules == null || rules.fields.isEmpty) {
+          return Center(
+            child: Text('No validation rules configured for $entityName'),
+          );
+        }
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: KeyValueList(
+            items: rules.fields.entries.map((entry) {
+              final field = entry.value;
+              return KeyValueItem.text(
+                label: _formatHeader(entry.key),
+                value: _formatValidationSummary(field),
+              );
+            }).toList(),
+          ),
+        );
+      },
+    );
+  }
+
+  static String _formatHeader(String raw) {
+    return raw
+        .split('_')
+        .map(
+          (w) => w.isNotEmpty
+              ? '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}'
+              : '',
+        )
+        .join(' ');
+  }
+
+  static String _formatValidationSummary(FieldValidation field) {
+    final parts = <String>[];
+    parts.add(field.type);
+    if (field.required) parts.add('required');
+    if (field.minLength != null) parts.add('min: ${field.minLength}');
+    if (field.maxLength != null) parts.add('max: ${field.maxLength}');
+    if (field.pattern != null) parts.add('pattern');
+    return parts.join(' • ');
   }
 }

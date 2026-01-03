@@ -13,8 +13,10 @@
 library;
 
 import 'package:flutter/material.dart';
-import '../../../config/app_spacing.dart';
+import '../../../config/app_borders.dart';
 import '../../../config/app_colors.dart';
+import '../../../config/app_spacing.dart';
+import '../../../config/app_typography.dart';
 
 /// Semantic badge styles - NO domain-specific values
 enum BadgeStyle {
@@ -57,7 +59,7 @@ class AppBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.background,
         borderRadius: compact ? spacing.radiusSM : spacing.radiusMD,
-        border: Border.all(color: colors.border, width: 1),
+        border: Border.all(color: colors.border, width: AppBorders.widthThin),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -80,9 +82,9 @@ class AppBadge extends StatelessWidget {
                           ? theme.textTheme.labelSmall
                           : theme.textTheme.labelMedium)
                       ?.copyWith(
-                        fontWeight: FontWeight.w600,
+                        fontWeight: AppTypography.semiBold,
                         color: colors.text,
-                        letterSpacing: 0.3,
+                        letterSpacing: AppTypography.letterSpacingMedium,
                       ),
             ),
           ),

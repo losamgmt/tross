@@ -11,7 +11,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tross_app/widgets/molecules/display/activity_log_display.dart';
-import 'package:tross_app/services/audit_log_service.dart';
+import 'package:tross_app/models/audit_log_entry.dart';
 
 import '../../../helpers/test_helpers.dart';
 

@@ -45,7 +45,10 @@
 library;
 
 import 'package:flutter/material.dart';
+import '../../../config/app_colors.dart';
+import '../../../config/app_sizes.dart';
 import '../../../config/app_spacing.dart';
+import '../../../config/app_typography.dart';
 
 class RadioInput<T> extends StatelessWidget {
   /// This radio button's value
@@ -75,18 +78,27 @@ class RadioInput<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final spacing = context.spacing;
+    final sizes = context.sizes;
     final theme = Theme.of(context);
 
-    // Get group context from RadioGroup ancestor
-    final groupValue = RadioGroup.maybeOf<T>(context)?.groupValue;
-    final onChanged = RadioGroup.maybeOf<T>(context)?.onChanged;
+    // Flutter 3.32+: RadioGroup ancestor provides groupValue and onChanged
+    final radioGroup = RadioGroup.maybeOf<T>(context);
+    final isSelected = value == radioGroup?.groupValue;
+    final onChanged = enabled ? radioGroup?.onChanged : null;
 
-    final isSelected = value == groupValue;
-    final labelFontSize = compact ? 13.0 : 14.0;
-    final descFontSize = compact ? 11.0 : 12.0;
+    // Use theme text styles, not hardcoded sizes
+    final labelStyle = compact
+        ? theme.textTheme.bodySmall
+        : theme.textTheme.bodyMedium;
+    final descStyle = theme.textTheme.bodySmall;
+
+    // Use centralized sizes for radio button container
+    final radioSize = compact
+        ? sizes.buttonHeightSmall
+        : sizes.buttonHeightMedium;
 
     return InkWell(
-      onTap: enabled && onChanged != null ? () => onChanged(value) : null,
+      onTap: onChanged != null ? () => onChanged(value) : null,
       borderRadius: spacing.radiusSM,
       child: Padding(
         padding: EdgeInsets.symmetric(vertical: spacing.xxs),
@@ -96,10 +108,12 @@ class RadioInput<T> extends StatelessWidget {
               : CrossAxisAlignment.center,
           children: [
             SizedBox(
-              width: compact ? 36 : 40,
-              height: compact ? 36 : 40,
+              width: radioSize,
+              height: radioSize,
+              // Flutter 3.32+: Radio gets groupValue/onChanged from RadioGroup ancestor
               child: Radio<T>(
                 value: value,
+                toggleable: false,
                 materialTapTargetSize: compact
                     ? MaterialTapTargetSize.shrinkWrap
                     : MaterialTapTargetSize.padded,
@@ -112,24 +126,24 @@ class RadioInput<T> extends StatelessWidget {
                 children: [
                   Text(
                     label,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontSize: labelFontSize,
+                    style: labelStyle?.copyWith(
                       fontWeight: isSelected
-                          ? FontWeight.w500
-                          : FontWeight.normal,
+                          ? AppTypography.medium
+                          : AppTypography.regular,
                       color: enabled
                           ? theme.colorScheme.onSurface
-                          : theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                          : theme.colorScheme.onSurface.withValues(
+                              alpha: AppColors.opacityHint,
+                            ),
                     ),
                   ),
                   if (description != null) ...[
                     SizedBox(height: spacing.xxs / 2),
                     Text(
                       description!,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        fontSize: descFontSize,
+                      style: descStyle?.copyWith(
                         color: theme.colorScheme.onSurface.withValues(
-                          alpha: 0.6,
+                          alpha: AppColors.opacitySecondary,
                         ),
                       ),
                     ),

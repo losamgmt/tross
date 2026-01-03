@@ -40,7 +40,7 @@ class TokenManager {
         await _secureStorage.write(key: _providerKey, value: provider);
       }
 
-      ErrorService.logInfo(
+      ErrorService.logDebug(
         'Auth data stored securely',
         context: {'provider': provider},
       );

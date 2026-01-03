@@ -25,6 +25,7 @@ import 'package:flutter/material.dart';
 import '../config/table_column.dart';
 import '../utils/table_cell_builders.dart';
 import '../widgets/atoms/indicators/app_badge.dart';
+import '../widgets/atoms/cells/foreign_key_lookup_cell.dart';
 import 'entity_metadata.dart';
 import 'generic_entity_service.dart';
 
@@ -333,7 +334,7 @@ class MetadataTableColumnFactory {
     }
 
     // Use async cell widget for FK lookup
-    return _ForeignKeyLookupCell(
+    return ForeignKeyLookupCell(
       entityId: value is int ? value : int.tryParse(value.toString()) ?? 0,
       relatedEntity: relatedEntity,
       displayField: displayField,
@@ -423,91 +424,5 @@ class MetadataTableColumnFactory {
     final minute = dateTime.minute.toString().padLeft(2, '0');
     final period = dateTime.hour >= 12 ? 'PM' : 'AM';
     return '$displayHour:$minute $period';
-  }
-}
-
-/// Global cache for FK lookup values
-/// Key: "entityName:id", Value: display string
-final Map<String, String> _fkLookupCache = {};
-
-/// Widget that loads and displays a foreign key's related entity display name
-class _ForeignKeyLookupCell extends StatefulWidget {
-  final int entityId;
-  final String relatedEntity;
-  final String displayField;
-
-  const _ForeignKeyLookupCell({
-    required this.entityId,
-    required this.relatedEntity,
-    required this.displayField,
-  });
-
-  @override
-  State<_ForeignKeyLookupCell> createState() => _ForeignKeyLookupCellState();
-}
-
-class _ForeignKeyLookupCellState extends State<_ForeignKeyLookupCell> {
-  String? _displayValue;
-  bool _isLoading = true;
-
-  String get _cacheKey => '${widget.relatedEntity}:${widget.entityId}';
-
-  @override
-  void initState() {
-    super.initState();
-    _loadValue();
-  }
-
-  Future<void> _loadValue() async {
-    // Check cache first
-    if (_fkLookupCache.containsKey(_cacheKey)) {
-      if (mounted) {
-        setState(() {
-          _displayValue = _fkLookupCache[_cacheKey];
-          _isLoading = false;
-        });
-      }
-      return;
-    }
-
-    try {
-      final entity = await GenericEntityService.getById(
-        widget.relatedEntity,
-        widget.entityId,
-      );
-      final display =
-          entity[widget.displayField]?.toString() ?? 'ID: ${widget.entityId}';
-
-      // Cache the result
-      _fkLookupCache[_cacheKey] = display;
-
-      if (mounted) {
-        setState(() {
-          _displayValue = display;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _displayValue = 'ID: ${widget.entityId}';
-        });
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const SizedBox(
-        width: 80,
-        child: LinearProgressIndicator(minHeight: 2),
-      );
-    }
-
-    return TableCellBuilders.textCell(
-      _displayValue ?? 'ID: ${widget.entityId}',
-    );
   }
 }

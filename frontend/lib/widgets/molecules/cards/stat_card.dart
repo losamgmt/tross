@@ -98,21 +98,22 @@ class StatCard extends StatelessWidget {
   /// Dashboard-style: Vertical layout with trend indicator, wrapped in Card
   Widget _buildDashboardStyle(BuildContext context) {
     final theme = Theme.of(context);
+    final spacing = context.spacing;
     final cardColor = textColor ?? theme.colorScheme.primary;
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: spacing.paddingLG,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: spacing.paddingSM,
                   decoration: BoxDecoration(
                     color: cardColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(spacing.sm),
                   ),
                   child: Icon(icon, color: cardColor, size: 24),
                 ),
@@ -120,7 +121,7 @@ class StatCard extends StatelessWidget {
                 if (trend != null) _buildTrendBadge(theme),
               ],
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: spacing.lg),
             Text(
               value,
               style: theme.textTheme.headlineMedium?.copyWith(
@@ -128,7 +129,7 @@ class StatCard extends StatelessWidget {
                 color: cardColor,
               ),
             ),
-            const SizedBox(height: 4),
+            SizedBox(height: spacing.xxs),
             Text(
               label,
               style: theme.textTheme.bodyMedium?.copyWith(

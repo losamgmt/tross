@@ -207,7 +207,7 @@ class PreferencesProvider extends ChangeNotifier {
 
     // Detect transition: not authenticated → authenticated
     if (!_wasAuthenticated && isNowAuthenticated && token != null) {
-      ErrorService.logInfo(
+      ErrorService.logDebug(
         '[PreferencesProvider] Auth state changed - loading preferences',
       );
       load(token);
@@ -215,7 +215,7 @@ class PreferencesProvider extends ChangeNotifier {
 
     // Detect transition: authenticated → not authenticated (logout)
     if (_wasAuthenticated && !isNowAuthenticated) {
-      ErrorService.logInfo(
+      ErrorService.logDebug(
         '[PreferencesProvider] Auth state changed - clearing preferences',
       );
       clear();
@@ -247,13 +247,13 @@ class PreferencesProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      ErrorService.logInfo('[PreferencesProvider] Loading preferences');
+      ErrorService.logDebug('[PreferencesProvider] Loading preferences');
 
       final result = await PreferencesService.loadRaw(token);
       _preferences = result;
       _error = null;
 
-      ErrorService.logInfo(
+      ErrorService.logDebug(
         '[PreferencesProvider] Preferences loaded',
         context: {'keys': _preferences.keys.toList()},
       );

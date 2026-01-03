@@ -196,7 +196,7 @@ class DashboardProvider extends ChangeNotifier {
       _lastUpdated = DateTime.now();
       _error = null;
 
-      ErrorService.logInfo(
+      ErrorService.logDebug(
         'Dashboard stats loaded',
         context: {
           'workOrders': _workOrderStats.total,

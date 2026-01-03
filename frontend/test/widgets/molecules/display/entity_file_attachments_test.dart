@@ -11,7 +11,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tross_app/widgets/molecules/display/entity_file_attachments.dart';
-import 'package:tross_app/services/file_service.dart';
+import 'package:tross_app/models/file_attachment.dart';
 
 import '../../../helpers/test_helpers.dart';
 

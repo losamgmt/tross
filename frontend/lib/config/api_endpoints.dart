@@ -38,6 +38,17 @@ class ApiEndpoints {
   static const String rolesBase = '/roles'; // For dynamic IDs: '$rolesBase/$id'
 
   // ============================================================================
+  // ADMIN SYSTEM ENDPOINTS
+  // ============================================================================
+
+  static const String adminMaintenance = '/admin/system/maintenance';
+  static const String adminSessions = '/admin/system/sessions';
+
+  /// Force logout a specific user
+  static String adminForceLogout(int userId) =>
+      '/admin/system/sessions/$userId/force-logout';
+
+  // ============================================================================
   // HELPER METHODS
   // ============================================================================
 

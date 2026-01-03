@@ -37,9 +37,9 @@ import '../../../config/app_spacing.dart';
 import '../../../config/table_column.dart';
 import '../../../config/table_config.dart';
 import '../../../config/constants.dart';
-// SavedViewService is used via TableCustomizationMenu
-import '../../../utils/helpers/pagination_helper.dart';
 import '../../../services/saved_view_service.dart';
+import '../../../utils/helpers/pagination_helper.dart';
+import '../../../models/saved_view.dart';
 import '../../../services/error_service.dart';
 import '../../atoms/typography/column_header.dart';
 import '../../molecules/feedback/empty_state.dart';

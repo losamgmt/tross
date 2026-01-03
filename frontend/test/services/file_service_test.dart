@@ -9,7 +9,7 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/services/file_service.dart';
+import 'package:tross_app/models/file_attachment.dart';
 
 void main() {
   group('FileAttachment', () {

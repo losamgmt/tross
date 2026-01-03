@@ -12,7 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tross_app/widgets/molecules/menus/table_customization_menu.dart';
 import 'package:tross_app/config/table_column.dart';
 import 'package:tross_app/config/table_config.dart';
-import 'package:tross_app/services/saved_view_service.dart';
+import 'package:tross_app/models/saved_view.dart';
 
 import '../../../helpers/test_helpers.dart';
 

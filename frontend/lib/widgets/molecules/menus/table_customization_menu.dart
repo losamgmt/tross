@@ -31,7 +31,7 @@ library;
 import 'package:flutter/material.dart';
 import '../../../config/table_config.dart';
 import '../../../config/table_column.dart';
-import '../../../services/saved_view_service.dart';
+import '../../../models/saved_view.dart';
 
 // =============================================================================
 // MAIN WIDGET - Pure presentation, data received from parent

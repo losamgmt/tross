@@ -10,7 +10,7 @@
 /// - Loading/error states handled gracefully
 ///
 /// STATS DISPLAYED:
-/// - Row 1: Welcome banner (from AuthProvider)
+/// - Row 1: Welcome banner (userName from prop)
 /// - Row 2: Work Order Stats (total, pending, in_progress, completed)
 /// - Row 3: Financial Stats (revenue, outstanding, active contracts)
 /// - Row 4: Resource Stats (customers, technicians, low stock, active users)
@@ -20,13 +20,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../config/app_colors.dart';
 import '../../config/app_spacing.dart';
-import '../../providers/auth_provider.dart';
 import '../../providers/dashboard_provider.dart';
 import '../molecules/cards/stat_card.dart';
 
 /// Main dashboard content widget
 class DashboardContent extends StatelessWidget {
-  const DashboardContent({super.key});
+  /// User's display name for welcome banner
+  final String userName;
+
+  const DashboardContent({super.key, required this.userName});
 
   @override
   Widget build(BuildContext context) {
@@ -66,8 +68,7 @@ class DashboardContent extends StatelessWidget {
 
   /// Welcome banner with user name
   Widget _buildWelcomeBanner(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
-    final userName = authProvider.userName.split(' ').first;
+    final displayName = userName.split(' ').first;
     final theme = Theme.of(context);
 
     return Container(
@@ -100,7 +101,7 @@ class DashboardContent extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Welcome back, $userName!',
+                  'Welcome back, $displayName!',
                   style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: Colors.white,

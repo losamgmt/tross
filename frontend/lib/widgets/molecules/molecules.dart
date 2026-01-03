@@ -27,6 +27,7 @@ export 'details/detail_panel.dart';
 
 // Dialogs
 export 'dialogs/confirmation_dialog.dart';
+export 'dialogs/unsaved_changes_dialog.dart';
 
 // Display
 export 'display/conditional_display.dart';
@@ -34,7 +35,7 @@ export 'display/data_cell.dart';
 export 'display/data_matrix.dart';
 export 'display/inline_edit_cell.dart';
 export 'display/key_value_list.dart';
-export 'display/user_avatar.dart';
+export 'display/initials_avatar.dart';
 export 'display/user_info_header.dart';
 
 // Feedback

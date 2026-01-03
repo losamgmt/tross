@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../config/app_colors.dart';
 
 /// Snackbar style - semantic notification types
 enum SnackbarStyle { success, error, info, warning }
@@ -9,6 +10,7 @@ enum SnackbarStyle { success, error, info, warning }
 /// - Parameterized by SnackbarStyle
 /// - Consistent floating behavior
 /// - Optional action support
+/// - Uses design system colors (AppColors)
 ///
 /// Usage:
 /// ```dart
@@ -24,7 +26,10 @@ class AppSnackbar extends SnackBar {
     Duration? duration,
     super.action,
   }) : super(
-         content: Text(message, style: const TextStyle(color: Colors.white)),
+         content: Text(
+           message,
+           style: const TextStyle(color: AppColors.textOnDark),
+         ),
          backgroundColor: _colorForStyle(style),
          behavior: SnackBarBehavior.floating,
          duration: duration ?? _durationForStyle(style),
@@ -32,10 +37,10 @@ class AppSnackbar extends SnackBar {
 
   static Color _colorForStyle(SnackbarStyle style) {
     return switch (style) {
-      SnackbarStyle.success => Colors.green,
-      SnackbarStyle.error => Colors.red,
-      SnackbarStyle.warning => Colors.orange,
-      SnackbarStyle.info => Colors.blue,
+      SnackbarStyle.success => AppColors.success,
+      SnackbarStyle.error => AppColors.error,
+      SnackbarStyle.warning => AppColors.warning,
+      SnackbarStyle.info => AppColors.info,
     };
   }
 

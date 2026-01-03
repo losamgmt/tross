@@ -1,45 +1,15 @@
 /// StatusChip - Generic status indicator chip atom
 ///
-/// **SOLE RESPONSIBILITY:** Render a colored chip indicating status
-/// - Context-agnostic: NO layout assumptions
-/// - Fully parameterized: label, color, icon - all configurable
-/// - Parent decides: placement, spacing, grouping
-///
-/// GENERIC: Works for ANY status (Active/Inactive, Published/Draft,
-/// Good/Fair/Poor, Approved/Pending/Rejected, etc.)
-///
-/// Features:
-/// - Customizable background color
-/// - Optional leading icon
-/// - Compact and standard sizes
-/// - Semantic color support via theme
-///
-/// Usage:
-/// ```dart
-/// // Simple status
-/// StatusChip(
-///   label: 'Active',
-///   color: Colors.green,
-/// )
-///
-/// // With icon
-/// StatusChip(
-///   label: 'Pending',
-///   color: Colors.orange,
-///   icon: Icons.hourglass_empty,
-/// )
-///
-/// // Compact variant
-/// StatusChip(
-///   label: 'Draft',
-///   color: Colors.grey,
-///   compact: true,
-/// )
-/// ```
+/// Renders a colored chip indicating status. Fully parameterized.
+/// Use factory constructors for semantic statuses (success, error, etc.)
+/// or pass custom color for domain-specific needs.
 library;
 
 import 'package:flutter/material.dart';
+import '../../../config/app_borders.dart';
+import '../../../config/app_colors.dart';
 import '../../../config/app_spacing.dart';
+import '../../../config/app_typography.dart';
 
 class StatusChip extends StatelessWidget {
   /// The status label text
@@ -75,11 +45,15 @@ class StatusChip extends StatelessWidget {
     final textColor = outlined ? color : _contrastingTextColor(color);
     final iconColor = textColor;
 
-    // Size variations
+    // Size variations using centralized spacing
     final horizontalPadding = compact ? spacing.xs : spacing.sm;
     final verticalPadding = compact ? spacing.xxs : spacing.xs;
-    final fontSize = compact ? 11.0 : 12.0;
-    final iconSize = compact ? 12.0 : 14.0;
+    final iconSize = compact ? spacing.iconSizeXS : spacing.iconSizeSM;
+
+    // Use theme text styles - labelSmall for compact, labelMedium for standard
+    final textStyle = compact
+        ? theme.textTheme.labelSmall
+        : theme.textTheme.labelMedium;
 
     return Container(
       padding: EdgeInsets.symmetric(
@@ -88,7 +62,9 @@ class StatusChip extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: outlined ? Colors.transparent : color,
-        border: outlined ? Border.all(color: color, width: 1.5) : null,
+        border: outlined
+            ? Border.all(color: color, width: AppBorders.widthMedium)
+            : null,
         borderRadius: spacing.radiusSM,
       ),
       child: Row(
@@ -100,11 +76,10 @@ class StatusChip extends StatelessWidget {
           ],
           Text(
             label,
-            style: theme.textTheme.labelSmall?.copyWith(
+            style: textStyle?.copyWith(
               color: textColor,
-              fontSize: fontSize,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.3,
+              fontWeight: AppTypography.semiBold,
+              letterSpacing: AppTypography.letterSpacingMedium,
             ),
           ),
         ],
@@ -116,7 +91,7 @@ class StatusChip extends StatelessWidget {
   Color _contrastingTextColor(Color background) {
     // Using relative luminance formula
     final luminance = background.computeLuminance();
-    return luminance > 0.5 ? Colors.black87 : Colors.white;
+    return luminance > 0.5 ? AppColors.textPrimary : AppColors.textOnDark;
   }
 
   // === Factory constructors for common status patterns ===
@@ -129,7 +104,7 @@ class StatusChip extends StatelessWidget {
   }) {
     return StatusChip(
       label: label,
-      color: Colors.green,
+      color: AppColors.success,
       icon: icon,
       compact: compact,
     );
@@ -143,7 +118,7 @@ class StatusChip extends StatelessWidget {
   }) {
     return StatusChip(
       label: label,
-      color: Colors.orange,
+      color: AppColors.warning,
       icon: icon,
       compact: compact,
     );
@@ -157,7 +132,7 @@ class StatusChip extends StatelessWidget {
   }) {
     return StatusChip(
       label: label,
-      color: Colors.red,
+      color: AppColors.error,
       icon: icon,
       compact: compact,
     );
@@ -171,7 +146,7 @@ class StatusChip extends StatelessWidget {
   }) {
     return StatusChip(
       label: label,
-      color: Colors.grey,
+      color: AppColors.grey500,
       icon: icon,
       compact: compact,
     );
@@ -185,7 +160,7 @@ class StatusChip extends StatelessWidget {
   }) {
     return StatusChip(
       label: label,
-      color: Colors.blue,
+      color: AppColors.info,
       icon: icon,
       compact: compact,
     );

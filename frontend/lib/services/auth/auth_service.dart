@@ -86,7 +86,7 @@ class AuthService {
           }
         }
       } else {
-        ErrorService.logInfo('No stored auth data found');
+        ErrorService.logDebug('No stored auth data found');
       }
     } catch (e) {
       ErrorService.logError('Failed to initialize auth state', error: e);

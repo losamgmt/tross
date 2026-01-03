@@ -32,6 +32,7 @@ import '../widgets/organisms/organisms.dart';
 import '../widgets/molecules/molecules.dart';
 import '../widgets/atoms/atoms.dart';
 import '../utils/crud_handlers.dart';
+import '../utils/entity_icon_resolver.dart';
 
 class EntityDetailScreen extends StatefulWidget {
   /// Entity name from route param (e.g., 'customer', 'work_order')
@@ -261,7 +262,7 @@ class _EntityDetailScreenState extends State<EntityDetailScreen> {
             entityName: widget.entityName,
             entity: _entity,
             title: metadata.displayName,
-            icon: _getEntityIcon(widget.entityName),
+            icon: EntityIconResolver.getIcon(widget.entityName),
             // Exclude system fields from detail view
             excludeFields: const ['created_at', 'updated_at'],
           ),
@@ -367,21 +368,5 @@ class _EntityDetailScreenState extends State<EntityDetailScreen> {
         ),
       ),
     );
-  }
-
-  /// Get icon for entity type - snake_case names only
-  IconData _getEntityIcon(String entityName) {
-    return switch (entityName) {
-      'user' => Icons.person,
-      'role' => Icons.admin_panel_settings,
-      'customer' => Icons.business,
-      'technician' => Icons.engineering,
-      'work_order' => Icons.assignment,
-      'contract' => Icons.description,
-      'invoice' => Icons.receipt_long,
-      'inventory' => Icons.inventory,
-      'preferences' => Icons.settings,
-      _ => Icons.folder,
-    };
   }
 }

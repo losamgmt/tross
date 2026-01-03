@@ -91,7 +91,7 @@ class NavMenuBuilder {
   ) {
     try {
       final filtered = items.where((item) => item.isVisibleFor(user)).toList();
-      ErrorService.logInfo(
+      ErrorService.logDebug(
         '[NavMenu] filterForUser result',
         context: {
           'inputCount': items.length,
@@ -350,7 +350,7 @@ class NavMenuBuilder {
     // Map permissionResource to ResourceType for nav visibility check
     final resourceType = ResourceType.fromString(staticItem.permissionResource);
 
-    ErrorService.logInfo(
+    ErrorService.logDebug(
       '[NavMenu] Converting static item',
       context: {
         'id': staticItem.id,
@@ -451,7 +451,7 @@ class NavMenuBuilder {
         resource,
         CrudOperation.read,
       );
-      ErrorService.logInfo(
+      ErrorService.logDebug(
         '[NavMenu] _canAccessResource check',
         context: {
           'resource': resource.toBackendString(),

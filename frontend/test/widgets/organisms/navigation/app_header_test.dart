@@ -3,7 +3,7 @@
 /// **BEHAVIORAL FOCUS:**
 /// - Renders page title correctly
 /// - Shows user avatar in menu trigger
-/// - Prop-driven values override provider values
+/// - Prop-driven user data display
 /// - Menu items configurable and filter by visibility
 /// - Logo navigation works
 /// - Menu item selection routes correctly
@@ -11,40 +11,35 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:provider/provider.dart';
 import 'package:tross_app/widgets/organisms/navigation/app_header.dart';
-import 'package:tross_app/widgets/molecules/display/user_avatar.dart';
+import 'package:tross_app/widgets/molecules/display/initials_avatar.dart';
 import 'package:tross_app/widgets/atoms/buttons/app_button.dart';
-import 'package:tross_app/providers/auth_provider.dart';
 
 import '../../../helpers/helpers.dart';
 
 void main() {
-  /// Creates an AppHeader wrapped with required AuthProvider
+  /// Creates an AppHeader with required props
   Widget createTestWidget({
     String pageTitle = 'Test Page',
-    String? userName,
-    String? userEmail,
-    String? userRole,
+    String userName = 'Test User',
+    String userEmail = 'test@test.com',
+    String userRole = 'user',
     Map<String, dynamic>? user,
     List<AppHeaderMenuItem>? menuItems,
     VoidCallback? onLogoPressed,
     void Function(String route)? onNavigate,
     Future<void> Function()? onLogout,
   }) {
-    return MultiProvider(
-      providers: [ChangeNotifierProvider(create: (_) => AuthProvider())],
-      child: AppHeader(
-        pageTitle: pageTitle,
-        userName: userName,
-        userEmail: userEmail,
-        userRole: userRole,
-        user: user,
-        menuItems: menuItems,
-        onLogoPressed: onLogoPressed,
-        onNavigate: onNavigate,
-        onLogout: onLogout,
-      ),
+    return AppHeader(
+      pageTitle: pageTitle,
+      userName: userName,
+      userEmail: userEmail,
+      userRole: userRole,
+      user: user,
+      menuItems: menuItems,
+      onLogoPressed: onLogoPressed,
+      onNavigate: onNavigate,
+      onLogout: onLogout,
     );
   }
 
@@ -81,7 +76,7 @@ void main() {
           createTestWidget(userName: 'John Doe', userEmail: 'john@test.com'),
         );
 
-        expect(find.byType(UserAvatar), findsOneWidget);
+        expect(find.byType(InitialsAvatar), findsOneWidget);
       });
 
       testWidgets('centers the title', (tester) async {

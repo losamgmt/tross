@@ -10,7 +10,9 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../core/routing/app_routes.dart';
+import '../providers/auth_provider.dart';
 import '../widgets/templates/templates.dart';
 import '../widgets/organisms/organisms.dart';
 
@@ -19,10 +21,12 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const AdaptiveShell(
+    final authProvider = context.watch<AuthProvider>();
+
+    return AdaptiveShell(
       currentRoute: AppRoutes.home,
       pageTitle: 'Dashboard',
-      body: DashboardContent(),
+      body: DashboardContent(userName: authProvider.userName),
     );
   }
 }

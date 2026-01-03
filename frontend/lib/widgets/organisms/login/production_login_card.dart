@@ -6,6 +6,8 @@
 /// - LoginForm organism (Auth0 button)
 ///
 /// Atomic Design: Organism (composes LoginForm organism)
+///
+/// PROP-DRIVEN: Receives isLoading and onLogin callback
 library;
 
 import 'package:flutter/material.dart';
@@ -13,7 +15,13 @@ import '../../../config/app_spacing.dart';
 import 'login_form.dart';
 
 class ProductionLoginCard extends StatelessWidget {
-  const ProductionLoginCard({super.key});
+  /// Whether login is in progress
+  final bool isLoading;
+
+  /// Callback triggered when login button is pressed
+  final VoidCallback? onLogin;
+
+  const ProductionLoginCard({super.key, this.isLoading = false, this.onLogin});
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +54,7 @@ class ProductionLoginCard extends StatelessWidget {
             spacing.gapXL,
 
             // Auth0 Login Button
-            const LoginForm(),
+            LoginForm(isLoading: isLoading, onLogin: onLogin),
           ],
         ),
       ),

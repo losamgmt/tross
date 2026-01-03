@@ -47,7 +47,10 @@
 library;
 
 import 'package:flutter/material.dart';
+import '../../../config/app_colors.dart';
+import '../../../config/app_sizes.dart';
 import '../../../config/app_spacing.dart';
+import '../../../config/app_typography.dart';
 
 class CheckboxInput extends StatelessWidget {
   /// Current checked value (null = indeterminate if tristate)
@@ -85,11 +88,17 @@ class CheckboxInput extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final spacing = context.spacing;
+    final sizes = context.sizes;
     final theme = Theme.of(context);
 
     final isChecked = value == true;
-    final labelFontSize = compact ? 13.0 : 14.0;
-    final descFontSize = compact ? 11.0 : 12.0;
+    final checkboxSize = compact
+        ? sizes.buttonHeightSmall
+        : sizes.buttonHeightMedium;
+    final labelStyle = compact
+        ? theme.textTheme.bodySmall
+        : theme.textTheme.bodyMedium;
+    final descStyle = theme.textTheme.bodySmall;
 
     return InkWell(
       onTap: enabled ? () => _handleTap() : null,
@@ -102,8 +111,8 @@ class CheckboxInput extends StatelessWidget {
               : CrossAxisAlignment.center,
           children: [
             SizedBox(
-              width: compact ? 36 : 40,
-              height: compact ? 36 : 40,
+              width: checkboxSize,
+              height: checkboxSize,
               child: Checkbox(
                 value: value,
                 onChanged: enabled ? onChanged : null,
@@ -120,24 +129,24 @@ class CheckboxInput extends StatelessWidget {
                 children: [
                   Text(
                     label,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontSize: labelFontSize,
+                    style: labelStyle?.copyWith(
                       fontWeight: isChecked
-                          ? FontWeight.w500
-                          : FontWeight.normal,
+                          ? AppTypography.medium
+                          : AppTypography.regular,
                       color: enabled
                           ? theme.colorScheme.onSurface
-                          : theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                          : theme.colorScheme.onSurface.withValues(
+                              alpha: AppColors.opacityHint,
+                            ),
                     ),
                   ),
                   if (description != null) ...[
                     SizedBox(height: spacing.xxs / 2),
                     Text(
                       description!,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        fontSize: descFontSize,
+                      style: descStyle?.copyWith(
                         color: theme.colorScheme.onSurface.withValues(
-                          alpha: 0.6,
+                          alpha: AppColors.opacitySecondary,
                         ),
                       ),
                     ),

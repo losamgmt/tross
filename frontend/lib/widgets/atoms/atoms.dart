@@ -7,6 +7,9 @@ library;
 // Buttons
 export 'buttons/app_button.dart';
 
+// Cells
+export 'cells/foreign_key_lookup_cell.dart';
+
 // Display
 export 'display/field_display.dart';
 

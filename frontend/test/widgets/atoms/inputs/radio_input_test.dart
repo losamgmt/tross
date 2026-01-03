@@ -287,7 +287,10 @@ void main() {
     });
 
     group('Compact Mode', () {
-      testWidgets('compact mode uses smaller font', (tester) async {
+      testWidgets('compact mode has smaller font than standard', (
+        tester,
+      ) async {
+        // Pump compact widget
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
@@ -303,12 +306,10 @@ void main() {
             ),
           ),
         );
+        final compactText = tester.widget<Text>(find.text('Compact'));
+        final compactSize = compactText.style?.fontSize;
 
-        final text = tester.widget<Text>(find.text('Compact'));
-        expect(text.style?.fontSize, 13.0);
-      });
-
-      testWidgets('standard mode uses regular font', (tester) async {
+        // Pump standard widget
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
@@ -324,9 +325,11 @@ void main() {
             ),
           ),
         );
+        final standardText = tester.widget<Text>(find.text('Standard'));
+        final standardSize = standardText.style?.fontSize;
 
-        final text = tester.widget<Text>(find.text('Standard'));
-        expect(text.style?.fontSize, 14.0);
+        // Verify compact is smaller than standard
+        expect(compactSize, lessThan(standardSize!));
       });
     });
 
