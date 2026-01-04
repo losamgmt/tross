@@ -28,8 +28,6 @@
     "test:e2e": "playwright test",
     "test:e2e:smoke": "playwright test --grep @smoke",
     "test:e2e:security": "playwright test --grep @security",
-    "test:e2e:rbac": "playwright test --grep @rbac",
-    "test:e2e:files": "playwright test --grep @files",
     "test:load": "npx artillery run tools/testing/load-test.yml",
     "test:all": "npm run test:unit && npm run test:integration && npm run test:frontend && npm run test:e2e",
     "test:watch": "npm run test:watch --workspace=backend",
