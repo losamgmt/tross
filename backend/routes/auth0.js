@@ -343,11 +343,10 @@ router.get('/logout', async (req, res) => {
   try {
     const result = await auth0Strategy.logout();
 
-    res.json(
-      ResponseFormatter.success(
-        { logout_url: result.logoutUrl },
-        'Redirect to logout_url to complete Auth0 logout',
-      ),
+    ResponseFormatter.success(
+      res,
+      { logout_url: result.logoutUrl },
+      { message: 'Redirect to logout_url to complete Auth0 logout' },
     );
   } catch (error) {
     logger.error('Logout failed', { error: error.message });

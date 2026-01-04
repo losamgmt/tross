@@ -42,11 +42,10 @@ router.use(authenticateToken);
 router.get(
   '/all',
   requirePermission('audit_logs', 'read'),
-  validatePagination(),
+  validatePagination({ defaultLimit: 100, maxLimit: 500 }),
   async (req, res) => {
     try {
-      const limit = Math.min(parseInt(req.query.limit) || 100, 500);
-      const offset = parseInt(req.query.offset) || 0;
+      const { limit, offset } = req.validated.pagination;
       const actionFilter = req.query.filter; // 'data' or 'auth'
 
       const result = await auditService.getAllRecentLogs({
@@ -95,14 +94,14 @@ router.get(
 router.get(
   '/user/:userId',
   requirePermission('users', 'read'),
-  validateIdParam('userId'),
+  validateIdParam({ paramName: 'userId' }),
   validatePagination(),
   async (req, res) => {
     try {
       const { userId } = req.params;
       const limit = Math.min(parseInt(req.query.limit) || 50, 100);
-      const requestingUserId = req.user?.id;
-      const isAdmin = req.user?.role === 'admin' || req.user?.role === 'manager';
+      const requestingUserId = req.dbUser?.id;
+      const isAdmin = req.dbUser?.role === 'admin' || req.dbUser?.role === 'manager';
 
       // Non-admins can only view their own audit trail
       if (!isAdmin && parseInt(userId) !== requestingUserId) {
@@ -154,7 +153,7 @@ router.get(
  */
 router.get(
   '/:resourceType/:resourceId',
-  validateIdParam('resourceId'),
+  validateIdParam({ paramName: 'resourceId' }),
   validatePagination(),
   async (req, res) => {
     try {

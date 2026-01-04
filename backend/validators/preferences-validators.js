@@ -62,6 +62,7 @@ function buildPreferenceJoiSchema() {
         });
         break;
 
+      /* istanbul ignore next -- Defensive fallback for unknown type */
       default:
         // Unknown type - allow any value
         schemaFields[key] = Joi.any();
@@ -178,6 +179,7 @@ function buildSinglePreferenceSchema(key) {
       if (def.min !== undefined) {schema = schema.min(def.min);}
       if (def.max !== undefined) {schema = schema.max(def.max);}
       return schema;
+    /* istanbul ignore next -- Defensive fallback for unknown type */
     default:
       return Joi.any();
   }

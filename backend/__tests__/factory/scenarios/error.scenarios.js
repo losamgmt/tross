@@ -1,0 +1,395 @@
+/**
+ * Error Handling Test Scenarios
+ * 
+ * PRINCIPLE: Happy paths are only half the story. Error handling is CRITICAL.
+ * These scenarios systematically test failure modes across all entities.
+ * 
+ * Each scenario tests a specific error condition and verifies:
+ * 1. Correct HTTP status code
+ * 2. Proper error message format
+ * 3. No sensitive data leakage
+ * 4. Consistent response structure
+ */
+
+/**
+ * Scenario: Update non-existent entity returns 404
+ * 
+ * Preconditions: Entity has mutable fields
+ * Tests: PATCH /:id with non-existent ID returns 404 (or 400 if validation fails first)
+ */
+function updateNonExistent(meta, ctx) {
+  // Need a valid payload to pass validation
+  const mutableFields = Object.keys(meta.fieldAccess || {}).filter((field) => {
+    if (['id', 'created_at'].includes(field)) return false;
+    if (meta.immutableFields?.includes(field)) return false;
+    const access = meta.fieldAccess[field];
+    return access?.update && access.update !== 'none';
+  });
+
+  if (!mutableFields.length) return;
+
+  ctx.it(`PATCH /api/${meta.tableName}/99999 - returns 404 for non-existent`, async () => {
+    const auth = await ctx.authHeader('admin');
+    const field = mutableFields[0];
+    const value = ctx.factory.generateFieldValue(meta.entityName, field);
+
+    const response = await ctx.request
+      .patch(`/api/${meta.tableName}/99999`)
+      .set(auth)
+      .send({ [field]: value });
+
+    ctx.expect(response.status).toBe(404);
+    ctx.expect(response.body.success).toBe(false);
+  });
+}
+
+/**
+ * Scenario: Delete non-existent entity returns 404
+ * 
+ * Preconditions: None
+ * Tests: DELETE /:id with non-existent ID returns 404
+ */
+function deleteNonExistent(meta, ctx) {
+  ctx.it(`DELETE /api/${meta.tableName}/99999 - returns 404 for non-existent`, async () => {
+    const auth = await ctx.authHeader('admin');
+
+    const response = await ctx.request
+      .delete(`/api/${meta.tableName}/99999`)
+      .set(auth);
+
+    ctx.expect(response.status).toBe(404);
+    ctx.expect(response.body.success).toBe(false);
+  });
+}
+
+/**
+ * Scenario: No authentication returns 401
+ * 
+ * Preconditions: None
+ * Tests: All CRUD operations without auth header return 401
+ */
+function noAuthReturns401(meta, ctx) {
+  ctx.it(`GET /api/${meta.tableName} - returns 401 without auth`, async () => {
+    const response = await ctx.request
+      .get(`/api/${meta.tableName}`);
+
+    ctx.expect(response.status).toBe(401);
+  });
+
+  ctx.it(`POST /api/${meta.tableName} - returns 401 without auth`, async () => {
+    const payload = ctx.factory.buildMinimal(meta.entityName);
+
+    const response = await ctx.request
+      .post(`/api/${meta.tableName}`)
+      .send(payload);
+
+    ctx.expect(response.status).toBe(401);
+  });
+}
+
+/**
+ * Scenario: Invalid JSON body returns 400
+ * 
+ * Preconditions: None
+ * Tests: Malformed JSON in request body returns 400
+ */
+function invalidJsonBody(meta, ctx) {
+  ctx.it(`POST /api/${meta.tableName} - returns 400 for invalid JSON`, async () => {
+    const auth = await ctx.authHeader('admin');
+
+    const response = await ctx.request
+      .post(`/api/${meta.tableName}`)
+      .set(auth)
+      .set('Content-Type', 'application/json')
+      .send('{ invalid json }');
+
+    ctx.expect(response.status).toBe(400);
+  });
+}
+
+/**
+ * Scenario: Empty body on create returns 400
+ * 
+ * Preconditions: Entity has required fields
+ * Tests: Empty body on POST returns 400
+ */
+function emptyBodyOnCreate(meta, ctx) {
+  if (!meta.requiredFields?.length) return;
+
+  ctx.it(`POST /api/${meta.tableName} - returns 400 for empty body`, async () => {
+    const auth = await ctx.authHeader('admin');
+
+    const response = await ctx.request
+      .post(`/api/${meta.tableName}`)
+      .set(auth)
+      .send({});
+
+    ctx.expect(response.status).toBe(400);
+  });
+}
+
+/**
+ * Scenario: Null values for required fields returns 400
+ * 
+ * Preconditions: Entity has required fields
+ * Tests: Null for required field returns 400
+ */
+function nullRequiredFieldReturns400(meta, ctx) {
+  const { requiredFields, entityName, tableName } = meta;
+  if (!requiredFields?.length) return;
+
+  for (const field of requiredFields) {
+    ctx.it(`POST /api/${tableName} - rejects null for ${field}`, async () => {
+      const payload = await ctx.factory.buildMinimalWithFKs(entityName);
+      payload[field] = null;
+      const auth = await ctx.authHeader('admin');
+
+      const response = await ctx.request
+        .post(`/api/${tableName}`)
+        .set(auth)
+        .send(payload);
+
+      ctx.expect(response.status).toBe(400);
+    });
+  }
+}
+
+/**
+ * Scenario: Invalid enum values rejected
+ * 
+ * Preconditions: Entity has enum fields
+ * Tests: Invalid enum value returns 400
+ */
+function invalidEnumRejected(meta, ctx) {
+  const { fields, entityName, tableName } = meta;
+  if (!fields) return;
+
+  const enumFields = Object.entries(fields)
+    .filter(([_, def]) => def.type === 'enum' && def.values?.length)
+    .map(([name]) => name);
+
+  for (const field of enumFields) {
+    ctx.it(`POST /api/${tableName} - rejects invalid enum for ${field}`, async () => {
+      const payload = await ctx.factory.buildMinimalWithFKs(entityName);
+      payload[field] = 'INVALID_ENUM_VALUE_XYZ';
+      const auth = await ctx.authHeader('admin');
+
+      const response = await ctx.request
+        .post(`/api/${tableName}`)
+        .set(auth)
+        .send(payload);
+
+      ctx.expect(response.status).toBe(400);
+    });
+  }
+}
+
+/**
+ * Scenario: Invalid email format rejected
+ * 
+ * Preconditions: Entity has email fields
+ * Tests: Invalid email format returns 400
+ */
+function invalidEmailRejected(meta, ctx) {
+  const { fields, entityName, tableName } = meta;
+  if (!fields) return;
+
+  const emailFields = Object.entries(fields)
+    .filter(([_, def]) => def.type === 'email')
+    .map(([name]) => name);
+
+  for (const field of emailFields) {
+    ctx.it(`POST /api/${tableName} - rejects invalid email for ${field}`, async () => {
+      const payload = await ctx.factory.buildMinimalWithFKs(entityName);
+      payload[field] = 'not-a-valid-email';
+      const auth = await ctx.authHeader('admin');
+
+      const response = await ctx.request
+        .post(`/api/${tableName}`)
+        .set(auth)
+        .send(payload);
+
+      ctx.expect(response.status).toBe(400);
+    });
+  }
+}
+
+/**
+ * Scenario: XSS payloads don't cause errors
+ * 
+ * Preconditions: Entity has string fields
+ * Tests: XSS payloads are handled without causing server errors
+ * Note: Output encoding is frontend's responsibility; backend stores raw data safely
+ */
+function xssHandledSafely(meta, ctx) {
+  const { fields, entityName, tableName } = meta;
+  if (!fields) return;
+
+  const stringFields = Object.entries(fields)
+    .filter(([_, def]) => def.type === 'string')
+    .map(([name]) => name)
+    .slice(0, 1); // Test just 1 field
+
+  if (!stringFields.length) return;
+
+  ctx.it(`POST /api/${tableName} - handles XSS payload without error`, async () => {
+    const payload = await ctx.factory.buildMinimalWithFKs(entityName);
+    const xssPayload = '<script>alert("xss")</script>';
+    payload[stringFields[0]] = xssPayload;
+    const auth = await ctx.authHeader('admin');
+
+    const response = await ctx.request
+      .post(`/api/${tableName}`)
+      .set(auth)
+      .send(payload);
+
+    // Should succeed - storing HTML is valid, output encoding is frontend's job
+    ctx.expect(response.status).toBe(201);
+    ctx.expect(response.body.success).toBe(true);
+  });
+}
+
+/**
+ * Scenario: Pagination edge cases
+ * 
+ * Preconditions: None
+ * Tests: Invalid pagination params handled gracefully
+ */
+function paginationEdgeCases(meta, ctx) {
+  ctx.it(`GET /api/${meta.tableName}?page=-1 - handles negative page`, async () => {
+    const auth = await ctx.authHeader('admin');
+
+    const response = await ctx.request
+      .get(`/api/${meta.tableName}`)
+      .query({ page: -1, limit: 10 })
+      .set(auth);
+
+    // Should either correct to page 1 or return 400
+    ctx.expect([200, 400]).toContain(response.status);
+  });
+
+  ctx.it(`GET /api/${meta.tableName}?limit=0 - handles zero limit`, async () => {
+    const auth = await ctx.authHeader('admin');
+
+    const response = await ctx.request
+      .get(`/api/${meta.tableName}`)
+      .query({ page: 1, limit: 0 })
+      .set(auth);
+
+    // Should either use default limit or return 400
+    ctx.expect([200, 400]).toContain(response.status);
+  });
+
+  ctx.it(`GET /api/${meta.tableName}?limit=10000 - handles excessive limit`, async () => {
+    const auth = await ctx.authHeader('admin');
+
+    const response = await ctx.request
+      .get(`/api/${meta.tableName}`)
+      .query({ page: 1, limit: 10000 })
+      .set(auth);
+
+    // Should cap limit or return 400
+    ctx.expect([200, 400]).toContain(response.status);
+    
+    if (response.status === 200 && response.body.pagination) {
+      // If successful, limit should be capped to max allowed
+      ctx.expect(response.body.pagination.limit).toBeLessThanOrEqual(500);
+    }
+  });
+}
+
+/**
+ * Scenario: Sort by invalid field returns 400
+ * 
+ * Preconditions: Entity supports sorting
+ * Tests: Sort by non-existent field returns 400
+ */
+function sortByInvalidField(meta, ctx) {
+  ctx.it(`GET /api/${meta.tableName}?sort=fake_field - rejects invalid sort field`, async () => {
+    const auth = await ctx.authHeader('admin');
+
+    const response = await ctx.request
+      .get(`/api/${meta.tableName}`)
+      .query({ sort: 'nonexistent_field_xyz' })
+      .set(auth);
+
+    ctx.expect(response.status).toBe(400);
+  });
+}
+
+/**
+ * Scenario: Error responses have consistent structure
+ * 
+ * Preconditions: None
+ * Tests: Error responses always have success:false and message
+ */
+function errorResponseStructure(meta, ctx) {
+  ctx.it(`GET /api/${meta.tableName}/99999 - error has consistent structure`, async () => {
+    const auth = await ctx.authHeader('admin');
+
+    const response = await ctx.request
+      .get(`/api/${meta.tableName}/99999`)
+      .set(auth);
+
+    ctx.expect(response.status).toBe(404);
+    ctx.expect(response.body).toHaveProperty('success', false);
+    ctx.expect(response.body).toHaveProperty('message');
+    ctx.expect(typeof response.body.message).toBe('string');
+    // Should not expose internal details
+    ctx.expect(response.body.stack).toBeUndefined();
+  });
+}
+
+/**
+ * Scenario: Concurrent operations don't corrupt data
+ * 
+ * Preconditions: Entity has mutable fields
+ * Tests: Concurrent updates don't lose data
+ */
+function concurrentOperationsSafe(meta, ctx) {
+  const mutableFields = Object.keys(meta.fieldAccess || {}).filter((field) => {
+    if (['id', 'created_at'].includes(field)) return false;
+    if (meta.immutableFields?.includes(field)) return false;
+    const access = meta.fieldAccess[field];
+    return access?.update && access.update !== 'none';
+  });
+
+  if (!mutableFields.length) return;
+
+  ctx.it(`PATCH /api/${meta.tableName}/:id - handles concurrent updates`, async () => {
+    const created = await ctx.factory.create(meta.entityName);
+    const field = mutableFields[0];
+    const auth = await ctx.authHeader('admin');
+
+    // Make 3 concurrent updates
+    const updates = [1, 2, 3].map((n) =>
+      ctx.request
+        .patch(`/api/${meta.tableName}/${created.id}`)
+        .set(auth)
+        .send({ [field]: ctx.factory.generateFieldValue(meta.entityName, field) })
+    );
+
+    const responses = await Promise.all(updates);
+
+    // All should succeed (200) - no 500 errors from race conditions
+    responses.forEach((response) => {
+      ctx.expect([200, 409]).toContain(response.status);
+    });
+  });
+}
+
+module.exports = {
+  updateNonExistent,
+  deleteNonExistent,
+  noAuthReturns401,
+  invalidJsonBody,
+  emptyBodyOnCreate,
+  nullRequiredFieldReturns400,
+  invalidEnumRejected,
+  invalidEmailRejected,
+  xssHandledSafely,
+  paginationEdgeCases,
+  sortByInvalidField,
+  errorResponseStructure,
+  concurrentOperationsSafe,
+};

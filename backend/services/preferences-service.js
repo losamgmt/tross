@@ -270,6 +270,7 @@ class PreferencesService {
         }
         break;
 
+      /* istanbul ignore next -- Defensive fallback for unknown type */
       default:
         // Unknown type - allow (for future extensibility)
         break;

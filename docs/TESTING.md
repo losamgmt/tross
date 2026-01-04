@@ -6,13 +6,19 @@ Philosophy, patterns, and best practices for testing TrossApp.
 
 ## Current Coverage
 
-| Layer | Tests | Coverage | Target |
-|-------|-------|----------|--------|
-| **Backend** | 2,196+ | ~75% lines | 80% |
-| **Flutter** | 1,739+ | ~63% lines | 80% |
-| **E2E** | 30 | N/A | Smoke tests |
+All coverage metrics and test counts are dynamically reported by the test runners. Run the following commands to see current status:
 
-*Last updated: December 2025*
+```bash
+# Backend coverage
+cd backend && npm run test:all -- --coverage
+
+# Frontend coverage  
+cd frontend && flutter test --coverage
+```
+
+**Coverage Thresholds (enforced in CI):**
+- Backend: 80% minimum for statements, branches, functions, and lines
+- Frontend: Target 80% line coverage
 
 ---
 
@@ -101,22 +107,56 @@ describe('Customer Model - Validation', () => {
 - Authentication flow
 - Error handling
 
-**Architecture:** Factory-driven testing with metadata-driven scenarios.
+**Architecture:** Pattern-based testing with metadata-driven scenarios.
 
-**Example:** Factory test pattern
+### Factory Pattern Architecture
+
+The test factory system uses **registries** and **scenarios** to generate comprehensive tests from metadata:
+
+```
+__tests__/factory/
+├── entity-registry.js    # Entity metadata (fields, validation, relationships)
+├── route-registry.js     # Route metadata (endpoints, auth, params)
+├── service-registry.js   # Service metadata (methods, dependencies)
+├── runner.js             # Entity test runner
+├── route-runner.js       # Route test runner
+├── service-runner.js     # Service test runner
+└── scenarios/            # Reusable test scenario modules
+    ├── crud.scenarios.js       # Create, Read, Update, Delete
+    ├── validation.scenarios.js # Field validation rules
+    ├── rls.scenarios.js        # Row-level security
+    ├── error.scenarios.js      # Error handling (unhappy paths)
+    ├── search.scenarios.js     # Search and filtering
+    ├── relationship.scenarios.js # Entity relationships
+    ├── audit.scenarios.js      # Audit logging
+    ├── lifecycle.scenarios.js  # Entity lifecycle events
+    ├── computed.scenarios.js   # Computed/derived fields
+    ├── field-access.scenarios.js # Field-level permissions
+    ├── response.scenarios.js   # Response format validation
+    ├── rls-filter.scenarios.js # RLS filter behavior
+    ├── route.scenarios.js      # Route-specific scenarios
+    └── service.scenarios.js    # Service layer scenarios
+```
+
+**Example:** Entity factory test
 ```javascript
-// __tests__/integration/customer-factory.test.js
-// Metadata-driven - automatically tests CRUD, validation, RLS, pagination, search
-const { runStandardCrudTests } = require('../factory/test-factory');
-const customerMetadata = require('../../config/customer.metadata');
+// __tests__/integration/customers-factory.test.js
+const { runEntityTests } = require('../factory/runner');
 
-describe('Customer API Factory Tests', () => {
-  runStandardCrudTests({
-    entity: 'customers',
-    metadata: customerMetadata,
-    // Factory auto-generates tests for all CRUD operations, validation, permissions
-  });
-});
+// Automatically generates tests for CRUD, validation, RLS, search, 
+// relationships, error handling, and more based on entity metadata
+runEntityTests('customers');
+```
+
+**Example:** Route factory test
+```javascript
+// __tests__/integration/customers-routes.test.js
+const { runRouteTests } = require('../factory/route-runner');
+const app = require('../../server');
+const db = require('../../db/connection');
+
+// Generates auth, validation, and error tests from route metadata
+runRouteTests('customers', { app, db });
 ```
 
 **Specialized Tests:** Non-standard behavior tested in `specialized/` folder:
@@ -416,29 +456,86 @@ test('should throw error for invalid data', async () => {
 });
 ```
 
+### Error Scenarios (Unhappy Path Testing)
+
+The factory system includes comprehensive error scenario testing via `error.scenarios.js`:
+
+```javascript
+// Automatically generated error tests include:
+- updateNonExistent()     // 404 for missing entity
+- deleteNonExistent()     // 404 for missing entity  
+- noAuthReturns401()      // Authentication required
+- invalidJsonBody()       // Malformed JSON handling
+- emptyBodyOnCreate()     // Empty body rejection
+- nullRequiredField()     // Required field validation
+- invalidEnumRejected()   // Enum value validation
+- invalidEmailRejected()  // Email format validation
+- xssHandledSafely()      // XSS input handling
+- paginationEdgeCases()   // Boundary conditions
+- sortByInvalidField()    // Invalid sort handling
+- errorResponseStructure()// Consistent error format
+- concurrentOperationsSafe() // Race condition handling
+```
+
+**Philosophy:** Every "happy path" has corresponding "unhappy path" tests. Error handling is not optional coverage—it's critical for production reliability.
+
 ---
 
 ## Test Organization
 
-### File Naming
+### Backend Test Structure
 ```
-__tests__/
-  unit/
-    models/
-      Customer.crud.test.js       # CRUD operations
-      Customer.validation.test.js # Validation logic
-      Customer.rls.test.js        # Row-level security
-    services/
-      auth-service.test.js
-  integration/
-    *-factory.test.js             # Factory-driven API tests (8 entities)
-    specialized/
-      user-role-assignment.test.js # Cross-entity behavior
-      entity-guards.test.js        # Core entities protection
-      audit-logging.test.js        # Audit compliance
-  factory/
-    scenarios/                     # Reusable test scenarios
+backend/__tests__/
+├── factory/                      # Pattern-based test generation
+│   ├── entity-registry.js        # Entity metadata definitions
+│   ├── route-registry.js         # Route metadata definitions
+│   ├── service-registry.js       # Service metadata definitions
+│   ├── runner.js                 # Entity test runner
+│   ├── route-runner.js           # Route test runner
+│   ├── service-runner.js         # Service test runner
+│   ├── data/                     # Test data generators
+│   └── scenarios/                # 14 reusable scenario modules
+│       ├── crud.scenarios.js
+│       ├── validation.scenarios.js
+│       ├── rls.scenarios.js
+│       ├── error.scenarios.js    # Unhappy path testing
+│       ├── search.scenarios.js
+│       └── ... (10 more)
+├── unit/                         # Isolated unit tests
+│   ├── models/
+│   ├── services/
+│   ├── utils/
+│   ├── validators/
+│   └── middleware/
+├── integration/                  # API + database tests
+│   ├── *-factory.test.js         # Factory-generated entity tests
+│   ├── *-routes.test.js          # Factory-generated route tests
+│   ├── *-api.test.js             # Endpoint-specific tests
+│   └── specialized/              # Non-standard workflows
+├── fixtures/                     # Test data
+├── helpers/                      # Shared test utilities
+├── mocks/                        # Mock implementations
+└── setup/                        # Jest configuration
 ```
+
+### Frontend Test Structure
+```
+frontend/test/
+├── widgets/                      # Widget tests (by atomic design)
+│   ├── atoms/
+│   ├── molecules/
+│   └── organisms/
+├── providers/                    # State management tests
+├── services/                     # API service tests
+├── screens/                      # Screen integration tests
+└── helpers/                      # Shared test utilities
+```
+
+### File Naming Conventions
+- `*.test.js` - Test files (Jest auto-discovers)
+- `*-factory.test.js` - Factory-generated tests
+- `*-routes.test.js` - Route-specific tests
+- `*.scenarios.js` - Reusable scenario modules
 
 ### Test Structure
 ```javascript
@@ -604,10 +701,10 @@ cd ../frontend && flutter test
 
 ### Manual Smoke Test Checklist
 
-Run these tests against **https://trossapp.vercel.app** after every production deployment:
+Run these tests against the production frontend URL after every deployment:
 
 #### 1. Authentication & Session
-- [ ] Visit https://trossapp.vercel.app
+- [ ] Visit the production frontend URL
 - [ ] Click "Login" button
 - [ ] Auth0 login page loads
 - [ ] Login with test credentials (or create new user)
@@ -626,7 +723,7 @@ Run these tests against **https://trossapp.vercel.app** after every production d
 
 #### 3. Role Management
 - [ ] Navigate to Roles page
-- [ ] View role list (5 core roles)
+- [ ] View role list (core roles present)
 - [ ] Create new custom role
 - [ ] Verify role appears
 - [ ] Try to delete core role (should fail with permission error)
@@ -639,7 +736,7 @@ Run these tests against **https://trossapp.vercel.app** after every production d
 - [ ] Verify no CORS errors
 
 #### 5. Backend Health
-- [ ] Visit https://tross-api-production.up.railway.app/api/health
+- [ ] Visit the production API health endpoint (`/api/health`)
 - [ ] Should return JSON: `{"status":"ok",...}`
 - [ ] Check database health in response
 
@@ -647,7 +744,8 @@ Run these tests against **https://trossapp.vercel.app** after every production d
 
 ```bash
 # Run E2E tests against production backend
-BACKEND_URL=https://tross-api-production.up.railway.app npm run test:e2e
+# Set BACKEND_URL environment variable to production API URL
+BACKEND_URL=<production-api-url> npm run test:e2e
 
 # Note: Uses dev tokens, not Auth0
 # Good for API testing, not auth flow testing

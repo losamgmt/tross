@@ -161,7 +161,8 @@ function handleDbError(error, res, config = {}) {
   }
 
   // Not a PostgreSQL error code - let caller handle
-  if (!errorCode || typeof errorCode !== 'string' || !errorCode.match(/^[0-9]{5}$/)) {
+  // PostgreSQL error codes are 5 characters: digits or letters (e.g., 23503, 22P02)
+  if (!errorCode || typeof errorCode !== 'string' || !errorCode.match(/^[0-9A-Z]{5}$/i)) {
     return false;
   }
 

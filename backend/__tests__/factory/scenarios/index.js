@@ -20,8 +20,16 @@ const auditScenarios = require('./audit.scenarios');
 const fieldAccessScenarios = require('./field-access.scenarios');
 const rlsFilterScenarios = require('./rls-filter.scenarios');
 const computedScenarios = require('./computed.scenarios');
+const errorScenarios = require('./error.scenarios');
+
+// Route and service scenarios have different signatures and are used
+// by their own runners (route-runner.js, service-runner.js)
+// They are NOT exported here to avoid mixing with entity scenarios
+const routeScenarios = require('./route.scenarios');
+const serviceScenarios = require('./service.scenarios');
 
 module.exports = {
+  // Entity scenarios (used by runner.js with entity metadata)
   crud: crudScenarios,
   validation: validationScenarios,
   relationships: relationshipScenarios,
@@ -33,4 +41,8 @@ module.exports = {
   fieldAccess: fieldAccessScenarios,
   rlsFilter: rlsFilterScenarios,
   computed: computedScenarios,
+  error: errorScenarios,
+  
+  // Route and service scenarios are exported separately for their runners
+  // Do NOT add 'route' or 'service' here - they have different signatures
 };

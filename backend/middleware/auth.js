@@ -119,6 +119,12 @@ const authenticateToken = async (req, res, next) => {
         name: `${testUser.first_name} ${testUser.last_name}`.trim() || 'User',
       };
 
+      // Attach permissions helper for route-level checks
+      req.permissions = {
+        hasPermission: (resource, operation) => hasPermission(req.dbUser.role, resource, operation),
+        hasMinimumRole: (requiredRole) => hasMinimumRole(req.dbUser.role, requiredRole),
+      };
+
       // CRITICAL SECURITY: Check if user is active (deactivated users cannot authenticate)
       if (req.dbUser.is_active === false) {
         logSecurityEvent('AUTH_DEACTIVATED_USER', {
@@ -175,6 +181,12 @@ const authenticateToken = async (req, res, next) => {
         // Canonical role fields
         role: roleName, // 'admin', 'manager', etc.
         role_priority: rolePriority, // 5, 4, 3, 2, 1
+      };
+
+      // Attach permissions helper for route-level checks
+      req.permissions = {
+        hasPermission: (resource, operation) => hasPermission(req.dbUser.role, resource, operation),
+        hasMinimumRole: (requiredRole) => hasMinimumRole(req.dbUser.role, requiredRole),
       };
 
       // CRITICAL SECURITY: Check if user is active (deactivated users cannot authenticate)

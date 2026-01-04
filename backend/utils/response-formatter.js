@@ -57,6 +57,7 @@ class ResponseFormatter {
    * @param {*} data - Response data (object, array, or primitive)
    * @param {Object} [options] - Additional options
    * @param {string} [options.message] - Optional success message
+   * @param {Object} [options.pagination] - Optional pagination metadata
    */
   static success(res, data, options = {}) {
     const response = {
@@ -67,6 +68,10 @@ class ResponseFormatter {
 
     if (options.message) {
       response.message = options.message;
+    }
+
+    if (options.pagination) {
+      response.pagination = options.pagination;
     }
 
     res.status(HTTP_STATUS.OK).json(response);

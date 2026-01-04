@@ -312,6 +312,91 @@ describe('services/preferences-service.js', () => {
         expect.stringContaining('Unknown preference key: unknownKey')
       );
     });
+
+    // String type validation tests (timezone preference)
+    test('should validate string preference type', () => {
+      const validPrefs = { timezone: 'America/Los_Angeles' };
+      const errors = preferencesService.validatePreferences(validPrefs);
+      expect(errors).toEqual([]);
+    });
+
+    test('should return error for non-string value on string preference', () => {
+      const invalidPrefs = { timezone: 12345 };
+      const errors = preferencesService.validatePreferences(invalidPrefs);
+      expect(errors).toContainEqual(
+        expect.stringContaining('timezone must be a string')
+      );
+    });
+
+    test('should return error for string exceeding maxLength', () => {
+      const invalidPrefs = { timezone: 'A'.repeat(100) }; // Over 50 chars
+      const errors = preferencesService.validatePreferences(invalidPrefs);
+      expect(errors).toContainEqual(
+        expect.stringContaining('timezone must be at most 50 characters')
+      );
+    });
+
+    // Number type validation tests (autoRefreshInterval preference)
+    test('should validate number preference type', () => {
+      const validPrefs = { autoRefreshInterval: 60 };
+      const errors = preferencesService.validatePreferences(validPrefs);
+      expect(errors).toEqual([]);
+    });
+
+    test('should return error for non-number value on number preference', () => {
+      const invalidPrefs = { autoRefreshInterval: 'fast' };
+      const errors = preferencesService.validatePreferences(invalidPrefs);
+      expect(errors).toContainEqual(
+        expect.stringContaining('autoRefreshInterval must be a number')
+      );
+    });
+
+    test('should return error for NaN on number preference', () => {
+      const invalidPrefs = { autoRefreshInterval: NaN };
+      const errors = preferencesService.validatePreferences(invalidPrefs);
+      expect(errors).toContainEqual(
+        expect.stringContaining('autoRefreshInterval must be a number')
+      );
+    });
+
+    test('should return error for number below min', () => {
+      const invalidPrefs = { autoRefreshInterval: -5 }; // min is 0
+      const errors = preferencesService.validatePreferences(invalidPrefs);
+      expect(errors).toContainEqual(
+        expect.stringContaining('autoRefreshInterval must be at least 0')
+      );
+    });
+
+    test('should return error for number above max', () => {
+      const invalidPrefs = { autoRefreshInterval: 500 }; // max is 300
+      const errors = preferencesService.validatePreferences(invalidPrefs);
+      expect(errors).toContainEqual(
+        expect.stringContaining('autoRefreshInterval must be at most 300')
+      );
+    });
+
+    test('should accept number at min boundary', () => {
+      const validPrefs = { autoRefreshInterval: 0 }; // min is 0
+      const errors = preferencesService.validatePreferences(validPrefs);
+      expect(errors).toEqual([]);
+    });
+
+    test('should accept number at max boundary', () => {
+      const validPrefs = { autoRefreshInterval: 300 }; // max is 300
+      const errors = preferencesService.validatePreferences(validPrefs);
+      expect(errors).toEqual([]);
+    });
+
+    test('should validate multiple preference types in one call', () => {
+      const validPrefs = {
+        theme: 'dark',
+        notificationsEnabled: true,
+        timezone: 'Europe/London',
+        autoRefreshInterval: 120,
+      };
+      const errors = preferencesService.validatePreferences(validPrefs);
+      expect(errors).toEqual([]);
+    });
   });
 
   describe('getPreferenceSchema()', () => {

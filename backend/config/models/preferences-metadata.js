@@ -284,6 +284,22 @@ module.exports = {
       },
       order: 3,
     },
-    // Future preferences can be added here without migration
+    timezone: {
+      type: 'string',
+      default: 'America/New_York',
+      maxLength: 50,
+      label: 'Timezone',
+      description: 'Your preferred timezone for displaying dates and times',
+      order: 4,
+    },
+    autoRefreshInterval: {
+      type: 'number',
+      default: 30,
+      min: 0,
+      max: 300,
+      label: 'Auto-Refresh Interval',
+      description: 'Seconds between automatic data refreshes (0 to disable)',
+      order: 5,
+    },
   },
 };
