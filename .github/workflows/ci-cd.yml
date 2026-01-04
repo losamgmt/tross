@@ -95,6 +95,13 @@ jobs:
           JWT_SECRET: test-secret-key-for-ci
           AUTH_MODE: development
           USE_TEST_AUTH: 'true'
+          # Storage configuration (Cloudflare R2)
+          STORAGE_PROVIDER: r2
+          STORAGE_ENDPOINT: ${{ secrets.STORAGE_ENDPOINT }}
+          STORAGE_BUCKET: ${{ secrets.STORAGE_BUCKET }}
+          STORAGE_ACCESS_KEY: ${{ secrets.STORAGE_ACCESS_KEY }}
+          STORAGE_SECRET_KEY: ${{ secrets.STORAGE_SECRET_KEY }}
+          STORAGE_REGION: auto
 
   # ============================================================================
   # FRONTEND TESTS (Flutter)
