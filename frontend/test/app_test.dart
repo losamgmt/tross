@@ -13,8 +13,19 @@ import 'package:tross_app/providers/auth_provider.dart';
 import 'package:tross_app/providers/app_provider.dart';
 import 'package:tross_app/config/constants.dart';
 import 'helpers/helpers.dart';
+import 'mocks/mock_api_client.dart';
 
 void main() {
+  late MockApiClient mockApiClient;
+
+  setUp(() {
+    mockApiClient = MockApiClient();
+  });
+
+  tearDown(() {
+    mockApiClient.reset();
+  });
+
   testWidgets('App structure can be rendered (smoke test)', (
     WidgetTester tester,
   ) async {
@@ -24,7 +35,7 @@ void main() {
       tester,
       MultiProvider(
         providers: [
-          ChangeNotifierProvider(create: (_) => AuthProvider()),
+          ChangeNotifierProvider(create: (_) => AuthProvider(mockApiClient)),
           ChangeNotifierProvider(create: (_) => AppProvider()),
         ],
         child: const MaterialApp(home: LoginScreen()),
@@ -46,7 +57,7 @@ void main() {
       tester,
       MultiProvider(
         providers: [
-          ChangeNotifierProvider(create: (_) => AuthProvider()),
+          ChangeNotifierProvider(create: (_) => AuthProvider(mockApiClient)),
           ChangeNotifierProvider(create: (_) => AppProvider()),
         ],
         child: const MaterialApp(home: LoginScreen()),

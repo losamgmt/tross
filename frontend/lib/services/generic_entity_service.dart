@@ -7,27 +7,30 @@
 ///
 /// USAGE:
 /// ```dart
+/// // Get from Provider
+/// final entityService = context.read<GenericEntityService>();
+///
 /// // Fetch customers
-/// final result = await GenericEntityService.getAll('customer');
+/// final result = await entityService.getAll('customer');
 /// final customers = result.data; // List<Map<String, dynamic>>
 ///
 /// // Create a work order
-/// final workOrder = await GenericEntityService.create('work_order', {
+/// final workOrder = await entityService.create('work_order', {
 ///   'title': 'Fix AC',
 ///   'customer_id': 42,
 /// });
 ///
 /// // Update inventory item
-/// final updated = await GenericEntityService.update('inventory', 5, {
+/// final updated = await entityService.update('inventory', 5, {
 ///   'quantity': 100,
 /// });
 ///
 /// // Delete invoice
-/// await GenericEntityService.delete('invoice', 99);
+/// await entityService.delete('invoice', 99);
 /// ```
 library;
 
-import 'api_client.dart';
+import 'api/api_client.dart';
 import 'error_service.dart';
 
 /// Result of a paginated list query
@@ -63,9 +66,14 @@ class EntityListResult {
 ///
 /// All CRUD operations for all entities go through this service.
 /// No per-entity services needed.
+///
+/// Inject via Provider - do NOT instantiate directly.
 class GenericEntityService {
-  // Private constructor - static class only
-  GenericEntityService._();
+  /// The API client used for HTTP calls - injected via constructor
+  final ApiClient _apiClient;
+
+  /// Constructor - requires ApiClient injection
+  GenericEntityService(this._apiClient);
 
   /// Fetch paginated list of entities
   ///
@@ -73,7 +81,7 @@ class GenericEntityService {
   ///
   /// Example:
   /// ```dart
-  /// final result = await GenericEntityService.getAll(
+  /// final result = await entityService.getAll(
   ///   'customer',
   ///   page: 1,
   ///   limit: 50,
@@ -84,7 +92,7 @@ class GenericEntityService {
   ///   print(customer['email']);
   /// }
   /// ```
-  static Future<EntityListResult> getAll(
+  Future<EntityListResult> getAll(
     String entityName, {
     int page = 1,
     int limit = 50,
@@ -99,7 +107,7 @@ class GenericEntityService {
         context: {'page': page, 'limit': limit, 'search': search},
       );
 
-      final result = await ApiClient.fetchEntities(
+      final result = await _apiClient.fetchEntities(
         entityName,
         page: page,
         limit: limit,
@@ -131,14 +139,14 @@ class GenericEntityService {
   ///
   /// Example:
   /// ```dart
-  /// final customer = await GenericEntityService.getById('customer', 42);
+  /// final customer = await entityService.getById('customer', 42);
   /// print(customer['email']);
   /// ```
-  static Future<Map<String, dynamic>> getById(String entityName, int id) async {
+  Future<Map<String, dynamic>> getById(String entityName, int id) async {
     try {
       ErrorService.logInfo('[GenericEntityService] Fetching $entityName #$id');
 
-      return await ApiClient.fetchEntity(entityName, id);
+      return await _apiClient.fetchEntity(entityName, id);
     } catch (e) {
       ErrorService.logError(
         '[GenericEntityService] Failed to fetch $entityName #$id',
@@ -154,13 +162,13 @@ class GenericEntityService {
   ///
   /// Example:
   /// ```dart
-  /// final newCustomer = await GenericEntityService.create('customer', {
+  /// final newCustomer = await entityService.create('customer', {
   ///   'email': 'new@example.com',
   ///   'first_name': 'John',
   /// });
   /// print('Created customer #${newCustomer['id']}');
   /// ```
-  static Future<Map<String, dynamic>> create(
+  Future<Map<String, dynamic>> create(
     String entityName,
     Map<String, dynamic> data,
   ) async {
@@ -170,7 +178,7 @@ class GenericEntityService {
         context: {'fields': data.keys.toList()},
       );
 
-      return await ApiClient.createEntity(entityName, data);
+      return await _apiClient.createEntity(entityName, data);
     } catch (e) {
       ErrorService.logError(
         '[GenericEntityService] Failed to create $entityName',
@@ -186,11 +194,11 @@ class GenericEntityService {
   ///
   /// Example:
   /// ```dart
-  /// final updated = await GenericEntityService.update('customer', 42, {
+  /// final updated = await entityService.update('customer', 42, {
   ///   'first_name': 'Jane',
   /// });
   /// ```
-  static Future<Map<String, dynamic>> update(
+  Future<Map<String, dynamic>> update(
     String entityName,
     int id,
     Map<String, dynamic> data,
@@ -201,7 +209,7 @@ class GenericEntityService {
         context: {'fields': data.keys.toList()},
       );
 
-      return await ApiClient.updateEntity(entityName, id, data);
+      return await _apiClient.updateEntity(entityName, id, data);
     } catch (e) {
       ErrorService.logError(
         '[GenericEntityService] Failed to update $entityName #$id',
@@ -215,13 +223,13 @@ class GenericEntityService {
   ///
   /// Example:
   /// ```dart
-  /// await GenericEntityService.delete('customer', 42);
+  /// await entityService.delete('customer', 42);
   /// ```
-  static Future<void> delete(String entityName, int id) async {
+  Future<void> delete(String entityName, int id) async {
     try {
       ErrorService.logInfo('[GenericEntityService] Deleting $entityName #$id');
 
-      await ApiClient.deleteEntity(entityName, id);
+      await _apiClient.deleteEntity(entityName, id);
     } catch (e) {
       ErrorService.logError(
         '[GenericEntityService] Failed to delete $entityName #$id',

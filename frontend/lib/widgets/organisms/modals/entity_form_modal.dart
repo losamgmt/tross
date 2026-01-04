@@ -198,11 +198,13 @@ class _EntityFormModalState extends State<EntityFormModal> {
     // Get field configs based on mode
     final fieldConfigs = widget.mode.isCreate
         ? MetadataFieldConfigFactory.forCreate(
+            context,
             widget.entityName,
             includeFields: widget.includeFields,
             excludeFields: widget.excludeFields,
           )
         : MetadataFieldConfigFactory.forEdit(
+            context,
             widget.entityName,
             includeFields: widget.includeFields,
             excludeFields: widget.excludeFields,

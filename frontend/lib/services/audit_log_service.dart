@@ -4,23 +4,26 @@
 ///
 /// USAGE:
 /// ```dart
+/// // Get from Provider
+/// final auditService = context.read<AuditLogService>();
+///
 /// // Get history for a work order
-/// final history = await AuditLogService.getResourceHistory(
+/// final history = await auditService.getResourceHistory(
 ///   resourceType: 'work_order',
 ///   resourceId: 123,
 /// );
 ///
 /// // Get user's activity history
-/// final myActivity = await AuditLogService.getUserHistory(userId: 5);
+/// final myActivity = await auditService.getUserHistory(userId: 5);
 ///
 /// // Get all recent logs (admin only)
-/// final allLogs = await AuditLogService.getAllLogs(filter: 'data');
+/// final allLogs = await auditService.getAllLogs(filter: 'data');
 /// ```
 library;
 
 import 'dart:convert';
 import '../models/audit_log_entry.dart';
-import 'api_client.dart';
+import 'api/api_client.dart';
 import 'auth/token_manager.dart';
 import 'error_service.dart';
 
@@ -41,15 +44,18 @@ class AuditLogResult {
 
 /// Service for fetching audit logs
 class AuditLogService {
-  // Private constructor - static only
-  AuditLogService._();
+  /// API client for HTTP requests - injected via constructor
+  final ApiClient _apiClient;
+
+  /// Constructor - requires ApiClient injection
+  AuditLogService(this._apiClient);
 
   /// Get all recent audit logs (admin only)
   ///
   /// [filter] - 'data' for CRUD events, 'auth' for auth events, null for all
   /// [limit] - Maximum entries to return (default 100, max 500)
   /// [offset] - Offset for pagination (default 0)
-  static Future<AuditLogResult> getAllLogs({
+  Future<AuditLogResult> getAllLogs({
     String? filter,
     int limit = 100,
     int offset = 0,
@@ -72,7 +78,7 @@ class AuditLogService {
           .map((e) => '${e.key}=${e.value}')
           .join('&');
 
-      final response = await ApiClient.authenticatedRequest(
+      final response = await _apiClient.authenticatedRequest(
         'GET',
         '/audit/all?$queryString',
         token: token,
@@ -113,7 +119,7 @@ class AuditLogService {
   /// [resourceType] - Entity type (work_order, customer, user, etc.)
   /// [resourceId] - ID of the resource
   /// [limit] - Maximum entries to return (default 50)
-  static Future<List<AuditLogEntry>> getResourceHistory({
+  Future<List<AuditLogEntry>> getResourceHistory({
     required String resourceType,
     required int resourceId,
     int limit = 50,
@@ -124,7 +130,7 @@ class AuditLogService {
         throw Exception('No authentication token');
       }
 
-      final response = await ApiClient.authenticatedRequest(
+      final response = await _apiClient.authenticatedRequest(
         'GET',
         '/audit/$resourceType/$resourceId?limit=$limit',
         token: token,
@@ -155,7 +161,7 @@ class AuditLogService {
   ///
   /// [userId] - ID of the user
   /// [limit] - Maximum entries to return (default 50)
-  static Future<List<AuditLogEntry>> getUserHistory({
+  Future<List<AuditLogEntry>> getUserHistory({
     required int userId,
     int limit = 50,
   }) async {
@@ -165,7 +171,7 @@ class AuditLogService {
         throw Exception('No authentication token');
       }
 
-      final response = await ApiClient.authenticatedRequest(
+      final response = await _apiClient.authenticatedRequest(
         'GET',
         '/audit/user/$userId?limit=$limit',
         token: token,

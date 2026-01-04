@@ -7,6 +7,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/permission.dart';
 import '../services/permission_service_dynamic.dart';
 import '../services/generic_entity_service.dart';
@@ -92,7 +93,9 @@ class GenericTableActionBuilders {
                     entityType: metadata.displayName.toLowerCase(),
                     entityName: entityDisplayName,
                     deleteOperation: () async {
-                      await GenericEntityService.delete(
+                      final entityService = context
+                          .read<GenericEntityService>();
+                      await entityService.delete(
                         entityName,
                         entity['id'] as int,
                       );
@@ -173,8 +176,8 @@ class GenericTableActionBuilders {
 
     // Generate fields from metadata
     final fields = isEdit
-        ? MetadataFieldConfigFactory.forEdit(entityName)
-        : MetadataFieldConfigFactory.forCreate(entityName);
+        ? MetadataFieldConfigFactory.forEdit(context, entityName)
+        : MetadataFieldConfigFactory.forCreate(context, entityName);
 
     // Initialize data
     final initialData = isEdit
@@ -262,10 +265,11 @@ class _EntityFormDialogState extends State<_EntityFormDialog> {
 
     setState(() => _isSaving = true);
     try {
+      final entityService = context.read<GenericEntityService>();
       if (widget.isEdit) {
         final updates = _getChangedFields();
         if (updates.isNotEmpty) {
-          await GenericEntityService.update(
+          await entityService.update(
             widget.entityName,
             widget.entityId!,
             updates,
@@ -273,7 +277,7 @@ class _EntityFormDialogState extends State<_EntityFormDialog> {
         }
       } else {
         final cleanData = _cleanData();
-        await GenericEntityService.create(widget.entityName, cleanData);
+        await entityService.create(widget.entityName, cleanData);
       }
 
       if (mounted) {
@@ -390,7 +394,8 @@ class _ExportButtonState extends State<_ExportButton> {
     setState(() => _isExporting = true);
 
     try {
-      final success = await ExportService.exportToCsv(
+      final exportService = context.read<ExportService>();
+      final success = await exportService.exportToCsv(
         entityName: widget.entityName,
       );
 

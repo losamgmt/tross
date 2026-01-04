@@ -118,7 +118,8 @@ class _EntityScreenState extends State<EntityScreen> {
         child: organisms.RefreshableDataProvider<List<Map<String, dynamic>>>(
           key: _tableKey,
           loadData: () async {
-            final result = await GenericEntityService.getAll(widget.entityName);
+            final entityService = context.read<GenericEntityService>();
+            final result = await entityService.getAll(widget.entityName);
             return result.data;
           },
           errorTitle: 'Failed to Load ${metadata.displayNamePlural}',
@@ -139,6 +140,7 @@ class _EntityScreenState extends State<EntityScreen> {
                 title: metadata.displayNamePlural,
                 entityName: widget.entityName,
                 columns: MetadataTableColumnFactory.forEntity(
+                  context,
                   widget.entityName,
                   onEntityUpdated: _refreshTable,
                 ),

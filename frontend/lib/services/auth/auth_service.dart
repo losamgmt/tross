@@ -5,7 +5,7 @@ import '../../config/constants.dart';
 import 'auth0_platform_service.dart';
 import 'auth_token_service.dart';
 import 'auth_profile_service.dart';
-import '../api_client.dart';
+import '../api/api_client.dart';
 import '../error_service.dart';
 
 class AuthService {
@@ -14,15 +14,19 @@ class AuthService {
   String? _provider; // Stored auth provider (auth0, development)
 
   final Auth0PlatformService _auth0Service = Auth0PlatformService();
-  final AuthTokenService _tokenService = AuthTokenService();
-  final AuthProfileService _profileService = AuthProfileService();
+  late final AuthTokenService _tokenService;
+  late final AuthProfileService _profileService;
 
-  // Singleton pattern
-  static final AuthService _instance = AuthService._internal();
-  factory AuthService() => _instance;
-  AuthService._internal() {
+  /// API client for HTTP requests - injected via constructor
+  final ApiClient _apiClient;
+
+  /// Constructor - requires ApiClient injection
+  AuthService(this._apiClient) {
+    // Create dependent services with same ApiClient
+    _tokenService = AuthTokenService(_apiClient);
+    _profileService = AuthProfileService(_apiClient);
     // Wire up auto token refresh callback
-    ApiClient.onTokenRefreshNeeded = _handleTokenRefresh;
+    _apiClient.onTokenRefreshNeeded = _handleTokenRefresh;
   }
 
   // Getters
@@ -248,7 +252,7 @@ class AuthService {
         context: {'role': role},
       );
 
-      final token = await ApiClient.getTestToken(role: role);
+      final token = await _apiClient.getTestToken(role: role);
 
       ErrorService.logInfo(
         'Test token received',
@@ -354,7 +358,7 @@ class AuthService {
           ErrorService.logInfo(
             '🔑 AUTH SERVICE: Calling backend /auth/logout...',
           );
-          final response = await ApiClient.authenticatedRequest(
+          final response = await _apiClient.authenticatedRequest(
             'POST',
             ApiEndpoints.authLogout,
             token: _token!,
@@ -482,7 +486,7 @@ class AuthService {
       throw Exception('Not authenticated - no token available');
     }
 
-    return ApiClient.authenticatedRequest(
+    return _apiClient.authenticatedRequest(
       method,
       endpoint,
       token: _token!,

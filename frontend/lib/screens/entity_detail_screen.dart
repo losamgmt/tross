@@ -70,7 +70,8 @@ class _EntityDetailScreenState extends State<EntityDetailScreen> {
     });
 
     try {
-      final entity = await GenericEntityService.getById(
+      final entityService = context.read<GenericEntityService>();
+      final entity = await entityService.getById(
         widget.entityName,
         widget.entityId,
       );
@@ -104,7 +105,8 @@ class _EntityDetailScreenState extends State<EntityDetailScreen> {
       entityType: metadata.displayName.toLowerCase(),
       entityName: entityDisplayName,
       deleteOperation: () async {
-        await GenericEntityService.delete(widget.entityName, widget.entityId);
+        final entityService = context.read<GenericEntityService>();
+        await entityService.delete(widget.entityName, widget.entityId);
         return true;
       },
       onSuccess: () {
@@ -277,7 +279,10 @@ class _EntityDetailScreenState extends State<EntityDetailScreen> {
     required AppSpacing spacing,
   }) {
     // Get form fields from metadata factory (forEdit marks immutable fields readonly)
-    final fieldConfigs = MetadataFieldConfigFactory.forEdit(widget.entityName);
+    final fieldConfigs = MetadataFieldConfigFactory.forEdit(
+      context,
+      widget.entityName,
+    );
 
     final formKey = GlobalKey<GenericFormState<Map<String, dynamic>>>();
     var formValue = Map<String, dynamic>.from(_entity!);
@@ -330,7 +335,9 @@ class _EntityDetailScreenState extends State<EntityDetailScreen> {
                       if (formKey.currentState?.validateAll() ?? false) {
                         final messenger = ScaffoldMessenger.of(context);
                         try {
-                          await GenericEntityService.update(
+                          final entityService = context
+                              .read<GenericEntityService>();
+                          await entityService.update(
                             widget.entityName,
                             widget.entityId,
                             formKey.currentState!.currentValue,

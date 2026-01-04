@@ -15,22 +15,25 @@
 ///
 /// USAGE:
 /// ```dart
+/// // Get from Provider
+/// final stats = context.read<StatsService>();
+///
 /// // Count all work orders
-/// final total = await StatsService.count('work_order');
+/// final total = await stats.count('work_order');
 ///
 /// // Count pending work orders
-/// final pending = await StatsService.count('work_order', filters: {'status': 'pending'});
+/// final pending = await stats.count('work_order', filters: {'status': 'pending'});
 ///
 /// // Get work orders grouped by status
-/// final byStatus = await StatsService.countGrouped('work_order', 'status');
+/// final byStatus = await stats.countGrouped('work_order', 'status');
 ///
 /// // Sum paid invoice totals
-/// final revenue = await StatsService.sum('invoice', 'total', filters: {'status': 'paid'});
+/// final revenue = await stats.sum('invoice', 'total', filters: {'status': 'paid'});
 /// ```
 library;
 
 import 'dart:convert';
-import 'api_client.dart';
+import 'api/api_client.dart';
 import 'auth/token_manager.dart';
 import 'error_service.dart';
 
@@ -57,8 +60,11 @@ class GroupedCount {
 /// All aggregation queries go through this service.
 /// Respects RLS and permissions - users only see stats for data they can access.
 class StatsService {
-  // Private constructor - static class only
-  StatsService._();
+  /// API client for HTTP requests - injected via constructor
+  final ApiClient _apiClient;
+
+  /// Constructor - requires ApiClient injection
+  StatsService(this._apiClient);
 
   /// Count records for an entity
   ///
@@ -66,13 +72,10 @@ class StatsService {
   ///
   /// Example:
   /// ```dart
-  /// final totalOrders = await StatsService.count('work_order');
-  /// final pendingOrders = await StatsService.count('work_order', filters: {'status': 'pending'});
+  /// final totalOrders = await stats.count('work_order');
+  /// final pendingOrders = await stats.count('work_order', filters: {'status': 'pending'});
   /// ```
-  static Future<int> count(
-    String entityName, {
-    Map<String, dynamic>? filters,
-  }) async {
+  Future<int> count(String entityName, {Map<String, dynamic>? filters}) async {
     try {
       final token = await TokenManager.getStoredToken();
       if (token == null) {
@@ -93,7 +96,7 @@ class StatsService {
           ? '?${queryParams.entries.map((e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}').join('&')}'
           : '';
 
-      final response = await ApiClient.authenticatedRequest(
+      final response = await _apiClient.authenticatedRequest(
         'GET',
         '/stats/$entityName$queryString',
         token: token,
@@ -129,10 +132,10 @@ class StatsService {
   ///
   /// Example:
   /// ```dart
-  /// final byStatus = await StatsService.countGrouped('work_order', 'status');
+  /// final byStatus = await stats.countGrouped('work_order', 'status');
   /// // Returns: [GroupedCount('completed', 42), GroupedCount('pending', 12), ...]
   /// ```
-  static Future<List<GroupedCount>> countGrouped(
+  Future<List<GroupedCount>> countGrouped(
     String entityName,
     String groupByField, {
     Map<String, dynamic>? filters,
@@ -157,7 +160,7 @@ class StatsService {
           ? '?${queryParams.entries.map((e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}').join('&')}'
           : '';
 
-      final response = await ApiClient.authenticatedRequest(
+      final response = await _apiClient.authenticatedRequest(
         'GET',
         '/stats/$entityName/grouped/$groupByField$queryString',
         token: token,
@@ -203,10 +206,10 @@ class StatsService {
   ///
   /// Example:
   /// ```dart
-  /// final revenue = await StatsService.sum('invoice', 'total', filters: {'status': 'paid'});
-  /// final outstanding = await StatsService.sum('invoice', 'total', filters: {'status': 'sent'});
+  /// final revenue = await stats.sum('invoice', 'total', filters: {'status': 'paid'});
+  /// final outstanding = await stats.sum('invoice', 'total', filters: {'status': 'sent'});
   /// ```
-  static Future<double> sum(
+  Future<double> sum(
     String entityName,
     String field, {
     Map<String, dynamic>? filters,
@@ -231,7 +234,7 @@ class StatsService {
           ? '?${queryParams.entries.map((e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}').join('&')}'
           : '';
 
-      final response = await ApiClient.authenticatedRequest(
+      final response = await _apiClient.authenticatedRequest(
         'GET',
         '/stats/$entityName/sum/$field$queryString',
         token: token,

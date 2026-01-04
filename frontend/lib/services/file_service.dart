@@ -6,8 +6,11 @@
 ///
 /// USAGE:
 /// ```dart
+/// // Get from Provider
+/// final fileService = context.read<FileService>();
+///
 /// // Upload a file to a work order
-/// final attachment = await FileService.uploadFile(
+/// final attachment = await fileService.uploadFile(
 ///   entityType: 'work_order',
 ///   entityId: 123,
 ///   bytes: fileBytes,
@@ -16,16 +19,16 @@
 /// );
 ///
 /// // List files for an entity
-/// final files = await FileService.listFiles(
+/// final files = await fileService.listFiles(
 ///   entityType: 'work_order',
 ///   entityId: 123,
 /// );
 ///
 /// // Get download URL
-/// final info = await FileService.getDownloadUrl(fileId: 42);
+/// final info = await fileService.getDownloadUrl(fileId: 42);
 ///
 /// // Delete a file
-/// await FileService.deleteFile(fileId: 42);
+/// await fileService.deleteFile(fileId: 42);
 /// ```
 library;
 
@@ -35,7 +38,7 @@ import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
 import '../models/file_attachment.dart';
 import '../utils/helpers/mime_helper.dart';
-import 'api_client.dart';
+import 'api/api_client.dart';
 import 'auth/token_manager.dart';
 import 'error_service.dart';
 
@@ -43,9 +46,13 @@ import 'error_service.dart';
 // SERVICE
 // =============================================================================
 
-/// File Service - static methods for file operations
+/// File Service - file operations with DI
 class FileService {
-  FileService._(); // Private constructor - static class only
+  /// API client for HTTP requests - injected via constructor
+  final ApiClient _apiClient;
+
+  /// Constructor - requires ApiClient injection
+  FileService(this._apiClient);
 
   static const String _basePath = '/files';
 
@@ -59,7 +66,7 @@ class FileService {
   /// Uses raw binary upload with headers for metadata.
   ///
   /// NOTE: Uses raw http instead of ApiClient for binary body upload.
-  static Future<FileAttachment> uploadFile({
+  Future<FileAttachment> uploadFile({
     required String entityType,
     required int entityId,
     required Uint8List bytes,
@@ -93,7 +100,7 @@ class FileService {
     return _handleUploadResponse(response, entityType, entityId);
   }
 
-  static FileAttachment _handleUploadResponse(
+  FileAttachment _handleUploadResponse(
     http.Response response,
     String entityType,
     int entityId,
@@ -125,7 +132,7 @@ class FileService {
   /// List files attached to an entity
   ///
   /// Optionally filter by category.
-  static Future<List<FileAttachment>> listFiles({
+  Future<List<FileAttachment>> listFiles({
     required String entityType,
     required int entityId,
     String? category,
@@ -140,7 +147,7 @@ class FileService {
       endpoint += '?category=${Uri.encodeComponent(category)}';
     }
 
-    final response = await ApiClient.authenticatedRequest(
+    final response = await _apiClient.authenticatedRequest(
       'GET',
       endpoint,
       token: token,
@@ -149,7 +156,7 @@ class FileService {
     return _handleListResponse(response, entityType, entityId);
   }
 
-  static List<FileAttachment> _handleListResponse(
+  List<FileAttachment> _handleListResponse(
     http.Response response,
     String entityType,
     int entityId,
@@ -184,13 +191,13 @@ class FileService {
   /// Get a signed download URL for a file
   ///
   /// URL is valid for 1 hour.
-  static Future<FileDownloadInfo> getDownloadUrl({required int fileId}) async {
+  Future<FileDownloadInfo> getDownloadUrl({required int fileId}) async {
     final token = await TokenManager.getStoredToken();
     if (token == null) {
       throw Exception('Not authenticated');
     }
 
-    final response = await ApiClient.authenticatedRequest(
+    final response = await _apiClient.authenticatedRequest(
       'GET',
       '$_basePath/$fileId/download',
       token: token,
@@ -199,10 +206,7 @@ class FileService {
     return _handleDownloadResponse(response, fileId);
   }
 
-  static FileDownloadInfo _handleDownloadResponse(
-    http.Response response,
-    int fileId,
-  ) {
+  FileDownloadInfo _handleDownloadResponse(http.Response response, int fileId) {
     switch (response.statusCode) {
       case 200:
         final json = jsonDecode(response.body) as Map<String, dynamic>;
@@ -228,13 +232,13 @@ class FileService {
   // ===========================================================================
 
   /// Delete a file (soft delete)
-  static Future<void> deleteFile({required int fileId}) async {
+  Future<void> deleteFile({required int fileId}) async {
     final token = await TokenManager.getStoredToken();
     if (token == null) {
       throw Exception('Not authenticated');
     }
 
-    final response = await ApiClient.authenticatedRequest(
+    final response = await _apiClient.authenticatedRequest(
       'DELETE',
       '$_basePath/$fileId',
       token: token,
@@ -243,7 +247,7 @@ class FileService {
     _handleDeleteResponse(response, fileId);
   }
 
-  static void _handleDeleteResponse(http.Response response, int fileId) {
+  void _handleDeleteResponse(http.Response response, int fileId) {
     switch (response.statusCode) {
       case 200:
         return;
@@ -268,7 +272,7 @@ class FileService {
   // ===========================================================================
 
   /// Parse error message from response
-  static String _parseError(http.Response response) {
+  String _parseError(http.Response response) {
     try {
       final json = jsonDecode(response.body) as Map<String, dynamic>;
       return json['error'] as String? ??

@@ -21,6 +21,14 @@ import 'services/error_service.dart';
 import 'services/permission_service_dynamic.dart';
 import 'services/entity_metadata.dart';
 import 'services/nav_config_loader.dart';
+import 'services/api/api.dart';
+import 'services/generic_entity_service.dart';
+import 'services/preferences_service.dart';
+import 'services/stats_service.dart';
+import 'services/export_service.dart';
+import 'services/file_service.dart';
+import 'services/audit_log_service.dart';
+import 'services/saved_view_service.dart';
 import 'config/validation_rules.dart';
 
 void main() async {
@@ -137,8 +145,37 @@ class TrossApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        // Core services - ApiClient first, others depend on it
+        Provider<ApiClient>(create: (_) => HttpApiClient()),
+        ProxyProvider<ApiClient, GenericEntityService>(
+          update: (_, apiClient, previous) => GenericEntityService(apiClient),
+        ),
+        ProxyProvider<ApiClient, PreferencesService>(
+          update: (_, apiClient, previous) => PreferencesService(apiClient),
+        ),
+        ProxyProvider<ApiClient, StatsService>(
+          update: (_, apiClient, previous) => StatsService(apiClient),
+        ),
+        ProxyProvider<ApiClient, ExportService>(
+          update: (_, apiClient, previous) => ExportService(apiClient),
+        ),
+        ProxyProvider<ApiClient, FileService>(
+          update: (_, apiClient, previous) => FileService(apiClient),
+        ),
+        ProxyProvider<ApiClient, AuditLogService>(
+          update: (_, apiClient, previous) => AuditLogService(apiClient),
+        ),
+        // SavedViewService depends on GenericEntityService
+        ProxyProvider<GenericEntityService, SavedViewService>(
+          update: (_, entityService, previous) =>
+              SavedViewService(entityService),
+        ),
+        // App state providers - AuthProvider needs ApiClient
         ChangeNotifierProvider(create: (context) => AppProvider()),
-        ChangeNotifierProvider(create: (context) => AuthProvider()),
+        ChangeNotifierProxyProvider<ApiClient, AuthProvider>(
+          create: (context) => AuthProvider(context.read<ApiClient>()),
+          update: (_, apiClient, authProvider) => authProvider!,
+        ),
         ChangeNotifierProvider(create: (context) => PreferencesProvider()),
         ChangeNotifierProvider(create: (context) => DashboardProvider()),
       ],
@@ -186,6 +223,15 @@ class _AppWithRouterState extends State<_AppWithRouter> {
       context,
       listen: false,
     );
+    final statsService = Provider.of<StatsService>(context, listen: false);
+    final preferencesService = Provider.of<PreferencesService>(
+      context,
+      listen: false,
+    );
+
+    // Connect services to providers
+    dashboardProvider.setStatsService(statsService);
+    preferencesProvider.setPreferencesService(preferencesService);
 
     // Connect providers to auth - will auto-load on login and clear on logout
     preferencesProvider.connectToAuth(authProvider);

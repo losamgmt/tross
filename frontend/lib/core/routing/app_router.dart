@@ -462,45 +462,48 @@ class _AdminLogsScreen extends StatelessWidget {
             icon: Icons.security_outlined,
           ),
         ],
-        contentBuilder: (tabId) => AsyncDataProvider<AuditLogResult>(
-          future: AuditLogService.getAllLogs(filter: tabId),
-          builder: (context, result) => AppDataTable<AuditLogEntry>(
-            data: result.logs,
-            columns: [
-              TableColumn<AuditLogEntry>(
-                id: 'timestamp',
-                label: 'Time',
-                cellBuilder: (log) => Text(
-                  _formatTimestamp(log.createdAt),
-                  style: Theme.of(context).textTheme.bodySmall,
+        contentBuilder: (tabId) {
+          final auditLogService = context.read<AuditLogService>();
+          return AsyncDataProvider<AuditLogResult>(
+            future: auditLogService.getAllLogs(filter: tabId),
+            builder: (context, result) => AppDataTable<AuditLogEntry>(
+              data: result.logs,
+              columns: [
+                TableColumn<AuditLogEntry>(
+                  id: 'timestamp',
+                  label: 'Time',
+                  cellBuilder: (log) => Text(
+                    _formatTimestamp(log.createdAt),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
                 ),
-              ),
-              TableColumn<AuditLogEntry>(
-                id: 'user',
-                label: 'User',
-                cellBuilder: (log) => Text(log.userDisplayName),
-              ),
-              TableColumn<AuditLogEntry>(
-                id: 'action',
-                label: 'Action',
-                cellBuilder: (log) => _ActionChip(action: log.action),
-              ),
-              TableColumn<AuditLogEntry>(
-                id: 'resource',
-                label: 'Resource',
-                cellBuilder: (log) => Text(
-                  '${log.resourceType}/${log.resourceId}',
-                  style: Theme.of(context).textTheme.bodySmall,
+                TableColumn<AuditLogEntry>(
+                  id: 'user',
+                  label: 'User',
+                  cellBuilder: (log) => Text(log.userDisplayName),
                 ),
-              ),
-              TableColumn<AuditLogEntry>(
-                id: 'result',
-                label: 'Result',
-                cellBuilder: (log) => _ResultBadge(result: log.result),
-              ),
-            ],
-          ),
-        ),
+                TableColumn<AuditLogEntry>(
+                  id: 'action',
+                  label: 'Action',
+                  cellBuilder: (log) => _ActionChip(action: log.action),
+                ),
+                TableColumn<AuditLogEntry>(
+                  id: 'resource',
+                  label: 'Resource',
+                  cellBuilder: (log) => Text(
+                    '${log.resourceType}/${log.resourceId}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+                TableColumn<AuditLogEntry>(
+                  id: 'result',
+                  label: 'Result',
+                  cellBuilder: (log) => _ResultBadge(result: log.result),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

@@ -1,77 +1,100 @@
-/// PreferencesService Unit Tests (Metadata-Driven)
+/// PreferencesService Unit Tests (DI-Based, Metadata-Driven)
 ///
 /// Tests verify the service works with raw Map-based preferences.
-/// No hardcoded UserPreferences class - all data is raw Map.
+/// Uses MockApiClient for DI pattern demonstration.
+/// Note: Full API tests require token mocking (Phase 2).
 library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tross_app/services/preferences_service.dart';
 import 'package:tross_app/config/preference_keys.dart';
 
+import '../mocks/mock_api_client.dart';
+
 void main() {
-  group('PreferencesService (Metadata-Driven)', () {
-    group('Static API Signature', () {
-      test('loadRaw method exists and requires token', () {
+  late MockApiClient mockApiClient;
+  late PreferencesService preferencesService;
+
+  setUp(() {
+    mockApiClient = MockApiClient();
+    preferencesService = PreferencesService(mockApiClient);
+  });
+
+  tearDown(() {
+    mockApiClient.reset();
+  });
+
+  group('PreferencesService (DI-Based)', () {
+    group('DI Construction', () {
+      test('can be constructed with ApiClient', () {
+        expect(preferencesService, isNotNull);
+        expect(preferencesService, isA<PreferencesService>());
+      });
+
+      test('loadRaw method exists with token parameter', () {
         // Verify the method signature is correct
-        // This will fail at compile time if signature changes
         Future<Map<String, dynamic>> Function(String) loadFn =
-            PreferencesService.loadRaw;
+            preferencesService.loadRaw;
         expect(loadFn, isNotNull);
       });
 
       test('updatePreference method exists with correct signature', () {
         Future<Map<String, dynamic>?> Function(String, String, dynamic) fn =
-            PreferencesService.updatePreference;
+            preferencesService.updatePreference;
         expect(fn, isNotNull);
       });
 
       test('resetRaw method exists with correct signature', () {
         Future<Map<String, dynamic>?> Function(String) fn =
-            PreferencesService.resetRaw;
+            preferencesService.resetRaw;
         expect(fn, isNotNull);
       });
 
       test('getSchema method exists with correct signature', () {
         Future<Map<String, dynamic>?> Function(String) fn =
-            PreferencesService.getSchema;
+            preferencesService.getSchema;
         expect(fn, isNotNull);
       });
     });
 
-    group('Error Handling (no network)', () {
-      // These tests verify behavior when API calls fail
-      // (which they will without a real backend)
+    group('Error Handling (invalid token)', () {
+      // These tests verify graceful failure when API is unavailable
+      // Full API mocking requires proper token handling (Phase 2)
 
-      test('loadRaw returns empty map when API unavailable', () async {
-        // With invalid token, should return empty map after catching error
-        final prefs = await PreferencesService.loadRaw('invalid-token');
+      test('loadRaw returns empty map on error', () async {
+        mockApiClient.setShouldFail(true, message: 'API Error');
 
-        expect(prefs, isNotNull);
-        expect(prefs, isA<Map<String, dynamic>>());
+        final result = await preferencesService.loadRaw('test-token');
+
+        expect(result, isA<Map<String, dynamic>>());
+        expect(result, isEmpty);
       });
 
       test('updatePreference returns null on failure', () async {
-        final result = await PreferencesService.updatePreference(
-          'invalid-token',
+        mockApiClient.setShouldFail(true, message: 'API Error');
+
+        final result = await preferencesService.updatePreference(
+          'test-token',
           'theme',
           'dark',
         );
 
-        // Should return null on failure (no backend available)
         expect(result, isNull);
       });
 
       test('resetRaw returns null on failure', () async {
-        final result = await PreferencesService.resetRaw('invalid-token');
+        mockApiClient.setShouldFail(true, message: 'API Error');
+
+        final result = await preferencesService.resetRaw('test-token');
 
         expect(result, isNull);
       });
 
       test('getSchema returns null on failure', () async {
-        // Without proper backend, schema fetch will fail
-        final result = await PreferencesService.getSchema('invalid-token');
+        mockApiClient.setShouldFail(true, message: 'API Error');
 
-        // Should return null on failure (no backend available)
+        final result = await preferencesService.getSchema('test-token');
+
         expect(result, isNull);
       });
     });

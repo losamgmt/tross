@@ -14,6 +14,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../services/generic_entity_service.dart';
 import '../../../utils/table_cell_builders.dart';
 
@@ -63,7 +64,8 @@ class _ForeignKeyLookupCellState extends State<ForeignKeyLookupCell> {
     }
 
     try {
-      final entity = await GenericEntityService.getById(
+      final entityService = context.read<GenericEntityService>();
+      final entity = await entityService.getById(
         widget.relatedEntity,
         widget.entityId,
       );

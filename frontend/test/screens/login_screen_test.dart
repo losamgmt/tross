@@ -14,14 +14,27 @@ import 'package:tross_app/providers/auth_provider.dart';
 import 'package:tross_app/providers/app_provider.dart';
 import 'package:tross_app/config/constants.dart';
 import '../helpers/helpers.dart';
+import '../mocks/mock_api_client.dart';
 
 void main() {
   group('LoginScreen Widget Tests', () {
+    late MockApiClient mockApiClient;
+
+    setUp(() {
+      mockApiClient = MockApiClient();
+    });
+
+    tearDown(() {
+      mockApiClient.reset();
+    });
+
     /// Helper that wraps LoginScreen with required providers
     Widget createTestWidget() {
       return MultiProvider(
         providers: [
-          ChangeNotifierProvider(create: (context) => AuthProvider()),
+          ChangeNotifierProvider(
+            create: (context) => AuthProvider(mockApiClient),
+          ),
           ChangeNotifierProvider(create: (context) => AppProvider()),
         ],
         child: const LoginScreen(),

@@ -15,19 +15,24 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tross_app/providers/auth_provider.dart';
 import 'package:tross_app/providers/app_provider.dart';
 
+import '../mocks/mock_api_client.dart';
+
 void main() {
   group('Concurrent Operations Tests - High Concurrency Scenarios', () {
     late AuthProvider authProvider;
     late AppProvider appProvider;
+    late MockApiClient mockApiClient;
 
     setUp(() {
-      authProvider = AuthProvider();
+      mockApiClient = MockApiClient();
+      authProvider = AuthProvider(mockApiClient);
       appProvider = AppProvider();
     });
 
     tearDown(() {
       authProvider.dispose();
       appProvider.dispose();
+      mockApiClient.reset();
     });
 
     group('Single Provider Concurrency', () {
@@ -343,7 +348,8 @@ void main() {
 
       test('Concurrent operations on freshly created provider', () async {
         // Test: Operations on brand new provider (no initialization)
-        final newAuthProvider = AuthProvider();
+        final newMockClient = MockApiClient();
+        final newAuthProvider = AuthProvider(newMockClient);
 
         try {
           // Execute: 50 concurrent logouts on uninitialized provider
@@ -355,6 +361,7 @@ void main() {
           expect(newAuthProvider.isAuthenticated, isFalse);
         } finally {
           newAuthProvider.dispose();
+          newMockClient.reset();
         }
       });
 

@@ -177,6 +177,7 @@ class EntityDetailCard extends StatelessWidget {
 
     // Normal state - display entity data
     final fieldConfigs = MetadataFieldConfigFactory.forDisplay(
+      context,
       entityName,
       includeFields: includeFields,
       excludeFields: excludeFields,

@@ -37,6 +37,8 @@ import 'auth_provider.dart';
 ///
 /// Stores preferences as a simple Map, driven by metadata.
 class PreferencesProvider extends ChangeNotifier {
+  PreferencesService? _preferencesService;
+
   /// Raw preferences map from API
   Map<String, dynamic> _preferences = {};
 
@@ -50,6 +52,11 @@ class PreferencesProvider extends ChangeNotifier {
   // Auth provider reference for listening to auth changes
   AuthProvider? _authProvider;
   bool _wasAuthenticated = false;
+
+  /// Set the PreferencesService dependency
+  void setPreferencesService(PreferencesService service) {
+    _preferencesService = service;
+  }
 
   // ═══════════════════════════════════════════════════════════════════════════
   // PUBLIC GETTERS
@@ -126,7 +133,13 @@ class PreferencesProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final updated = await PreferencesService.updatePreference(
+      if (_preferencesService == null) {
+        ErrorService.logWarning(
+          '[PreferencesProvider] No preferences service set',
+        );
+        return;
+      }
+      final updated = await _preferencesService!.updatePreference(
         _token!,
         key,
         value,
@@ -249,7 +262,13 @@ class PreferencesProvider extends ChangeNotifier {
     try {
       ErrorService.logDebug('[PreferencesProvider] Loading preferences');
 
-      final result = await PreferencesService.loadRaw(token);
+      if (_preferencesService == null) {
+        ErrorService.logWarning(
+          '[PreferencesProvider] No preferences service set',
+        );
+        return;
+      }
+      final result = await _preferencesService!.loadRaw(token);
       _preferences = result;
       _error = null;
 
@@ -280,13 +299,13 @@ class PreferencesProvider extends ChangeNotifier {
 
   /// Reset all preferences to defaults
   Future<void> reset() async {
-    if (_token == null) return;
+    if (_token == null || _preferencesService == null) return;
 
     _isLoading = true;
     notifyListeners();
 
     try {
-      final result = await PreferencesService.resetRaw(_token!);
+      final result = await _preferencesService!.resetRaw(_token!);
       _preferences = result ?? {};
       _error = null;
     } catch (e) {

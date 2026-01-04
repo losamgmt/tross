@@ -3,6 +3,7 @@ import '../services/auth/auth_service.dart';
 import '../services/error_service.dart';
 import '../services/auth/auth0_platform_service.dart';
 import '../services/permission_service_dynamic.dart';
+import '../services/api/api_client.dart';
 import '../models/permission.dart';
 
 /// Authentication State Provider
@@ -59,7 +60,12 @@ import '../models/permission.dart';
 /// - No dispose() needed (no resources to clean up)
 /// - Direct delegation to services (thin provider layer)
 class AuthProvider extends ChangeNotifier {
-  final AuthService _authService = AuthService();
+  late final AuthService _authService;
+
+  /// Constructor - requires ApiClient injection
+  AuthProvider(ApiClient apiClient) {
+    _authService = AuthService(apiClient);
+  }
 
   // State properties
   bool _isLoading = false;

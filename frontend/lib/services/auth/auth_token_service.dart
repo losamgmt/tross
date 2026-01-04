@@ -1,21 +1,22 @@
 // Auth Token Service - Token validation and refresh operations
 import 'token_manager.dart';
-import '../api_client.dart';
+import '../api/api_client.dart';
 import '../error_service.dart';
 import 'auth0_service.dart';
 
 class AuthTokenService {
   final Auth0Service _auth0Service = Auth0Service();
 
-  // Singleton pattern
-  static final AuthTokenService _instance = AuthTokenService._internal();
-  factory AuthTokenService() => _instance;
-  AuthTokenService._internal();
+  /// API client for HTTP requests - injected via constructor
+  final ApiClient _apiClient;
+
+  /// Constructor - requires ApiClient injection
+  AuthTokenService(this._apiClient);
 
   /// Validate token by checking with backend
   Future<Map<String, dynamic>?> validateToken(String token) async {
     try {
-      final profile = await ApiClient.getUserProfile(token);
+      final profile = await _apiClient.getUserProfile(token);
       if (profile != null) {
         ErrorService.logDebug('Token validated successfully');
         return profile;
@@ -41,7 +42,7 @@ class AuthTokenService {
       final credentials = await _auth0Service.refreshToken(refreshToken);
       if (credentials?.accessToken.isNotEmpty == true) {
         // Get updated profile
-        final profile = await ApiClient.getUserProfile(
+        final profile = await _apiClient.getUserProfile(
           credentials!.accessToken,
         );
         if (profile != null) {

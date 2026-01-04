@@ -3,13 +3,20 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tross_app/providers/auth_provider.dart';
 import 'package:tross_app/models/permission.dart';
 import '../helpers/backend_availability.dart';
+import '../mocks/mock_api_client.dart';
 
 void main() {
   group('AuthProvider Tests', () {
     late AuthProvider authProvider;
+    late MockApiClient mockApiClient;
 
     setUp(() {
-      authProvider = AuthProvider();
+      mockApiClient = MockApiClient();
+      authProvider = AuthProvider(mockApiClient);
+    });
+
+    tearDown(() {
+      mockApiClient.reset();
     });
 
     // Check backend availability once for entire test suite

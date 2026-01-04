@@ -167,6 +167,7 @@ void main() {
             title: 'User Profile',
             icon: Icons.person,
           ),
+          withProviders: true,
         );
 
         expect(find.text('User Profile'), findsWidgets);
@@ -181,6 +182,7 @@ void main() {
             entity: testUser,
             title: 'User Details',
           ),
+          withProviders: true,
         );
 
         // Should show the email field value
@@ -196,6 +198,7 @@ void main() {
             title: 'Editable User',
             onEdit: () {},
           ),
+          withProviders: true,
         );
 
         expect(find.byIcon(Icons.edit), findsWidgets);
@@ -212,6 +215,7 @@ void main() {
             title: 'Editable User',
             onEdit: () => editCalled = true,
           ),
+          withProviders: true,
         );
 
         await tester.tap(find.byIcon(Icons.edit));
@@ -230,6 +234,7 @@ void main() {
             onEdit: () {},
             editLabel: 'Modify Profile',
           ),
+          withProviders: true,
         );
 
         expect(find.text('Modify Profile'), findsWidgets);
@@ -244,6 +249,7 @@ void main() {
             title: 'User Profile',
             excludeFields: const ['auth0_id', 'role_id'],
           ),
+          withProviders: true,
         );
 
         // Excluded field values should not appear
@@ -260,6 +266,7 @@ void main() {
             entity: testUser,
             title: 'User Profile',
           ),
+          withProviders: true,
         );
 
         expect(find.byType(Card), findsWidgets);

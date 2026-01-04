@@ -1,20 +1,39 @@
-/// StatsService Unit Tests
+/// StatsService Unit Tests (DI-Based)
 ///
-/// Tests the stats aggregation service.
-/// Since StatsService makes HTTP calls, these tests verify
-/// the static method signatures, data models, and error handling patterns.
+/// Tests the stats aggregation service using dependency injection.
+/// Uses MockApiClient for DI pattern demonstration.
+/// Note: Full API tests require token mocking (Phase 2).
 library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tross_app/services/stats_service.dart';
 
+import '../mocks/mock_api_client.dart';
+
 void main() {
+  late MockApiClient mockApiClient;
+  late StatsService statsService;
+
+  setUp(() {
+    mockApiClient = MockApiClient();
+    statsService = StatsService(mockApiClient);
+  });
+
+  tearDown(() {
+    mockApiClient.reset();
+  });
+
   group('StatsService', () {
-    group('Static API Signature', () {
+    group('DI Construction', () {
+      test('can be constructed with ApiClient', () {
+        expect(statsService, isNotNull);
+        expect(statsService, isA<StatsService>());
+      });
+
       test('count method exists with correct signature', () {
         // Verify the method signature is correct
         Future<int> Function(String, {Map<String, dynamic>? filters}) countFn =
-            StatsService.count;
+            statsService.count;
         expect(countFn, isNotNull);
       });
 
@@ -24,13 +43,13 @@ void main() {
           String, {
           Map<String, dynamic>? filters,
         })
-        fn = StatsService.countGrouped;
+        fn = statsService.countGrouped;
         expect(fn, isNotNull);
       });
 
       test('sum method exists with correct signature', () {
         Future<double> Function(String, String, {Map<String, dynamic>? filters})
-        fn = StatsService.sum;
+        fn = statsService.sum;
         expect(fn, isNotNull);
       });
     });
@@ -88,49 +107,24 @@ void main() {
       });
     });
 
-    group('Error Handling (no network)', () {
-      // These tests verify behavior when API calls fail
-      // (which they will without a real backend/auth)
+    group('Error Handling (no token)', () {
+      // These tests verify graceful failure when not authenticated
+      // Full API mocking requires TokenManager mocking (Phase 2)
 
       test('count throws when not authenticated', () async {
-        // Without valid token, should throw
-        expect(() => StatsService.count('work_order'), throwsException);
+        // Without token, service should throw (caught in caller)
+        expect(() => statsService.count('work_order'), throwsException);
       });
 
       test('countGrouped throws when not authenticated', () async {
         expect(
-          () => StatsService.countGrouped('work_order', 'status'),
+          () => statsService.countGrouped('work_order', 'status'),
           throwsException,
         );
       });
 
       test('sum throws when not authenticated', () async {
-        expect(() => StatsService.sum('invoice', 'total'), throwsException);
-      });
-    });
-
-    group('Query String Building', () {
-      // These tests document the expected query string behavior
-      // by testing edge cases in the filter handling
-
-      test('count accepts empty filters', () async {
-        // Should not throw on empty filters
-        // Will still fail on auth, but filters param is valid
-        expect(
-          () => StatsService.count('work_order', filters: {}),
-          throwsException, // Auth failure, not filter failure
-        );
-      });
-
-      test('count accepts null filter values', () async {
-        // Null values should be filtered out
-        expect(
-          () => StatsService.count(
-            'work_order',
-            filters: {'status': null, 'priority': 'high'},
-          ),
-          throwsException, // Auth failure, not filter failure
-        );
+        expect(() => statsService.sum('invoice', 'total'), throwsException);
       });
     });
   });

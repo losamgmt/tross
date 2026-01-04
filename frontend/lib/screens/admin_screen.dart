@@ -11,9 +11,10 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../config/config.dart';
 import '../core/routing/app_routes.dart';
-import '../services/api_client.dart';
+import '../services/api/api_client.dart';
 import '../services/auth/token_manager.dart';
 import '../widgets/atoms/indicators/loading_indicator.dart';
 import '../widgets/molecules/cards/error_card.dart';
@@ -41,6 +42,7 @@ class _AdminScreenState extends State<AdminScreen> {
   @override
   Widget build(BuildContext context) {
     final spacing = context.spacing;
+    final apiClient = context.read<ApiClient>();
 
     return AdaptiveShell(
       currentRoute: AppRoutes.admin,
@@ -74,7 +76,7 @@ class _AdminScreenState extends State<AdminScreen> {
                           return const LoadingIndicator.inline();
                         }
                         return AsyncDataProvider<Map<String, dynamic>>(
-                          future: ApiClient.get(
+                          future: apiClient.get(
                             '/health/databases',
                             token: tokenSnap.data,
                           ),
@@ -136,7 +138,7 @@ class _AdminScreenState extends State<AdminScreen> {
                     ),
                     child: AsyncDataProvider<Map<String, dynamic>>(
                       key: _sessionsKey,
-                      future: ApiClient.get(ApiEndpoints.adminSessions),
+                      future: apiClient.get(ApiEndpoints.adminSessions),
                       builder: (context, data) {
                         final sessions = List<Map<String, dynamic>>.from(
                           data['data'] ?? [],
@@ -201,12 +203,12 @@ class _AdminScreenState extends State<AdminScreen> {
                 title: 'Maintenance Mode',
                 child: AsyncDataProvider<Map<String, dynamic>>(
                   key: _maintenanceKey,
-                  future: ApiClient.get(ApiEndpoints.adminMaintenance),
+                  future: apiClient.get(ApiEndpoints.adminMaintenance),
                   builder: (context, data) => _MaintenancePanel(
                     enabled: data['data']?['enabled'] ?? false,
                     message: data['data']?['message'],
                     onToggle: (enabled) async {
-                      await ApiClient.put(
+                      await apiClient.put(
                         ApiEndpoints.adminMaintenance,
                         body: {'enabled': enabled},
                       );
@@ -270,7 +272,8 @@ class _AdminScreenState extends State<AdminScreen> {
 
     if (confirmed == true && context.mounted) {
       try {
-        await ApiClient.post(
+        final apiClient = context.read<ApiClient>();
+        await apiClient.post(
           ApiEndpoints.adminForceLogout(userId as int),
           body: {},
         );

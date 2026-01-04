@@ -7,11 +7,14 @@
 ///
 /// USAGE:
 /// ```dart
+/// // Via Provider
+/// final savedViewService = context.read<SavedViewService>();
+///
 /// // Get all views for work_orders
-/// final views = await SavedViewService.getForEntity('work_order');
+/// final views = await savedViewService.getForEntity('work_order');
 ///
 /// // Save current view
-/// await SavedViewService.save(
+/// await savedViewService.create(
 ///   entityName: 'work_order',
 ///   viewName: 'My Pending Orders',
 ///   settings: SavedViewSettings(
@@ -22,7 +25,7 @@
 /// );
 ///
 /// // Load a view
-/// final view = await SavedViewService.getById(viewId);
+/// final view = await savedViewService.getById(viewId);
 /// ```
 library;
 
@@ -32,17 +35,18 @@ import 'error_service.dart';
 
 /// Service for managing saved table views
 class SavedViewService {
-  // Private constructor - static only
-  SavedViewService._();
+  final GenericEntityService _entityService;
+
+  SavedViewService(this._entityService);
 
   static const String _entityName = 'saved_view';
 
   /// Get all saved views for a specific entity
   ///
   /// Returns views sorted by name, with default view first
-  static Future<List<SavedView>> getForEntity(String entityName) async {
+  Future<List<SavedView>> getForEntity(String entityName) async {
     try {
-      final result = await GenericEntityService.getAll(
+      final result = await _entityService.getAll(
         _entityName,
         filters: {'entity_name': entityName},
         sortBy: 'view_name',
@@ -72,9 +76,9 @@ class SavedViewService {
   }
 
   /// Get the default view for an entity, if one exists
-  static Future<SavedView?> getDefault(String entityName) async {
+  Future<SavedView?> getDefault(String entityName) async {
     try {
-      final result = await GenericEntityService.getAll(
+      final result = await _entityService.getAll(
         _entityName,
         filters: {'entity_name': entityName, 'is_default': true},
         limit: 1,
@@ -92,14 +96,14 @@ class SavedViewService {
   }
 
   /// Save a new view
-  static Future<SavedView> create({
+  Future<SavedView> create({
     required String entityName,
     required String viewName,
     required SavedViewSettings settings,
     bool isDefault = false,
   }) async {
     try {
-      final created = await GenericEntityService.create(_entityName, {
+      final created = await _entityService.create(_entityName, {
         'entity_name': entityName,
         'view_name': viewName,
         'settings': settings.toJson(),
@@ -122,7 +126,7 @@ class SavedViewService {
   }
 
   /// Update an existing view
-  static Future<SavedView> update(
+  Future<SavedView> update(
     int viewId, {
     String? viewName,
     SavedViewSettings? settings,
@@ -134,11 +138,7 @@ class SavedViewService {
       if (settings != null) updates['settings'] = settings.toJson();
       if (isDefault != null) updates['is_default'] = isDefault;
 
-      final updated = await GenericEntityService.update(
-        _entityName,
-        viewId,
-        updates,
-      );
+      final updated = await _entityService.update(_entityName, viewId, updates);
 
       ErrorService.logInfo('[SavedViewService] Updated view #$viewId');
 
@@ -153,9 +153,9 @@ class SavedViewService {
   }
 
   /// Delete a saved view
-  static Future<void> delete(int viewId) async {
+  Future<void> delete(int viewId) async {
     try {
-      await GenericEntityService.delete(_entityName, viewId);
+      await _entityService.delete(_entityName, viewId);
       ErrorService.logInfo('[SavedViewService] Deleted view #$viewId');
     } catch (e) {
       ErrorService.logError(
@@ -169,7 +169,7 @@ class SavedViewService {
   /// Set a view as the default (clears other defaults for that entity)
   ///
   /// Note: Backend should handle clearing other defaults via trigger/logic
-  static Future<SavedView> setAsDefault(int viewId) async {
+  Future<SavedView> setAsDefault(int viewId) async {
     return update(viewId, isDefault: true);
   }
 }

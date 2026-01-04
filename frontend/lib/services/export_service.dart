@@ -16,7 +16,7 @@ import 'dart:typed_data';
 import 'package:web/web.dart' as web;
 import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
-import 'api_client.dart';
+import 'api/api_client.dart';
 import 'auth/token_manager.dart';
 import 'error_service.dart';
 
@@ -37,22 +37,24 @@ class ExportField {
 
 /// Service for exporting entity data as CSV
 class ExportService {
-  ExportService._(); // Private constructor - static class only
+  /// API client for HTTP requests - injected via constructor
+  final ApiClient _apiClient;
+
+  /// Constructor - requires ApiClient injection
+  ExportService(this._apiClient);
 
   /// Get list of exportable fields for an entity
   ///
   /// Returns field metadata that can be used to let users
   /// select which fields to include in the export
-  static Future<List<ExportField>> getExportableFields(
-    String entityName,
-  ) async {
+  Future<List<ExportField>> getExportableFields(String entityName) async {
     try {
       final token = await TokenManager.getStoredToken();
       if (token == null) {
         throw Exception('Not authenticated');
       }
 
-      final response = await ApiClient.authenticatedRequest(
+      final response = await _apiClient.authenticatedRequest(
         'GET',
         '/export/$entityName/fields',
         token: token,
@@ -90,7 +92,7 @@ class ExportService {
   /// - Custom Accept header (text/csv)
   /// - Extended 2-minute timeout for large exports
   /// - Access to bodyBytes for binary download
-  static Future<bool> exportToCsv({
+  Future<bool> exportToCsv({
     required String entityName,
     Map<String, dynamic>? filters,
     List<String>? selectedFields,

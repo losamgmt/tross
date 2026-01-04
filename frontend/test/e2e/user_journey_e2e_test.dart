@@ -14,19 +14,24 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tross_app/providers/auth_provider.dart';
 import 'package:tross_app/providers/app_provider.dart';
 
+import '../mocks/mock_api_client.dart';
+
 void main() {
   group('E2E User Journey Tests - State & Integration', () {
     late AuthProvider authProvider;
     late AppProvider appProvider;
+    late MockApiClient mockApiClient;
 
     setUp(() {
-      authProvider = AuthProvider();
+      mockApiClient = MockApiClient();
+      authProvider = AuthProvider(mockApiClient);
       appProvider = AppProvider();
     });
 
     tearDown(() {
       authProvider.dispose();
       appProvider.dispose();
+      mockApiClient.reset();
     });
 
     group('Complete User Journey: Login → Dashboard → Logout', () {

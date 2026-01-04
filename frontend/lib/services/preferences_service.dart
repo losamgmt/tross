@@ -9,19 +9,22 @@
 ///
 /// USAGE:
 /// ```dart
+/// // Get from Provider
+/// final prefsService = context.read<PreferencesService>();
+///
 /// // Get current preferences as raw map
-/// final prefs = await PreferencesService.loadRaw(token);
+/// final prefs = await prefsService.loadRaw(token);
 ///
 /// // Update single preference
-/// final updated = await PreferencesService.updatePreference(token, 'theme', 'dark');
+/// final updated = await prefsService.updatePreference(token, 'theme', 'dark');
 ///
 /// // Reset to defaults
-/// final reset = await PreferencesService.resetRaw(token);
+/// final reset = await prefsService.resetRaw(token);
 /// ```
 library;
 
 import 'dart:convert';
-import 'api_client.dart';
+import 'api/api_client.dart';
 import 'error_service.dart';
 
 /// PreferencesService - API client for user preferences
@@ -29,7 +32,11 @@ import 'error_service.dart';
 /// Returns raw Map - no typed wrapper classes.
 /// Defaults are handled by PreferencesProvider using metadata.
 class PreferencesService {
-  PreferencesService._(); // Private constructor - static class only
+  /// API client for HTTP requests - injected via constructor
+  final ApiClient _apiClient;
+
+  /// Constructor - requires ApiClient injection
+  PreferencesService(this._apiClient);
 
   // API endpoints (baseUrl already includes /api)
   static const String _baseEndpoint = '/preferences';
@@ -40,13 +47,13 @@ class PreferencesService {
   ///
   /// Returns raw preferences map from API.
   /// Returns empty map on error (provider uses metadata defaults).
-  static Future<Map<String, dynamic>> loadRaw(String token) async {
+  Future<Map<String, dynamic>> loadRaw(String token) async {
     try {
       ErrorService.logDebug(
         '[PreferencesService] Loading preferences from API',
       );
 
-      final response = await ApiClient.authenticatedRequest(
+      final response = await _apiClient.authenticatedRequest(
         'GET',
         _baseEndpoint,
         token: token,
@@ -87,7 +94,7 @@ class PreferencesService {
   /// [key] is the preference key from preferenceSchema.
   /// [value] is the new value.
   /// Returns updated preferences map on success, null on failure.
-  static Future<Map<String, dynamic>?> updatePreference(
+  Future<Map<String, dynamic>?> updatePreference(
     String token,
     String key,
     dynamic value,
@@ -98,7 +105,7 @@ class PreferencesService {
         context: {'key': key, 'value': value},
       );
 
-      final response = await ApiClient.authenticatedRequest(
+      final response = await _apiClient.authenticatedRequest(
         'PUT',
         '$_baseEndpoint/$key',
         token: token,
@@ -143,7 +150,7 @@ class PreferencesService {
   ///
   /// [updates] is a map of preference keys to new values.
   /// Returns updated preferences map on success, null on failure.
-  static Future<Map<String, dynamic>?> updatePreferences(
+  Future<Map<String, dynamic>?> updatePreferences(
     String token,
     Map<String, dynamic> updates,
   ) async {
@@ -153,7 +160,7 @@ class PreferencesService {
         context: {'keys': updates.keys.toList()},
       );
 
-      final response = await ApiClient.authenticatedRequest(
+      final response = await _apiClient.authenticatedRequest(
         'PUT',
         _baseEndpoint,
         token: token,
@@ -191,11 +198,11 @@ class PreferencesService {
   /// Reset preferences to defaults
   ///
   /// Returns reset preferences map on success, null on failure.
-  static Future<Map<String, dynamic>?> resetRaw(String token) async {
+  Future<Map<String, dynamic>?> resetRaw(String token) async {
     try {
       ErrorService.logInfo('[PreferencesService] Resetting preferences');
 
-      final response = await ApiClient.authenticatedRequest(
+      final response = await _apiClient.authenticatedRequest(
         'POST',
         _resetEndpoint,
         token: token,
@@ -233,11 +240,11 @@ class PreferencesService {
   ///
   /// Returns schema map on success, null on failure.
   /// Note: Frontend typically uses synced metadata instead of this endpoint.
-  static Future<Map<String, dynamic>?> getSchema(String token) async {
+  Future<Map<String, dynamic>?> getSchema(String token) async {
     try {
       ErrorService.logInfo('[PreferencesService] Fetching preference schema');
 
-      final response = await ApiClient.authenticatedRequest(
+      final response = await _apiClient.authenticatedRequest(
         'GET',
         _schemaEndpoint,
         token: token,

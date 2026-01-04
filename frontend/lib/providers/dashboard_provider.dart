@@ -91,6 +91,8 @@ class ResourceStats {
 
 /// Provider for reactive dashboard stats
 class DashboardProvider extends ChangeNotifier {
+  StatsService? _statsService;
+
   WorkOrderStats _workOrderStats = WorkOrderStats.empty;
   FinancialStats _financialStats = FinancialStats.empty;
   ResourceStats _resourceStats = ResourceStats.empty;
@@ -102,6 +104,11 @@ class DashboardProvider extends ChangeNotifier {
   // Auth provider reference for listening to auth changes
   AuthProvider? _authProvider;
   bool _wasAuthenticated = false;
+
+  /// Set the StatsService dependency
+  void setStatsService(StatsService statsService) {
+    _statsService = statsService;
+  }
 
   // ═══════════════════════════════════════════════════════════════════════════
   // PUBLIC GETTERS
@@ -223,12 +230,14 @@ class DashboardProvider extends ChangeNotifier {
   // ═══════════════════════════════════════════════════════════════════════════
 
   Future<void> _loadWorkOrderStats() async {
+    if (_statsService == null) return;
+
     try {
       final results = await Future.wait([
-        StatsService.count('work_order'),
-        StatsService.count('work_order', filters: {'status': 'pending'}),
-        StatsService.count('work_order', filters: {'status': 'in_progress'}),
-        StatsService.count('work_order', filters: {'status': 'completed'}),
+        _statsService!.count('work_order'),
+        _statsService!.count('work_order', filters: {'status': 'pending'}),
+        _statsService!.count('work_order', filters: {'status': 'in_progress'}),
+        _statsService!.count('work_order', filters: {'status': 'completed'}),
       ]);
 
       _workOrderStats = WorkOrderStats(
@@ -247,11 +256,13 @@ class DashboardProvider extends ChangeNotifier {
   }
 
   Future<void> _loadFinancialStats() async {
+    if (_statsService == null) return;
+
     try {
       final results = await Future.wait([
-        StatsService.sum('invoice', 'total', filters: {'status': 'paid'}),
-        StatsService.sum('invoice', 'total', filters: {'status': 'sent'}),
-        StatsService.count('contract', filters: {'status': 'active'}),
+        _statsService!.sum('invoice', 'total', filters: {'status': 'paid'}),
+        _statsService!.sum('invoice', 'total', filters: {'status': 'sent'}),
+        _statsService!.count('contract', filters: {'status': 'active'}),
       ]);
 
       _financialStats = FinancialStats(
@@ -269,12 +280,14 @@ class DashboardProvider extends ChangeNotifier {
   }
 
   Future<void> _loadResourceStats() async {
+    if (_statsService == null) return;
+
     try {
       final results = await Future.wait([
-        StatsService.count('customer'),
-        StatsService.count('technician', filters: {'status': 'available'}),
-        StatsService.count('inventory', filters: {'status': 'low_stock'}),
-        StatsService.count('user', filters: {'status': 'active'}),
+        _statsService!.count('customer'),
+        _statsService!.count('technician', filters: {'status': 'available'}),
+        _statsService!.count('inventory', filters: {'status': 'low_stock'}),
+        _statsService!.count('user', filters: {'status': 'active'}),
       ]);
 
       _resourceStats = ResourceStats(

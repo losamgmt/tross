@@ -6,6 +6,10 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
+import 'package:tross_app/services/api/api_client.dart';
+import 'package:tross_app/services/generic_entity_service.dart';
+import '../mocks/mock_api_client.dart';
 
 /// Pumps a widget wrapped in MaterialApp with proper test environment
 ///
@@ -14,6 +18,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// - Scaffold for proper Material styling
 /// - Home route for navigation testing
 /// - Consistent theme across all tests
+/// - Optional providers for DI-dependent widgets
 ///
 /// Example:
 /// ```dart
@@ -21,18 +26,43 @@ import 'package:flutter_test/flutter_test.dart';
 ///   tester,
 ///   const MyWidget(),
 /// );
+///
+/// // With providers (for widgets that need GenericEntityService etc.)
+/// await pumpTestWidget(
+///   tester,
+///   const EntityDetailCard(...),
+///   withProviders: true,
+/// );
 /// ```
 Future<void> pumpTestWidget(
   WidgetTester tester,
   Widget child, {
   ThemeData? theme,
   NavigatorObserver? navigatorObserver,
+  bool withProviders = false,
+  MockApiClient? mockApiClient,
 }) async {
+  Widget content = Scaffold(body: child);
+
+  // Wrap with providers if needed
+  if (withProviders) {
+    final apiClient = mockApiClient ?? MockApiClient();
+    content = MultiProvider(
+      providers: [
+        Provider<ApiClient>.value(value: apiClient),
+        Provider<GenericEntityService>(
+          create: (_) => GenericEntityService(apiClient),
+        ),
+      ],
+      child: content,
+    );
+  }
+
   await tester.pumpWidget(
     MaterialApp(
       theme: theme,
       navigatorObservers: navigatorObserver != null ? [navigatorObserver] : [],
-      home: Scaffold(body: child),
+      home: content,
     ),
   );
 }

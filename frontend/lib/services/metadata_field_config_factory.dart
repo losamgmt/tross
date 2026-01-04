@@ -30,6 +30,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../widgets/atoms/inputs/text_input.dart' show TextFieldType;
 import '../widgets/molecules/forms/field_config.dart';
 import 'entity_metadata.dart' as meta;
@@ -48,11 +49,13 @@ class MetadataFieldConfigFactory {
 
   /// Generate all visible field configs for an entity
   ///
+  /// [context] - BuildContext for accessing Provider
   /// [entityName] - Name of the entity (e.g., 'customer')
   /// [includeFields] - If provided, only include these fields
   /// [excludeFields] - Fields to exclude (e.g., system fields)
   /// [forEdit] - If true, marks immutable fields as readOnly
   static List<FieldConfig<Map<String, dynamic>, dynamic>> forEntity(
+    BuildContext context,
     String entityName, {
     List<String>? includeFields,
     List<String>? excludeFields,
@@ -60,6 +63,7 @@ class MetadataFieldConfigFactory {
   }) {
     final metadata = meta.EntityMetadataRegistry.get(entityName);
     final configs = <FieldConfig<Map<String, dynamic>, dynamic>>[];
+    final entityService = context.read<GenericEntityService>();
 
     // Default exclusions - system fields not shown in forms
     final defaultExclusions = {'id', 'created_at', 'updated_at'};
@@ -83,6 +87,7 @@ class MetadataFieldConfigFactory {
         fieldName: fieldName,
         fieldDef: fieldDef,
         metadata: metadata,
+        entityService: entityService,
         readOnly: forEdit && metadata.isImmutable(fieldName),
       );
 
@@ -98,11 +103,13 @@ class MetadataFieldConfigFactory {
   ///
   /// Excludes readonly and system fields.
   static List<FieldConfig<Map<String, dynamic>, dynamic>> forCreate(
+    BuildContext context,
     String entityName, {
     List<String>? includeFields,
     List<String>? excludeFields,
   }) {
     return forEntity(
+      context,
       entityName,
       includeFields: includeFields,
       excludeFields: excludeFields,
@@ -114,11 +121,13 @@ class MetadataFieldConfigFactory {
   ///
   /// Marks immutable fields as readOnly.
   static List<FieldConfig<Map<String, dynamic>, dynamic>> forEdit(
+    BuildContext context,
     String entityName, {
     List<String>? includeFields,
     List<String>? excludeFields,
   }) {
     return forEntity(
+      context,
       entityName,
       includeFields: includeFields,
       excludeFields: excludeFields,
@@ -131,11 +140,13 @@ class MetadataFieldConfigFactory {
   /// Includes ALL fields (even readonly ones like timestamps)
   /// All configs marked as readOnly since this is for display only.
   ///
+  /// [context] - BuildContext for accessing Provider
   /// [entityName] - Name of the entity (e.g., 'customer')
   /// [includeFields] - If provided, only include these fields
   /// [excludeFields] - Fields to exclude
   /// [includeSystemFields] - If true, includes id, created_at, updated_at
   static List<FieldConfig<Map<String, dynamic>, dynamic>> forDisplay(
+    BuildContext context,
     String entityName, {
     List<String>? includeFields,
     List<String>? excludeFields,
@@ -143,6 +154,7 @@ class MetadataFieldConfigFactory {
   }) {
     final metadata = meta.EntityMetadataRegistry.get(entityName);
     final configs = <FieldConfig<Map<String, dynamic>, dynamic>>[];
+    final entityService = context.read<GenericEntityService>();
 
     // Default exclusions - system fields unless explicitly included
     final defaultExclusions = includeSystemFields
@@ -165,6 +177,7 @@ class MetadataFieldConfigFactory {
         fieldName: fieldName,
         fieldDef: fieldDef,
         metadata: metadata,
+        entityService: entityService,
         readOnly: true, // Always readonly for display
       );
 
@@ -181,6 +194,7 @@ class MetadataFieldConfigFactory {
     required String fieldName,
     required meta.FieldDefinition fieldDef,
     required meta.EntityMetadata metadata,
+    required GenericEntityService entityService,
     bool readOnly = false,
   }) {
     // Generate label from field name
@@ -246,6 +260,7 @@ class MetadataFieldConfigFactory {
         label: label,
         validator: validator,
         readOnly: readOnly,
+        entityService: entityService,
       ),
       meta.FieldType.jsonb =>
         null, // Skip JSONB for now - needs special handling
@@ -566,6 +581,7 @@ class MetadataFieldConfigFactory {
     required String label,
     required String? Function(dynamic)? validator,
     required bool readOnly,
+    required GenericEntityService entityService,
   }) {
     final relatedEntity = fieldDef.relatedEntity;
     final displayField = fieldDef.displayField ?? 'name';
@@ -599,7 +615,7 @@ class MetadataFieldConfigFactory {
       placeholder: 'Select $displayLabel',
       asyncItemsLoader: () async {
         // Load related entities using GenericEntityService
-        final result = await GenericEntityService.getAll(relatedEntity);
+        final result = await entityService.getAll(relatedEntity);
         return result.data;
       },
       valueField: 'id',

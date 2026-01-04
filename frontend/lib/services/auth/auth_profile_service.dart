@@ -8,15 +8,16 @@ import '../../models/permission.dart';
 import '../../services/permission_service_dynamic.dart';
 import '../../config/api_endpoints.dart';
 import '../../utils/helpers/string_helper.dart';
-import '../api_client.dart';
+import '../api/api_client.dart';
 import '../error_service.dart';
 import '../../utils/validators.dart';
 
 class AuthProfileService {
-  // Singleton pattern
-  static final AuthProfileService _instance = AuthProfileService._internal();
-  factory AuthProfileService() => _instance;
-  AuthProfileService._internal();
+  /// API client for HTTP requests - injected via constructor
+  final ApiClient _apiClient;
+
+  /// Constructor - requires ApiClient injection
+  AuthProfileService(this._apiClient);
 
   /// Get user profile from backend
   ///
@@ -24,7 +25,7 @@ class AuthProfileService {
   Future<Map<String, dynamic>?> getUserProfile(String token) async {
     ErrorService.logDebug('Getting user profile');
     try {
-      final profile = await ApiClient.getUserProfile(token);
+      final profile = await _apiClient.getUserProfile(token);
 
       if (profile != null) {
         // VALIDATE: API response data before using it
@@ -152,7 +153,7 @@ class AuthProfileService {
       final validatedUpdates = _validateProfileUpdates(updates);
 
       // Backend uses PATCH for partial profile updates
-      final response = await ApiClient.authenticatedRequest(
+      final response = await _apiClient.authenticatedRequest(
         'PATCH',
         ApiEndpoints.authMe,
         token: token,
@@ -160,7 +161,7 @@ class AuthProfileService {
       );
 
       if (response.statusCode == 200) {
-        final profile = await ApiClient.getUserProfile(token);
+        final profile = await _apiClient.getUserProfile(token);
         if (profile != null) {
           // VALIDATE: Response data (already done in getUserProfile)
           ErrorService.logInfo('Profile updated successfully');

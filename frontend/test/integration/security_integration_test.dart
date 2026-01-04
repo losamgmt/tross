@@ -13,8 +13,20 @@ import 'package:tross_app/providers/auth_provider.dart';
 import 'package:tross_app/screens/login_screen.dart';
 import 'package:tross_app/widgets/molecules/indicators/dev_mode_indicator.dart';
 
+import '../mocks/mock_api_client.dart';
+
 void main() {
   group('Security Integration Tests - UI + Service Layers', () {
+    late MockApiClient mockApiClient;
+
+    setUp(() {
+      mockApiClient = MockApiClient();
+    });
+
+    tearDown(() {
+      mockApiClient.reset();
+    });
+
     testWidgets('dev login buttons should be hidden in production', (
       tester,
     ) async {
@@ -26,7 +38,9 @@ void main() {
           home: MultiProvider(
             providers: [
               ChangeNotifierProvider(create: (_) => AppProvider()),
-              ChangeNotifierProvider(create: (_) => AuthProvider()),
+              ChangeNotifierProvider(
+                create: (_) => AuthProvider(mockApiClient),
+              ),
             ],
             child: const LoginScreen(),
           ),
@@ -143,7 +157,9 @@ void main() {
           home: MultiProvider(
             providers: [
               ChangeNotifierProvider(create: (_) => AppProvider()),
-              ChangeNotifierProvider(create: (_) => AuthProvider()),
+              ChangeNotifierProvider(
+                create: (_) => AuthProvider(mockApiClient),
+              ),
             ],
             child: const LoginScreen(),
           ),

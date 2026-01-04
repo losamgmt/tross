@@ -22,6 +22,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../config/table_column.dart';
 import '../utils/table_cell_builders.dart';
 import '../widgets/atoms/indicators/app_badge.dart';
@@ -35,11 +36,13 @@ class MetadataTableColumnFactory {
 
   /// Generate table columns for an entity
   ///
+  /// [context] - BuildContext for accessing Provider
   /// [entityName] - Name of the entity (e.g., 'customer', 'work_order')
   /// [onEntityUpdated] - Callback when an entity is updated in the table
   /// [visibleFields] - Optional list of fields to show. If null, shows defaults.
   /// [customBuilders] - Optional custom cell builders for specific fields
   static List<TableColumn<Map<String, dynamic>>> forEntity(
+    BuildContext context,
     String entityName, {
     VoidCallback? onEntityUpdated,
     List<String>? visibleFields,
@@ -47,6 +50,7 @@ class MetadataTableColumnFactory {
   }) {
     final metadata = EntityMetadataRegistry.get(entityName);
     final fields = visibleFields ?? _getDefaultVisibleFields(metadata);
+    final entityService = context.read<GenericEntityService>();
 
     return fields
         .where((field) => metadata.fields.containsKey(field))
@@ -54,6 +58,7 @@ class MetadataTableColumnFactory {
           (field) => _buildColumn(
             metadata,
             field,
+            entityService: entityService,
             onEntityUpdated: onEntityUpdated,
             customBuilder: customBuilders?[field],
           ),
@@ -76,6 +81,7 @@ class MetadataTableColumnFactory {
   static TableColumn<Map<String, dynamic>> _buildColumn(
     EntityMetadata metadata,
     String fieldName, {
+    required GenericEntityService entityService,
     VoidCallback? onEntityUpdated,
     Widget Function(Map<String, dynamic>)? customBuilder,
   }) {
@@ -93,6 +99,7 @@ class MetadataTableColumnFactory {
             metadata,
             fieldName,
             item,
+            entityService: entityService,
             onEntityUpdated: onEntityUpdated,
           ),
       comparator: isSortable ? _getComparator(fieldDef?.type, fieldName) : null,
@@ -143,6 +150,7 @@ class MetadataTableColumnFactory {
     EntityMetadata metadata,
     String fieldName,
     Map<String, dynamic> item, {
+    required GenericEntityService entityService,
     VoidCallback? onEntityUpdated,
   }) {
     final fieldDef = metadata.fields[fieldName];
@@ -159,6 +167,7 @@ class MetadataTableColumnFactory {
         metadata.name,
         item,
         value as bool,
+        entityService,
         onEntityUpdated,
       );
     }
@@ -188,6 +197,7 @@ class MetadataTableColumnFactory {
     String entityName,
     Map<String, dynamic> item,
     bool value,
+    GenericEntityService entityService,
     VoidCallback? onEntityUpdated,
   ) {
     final displayName = _fieldToLabel(entityName);
@@ -197,9 +207,7 @@ class MetadataTableColumnFactory {
       onUpdate: (newValue) async {
         final id = item['id'];
         if (id == null) return false;
-        await GenericEntityService.update(entityName, id, {
-          'is_active': newValue,
-        });
+        await entityService.update(entityName, id, {'is_active': newValue});
         return true;
       },
       onChanged: onEntityUpdated,

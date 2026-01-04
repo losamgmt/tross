@@ -33,6 +33,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../config/app_spacing.dart';
 import '../../../config/table_column.dart';
 import '../../../config/table_config.dart';
@@ -146,7 +147,8 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
     setState(() => _savedViewsLoading = true);
 
     try {
-      final views = await SavedViewService.getForEntity(widget.entityName!);
+      final savedViewService = context.read<SavedViewService>();
+      final views = await savedViewService.getForEntity(widget.entityName!);
       if (mounted) {
         setState(() {
           _savedViews = views;
@@ -165,7 +167,8 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
     if (widget.entityName == null) return;
 
     try {
-      await SavedViewService.create(
+      final savedViewService = context.read<SavedViewService>();
+      await savedViewService.create(
         entityName: widget.entityName!,
         viewName: viewName,
         settings: SavedViewSettings(
@@ -203,7 +206,8 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
   /// Delete a saved view
   Future<void> _deleteView(SavedView view) async {
     try {
-      await SavedViewService.delete(view.id);
+      final savedViewService = context.read<SavedViewService>();
+      await savedViewService.delete(view.id);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
