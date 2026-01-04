@@ -124,25 +124,22 @@ describe('Auth0 API Endpoints - Integration Tests', () => {
   describe('GET /api/auth0/logout - Get Logout URL', () => {
     const hasAuth0Config = !!(process.env.AUTH0_DOMAIN && process.env.AUTH0_CLIENT_ID);
 
-    test('should return logout URL when Auth0 is configured', async () => {
+    test('should return logout URL', async () => {
       const response = await request(app)
         .get('/api/auth0/logout');
 
-      // Returns 200 if Auth0 is configured, 500 if not (acceptable in test env)
-      if (hasAuth0Config) {
-        expect(response.status).toBe(HTTP_STATUS.OK);
-        expect(response.body.success).toBe(true);
-        expect(response.body.data).toHaveProperty('logout_url');
-        expect(typeof response.body.data.logout_url).toBe('string');
-      } else {
-        // Auth0 not configured - 500 is expected
-        expect(response.status).toBe(HTTP_STATUS.INTERNAL_SERVER_ERROR);
-      }
+      // Logout endpoint always returns 200 with a logout_url
+      // (it just constructs a URL string, doesn't require actual Auth0 connection)
+      expect(response.status).toBe(HTTP_STATUS.OK);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toHaveProperty('logout_url');
+      expect(typeof response.body.data.logout_url).toBe('string');
     });
 
     test('should return valid Auth0 logout URL format when configured', async () => {
       if (!hasAuth0Config) {
-        return; // Skip if Auth0 not configured
+        // Without Auth0 config, URL will have 'undefined' in it - skip validation
+        return;
       }
 
       const response = await request(app)
@@ -164,15 +161,11 @@ describe('Auth0 API Endpoints - Integration Tests', () => {
       const response = await request(app)
         .get('/api/auth0/logout');
 
-      // Either 200 (configured) or 500 (not configured) - both are valid non-auth errors
-      expect([HTTP_STATUS.OK, HTTP_STATUS.INTERNAL_SERVER_ERROR]).toContain(response.status);
+      // Always returns 200 - just constructs URL
+      expect(response.status).toBe(HTTP_STATUS.OK);
     });
 
-    test('should include helpful message when configured', async () => {
-      if (!hasAuth0Config) {
-        return; // Skip if Auth0 not configured
-      }
-
+    test('should include helpful message', async () => {
       const response = await request(app)
         .get('/api/auth0/logout');
 
