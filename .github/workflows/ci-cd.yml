@@ -145,11 +145,11 @@ jobs:
       - name: Run database migrations
         run: cd backend && npm run db:migrate
         env:
-          DB_HOST: localhost
-          DB_PORT: 5433
-          DB_NAME: trossapp_test
-          DB_USER: postgres
-          DB_PASSWORD: test123
+          TEST_DB_HOST: localhost
+          TEST_DB_PORT: 5433
+          TEST_DB_NAME: trossapp_test
+          TEST_DB_USER: postgres
+          TEST_DB_PASSWORD: test123
           NODE_ENV: test
 
       - name: Start backend server
@@ -157,11 +157,11 @@ jobs:
           cd backend && npm run dev &
           echo $! > /tmp/backend.pid
         env:
-          DB_HOST: localhost
-          DB_PORT: 5433
-          DB_NAME: trossapp_test
-          DB_USER: postgres
-          DB_PASSWORD: test123
+          TEST_DB_HOST: localhost
+          TEST_DB_PORT: 5433
+          TEST_DB_NAME: trossapp_test
+          TEST_DB_USER: postgres
+          TEST_DB_PASSWORD: test123
           NODE_ENV: test
           JWT_SECRET: test-secret-key-for-ci
           AUTH_MODE: development
