@@ -55,18 +55,58 @@ Guide to TrossApp's continuous integration and deployment pipeline.
 
 ## E2E Testing Strategy
 
-**E2E = Smoke tests only** (stack connectivity, not business logic)
+**E2E tests verify production is up and secure** - they run against the real Railway deployment, not a CI simulation.
 
-Integration tests provide comprehensive API contract coverage. E2E tests verify the full stack works together.
+### Why This Approach?
 
-### Running Tests Locally
+| Approach | Problem |
+|----------|---------|
+| ❌ Simulate Railway in CI | Complex DB setup, env var juggling, tests a mock not reality |
+| ✅ Test real deployment | Simple, tests what users actually experience |
+
+### What E2E Tests Verify (15 tests)
+
+- **Health:** Server running, DB connected, memory healthy
+- **Security:** Auth required, invalid tokens rejected, headers present
+- **Routing:** Unknown routes return 404
+- **Files:** All file endpoints require auth
+
+### What's NOT in E2E
+
+Tests requiring authentication are in **integration tests** (1100+ tests) where test auth is enabled. Production doesn't accept dev tokens (correct security!).
+
+### CI Pipeline Flow
+
+```
+Push to main
+    ├─► Backend Unit (1900+) ────┐
+    │                            ├─► E2E (15 tests) ─► Deploy Notify
+    ├─► Backend Integration (1100+)┘   against Railway
+    │
+    ├─► Frontend Tests
+    │
+    └─► Railway auto-deploys (parallel with CI)
+```
+
+E2E waits for Railway to be healthy, then runs against the production URL.
+
+### Required GitHub Secrets
+
+| Secret | Value | Example |
+|--------|-------|---------|
+| `RAILWAY_BACKEND_URL` | Your Railway backend URL | `https://tross-api-production.up.railway.app` |
+
+### Running Tests
 
 ```bash
-# Full test suite
+# Full test suite (local)
 npm run test:all
 
-# E2E smoke tests only
-npx playwright test
+# E2E against local backend
+npm run test:e2e
+
+# E2E against production (set BACKEND_URL)
+BACKEND_URL=https://tross-api-production.up.railway.app npm run test:e2e
 ```
 
 ---
@@ -276,15 +316,15 @@ API Docs: https://tross-api-production.up.railway.app/api-docs
 ## Security Notes
 
 **Secrets management:**
-- GitHub Secrets for CI (DB password, etc.)
+- GitHub Secrets for CI (`RAILWAY_BACKEND_URL`, R2 storage credentials)
 - Railway environment variables for production
 - Vercel environment variables for frontend
 - **Never commit secrets to repo!**
 
 **Fork PR security:**
 - Secrets not exposed to fork PRs
-- E2E skipped to avoid secret access
-- Build runs in isolated environment
+- E2E only runs on `main` branch (requires `RAILWAY_BACKEND_URL` secret)
+- Build and tests run in isolated environment
 
 ---
 
@@ -294,6 +334,11 @@ API Docs: https://tross-api-production.up.railway.app/api-docs
 - Usually times out after 30s
 - Rare infrastructure issue
 - Fix: Re-run jobs
+
+**"E2E tests failing with connection refused"**
+- Check `RAILWAY_BACKEND_URL` secret is set correctly
+- Verify Railway deployment is healthy
+- E2E waits up to 5 minutes for Railway to respond
 
 **"Coverage upload failed"**
 - Non-blocking (won't fail PR)

@@ -292,125 +292,81 @@ void main() {
 ## E2E Testing (Playwright)
 
 **Philosophy:**
-- E2E tests prove the **stack connects** - not logic or contracts
-- Unit tests verify logic (comprehensive)
-- Integration tests verify API contracts (factory-driven)
-- E2E smoke tests verify full-stack connectivity (minimal)
+- E2E tests verify **production is up and secure** - nothing more
+- Unit tests verify logic (1900+ tests)
+- Integration tests verify API contracts with test auth (1100+ tests)
+- E2E tests verify production deployment works (15 tests)
 
-**What to test in E2E:**
-- Health check and database connectivity
-- Authentication flow (tokens work end-to-end)
-- Cross-entity business workflows (customer → work order → invoice)
-- Role-based permission enforcement
-- File storage API (upload, download, permissions)
+**Key Insight:** Tests that can't run in production are cruft. We don't skip them—we remove them. All auth-dependent testing happens in integration tests where test auth is enabled.
 
-**Test Files:**
-- `e2e/stack-health.spec.ts` - Health checks + CRUD connectivity (19 tests)
-- `e2e/file-storage.spec.ts` - File API smoke tests (11 tests)
+**What E2E tests verify:**
+- Health checks (server up, database connected, memory healthy)
+- Security (auth required, invalid tokens rejected, security headers present)
+- Routing (unknown routes return 404)
+- File endpoints (auth enforcement)
 
-**Helper Modules:**
-- `e2e/helpers/auth.ts` - Token generation (`getDevToken`, `getDevTokenWithRequest`)
-- `e2e/helpers/users.ts` - Test user creation/cleanup
-- `e2e/helpers/cleanup.ts` - Post-test data cleanup
-- `e2e/config/constants.ts` - Centralized URLs and test data
+**What's NOT in E2E (and why):**
+- Dev token tests → Dev tokens don't work in production (correct security!)
+- RBAC tests → Tested in 1100+ integration tests with test auth
+- Read-only protection → Tested in integration tests
+- Pagination/API contracts → Tested in integration tests
 
----
+**Test File:**
+- `e2e/production.spec.ts` - Production health & security (15 tests)
 
-### E2E Token Helpers
-
-**Two helpers for different contexts:**
-
-```typescript
-// In beforeAll (no request fixture available)
-import { getDevToken, DevRole } from './helpers';
-
-let adminToken: string;
-test.beforeAll(async () => {
-  adminToken = await getDevToken('admin');
-});
-
-// In test body (use Playwright's request fixture)
-import { getDevTokenWithRequest } from './helpers';
-
-test('manager can list users', async ({ request }) => {
-  const token = await getDevTokenWithRequest(request, 'manager');
-  const response = await request.get(`${URLS.API}/users`, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
-  expect(response.ok()).toBe(true);
-});
-```
+**Configuration:**
+- `e2e/config/constants.ts` - URLs (supports `BACKEND_URL` env var for production)
 
 ---
 
-### E2E Constants Pattern
+### E2E Test Categories
 
-**Centralized configuration** prevents hardcoded values and duplication:
-
-```typescript
-// e2e/config/constants.ts
-import { BACKEND_PORT, FRONTEND_PORT } from '../../config/ports';
-
-export const URLS = {
-  BACKEND: `http://localhost:${BACKEND_PORT}`,
-  FRONTEND: `http://localhost:${FRONTEND_PORT}`,
-  API: `http://localhost:${BACKEND_PORT}/api`,
-  HEALTH: `http://localhost:${BACKEND_PORT}/api/health`
-};
-
-export const TEST_DATA = {
-  PHONES: {
-    CUSTOMER: '+15550100',    // E.164 format required
-    TECHNICIAN: '+15550101'
-  },
-  EMAIL: {
-    unique: (prefix) => `${prefix}-${Date.now()}@e2etest.trossapp.dev`
-  },
-  PREFIXES: {
-    CUSTOMER: 'e2e-customer',
-    TECHNICIAN: 'e2e-tech'
-  }
-};
-```
-
-**Usage in tests:**
-```typescript
-import { URLS, TEST_DATA } from './config/constants';
-
-test('Create customer', async ({ request }) => {
-  const response = await request.post(`${URLS.API}/customers`, {
-    headers: { Authorization: `Bearer ${token}` },
-    data: {
-      email: TEST_DATA.EMAIL.unique(TEST_DATA.PREFIXES.CUSTOMER),
-      phone: TEST_DATA.PHONES.CUSTOMER  // E.164: +15550100
-    }
-  });
-});
-```
-
-**Phone Validation:** All phone numbers must use E.164 international format:
-- ✅ Valid: `+15550100`, `+442071838750`
-- ❌ Invalid: `555-0100`, `(555) 010-0000`
-
----
-
-### E2E Scope
-
-**Focus:** Stack connectivity and business workflows  
-**Not duplicated in E2E:** Validation, error handling, CRUD edge cases
-
-> **Why?** All validation, permissions, and CRUD behavior is comprehensively tested in the integration test factory (`__tests__/factory/`). E2E smoke tests prove the full stack connects without duplicating that coverage.
+| Category | Tests | What it verifies |
+|----------|-------|------------------|
+| Health | 3 | Server running, DB connected, memory healthy |
+| Security | 6 | Auth required, invalid tokens rejected, headers present |
+| Routing | 2 | Unknown routes return 404 |
+| File Storage | 4 | All file endpoints require auth |
 
 ---
 
 ### Run E2E Tests
 
 ```bash
-npx playwright test                     # Full smoke suite
-npx playwright test --ui                # Interactive mode
-npx playwright test smoke.spec.ts       # Core business workflow
-npx playwright test roles-permissions   # Permission enforcement
+# Full production suite
+npm run test:e2e
+
+# Smoke tests only
+npm run test:e2e:smoke
+
+# Security tests only
+npm run test:e2e:security
+
+# Interactive mode (local dev)
+npx playwright test --ui
 ```
+
+**Local vs CI:**
+- **Local:** Runs against `http://localhost:3001` (start backend first)
+- **CI:** Runs against deployed Railway URL via `BACKEND_URL` env var
+
+---
+
+### E2E in CI/CD
+
+E2E tests run **after** unit and integration tests pass, and target the **real Railway deployment**:
+
+```
+Push to main
+    ├─► Unit Tests (1900+) ─────┐
+    │                           ├─► E2E (15 tests) ─► Deploy Notify
+    ├─► Integration Tests (1100+)┘   against Railway
+    │
+    └─► Railway auto-deploys (parallel)
+```
+
+**Required GitHub Secret:** `RAILWAY_BACKEND_URL`
+- Example: `https://tross-api-production.up.railway.app`
 
 ---
 

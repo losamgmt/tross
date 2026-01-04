@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - E2E & CI/CD Enhancements (2026-01-03)
+
+#### E2E Testing Overhaul
+- **Production-Appropriate Tests**: Rewrote E2E suite to test only what production supports
+  - 15 tests verifying health, security, routing, and file storage auth
+  - Removed all tests requiring dev tokens (don't work in production - correct!)
+  - Removed auth helpers, cleanup utilities, and test data generators
+  - Single test file: `e2e/production.spec.ts`
+
+- **Philosophy Shift**: Tests that can't run in production are cruft—remove, don't skip
+  - Unit tests: Logic (1,900+ tests)
+  - Integration tests: API contracts with test auth (1,100+ tests)
+  - E2E tests: Production is up and secure (15 tests)
+
+#### CI/CD Pipeline Improvements
+- **E2E Against Real Deployment**: Tests run against live Railway, not CI simulation
+  - Eliminates complex DB setup, env var juggling, migration scripts in CI
+  - Tests what users actually experience
+  - Waits for Railway health before running tests
+
+- **Required Secret**: `RAILWAY_BACKEND_URL` in GitHub repository secrets
+
+- **Pipeline Flow**:
+  ```
+  Push to main
+      ├─► Backend Unit (1900+) ────┐
+      │                            ├─► E2E (15) ─► Deploy Notify
+      ├─► Backend Integration (1100+)┘
+      ├─► Frontend Tests
+      └─► Railway auto-deploys (parallel)
+  ```
+
+#### Documentation Updates
+- Updated `docs/TESTING.md` with new E2E philosophy and test categories
+- Updated `docs/CI_CD_GUIDE.md` with pipeline flow and secrets documentation
+- Updated `README.md` with accurate test counts
+
+---
+
 ### Added - Strangler-Fig Phase 3D: GenericEntityService (2025-12-05)
 
 #### New Backend Infrastructure
