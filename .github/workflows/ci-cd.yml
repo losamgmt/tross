@@ -142,16 +142,26 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
+      - name: Run database migrations
+        run: cd backend && npm run migrate
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5433
+          DB_NAME: trossapp_test
+          DB_USER: postgres
+          DB_PASSWORD: test123
+          NODE_ENV: test
+
       - name: Start backend server
         run: |
           cd backend && npm run dev &
-          sleep 5
+          echo $! > /tmp/backend.pid
         env:
-          TEST_DB_HOST: localhost
-          TEST_DB_PORT: 5433
-          TEST_DB_NAME: trossapp_test
-          TEST_DB_USER: postgres
-          TEST_DB_PASSWORD: test123
+          DB_HOST: localhost
+          DB_PORT: 5433
+          DB_NAME: trossapp_test
+          DB_USER: postgres
+          DB_PASSWORD: test123
           NODE_ENV: test
           JWT_SECRET: test-secret-key-for-ci
           AUTH_MODE: development
@@ -160,16 +170,23 @@ jobs:
 
       - name: Wait for backend to be ready
         run: |
+          echo "Waiting for backend server to start..."
           for i in {1..30}; do
-            curl -s http://localhost:3001/api/health && break
+            if curl -s http://localhost:3001/api/health > /dev/null 2>&1; then
+              echo "✅ Backend is ready!"
+              exit 0
+            fi
             echo "Waiting for backend... ($i/30)"
             sleep 2
           done
+          echo "❌ Backend failed to start within 60 seconds"
+          exit 1
 
       - name: Run E2E tests
         run: npm run test:e2e
         env:
           BACKEND_URL: http://localhost:3001
+          CI: true
 
   # ============================================================================
   # FRONTEND TESTS (Flutter)
