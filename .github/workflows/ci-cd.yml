@@ -142,6 +142,16 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
+      - name: Initialize database schema
+        run: cd backend && npm run db:init
+        env:
+          TEST_DB_HOST: localhost
+          TEST_DB_PORT: 5433
+          TEST_DB_NAME: trossapp_test
+          TEST_DB_USER: postgres
+          TEST_DB_PASSWORD: test123
+          NODE_ENV: test
+
       - name: Run database migrations
         run: cd backend && npm run db:migrate
         env:
