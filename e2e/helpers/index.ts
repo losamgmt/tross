@@ -1,7 +1,11 @@
 /**
  * E2E Test Helpers - Index
  * 
- * Central export point for all E2E test helpers
+ * Central export point for all E2E test helpers.
+ * 
+ * NOTE: E2E tests are READ-ONLY by design.
+ * CRUD operations are tested in 1100+ integration tests.
+ * E2E tests verify stack connectivity only.
  */
 
 // Auth helpers
@@ -19,25 +23,15 @@ export {
 } from './auth';
 export type { DevRole } from './auth';
 
-// User management helpers
+// User read helpers (READ-ONLY)
 export {
-  createTestUser,
-  deleteTestUser,
   getAllUsers,
   getUserById,
-  updateTestUser,
-  updateUserRole,
-  deactivateUser,
-  reactivateUser,
 } from './users';
 export type { TestUser } from './users';
 
-// Cleanup helpers
+// Utility helpers
 export {
-  cleanupTestUsers,
-  cleanupTestRoles,
-  cleanupAllTestData,
-  createTestRole,
   wait,
   retry,
 } from './cleanup';

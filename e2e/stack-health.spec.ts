@@ -5,12 +5,19 @@
  * They are READ-ONLY by design because:
  * 1. Dev users are read-only (security protection)
  * 2. E2E tests should verify connectivity, not business logic
- * 3. CRUD operations are tested in 689 integration tests
+ * 3. CRUD operations are tested in 1100+ integration tests
  * 
  * PHILOSOPHY:
- * - Unit tests verify logic (1500+ tests)
- * - Integration tests verify API contracts (700+ tests)  
- * - E2E tests verify the stack connects (~10 tests)
+ * - Unit tests verify logic (1900+ tests)
+ * - Integration tests verify API contracts (1100+ tests)  
+ * - E2E tests verify the stack connects (~26 tests)
+ * 
+ * TEST TAGS:
+ * - @smoke: Critical path tests (run on every CI build)
+ * - @security: Security header and auth tests
+ * - @rbac: Role-based access control tests
+ * 
+ * Run specific tags: npx playwright test --grep @smoke
  * 
  * These tests should NEVER flake because they:
  * - Don't depend on test data state
@@ -24,7 +31,7 @@ import { getDevToken, getDevTokenWithRequest } from './helpers';
 
 const BACKEND_URL = URLS.BACKEND;
 
-test.describe('E2E - System Health', () => {
+test.describe('E2E - System Health @smoke', () => {
   
   test('Backend health check passes', async ({ request }) => {
     const response = await request.get(`${BACKEND_URL}/api/health`);
@@ -52,7 +59,7 @@ test.describe('E2E - System Health', () => {
   });
 });
 
-test.describe('E2E - Authentication Flow', () => {
+test.describe('E2E - Authentication Flow @smoke', () => {
 
   test('Dev token endpoint returns valid JWT', async ({ request }) => {
     const response = await request.get(`${BACKEND_URL}/api/dev/token?role=admin`);
@@ -118,7 +125,7 @@ test.describe('E2E - Authentication Flow', () => {
   });
 });
 
-test.describe('E2E - Security Headers', () => {
+test.describe('E2E - Security Headers @security', () => {
   
   test('X-Content-Type-Options is nosniff', async ({ request }) => {
     const response = await request.get(`${BACKEND_URL}/api/health`);
@@ -137,7 +144,7 @@ test.describe('E2E - Security Headers', () => {
   });
 });
 
-test.describe('E2E - API Contract', () => {
+test.describe('E2E - API Contract @smoke', () => {
   let adminToken: string;
 
   test.beforeAll(async () => {
@@ -198,7 +205,7 @@ test.describe('E2E - API Contract', () => {
   });
 });
 
-test.describe('E2E - Role-Based Access', () => {
+test.describe('E2E - Role-Based Access @rbac', () => {
   
   test('Admin can access all read endpoints', async ({ request }) => {
     const adminToken = await getDevTokenWithRequest(request, 'admin');
