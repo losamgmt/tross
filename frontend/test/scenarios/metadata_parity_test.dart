@@ -12,21 +12,8 @@ import 'package:tross_app/services/entity_metadata.dart';
 
 import '../factory/factory.dart';
 
-/// Expected entities based on backend schema.sql and entity-metadata.json
-/// Single source of truth for entity existence tests.
-const _expectedEntities = <String>{
-  'user',
-  'role',
-  'customer',
-  'technician',
-  'work_order',
-  'contract',
-  'invoice',
-  'inventory',
-  'preferences',
-  'saved_view',
-  'file_attachment',
-};
+/// Expected entities - uses shared constant from factory
+final _expectedEntities = allKnownEntities.toSet();
 
 void main() {
   setUpAll(() async {

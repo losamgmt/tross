@@ -9,6 +9,22 @@ library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tross_app/services/entity_metadata.dart';
 
+/// All known entity names - single source of truth for tests.
+/// Derived from backend schema.sql and entity-metadata.json.
+const allKnownEntities = <String>[
+  'user',
+  'role',
+  'customer',
+  'technician',
+  'work_order',
+  'contract',
+  'invoice',
+  'inventory',
+  'preferences',
+  'saved_view',
+  'file_attachment',
+];
+
 /// Test-friendly wrapper for EntityMetadataRegistry
 ///
 /// Ensures proper initialization in test context and provides

@@ -197,11 +197,16 @@ class EntityDetailCard extends StatelessWidget {
             SizedBox(height: spacing.lg),
             const Divider(),
             SizedBox(height: spacing.lg),
-            // Use DetailPanel for metadata-driven field display
-            DetailPanel<Map<String, dynamic>>(
-              value: entity!,
-              fields: fieldConfigs,
-              spacing: spacing.md,
+            // Use Flexible to prevent overflow with many fields
+            Flexible(
+              fit: FlexFit.loose,
+              child: SingleChildScrollView(
+                child: DetailPanel<Map<String, dynamic>>(
+                  value: entity!,
+                  fields: fieldConfigs,
+                  spacing: spacing.md,
+                ),
+              ),
             ),
           ],
         ),
