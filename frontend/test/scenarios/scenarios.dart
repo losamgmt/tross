@@ -9,7 +9,10 @@
 /// - [permission_parity_test.dart]: ResourceType covers permissions.json
 ///
 /// Widget Scenarios (cross-entity widget tests):
-/// - [widget_entity_scenario_test.dart]: All widgets x all entities
+/// - [widget_entity_scenario_test.dart]: EntityDetailCard for all entities
+/// - [data_table_scenario_test.dart]: AppDataTable for all entities
+/// - [entity_form_modal_scenario_test.dart]: EntityFormModal create/edit/view
+/// - [filterable_data_table_scenario_test.dart]: FilterableDataTable for all
 ///
 /// Validation Scenarios (robustness tests):
 /// - [validation_scenario_test.dart]: Missing fields, type mismatches, edge cases

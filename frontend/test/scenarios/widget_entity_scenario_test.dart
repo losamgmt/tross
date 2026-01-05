@@ -56,6 +56,7 @@ void main() {
             title: 'Loading ${metadata.displayName}',
             isLoading: true,
           ),
+          withProviders: true,
         );
 
         expect(find.byType(CircularProgressIndicator), findsOneWidget);
@@ -71,6 +72,7 @@ void main() {
             entity: null,
             title: 'No ${metadata.displayName}',
           ),
+          withProviders: true,
         );
 
         expect(find.byIcon(Icons.inbox_outlined), findsWidgets);
@@ -87,6 +89,7 @@ void main() {
             title: metadata.displayName,
             error: 'Failed to load ${metadata.displayName.toLowerCase()}',
           ),
+          withProviders: true,
         );
 
         expect(find.byIcon(Icons.error_outline), findsWidgets);
