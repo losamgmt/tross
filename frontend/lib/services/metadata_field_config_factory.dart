@@ -44,6 +44,20 @@ class MetadataFieldConfigFactory {
   // Private constructor - static class only
   MetadataFieldConfigFactory._();
 
+  /// Safely convert any value to String (defensive against type mismatches)
+  static String _safeToString(dynamic value) {
+    if (value == null) return '';
+    if (value is String) return value;
+    return value.toString();
+  }
+
+  /// Safely convert any value to String? (preserves null)
+  static String? _safeToNullableString(dynamic value) {
+    if (value == null) return null;
+    if (value is String) return value.isEmpty ? null : value;
+    return value.toString();
+  }
+
   /// Type alias for our generic FieldConfig with `Map<String, dynamic>`
   /// `FieldConfig<Map<String, dynamic>, dynamic>`
 
@@ -399,7 +413,7 @@ class MetadataFieldConfigFactory {
           ? FieldType.textArea
           : FieldType.text,
       label: label,
-      getValue: (map) => map[fieldName] as String? ?? '',
+      getValue: (map) => _safeToString(map[fieldName]),
       setValue: (map, value) => {...map, fieldName: value},
       validator: validator,
       placeholder: 'Enter ${label.toLowerCase()}',
@@ -422,7 +436,7 @@ class MetadataFieldConfigFactory {
     return FieldConfig<Map<String, dynamic>, dynamic>(
       fieldType: FieldType.text,
       label: label,
-      getValue: (map) => map[fieldName] as String? ?? '',
+      getValue: (map) => _safeToString(map[fieldName]),
       setValue: (map, value) => {...map, fieldName: value},
       validator: validator,
       placeholder: 'email@example.com',
@@ -445,7 +459,7 @@ class MetadataFieldConfigFactory {
     return FieldConfig<Map<String, dynamic>, dynamic>(
       fieldType: FieldType.text,
       label: label,
-      getValue: (map) => map[fieldName] as String? ?? '',
+      getValue: (map) => _safeToString(map[fieldName]),
       setValue: (map, value) => {...map, fieldName: value},
       validator: validator,
       placeholder: '(555) 123-4567',
@@ -553,7 +567,7 @@ class MetadataFieldConfigFactory {
       fieldType: FieldType.select,
       label: label,
       getValue: (map) {
-        final value = map[fieldName] as String?;
+        final value = _safeToNullableString(map[fieldName]);
         // Return null/empty for values not in items list (including null from DB)
         if (value == null || value.isEmpty) return null;
         // Ensure value is actually in items list to prevent dropdown assertion

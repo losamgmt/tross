@@ -11,6 +11,9 @@
 /// Widget Scenarios (cross-entity widget tests):
 /// - [widget_entity_scenario_test.dart]: All widgets x all entities
 ///
+/// Validation Scenarios (robustness tests):
+/// - [validation_scenario_test.dart]: Missing fields, type mismatches, edge cases
+///
 /// All tests are ZERO per-entity code - everything is generated from metadata.
 library;
 
