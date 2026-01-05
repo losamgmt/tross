@@ -249,6 +249,38 @@ module.exports = {
   defaultSort: { field: 'created_at', order: 'desc' },
 
   // ============================================================================
+  // FIELD DEFINITIONS
+  // ============================================================================
+  // Matches schema.sql file_attachments table structure
+
+  fields: {
+    // Primary key
+    id: { type: 'integer', readonly: true },
+
+    // Polymorphic reference fields
+    entity_type: { type: 'string', required: true, maxLength: 50 },
+    entity_id: { type: 'integer', required: true },
+
+    // File metadata
+    original_filename: { type: 'string', required: true, maxLength: 255 },
+    storage_key: { type: 'string', required: true, maxLength: 500, readonly: true },
+    mime_type: { type: 'string', required: true, maxLength: 100 },
+    file_size: { type: 'integer', required: true },
+
+    // Categorization
+    category: { type: 'string', maxLength: 50, default: 'attachment' },
+    description: { type: 'text' },
+
+    // Upload tracking
+    uploaded_by: { type: 'integer', readonly: true },
+
+    // Soft delete and timestamps
+    is_active: { type: 'boolean', default: true },
+    created_at: { type: 'timestamp', readonly: true },
+    updated_at: { type: 'timestamp', readonly: true },
+  },
+
+  // ============================================================================
   // ALLOWED VALUES
   // ============================================================================
 
