@@ -263,6 +263,70 @@ void main() {
 
 ---
 
+### Metadata-Driven Scenario Tests (`test/scenarios/`)
+
+**Architecture:** Zero per-entity code - all tests generated from metadata.
+
+The frontend test factory system mirrors the backend pattern, using registries and scenarios:
+
+```
+test/
+├── factory/
+│   ├── entity_registry.dart      # EntityTestRegistry singleton
+│   ├── entity_data_generator.dart # Generates test data from metadata
+│   └── factory.dart              # Barrel file
+├── scenarios/
+│   ├── metadata_parity_test.dart        # Entity existence drift detection
+│   ├── field_parity_test.dart           # Field definition parity
+│   ├── enum_parity_test.dart            # Enum value parity
+│   ├── permission_parity_test.dart      # Permission coverage parity
+│   ├── widget_entity_scenario_test.dart # EntityDetailCard × all entities
+│   ├── data_table_scenario_test.dart    # AppDataTable × all entities
+│   ├── entity_form_modal_scenario_test.dart  # Forms × all entities × all modes
+│   ├── filterable_data_table_scenario_test.dart # FilterableDataTable × all entities
+│   ├── validation_scenario_test.dart    # Missing fields, type mismatches, edge cases
+│   └── scenarios.dart            # Barrel file
+└── helpers/
+    ├── pump_test_widget.dart     # Provider-aware widget pumping
+    └── helpers.dart              # Barrel file
+```
+
+**Key Concept:** Tests loop over `allKnownEntities` (11 entities) and generate tests automatically:
+
+```dart
+// test/scenarios/widget_entity_scenario_test.dart
+for (final entityName in allKnownEntities) {
+  testWidgets('$entityName - displays entity data correctly', (tester) async {
+    final entityData = entityName.testData();  // Generated from metadata
+    final metadata = EntityTestRegistry.get(entityName);
+
+    await pumpTestWidget(
+      tester,
+      EntityDetailCard(entityName: entityName, entity: entityData),
+      withProviders: true,
+    );
+
+    expect(find.text(metadata.displayName), findsWidgets);
+  });
+}
+```
+
+**Scenario Categories:**
+
+| Category | Tests | What it validates |
+|----------|-------|-------------------|
+| Parity | 31 | Frontend metadata matches backend config |
+| Widget Rendering | 287 | All widgets × all entities render correctly |
+| Validation | 132 | Missing fields, type mismatches, boundaries |
+| **Total** | **450+** | Zero per-entity code |
+
+**Benefits:**
+- Add new entity → tests automatically generated
+- Change metadata → parity tests catch drift
+- Bug in factory → one fix covers all entities
+
+---
+
 ### Provider Testing
 
 **Testing state management:**

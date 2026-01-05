@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Metadata-Driven Frontend Test Infrastructure (2026-01-04)
+
+#### Test Factory System
+- **EntityTestRegistry**: Singleton providing entity metadata for all 11 entities
+- **EntityDataGenerator**: Generates type-aware test data from metadata
+- **allKnownEntities**: Shared constant for zero per-entity test loops
+
+#### Scenario Test Suites (531 new tests)
+- **Parity Tests** (31): Drift detection between frontend metadata and backend config
+  - Entity existence, field definitions, enum values, permission coverage
+- **Widget Scenario Tests** (287): Cross-entity widget rendering
+  - EntityDetailCard, AppDataTable, EntityFormModal, FilterableDataTable
+  - All widgets × all 11 entities × loading/error/empty states
+- **Validation Scenario Tests** (132): Robustness testing
+  - Missing fields, type mismatches, boundary values, invalid enums, special characters
+
+#### Bug Fixes Discovered
+- **MetadataFieldConfigFactory**: Fixed type casting bug where non-String values crashed `as String?` casts
+  - Added `_safeToString()` and `_safeToNullableString()` helper methods
+
+#### Coverage Milestone
+- **Frontend Tests**: 2,643 passing
+- **Frontend Coverage**: 70.1% (6,705/9,569 lines)
+- **Total Project Tests**: ~5,800 (backend + frontend + E2E)
+
+---
+
 ### Added - E2E & CI/CD Enhancements (2026-01-03)
 
 #### E2E Testing Overhaul
