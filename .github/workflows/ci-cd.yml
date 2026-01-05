@@ -182,7 +182,27 @@ jobs:
         run: cd frontend && flutter analyze
 
       - name: Run Flutter tests
-        run: cd frontend && flutter test
+        id: flutter_test
+        run: |
+          cd frontend
+          flutter test 2>&1 | tee test_output.txt
+          TEST_EXIT_CODE=${PIPESTATUS[0]}
+          
+          # If tests failed, extract and highlight failures
+          if [ $TEST_EXIT_CODE -ne 0 ]; then
+            echo ""
+            echo "========================================"
+            echo "========== TEST FAILURES FOUND ========="
+            echo "========================================"
+            echo ""
+            grep "❌ /home" test_output.txt || echo "Could not extract specific failures"
+            echo ""
+            echo "========================================"
+            echo "Search for: ❌ /home  to find failures"
+            echo "========================================"
+          fi
+          
+          exit $TEST_EXIT_CODE
 
   # ============================================================================
   # DEPLOYMENT NOTIFICATION

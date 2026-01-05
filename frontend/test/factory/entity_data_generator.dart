@@ -180,14 +180,35 @@ abstract final class FieldValueGenerator {
       FieldType.email => _email(entityName, entityId),
       FieldType.phone => _phone(random),
       FieldType.boolean => true,
-      FieldType.timestamp => DateTime.now().toIso8601String(),
-      FieldType.date => DateTime.now().toIso8601String().split('T').first,
+      FieldType.timestamp => _timestamp(random),
+      FieldType.date => _date(random),
       FieldType.decimal => _decimal(field, random),
       FieldType.enumType => _enumValue(field),
       FieldType.jsonb => <String, dynamic>{},
       FieldType.uuid => _uuid(random),
       FieldType.foreignKey => 1, // Default FK assumes id=1 exists
     };
+  }
+
+  /// Generate deterministic timestamp from random seed (not DateTime.now())
+  static String _timestamp(Random random) {
+    // Base date: 2026-01-01 + random days/hours/minutes
+    final days = random.nextInt(365);
+    final hours = random.nextInt(24);
+    final minutes = random.nextInt(60);
+    final baseDate = DateTime(2026, 1, 1, hours, minutes);
+    return baseDate.add(Duration(days: days)).toIso8601String();
+  }
+
+  /// Generate deterministic date from random seed (not DateTime.now())
+  static String _date(Random random) {
+    final days = random.nextInt(365);
+    final baseDate = DateTime(2026, 1, 1);
+    return baseDate
+        .add(Duration(days: days))
+        .toIso8601String()
+        .split('T')
+        .first;
   }
 
   static int _integer(FieldDefinition field, Random random) {
