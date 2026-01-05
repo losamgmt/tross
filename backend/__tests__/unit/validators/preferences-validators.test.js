@@ -258,40 +258,40 @@ describe('validators/preferences-validators.js', () => {
       expect(ResponseFormatter.badRequest).toHaveBeenCalled();
     });
 
-    test('should handle number preference with min/max boundaries', () => {
-      // autoRefreshInterval is a number type with min=0 and max=300
+    test('should handle integer preference with min/max boundaries', () => {
+      // autoRefreshInterval is an integer type with min=0 and max=300
       mockReq.body = { autoRefreshInterval: 120 };
       validatePreferencesUpdate(mockReq, mockRes, mockNext);
       expect(mockNext).toHaveBeenCalled();
     });
 
-    test('should accept number preference at min boundary', () => {
+    test('should accept integer preference at min boundary', () => {
       mockReq.body = { autoRefreshInterval: 0 }; // min=0
       validatePreferencesUpdate(mockReq, mockRes, mockNext);
       expect(mockNext).toHaveBeenCalled();
     });
 
-    test('should accept number preference at max boundary', () => {
+    test('should accept integer preference at max boundary', () => {
       mockReq.body = { autoRefreshInterval: 300 }; // max=300
       validatePreferencesUpdate(mockReq, mockRes, mockNext);
       expect(mockNext).toHaveBeenCalled();
     });
 
-    test('should reject number preference below min', () => {
+    test('should reject integer preference below min', () => {
       mockReq.body = { autoRefreshInterval: -1 }; // Below min of 0
       validatePreferencesUpdate(mockReq, mockRes, mockNext);
       expect(mockNext).not.toHaveBeenCalled();
       expect(ResponseFormatter.badRequest).toHaveBeenCalled();
     });
 
-    test('should reject number preference above max', () => {
+    test('should reject integer preference above max', () => {
       mockReq.body = { autoRefreshInterval: 301 }; // Above max of 300
       validatePreferencesUpdate(mockReq, mockRes, mockNext);
       expect(mockNext).not.toHaveBeenCalled();
       expect(ResponseFormatter.badRequest).toHaveBeenCalled();
     });
 
-    test('should reject non-number for number preference', () => {
+    test('should reject non-integer for integer preference', () => {
       mockReq.body = { autoRefreshInterval: 'fast' };
       validatePreferencesUpdate(mockReq, mockRes, mockNext);
       expect(mockNext).not.toHaveBeenCalled();
@@ -349,7 +349,7 @@ describe('validators/preferences-validators.js', () => {
       expect(ResponseFormatter.badRequest).toHaveBeenCalled();
     });
 
-    test('should validate autoRefreshInterval number preference', () => {
+    test('should validate autoRefreshInterval integer preference', () => {
       mockReq.params = { key: 'autoRefreshInterval' };
       mockReq.body = { value: 60 };
       validateSinglePreferenceUpdate(mockReq, mockRes, mockNext);

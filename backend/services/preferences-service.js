@@ -258,9 +258,9 @@ class PreferencesService {
         }
         break;
 
-      case 'number':
-        if (typeof value !== 'number' || isNaN(value)) {
-          return `${key} must be a number`;
+      case 'integer':
+        if (typeof value !== 'number' || isNaN(value) || !Number.isInteger(value)) {
+          return `${key} must be an integer`;
         }
         if (schema.min !== undefined && value < schema.min) {
           return `${key} must be at least ${schema.min}`;

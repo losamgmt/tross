@@ -336,30 +336,30 @@ describe('services/preferences-service.js', () => {
       );
     });
 
-    // Number type validation tests (autoRefreshInterval preference)
-    test('should validate number preference type', () => {
+    // Integer type validation tests (autoRefreshInterval preference)
+    test('should validate integer preference type', () => {
       const validPrefs = { autoRefreshInterval: 60 };
       const errors = preferencesService.validatePreferences(validPrefs);
       expect(errors).toEqual([]);
     });
 
-    test('should return error for non-number value on number preference', () => {
+    test('should return error for non-integer value on integer preference', () => {
       const invalidPrefs = { autoRefreshInterval: 'fast' };
       const errors = preferencesService.validatePreferences(invalidPrefs);
       expect(errors).toContainEqual(
-        expect.stringContaining('autoRefreshInterval must be a number')
+        expect.stringContaining('autoRefreshInterval must be an integer')
       );
     });
 
-    test('should return error for NaN on number preference', () => {
+    test('should return error for NaN on integer preference', () => {
       const invalidPrefs = { autoRefreshInterval: NaN };
       const errors = preferencesService.validatePreferences(invalidPrefs);
       expect(errors).toContainEqual(
-        expect.stringContaining('autoRefreshInterval must be a number')
+        expect.stringContaining('autoRefreshInterval must be an integer')
       );
     });
 
-    test('should return error for number below min', () => {
+    test('should return error for integer below min', () => {
       const invalidPrefs = { autoRefreshInterval: -5 }; // min is 0
       const errors = preferencesService.validatePreferences(invalidPrefs);
       expect(errors).toContainEqual(
@@ -367,7 +367,7 @@ describe('services/preferences-service.js', () => {
       );
     });
 
-    test('should return error for number above max', () => {
+    test('should return error for integer above max', () => {
       const invalidPrefs = { autoRefreshInterval: 500 }; // max is 300
       const errors = preferencesService.validatePreferences(invalidPrefs);
       expect(errors).toContainEqual(
@@ -375,13 +375,13 @@ describe('services/preferences-service.js', () => {
       );
     });
 
-    test('should accept number at min boundary', () => {
+    test('should accept integer at min boundary', () => {
       const validPrefs = { autoRefreshInterval: 0 }; // min is 0
       const errors = preferencesService.validatePreferences(validPrefs);
       expect(errors).toEqual([]);
     });
 
-    test('should accept number at max boundary', () => {
+    test('should accept integer at max boundary', () => {
       const validPrefs = { autoRefreshInterval: 300 }; // max is 300
       const errors = preferencesService.validatePreferences(validPrefs);
       expect(errors).toEqual([]);

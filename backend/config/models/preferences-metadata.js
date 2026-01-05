@@ -293,7 +293,7 @@ module.exports = {
       order: 4,
     },
     autoRefreshInterval: {
-      type: 'number',
+      type: 'integer',
       default: 30,
       min: 0,
       max: 300,

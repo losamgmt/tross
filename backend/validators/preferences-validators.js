@@ -47,8 +47,8 @@ function buildPreferenceJoiSchema() {
         });
         break;
 
-      case 'number':
-        let numberSchema = Joi.number();
+      case 'integer':
+        let numberSchema = Joi.number().integer();
         if (def.min !== undefined) {
           numberSchema = numberSchema.min(def.min);
         }
@@ -56,7 +56,8 @@ function buildPreferenceJoiSchema() {
           numberSchema = numberSchema.max(def.max);
         }
         schemaFields[key] = numberSchema.messages({
-          'number.base': `${key} must be a number`,
+          'number.base': `${key} must be an integer`,
+          'number.integer': `${key} must be an integer`,
           'number.min': `${key} must be at least ${def.min}`,
           'number.max': `${key} must be at most ${def.max}`,
         });
@@ -174,8 +175,8 @@ function buildSinglePreferenceSchema(key) {
       return Joi.boolean();
     case 'string':
       return def.maxLength ? Joi.string().max(def.maxLength) : Joi.string();
-    case 'number':
-      let schema = Joi.number();
+    case 'integer':
+      let schema = Joi.number().integer();
       if (def.min !== undefined) {schema = schema.min(def.min);}
       if (def.max !== undefined) {schema = schema.max(def.max);}
       return schema;
