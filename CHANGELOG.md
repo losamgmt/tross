@@ -7,25 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added - Test Coverage Milestone: 80%+ (2026-01-14)
+### Added - Frontend Coverage: 80%+ Milestone (2026-01-14)
 
-#### New Test Factories
-- **AuthServiceTestFactory**: Factory-generated tests for auth_service.dart
-  - Initialization, getters, auth strategy, token validation, error handling (27 tests)
-- **WidgetRenderTestFactory**: Factory-generated render tests for widgets
-  - DebouncedSearchFilter and PageHeader render scenarios (22 tests)
-- **ActionBuildersTestFactory**: Permission matrix testing with Builder pattern
-  - Row actions × toolbar actions × 11 entities × 4 roles (114 tests)
-
-#### New Widget & Service Tests
-- **ErrorCard**: All factory constructors (default, compact, network, loadFailed) - 33 tests
-- **TableFilterService**: Extended with filterByMetadata, getSearchableFieldNames, getSearchPlaceholder - 8 tests
-- **Layout Widgets**: PaginationDisplay, PageScaffold, ActionGrid, CardGrid - 25 tests
-
-#### Coverage Achievement
-- **Target Met**: 80.56% line coverage (8,239/10,227 lines)
-- **Total Tests**: 4,704 frontend tests passing
-- **Session Gain**: +213 new tests, +2% coverage
+- **New Test Factories**: AuthService (27), WidgetRender (22), ActionBuilders (114 tests)
+- **New Widget Tests**: ErrorCard, PaginationDisplay, PageScaffold, ActionGrid, CardGrid
+- **Result**: 4,704 tests, 80.56% line coverage (frontend now matches backend threshold)
 
 ---
 
