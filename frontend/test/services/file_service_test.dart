@@ -1,15 +1,21 @@
 /// FileService Unit Tests
 ///
-/// Tests the file attachment service models and pure functions.
+/// Tests the file attachment service models and API integration.
 ///
 /// STRATEGY:
 /// - Test data models (FileAttachment, FileDownloadInfo) via fromJson
 /// - Test computed properties (fileSizeFormatted, isImage, isPdf, extension)
-/// - HTTP calls are NOT tested here (use integration tests)
+/// - Test service DI construction
+/// - Test authentication requirements
 library;
+
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tross_app/models/file_attachment.dart';
+import 'package:tross_app/services/file_service.dart';
+import '../mocks/mock_api_client.dart';
+import '../mocks/mock_token_provider.dart';
 
 void main() {
   group('FileAttachment', () {
@@ -227,6 +233,170 @@ void main() {
         expect(info.filename, 'report.pdf');
         expect(info.mimeType, 'application/pdf');
         expect(info.expiresIn, 3600);
+      });
+    });
+  });
+
+  // ===========================================================================
+  // FileService DI & Authentication Tests
+  // ===========================================================================
+  group('FileService', () {
+    late MockApiClient mockApiClient;
+    late MockTokenProvider mockTokenProvider;
+
+    setUp(() {
+      mockApiClient = MockApiClient();
+      mockTokenProvider = MockTokenProvider('test-token');
+    });
+
+    group('Dependency Injection', () {
+      test('constructs with ApiClient and TokenProvider', () {
+        final service = FileService(mockApiClient, mockTokenProvider);
+        expect(service, isNotNull);
+      });
+
+      test('defaults to DefaultTokenProvider when not provided', () {
+        // This will use DefaultTokenProvider internally
+        // Just verify it constructs without error
+        final service = FileService(mockApiClient);
+        expect(service, isNotNull);
+      });
+    });
+
+    group('Authentication Requirements', () {
+      test('listFiles throws when not authenticated', () async {
+        // Arrange - no token
+        final unauthenticatedProvider = MockTokenProvider.unauthenticated();
+        final unauthenticatedService = FileService(
+          mockApiClient,
+          unauthenticatedProvider,
+        );
+
+        // Act & Assert
+        expect(
+          () => unauthenticatedService.listFiles(
+            entityType: 'work_order',
+            entityId: 123,
+          ),
+          throwsA(
+            isA<Exception>().having(
+              (e) => e.toString(),
+              'message',
+              contains('Not authenticated'),
+            ),
+          ),
+        );
+      });
+
+      test('getDownloadUrl throws when not authenticated', () async {
+        // Arrange - no token
+        final unauthenticatedProvider = MockTokenProvider.unauthenticated();
+        final unauthenticatedService = FileService(
+          mockApiClient,
+          unauthenticatedProvider,
+        );
+
+        // Act & Assert
+        expect(
+          () => unauthenticatedService.getDownloadUrl(fileId: 42),
+          throwsA(
+            isA<Exception>().having(
+              (e) => e.toString(),
+              'message',
+              contains('Not authenticated'),
+            ),
+          ),
+        );
+      });
+
+      test('deleteFile throws when not authenticated', () async {
+        // Arrange - no token
+        final unauthenticatedProvider = MockTokenProvider.unauthenticated();
+        final unauthenticatedService = FileService(
+          mockApiClient,
+          unauthenticatedProvider,
+        );
+
+        // Act & Assert
+        expect(
+          () => unauthenticatedService.deleteFile(fileId: 42),
+          throwsA(
+            isA<Exception>().having(
+              (e) => e.toString(),
+              'message',
+              contains('Not authenticated'),
+            ),
+          ),
+        );
+      });
+
+      test('uploadFile throws when not authenticated', () async {
+        // Arrange - no token
+        final unauthenticatedProvider = MockTokenProvider.unauthenticated();
+        final unauthenticatedService = FileService(
+          mockApiClient,
+          unauthenticatedProvider,
+        );
+
+        // Act & Assert
+        expect(
+          () => unauthenticatedService.uploadFile(
+            entityType: 'work_order',
+            entityId: 123,
+            bytes: Uint8List.fromList([1, 2, 3]),
+            filename: 'test.txt',
+          ),
+          throwsA(
+            isA<Exception>().having(
+              (e) => e.toString(),
+              'message',
+              contains('Not authenticated'),
+            ),
+          ),
+        );
+      });
+    });
+
+    group('Token State Changes', () {
+      test('succeeds after token is set', () async {
+        // Arrange - start unauthenticated
+        final tokenProvider = MockTokenProvider.unauthenticated();
+        final service = FileService(mockApiClient, tokenProvider);
+
+        // Verify fails without token
+        expect(
+          () => service.listFiles(entityType: 'work_order', entityId: 1),
+          throwsException,
+        );
+
+        // Set token
+        tokenProvider.setToken('new-token');
+
+        // Now the token check will pass (though the request may still fail
+        // due to mock setup - the point is authentication passes)
+        // We just verify setToken works correctly
+        expect(await tokenProvider.hasToken(), isTrue);
+      });
+
+      test('fails after token is cleared', () async {
+        // Arrange - start authenticated
+        final tokenProvider = MockTokenProvider('valid-token');
+        final service = FileService(mockApiClient, tokenProvider);
+
+        // Clear token
+        tokenProvider.clearToken();
+
+        // Act & Assert - should fail authentication
+        expect(
+          () => service.listFiles(entityType: 'work_order', entityId: 1),
+          throwsA(
+            isA<Exception>().having(
+              (e) => e.toString(),
+              'message',
+              contains('Not authenticated'),
+            ),
+          ),
+        );
       });
     });
   });

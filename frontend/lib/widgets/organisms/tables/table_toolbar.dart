@@ -3,12 +3,12 @@
 /// Combines search, filters, actions above table
 /// Flexible layout with common table operations
 ///
-/// Composes: SearchBar organism, action widgets
+/// Composes: DebouncedSearchFilter organism, action widgets
 library;
 
 import 'package:flutter/material.dart';
 import '../../../config/app_spacing.dart';
-import '../search/search_bar.dart' as custom;
+import '../search/debounced_search_filter.dart';
 
 class TableToolbar extends StatelessWidget {
   /// String title (mutually exclusive with titleWidget)
@@ -85,7 +85,10 @@ class TableToolbar extends StatelessWidget {
             ),
           // Search bar
           if (onSearch != null)
-            custom.SearchBar(placeholder: 'Search...', onSearch: onSearch),
+            DebouncedSearchFilter(
+              searchPlaceholder: 'Search...',
+              onSearchChanged: onSearch,
+            ),
         ],
       ),
     );

@@ -6,6 +6,107 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:tross_app/models/permission.dart';
 import 'package:tross_app/providers/auth_provider.dart';
+import 'package:tross_app/services/generic_entity_service.dart';
+import 'mock_api_client.dart';
+
+/// Mock GenericEntityService for widget testing
+///
+/// Provides controllable responses for entity CRUD operations.
+class MockGenericEntityService extends GenericEntityService {
+  final Map<String, List<Map<String, dynamic>>> _entityData = {};
+  final List<String> _callHistory = [];
+  bool _shouldFail = false;
+  String _failureMessage = 'Mock service error';
+
+  MockGenericEntityService() : super(MockApiClient());
+
+  /// Get call history for verification
+  List<String> get callHistory => List.unmodifiable(_callHistory);
+
+  /// Check if a method was called
+  bool wasCalled(String method) => _callHistory.contains(method);
+
+  /// Set mock to fail
+  void setShouldFail(bool value, {String? message}) {
+    _shouldFail = value;
+    if (message != null) _failureMessage = message;
+  }
+
+  /// Mock entity data for a specific entity type
+  void mockEntities(String entityName, List<Map<String, dynamic>> data) {
+    _entityData[entityName] = data;
+  }
+
+  @override
+  Future<EntityListResult> getAll(
+    String entityName, {
+    int page = 1,
+    int limit = 50,
+    String? search,
+    Map<String, dynamic>? filters,
+    String? sortBy,
+    String sortOrder = 'DESC',
+  }) async {
+    _callHistory.add('getAll:$entityName');
+    if (_shouldFail) throw Exception(_failureMessage);
+
+    final data = _entityData[entityName] ?? [];
+    return EntityListResult(
+      data: data,
+      count: data.length,
+      pagination: {
+        'page': page,
+        'limit': limit,
+        'total': data.length,
+        'hasNext': false,
+      },
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> getById(String entityName, int id) async {
+    _callHistory.add('getById:$entityName:$id');
+    if (_shouldFail) throw Exception(_failureMessage);
+
+    final data = _entityData[entityName] ?? [];
+    return data.firstWhere((e) => e['id'] == id, orElse: () => {'id': id});
+  }
+
+  @override
+  Future<Map<String, dynamic>> create(
+    String entityName,
+    Map<String, dynamic> data,
+  ) async {
+    _callHistory.add('create:$entityName');
+    if (_shouldFail) throw Exception(_failureMessage);
+    return {...data, 'id': DateTime.now().millisecondsSinceEpoch};
+  }
+
+  @override
+  Future<Map<String, dynamic>> update(
+    String entityName,
+    int id,
+    Map<String, dynamic> data,
+  ) async {
+    _callHistory.add('update:$entityName:$id');
+    if (_shouldFail) throw Exception(_failureMessage);
+    return {...data, 'id': id};
+  }
+
+  @override
+  Future<void> delete(String entityName, int id) async {
+    _callHistory.add('delete:$entityName:$id');
+    if (_shouldFail) throw Exception(_failureMessage);
+  }
+
+  /// Reset all mock state
+  void reset() {
+    _entityData.clear();
+    _callHistory.clear();
+    _shouldFail = false;
+    _failureMessage = 'Mock service error';
+  }
+}
 
 /// Mock AuthProvider for testing components that need authenticated state
 /// without requiring actual authentication or backend connectivity

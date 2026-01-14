@@ -27,3 +27,9 @@ library;
 
 export 'entity_registry.dart';
 export 'entity_data_generator.dart';
+export 'service_test_factory.dart';
+export 'crud_test_factory.dart';
+export 'widget_test_factory.dart';
+export 'auth_service_test_factory.dart';
+export 'widget_render_test_factory.dart';
+export 'action_builders_test_factory.dart';

@@ -3,6 +3,9 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tross_app/services/table_filter_service.dart';
+import 'package:tross_app/services/entity_metadata.dart';
+
+import '../helpers/helpers.dart';
 
 // Test model
 class TestUser {
@@ -107,6 +110,110 @@ void main() {
 
         expect(result.length, 1);
         expect(result.first.role, 'technician');
+      });
+    });
+
+    group('filterByMetadata', () {
+      setUpAll(() async {
+        initializeTestBinding();
+        await EntityMetadataRegistry.instance.initialize();
+      });
+
+      test('returns all items when query is empty', () {
+        final items = [
+          {'id': 1, 'name': 'John', 'email': 'john@test.com'},
+          {'id': 2, 'name': 'Jane', 'email': 'jane@test.com'},
+        ];
+
+        final result = TableFilterService.filterByMetadata(
+          entityName: 'user',
+          items: items,
+          query: '',
+        );
+
+        expect(result.length, 2);
+      });
+
+      test('filters by searchable fields from metadata', () {
+        final items = [
+          {'id': 1, 'name': 'John Doe', 'email': 'john@test.com'},
+          {'id': 2, 'name': 'Jane Smith', 'email': 'jane@test.com'},
+        ];
+
+        final result = TableFilterService.filterByMetadata(
+          entityName: 'user',
+          items: items,
+          query: 'john',
+        );
+
+        expect(result.length, 1);
+        expect(result.first['name'], 'John Doe');
+      });
+
+      test('is case-insensitive', () {
+        final items = [
+          {'id': 1, 'name': 'Alice', 'email': 'alice@test.com'},
+        ];
+
+        final result = TableFilterService.filterByMetadata(
+          entityName: 'user',
+          items: items,
+          query: 'ALICE',
+        );
+
+        expect(result.length, 1);
+      });
+
+      test('handles null field values gracefully', () {
+        final items = [
+          {'id': 1, 'name': null, 'email': 'test@test.com'},
+          {'id': 2, 'name': 'Valid', 'email': null},
+        ];
+
+        final result = TableFilterService.filterByMetadata(
+          entityName: 'user',
+          items: items,
+          query: 'test',
+        );
+
+        expect(result.length, 1);
+        expect(result.first['id'], 1);
+      });
+    });
+
+    group('getSearchableFieldNames', () {
+      setUpAll(() async {
+        initializeTestBinding();
+        await EntityMetadataRegistry.instance.initialize();
+      });
+
+      test('returns searchable field names for entity', () {
+        final fields = TableFilterService.getSearchableFieldNames('customer');
+        expect(fields, isNotEmpty);
+      });
+
+      test('returns list type', () {
+        final fields = TableFilterService.getSearchableFieldNames('user');
+        expect(fields, isA<List<String>>());
+      });
+    });
+
+    group('getSearchPlaceholder', () {
+      setUpAll(() async {
+        initializeTestBinding();
+        await EntityMetadataRegistry.instance.initialize();
+      });
+
+      test('returns placeholder with field names', () {
+        final placeholder = TableFilterService.getSearchPlaceholder('customer');
+        expect(placeholder, contains('Search by'));
+      });
+
+      test('replaces underscores with spaces in field names', () {
+        final placeholder = TableFilterService.getSearchPlaceholder(
+          'work_order',
+        );
+        expect(placeholder.contains('_'), isFalse);
       });
     });
   });

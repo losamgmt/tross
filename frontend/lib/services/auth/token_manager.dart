@@ -6,9 +6,8 @@ import '../error_service.dart';
 class TokenManager {
   // Configure secure storage with web support
   // On web: Uses IndexedDB with encryption
-  // On mobile: Uses Keychain (iOS) / EncryptedSharedPreferences (Android)
+  // On mobile: Uses Keychain (iOS) / Custom ciphers (Android)
   static const _secureStorage = FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
     webOptions: WebOptions(
       dbName: 'TrossAppSecureStorage',
       publicKey: 'TrossAppAuth',

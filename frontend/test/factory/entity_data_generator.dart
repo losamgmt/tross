@@ -98,6 +98,18 @@ abstract final class EntityDataGenerator {
     return create(entityName, overrides: {fieldName: invalidValue}, seed: seed);
   }
 
+  /// Create input data for a new entity (no id field)
+  /// Suitable for create operations where the backend assigns the id
+  static Map<String, dynamic> createInput(
+    String entityName, {
+    Map<String, dynamic>? overrides,
+    int? seed,
+  }) {
+    final data = create(entityName, overrides: overrides, seed: seed);
+    data.remove('id'); // Remove id - backend will assign it
+    return data;
+  }
+
   static Map<String, dynamic> _buildEntity(
     String entityName,
     GeneratorContext context,

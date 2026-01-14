@@ -32,9 +32,6 @@ class HttpApiClient implements ApiClient {
     _onTokenRefreshNeeded = callback;
   }
 
-  // TODO: Implement all ApiClient methods
-  // Methods will be added incrementally in subsequent edits
-
   @override
   Future<http.Response> authenticatedRequest(
     String method,

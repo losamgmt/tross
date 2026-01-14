@@ -61,7 +61,7 @@ export 'providers/stream_data_provider.dart';
 export 'guards/permission_gate.dart';
 
 // Search
-export 'search/search_bar.dart';
+export 'search/debounced_search_filter.dart';
 
 // Tables
 export 'tables/data_table.dart';
