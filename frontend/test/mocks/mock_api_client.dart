@@ -2,6 +2,25 @@
 ///
 /// Implements the ApiClient interface for unit testing.
 /// Provides controllable responses for all API operations.
+///
+/// USAGE:
+/// ```dart
+/// final mock = MockApiClient();
+///
+/// // For entity lists - use typed helper
+/// mock.mockEntityList('customer', [
+///   {'id': 1, 'name': 'Test'},
+/// ]);
+///
+/// // For single entities
+/// mock.mockEntity('customer', 42, {'id': 42, 'name': 'Test'});
+///
+/// // For custom responses
+/// mock.mockResponse('/custom/endpoint', {'data': 'value'});
+///
+/// // Verify calls
+/// expect(mock.wasCalled('fetchEntities customer'), isTrue);
+/// ```
 library;
 
 import 'dart:convert';
@@ -25,10 +44,59 @@ class MockApiClient implements ApiClient {
   List<String> get callHistory => List.unmodifiable(_callHistory);
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // MOCK CONFIGURATION
+  // MOCK CONFIGURATION - Entity Helpers (Type-Safe)
   // ═══════════════════════════════════════════════════════════════════════════
 
-  /// Set up a mock response for a specific key
+  /// Mock an entity list response with proper typing
+  ///
+  /// Ensures the response is correctly typed for GenericEntityService
+  void mockEntityList(
+    String entityName,
+    List<Map<String, dynamic>> data, {
+    int page = 1,
+    int limit = 50,
+    int? total,
+    bool hasNext = false,
+  }) {
+    _mockResponses['entities:$entityName'] = {
+      'success': true,
+      'data': data,
+      'count': data.length,
+      'pagination': {
+        'page': page,
+        'limit': limit,
+        'total': total ?? data.length,
+        'totalPages': ((total ?? data.length) / limit).ceil(),
+        'hasNext': hasNext,
+      },
+    };
+  }
+
+  /// Mock a single entity response
+  void mockEntity(String entityName, int id, Map<String, dynamic> data) {
+    _mockResponses['entity:$entityName:$id'] = data;
+  }
+
+  /// Mock entity creation response
+  void mockCreate(String entityName, Map<String, dynamic> response) {
+    _mockResponses['create:$entityName'] = response;
+  }
+
+  /// Mock entity update response
+  void mockUpdate(String entityName, int id, Map<String, dynamic> response) {
+    _mockResponses['update:$entityName:$id'] = response;
+  }
+
+  /// Mock entity delete response
+  void mockDelete(String entityName, int id, Map<String, dynamic> response) {
+    _mockResponses['delete:$entityName:$id'] = response;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // MOCK CONFIGURATION - Generic
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Set up a mock response for a specific key (for custom endpoints)
   void mockResponse(String key, dynamic response) {
     _mockResponses[key] = response;
   }
@@ -46,10 +114,47 @@ class MockApiClient implements ApiClient {
     _currentToken = token;
   }
 
+  /// Endpoint-specific error tracking
+  final Map<String, String> _endpointErrors = {};
+
+  /// Mock an error for a specific endpoint
+  void mockErrorFor(String endpoint, String message) {
+    _endpointErrors[endpoint] = message;
+  }
+
+  /// Endpoint-specific status code responses (for testing error paths)
+  final Map<String, int> _endpointStatusCodes = {};
+  final Map<String, dynamic> _endpointBodies = {};
+
+  /// Mock a response with specific status code for an endpoint
+  ///
+  /// Use this to test error handling paths (403, 404, 500, etc.)
+  /// ```dart
+  /// mockApiClient.mockStatusCode('/stats/work_order', 403, {'error': 'Forbidden'});
+  /// ```
+  void mockStatusCode(
+    String endpoint,
+    int statusCode, [
+    Map<String, dynamic>? body,
+  ]) {
+    _endpointStatusCodes[endpoint] = statusCode;
+    if (body != null) {
+      _endpointBodies[endpoint] = body;
+    }
+  }
+
+  /// Clear endpoint-specific errors
+  void clearEndpointErrors() {
+    _endpointErrors.clear();
+  }
+
   /// Reset all mock state
   void reset() {
     _callHistory.clear();
     _mockResponses.clear();
+    _endpointErrors.clear();
+    _endpointStatusCodes.clear();
+    _endpointBodies.clear();
     _shouldFail = false;
     _failureMessage = 'Mock API Error';
     _currentToken = null;
@@ -61,6 +166,11 @@ class MockApiClient implements ApiClient {
     return _callHistory.any((call) => call.contains(pattern));
   }
 
+  /// Get count of calls matching pattern
+  int callCount(String pattern) {
+    return _callHistory.where((call) => call.contains(pattern)).length;
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // PRIVATE HELPERS
   // ═══════════════════════════════════════════════════════════════════════════
@@ -69,12 +179,52 @@ class MockApiClient implements ApiClient {
     _callHistory.add(call);
   }
 
-  T? _getResponse<T>(String key) {
+  /// Check if an endpoint has a specific error configured
+  void _checkEndpointError(String endpoint) {
+    // Check for exact match or partial match
+    for (final entry in _endpointErrors.entries) {
+      if (endpoint.contains(entry.key) || entry.key.contains(endpoint)) {
+        throw Exception(entry.value);
+      }
+    }
+  }
+
+  T? _getResponse<T>(String key, {String? endpoint}) {
+    if (endpoint != null) {
+      _checkEndpointError(endpoint);
+    }
     if (_shouldFail) {
       _shouldFail = false;
       throw Exception(_failureMessage);
     }
     return _mockResponses[key] as T?;
+  }
+
+  /// Get entity list response with proper default typing
+  Map<String, dynamic> _getEntityListResponse(String entityName) {
+    if (_shouldFail) {
+      _shouldFail = false;
+      throw Exception(_failureMessage);
+    }
+
+    final response = _mockResponses['entities:$entityName'];
+    if (response != null) {
+      return response as Map<String, dynamic>;
+    }
+
+    // Default empty response with correct typing
+    return {
+      'success': true,
+      'data': <Map<String, dynamic>>[],
+      'count': 0,
+      'pagination': {
+        'page': 1,
+        'limit': 50,
+        'total': 0,
+        'totalPages': 0,
+        'hasNext': false,
+      },
+    };
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -109,8 +259,33 @@ class MockApiClient implements ApiClient {
       _shouldFail = false;
       throw Exception(_failureMessage);
     }
+
+    // Check for endpoint-specific status code mocking (supports partial match)
+    for (final entry in _endpointStatusCodes.entries) {
+      if (endpoint.contains(entry.key) || entry.key.contains(endpoint)) {
+        final statusCode = entry.value;
+        final mockBody = _endpointBodies[entry.key];
+        final responseBody = mockBody != null
+            ? json.encode(mockBody)
+            : '{"error": "Mocked error"}';
+        return http.Response(responseBody, statusCode);
+      }
+    }
+
+    // Check for mocked response - supports both exact and partial match
+    dynamic response = _mockResponses[endpoint];
+    if (response == null) {
+      // Try partial match for endpoints with query params
+      for (final entry in _mockResponses.entries) {
+        if (endpoint.startsWith(entry.key) ||
+            entry.key.startsWith(endpoint.split('?')[0])) {
+          response = entry.value;
+          break;
+        }
+      }
+    }
+
     // Use json.encode for proper JSON formatting
-    final response = _mockResponses[endpoint];
     final responseBody = response != null
         ? json.encode(response)
         : '{"success": true}';
@@ -182,12 +357,7 @@ class MockApiClient implements ApiClient {
     String sortOrder = 'DESC',
   }) async {
     _recordCall('fetchEntities $entityName');
-    return _getResponse<Map<String, dynamic>>('entities:$entityName') ??
-        {
-          'success': true,
-          'data': [],
-          'pagination': {'page': page, 'limit': limit, 'totalCount': 0},
-        };
+    return _getEntityListResponse(entityName);
   }
 
   @override

@@ -1,4 +1,6 @@
+// coverage:ignore-file
 // Auth0 Service - Focused on Auth0 OAuth2 operations only
+// This is a thin wrapper around Auth0's SDK - we rely on Auth0 for testing their SDK.
 import 'package:auth0_flutter/auth0_flutter.dart';
 import '../../config/app_config.dart';
 import '../error_service.dart';

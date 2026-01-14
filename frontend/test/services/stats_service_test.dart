@@ -1,22 +1,29 @@
 /// StatsService Unit Tests (DI-Based)
 ///
 /// Tests the stats aggregation service using dependency injection.
-/// Uses MockApiClient for DI pattern demonstration.
-/// Note: Full API tests require token mocking (Phase 2).
+/// Uses MockApiClient + MockTokenProvider for full testability.
+///
+/// ARCHITECTURE:
+/// - MockApiClient: Mocks HTTP responses
+/// - MockTokenProvider: Provides mock token (no flutter_secure_storage)
+/// - Service constructed with both mocks = fully testable
 library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tross_app/services/stats_service.dart';
 
 import '../mocks/mock_api_client.dart';
+import '../mocks/mock_token_provider.dart';
 
 void main() {
   late MockApiClient mockApiClient;
+  late MockTokenProvider mockTokenProvider;
   late StatsService statsService;
 
   setUp(() {
     mockApiClient = MockApiClient();
-    statsService = StatsService(mockApiClient);
+    mockTokenProvider = MockTokenProvider();
+    statsService = StatsService(mockApiClient, mockTokenProvider);
   });
 
   tearDown(() {
@@ -109,22 +116,83 @@ void main() {
 
     group('Error Handling (no token)', () {
       // These tests verify graceful failure when not authenticated
-      // Full API mocking requires TokenManager mocking (Phase 2)
-
       test('count throws when not authenticated', () async {
-        // Without token, service should throw (caught in caller)
-        expect(() => statsService.count('work_order'), throwsException);
+        // Create service with unauthenticated token provider
+        final unauthService = StatsService(
+          mockApiClient,
+          MockTokenProvider.unauthenticated(),
+        );
+        expect(() => unauthService.count('work_order'), throwsException);
       });
 
       test('countGrouped throws when not authenticated', () async {
+        final unauthService = StatsService(
+          mockApiClient,
+          MockTokenProvider.unauthenticated(),
+        );
         expect(
-          () => statsService.countGrouped('work_order', 'status'),
+          () => unauthService.countGrouped('work_order', 'status'),
           throwsException,
         );
       });
 
       test('sum throws when not authenticated', () async {
-        expect(() => statsService.sum('invoice', 'total'), throwsException);
+        final unauthService = StatsService(
+          mockApiClient,
+          MockTokenProvider.unauthenticated(),
+        );
+        expect(() => unauthService.sum('invoice', 'total'), throwsException);
+      });
+    });
+
+    group('API Integration (with MockTokenProvider)', () {
+      // These tests verify full API interaction with mocked token
+      test('count returns mocked count', () async {
+        mockApiClient.mockResponse('/stats/work_order', {
+          'success': true,
+          'data': {'count': 42},
+        });
+
+        final result = await statsService.count('work_order');
+        expect(result, equals(42));
+      });
+
+      test('count with filters builds correct query', () async {
+        mockApiClient.mockResponse('/stats/work_order?status=pending', {
+          'success': true,
+          'data': {'count': 10},
+        });
+
+        final result = await statsService.count(
+          'work_order',
+          filters: {'status': 'pending'},
+        );
+        expect(result, equals(10));
+      });
+
+      test('countGrouped returns mocked grouped data', () async {
+        mockApiClient.mockResponse('/stats/work_order/grouped/status', {
+          'success': true,
+          'data': [
+            {'value': 'pending', 'count': 5},
+            {'value': 'completed', 'count': 10},
+          ],
+        });
+
+        final result = await statsService.countGrouped('work_order', 'status');
+        expect(result.length, equals(2));
+        expect(result[0].value, equals('pending'));
+        expect(result[0].count, equals(5));
+      });
+
+      test('sum returns mocked sum value', () async {
+        mockApiClient.mockResponse('/stats/invoice/sum/total', {
+          'success': true,
+          'data': {'sum': 12500.50},
+        });
+
+        final result = await statsService.sum('invoice', 'total');
+        expect(result, equals(12500.50));
       });
     });
   });

@@ -26,3 +26,9 @@ export 'test_data_builders.dart';
 // Mocking infrastructure for service tests
 export 'mock_setup.dart';
 export 'test_api_client.dart';
+
+// Service testing contract (standardized patterns)
+export '../templates/service_test_contract.dart';
+
+// Screen testing helpers
+export 'screen_test_helpers.dart';

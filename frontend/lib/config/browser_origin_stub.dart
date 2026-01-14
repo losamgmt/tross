@@ -1,3 +1,4 @@
+// coverage:ignore-file
 // Stub for non-web platforms (VM, iOS, Android, etc.)
 // Provides browser origin getter that only works on web
 

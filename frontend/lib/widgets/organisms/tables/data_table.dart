@@ -341,50 +341,73 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
 
     // No container - let the parent (DashboardCard) handle borders/shadows
     // This widget focuses purely on table layout and functionality
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Toolbar (with padding)
-        if (widget.title != null ||
-            widget.titleWidget != null ||
-            widget.onSearch != null ||
-            combinedActions.isNotEmpty)
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-              spacing.md,
-              spacing.md,
-              spacing.md,
-              spacing.md,
-            ),
-            child: TableToolbar(
-              title: widget.title,
-              titleWidget: widget.titleWidget,
-              onSearch: widget.onSearch,
-              actions: combinedActions.isNotEmpty ? combinedActions : null,
-            ),
-          ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final hasFiniteHeight = constraints.maxHeight.isFinite;
 
-        // Table content (NO padding - extends to edges!)
-        _buildTableContent(),
-
-        // Pagination (with padding)
-        if (widget.paginated && widget.state == AppDataTableState.loaded)
-          Padding(
-            padding: EdgeInsets.all(spacing.md),
-            child: PaginationDisplay(
-              rangeText: PaginationHelper.getPageRangeText(
-                _currentPage,
-                widget.itemsPerPage,
-                widget.totalItems ?? widget.data.length,
-              ),
-              canGoPrevious: PaginationHelper.canGoPrevious(_currentPage),
-              canGoNext: PaginationHelper.canGoNext(_currentPage, _totalPages),
-              onPrevious: () => _handlePageChange(_currentPage - 1),
-              onNext: () => _handlePageChange(_currentPage + 1),
-            ),
+        return ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: hasFiniteHeight
+                ? constraints.maxHeight
+                : double.infinity,
           ),
-      ],
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Toolbar (with padding)
+              if (widget.title != null ||
+                  widget.titleWidget != null ||
+                  widget.onSearch != null ||
+                  combinedActions.isNotEmpty)
+                Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    spacing.md,
+                    spacing.md,
+                    spacing.md,
+                    spacing.md,
+                  ),
+                  child: TableToolbar(
+                    title: widget.title,
+                    titleWidget: widget.titleWidget,
+                    onSearch: widget.onSearch,
+                    actions: combinedActions.isNotEmpty
+                        ? combinedActions
+                        : null,
+                  ),
+                ),
+
+              // Table content (NO padding - extends to edges!)
+              // Use Expanded when we have finite height, otherwise just the content
+              // to avoid "children have non-zero flex but incoming height constraints are unbounded"
+              if (hasFiniteHeight)
+                Expanded(child: _buildTableContent())
+              else
+                _buildTableContent(),
+
+              // Pagination (with padding)
+              if (widget.paginated && widget.state == AppDataTableState.loaded)
+                Padding(
+                  padding: EdgeInsets.all(spacing.md),
+                  child: PaginationDisplay(
+                    rangeText: PaginationHelper.getPageRangeText(
+                      _currentPage,
+                      widget.itemsPerPage,
+                      widget.totalItems ?? widget.data.length,
+                    ),
+                    canGoPrevious: PaginationHelper.canGoPrevious(_currentPage),
+                    canGoNext: PaginationHelper.canGoNext(
+                      _currentPage,
+                      _totalPages,
+                    ),
+                    onPrevious: () => _handlePageChange(_currentPage - 1),
+                    onNext: () => _handlePageChange(_currentPage + 1),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -434,26 +457,44 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
   /// Builds the table using Flutter's native Table widget
   ///
   /// Uses IntrinsicColumnWidth so columns size to their content naturally.
-  /// Horizontal scroll enabled when content exceeds viewport.
+  /// Horizontal and vertical scroll enabled when content exceeds viewport.
   Widget _buildNativeTable() {
     final theme = Theme.of(context);
     final hasActions = widget.actionsBuilder != null;
     final data = _sortedAndPaginatedData;
 
-    final scrollController = ScrollController();
+    final horizontalScrollController = ScrollController();
+    final verticalScrollController = ScrollController();
+
     // Add bottom padding to prevent scrollbar from overlaying table content
     return Padding(
       padding: EdgeInsets.only(bottom: StyleConstants.scrollbarThickness + 4),
       child: Scrollbar(
-        controller: scrollController,
+        controller: verticalScrollController,
         thumbVisibility: true,
         trackVisibility: true,
         thickness: StyleConstants.scrollbarThickness,
         radius: Radius.circular(StyleConstants.scrollbarRadius),
         child: SingleChildScrollView(
-          controller: scrollController,
-          scrollDirection: Axis.horizontal,
-          child: _buildUnifiedTable(theme, data, includeActions: hasActions),
+          controller: verticalScrollController,
+          scrollDirection: Axis.vertical,
+          child: Scrollbar(
+            controller: horizontalScrollController,
+            thumbVisibility: true,
+            trackVisibility: true,
+            thickness: StyleConstants.scrollbarThickness,
+            radius: Radius.circular(StyleConstants.scrollbarRadius),
+            notificationPredicate: (notification) => notification.depth == 0,
+            child: SingleChildScrollView(
+              controller: horizontalScrollController,
+              scrollDirection: Axis.horizontal,
+              child: _buildUnifiedTable(
+                theme,
+                data,
+                includeActions: hasActions,
+              ),
+            ),
+          ),
         ),
       ),
     );

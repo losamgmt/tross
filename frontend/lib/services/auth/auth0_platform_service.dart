@@ -1,5 +1,7 @@
+// coverage:ignore-file
 // Platform-agnostic Auth0 service - automatically uses correct implementation
 // Supports: Web (browser), iOS, Android, Windows, macOS, Linux
+// This is a thin wrapper around Auth0's SDK - we rely on Auth0 for testing their SDK.
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:io' show Platform;
 import 'auth0_service.dart'; // Mobile implementation (iOS/Android)

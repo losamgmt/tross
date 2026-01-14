@@ -4,6 +4,9 @@
 /// - Strategy-based sidebar item building
 /// - Route-to-strategy mapping
 /// - Fallback behavior when config not loaded
+/// - Section types: clickable, entity groupers, static groupers
+/// - User menu building
+/// - Permission filtering
 library;
 
 import 'package:flutter_test/flutter_test.dart';
@@ -55,7 +58,59 @@ void main() {
           'order': 0,
           'menuType': 'sidebar',
         },
+        {
+          'id': 'settings',
+          'label': 'Settings',
+          'route': '/settings',
+          'group': 'main',
+          'order': 10,
+          'menuType': 'userMenu',
+        },
       ],
+      'entityPlacements': {},
+    };
+
+    // Config with all section types
+    final advancedConfig = {
+      'version': '1.4.0',
+      'sidebarStrategies': {
+        'admin': {
+          'label': 'Admin Panel',
+          'groups': ['admin'],
+          'includeEntities': true,
+          'sections': [
+            // Type 1: Clickable item (has route, not a grouper)
+            {'id': 'home', 'label': 'Home', 'route': '/admin', 'order': 0},
+            // Type 2: Entity grouper
+            {'id': 'entities', 'label': 'Entities', 'order': 1},
+            // Type 3: Static grouper with children
+            {
+              'id': 'logs',
+              'label': 'Logs',
+              'icon': 'history',
+              'order': 2,
+              'children': [
+                {
+                  'id': 'data',
+                  'label': 'Data Logs',
+                  'route': '/admin/logs/data',
+                },
+                {
+                  'id': 'auth',
+                  'label': 'Auth Logs',
+                  'route': '/admin/logs/auth',
+                },
+              ],
+            },
+          ],
+        },
+      },
+      'routeStrategies': {'/admin': 'admin', '/admin/*': 'admin'},
+      'publicRoutes': [],
+      'groups': [
+        {'id': 'admin', 'label': 'Admin', 'order': 0},
+      ],
+      'staticItems': [],
       'entityPlacements': {},
     };
 
@@ -160,6 +215,125 @@ void main() {
         // Should use correct fallbacks based on route
         expect(appItems.any((i) => i.id == 'dashboard'), isTrue);
         expect(adminItems, isNotEmpty);
+      });
+    });
+
+    group('Section Types', () {
+      test('builds clickable section items (Type 1)', () {
+        NavConfigService.loadFromJson(advancedConfig);
+        final items = NavMenuBuilder.buildSidebarItemsForStrategy('admin');
+
+        // Find the home section (clickable, has route)
+        final homeItem = items.firstWhere(
+          (i) => i.label == 'Home',
+          orElse: () => throw StateError('Home not found'),
+        );
+
+        expect(homeItem.route, equals('/admin'));
+        expect(homeItem.children, isNull);
+      });
+
+      test(
+        'builds entity grouper with no children when entityPlacements empty',
+        () {
+          // advancedConfig has entityPlacements: {} so no entities will be found
+          NavConfigService.loadFromJson(advancedConfig);
+          final items = NavMenuBuilder.buildSidebarItemsForStrategy('admin');
+
+          // Find the entities section
+          final entitiesItem = items.firstWhere(
+            (i) => i.label == 'Entities',
+            orElse: () => throw StateError('Entities not found'),
+          );
+
+          // With empty entityPlacements, children is null and isSectionHeader is false
+          expect(entitiesItem.children, isNull);
+          expect(entitiesItem.isSectionHeader, isFalse);
+        },
+      );
+
+      test('builds static grouper sections with children (Type 3)', () {
+        NavConfigService.loadFromJson(advancedConfig);
+        final items = NavMenuBuilder.buildSidebarItemsForStrategy('admin');
+
+        // Find the logs section (has children)
+        final logsItem = items.firstWhere(
+          (i) => i.label == 'Logs',
+          orElse: () => throw StateError('Logs not found'),
+        );
+
+        expect(logsItem.isSectionHeader, isTrue);
+        expect(logsItem.children, isNotNull);
+        expect(logsItem.children!.length, equals(2));
+        expect(logsItem.children!.first.label, equals('Data Logs'));
+        expect(logsItem.children!.last.label, equals('Auth Logs'));
+      });
+    });
+
+    group('User Menu Building', () {
+      test('buildUserMenuItems returns fallback when not initialized', () {
+        final items = NavMenuBuilder.buildUserMenuItems();
+        expect(items, isNotEmpty);
+      });
+
+      test('buildUserMenuItems returns items from config', () {
+        NavConfigService.loadFromJson(testConfig);
+        final items = NavMenuBuilder.buildUserMenuItems();
+
+        // Should have settings item from config
+        expect(items.any((i) => i.label == 'Settings'), isTrue);
+      });
+    });
+
+    group('Permission Filtering', () {
+      test('filterForUser returns all items when user is null', () {
+        final items = NavMenuBuilder.buildSidebarItems();
+        final filtered = NavMenuBuilder.filterForUser(items, null);
+
+        // Should still return items (defensive behavior)
+        expect(filtered, isNotEmpty);
+      });
+
+      test('filterForUser filters based on user role', () {
+        NavConfigService.loadFromJson(testConfig);
+        final items = NavMenuBuilder.buildSidebarItems();
+        final filtered = NavMenuBuilder.filterForUser(items, {
+          'role': 'admin',
+          'id': 1,
+          'email': 'test@test.com',
+        });
+
+        expect(filtered, isNotEmpty);
+      });
+
+      test('filterForUser with customer role', () {
+        NavConfigService.loadFromJson(testConfig);
+        final items = NavMenuBuilder.buildSidebarItems();
+        final filtered = NavMenuBuilder.filterForUser(items, {
+          'role': 'customer',
+          'id': 2,
+          'email': 'customer@test.com',
+        });
+
+        // Customer should see some items
+        expect(filtered, isNotEmpty);
+      });
+    });
+
+    group('Default Sidebar Building', () {
+      test('buildSidebarItems returns fallback when not initialized', () {
+        final items = NavMenuBuilder.buildSidebarItems();
+
+        expect(items, isNotEmpty);
+        expect(items.any((i) => i.id == 'dashboard'), isTrue);
+      });
+
+      test('buildSidebarItems returns config items when initialized', () {
+        NavConfigService.loadFromJson(testConfig);
+        final items = NavMenuBuilder.buildSidebarItems();
+
+        expect(items, isNotEmpty);
+        expect(items.any((i) => i.id == 'dashboard'), isTrue);
       });
     });
   });

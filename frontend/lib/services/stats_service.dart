@@ -30,11 +30,17 @@
 /// // Sum paid invoice totals
 /// final revenue = await stats.sum('invoice', 'total', filters: {'status': 'paid'});
 /// ```
+///
+/// TESTING:
+/// ```dart
+/// // Use MockTokenProvider for unit tests
+/// final service = StatsService(mockApiClient, MockTokenProvider());
+/// ```
 library;
 
 import 'dart:convert';
 import 'api/api_client.dart';
-import 'auth/token_manager.dart';
+import 'auth/token_provider.dart';
 import 'error_service.dart';
 
 /// Result of a grouped count query
@@ -63,8 +69,15 @@ class StatsService {
   /// API client for HTTP requests - injected via constructor
   final ApiClient _apiClient;
 
-  /// Constructor - requires ApiClient injection
-  StatsService(this._apiClient);
+  /// Token provider for authentication - injectable for testing
+  final TokenProvider _tokenProvider;
+
+  /// Constructor - requires ApiClient injection, optional TokenProvider
+  ///
+  /// In production, uses DefaultTokenProvider (flutter_secure_storage).
+  /// In tests, inject MockTokenProvider for full testability.
+  StatsService(this._apiClient, [TokenProvider? tokenProvider])
+    : _tokenProvider = tokenProvider ?? DefaultTokenProvider();
 
   /// Count records for an entity
   ///
@@ -77,7 +90,7 @@ class StatsService {
   /// ```
   Future<int> count(String entityName, {Map<String, dynamic>? filters}) async {
     try {
-      final token = await TokenManager.getStoredToken();
+      final token = await _tokenProvider.getToken();
       if (token == null) {
         throw Exception('Not authenticated');
       }
@@ -141,7 +154,7 @@ class StatsService {
     Map<String, dynamic>? filters,
   }) async {
     try {
-      final token = await TokenManager.getStoredToken();
+      final token = await _tokenProvider.getToken();
       if (token == null) {
         throw Exception('Not authenticated');
       }
@@ -215,7 +228,7 @@ class StatsService {
     Map<String, dynamic>? filters,
   }) async {
     try {
-      final token = await TokenManager.getStoredToken();
+      final token = await _tokenProvider.getToken();
       if (token == null) {
         throw Exception('Not authenticated');
       }

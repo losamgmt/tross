@@ -222,10 +222,13 @@ class AdaptiveShell extends StatelessWidget {
               color: AppColors.white.withValues(alpha: 0.3),
             ),
             const SizedBox(width: 16),
-            Text(
-              pageTitle,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: AppColors.white.withValues(alpha: 0.9),
+            Flexible(
+              child: Text(
+                pageTitle,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: AppColors.white.withValues(alpha: 0.9),
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],

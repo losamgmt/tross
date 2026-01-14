@@ -19,12 +19,18 @@
 /// // Get all recent logs (admin only)
 /// final allLogs = await auditService.getAllLogs(filter: 'data');
 /// ```
+///
+/// TESTING:
+/// ```dart
+/// // Use MockTokenProvider for unit tests
+/// final service = AuditLogService(mockApiClient, MockTokenProvider());
+/// ```
 library;
 
 import 'dart:convert';
 import '../models/audit_log_entry.dart';
 import 'api/api_client.dart';
-import 'auth/token_manager.dart';
+import 'auth/token_provider.dart';
 import 'error_service.dart';
 
 /// Result from paginated audit log query
@@ -47,8 +53,15 @@ class AuditLogService {
   /// API client for HTTP requests - injected via constructor
   final ApiClient _apiClient;
 
-  /// Constructor - requires ApiClient injection
-  AuditLogService(this._apiClient);
+  /// Token provider for authentication - injectable for testing
+  final TokenProvider _tokenProvider;
+
+  /// Constructor - requires ApiClient injection, optional TokenProvider
+  ///
+  /// In production, uses DefaultTokenProvider (flutter_secure_storage).
+  /// In tests, inject MockTokenProvider for full testability.
+  AuditLogService(this._apiClient, [TokenProvider? tokenProvider])
+    : _tokenProvider = tokenProvider ?? DefaultTokenProvider();
 
   /// Get all recent audit logs (admin only)
   ///
@@ -61,7 +74,7 @@ class AuditLogService {
     int offset = 0,
   }) async {
     try {
-      final token = await TokenManager.getStoredToken();
+      final token = await _tokenProvider.getToken();
       if (token == null) {
         throw Exception('No authentication token');
       }
@@ -125,7 +138,7 @@ class AuditLogService {
     int limit = 50,
   }) async {
     try {
-      final token = await TokenManager.getStoredToken();
+      final token = await _tokenProvider.getToken();
       if (token == null) {
         throw Exception('No authentication token');
       }
@@ -166,7 +179,7 @@ class AuditLogService {
     int limit = 50,
   }) async {
     try {
-      final token = await TokenManager.getStoredToken();
+      final token = await _tokenProvider.getToken();
       if (token == null) {
         throw Exception('No authentication token');
       }

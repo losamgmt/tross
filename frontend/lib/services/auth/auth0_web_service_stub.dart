@@ -1,3 +1,4 @@
+// coverage:ignore-file
 // Stub for non-web platforms (VM, iOS, Android, etc.)
 // This file is used when running tests in VM environment
 // Provides same interface as auth0_web_service.dart but throws UnsupportedError

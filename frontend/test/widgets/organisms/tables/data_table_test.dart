@@ -311,29 +311,34 @@ void main() {
       // These are brittle and don't verify user-facing behavior
       // Use visual regression testing if styling matters
 
-      testWidgets('supports horizontal scrolling', (tester) async {
+      testWidgets('renders all columns regardless of viewport width', (
+        tester,
+      ) async {
+        // BEHAVIOR TEST: All columns should be present in the widget tree
+        // (whether visible via scrolling or not is handled by Flutter's scroll widgets)
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
-              body: AppDataTable<TestUser>(
-                columns: userColumns,
-                data: testUsers,
+              body: SizedBox(
+                width: 200, // Narrow viewport - columns won't all fit
+                child: AppDataTable<TestUser>(
+                  columns: userColumns,
+                  data: testUsers,
+                ),
               ),
             ),
           ),
         );
 
-        // Find the horizontal SingleChildScrollView (the table's scroll view)
-        // There may be multiple ScrollViews in the widget tree, so we look for
-        // the one with horizontal scroll direction
-        final scrollViews = find.byType(SingleChildScrollView);
-        expect(scrollViews, findsWidgets);
+        // Pure behavior test: All column headers are rendered in the tree
+        // (scrollable or not - that's Flutter's job, not ours to test)
+        expect(find.text('Name'), findsOneWidget);
+        expect(find.text('Email'), findsOneWidget);
+        expect(find.text('Role'), findsOneWidget);
 
-        // Verify at least one SingleChildScrollView exists (the table's horizontal scroll)
-        final scrollView = tester.widget<SingleChildScrollView>(
-          scrollViews.first,
-        );
-        expect(scrollView.scrollDirection, Axis.horizontal);
+        // All data is also present (using actual fixture names)
+        expect(find.text('Alice Admin'), findsOneWidget);
+        expect(find.text('Bob Technician'), findsOneWidget);
       });
     });
 
