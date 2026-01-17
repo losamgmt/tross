@@ -11,6 +11,7 @@
  */
 
 const { logger } = require('../../config/logger');
+const { sanitizeIdentifier } = require('../../utils/sql-safety');
 
 /**
  * Cascade delete dependent records for an entity
@@ -66,16 +67,22 @@ async function cascadeDeleteDependents(client, metadata, id) {
   for (const dependent of dependents) {
     const { table, foreignKey, polymorphicType } = dependent;
 
+    // SECURITY: Defense-in-depth - validate identifiers even from metadata
+    const safeTable = sanitizeIdentifier(table, 'dependent table');
+    const safeForeignKey = sanitizeIdentifier(foreignKey, 'foreign key');
+
     let query;
     let params;
 
     if (polymorphicType) {
+      // SECURITY: Validate polymorphic column name too
+      const safePolyColumn = sanitizeIdentifier(polymorphicType.column, 'polymorphic column');
       // Polymorphic relationship: WHERE foreignKey = $1 AND typeColumn = $2
-      query = `DELETE FROM ${table} WHERE ${foreignKey} = $1 AND ${polymorphicType.column} = $2`;
+      query = `DELETE FROM ${safeTable} WHERE ${safeForeignKey} = $1 AND ${safePolyColumn} = $2`;
       params = [id, polymorphicType.value];
     } else {
       // Simple FK relationship: WHERE foreignKey = $1
-      query = `DELETE FROM ${table} WHERE ${foreignKey} = $1`;
+      query = `DELETE FROM ${safeTable} WHERE ${safeForeignKey} = $1`;
       params = [id];
     }
 

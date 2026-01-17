@@ -27,6 +27,7 @@ const { filterDataByRole } = require('../utils/response-transform');
 const { buildRlsContext, buildAuditContext } = require('../utils/request-context');
 const { handleDbError, buildDbErrorConfig } = require('../utils/db-error-handler');
 const { logger } = require('../config/logger');
+const AppError = require('../utils/app-error');
 
 // =============================================================================
 // ASYNC HANDLER WRAPPER
@@ -34,7 +35,7 @@ const { logger } = require('../config/logger');
 
 /**
  * Async wrapper for consistent error handling
- * Eliminates try/catch boilerplate in every handler
+ * Catches promise rejections and passes to global error handler
  */
 const createAsyncHandler = (entityName, metadata) => (fn) => (req, res, next) => {
   Promise.resolve(fn(req, res, next)).catch((error) => {
@@ -44,7 +45,7 @@ const createAsyncHandler = (entityName, metadata) => (fn) => (req, res, next) =>
       entityId: req.params?.id,
     });
 
-    // Try entity-specific DB error handling
+    // Try entity-specific DB error handling (unique constraints, FK violations)
     if (metadata) {
       const dbErrorConfig = buildDbErrorConfig(metadata);
       if (handleDbError(error, res, dbErrorConfig)) {
@@ -52,12 +53,8 @@ const createAsyncHandler = (entityName, metadata) => (fn) => (req, res, next) =>
       }
     }
 
-    // Handle deletion blocked by dependents
-    if (error.message.includes('Cannot delete')) {
-      return ResponseFormatter.badRequest(res, error.message);
-    }
-
-    return ResponseFormatter.internalError(res, error);
+    // Pass to global error handler
+    next(error);
   });
 };
 
@@ -86,23 +83,22 @@ function toDisplayName(entityName) {
  * Create a router for a specific entity type
  *
  * @param {string} entityName - Internal entity name (e.g., 'customer', 'work_order')
- * @param {Object} options - Optional configuration
- * @param {string} options.rlsResource - RLS resource name if different from entityName
+ * @param {Object} _options - Optional configuration (deprecated - rlsResource comes from metadata)
  * @returns {express.Router} Configured router for the entity
  */
-function createEntityRouter(entityName, options = {}) {
+function createEntityRouter(entityName, _options = {}) {
   const router = express.Router();
 
   // Get metadata for this entity
   const metadata = GenericEntityService._getMetadata(entityName);
   // Use metadata displayName, or auto-generate from entityName
   const displayName = metadata.displayName || toDisplayName(entityName);
-  const rlsResource = options.rlsResource || metadata.rlsResource || entityName;
 
   // Create async handler bound to this entity
   const asyncHandler = createAsyncHandler(entityName, metadata);
 
-  // Attach entity info to request for middleware
+  // Attach entity info to request for unified middleware
+  // requirePermission and enforceRLS read from req.entityMetadata.rlsResource
   const attachEntity = (req, res, next) => {
     req.entityName = entityName;
     req.entityMetadata = metadata;
@@ -117,8 +113,8 @@ function createEntityRouter(entityName, options = {}) {
     '/',
     authenticateToken,
     attachEntity,
-    requirePermission(rlsResource, 'read'),
-    enforceRLS(rlsResource),
+    requirePermission('read'),
+    enforceRLS,
     validatePagination({ maxLimit: 200 }),
     (req, res, next) => validateQuery(metadata)(req, res, next),
     asyncHandler(async (req, res) => {
@@ -159,8 +155,8 @@ function createEntityRouter(entityName, options = {}) {
     '/:id',
     authenticateToken,
     attachEntity,
-    requirePermission(rlsResource, 'read'),
-    enforceRLS(rlsResource),
+    requirePermission('read'),
+    enforceRLS,
     validateIdParam(),
     asyncHandler(async (req, res) => {
       const entityId = req.validated.id;
@@ -191,10 +187,10 @@ function createEntityRouter(entityName, options = {}) {
     '/',
     authenticateToken,
     attachEntity,
-    requirePermission(rlsResource, 'create'),
+    requirePermission('create'),
     genericValidateBody('create'),
     asyncHandler(async (req, res) => {
-      const { validatedBody } = req;
+      const validatedBody = req.validated.body;
       const auditContext = buildAuditContext(req);
 
       const created = await GenericEntityService.create(
@@ -204,7 +200,7 @@ function createEntityRouter(entityName, options = {}) {
       );
 
       if (!created) {
-        throw new Error(`${displayName} creation failed unexpectedly`);
+        throw new AppError(`${displayName} creation failed unexpectedly`, 500, 'INTERNAL_ERROR');
       }
 
       // SECURITY: Filter response to only include fields user can read
@@ -227,12 +223,12 @@ function createEntityRouter(entityName, options = {}) {
     '/:id',
     authenticateToken,
     attachEntity,
-    requirePermission(rlsResource, 'update'),
-    enforceRLS(rlsResource),
+    requirePermission('update'),
+    enforceRLS,
     validateIdParam(),
     genericValidateBody('update'),
     asyncHandler(async (req, res) => {
-      const { validatedBody } = req;
+      const validatedBody = req.validated.body;
       const entityId = req.validated.id;
       const rlsContext = buildRlsContext(req);
       const auditContext = buildAuditContext(req);
@@ -274,8 +270,8 @@ function createEntityRouter(entityName, options = {}) {
     '/:id',
     authenticateToken,
     attachEntity,
-    requirePermission(rlsResource, 'delete'),
-    enforceRLS(rlsResource),
+    requirePermission('delete'),
+    enforceRLS,
     validateIdParam(),
     asyncHandler(async (req, res) => {
       const entityId = req.validated.id;
@@ -299,21 +295,56 @@ function createEntityRouter(entityName, options = {}) {
 }
 
 // =============================================================================
-// PRE-BUILT ENTITY ROUTERS
+// DYNAMIC ENTITY ROUTER GENERATION
 // =============================================================================
 
-// Export factory for custom use cases
+/**
+ * Dynamically generate routers for all entities with routeConfig.useGenericRouter: true
+ * This replaces hardcoded router declarations with metadata-driven generation.
+ */
+const allMetadata = require('../config/models');
+
+// Derive uncountable entity names from metadata at load time (no hardcoding!)
+const UNCOUNTABLE_ENTITIES = Object.entries(allMetadata)
+  .filter(([, meta]) => meta.uncountable === true)
+  .map(([key]) => key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase()));
+
+/**
+ * Convert entity name to router export name
+ * Examples: 'customer' -> 'customersRouter', 'work_order' -> 'workOrdersRouter'
+ */
+function toRouterName(entityName) {
+  // Convert snake_case to camelCase
+  const camelCase = entityName.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+
+  // Uncountable nouns derived from metadata (no plural form)
+  if (UNCOUNTABLE_ENTITIES.includes(camelCase)) {
+    return `${camelCase}Router`;
+  }
+
+  // Simple pluralization: 'y' -> 'ies' for consonant+y, otherwise add 's'
+  const vowels = ['a', 'e', 'i', 'o', 'u'];
+  const plural = camelCase.endsWith('y') && !vowels.includes(camelCase.slice(-2, -1))
+    ? camelCase.slice(0, -1) + 'ies'
+    : camelCase + 's';
+  return `${plural}Router`;
+}
+
+// Generate routers dynamically from metadata
+const dynamicRouters = {};
+
+for (const [entityName, metadata] of Object.entries(allMetadata)) {
+  // Only create routers for entities that opt-in via routeConfig
+  if (metadata.routeConfig?.useGenericRouter === true && metadata.rlsResource) {
+    const routerName = toRouterName(entityName);
+    dynamicRouters[routerName] = createEntityRouter(entityName, {
+      rlsResource: metadata.rlsResource,
+    });
+  }
+}
+
+// Export factory + all dynamic routers
 module.exports = {
   createEntityRouter,
-
-  // Pre-built routers for standard entities
-  usersRouter: createEntityRouter('user', { rlsResource: 'users' }),
-  rolesRouter: createEntityRouter('role', { rlsResource: 'roles' }),
-  customersRouter: createEntityRouter('customer', { rlsResource: 'customers' }),
-  techniciansRouter: createEntityRouter('technician', { rlsResource: 'technicians' }),
-  inventoryRouter: createEntityRouter('inventory', { rlsResource: 'inventory' }),
-  workOrdersRouter: createEntityRouter('work_order', { rlsResource: 'work_orders' }),
-  invoicesRouter: createEntityRouter('invoice', { rlsResource: 'invoices' }),
-  contractsRouter: createEntityRouter('contract', { rlsResource: 'contracts' }),
-  savedViewsRouter: createEntityRouter('saved_view', { rlsResource: 'saved_views' }),
+  ...dynamicRouters,
 };

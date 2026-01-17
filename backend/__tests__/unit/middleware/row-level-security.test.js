@@ -3,6 +3,11 @@
  *
  * Tests the enforceRLS middleware in isolation.
  * Validates RLS policy attachment and error handling.
+ *
+ * UNIFIED DATA FLOW:
+ * - enforceRLS reads resource from req.entityMetadata.rlsResource
+ * - Entity metadata is attached by extractEntity or attachEntity middleware
+ * - ONE code path, ONE data shape - no optional parameters, no fallbacks
  */
 
 const { enforceRLS, validateRLSApplied } = require('../../../middleware/row-level-security');
@@ -32,6 +37,8 @@ describe('Row-Level Security Middleware', () => {
     req = {
       dbUser: { role: 'customer', id: 1 },
       url: '/api/customers',
+      // Unified data flow: entityMetadata is set by extractEntity/attachEntity
+      entityMetadata: { rlsResource: 'customers' },
     };
     res = {
       status: jest.fn().mockReturnThis(),
@@ -41,12 +48,11 @@ describe('Row-Level Security Middleware', () => {
     jest.clearAllMocks();
   });
 
-  describe('enforceRLS(resource)', () => {
+  describe('enforceRLS (unified signature)', () => {
     test('should attach RLS policy to request when policy exists', () => {
       getRLSRule.mockReturnValue('own_record_only');
 
-      const middleware = enforceRLS('customers');
-      middleware(req, res, next);
+      enforceRLS(req, res, next);
 
       expect(req.rlsPolicy).toBe('own_record_only');
       expect(req.rlsResource).toBe('customers');
@@ -57,9 +63,9 @@ describe('Row-Level Security Middleware', () => {
 
     test('should attach null policy when no RLS defined', () => {
       getRLSRule.mockReturnValue(null);
+      req.entityMetadata = { rlsResource: 'inventory' };
 
-      const middleware = enforceRLS('inventory');
-      middleware(req, res, next);
+      enforceRLS(req, res, next);
 
       expect(req.rlsPolicy).toBeNull();
       expect(req.rlsResource).toBe('inventory');
@@ -69,9 +75,9 @@ describe('Row-Level Security Middleware', () => {
 
     test('should handle different RLS policies for different resources', () => {
       getRLSRule.mockReturnValue('assigned_work_orders_only');
+      req.entityMetadata = { rlsResource: 'work_orders' };
 
-      const middleware = enforceRLS('work_orders');
-      middleware(req, res, next);
+      enforceRLS(req, res, next);
 
       expect(req.rlsPolicy).toBe('assigned_work_orders_only');
       expect(req.rlsResource).toBe('work_orders');
@@ -81,8 +87,7 @@ describe('Row-Level Security Middleware', () => {
     test('should reject request when user has no role', () => {
       req.dbUser = { id: 1 }; // No role
 
-      const middleware = enforceRLS('customers');
-      middleware(req, res, next);
+      enforceRLS(req, res, next);
 
       expect(res.status).toHaveBeenCalledWith(HTTP_STATUS.FORBIDDEN);
       expect(res.json).toHaveBeenCalledWith(
@@ -97,8 +102,7 @@ describe('Row-Level Security Middleware', () => {
     test('should reject request when user is missing', () => {
       req.dbUser = null;
 
-      const middleware = enforceRLS('customers');
-      middleware(req, res, next);
+      enforceRLS(req, res, next);
 
       expect(res.status).toHaveBeenCalledWith(HTTP_STATUS.FORBIDDEN);
       expect(next).not.toHaveBeenCalled();
@@ -107,9 +111,9 @@ describe('Row-Level Security Middleware', () => {
     test('should call getRLSRule with correct parameters', () => {
       getRLSRule.mockReturnValue('own_work_orders_only');
       req.dbUser.role = 'technician';
+      req.entityMetadata = { rlsResource: 'work_orders' };
 
-      const middleware = enforceRLS('work_orders');
-      middleware(req, res, next);
+      enforceRLS(req, res, next);
 
       expect(getRLSRule).toHaveBeenCalledWith('technician', 'work_orders');
     });
@@ -118,9 +122,9 @@ describe('Row-Level Security Middleware', () => {
       // Technicians have null access to contracts
       getRLSRule.mockReturnValue(null);
       req.dbUser.role = 'technician';
+      req.entityMetadata = { rlsResource: 'contracts' };
 
-      const middleware = enforceRLS('contracts');
-      middleware(req, res, next);
+      enforceRLS(req, res, next);
 
       expect(req.rlsPolicy).toBeNull();
       expect(req.rlsResource).toBe('contracts');
@@ -130,9 +134,9 @@ describe('Row-Level Security Middleware', () => {
     test('should preserve user ID for filtering', () => {
       getRLSRule.mockReturnValue('own_invoices_only');
       req.dbUser = { role: 'customer', id: 42 };
+      req.entityMetadata = { rlsResource: 'invoices' };
 
-      const middleware = enforceRLS('invoices');
-      middleware(req, res, next);
+      enforceRLS(req, res, next);
 
       expect(req.rlsUserId).toBe(42);
       expect(next).toHaveBeenCalled();
@@ -142,11 +146,35 @@ describe('Row-Level Security Middleware', () => {
       getRLSRule.mockReturnValue('all_records');
       req.dbUser.role = 'dispatcher';
 
-      const middleware = enforceRLS('customers');
-      middleware(req, res, next);
+      enforceRLS(req, res, next);
 
       expect(req.rlsPolicy).toBe('all_records');
       expect(next).toHaveBeenCalled();
+    });
+
+    test('should fail when entityMetadata is missing (configuration error)', () => {
+      delete req.entityMetadata;
+
+      enforceRLS(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(HTTP_STATUS.INTERNAL_SERVER_ERROR);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          error: 'Internal Server Error',
+          code: 'SERVER_ERROR',
+        }),
+      );
+      expect(next).not.toHaveBeenCalled();
+    });
+
+    test('should fail when rlsResource is missing from entityMetadata', () => {
+      req.entityMetadata = {}; // Missing rlsResource
+
+      enforceRLS(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(HTTP_STATUS.INTERNAL_SERVER_ERROR);
+      expect(next).not.toHaveBeenCalled();
     });
   });
 
@@ -204,9 +232,9 @@ describe('Row-Level Security Middleware', () => {
       // Customer gets own_record_only
       getRLSRule.mockReturnValue('own_record_only');
       req.dbUser = { role: 'customer', id: 1 };
+      req.entityMetadata = { rlsResource: 'customers' };
 
-      let middleware = enforceRLS('customers');
-      middleware(req, res, next);
+      enforceRLS(req, res, next);
       expect(req.rlsPolicy).toBe('own_record_only');
 
       // Dispatcher gets all_records
@@ -214,17 +242,16 @@ describe('Row-Level Security Middleware', () => {
       getRLSRule.mockReturnValue('all_records');
       req.dbUser = { role: 'dispatcher', id: 2 };
 
-      middleware = enforceRLS('customers');
-      middleware(req, res, next);
+      enforceRLS(req, res, next);
       expect(req.rlsPolicy).toBe('all_records');
     });
 
     test('should handle work_orders with technician role', () => {
       getRLSRule.mockReturnValue('assigned_work_orders_only');
       req.dbUser = { role: 'technician', id: 3 };
+      req.entityMetadata = { rlsResource: 'work_orders' };
 
-      const middleware = enforceRLS('work_orders');
-      middleware(req, res, next);
+      enforceRLS(req, res, next);
 
       expect(req.rlsPolicy).toBe('assigned_work_orders_only');
       expect(getRLSRule).toHaveBeenCalledWith('technician', 'work_orders');
@@ -233,9 +260,9 @@ describe('Row-Level Security Middleware', () => {
     test('should handle contracts with technician role (null access)', () => {
       getRLSRule.mockReturnValue(null);
       req.dbUser = { role: 'technician', id: 3 };
+      req.entityMetadata = { rlsResource: 'contracts' };
 
-      const middleware = enforceRLS('contracts');
-      middleware(req, res, next);
+      enforceRLS(req, res, next);
 
       expect(req.rlsPolicy).toBeNull();
       expect(next).toHaveBeenCalled();
@@ -246,8 +273,7 @@ describe('Row-Level Security Middleware', () => {
     test('should return standardized error structure', () => {
       req.dbUser = null;
 
-      const middleware = enforceRLS('customers');
-      middleware(req, res, next);
+      enforceRLS(req, res, next);
 
       expect(res.status).toHaveBeenCalledWith(HTTP_STATUS.FORBIDDEN);
       expect(res.json).toHaveBeenCalledWith(
@@ -262,8 +288,7 @@ describe('Row-Level Security Middleware', () => {
     test('should include ISO timestamp in error response', () => {
       req.dbUser = { id: 1 }; // No role
 
-      const middleware = enforceRLS('customers');
-      middleware(req, res, next);
+      enforceRLS(req, res, next);
 
       const jsonCall = res.json.mock.calls[0][0];
       expect(() => new Date(jsonCall.timestamp)).not.toThrow();

@@ -56,12 +56,16 @@ describe("services/audit-service.js - Validation & Error Handling", () => {
         }),
       ).resolves.toBeUndefined();
 
+      // New behavior: logs with CRITICAL prefix and includes full audit event as fallback
       expect(logger.error).toHaveBeenCalledWith(
-        "Error writing audit log",
+        "CRITICAL: Audit log write failed - event captured in logs",
         expect.objectContaining({
           error: "Database connection failed",
-          action: AuditActions.LOGIN,
-          userId: 1,
+          auditEvent: expect.objectContaining({
+            action: AuditActions.LOGIN,
+            resourceType: ResourceTypes.AUTH,
+            userId: 1,
+          }),
         }),
       );
     });

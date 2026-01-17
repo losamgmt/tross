@@ -18,7 +18,7 @@ process.env.AUTH0_AUDIENCE = process.env.AUTH0_AUDIENCE || 'https://test-api.com
 process.env.AUTH0_CALLBACK_URL = process.env.AUTH0_CALLBACK_URL || 'http://localhost:3001/callback';
 
 const Auth0Strategy = require('../../services/auth/Auth0Strategy');
-const { UserDataService } = require('../../services/user-data');
+const UserDataService = require('../../services/user-data');
 const auth0Config = require('../../config/auth0');
 const jwt = require('jsonwebtoken');
 

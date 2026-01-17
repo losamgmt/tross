@@ -6,14 +6,19 @@
  *
  * This file contains ONLY unique role-specific endpoints that don't fit
  * the standard CRUD pattern.
+ *
+ * UNIFIED DATA FLOW:
+ * - requirePermission(operation) reads resource from req.entityMetadata.rlsResource
+ * - attachEntity middleware sets req.entityMetadata at factory time
  */
 const express = require('express');
 const router = express.Router();
 const { authenticateToken, requirePermission } = require('../middleware/auth');
+const { attachEntity } = require('../middleware/generic-entity');
 const { validateIdParam, validatePagination } = require('../validators');
-const { logger } = require('../config/logger');
 const ResponseFormatter = require('../utils/response-formatter');
 const GenericEntityService = require('../services/generic-entity-service');
+const { asyncHandler } = require('../middleware/utils');
 
 /**
  * @openapi
@@ -52,32 +57,25 @@ const GenericEntityService = require('../services/generic-entity-service');
 router.get(
   '/:id/users',
   authenticateToken,
-  requirePermission('users', 'read'),
+  attachEntity('user'),
+  requirePermission('read'),
   validateIdParam(),
   validatePagination(),
-  async (req, res) => {
-    try {
-      const roleId = req.validated.id;
-      const { page, limit } = req.validated.pagination;
+  asyncHandler(async (req, res) => {
+    const roleId = req.validated.id;
+    const { page, limit } = req.validated.pagination;
 
-      const result = await GenericEntityService.findAll('user', {
-        filters: { role_id: roleId },
-        page,
-        limit,
-      });
+    const result = await GenericEntityService.findAll('user', {
+      filters: { role_id: roleId },
+      page,
+      limit,
+    });
 
-      return ResponseFormatter.list(res, {
-        data: result.data,
-        pagination: result.pagination,
-      });
-    } catch (error) {
-      logger.error('Error fetching users by role', {
-        error: error.message,
-        roleId: req.validated.id,
-      });
-      return ResponseFormatter.internalError(res, error);
-    }
-  },
+    return ResponseFormatter.list(res, {
+      data: result.data,
+      pagination: result.pagination,
+    });
+  }),
 );
 
 module.exports = router;

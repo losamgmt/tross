@@ -11,7 +11,10 @@
  */
 const Joi = require('joi');
 const ResponseFormatter = require('../utils/response-formatter');
-const { PREFERENCE_SCHEMA } = require('../services/preferences-service');
+
+// Import preference schema from metadata (SSOT), not from service
+const preferencesMetadata = require('../config/models/preferences-metadata');
+const PREFERENCE_SCHEMA = preferencesMetadata.preferenceSchema;
 
 /**
  * Build Joi schema from preference schema definition

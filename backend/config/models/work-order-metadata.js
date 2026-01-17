@@ -13,8 +13,9 @@
 const {
   FIELD_ACCESS_LEVELS: _FAL,
   UNIVERSAL_FIELD_ACCESS,
-  ENTITY_CATEGORIES,
 } = require('../constants');
+const { NAME_TYPES } = require('../entity-types');
+const { WORK_ORDER_STATUS, PRIORITY } = require('../status-enums');
 
 module.exports = {
   // Table name in database
@@ -31,7 +32,13 @@ module.exports = {
    * Entity category: COMPUTED entities have auto-generated identifiers
    * and computed name from template: "{customer.fullName}: {summary}: {identifier}"
    */
-  entityCategory: ENTITY_CATEGORIES.COMPUTED,
+  nameType: NAME_TYPES.COMPUTED,
+
+  /**
+   * Display field for UI rendering
+   * COMPUTED entities use the identifier field (work_order_number)
+   */
+  displayField: 'work_order_number',
 
   // ============================================================================
   // IDENTITY CONFIGURATION (Entity Contract v2.0)
@@ -44,6 +51,12 @@ module.exports = {
   identityField: 'work_order_number',
 
   /**
+   * Prefix for auto-generated identifiers (COMPUTED entities only)
+   * Format: WO-YYYY-NNNN
+   */
+  identifierPrefix: 'WO',
+
+  /**
    * Whether the identity field has a UNIQUE constraint in the database
    */
   identityFieldUnique: true,
@@ -53,6 +66,36 @@ module.exports = {
    * Maps to permissions.json resource names
    */
   rlsResource: 'work_orders',
+
+  /**
+   * Row-Level Security policy per role
+   * Customers see own work orders, technicians see assigned, dispatcher+ see all
+   */
+  rlsPolicy: {
+    customer: 'own_work_orders_only',
+    technician: 'assigned_work_orders_only',
+    dispatcher: 'all_records',
+    manager: 'all_records',
+    admin: 'all_records',
+  },
+
+  /**
+   * Entity-level permission overrides
+   * Matches permissions.json - customer+ create/read/update, manager+ delete
+   */
+  entityPermissions: {
+    create: 'customer',
+    read: 'customer',
+    update: 'customer',
+    delete: 'manager',
+  },
+
+  /**
+   * Route configuration - explicit opt-in for generic router
+   */
+  routeConfig: {
+    useGenericRouter: true,
+  },
 
   // ============================================================================
   // FIELD ALIASING (for UI display names)
@@ -302,7 +345,15 @@ module.exports = {
   fields: {
     // TIER 1: Universal Entity Contract Fields
     id: { type: 'integer', readonly: true },
-    work_order_number: { type: 'string', readonly: true, maxLength: 100 },
+    work_order_number: {
+      type: 'string',
+      readonly: true, // Auto-generated: WO-YYYY-NNNN
+      maxLength: 100,
+      pattern: '^WO-[0-9]{4}-[0-9]+$',
+      errorMessages: {
+        pattern: 'Work order number must be in format WO-YYYY-NNNN',
+      },
+    },
     is_active: { type: 'boolean', default: true },
     created_at: { type: 'timestamp', readonly: true },
     updated_at: { type: 'timestamp', readonly: true },
@@ -310,19 +361,20 @@ module.exports = {
     // TIER 2: Entity-Specific Lifecycle Field
     status: {
       type: 'enum',
-      values: ['pending', 'assigned', 'in_progress', 'completed', 'cancelled'],
-      default: 'pending',
+      values: Object.values(WORK_ORDER_STATUS),
+      default: WORK_ORDER_STATUS.PENDING,
     },
 
     // COMPUTED entity name field (aliased as "Title" in UI)
-    name: { type: 'string', required: true, maxLength: 255 },
+    // Optional because it's computed from template: {customer}: {summary}: {work_order_number}
+    name: { type: 'string', maxLength: 255 },
     summary: { type: 'string', maxLength: 255 },
 
     // Entity-specific fields
     priority: {
       type: 'enum',
-      values: ['low', 'normal', 'high', 'urgent'],
-      default: 'normal',
+      values: Object.values(PRIORITY),
+      default: PRIORITY.NORMAL,
     },
     customer_id: {
       type: 'foreignKey',

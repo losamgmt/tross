@@ -44,6 +44,34 @@ module.exports = {
    */
   rlsResource: 'saved_views',
 
+  /**
+   * Row-Level Security policy per role
+   * Users can only access their own saved views, admin can see all
+   */
+  rlsPolicy: {
+    customer: 'own_record_only',
+    technician: 'own_record_only',
+    dispatcher: 'own_record_only',
+    manager: 'own_record_only',
+    admin: 'all_records',
+  },
+
+  /**   * Entity-level permission overrides
+   * Matches permissions.json - all users can manage their own saved views
+   */
+  entityPermissions: {
+    create: 'customer',
+    read: 'customer',
+    update: 'customer',
+    delete: 'customer',
+  },
+
+  /**   * Route configuration - explicit opt-in for generic router
+   */
+  routeConfig: {
+    useGenericRouter: true,
+  },
+
   // ============================================================================
   // RLS FILTER CONFIGURATION
   // ============================================================================
@@ -63,7 +91,7 @@ module.exports = {
   /**
    * Entity category: N/A - system table, not a business entity
    */
-  entityCategory: null,
+  nameType: null,
 
   // ============================================================================
   // FIELD ALIASING

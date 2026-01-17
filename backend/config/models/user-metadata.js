@@ -13,8 +13,8 @@
 const {
   FIELD_ACCESS_LEVELS: FAL,
   UNIVERSAL_FIELD_ACCESS,
-  ENTITY_CATEGORIES,
 } = require('../constants');
+const { NAME_TYPES } = require('../entity-types');
 
 module.exports = {
   // Table name in database
@@ -56,6 +56,37 @@ module.exports = {
    */
   rlsResource: 'users',
 
+  /**
+   * Row-Level Security policy per role
+   * Defines what records each role can access
+   */
+  rlsPolicy: {
+    customer: 'own_record_only',
+    technician: 'all_records',
+    dispatcher: 'all_records',
+    manager: 'all_records',
+    admin: 'all_records',
+  },
+
+  /**
+   * Entity-level permission overrides
+   * When entity-level access differs from field-level minimums
+   * (e.g., only admin can call PATCH /users/:id even if some fields are self-editable)
+   */
+  entityPermissions: {
+    create: 'admin',
+    read: 'customer',
+    update: 'admin',
+    delete: 'admin',
+  },
+
+  /**
+   * Route configuration - explicit opt-in for generic router
+   */
+  routeConfig: {
+    useGenericRouter: true,
+  },
+
   // ============================================================================
   // ENTITY CATEGORY (determines name handling pattern)
   // ============================================================================
@@ -63,7 +94,13 @@ module.exports = {
   /**
    * Entity category: HUMAN entities use first_name + last_name for display
    */
-  entityCategory: ENTITY_CATEGORIES.HUMAN,
+  nameType: NAME_TYPES.HUMAN,
+
+  /**
+   * Display fields for UI rendering
+   * HUMAN entities use [first_name, last_name] for full name display
+   */
+  displayFields: ['first_name', 'last_name'],
 
   // ============================================================================
   // FIELD ALIASING (for UI display names)

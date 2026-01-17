@@ -12,8 +12,8 @@
 
 const {
   UNIVERSAL_FIELD_ACCESS,
-  ENTITY_CATEGORIES,
 } = require('../constants');
+const { NAME_TYPES } = require('../entity-types');
 
 module.exports = {
   // Table name in database
@@ -30,7 +30,13 @@ module.exports = {
    * Entity category: HUMAN entities use first_name + last_name
    * Display name computed as fullName = "{first_name} {last_name}"
    */
-  entityCategory: ENTITY_CATEGORIES.HUMAN,
+  nameType: NAME_TYPES.HUMAN,
+
+  /**
+   * Display fields for UI rendering
+   * HUMAN entities use [first_name, last_name] for full name display
+   */
+  displayFields: ['first_name', 'last_name'],
 
   // ============================================================================
   // IDENTITY CONFIGURATION (Entity Contract v2.0)
@@ -53,6 +59,36 @@ module.exports = {
    * Maps to permissions.json resource names
    */
   rlsResource: 'customers',
+
+  /**
+   * Row-Level Security policy per role
+   * Customers see own record only, technician+ see all
+   */
+  rlsPolicy: {
+    customer: 'own_record_only',
+    technician: 'all_records',
+    dispatcher: 'all_records',
+    manager: 'all_records',
+    admin: 'all_records',
+  },
+
+  /**
+   * Entity-level permission overrides
+   * Matches permissions.json - dispatcher+ create, customer+ read/update, manager+ delete
+   */
+  entityPermissions: {
+    create: 'dispatcher',
+    read: 'customer',
+    update: 'customer',
+    delete: 'manager',
+  },
+
+  /**
+   * Route configuration - explicit opt-in for generic router
+   */
+  routeConfig: {
+    useGenericRouter: true,
+  },
 
   // ============================================================================
   // FIELD ALIASING (for UI display names)

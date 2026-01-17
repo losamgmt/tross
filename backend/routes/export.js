@@ -16,10 +16,12 @@
 const express = require('express');
 const router = express.Router();
 const ExportService = require('../services/export-service');
-const { authenticateToken } = require('../middleware/auth');
-const { extractEntity, genericRequirePermission, genericEnforceRLS } = require('../middleware/generic-entity');
+const { authenticateToken, requirePermission } = require('../middleware/auth');
+const { enforceRLS } = require('../middleware/row-level-security');
+const { extractEntity } = require('../middleware/generic-entity');
 const ResponseFormatter = require('../utils/response-formatter');
 const { logger } = require('../config/logger');
+const { asyncHandler } = require('../middleware/utils');
 
 /**
  * GET /api/export/:entity
@@ -42,80 +44,62 @@ router.get(
   '/:entity',
   authenticateToken,
   extractEntity,
-  genericRequirePermission('read'),
-  genericEnforceRLS,
-  async (req, res) => {
+  requirePermission('read'),
+  enforceRLS,
+  asyncHandler(async (req, res) => {
     const entityName = req.entityName;
 
-    try {
-      // Extract query options
-      const options = {
-        search: req.query.search,
-        filters: {},
-        sortBy: req.query.sortBy,
-        sortOrder: req.query.sortOrder,
-        includeInactive: req.query.includeInactive === 'true',
-      };
+    // Extract query options
+    const options = {
+      search: req.query.search,
+      filters: {},
+      sortBy: req.query.sortBy,
+      sortOrder: req.query.sortOrder,
+      includeInactive: req.query.includeInactive === 'true',
+    };
 
-      // Parse filter params (exclude known non-filter params)
-      const nonFilterParams = ['search', 'sortBy', 'sortOrder', 'fields', 'includeInactive', 'format'];
-      for (const [key, value] of Object.entries(req.query)) {
-        if (!nonFilterParams.includes(key)) {
-          options.filters[key] = value;
-        }
+    // Parse filter params (exclude known non-filter params)
+    const nonFilterParams = ['search', 'sortBy', 'sortOrder', 'fields', 'includeInactive', 'format'];
+    for (const [key, value] of Object.entries(req.query)) {
+      if (!nonFilterParams.includes(key)) {
+        options.filters[key] = value;
       }
-
-      // Parse selected fields if provided
-      const selectedFields = req.query.fields
-        ? req.query.fields.split(',').map(f => f.trim())
-        : null;
-
-      // Get RLS context from middleware
-      const rlsContext = req.rlsContext || null;
-
-      // Generate export
-      const result = await ExportService.exportToCSV(
-        entityName,
-        options,
-        rlsContext,
-        selectedFields,
-      );
-
-      // Log export for audit
-      logger.info('[Export] CSV download', {
-        entity: entityName,
-        userId: req.user?.id,
-        rowCount: result.count,
-        columns: result.columns.length,
-        filters: Object.keys(options.filters).length,
-      });
-
-      // Set response headers for file download
-      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-      res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
-      res.setHeader('X-Row-Count', result.count);
-      res.setHeader('X-Column-Count', result.columns.length);
-
-      // Send CSV data
-      res.send(result.csv);
-    } catch (error) {
-      logger.error('[Export] Failed', {
-        entity: entityName,
-        error: error.message,
-      });
-
-      // Handle specific error types
-      if (error.message.includes('Unknown entity')) {
-        return ResponseFormatter.notFound(res, error.message);
-      }
-
-      if (error.message.includes('No exportable fields')) {
-        return ResponseFormatter.badRequest(res, error.message);
-      }
-
-      return ResponseFormatter.error(res, 'Export failed');
     }
-  },
+
+    // Parse selected fields if provided
+    const selectedFields = req.query.fields
+      ? req.query.fields.split(',').map(f => f.trim())
+      : null;
+
+    // Get RLS context from middleware
+    const rlsContext = req.rlsContext || null;
+
+    // Generate export
+    const result = await ExportService.exportToCSV(
+      entityName,
+      options,
+      rlsContext,
+      selectedFields,
+    );
+
+    // Log export for audit
+    logger.info('[Export] CSV download', {
+      entity: entityName,
+      userId: req.user?.id,
+      rowCount: result.count,
+      columns: result.columns.length,
+      filters: Object.keys(options.filters).length,
+    });
+
+    // Set response headers for file download
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+    res.setHeader('X-Row-Count', result.count);
+    res.setHeader('X-Column-Count', result.columns.length);
+
+    // Send CSV data
+    res.send(result.csv);
+  }),
 );
 
 /**
@@ -131,31 +115,18 @@ router.get(
   '/:entity/fields',
   authenticateToken,
   extractEntity,
-  genericRequirePermission('read'),
-  async (req, res) => {
+  requirePermission('read'),
+  asyncHandler(async (req, res) => {
     const entityName = req.entityName;
 
-    try {
-      const fields = ExportService.getExportableFields(entityName);
+    const fields = ExportService.getExportableFields(entityName);
 
-      return ResponseFormatter.get(res, {
-        entity: entityName,
-        fields,
-        count: fields.length,
-      });
-    } catch (error) {
-      logger.error('[Export] Get fields failed', {
-        entity: entityName,
-        error: error.message,
-      });
-
-      if (error.message.includes('Unknown entity')) {
-        return ResponseFormatter.notFound(res, error.message);
-      }
-
-      return ResponseFormatter.error(res, 'Failed to get exportable fields');
-    }
-  },
+    return ResponseFormatter.get(res, {
+      entity: entityName,
+      fields,
+      count: fields.length,
+    });
+  }),
 );
 
 module.exports = router;

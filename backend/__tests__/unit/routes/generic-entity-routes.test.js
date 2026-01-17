@@ -80,19 +80,21 @@ jest.mock('../../../middleware/auth', () => {
   };
   return {
     authenticateToken: passMiddleware,
+    // Unified signature: requirePermission(operation) returns middleware
     requirePermission: () => passMiddleware,
     requireMinimumRole: () => passMiddleware,
   };
 });
 
 jest.mock('../../../middleware/row-level-security', () => {
+  // Unified signature: enforceRLS is a middleware function (no args)
   const rlsMiddleware = (req, res, next) => {
     req.rlsPolicy = 'all_records';
     req.rlsUserId = 1;
     next();
   };
   return {
-    enforceRLS: () => rlsMiddleware,
+    enforceRLS: rlsMiddleware,
   };
 });
 
@@ -100,12 +102,12 @@ jest.mock('../../../middleware/row-level-security', () => {
 jest.mock('../../../middleware/generic-entity', () => {
   const passMiddleware = (req, res, next) => next();
   const validateBodyMiddleware = () => (req, res, next) => {
-    req.validatedBody = req.body; // Pass body through as validated
+    if (!req.validated) req.validated = {};
+    req.validated.body = req.body; // Pass body through as validated
     next();
   };
   return {
-    genericRequirePermission: () => passMiddleware,
-    genericEnforceRLS: passMiddleware,
+    // genericRequirePermission and genericEnforceRLS removed - unified middleware used directly
     genericValidateBody: validateBodyMiddleware,
     extractEntity: passMiddleware,
   };
@@ -132,18 +134,8 @@ jest.mock('../../../validators', () => {
     validatePagination: () => paginationMiddleware,
     validateQuery: () => paginationMiddleware,
     validateIdParam: () => idMiddleware,
-    validateCustomerCreate: passThrough,
-    validateCustomerUpdate: passThrough,
-    validateTechnicianCreate: passThrough,
-    validateTechnicianUpdate: passThrough,
-    validateWorkOrderCreate: passThrough,
-    validateWorkOrderUpdate: passThrough,
-    validateInvoiceCreate: passThrough,
-    validateInvoiceUpdate: passThrough,
-    validateContractCreate: passThrough,
-    validateContractUpdate: passThrough,
-    validateInventoryCreate: passThrough,
-    validateInventoryUpdate: passThrough,
+    // NOTE: Entity-specific validators (validateCustomerCreate, etc.) removed
+    // Routes use genericValidateBody middleware, not these validators
   };
 });
 

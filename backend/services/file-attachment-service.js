@@ -16,6 +16,7 @@
 
 const { query: db } = require('../db/connection');
 const { logger } = require('../config/logger');
+const AppError = require('../utils/app-error');
 
 class FileAttachmentService {
   /**
@@ -48,7 +49,28 @@ class FileAttachmentService {
 
       return entityCheck.rows.length > 0;
     } catch (error) {
-      logger.error('Error checking entity existence', {
+      // SECURITY FIX: Don't swallow DB connection errors
+      // Only return false for "entity not found", not for DB failures
+      const isConnectionError =
+        error.code === 'ECONNREFUSED' ||
+        error.code === 'ETIMEDOUT' ||
+        error.code === 'ENOTFOUND' ||
+        error.message?.includes('connection') ||
+        error.message?.includes('timeout');
+
+      if (isConnectionError) {
+        logger.error('Database connection error checking entity existence', {
+          entityType,
+          entityId,
+          error: error.message,
+          code: error.code,
+        });
+        // Re-throw connection errors - caller needs to know DB is down
+        throw new AppError(`Database unavailable: ${error.message}`, 503, 'SERVICE_UNAVAILABLE');
+      }
+
+      // For other errors (table doesn't exist, etc.), log and return false
+      logger.warn('Error checking entity existence (non-fatal)', {
         entityType,
         entityId,
         error: error.message,

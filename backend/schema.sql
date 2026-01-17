@@ -542,7 +542,7 @@ CREATE TABLE IF NOT EXISTS invoices (
     
     -- TIER 2: Entity-Specific Lifecycle Field
     status VARCHAR(50) DEFAULT 'draft'
-        CHECK (status IN ('draft', 'sent', 'paid', 'overdue', 'cancelled')),
+        CHECK (status IN ('draft', 'sent', 'paid', 'overdue', 'cancelled', 'void')),
     
     -- COMPUTED entity name field
     name VARCHAR(255),  -- Computed: "{customer}: {summary}: {invoice_number}"
@@ -585,7 +585,7 @@ CREATE TABLE IF NOT EXISTS contracts (
     
     -- TIER 2: Entity-Specific Lifecycle Field
     status VARCHAR(50) DEFAULT 'draft'
-        CHECK (status IN ('draft', 'active', 'expired', 'cancelled')),
+        CHECK (status IN ('draft', 'active', 'expired', 'cancelled', 'terminated')),
     
     -- COMPUTED entity name field
     name VARCHAR(255),  -- Computed: "{customer}: {summary}: {contract_number}"

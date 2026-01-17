@@ -16,9 +16,14 @@
  *
  * ADMIN ENDPOINTS:
  * - GET    /api/preferences/user/:userId - Get any user's preferences
+ *
+ * UNIFIED DATA FLOW:
+ * - requirePermission(operation) reads resource from req.entityMetadata.rlsResource
+ * - attachEntity middleware sets req.entityMetadata at factory time
  */
 const express = require('express');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
+const { attachEntity } = require('../middleware/generic-entity');
 const ResponseFormatter = require('../utils/response-formatter');
 const {
   validatePreferencesUpdate,
@@ -26,7 +31,8 @@ const {
 } = require('../validators/preferences-validators');
 const { validateIdParam } = require('../validators');
 const preferencesService = require('../services/preferences-service');
-const { logger } = require('../config/logger');
+const preferencesMetadata = require('../config/models/preferences-metadata');
+const { asyncHandler } = require('../middleware/utils');
 
 const router = express.Router();
 
@@ -68,41 +74,32 @@ const router = express.Router();
 router.get(
   '/',
   authenticateToken,
-  async (req, res) => {
-    try {
-      const userId = req.dbUser.id;
+  asyncHandler(async (req, res) => {
+    const userId = req.dbUser.id;
 
-      // Dev users (id: null) get defaults from metadata - no DB access
-      if (userId === null) {
-        const preferencesMetadata = require('../config/models/preferences-metadata');
-        const schema = preferencesMetadata.preferenceSchema;
+    // Dev users (id: null) get defaults from metadata - no DB access
+    if (userId === null) {
+      const schema = preferencesMetadata.preferenceSchema;
 
-        // Build defaults from schema
-        const defaultPreferences = {};
-        for (const [key, config] of Object.entries(schema)) {
-          defaultPreferences[key] = config.default;
-        }
-
-        // Shared PK pattern: id = userId, no separate user_id field
-        return ResponseFormatter.get(res, {
-          id: null,
-          preferences: defaultPreferences,
-          created_at: null,
-          updated_at: null,
-        });
+      // Build defaults from schema
+      const defaultPreferences = {};
+      for (const [key, config] of Object.entries(schema)) {
+        defaultPreferences[key] = config.default;
       }
 
-      const preferences = await preferencesService.getPreferences(userId);
-
-      return ResponseFormatter.get(res, preferences);
-    } catch (error) {
-      logger.error('Error retrieving preferences', {
-        error: error.message,
-        userId: req.dbUser?.id,
+      // Shared PK pattern: id = userId, no separate user_id field
+      return ResponseFormatter.get(res, {
+        id: null,
+        preferences: defaultPreferences,
+        created_at: null,
+        updated_at: null,
       });
-      return ResponseFormatter.internalError(res, error);
     }
-  },
+
+    const preferences = await preferencesService.getPreferences(userId);
+
+    return ResponseFormatter.get(res, preferences);
+  }),
 );
 
 /**
@@ -141,29 +138,17 @@ router.put(
   '/',
   authenticateToken,
   validatePreferencesUpdate,
-  async (req, res) => {
-    try {
-      const userId = req.dbUser.id;
-      const updates = req.body;
+  asyncHandler(async (req, res) => {
+    const userId = req.dbUser.id;
+    const updates = req.body;
 
-      // Note: Dev users are blocked at auth middleware (read-only)
-      // This code only runs for Auth0-authenticated users
+    // Note: Dev users are blocked at auth middleware (read-only)
+    // This code only runs for Auth0-authenticated users
 
-      const preferences = await preferencesService.updatePreferences(userId, updates);
+    const preferences = await preferencesService.updatePreferences(userId, updates);
 
-      return ResponseFormatter.updated(res, preferences, 'Preferences updated successfully');
-    } catch (error) {
-      if (error.validationErrors) {
-        return ResponseFormatter.badRequest(res, error.message, error.validationErrors);
-      }
-
-      logger.error('Error updating preferences', {
-        error: error.message,
-        userId: req.dbUser?.id,
-      });
-      return ResponseFormatter.internalError(res, error);
-    }
-  },
+    return ResponseFormatter.updated(res, preferences, 'Preferences updated successfully');
+  }),
 );
 
 /**
@@ -204,31 +189,18 @@ router.put(
   '/:key',
   authenticateToken,
   validateSinglePreferenceUpdate,
-  async (req, res) => {
-    try {
-      const userId = req.dbUser.id;
-      const { key } = req.params;
-      const { value } = req.body;
+  asyncHandler(async (req, res) => {
+    const userId = req.dbUser.id;
+    const { key } = req.params;
+    const { value } = req.body;
 
-      // Note: Dev users are blocked at auth middleware (read-only)
-      // This code only runs for Auth0-authenticated users
+    // Note: Dev users are blocked at auth middleware (read-only)
+    // This code only runs for Auth0-authenticated users
 
-      const preferences = await preferencesService.updatePreference(userId, key, value);
+    const preferences = await preferencesService.updatePreference(userId, key, value);
 
-      return ResponseFormatter.updated(res, preferences, `Preference '${key}' updated successfully`);
-    } catch (error) {
-      if (error.validationErrors) {
-        return ResponseFormatter.badRequest(res, error.message, error.validationErrors);
-      }
-
-      logger.error('Error updating single preference', {
-        error: error.message,
-        userId: req.dbUser?.id,
-        key: req.params?.key,
-      });
-      return ResponseFormatter.internalError(res, error);
-    }
-  },
+    return ResponseFormatter.updated(res, preferences, `Preference '${key}' updated successfully`);
+  }),
 );
 
 /**
@@ -249,21 +221,13 @@ router.put(
 router.post(
   '/reset',
   authenticateToken,
-  async (req, res) => {
-    try {
-      const userId = req.dbUser.id;
+  asyncHandler(async (req, res) => {
+    const userId = req.dbUser.id;
 
-      const preferences = await preferencesService.resetPreferences(userId);
+    const preferences = await preferencesService.resetPreferences(userId);
 
-      return ResponseFormatter.updated(res, preferences, 'Preferences reset to defaults');
-    } catch (error) {
-      logger.error('Error resetting preferences', {
-        error: error.message,
-        userId: req.dbUser?.id,
-      });
-      return ResponseFormatter.internalError(res, error);
-    }
-  },
+    return ResponseFormatter.updated(res, preferences, 'Preferences reset to defaults');
+  }),
 );
 
 /**
@@ -281,20 +245,15 @@ router.post(
  */
 router.get(
   '/schema',
-  async (req, res) => {
-    try {
-      const schema = preferencesService.getPreferenceSchema();
-      const defaults = preferencesService.getDefaults();
+  asyncHandler(async (req, res) => {
+    const schema = preferencesService.getPreferenceSchema();
+    const defaults = preferencesService.getDefaults();
 
-      return ResponseFormatter.get(res, {
-        schema,
-        defaults,
-      });
-    } catch (error) {
-      logger.error('Error retrieving preference schema', { error: error.message });
-      return ResponseFormatter.internalError(res, error);
-    }
-  },
+    return ResponseFormatter.get(res, {
+      schema,
+      defaults,
+    });
+  }),
 );
 
 /**
@@ -323,24 +282,16 @@ router.get(
 router.get(
   '/user/:userId',
   authenticateToken,
-  requirePermission('preferences', 'admin'),
+  attachEntity('preferences'),
+  requirePermission('admin'),
   validateIdParam({ paramName: 'userId' }),
-  async (req, res) => {
-    try {
-      const { userId } = req.params;
+  asyncHandler(async (req, res) => {
+    const { userId } = req.params;
 
-      const preferences = await preferencesService.getPreferences(parseInt(userId, 10));
+    const preferences = await preferencesService.getPreferences(parseInt(userId, 10));
 
-      return ResponseFormatter.get(res, preferences);
-    } catch (error) {
-      logger.error('Error retrieving user preferences', {
-        error: error.message,
-        targetUserId: req.params?.userId,
-        adminUserId: req.dbUser?.id,
-      });
-      return ResponseFormatter.internalError(res, error);
-    }
-  },
+    return ResponseFormatter.get(res, preferences);
+  }),
 );
 
 module.exports = router;

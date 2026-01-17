@@ -1,26 +1,19 @@
 /**
  * Request Body Validation Middleware
  *
- * Comprehensive validation for all POST/PUT endpoints using Joi.
- * Ensures data integrity before it reaches the database.
+ * Special-case validators for endpoints that don't use genericValidateBody.
+ * For entity CRUD operations, use genericValidateBody from middleware/generic-entity.js
+ * which provides role-aware, metadata-driven validation.
  *
- * Philosophy: Fail fast with clear, actionable error messages.
+ * This module contains ONLY:
+ * 1. Auth-related validators (login, token refresh, callbacks)
+ * 2. Profile update validator (stricter than general user update)
+ * 3. Role assignment validator
  *
- * NOW CENTRALIZED: Uses shared validation rules from config/validation-rules.json
- * This ensures frontend and backend use IDENTICAL validation logic.
+ * Philosophy: Explicit is better than implicit. No auto-generation.
  */
 const Joi = require('joi');
-const { buildCompositeSchema, getValidationMetadata } = require('../utils/validation-loader');
 const ResponseFormatter = require('../utils/response-formatter');
-const { logger } = require('../config/logger');
-
-// Log validation metadata on startup
-try {
-  const metadata = getValidationMetadata();
-  logger.info(`[ValidationLoader] Loaded validation rules v${metadata.version}`);
-} catch (error) {
-  logger.error('[ValidationLoader] Failed to load validation metadata:', { error: error.message });
-}
 
 /**
  * Helper function to create validation middleware
@@ -42,72 +35,45 @@ const createValidator = (schema) => (req, res, next) => {
   }
 
   // Replace req.body with validated/stripped value
-  // Routes can now just use req.body directly without manual destructuring
   req.body = value;
   next();
 };
 
+// ============================================================================
+// PROFILE UPDATE VALIDATOR
+// ============================================================================
+// Used by PUT /api/auth/me - only allows first_name and last_name updates
+// This is stricter than a general user update (which allows email, role_id, etc.)
+
 /**
- * Helper function to build UPDATE schemas with consistent validation
- * DRY principle: Eliminates repeated .min(1).messages() pattern
- *
- * @param {string} operationName - Name of update operation (e.g., 'updateUser')
- * @returns {Joi.Schema} Configured Joi schema for updates
+ * Profile Update Validation
+ * Validates: PUT /api/auth/me
+ * Only allows users to update their own first_name and last_name
  */
-function buildUpdateSchema(operationName) {
-  return buildCompositeSchema(operationName).min(1).messages({
-    'object.min': 'At least one field must be provided for update',
-  });
-}
+const validateProfileUpdate = createValidator(
+  Joi.object({
+    first_name: Joi.string().trim().min(1).max(100).messages({
+      'string.empty': 'First name cannot be empty',
+      'string.min': 'First name must be at least 1 character',
+      'string.max': 'First name cannot exceed 100 characters',
+    }),
+    last_name: Joi.string().trim().min(1).max(100).messages({
+      'string.empty': 'Last name cannot be empty',
+      'string.min': 'Last name must be at least 1 character',
+      'string.max': 'Last name cannot exceed 100 characters',
+    }),
+  })
+    .min(1)
+    .messages({
+      'object.min': 'At least one field (first_name or last_name) must be provided',
+    }),
+);
 
 // ============================================================================
-// AUTO-GENERATED RESOURCE VALIDATORS (DRY Factory Pattern)
+// ROLE ASSIGNMENT VALIDATOR
 // ============================================================================
-// Generates create/update validators for all resources using metadata
-// This eliminates 16+ lines of repetitive validator definitions
+// Used by PUT /api/admin/users/:id/role
 
-const RESOURCES = ['User', 'Role', 'Customer', 'Technician', 'WorkOrder', 'Invoice', 'Contract', 'Inventory'];
-const resourceValidators = {};
-
-RESOURCES.forEach(resource => {
-  // Generate CREATE validator (e.g., validateUserCreate)
-  resourceValidators[`validate${resource}Create`] = createValidator(
-    buildCompositeSchema(`create${resource}`),
-  );
-
-  // Generate UPDATE validator (e.g., validateUserUpdate)
-  resourceValidators[`validate${resource}Update`] = createValidator(
-    buildUpdateSchema(`update${resource}`),
-  );
-});
-
-// Extract individual validators for readability
-const {
-  validateUserCreate,
-  validateUserUpdate,
-  validateRoleCreate,
-  validateRoleUpdate,
-  validateCustomerCreate,
-  validateCustomerUpdate,
-  validateTechnicianCreate,
-  validateTechnicianUpdate,
-  validateWorkOrderCreate,
-  validateWorkOrderUpdate,
-  validateInvoiceCreate,
-  validateInvoiceUpdate,
-  validateContractCreate,
-  validateContractUpdate,
-  validateInventoryCreate,
-  validateInventoryUpdate,
-} = resourceValidators;
-
-// Alias for User update (used in profile endpoints)
-const validateProfileUpdate = validateUserUpdate;
-
-// ============================================================================
-// SPECIAL-CASE VALIDATORS (Not auto-generated)
-// ============================================================================
-// These validators have custom business logic beyond simple create/update
 const validateRoleAssignment = createValidator(
   Joi.object({
     role_id: Joi.number().integer().positive().required().messages({
@@ -118,6 +84,11 @@ const validateRoleAssignment = createValidator(
     }),
   }),
 );
+
+// ============================================================================
+// AUTH0 VALIDATORS
+// ============================================================================
+// Special validators for Auth0 OAuth flow - not entity CRUD
 
 /**
  * Auth0 Callback Validation
@@ -179,26 +150,15 @@ const validateRefreshToken = createValidator(
 );
 
 module.exports = {
-  validateUserCreate,
-  validateUserUpdate,
+  // Profile validator (stricter than general user update)
   validateProfileUpdate,
+
+  // Role assignment validator
   validateRoleAssignment,
-  validateRoleCreate,
-  validateRoleUpdate,
+
+  // Auth0 OAuth flow validators
   validateAuthCallback,
   validateAuth0Token,
   validateAuth0Refresh,
   validateRefreshToken,
-  validateCustomerCreate,
-  validateCustomerUpdate,
-  validateTechnicianCreate,
-  validateTechnicianUpdate,
-  validateWorkOrderCreate,
-  validateWorkOrderUpdate,
-  validateInvoiceCreate,
-  validateInvoiceUpdate,
-  validateContractCreate,
-  validateContractUpdate,
-  validateInventoryCreate,
-  validateInventoryUpdate,
 };

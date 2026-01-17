@@ -32,8 +32,8 @@ const fs = require('fs').promises;
 const path = require('path');
 const { logger } = require('../config/logger');
 
-// Use the same pool as the rest of the app
-const pool = require('../db/connection');
+// Use the standard db connection module
+const db = require('../db/connection');
 
 const SCHEMA_FILE = path.join(__dirname, '..', 'schema.sql');
 const SEED_FILE = path.join(__dirname, '..', 'seeds', 'seed-data.sql');
@@ -49,7 +49,7 @@ async function initializeDatabase() {
     // Run schema.sql
     logger.info('📦 Applying database schema...');
     const schemaSQL = await fs.readFile(SCHEMA_FILE, 'utf8');
-    await pool.query(schemaSQL);
+    await db.query(schemaSQL);
     results.schema = true;
     logger.info('✅ Schema applied successfully');
   } catch (error) {
@@ -62,7 +62,7 @@ async function initializeDatabase() {
     // Run seed data
     logger.info('🌱 Applying seed data...');
     const seedSQL = await fs.readFile(SEED_FILE, 'utf8');
-    await pool.query(seedSQL);
+    await db.query(seedSQL);
     results.seed = true;
     logger.info('✅ Seed data applied successfully');
   } catch (error) {

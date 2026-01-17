@@ -11,6 +11,7 @@
  */
 
 const userMetadata = require('../config/models/user-metadata');
+const AppError = require('./app-error');
 
 /**
  * Default role name for new users (configurable via metadata)
@@ -40,17 +41,17 @@ const DEFAULT_ROLE_NAME = userMetadata.defaultRoleName || 'customer';
  */
 function mapAuth0ToUser(auth0Data) {
   if (!auth0Data) {
-    throw new Error('Auth0 data is required');
+    throw new AppError('Auth0 data is required', 400, 'BAD_REQUEST');
   }
 
   const { sub, email, given_name, family_name, role } = auth0Data;
 
   if (!sub) {
-    throw new Error('Auth0 sub (user ID) is required');
+    throw new AppError('Auth0 sub (user ID) is required', 400, 'BAD_REQUEST');
   }
 
   if (!email) {
-    throw new Error('Auth0 email is required');
+    throw new AppError('Auth0 email is required', 400, 'BAD_REQUEST');
   }
 
   return {
@@ -72,15 +73,15 @@ function mapAuth0ToUser(auth0Data) {
  */
 function validateAuth0Data(auth0Data) {
   if (!auth0Data) {
-    throw new Error('Auth0 data is required');
+    throw new AppError('Auth0 data is required', 400, 'BAD_REQUEST');
   }
 
   if (!auth0Data.sub) {
-    throw new Error('Auth0 sub (user ID) is required');
+    throw new AppError('Auth0 sub (user ID) is required', 400, 'BAD_REQUEST');
   }
 
   if (!auth0Data.email) {
-    throw new Error('Auth0 email is required');
+    throw new AppError('Auth0 email is required', 400, 'BAD_REQUEST');
   }
 
   return true;

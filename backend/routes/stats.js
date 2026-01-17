@@ -13,38 +13,35 @@
  *
  * ARCHITECTURE:
  * - Uses StatsService for all aggregation logic
- * - Uses entity middleware for permission/RLS setup
+ * - Uses unified middleware (requirePermission/enforceRLS read from req.entityMetadata)
  * - ResponseFormatter for consistent responses
  */
 
 const express = require('express');
 const router = express.Router();
 const StatsService = require('../services/stats-service');
-const { authenticateToken } = require('../middleware/auth');
-const {
-  extractEntity,
-  genericRequirePermission,
-  genericEnforceRLS,
-} = require('../middleware/generic-entity');
+const { authenticateToken, requirePermission } = require('../middleware/auth');
+const { enforceRLS } = require('../middleware/row-level-security');
+const { extractEntity } = require('../middleware/generic-entity');
 const ResponseFormatter = require('../utils/response-formatter');
 const { logger } = require('../config/logger');
 
 // ============================================================================
-// MIDDLEWARE CHAIN (same as entity routes)
+// MIDDLEWARE CHAIN (unified pattern)
 // ============================================================================
 
 /**
  * Common middleware for all stats routes:
  * 1. Authenticate user
- * 2. Extract entity name from URL
- * 3. Check read permission
- * 4. Setup RLS context
+ * 2. Extract entity name from URL (sets req.entityMetadata)
+ * 3. Check read permission (reads from req.entityMetadata.rlsResource)
+ * 4. Setup RLS context (reads from req.entityMetadata.rlsResource)
  */
 const statsMiddleware = [
   authenticateToken,
   extractEntity,
-  genericRequirePermission('read'),
-  genericEnforceRLS,
+  requirePermission('read'),
+  enforceRLS,
 ];
 
 // ============================================================================

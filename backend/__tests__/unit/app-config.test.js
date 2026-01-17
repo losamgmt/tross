@@ -144,27 +144,48 @@ describe("AppConfig", () => {
   });
 
   describe("Auth0 Configuration", () => {
-    test("should have Auth0 config", () => {
+    test("should have Auth0 config object", () => {
       expect(AppConfig.auth0).toBeDefined();
-      expect(AppConfig.auth0.domain).toBeDefined();
-      expect(AppConfig.auth0.clientId).toBeDefined();
+      // Auth0 values require explicit env vars - no fallbacks for security
+      // In test environment without env vars, these will be undefined
+      expect(AppConfig.auth0).toHaveProperty('domain');
+      expect(AppConfig.auth0).toHaveProperty('clientId');
     });
 
-    test("Auth0 domain should be valid format", () => {
-      expect(AppConfig.auth0.domain).toMatch(/\.auth0\.com$/);
+    test("Auth0 domain should be valid format when set", () => {
+      if (AppConfig.auth0.domain) {
+        expect(AppConfig.auth0.domain).toMatch(/\.auth0\.com$/);
+      } else {
+        // No fallback - requires explicit configuration
+        expect(AppConfig.auth0.domain).toBeUndefined();
+      }
     });
 
-    test("Auth0 audience should be valid URL", () => {
-      expect(AppConfig.auth0.audience).toMatch(/^https?:\/\//);
+    test("Auth0 audience should be valid URL when set", () => {
+      if (AppConfig.auth0.audience) {
+        expect(AppConfig.auth0.audience).toMatch(/^https?:\/\//);
+      } else {
+        // No fallback - requires explicit configuration
+        expect(AppConfig.auth0.audience).toBeUndefined();
+      }
     });
   });
 
   describe("JWT Configuration", () => {
-    test("should have JWT config", () => {
+    test("should have JWT config object", () => {
       expect(AppConfig.jwt).toBeDefined();
-      expect(AppConfig.jwt.secret).toBeDefined();
+      // JWT secret requires explicit env var - no fallback for security
+      expect(AppConfig.jwt).toHaveProperty('secret');
       expect(AppConfig.jwt.expiresIn).toBeDefined();
       expect(AppConfig.jwt.algorithm).toBe("HS256");
+    });
+
+    test("JWT secret should be undefined without env var (security)", () => {
+      // In test environment without JWT_SECRET env var, secret should be undefined
+      // This is INTENTIONAL - no hardcoded fallback secrets
+      if (!process.env.JWT_SECRET) {
+        expect(AppConfig.jwt.secret).toBeUndefined();
+      }
     });
 
     test("JWT expiry should be valid format", () => {

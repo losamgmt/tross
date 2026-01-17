@@ -6,6 +6,10 @@
  * - Role bypass attacks
  * - Permission boundary violations
  * - Vertical and horizontal access control bypass
+ *
+ * UNIFIED DATA FLOW:
+ * - requirePermission(operation) reads resource from req.entityMetadata.rlsResource
+ * - attachTestEntity middleware sets req.entityMetadata for test routes
  */
 
 const request = require('supertest');
@@ -18,19 +22,26 @@ const {
 } = require('../../../middleware/auth');
 const { mockUserDataServiceFindOrCreateUser } = require('../../mocks/services.mock');
 
-// Mock the UserDataService for Auth0 token tests
+// Mock the UserDataService (static class)
 jest.mock('../../../services/user-data', () => ({
-  UserDataService: {
-    findOrCreateUser: jest.fn(),
-    getUserByAuth0Id: jest.fn(),
-    getAllUsers: jest.fn(),
-    isConfigMode: jest.fn(),
-  },
+  findOrCreateUser: jest.fn(),
+  getUserByAuth0Id: jest.fn(),
+  getAllUsers: jest.fn(),
+  isConfigMode: jest.fn(),
 }));
 
-const { UserDataService } = require('../../../services/user-data');
+const UserDataService = require('../../../services/user-data');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key';
+
+/**
+ * Test helper: attach entity metadata for routes that use requirePermission.
+ * In production, this is done by extractEntity or attachEntity middleware.
+ */
+const attachTestEntity = (resource) => (req, res, next) => {
+  req.entityMetadata = { rlsResource: resource };
+  next();
+};
 
 // Helper to create DEV tokens (read-only access)
 const createToken = (role, overrides = {}) => {
@@ -118,25 +129,28 @@ describe('Authorization Bypass Prevention', () => {
       (req, res) => res.json({ success: true, jobs: [] })
     );
 
-    // Users CRUD with permissions
+    // Users CRUD with permissions - unified signature
     app.get(
       '/api/users',
       authenticateToken,
-      requirePermission('users', 'read'),
+      attachTestEntity('users'),
+      requirePermission('read'),
       (req, res) => res.json({ success: true, users: [] })
     );
 
     app.post(
       '/api/users',
       authenticateToken,
-      requirePermission('users', 'create'),
+      attachTestEntity('users'),
+      requirePermission('create'),
       (req, res) => res.json({ success: true, user: req.body })
     );
 
     app.delete(
       '/api/users/:id',
       authenticateToken,
-      requirePermission('users', 'delete'),
+      attachTestEntity('users'),
+      requirePermission('delete'),
       (req, res) => res.json({ success: true, deleted: req.params.id })
     );
   });

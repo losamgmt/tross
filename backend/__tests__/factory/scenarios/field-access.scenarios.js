@@ -9,9 +9,10 @@
  */
 
 const permissions = require('../../../../config/permissions.json');
+const { ROLE_HIERARCHY } = require('../../../config/constants');
 
-// Role priority order (lowest to highest)
-const ROLE_ORDER = ['customer', 'technician', 'dispatcher', 'manager', 'admin'];
+// Role priority order from single source of truth
+const ROLE_ORDER = ROLE_HIERARCHY;
 
 /**
  * Get fields that a role should NOT see (read access level above their role)

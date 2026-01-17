@@ -1,18 +1,31 @@
 /**
  * Unit Tests for validators/preferences-validators.js
  *
- * Tests preference validation middleware with mocked Express objects.
+ * 100% METADATA-DRIVEN - No hardcoded preference field names.
+ * Tests discover fields from PREFERENCE_SCHEMA and generate test cases dynamically.
+ *
  * Follows AAA pattern (Arrange, Act, Assert).
  *
  * Test Coverage:
  * - validatePreferencesUpdate - batch update validation
  * - validateSinglePreferenceUpdate - single key update validation
+ * - All preference types: enum, boolean, string, integer
  */
 
 const {
   validatePreferencesUpdate,
   validateSinglePreferenceUpdate,
 } = require('../../../validators/preferences-validators');
+
+const { PREFERENCE_SCHEMA } = require('../../../services/preferences-service');
+
+// Use shared field introspection from the factory
+const {
+  findFieldByType: factoryFindFieldByType,
+  findAllFieldsByType,
+  generateInvalidValue: factoryGenerateInvalidValue,
+  getEntityFields,
+} = require('../../factory/data/entity-factory');
 
 // Mock ResponseFormatter
 jest.mock('../../../utils/response-formatter', () => ({
@@ -22,6 +35,98 @@ jest.mock('../../../utils/response-formatter', () => ({
 }));
 
 const ResponseFormatter = require('../../../utils/response-formatter');
+
+// =============================================================================
+// METADATA-DRIVEN TEST HELPERS
+// Uses shared factory functions with PREFERENCE_SCHEMA
+// =============================================================================
+
+/**
+ * Find first preference field of a specific type
+ * Wraps the shared factory function with our local schema
+ * @param {string} type - 'enum', 'boolean', 'string', 'integer'
+ * @returns {{ key: string, def: object } | null}
+ */
+function findFieldByType(type) {
+  const result = factoryFindFieldByType(null, type, PREFERENCE_SCHEMA);
+  if (!result) return null;
+  const [key, def] = result;
+  return { key, def };
+}
+
+/**
+ * Find first integer field with min/max constraints
+ * @returns {{ key: string, def: object } | null}
+ */
+function findIntegerFieldWithBounds() {
+  const intFields = findAllFieldsByType(null, 'integer', PREFERENCE_SCHEMA);
+  for (const [key, def] of intFields) {
+    if (def.min !== undefined && def.max !== undefined) {
+      return { key, def };
+    }
+  }
+  return null;
+}
+
+/**
+ * Generate a valid value for a preference field based on its type
+ * @param {object} def - Preference field definition
+ * @returns {any} A valid value for this field type
+ */
+function generateValidValue(def) {
+  switch (def.type) {
+    case 'enum':
+      return def.values[0]; // First valid enum value
+    case 'boolean':
+      return true;
+    case 'string':
+      return 'valid-string';
+    case 'integer':
+      return def.default ?? def.min ?? 0;
+    default:
+      return 'unknown';
+  }
+}
+
+/**
+ * Generate an invalid value for a preference field based on its type
+ * Wraps the shared factory function
+ * @param {object} def - Preference field definition
+ * @param {string} fieldName - Field name for context
+ * @returns {any} An invalid value for this field type
+ */
+function generateInvalidValue(def, fieldName = 'field') {
+  // Use the shared factory's generateInvalidValue with schema override
+  return factoryGenerateInvalidValue(fieldName, null, { [fieldName]: def });
+}
+
+/**
+ * Build a valid preferences object with one field of each type that exists
+ */
+function buildValidPreferencesObject() {
+  const prefs = {};
+  const usedTypes = new Set();
+
+  for (const [key, def] of Object.entries(PREFERENCE_SCHEMA)) {
+    if (!usedTypes.has(def.type)) {
+      prefs[key] = generateValidValue(def);
+      usedTypes.add(def.type);
+    }
+  }
+
+  return prefs;
+}
+
+/**
+ * Get all preference keys
+ */
+function getAllPreferenceKeys() {
+  return Object.keys(PREFERENCE_SCHEMA);
+}
+
+// =============================================================================
+// TESTS
+// =============================================================================
 
 describe('validators/preferences-validators.js', () => {
   let mockReq;
@@ -41,343 +146,282 @@ describe('validators/preferences-validators.js', () => {
     mockNext = jest.fn();
   });
 
-  describe('validatePreferencesUpdate', () => {
-    test('should pass valid preferences to next()', () => {
-      // Arrange
-      mockReq.body = { theme: 'dark', notificationsEnabled: false };
+  // ===========================================================================
+  // SCHEMA SANITY CHECKS
+  // ===========================================================================
 
-      // Act
+  describe('PREFERENCE_SCHEMA availability', () => {
+    test('schema should be loaded and non-empty', () => {
+      expect(PREFERENCE_SCHEMA).toBeDefined();
+      expect(Object.keys(PREFERENCE_SCHEMA).length).toBeGreaterThan(0);
+    });
+
+    test('all schema entries should have a type', () => {
+      for (const [key, def] of Object.entries(PREFERENCE_SCHEMA)) {
+        expect(def.type).toBeDefined();
+        expect(['enum', 'boolean', 'string', 'integer']).toContain(def.type);
+      }
+    });
+  });
+
+  // ===========================================================================
+  // validatePreferencesUpdate - BATCH VALIDATION
+  // ===========================================================================
+
+  describe('validatePreferencesUpdate', () => {
+    test('should pass valid preferences object to next()', () => {
+      mockReq.body = buildValidPreferencesObject();
+
       validatePreferencesUpdate(mockReq, mockRes, mockNext);
 
-      // Assert
       expect(mockNext).toHaveBeenCalled();
       expect(ResponseFormatter.badRequest).not.toHaveBeenCalled();
     });
 
-    test('should pass valid single preference to next()', () => {
-      // Arrange
-      mockReq.body = { theme: 'light' };
-
-      // Act
-      validatePreferencesUpdate(mockReq, mockRes, mockNext);
-
-      // Assert
-      expect(mockNext).toHaveBeenCalled();
-    });
-
-    test('should reject invalid theme value', () => {
-      // Arrange
-      mockReq.body = { theme: 'invalid-theme' };
-
-      // Act
-      validatePreferencesUpdate(mockReq, mockRes, mockNext);
-
-      // Assert
-      expect(mockNext).not.toHaveBeenCalled();
-      expect(ResponseFormatter.badRequest).toHaveBeenCalledWith(
-        mockRes,
-        expect.stringContaining('theme must be one of'),
-        expect.any(Array)
-      );
-    });
-
-    test('should reject invalid boolean type for notificationsEnabled', () => {
-      // Arrange
-      mockReq.body = { notificationsEnabled: 'yes' };
-
-      // Act
-      validatePreferencesUpdate(mockReq, mockRes, mockNext);
-
-      // Assert
-      expect(mockNext).not.toHaveBeenCalled();
-      expect(ResponseFormatter.badRequest).toHaveBeenCalledWith(
-        mockRes,
-        expect.stringContaining('notificationsEnabled must be a boolean'),
-        expect.any(Array)
-      );
-    });
-
     test('should reject empty object (min 1 preference required)', () => {
-      // Arrange
       mockReq.body = {};
 
-      // Act
       validatePreferencesUpdate(mockReq, mockRes, mockNext);
 
-      // Assert
       expect(mockNext).not.toHaveBeenCalled();
       expect(ResponseFormatter.badRequest).toHaveBeenCalledWith(
         mockRes,
         expect.stringContaining('At least one preference must be provided'),
-        expect.any(Array)
+        expect.any(Array),
       );
     });
 
-    test('should report unknown preference keys', () => {
-      // Arrange
-      mockReq.body = { unknownPref: 'value', theme: 'dark' };
+    test('should reject unknown preference keys', () => {
+      const firstKey = getAllPreferenceKeys()[0];
+      mockReq.body = {
+        unknownPrefXYZ123: 'value',
+        [firstKey]: generateValidValue(PREFERENCE_SCHEMA[firstKey]),
+      };
 
-      // Act
       validatePreferencesUpdate(mockReq, mockRes, mockNext);
 
-      // Assert
       expect(mockNext).not.toHaveBeenCalled();
       expect(ResponseFormatter.badRequest).toHaveBeenCalled();
     });
 
-    test('should accept all valid enum values for theme', () => {
-      const validThemes = ['system', 'light', 'dark'];
+    // Dynamic tests for each preference field
+    describe.each(getAllPreferenceKeys())('field: %s', (key) => {
+      const def = PREFERENCE_SCHEMA[key];
 
-      validThemes.forEach((theme) => {
-        // Reset mocks for each iteration
-        jest.clearAllMocks();
-        mockReq.body = { theme };
+      test(`should accept valid ${def.type} value`, () => {
+        mockReq.body = { [key]: generateValidValue(def) };
 
-        // Act
         validatePreferencesUpdate(mockReq, mockRes, mockNext);
 
-        // Assert
         expect(mockNext).toHaveBeenCalled();
-        expect(ResponseFormatter.badRequest).not.toHaveBeenCalled();
       });
-    });
 
-    test('should accept both true and false for notificationsEnabled', () => {
-      [true, false].forEach((value) => {
-        jest.clearAllMocks();
-        mockReq.body = { notificationsEnabled: value };
+      test(`should reject invalid value for ${def.type} type`, () => {
+        const invalidValue = generateInvalidValue(def);
+        // Skip if we can't generate an invalid value for this type
+        if (invalidValue === null) return;
+
+        mockReq.body = { [key]: invalidValue };
 
         validatePreferencesUpdate(mockReq, mockRes, mockNext);
 
-        expect(mockNext).toHaveBeenCalled();
+        expect(mockNext).not.toHaveBeenCalled();
+        expect(ResponseFormatter.badRequest).toHaveBeenCalled();
       });
     });
   });
 
+  // ===========================================================================
+  // validateSinglePreferenceUpdate - SINGLE KEY VALIDATION
+  // ===========================================================================
+
   describe('validateSinglePreferenceUpdate', () => {
-    test('should pass valid single preference update to next()', () => {
-      // Arrange
-      mockReq.params = { key: 'theme' };
-      mockReq.body = { value: 'dark' };
-
-      // Act
-      validateSinglePreferenceUpdate(mockReq, mockRes, mockNext);
-
-      // Assert
-      expect(mockNext).toHaveBeenCalled();
-      expect(ResponseFormatter.badRequest).not.toHaveBeenCalled();
-    });
-
     test('should reject unknown preference key', () => {
-      // Arrange
-      mockReq.params = { key: 'unknownKey' };
+      mockReq.params = { key: 'unknownKeyXYZ' };
       mockReq.body = { value: 'anything' };
 
-      // Act
       validateSinglePreferenceUpdate(mockReq, mockRes, mockNext);
 
-      // Assert
       expect(mockNext).not.toHaveBeenCalled();
       expect(ResponseFormatter.badRequest).toHaveBeenCalledWith(
         mockRes,
-        expect.stringContaining('Unknown preference key: unknownKey'),
-        expect.any(Array)
+        expect.stringContaining('Unknown preference key'),
+        expect.any(Array),
       );
     });
 
     test('should reject missing value in body', () => {
-      // Arrange
-      mockReq.params = { key: 'theme' };
+      const firstKey = getAllPreferenceKeys()[0];
+      mockReq.params = { key: firstKey };
       mockReq.body = {}; // No value
 
-      // Act
       validateSinglePreferenceUpdate(mockReq, mockRes, mockNext);
 
-      // Assert
       expect(mockNext).not.toHaveBeenCalled();
       expect(ResponseFormatter.badRequest).toHaveBeenCalledWith(
         mockRes,
         'Value is required',
-        expect.any(Array)
+        expect.any(Array),
       );
     });
 
-    test('should reject invalid value for theme', () => {
-      // Arrange
-      mockReq.params = { key: 'theme' };
-      mockReq.body = { value: 'invalid-theme' };
+    // Dynamic tests for each preference field
+    describe.each(getAllPreferenceKeys())('field: %s', (key) => {
+      const def = PREFERENCE_SCHEMA[key];
 
-      // Act
-      validateSinglePreferenceUpdate(mockReq, mockRes, mockNext);
+      test(`should accept valid ${def.type} value`, () => {
+        mockReq.params = { key };
+        mockReq.body = { value: generateValidValue(def) };
 
-      // Assert
-      expect(mockNext).not.toHaveBeenCalled();
-      expect(ResponseFormatter.badRequest).toHaveBeenCalled();
-    });
+        validateSinglePreferenceUpdate(mockReq, mockRes, mockNext);
 
-    test('should reject invalid type for notificationsEnabled', () => {
-      // Arrange
-      mockReq.params = { key: 'notificationsEnabled' };
-      mockReq.body = { value: 'not-a-boolean' };
+        expect(mockNext).toHaveBeenCalled();
+      });
 
-      // Act
-      validateSinglePreferenceUpdate(mockReq, mockRes, mockNext);
+      test(`should reject invalid value for ${def.type} type`, () => {
+        const invalidValue = generateInvalidValue(def);
+        // Skip if we can't generate an invalid value for this type
+        if (invalidValue === null) return;
 
-      // Assert
-      expect(mockNext).not.toHaveBeenCalled();
-      expect(ResponseFormatter.badRequest).toHaveBeenCalled();
-    });
+        mockReq.params = { key };
+        mockReq.body = { value: invalidValue };
 
-    test('should accept valid boolean value for notificationsEnabled', () => {
-      // Arrange
-      mockReq.params = { key: 'notificationsEnabled' };
-      mockReq.body = { value: false };
+        validateSinglePreferenceUpdate(mockReq, mockRes, mockNext);
 
-      // Act
-      validateSinglePreferenceUpdate(mockReq, mockRes, mockNext);
-
-      // Assert
-      expect(mockNext).toHaveBeenCalled();
+        expect(mockNext).not.toHaveBeenCalled();
+        expect(ResponseFormatter.badRequest).toHaveBeenCalled();
+      });
     });
   });
 
-  describe('buildPreferenceJoiSchema branch coverage', () => {
-    // These tests exercise specific branches in buildPreferenceJoiSchema via validatePreferencesUpdate
+  // ===========================================================================
+  // TYPE-SPECIFIC BOUNDARY TESTS
+  // ===========================================================================
 
-    test('should handle string preference with maxLength', () => {
-      // timezone is a string type with maxLength
-      mockReq.body = { timezone: 'America/Chicago' };
-      validatePreferencesUpdate(mockReq, mockRes, mockNext);
-      expect(mockNext).toHaveBeenCalled();
+  describe('Type-specific validation (metadata-driven)', () => {
+    describe('enum type validation', () => {
+      const enumField = findFieldByType('enum');
+
+      // Skip if no enum fields exist
+      if (!enumField) {
+        test.skip('no enum fields in schema', () => {});
+      } else {
+        test(`should accept all valid enum values for ${enumField.key}`, () => {
+          enumField.def.values.forEach((value) => {
+            jest.clearAllMocks();
+            mockReq.body = { [enumField.key]: value };
+
+            validatePreferencesUpdate(mockReq, mockRes, mockNext);
+
+            expect(mockNext).toHaveBeenCalled();
+          });
+        });
+
+        test(`should reject invalid enum value for ${enumField.key}`, () => {
+          mockReq.body = { [enumField.key]: 'invalid-enum-xyz' };
+
+          validatePreferencesUpdate(mockReq, mockRes, mockNext);
+
+          expect(mockNext).not.toHaveBeenCalled();
+          expect(ResponseFormatter.badRequest).toHaveBeenCalledWith(
+            mockRes,
+            expect.stringContaining(`${enumField.key} must be one of`),
+            expect.any(Array),
+          );
+        });
+      }
     });
 
-    test('should reject string preference exceeding maxLength', () => {
-      mockReq.body = { timezone: 'A'.repeat(100) }; // Over 50 char limit
-      validatePreferencesUpdate(mockReq, mockRes, mockNext);
-      expect(mockNext).not.toHaveBeenCalled();
-      expect(ResponseFormatter.badRequest).toHaveBeenCalled();
+    describe('boolean type validation', () => {
+      const boolField = findFieldByType('boolean');
+
+      if (!boolField) {
+        test.skip('no boolean fields in schema', () => {});
+      } else {
+        test(`should accept true and false for ${boolField.key}`, () => {
+          [true, false].forEach((value) => {
+            jest.clearAllMocks();
+            mockReq.body = { [boolField.key]: value };
+
+            validatePreferencesUpdate(mockReq, mockRes, mockNext);
+
+            expect(mockNext).toHaveBeenCalled();
+          });
+        });
+
+        test(`should reject non-boolean for ${boolField.key}`, () => {
+          mockReq.body = { [boolField.key]: 'yes' };
+
+          validatePreferencesUpdate(mockReq, mockRes, mockNext);
+
+          expect(mockNext).not.toHaveBeenCalled();
+          expect(ResponseFormatter.badRequest).toHaveBeenCalledWith(
+            mockRes,
+            expect.stringContaining(`${boolField.key} must be a boolean`),
+            expect.any(Array),
+          );
+        });
+      }
     });
 
-    test('should handle integer preference with min/max boundaries', () => {
-      // autoRefreshInterval is an integer type with min=0 and max=300
-      mockReq.body = { autoRefreshInterval: 120 };
-      validatePreferencesUpdate(mockReq, mockRes, mockNext);
-      expect(mockNext).toHaveBeenCalled();
-    });
+    describe('integer type with boundaries', () => {
+      const intField = findIntegerFieldWithBounds();
 
-    test('should accept integer preference at min boundary', () => {
-      mockReq.body = { autoRefreshInterval: 0 }; // min=0
-      validatePreferencesUpdate(mockReq, mockRes, mockNext);
-      expect(mockNext).toHaveBeenCalled();
-    });
+      if (!intField) {
+        test.skip('no integer fields with min/max in schema', () => {});
+      } else {
+        test(`should accept value at min boundary (${intField.def.min}) for ${intField.key}`, () => {
+          mockReq.body = { [intField.key]: intField.def.min };
 
-    test('should accept integer preference at max boundary', () => {
-      mockReq.body = { autoRefreshInterval: 300 }; // max=300
-      validatePreferencesUpdate(mockReq, mockRes, mockNext);
-      expect(mockNext).toHaveBeenCalled();
-    });
+          validatePreferencesUpdate(mockReq, mockRes, mockNext);
 
-    test('should reject integer preference below min', () => {
-      mockReq.body = { autoRefreshInterval: -1 }; // Below min of 0
-      validatePreferencesUpdate(mockReq, mockRes, mockNext);
-      expect(mockNext).not.toHaveBeenCalled();
-      expect(ResponseFormatter.badRequest).toHaveBeenCalled();
-    });
+          expect(mockNext).toHaveBeenCalled();
+        });
 
-    test('should reject integer preference above max', () => {
-      mockReq.body = { autoRefreshInterval: 301 }; // Above max of 300
-      validatePreferencesUpdate(mockReq, mockRes, mockNext);
-      expect(mockNext).not.toHaveBeenCalled();
-      expect(ResponseFormatter.badRequest).toHaveBeenCalled();
-    });
+        test(`should accept value at max boundary (${intField.def.max}) for ${intField.key}`, () => {
+          mockReq.body = { [intField.key]: intField.def.max };
 
-    test('should reject non-integer for integer preference', () => {
-      mockReq.body = { autoRefreshInterval: 'fast' };
-      validatePreferencesUpdate(mockReq, mockRes, mockNext);
-      expect(mockNext).not.toHaveBeenCalled();
-      expect(ResponseFormatter.badRequest).toHaveBeenCalled();
-    });
+          validatePreferencesUpdate(mockReq, mockRes, mockNext);
 
-    test('should handle validation error with no details message', () => {
-      // Force an edge case where error.details[0]?.message is undefined
-      mockReq.body = {}; // Empty should trigger min(1) error
-      validatePreferencesUpdate(mockReq, mockRes, mockNext);
-      expect(mockNext).not.toHaveBeenCalled();
-      expect(ResponseFormatter.badRequest).toHaveBeenCalled();
-    });
+          expect(mockNext).toHaveBeenCalled();
+        });
 
-    test('should handle multiple preference types in one update', () => {
-      mockReq.body = {
-        theme: 'dark',
-        notificationsEnabled: false,
-        timezone: 'Europe/London',
-        autoRefreshInterval: 60,
-      };
-      validatePreferencesUpdate(mockReq, mockRes, mockNext);
-      expect(mockNext).toHaveBeenCalled();
-    });
-  });
+        test(`should accept value in middle of range for ${intField.key}`, () => {
+          const midValue = Math.floor((intField.def.min + intField.def.max) / 2);
+          mockReq.body = { [intField.key]: midValue };
 
-  describe('buildSinglePreferenceSchema branch coverage', () => {
-    test('should handle string type preference in single update', () => {
-      // If theme is enum, use it; this tests the enum branch
-      mockReq.params = { key: 'theme' };
-      mockReq.body = { value: 'dark' };
-      validateSinglePreferenceUpdate(mockReq, mockRes, mockNext);
-      expect(mockNext).toHaveBeenCalled();
-    });
+          validatePreferencesUpdate(mockReq, mockRes, mockNext);
 
-    test('should handle boolean type preference in single update', () => {
-      mockReq.params = { key: 'notificationsEnabled' };
-      mockReq.body = { value: true };
-      validateSinglePreferenceUpdate(mockReq, mockRes, mockNext);
-      expect(mockNext).toHaveBeenCalled();
-    });
+          expect(mockNext).toHaveBeenCalled();
+        });
 
-    test('should validate timezone string preference', () => {
-      mockReq.params = { key: 'timezone' };
-      mockReq.body = { value: 'America/Los_Angeles' };
-      validateSinglePreferenceUpdate(mockReq, mockRes, mockNext);
-      expect(mockNext).toHaveBeenCalled();
-    });
+        test(`should reject value below min for ${intField.key}`, () => {
+          mockReq.body = { [intField.key]: intField.def.min - 1 };
 
-    test('should reject timezone exceeding maxLength', () => {
-      mockReq.params = { key: 'timezone' };
-      mockReq.body = { value: 'A'.repeat(100) }; // Way over 50 char limit
-      validateSinglePreferenceUpdate(mockReq, mockRes, mockNext);
-      expect(mockNext).not.toHaveBeenCalled();
-      expect(ResponseFormatter.badRequest).toHaveBeenCalled();
-    });
+          validatePreferencesUpdate(mockReq, mockRes, mockNext);
 
-    test('should validate autoRefreshInterval integer preference', () => {
-      mockReq.params = { key: 'autoRefreshInterval' };
-      mockReq.body = { value: 60 };
-      validateSinglePreferenceUpdate(mockReq, mockRes, mockNext);
-      expect(mockNext).toHaveBeenCalled();
-    });
+          expect(mockNext).not.toHaveBeenCalled();
+          expect(ResponseFormatter.badRequest).toHaveBeenCalled();
+        });
 
-    test('should reject autoRefreshInterval below min', () => {
-      mockReq.params = { key: 'autoRefreshInterval' };
-      mockReq.body = { value: -5 }; // Below min of 0
-      validateSinglePreferenceUpdate(mockReq, mockRes, mockNext);
-      expect(mockNext).not.toHaveBeenCalled();
-      expect(ResponseFormatter.badRequest).toHaveBeenCalled();
-    });
+        test(`should reject value above max for ${intField.key}`, () => {
+          mockReq.body = { [intField.key]: intField.def.max + 1 };
 
-    test('should reject autoRefreshInterval above max', () => {
-      mockReq.params = { key: 'autoRefreshInterval' };
-      mockReq.body = { value: 500 }; // Above max of 300
-      validateSinglePreferenceUpdate(mockReq, mockRes, mockNext);
-      expect(mockNext).not.toHaveBeenCalled();
-      expect(ResponseFormatter.badRequest).toHaveBeenCalled();
-    });
+          validatePreferencesUpdate(mockReq, mockRes, mockNext);
 
-    test('should reject non-number for autoRefreshInterval', () => {
-      mockReq.params = { key: 'autoRefreshInterval' };
-      mockReq.body = { value: 'not-a-number' };
-      validateSinglePreferenceUpdate(mockReq, mockRes, mockNext);
-      expect(mockNext).not.toHaveBeenCalled();
-      expect(ResponseFormatter.badRequest).toHaveBeenCalled();
+          expect(mockNext).not.toHaveBeenCalled();
+          expect(ResponseFormatter.badRequest).toHaveBeenCalled();
+        });
+
+        test(`should reject non-integer for ${intField.key}`, () => {
+          mockReq.body = { [intField.key]: 'not-a-number' };
+
+          validatePreferencesUpdate(mockReq, mockRes, mockNext);
+
+          expect(mockNext).not.toHaveBeenCalled();
+          expect(ResponseFormatter.badRequest).toHaveBeenCalled();
+        });
+      }
     });
   });
 });

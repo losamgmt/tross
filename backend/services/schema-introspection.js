@@ -22,28 +22,28 @@ class SchemaIntrospectionService {
    * @param {string} tableName - Table to introspect
    * @returns {Promise<Object>} Schema metadata
    */
-  async getTableSchema(tableName) {
+  static async getTableSchema(tableName) {
     const [columns, constraints, foreignKeys, indexes] = await Promise.all([
-      this._getColumns(tableName),
-      this._getConstraints(tableName),
-      this._getForeignKeys(tableName),
-      this._getIndexes(tableName),
+      SchemaIntrospectionService._getColumns(tableName),
+      SchemaIntrospectionService._getConstraints(tableName),
+      SchemaIntrospectionService._getForeignKeys(tableName),
+      SchemaIntrospectionService._getIndexes(tableName),
     ]);
 
     return {
       tableName,
-      columns: this._enrichColumns(columns, foreignKeys),
+      columns: SchemaIntrospectionService._enrichColumns(columns, foreignKeys),
       constraints,
       foreignKeys,
       indexes,
-      displayName: this._generateDisplayName(tableName),
+      displayName: SchemaIntrospectionService._generateDisplayName(tableName),
     };
   }
 
   /**
    * Get all available tables in public schema
    */
-  async getAllTables() {
+  static async getAllTables() {
     const result = await db.query(`
       SELECT 
         table_name,
@@ -56,7 +56,7 @@ class SchemaIntrospectionService {
 
     return result.rows.map((row) => ({
       name: row.table_name,
-      displayName: this._generateDisplayName(row.table_name),
+      displayName: SchemaIntrospectionService._generateDisplayName(row.table_name),
       description: row.description,
     }));
   }
@@ -65,7 +65,7 @@ class SchemaIntrospectionService {
    * Get column information from information_schema
    * @private
    */
-  async _getColumns(tableName) {
+  static async _getColumns(tableName) {
     const result = await db.query(
       `
       SELECT 
@@ -93,7 +93,7 @@ class SchemaIntrospectionService {
    * Get table constraints (PRIMARY KEY, UNIQUE, CHECK)
    * @private
    */
-  async _getConstraints(tableName) {
+  static async _getConstraints(tableName) {
     const result = await db.query(
       `
       SELECT 
@@ -117,7 +117,7 @@ class SchemaIntrospectionService {
    * Get foreign key relationships
    * @private
    */
-  async _getForeignKeys(tableName) {
+  static async _getForeignKeys(tableName) {
     const result = await db.query(
       `
       SELECT 
@@ -149,7 +149,7 @@ class SchemaIntrospectionService {
    * Get table indexes
    * @private
    */
-  async _getIndexes(tableName) {
+  static async _getIndexes(tableName) {
     const result = await db.query(
       `
       SELECT
@@ -169,7 +169,7 @@ class SchemaIntrospectionService {
    * Enrich column metadata with UI hints and foreign key info
    * @private
    */
-  _enrichColumns(columns, foreignKeys) {
+  static _enrichColumns(columns, foreignKeys) {
     const fkMap = new Map(
       foreignKeys.map((fk) => [
         fk.column_name,
@@ -187,7 +187,7 @@ class SchemaIntrospectionService {
 
       return {
         name: col.column_name,
-        type: this._mapPostgreSQLType(col.data_type, col.udt_name),
+        type: SchemaIntrospectionService._mapPostgreSQLType(col.data_type, col.udt_name),
         nullable: col.is_nullable === 'YES',
         default: col.column_default,
         maxLength: col.character_maximum_length,
@@ -196,10 +196,10 @@ class SchemaIntrospectionService {
         position: col.ordinal_position,
 
         // UI metadata (inferred from schema)
-        uiType: this._inferUIType(col, foreignKey),
-        label: this._generateLabel(col.column_name),
-        readonly: this._isReadonly(col.column_name),
-        searchable: this._isSearchable(col),
+        uiType: SchemaIntrospectionService._inferUIType(col, foreignKey),
+        label: SchemaIntrospectionService._generateLabel(col.column_name),
+        readonly: SchemaIntrospectionService._isReadonly(col.column_name),
+        searchable: SchemaIntrospectionService._isSearchable(col),
         sortable: true,
 
         // Foreign key info
@@ -212,7 +212,7 @@ class SchemaIntrospectionService {
    * Map PostgreSQL types to generic types
    * @private
    */
-  _mapPostgreSQLType(dataType, udtName) {
+  static _mapPostgreSQLType(dataType, udtName) {
     const typeMap = {
       integer: 'number',
       bigint: 'number',
@@ -240,7 +240,7 @@ class SchemaIntrospectionService {
    * Infer UI input type from column metadata
    * @private
    */
-  _inferUIType(column, foreignKey) {
+  static _inferUIType(column, foreignKey) {
     const { column_name, data_type } = column;
 
     // System fields (readonly) - Contract v2.0
@@ -315,7 +315,7 @@ class SchemaIntrospectionService {
    * Generate human-readable label from column name
    * @private
    */
-  _generateLabel(columnName) {
+  static _generateLabel(columnName) {
     // Special cases
     const specialLabels = {
       id: 'ID',
@@ -341,21 +341,11 @@ class SchemaIntrospectionService {
   /**
    * Generate display name for table
    * @private
+   *
+   * Converts snake_case to Title Case
+   * No hardcoded special cases - the algorithm handles all patterns
    */
-  _generateDisplayName(tableName) {
-    // Special cases
-    const specialNames = {
-      users: 'Users',
-      roles: 'Roles',
-      audit_logs: 'Audit Logs',
-      refresh_tokens: 'Refresh Tokens',
-    };
-
-    if (specialNames[tableName]) {
-      return specialNames[tableName];
-    }
-
-    // Convert snake_case to Title Case (singular)
+  static _generateDisplayName(tableName) {
     return tableName
       .split('_')
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
@@ -366,7 +356,7 @@ class SchemaIntrospectionService {
    * Determine if field should be readonly in forms
    * @private
    */
-  _isReadonly(columnName) {
+  static _isReadonly(columnName) {
     // Contract v2.0: Readonly fields (cached from audit_logs or auto-managed)
     const readonlyFields = [
       'id',
@@ -381,7 +371,7 @@ class SchemaIntrospectionService {
    * Determine if field should be searchable
    * @private
    */
-  _isSearchable(column) {
+  static _isSearchable(column) {
     const { column_name, data_type } = column;
 
     // Don't search IDs or timestamps
@@ -405,14 +395,14 @@ class SchemaIntrospectionService {
    * @param {string} labelColumn - Column to use as label (default: 'name')
    * @returns {Promise<Array>} Array of {value, label} objects
    */
-  async getForeignKeyOptions(
+  static async getForeignKeyOptions(
     tableName,
     valueColumn = 'id',
     labelColumn = 'name',
   ) {
     // Try to find a name-like column
     const nameColumns = ['name', 'title', 'email', 'description'];
-    const schema = await this.getTableSchema(tableName);
+    const schema = await SchemaIntrospectionService.getTableSchema(tableName);
 
     // Find best label column
     let actualLabelColumn = labelColumn;
@@ -434,4 +424,4 @@ class SchemaIntrospectionService {
   }
 }
 
-module.exports = new SchemaIntrospectionService();
+module.exports = SchemaIntrospectionService;

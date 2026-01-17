@@ -1,85 +1,73 @@
 /**
  * Generic Entity Middleware
  *
- * Middleware stack for the generic entity API (/api/v2/:entity).
+ * Middleware for the generic entity API.
  * Uses entity metadata as the SINGLE SOURCE OF TRUTH for:
- * - Entity validation
- * - Permission checks (via rlsResource)
- * - Row-Level Security (via rlsResource)
+ * - Entity extraction from URL
  * - Request body validation (via requiredFields, updateableFields)
  *
- * ARCHITECTURE:
- * authenticateToken → extractEntity → genericRequirePermission → genericEnforceRLS → handler
- *                          ↓                    ↓                       ↓
- *                    req.entityName        uses metadata            uses metadata
- *                    req.entityMetadata    .rlsResource             .rlsResource
- *                    req.entityId
+ * UNIFIED ARCHITECTURE:
+ * authenticateToken → extractEntity → requirePermission → enforceRLS → handler
+ *                          ↓                 ↓                 ↓
+ *                    req.entityMetadata   reads from      reads from
+ *                    req.entityName       req.entityMetadata   req.entityMetadata
+ *                    req.entityId         .rlsResource    .rlsResource
+ *
+ * NOTE: requirePermission and enforceRLS are unified middleware that read
+ * resource from req.entityMetadata.rlsResource. No wrapper functions needed.
  *
  * SECURITY: All middleware follow defense-in-depth principle.
  * Each layer validates independently - no assumptions about prior checks.
  */
 
 const GenericEntityService = require('../services/generic-entity-service');
-const { getRLSRule } = require('../config/permissions-loader');
-const { hasPermission } = require('../config/permissions-loader');
-const { HTTP_STATUS } = require('../config/constants');
 const { logSecurityEvent } = require('../config/logger');
 const { getClientIp, getUserAgent } = require('../utils/request-helpers');
-const { toSafeInteger } = require('../validators/type-coercion');
 const { buildEntitySchema } = require('../utils/validation-schema-builder');
+const ResponseFormatter = require('../utils/response-formatter');
+const { ERROR_CODES } = require('../utils/response-formatter');
 
 // =============================================================================
-// ERROR RESPONSE HELPERS
-// =============================================================================
-
-/**
- * Send standardized error response
- * @param {Object} res - Express response
- * @param {number} status - HTTP status code
- * @param {string} error - Error type
- * @param {string} message - User-facing message
- */
-const sendError = (res, status, error, message) => {
-  return res.status(status).json({
-    error,
-    message,
-    timestamp: new Date().toISOString(),
-  });
-};
-
-// =============================================================================
-// ENTITY NAME MAPPING
+// ENTITY NAME MAPPING (METADATA-DRIVEN - NO HARDCODING!)
 // =============================================================================
 
 /**
- * Map URL entity names to internal entity names
- * Handles pluralization and case normalization
+ * Build entity URL map dynamically from metadata.
+ * SINGLE SOURCE OF TRUTH: config/models/*.js
  *
- * URL: /api/v2/customers/1 → entityName: 'customer'
- * URL: /api/v2/work-orders/1 → entityName: 'work_order'
- * All internal entity names use snake_case
+ * For each entity in metadata, accepts:
+ * - Singular form (entity name): 'customer' → 'customer'
+ * - Plural form (table name): 'customers' → 'customer'
+ * - Kebab-case form: 'work-orders' → 'work_order'
+ * - Snake_case form: 'work_orders' → 'work_order'
  */
-const ENTITY_URL_MAP = {
-  // Plural URL forms → internal entity names (snake_case only)
-  users: 'user',
-  roles: 'role',
-  customers: 'customer',
-  technicians: 'technician',
-  'work-orders': 'work_order',
-  work_orders: 'work_order',
-  invoices: 'invoice',
-  contracts: 'contract',
-  inventory: 'inventory',
-  // Singular forms (also accepted)
-  user: 'user',
-  role: 'role',
-  customer: 'customer',
-  technician: 'technician',
-  'work-order': 'work_order',
-  work_order: 'work_order',
-  invoice: 'invoice',
-  contract: 'contract',
-};
+const allMetadata = require('../config/models');
+
+function buildEntityUrlMap() {
+  const map = {};
+
+  for (const [entityName, metadata] of Object.entries(allMetadata)) {
+    // Map singular form (entity name)
+    map[entityName] = entityName;
+
+    // Map plural form (table name)
+    if (metadata.tableName) {
+      map[metadata.tableName] = entityName;
+    }
+
+    // Map kebab-case variants for URL compatibility
+    // work_order → work-order, work-orders
+    const kebabCase = entityName.replace(/_/g, '-');
+    map[kebabCase] = entityName;
+    if (metadata.tableName) {
+      map[metadata.tableName.replace(/_/g, '-')] = entityName;
+    }
+  }
+
+  return map;
+}
+
+const ENTITY_URL_MAP = buildEntityUrlMap();
 
 /**
  * Normalize URL entity parameter to internal entity name
@@ -95,7 +83,46 @@ const normalizeEntityName = (urlEntity) => {
 };
 
 // =============================================================================
-// EXTRACT ENTITY MIDDLEWARE
+// ATTACH ENTITY MIDDLEWARE (FACTORY-TIME METADATA)
+// =============================================================================
+
+/**
+ * Factory to create middleware that attaches entity metadata at route-definition time.
+ * Use this for routes that know their entity statically (not from URL params).
+ *
+ * UNIFIED DATA FLOW: Sets req.entityMetadata which requirePermission and enforceRLS read.
+ *
+ * @param {string} entityName - The internal entity name (e.g., 'customer', 'work_order')
+ * @returns {Function} Express middleware that attaches entity metadata
+ *
+ * @example
+ * // In roles-extensions.js - knows it's checking 'users' permission
+ * router.get('/:id/users',
+ *   authenticateToken,
+ *   attachEntity('user'),
+ *   requirePermission('read'),
+ *   handler
+ * );
+ */
+const attachEntity = (entityName) => {
+  // Get metadata at factory time (route definition)
+  let metadata;
+  try {
+    metadata = GenericEntityService._getMetadata(entityName);
+  } catch (_error) {
+    // Fail at startup, not at request time
+    throw new Error(`attachEntity: Unknown entity '${entityName}' - check config/models`);
+  }
+
+  return (req, res, next) => {
+    req.entityName = entityName;
+    req.entityMetadata = metadata;
+    next();
+  };
+};
+
+// =============================================================================
+// EXTRACT ENTITY MIDDLEWARE (RUNTIME URL PARSING)
 // =============================================================================
 
 /**
@@ -104,16 +131,18 @@ const normalizeEntityName = (urlEntity) => {
  * Attaches to request:
  * - req.entityName: Normalized entity name (e.g., 'customer')
  * - req.entityMetadata: Full metadata object from registry
- * - req.entityId: Validated ID (if :id param present)
+ *
+ * Note: ID validation is handled separately by validateIdParam() middleware.
+ * Use both in your route chain: extractEntity, validateIdParam()
  *
  * @returns {Function} Express middleware
  *
  * @example
  * // In route: GET /api/v2/:entity/:id
- * router.get('/:entity/:id', extractEntity, handler);
+ * router.get('/:entity/:id', extractEntity, validateIdParam(), handler);
  * // req.entityName = 'customer'
  * // req.entityMetadata = { tableName: 'customers', ... }
- * // req.entityId = 123
+ * // req.validated.id = 123 (set by validateIdParam)
  */
 const extractEntity = (req, res, next) => {
   const urlEntity = req.params.entity;
@@ -129,12 +158,7 @@ const extractEntity = (req, res, next) => {
       urlEntity,
       severity: 'WARN',
     });
-    return sendError(
-      res,
-      HTTP_STATUS.NOT_FOUND,
-      'Not Found',
-      `Unknown entity: ${urlEntity}`,
-    );
+    return ResponseFormatter.notFound(res, `Unknown entity: ${urlEntity}`, ERROR_CODES.RESOURCE_NOT_FOUND);
   }
 
   // Get metadata (validates entity exists in registry)
@@ -151,228 +175,15 @@ const extractEntity = (req, res, next) => {
       error: error.message,
       severity: 'ERROR',
     });
-    return sendError(
-      res,
-      HTTP_STATUS.INTERNAL_SERVER_ERROR,
-      'Internal Error',
-      'Entity configuration error',
-    );
+    return ResponseFormatter.internalError(res, new Error('Entity configuration error'), ERROR_CODES.SERVER_ERROR);
   }
 
   // Attach entity info to request
   req.entityName = entityName;
   req.entityMetadata = metadata;
 
-  // If :id param present, validate and attach
-  if (req.params.id !== undefined) {
-    try {
-      // silent: true because URL params are ALWAYS strings - coercion is expected, not noteworthy
-      req.entityId = toSafeInteger(req.params.id, 'id', { silent: true });
-    } catch (error) {
-      return sendError(
-        res,
-        HTTP_STATUS.BAD_REQUEST,
-        'Bad Request',
-        `Invalid ${entityName} ID: ${error.message}`,
-      );
-    }
-  }
-
-  next();
-};
-
-// =============================================================================
-// GENERIC PERMISSION MIDDLEWARE
-// =============================================================================
-
-/**
- * Generic permission check using entity metadata
- *
- * Uses metadata.rlsResource to determine the permission resource.
- * This allows the generic route to work without hardcoded resource names.
- *
- * @param {string} operation - Operation to check ('create', 'read', 'update', 'delete')
- * @returns {Function} Express middleware
- *
- * @example
- * router.get('/:entity/:id',
- *   extractEntity,
- *   genericRequirePermission('read'),
- *   handler
- * );
- */
-const genericRequirePermission = (operation) => (req, res, next) => {
-  const userRole = req.dbUser?.role;
-  const { entityName, entityMetadata } = req;
-
-  // Defense-in-depth: Verify extractEntity ran
-  if (!entityName || !entityMetadata) {
-    logSecurityEvent('GENERIC_PERMISSION_NO_ENTITY', {
-      ip: getClientIp(req),
-      userAgent: getUserAgent(req),
-      url: req.url,
-      severity: 'ERROR',
-    });
-    return sendError(
-      res,
-      HTTP_STATUS.INTERNAL_SERVER_ERROR,
-      'Internal Error',
-      'Entity not extracted',
-    );
-  }
-
-  // Defense-in-depth: Verify user authenticated
-  if (!userRole) {
-    logSecurityEvent('GENERIC_PERMISSION_NO_ROLE', {
-      ip: getClientIp(req),
-      userAgent: getUserAgent(req),
-      url: req.url,
-      entityName,
-      operation,
-      severity: 'WARN',
-    });
-    return sendError(
-      res,
-      HTTP_STATUS.FORBIDDEN,
-      'Forbidden',
-      'User has no assigned role',
-    );
-  }
-
-  // Get resource name from metadata (e.g., 'customers', 'work_orders')
-  const resource = entityMetadata.rlsResource;
-
-  if (!resource) {
-    logSecurityEvent('GENERIC_PERMISSION_NO_RLS_RESOURCE', {
-      ip: getClientIp(req),
-      userAgent: getUserAgent(req),
-      url: req.url,
-      entityName,
-      severity: 'ERROR',
-    });
-    return sendError(
-      res,
-      HTTP_STATUS.INTERNAL_SERVER_ERROR,
-      'Internal Error',
-      'Entity missing rlsResource configuration',
-    );
-  }
-
-  // Check permission using existing permission loader
-  if (!hasPermission(userRole, resource, operation)) {
-    logSecurityEvent('GENERIC_PERMISSION_DENIED', {
-      ip: getClientIp(req),
-      userAgent: getUserAgent(req),
-      url: req.url,
-      userId: req.dbUser?.id,
-      userRole,
-      resource,
-      operation,
-      severity: 'WARN',
-    });
-    return sendError(
-      res,
-      HTTP_STATUS.FORBIDDEN,
-      'Forbidden',
-      `You do not have permission to ${operation} ${resource}`,
-    );
-  }
-
-  // Log successful permission check
-  logSecurityEvent('GENERIC_PERMISSION_GRANTED', {
-    ip: getClientIp(req),
-    userAgent: getUserAgent(req),
-    url: req.url,
-    userId: req.dbUser?.id,
-    userRole,
-    resource,
-    operation,
-    severity: 'DEBUG',
-  });
-
-  next();
-};
-
-// =============================================================================
-// GENERIC RLS MIDDLEWARE
-// =============================================================================
-
-/**
- * Generic Row-Level Security using entity metadata
- *
- * Uses metadata.rlsResource to determine the RLS resource.
- * Attaches RLS policy to request for service-layer filtering.
- *
- * @returns {Function} Express middleware
- *
- * @example
- * router.get('/:entity',
- *   extractEntity,
- *   genericRequirePermission('read'),
- *   genericEnforceRLS,
- *   handler
- * );
- */
-const genericEnforceRLS = (req, res, next) => {
-  const userRole = req.dbUser?.role;
-  const userId = req.dbUser?.id;
-  const { entityName, entityMetadata } = req;
-
-  // Defense-in-depth: Verify extractEntity ran
-  if (!entityName || !entityMetadata) {
-    logSecurityEvent('GENERIC_RLS_NO_ENTITY', {
-      ip: getClientIp(req),
-      userAgent: getUserAgent(req),
-      url: req.url,
-      severity: 'ERROR',
-    });
-    return sendError(
-      res,
-      HTTP_STATUS.INTERNAL_SERVER_ERROR,
-      'Internal Error',
-      'Entity not extracted',
-    );
-  }
-
-  // Defense-in-depth: Verify user authenticated
-  if (!userRole) {
-    logSecurityEvent('GENERIC_RLS_NO_ROLE', {
-      ip: getClientIp(req),
-      userAgent: getUserAgent(req),
-      url: req.url,
-      entityName,
-      severity: 'WARN',
-    });
-    return sendError(
-      res,
-      HTTP_STATUS.FORBIDDEN,
-      'Forbidden',
-      'User has no assigned role',
-    );
-  }
-
-  // Get resource name from metadata
-  const resource = entityMetadata.rlsResource;
-
-  // Get RLS policy from permissions.json
-  const rlsPolicy = getRLSRule(userRole, resource);
-
-  // Attach RLS context to request
-  req.rlsPolicy = rlsPolicy;
-  req.rlsResource = resource;
-  req.rlsUserId = userId;
-
-  logSecurityEvent('GENERIC_RLS_APPLIED', {
-    ip: getClientIp(req),
-    userAgent: getUserAgent(req),
-    url: req.url,
-    userId,
-    userRole,
-    entityName,
-    resource,
-    policy: rlsPolicy,
-    severity: 'DEBUG',
-  });
+  // Note: ID validation is handled by validateIdParam() middleware
+  // Do not duplicate validation here - SRP
 
   next();
 };
@@ -409,32 +220,17 @@ const genericValidateBody = (operation) => (req, res, next) => {
 
   // Defense-in-depth: Verify extractEntity ran
   if (!entityName || !entityMetadata) {
-    return sendError(
-      res,
-      HTTP_STATUS.INTERNAL_SERVER_ERROR,
-      'Internal Error',
-      'Entity not extracted',
-    );
+    return ResponseFormatter.internalError(res, new Error('Entity not extracted'), ERROR_CODES.SERVER_ERROR);
   }
 
   // Defense-in-depth: Verify user is authenticated (should be caught by auth middleware)
   if (!userRole) {
-    return sendError(
-      res,
-      HTTP_STATUS.FORBIDDEN,
-      'Forbidden',
-      'User role not available for field access control',
-    );
+    return ResponseFormatter.forbidden(res, 'User role not available for field access control', ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS);
   }
 
   // Validate body is an object
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
-    return sendError(
-      res,
-      HTTP_STATUS.BAD_REQUEST,
-      'Bad Request',
-      'Request body must be a JSON object',
-    );
+    return ResponseFormatter.badRequest(res, 'Request body must be a JSON object', null, ERROR_CODES.VALIDATION_FAILED);
   }
 
   // Build role-aware Joi schema for this entity/operation/role
@@ -450,12 +246,7 @@ const genericValidateBody = (operation) => (req, res, next) => {
   if (error) {
     // Format Joi errors into user-friendly message
     const messages = error.details.map((detail) => detail.message);
-    return sendError(
-      res,
-      HTTP_STATUS.BAD_REQUEST,
-      'Validation Error',
-      messages.join('; '),
-    );
+    return ResponseFormatter.badRequest(res, messages.join('; '), null, ERROR_CODES.VALIDATION_FAILED);
   }
 
   // Additional operation-specific checks
@@ -476,12 +267,7 @@ const genericValidateBody = (operation) => (req, res, next) => {
     });
 
     if (missingFields.length > 0) {
-      return sendError(
-        res,
-        HTTP_STATUS.BAD_REQUEST,
-        'Validation Error',
-        `Missing required fields: ${missingFields.join(', ')}`,
-      );
+      return ResponseFormatter.badRequest(res, `Missing required fields: ${missingFields.join(', ')}`, null, ERROR_CODES.VALIDATION_MISSING_FIELD);
     }
   } else if (operation === 'update') {
     // Ensure at least one valid field
@@ -489,17 +275,13 @@ const genericValidateBody = (operation) => (req, res, next) => {
       // Derive updateable fields from fieldAccess for this role
       const { deriveUpdateableFields } = require('../utils/validation-schema-builder');
       const updateableFields = deriveUpdateableFields(entityMetadata, userRole);
-      return sendError(
-        res,
-        HTTP_STATUS.BAD_REQUEST,
-        'Validation Error',
-        `No valid updateable fields provided. Allowed for your role: ${updateableFields.join(', ')}`,
-      );
+      return ResponseFormatter.badRequest(res, `No valid updateable fields provided. Allowed for your role: ${updateableFields.join(', ')}`, null, ERROR_CODES.VALIDATION_FAILED);
     }
   }
 
-  // Store validated and filtered body
-  req.validatedBody = value;
+  // Store validated and filtered body in unified location
+  if (!req.validated) {req.validated = {};}
+  req.validated.body = value;
 
   next();
 };
@@ -511,9 +293,8 @@ const genericValidateBody = (operation) => (req, res, next) => {
 module.exports = {
   // Core middleware
   extractEntity,
-  genericRequirePermission,
-  genericEnforceRLS,
   genericValidateBody,
+  attachEntity,
 
   // Utilities (for testing)
   normalizeEntityName,

@@ -20,6 +20,8 @@ const { logger } = require('../config/logger');
 const db = require('../db/connection');
 const QueryBuilderService = require('./query-builder-service');
 const { buildRLSFilter } = require('../db/helpers/rls-filter-helper');
+const { sanitizeIdentifier, validateFieldAgainstWhitelist } = require('../utils/sql-safety');
+const AppError = require('../utils/app-error');
 
 class StatsService {
   /**
@@ -29,7 +31,7 @@ class StatsService {
   static _getMetadata(entityName) {
     const metadata = allMetadata[entityName];
     if (!metadata) {
-      throw new Error(`Unknown entity: ${entityName}`);
+      throw new AppError(`Unknown entity: ${entityName}`, 404, 'NOT_FOUND');
     }
     return metadata;
   }
@@ -104,7 +106,7 @@ class StatsService {
 
     // Validate groupByField is filterable
     if (!filterableFields.includes(groupByField)) {
-      throw new Error(`Cannot group by '${groupByField}' - not a filterable field`);
+      throw new AppError(`Cannot group by '${groupByField}' - not a filterable field`, 400, 'BAD_REQUEST');
     }
 
     // Build RLS filter
@@ -167,6 +169,16 @@ class StatsService {
     const metadata = this._getMetadata(entityName);
     const { tableName, filterableFields = [] } = metadata;
 
+    // SECURITY: Validate field is a numeric/summable field before interpolation
+    // Build list of allowed sum fields from metadata
+    const numericFields = Object.entries(metadata.fields || {})
+      .filter(([_, def]) => ['integer', 'number', 'decimal', 'currency'].includes(def.type))
+      .map(([name]) => name);
+
+    validateFieldAgainstWhitelist(field, numericFields, 'sum field');
+    const safeField = sanitizeIdentifier(field, 'field');
+    const safeTable = sanitizeIdentifier(tableName, 'table');
+
     // Build RLS filter
     const rlsResult = buildRLSFilter(req, metadata, 0);
     const paramOffset = rlsResult.params.length;
@@ -194,7 +206,8 @@ class StatsService {
       ? `WHERE ${whereClauses.join(' AND ')}`
       : '';
 
-    const query = `SELECT COALESCE(SUM(${tableName}.${field}), 0) as total FROM ${tableName} ${whereSQL}`;
+    // SECURITY: Using validated/sanitized identifiers
+    const query = `SELECT COALESCE(SUM(${safeTable}.${safeField}), 0) as total FROM ${safeTable} ${whereSQL}`;
 
     logger.debug('[StatsService.sum]', { entityName, field, query, params });
 

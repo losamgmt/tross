@@ -73,24 +73,11 @@ function createFactoryValidatorMock(validatorName, customLogic = null) {
 function createValidatorMockConfig() {
   // Direct middleware validators (called as middleware directly)
   // MUST be plain functions - jest.fn() breaks Express middleware chain!
+  // NOTE: Entity-specific validators (validateCustomerCreate, etc.) are NOT mocked here
+  // because routes use genericValidateBody middleware, not these validators.
   const directValidators = [
-    'validateUserCreate',
     'validateProfileUpdate',
     'validateRoleAssignment',
-    'validateRoleCreate',
-    'validateRoleUpdate',
-    'validateCustomerCreate',
-    'validateCustomerUpdate',
-    'validateTechnicianCreate',
-    'validateTechnicianUpdate',
-    'validateWorkOrderCreate',
-    'validateWorkOrderUpdate',
-    'validateInvoiceCreate',
-    'validateInvoiceUpdate',
-    'validateContractCreate',
-    'validateContractUpdate',
-    'validateInventoryCreate',
-    'validateInventoryUpdate',
     'validateAuthCallback',
     'validateAuth0Token',
     'validateAuth0Refresh',
@@ -138,12 +125,6 @@ function createValidatorMockConfig() {
       if (!req.validated) req.validated = {};
       req.validated.sortBy = req.query.sortBy || 'created_at';
       req.validated.sortOrder = req.query.sortOrder || 'DESC';
-      next();
-    },
-    
-    validateFilters: (options) => (req, res, next) => {
-      if (!req.validated) req.validated = {};
-      req.validated.filters = req.query.filters || {};
       next();
     },
   };
@@ -276,6 +257,8 @@ function setupGenericEntityServiceMock(GenericEntityService, entityName, options
 
 /**
  * Create a configured Express test app with a router
+ * Includes global error handler that mimics production behavior (pattern-matching)
+ * 
  * @param {Router} router - Express router to mount
  * @param {string} path - Path to mount router at (default: '/api/users')
  * @returns {Express} Configured test app
@@ -284,6 +267,38 @@ function createRouteTestApp(router, path = "/api/users") {
   const app = express();
   app.use(express.json());
   app.use(path, router);
+  
+  // Global error handler - mimics server.js pattern-matching behavior
+  // eslint-disable-next-line no-unused-vars
+  app.use((err, req, res, next) => {
+    const messageLower = (err.message || '').toLowerCase();
+    let statusCode = 500;
+    
+    // Pattern match error messages to determine HTTP status (same as server.js)
+    // Note: "Cannot read properties" is an internal JS error, NOT a 400 validation error
+    if (messageLower.includes('not found') || messageLower.includes('does not exist')) {
+      statusCode = 404;
+    } else if (messageLower.includes('invalid') || messageLower.includes('required') || 
+               messageLower.includes('must be') || messageLower.includes('already') || 
+               messageLower.includes('yourself') || messageLower.includes('not a foreign key') ||
+               (messageLower.includes('cannot') && !messageLower.includes('cannot read properties'))) {
+      statusCode = 400;
+    } else if (messageLower.includes('expired') || messageLower.includes('unauthorized')) {
+      statusCode = 401;
+    } else if (messageLower.includes('permission') || messageLower.includes('forbidden') ||
+               messageLower.includes('access denied') || messageLower.includes('not allowed')) {
+      statusCode = 403;
+    }
+    
+    const errorMessage = err.message || 'Internal server error';
+    res.status(statusCode).json({
+      success: false,
+      error: errorMessage,
+      message: errorMessage,
+      timestamp: new Date().toISOString(),
+    });
+  });
+  
   return app;
 }
 

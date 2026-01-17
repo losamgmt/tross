@@ -3,30 +3,54 @@
  *
  * SRP: ONLY exports all model metadata configurations
  * Single import point for all model metadata
+ *
+ * AUTO-DISCOVERY: Automatically loads all *-metadata.js files in this directory.
+ * To add a new entity, simply create a new {entity-name}-metadata.js file.
+ * No manual registration required!
+ *
+ * Naming Convention:
+ * - Filename: {entity-name}-metadata.js (hyphen-separated)
+ * - Export key: {entity_name} (underscore-separated, derived from filename)
+ * - Example: work-order-metadata.js → exports as 'work_order'
+ *
+ * @module config/models
  */
 
-const userMetadata = require('./user-metadata');
-const roleMetadata = require('./role-metadata');
-const customerMetadata = require('./customer-metadata');
-const technicianMetadata = require('./technician-metadata');
-const workOrderMetadata = require('./work-order-metadata');
-const contractMetadata = require('./contract-metadata');
-const invoiceMetadata = require('./invoice-metadata');
-const inventoryMetadata = require('./inventory-metadata');
-const preferencesMetadata = require('./preferences-metadata');
-const savedViewMetadata = require('./saved-view-metadata');
-const fileAttachmentMetadata = require('./file-attachment-metadata');
+const fs = require('fs');
+const path = require('path');
 
-module.exports = {
-  user: userMetadata,
-  role: roleMetadata,
-  customer: customerMetadata,
-  technician: technicianMetadata,
-  work_order: workOrderMetadata,
-  contract: contractMetadata,
-  invoice: invoiceMetadata,
-  inventory: inventoryMetadata,
-  preferences: preferencesMetadata,
-  saved_view: savedViewMetadata,
-  file_attachment: fileAttachmentMetadata,
-};
+/**
+ * Auto-discover and load all metadata files in this directory
+ * @returns {Object} Map of entityName → metadata
+ */
+function loadAllMetadata() {
+  const metadataDir = __dirname;
+  const allMetadata = {};
+
+  // Find all *-metadata.js files (excluding index.js)
+  const metadataFiles = fs.readdirSync(metadataDir)
+    .filter(file => file.endsWith('-metadata.js'));
+
+  for (const file of metadataFiles) {
+    // Load the metadata module
+    const metadata = require(path.join(metadataDir, file));
+
+    // Derive entity name from filename:
+    // 'work-order-metadata.js' → 'work-order' → 'work_order'
+    const entityName = file
+      .replace('-metadata.js', '') // Remove suffix
+      .replace(/-/g, '_'); // Convert hyphens to underscores
+
+    allMetadata[entityName] = metadata;
+  }
+
+  return allMetadata;
+}
+
+const allMetadata = loadAllMetadata();
+
+/**
+ * Default export: pure metadata object for backwards compatibility.
+ * Consumers can iterate with Object.entries(allMetadata) safely.
+ */
+module.exports = allMetadata;

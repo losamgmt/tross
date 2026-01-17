@@ -144,19 +144,21 @@ const AppConfig = {
 
   // ============================================================================
   // AUTH0 CONFIGURATION
+  // SECURITY: No fallbacks - must be explicitly configured via environment
   // ============================================================================
   auth0: {
-    domain: process.env.AUTH0_DOMAIN || 'dev-mglpuahc3cwf66wq.us.auth0.com',
-    clientId: process.env.AUTH0_CLIENT_ID || 'WxWdn4aInQlttryLO0TYdvheBka8yXX4',
+    domain: process.env.AUTH0_DOMAIN,
+    clientId: process.env.AUTH0_CLIENT_ID,
     clientSecret: process.env.AUTH0_CLIENT_SECRET,
-    audience: process.env.AUTH0_AUDIENCE || 'https://api.tross.dev',
+    audience: process.env.AUTH0_AUDIENCE,
   },
 
   // ============================================================================
   // JWT CONFIGURATION
+  // SECURITY: No fallbacks - must be explicitly configured via environment
   // ============================================================================
   jwt: {
-    secret: process.env.JWT_SECRET || 'your-secret-key-change-in-production',
+    secret: process.env.JWT_SECRET,
     expiresIn: process.env.JWT_EXPIRES_IN || '24h',
     algorithm: 'HS256',
   },

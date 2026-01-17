@@ -8,17 +8,19 @@
  * - Active session = refresh_token with is_active=true and expires_at > now
  * - Force logout = set user status to 'suspended' + revoke all tokens
  * - Session info includes user name, role, login time, IP, user agent
+ * - Static class (no instance state)
  */
 
-const { pool } = require('../db/connection');
+const db = require('../db/connection');
 const { logger } = require('../config/logger');
+const AppError = require('../utils/app-error');
 
 class SessionsService {
   /**
    * Get all active sessions with user details
    * @returns {Promise<Array>} Array of active sessions with user info
    */
-  async getActiveSessions() {
+  static async getActiveSessions() {
     const query = `
       SELECT 
         rt.id as session_id,
@@ -42,7 +44,7 @@ class SessionsService {
       ORDER BY rt.created_at DESC
     `;
 
-    const result = await pool.query(query);
+    const result = await db.query(query);
     return result.rows.map(row => ({
       sessionId: row.session_id,
       userId: row.user_id,
@@ -67,7 +69,7 @@ class SessionsService {
    * @param {number} userId - User ID
    * @returns {Promise<Array>} Array of user's active sessions
    */
-  async getUserSessions(userId) {
+  static async getUserSessions(userId) {
     const query = `
       SELECT 
         rt.id as session_id,
@@ -84,7 +86,7 @@ class SessionsService {
       ORDER BY rt.created_at DESC
     `;
 
-    const result = await pool.query(query, [userId]);
+    const result = await db.query(query, [userId]);
     return result.rows.map(row => ({
       sessionId: row.session_id,
       loginTime: row.login_time,
@@ -102,13 +104,13 @@ class SessionsService {
    * @param {string} reason - Optional reason for the suspension
    * @returns {Promise<Object>} Result with user info and revoked session count
    */
-  async forceLogoutUser(userId, adminUserId, reason = null) {
+  static async forceLogoutUser(userId, adminUserId, reason = null) {
     // Prevent admin from locking themselves (check before transaction)
     if (userId === adminUserId) {
-      throw new Error('Cannot force logout yourself');
+      throw new AppError('Cannot force logout yourself', 400, 'BAD_REQUEST');
     }
 
-    const client = await pool.connect();
+    const client = await db.getClient();
 
     try {
       await client.query('BEGIN');
@@ -122,7 +124,7 @@ class SessionsService {
       const userResult = await client.query(userQuery, [userId]);
 
       if (userResult.rows.length === 0) {
-        throw new Error(`User with ID ${userId} not found`);
+        throw new AppError(`User with ID ${userId} not found`, 404, 'NOT_FOUND');
       }
 
       const user = userResult.rows[0];
@@ -187,7 +189,7 @@ class SessionsService {
    * @param {number} adminUserId - Admin performing the action
    * @returns {Promise<Object>} Result with revoke status
    */
-  async revokeSession(sessionId, adminUserId) {
+  static async revokeSession(sessionId, adminUserId) {
     const query = `
       UPDATE refresh_tokens
       SET is_active = false, revoked_at = NOW()
@@ -197,10 +199,10 @@ class SessionsService {
       RETURNING id, user_id
     `;
 
-    const result = await pool.query(query, [sessionId]);
+    const result = await db.query(query, [sessionId]);
 
     if (result.rowCount === 0) {
-      throw new Error(`Session ${sessionId} not found or already revoked`);
+      throw new AppError(`Session ${sessionId} not found or already revoked`, 404, 'NOT_FOUND');
     }
 
     logger.info('Session revoked', {
@@ -222,7 +224,7 @@ class SessionsService {
    * @param {number} adminUserId - Admin performing the action
    * @returns {Promise<Object>} Result with user info
    */
-  async reactivateUser(userId, adminUserId) {
+  static async reactivateUser(userId, adminUserId) {
     const query = `
       UPDATE users
       SET status = 'active', updated_at = NOW()
@@ -230,10 +232,10 @@ class SessionsService {
       RETURNING id, email, first_name, last_name, status
     `;
 
-    const result = await pool.query(query, [userId]);
+    const result = await db.query(query, [userId]);
 
     if (result.rowCount === 0) {
-      throw new Error(`User ${userId} not found or not suspended`);
+      throw new AppError(`User ${userId} not found or not suspended`, 404, 'NOT_FOUND');
     }
 
     const user = result.rows[0];
@@ -255,4 +257,4 @@ class SessionsService {
   }
 }
 
-module.exports = new SessionsService();
+module.exports = SessionsService;

@@ -6,6 +6,7 @@
  */
 const jwt = require('jsonwebtoken');
 const AuthStrategy = require('./AuthStrategy');
+const AppError = require('../../utils/app-error');
 const { TEST_USERS } = require('../../config/test-users');
 const { AUTH, USER_ROLES: _USER_ROLES } = require('../../config/constants');
 const { logger } = require('../../config/logger');
@@ -49,7 +50,7 @@ class DevAuthStrategy extends AuthStrategy {
       }
 
       if (!user) {
-        throw new Error('User not found in development test users');
+        throw new AppError('User not found in development test users', 404, 'NOT_FOUND');
       }
 
       // Generate JWT token with RFC 7519 standard claims
@@ -84,7 +85,7 @@ class DevAuthStrategy extends AuthStrategy {
       };
     } catch (error) {
       logger.error('Development authentication error:', error);
-      throw new Error(`Authentication failed: ${error.message}`);
+      throw new AppError(`Authentication failed: ${error.message}`, 401, 'UNAUTHORIZED');
     }
   }
 
@@ -99,16 +100,16 @@ class DevAuthStrategy extends AuthStrategy {
 
       // Ensure this is a development token
       if (decoded.provider !== 'development') {
-        throw new Error('Invalid token provider');
+        throw new AppError('Invalid token provider', 401, 'UNAUTHORIZED');
       }
 
       return decoded;
     } catch (error) {
       if (error.name === 'TokenExpiredError') {
-        throw new Error('Token has expired');
+        throw new AppError('Token has expired', 401, 'UNAUTHORIZED');
       }
       if (error.name === 'JsonWebTokenError') {
-        throw new Error('Invalid token');
+        throw new AppError('Invalid token', 401, 'UNAUTHORIZED');
       }
       throw error;
     }
@@ -131,7 +132,7 @@ class DevAuthStrategy extends AuthStrategy {
       }
 
       if (!user) {
-        throw new Error('User not found');
+        throw new AppError('User not found', 404, 'NOT_FOUND');
       }
 
       // Return complete user object (matches DB schema exactly)

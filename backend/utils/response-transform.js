@@ -27,6 +27,7 @@ const {
   ROLE_PRIORITY_TO_NAME,
   UNIVERSAL_FIELD_ACCESS,
 } = require('../config/constants');
+const AppError = require('./app-error');
 
 /**
  * Get the index of a role in the hierarchy (higher = more permissions)
@@ -188,8 +189,10 @@ function validateFieldAccess(data, metadata, userRole, operation) {
 
   if (disallowedFields.length > 0) {
     const roleName = normalizeRoleName(userRole);
-    throw new Error(
+    throw new AppError(
       `Access denied: Role '${roleName}' cannot ${operation} field(s): ${disallowedFields.join(', ')}`,
+      403,
+      'FORBIDDEN',
     );
   }
 }

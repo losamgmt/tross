@@ -339,7 +339,8 @@ function errorsDoNotLeakData(routeMeta, endpointMeta, ctx) {
       // Should not expose stack traces or SQL
       ctx.expect(response.body.stack).toBeUndefined();
       if (response.body.message) {
-        ctx.expect(response.body.message).not.toMatch(/SELECT|INSERT|UPDATE|DELETE|FROM/i);
+        // Use word boundaries to avoid false positives like "Updates" matching "UPDATE"
+        ctx.expect(response.body.message).not.toMatch(/\bSELECT\b|\bINSERT\b|\bUPDATE\b|\bDELETE\b|\bFROM\b/i);
       }
     }
   });

@@ -10,6 +10,7 @@
  */
 
 const ResponseFormatter = require('../../../utils/response-formatter');
+const { ERROR_CODES } = require('../../../utils/response-formatter');
 const { HTTP_STATUS } = require('../../../config/constants');
 
 describe('ResponseFormatter', () => {
@@ -232,6 +233,7 @@ describe('ResponseFormatter', () => {
       expect(res.json).toHaveBeenCalledWith({
         success: false,
         error: 'Not Found',
+        code: ERROR_CODES.RESOURCE_NOT_FOUND,
         message: 'Resource not found',
         timestamp: expect.any(String),
       });
@@ -242,6 +244,18 @@ describe('ResponseFormatter', () => {
 
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
+          code: ERROR_CODES.RESOURCE_NOT_FOUND,
+          message: 'User not found',
+        })
+      );
+    });
+
+    test('should format 404 response with custom error code', () => {
+      ResponseFormatter.notFound(res, 'User not found', 'CUSTOM_NOT_FOUND');
+
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: 'CUSTOM_NOT_FOUND',
           message: 'User not found',
         })
       );
@@ -256,6 +270,7 @@ describe('ResponseFormatter', () => {
       expect(res.json).toHaveBeenCalledWith({
         success: false,
         error: 'Bad Request',
+        code: ERROR_CODES.VALIDATION_FAILED,
         message: 'Email is required',
         timestamp: expect.any(String),
       });
@@ -272,6 +287,7 @@ describe('ResponseFormatter', () => {
       expect(res.json).toHaveBeenCalledWith({
         success: false,
         error: 'Bad Request',
+        code: ERROR_CODES.VALIDATION_FAILED,
         message: 'Validation failed',
         details,
         timestamp: expect.any(String),
@@ -284,7 +300,20 @@ describe('ResponseFormatter', () => {
       expect(res.json).toHaveBeenCalledWith({
         success: false,
         error: 'Bad Request',
+        code: ERROR_CODES.VALIDATION_FAILED,
         message: 'Invalid input',
+        timestamp: expect.any(String),
+      });
+    });
+
+    test('should format 400 response with custom error code', () => {
+      ResponseFormatter.badRequest(res, 'Missing field', null, ERROR_CODES.VALIDATION_MISSING_FIELD);
+
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        error: 'Bad Request',
+        code: ERROR_CODES.VALIDATION_MISSING_FIELD,
+        message: 'Missing field',
         timestamp: expect.any(String),
       });
     });
@@ -298,6 +327,7 @@ describe('ResponseFormatter', () => {
       expect(res.json).toHaveBeenCalledWith({
         success: false,
         error: 'Forbidden',
+        code: ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS,
         message: 'You do not have permission to perform this action',
         timestamp: expect.any(String),
       });
@@ -308,7 +338,19 @@ describe('ResponseFormatter', () => {
 
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
+          code: ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS,
           message: 'Insufficient permissions',
+        })
+      );
+    });
+
+    test('should format 403 response with custom error code', () => {
+      ResponseFormatter.forbidden(res, 'Cannot access', 'CUSTOM_FORBIDDEN');
+
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: 'CUSTOM_FORBIDDEN',
+          message: 'Cannot access',
         })
       );
     });
@@ -322,6 +364,7 @@ describe('ResponseFormatter', () => {
       expect(res.json).toHaveBeenCalledWith({
         success: false,
         error: 'Unauthorized',
+        code: ERROR_CODES.AUTH_REQUIRED,
         message: 'Authentication required',
         timestamp: expect.any(String),
       });
@@ -332,7 +375,19 @@ describe('ResponseFormatter', () => {
 
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
+          code: ERROR_CODES.AUTH_REQUIRED,
           message: 'Invalid token',
+        })
+      );
+    });
+
+    test('should format 401 response with custom error code', () => {
+      ResponseFormatter.unauthorized(res, 'Token expired', ERROR_CODES.AUTH_TOKEN_EXPIRED);
+
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: ERROR_CODES.AUTH_TOKEN_EXPIRED,
+          message: 'Token expired',
         })
       );
     });
@@ -348,6 +403,7 @@ describe('ResponseFormatter', () => {
       expect(res.json).toHaveBeenCalledWith({
         success: false,
         error: 'Internal Server Error',
+        code: ERROR_CODES.SERVER_ERROR,
         message: 'An unexpected error occurred',
         timestamp: expect.any(String),
       });
@@ -360,9 +416,24 @@ describe('ResponseFormatter', () => {
 
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
+          code: ERROR_CODES.SERVER_ERROR,
           message: 'An unexpected error occurred', // Generic for security
         })
       );
+    });
+
+    test('should format 500 response with custom error code', () => {
+      const error = new Error('DB connection lost');
+
+      ResponseFormatter.internalError(res, error, ERROR_CODES.DB_CONNECTION_ERROR);
+
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        error: 'Internal Server Error',
+        code: ERROR_CODES.DB_CONNECTION_ERROR,
+        message: 'An unexpected error occurred',
+        timestamp: expect.any(String),
+      });
     });
   });
 
@@ -377,6 +448,7 @@ describe('ResponseFormatter', () => {
       expect(res.json).toHaveBeenCalledWith({
         success: false,
         error: 'Service Unavailable',
+        code: ERROR_CODES.SERVER_UNAVAILABLE,
         message: 'Service temporarily unavailable',
         timestamp: expect.any(String),
       });
@@ -387,6 +459,7 @@ describe('ResponseFormatter', () => {
 
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
+          code: ERROR_CODES.SERVER_UNAVAILABLE,
           message: 'Database connection timeout',
         })
       );
@@ -404,6 +477,7 @@ describe('ResponseFormatter', () => {
       expect(res.json).toHaveBeenCalledWith({
         success: false,
         error: 'Service Unavailable',
+        code: ERROR_CODES.SERVER_UNAVAILABLE,
         message: 'Health check failed',
         status: 'unhealthy',
         database: 'down',
@@ -418,6 +492,7 @@ describe('ResponseFormatter', () => {
       expect(res.json).toHaveBeenCalledWith({
         success: false,
         error: 'Service Unavailable',
+        code: ERROR_CODES.SERVER_UNAVAILABLE,
         message: 'Service down',
         timestamp: expect.any(String),
       });
@@ -429,7 +504,20 @@ describe('ResponseFormatter', () => {
       expect(res.json).toHaveBeenCalledWith({
         success: false,
         error: 'Service Unavailable',
+        code: ERROR_CODES.SERVER_UNAVAILABLE,
         message: 'Service down',
+        timestamp: expect.any(String),
+      });
+    });
+
+    test('should format 503 response with custom error code', () => {
+      ResponseFormatter.serviceUnavailable(res, 'Database timeout', null, ERROR_CODES.SERVER_TIMEOUT);
+
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        error: 'Service Unavailable',
+        code: ERROR_CODES.SERVER_TIMEOUT,
+        message: 'Database timeout',
         timestamp: expect.any(String),
       });
     });

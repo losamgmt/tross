@@ -1,55 +1,43 @@
 /**
  * Validation Rule Loader
  *
- * Loads centralized validation rules from config/validation-rules.json
- * and generates Joi schemas dynamically.
+ * SINGLE SOURCE OF TRUTH: Derives validation rules from entity metadata.
+ * No separate JSON file required - everything from config/models/*-metadata.js
+ *
+ * MIGRATION PATH:
+ * - v2.x: Loaded from config/validation-rules.json
+ * - v3.0: Derived from entity metadata (this version)
  *
  * This ensures frontend and backend use IDENTICAL validation rules.
+ * Frontend can fetch via /api/schema/validation-rules endpoint.
  */
 
-const fs = require('fs');
-const path = require('path');
 const Joi = require('joi');
+const AppError = require('./app-error');
 
-// Validate schema structure on first load (if ajv is available)
-let schemaValidated = false;
+// Import the deriver (SINGLE SOURCE OF TRUTH)
+const { deriveValidationRules } = require('../config/validation-deriver');
 
-// Load validation rules from central config
-const VALIDATION_RULES_PATH = path.join(__dirname, '../../config/validation-rules.json');
+// Cache for validation rules
 let validationRules = null;
 
 /**
- * Load validation rules from JSON file
- * @returns {Object} Parsed validation rules
+ * Load validation rules - now derived from metadata
+ * @returns {Object} Derived validation rules
  */
 function loadValidationRules() {
   if (validationRules) {
-    return validationRules; // Cache loaded rules
+    return validationRules; // Cache derived rules
   }
 
   try {
-    const rulesJson = fs.readFileSync(VALIDATION_RULES_PATH, 'utf8');
-    validationRules = JSON.parse(rulesJson);
-
-    // Validate schema structure on first load (skip in test mode for performance)
-    if (!schemaValidated && process.env.NODE_ENV !== 'test') {
-      try {
-        const { validateRulesSchema } = require('./validation-schema-validator');
-        validateRulesSchema();
-        schemaValidated = true;
-      } catch (error) {
-        // If ajv not installed, skip schema validation
-        if (error.code !== 'MODULE_NOT_FOUND') {
-          throw error;
-        }
-      }
-    }
-
+    // DERIVE from metadata instead of reading JSON
+    validationRules = deriveValidationRules();
     return validationRules;
   } catch (error) {
     const { logger } = require('../config/logger');
-    logger.error('[ValidationLoader] Failed to load validation rules:', { error: error.message });
-    throw new Error('Cannot load validation rules. Check config/validation-rules.json');
+    logger.error('[ValidationLoader] Failed to derive validation rules:', { error: error.message });
+    throw new AppError('Cannot derive validation rules from metadata', 500, 'INTERNAL_ERROR');
   }
 }
 
@@ -103,8 +91,12 @@ function buildFieldSchema(fieldDef, fieldName) {
     case 'boolean':
       schema = Joi.boolean();
       break;
+    case 'object':
+      // JSONB fields - accept any object structure
+      schema = Joi.object();
+      break;
     default:
-      throw new Error(`Unsupported field type: ${fieldDef.type} for ${fieldName}`);
+      throw new AppError(`Unsupported field type: ${fieldDef.type} for ${fieldName}`, 500, 'INTERNAL_ERROR');
   }
 
   // Apply string-specific rules
@@ -225,6 +217,10 @@ function buildFieldSchema(fieldDef, fieldName) {
 /**
  * Build a composite Joi schema for operations like "createUser" or "updateRole"
  *
+ * @deprecated Use buildEntitySchema() from validation-schema-builder.js instead.
+ * This function is NOT role-aware and is kept only for backward compatibility.
+ * Production code should use genericValidateBody middleware which uses buildEntitySchema.
+ *
  * METADATA-DRIVEN: Uses entityName from composite definition to load entity metadata.
  * No string parsing or hardcoded mappings - everything derived from configuration.
  *
@@ -236,103 +232,32 @@ function buildCompositeSchema(operationName) {
 
   const composite = rules.compositeValidations[operationName];
   if (!composite) {
-    throw new Error(`Unknown composite validation: ${operationName}`);
+    throw new AppError(`Unknown composite validation: ${operationName}`, 400, 'BAD_REQUEST');
   }
 
-  // Get entity metadata for status field validation (if entity context available)
-  let entityMetadata = null;
-  if (composite.entityName) {
-    try {
-      const allMetadata = require('../config/models');
-      entityMetadata = allMetadata[composite.entityName];
-    } catch {
-      // Entity metadata not available - will use generic status validation
-    }
-  }
-
+  const entityName = composite.entityName;
   const schemaFields = {};
 
   /**
    * Get field definition for a field name
    *
-   * PRIORITY ORDER (entity metadata is source of truth):
-   * 1. Entity metadata fields (if entity context available)
-   * 2. Fallback to validation-rules.json for universal fields (email, phone, etc.)
+   * PRIORITY ORDER:
+   * 1. Entity-specific fields from rules.entityFields (derived from metadata)
+
+   * 2. Fallback to shared fields from rules.fields
    *
-   * This ensures fields like 'priority' are correctly resolved per-entity:
-   * - role.priority = integer (1-100)
-   * - work_order.priority = enum ("low", "normal", "high", "urgent")
+   * This ensures fields like 'status' are correctly resolved per-entity:
+   * - user.status = enum ("pending_activation", "active", "suspended")
+   * - work_order.status = enum ("pending", "assigned", "in_progress", ...)
    */
   const getFieldDef = (fieldName) => {
-    // First: Try entity metadata (source of truth for entity-specific fields)
-    if (entityMetadata?.fields?.[fieldName]) {
-      const metaField = entityMetadata.fields[fieldName];
-      return convertMetadataToFieldDef(metaField, fieldName);
+    // First: Try entity-specific field (source of truth)
+    if (entityName && rules.entityFields?.[entityName]?.[fieldName]) {
+      return rules.entityFields[entityName][fieldName];
     }
 
-    // Fallback: Universal fields from validation-rules.json
+    // Fallback: Shared/global fields
     return rules.fields[fieldName];
-  };
-
-  /**
-   * Convert entity metadata field format to validation-rules.json field format
-   * Entity metadata uses: { type, values, required, min, max, maxLength, default }
-   * Validation rules use: { type, enum, required, min, max, maxLength, errorMessages }
-   */
-  const convertMetadataToFieldDef = (metaField, fieldName) => {
-    const fieldDef = {
-      required: metaField.required || false,
-    };
-
-    // Handle type mapping
-    switch (metaField.type) {
-      case 'enum':
-        fieldDef.type = 'string';
-        fieldDef.enum = metaField.values;
-        fieldDef.errorMessages = {
-          enum: `${fieldName} must be one of: ${metaField.values.join(', ')}`,
-        };
-        break;
-      case 'email':
-        fieldDef.type = 'string';
-        fieldDef.format = 'email';
-        fieldDef.maxLength = metaField.maxLength || 255;
-        break;
-      case 'decimal':
-      case 'currency':
-        fieldDef.type = 'number';
-        if (metaField.min !== undefined) {fieldDef.min = metaField.min;}
-        if (metaField.max !== undefined) {fieldDef.max = metaField.max;}
-        break;
-      case 'integer':
-      case 'foreignKey': // Foreign keys are integer IDs
-        fieldDef.type = 'integer';
-        fieldDef.min = 1; // FK IDs must be positive
-        if (metaField.min !== undefined) {fieldDef.min = metaField.min;}
-        if (metaField.max !== undefined) {fieldDef.max = metaField.max;}
-        break;
-      case 'boolean':
-        fieldDef.type = 'boolean';
-        break;
-      case 'date':
-      case 'timestamp':
-        fieldDef.type = 'date';
-        fieldDef.format = 'date';
-        break;
-      case 'uuid':
-        fieldDef.type = 'string';
-        fieldDef.pattern = '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
-        break;
-      case 'string':
-      default:
-        fieldDef.type = 'string';
-        if (metaField.minLength !== undefined) {fieldDef.minLength = metaField.minLength;}
-        if (metaField.maxLength !== undefined) {fieldDef.maxLength = metaField.maxLength;}
-        if (metaField.pattern) {fieldDef.pattern = metaField.pattern;}
-        break;
-    }
-
-    return fieldDef;
   };
 
   // Add required fields - force required: true regardless of metadata
@@ -380,9 +305,19 @@ function getValidationMetadata() {
   };
 }
 
+/**
+ * Clear the validation rules cache
+ * Useful for testing or hot-reloading validation rules
+ * @returns {void}
+ */
+function clearValidationCache() {
+  validationRules = null;
+}
+
 module.exports = {
   loadValidationRules,
   buildFieldSchema,
   buildCompositeSchema,
   getValidationMetadata,
+  clearValidationCache,
 };

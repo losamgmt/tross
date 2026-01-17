@@ -10,9 +10,6 @@
  * - Edge cases (empty table, existing values, database errors)
  */
 
-const { getNextOrdinalValue } = require('../../../db/helpers/default-value-helper');
-const db = require('../../../db/connection');
-
 // Mock the database connection
 jest.mock('../../../db/connection');
 
@@ -25,6 +22,22 @@ jest.mock('../../../config/logger', () => ({
     warn: jest.fn(),
   },
 }));
+
+// Mock models metadata (must be before require)
+jest.mock('../../../config/models', () => ({
+  allMetadata: {
+    users: { tableName: 'users' },
+    customers: { tableName: 'customers' },
+    technicians: { tableName: 'technicians' },
+    work_orders: { tableName: 'work_orders' },
+    invoices: { tableName: 'invoices' },
+    contracts: { tableName: 'contracts' },
+    inventory: { tableName: 'inventory' },
+  },
+}));
+
+const { getNextOrdinalValue } = require('../../../db/helpers/default-value-helper');
+const db = require('../../../db/connection');
 
 describe('Default Value Helper', () => {
   // ============================================================================

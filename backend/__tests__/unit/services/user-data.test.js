@@ -7,9 +7,11 @@
  * 
  * NOTE: Now uses GenericEntityService.findByField and findAll
  * instead of User.findByAuth0Id
+ * 
+ * Static class - methods read env vars fresh each call
  */
 
-const { UserDataService } = require('../../../services/user-data');
+const UserDataService = require('../../../services/user-data');
 const { TEST_USERS } = require('../../../config/test-users');
 const AuthUserService = require('../../../services/auth-user-service');
 const GenericEntityService = require('../../../services/generic-entity-service');
@@ -33,10 +35,9 @@ describe('UserDataService', () => {
       // Arrange
       process.env.USE_TEST_AUTH = 'true';
       process.env.NODE_ENV = 'development';
-      const service = new (require('../../../services/user-data').UserDataService.constructor)();
 
       // Act
-      const users = await service.getAllUsers();
+      const users = await UserDataService.getAllUsers();
 
       // Assert
       expect(users).toHaveLength(Object.keys(TEST_USERS).length);
@@ -50,12 +51,11 @@ describe('UserDataService', () => {
       // Arrange
       process.env.USE_TEST_AUTH = 'false';
       process.env.NODE_ENV = 'production';
-      const service = new (require('../../../services/user-data').UserDataService.constructor)();
       const mockUsers = [{ id: 1, email: 'test@example.com' }];
       GenericEntityService.findAll.mockResolvedValue({ data: mockUsers });
 
       // Act
-      const users = await service.getAllUsers();
+      const users = await UserDataService.getAllUsers();
 
       // Assert
       expect(GenericEntityService.findAll).toHaveBeenCalledWith('user', { includeInactive: false });
@@ -68,11 +68,10 @@ describe('UserDataService', () => {
       // Arrange
       process.env.USE_TEST_AUTH = 'true';
       process.env.NODE_ENV = 'development';
-      const service = new (require('../../../services/user-data').UserDataService.constructor)();
       const testUser = Object.values(TEST_USERS)[0];
 
       // Act
-      const user = await service.getUserByAuth0Id(testUser.auth0_id);
+      const user = await UserDataService.getUserByAuth0Id(testUser.auth0_id);
 
       // Assert
       expect(user).toBeDefined();
@@ -85,10 +84,9 @@ describe('UserDataService', () => {
       // Arrange
       process.env.USE_TEST_AUTH = 'true';
       process.env.NODE_ENV = 'development';
-      const service = new (require('../../../services/user-data').UserDataService.constructor)();
 
       // Act
-      const user = await service.getUserByAuth0Id('unknown|12345');
+      const user = await UserDataService.getUserByAuth0Id('unknown|12345');
 
       // Assert
       expect(user).toBeNull();
@@ -98,12 +96,11 @@ describe('UserDataService', () => {
       // Arrange
       process.env.USE_TEST_AUTH = 'false';
       process.env.NODE_ENV = 'production';
-      const service = new (require('../../../services/user-data').UserDataService.constructor)();
       const mockUser = { id: 1, auth0_id: 'auth0|123', email: 'test@example.com' };
       GenericEntityService.findByField.mockResolvedValue(mockUser);
 
       // Act
-      const user = await service.getUserByAuth0Id('auth0|123');
+      const user = await UserDataService.getUserByAuth0Id('auth0|123');
 
       // Assert
       expect(GenericEntityService.findByField).toHaveBeenCalledWith('user', 'auth0_id', 'auth0|123');
@@ -116,12 +113,11 @@ describe('UserDataService', () => {
       // Arrange
       process.env.USE_TEST_AUTH = 'true';
       process.env.NODE_ENV = 'development';
-      const service = new (require('../../../services/user-data').UserDataService.constructor)();
       const testUser = Object.values(TEST_USERS)[0];
       const auth0Data = { sub: testUser.auth0_id };
 
       // Act
-      const user = await service.findOrCreateUser(auth0Data);
+      const user = await UserDataService.findOrCreateUser(auth0Data);
 
       // Assert
       expect(user).toBeDefined();
@@ -132,13 +128,12 @@ describe('UserDataService', () => {
       // Arrange
       process.env.USE_TEST_AUTH = 'false';
       process.env.NODE_ENV = 'production';
-      const service = new (require('../../../services/user-data').UserDataService.constructor)();
       const auth0Data = { sub: 'auth0|123', email: 'new@example.com' };
       const mockUser = { id: 1, auth0_id: 'auth0|123' };
       AuthUserService.findOrCreateFromAuth0.mockResolvedValue(mockUser);
 
       // Act
-      const user = await service.findOrCreateUser(auth0Data);
+      const user = await UserDataService.findOrCreateUser(auth0Data);
 
       // Assert
       expect(AuthUserService.findOrCreateFromAuth0).toHaveBeenCalledWith(auth0Data);
@@ -151,30 +146,27 @@ describe('UserDataService', () => {
       // Arrange
       process.env.USE_TEST_AUTH = 'true';
       process.env.NODE_ENV = 'development';
-      const service = new (require('../../../services/user-data').UserDataService.constructor)();
 
       // Act & Assert
-      expect(service.isConfigMode()).toBe(true);
+      expect(UserDataService.isConfigMode()).toBe(true);
     });
 
     test('should return false in production', () => {
       // Arrange
       process.env.USE_TEST_AUTH = 'false';
       process.env.NODE_ENV = 'production';
-      const service = new (require('../../../services/user-data').UserDataService.constructor)();
 
       // Act & Assert
-      expect(service.isConfigMode()).toBe(false);
+      expect(UserDataService.isConfigMode()).toBe(false);
     });
 
     test('should return false when USE_TEST_AUTH=false even in development', () => {
       // Arrange
       process.env.USE_TEST_AUTH = 'false';
       process.env.NODE_ENV = 'development';
-      const service = new (require('../../../services/user-data').UserDataService.constructor)();
 
       // Act & Assert
-      expect(service.isConfigMode()).toBe(false);
+      expect(UserDataService.isConfigMode()).toBe(false);
     });
   });
 });

@@ -13,8 +13,8 @@
 const {
   FIELD_ACCESS_LEVELS: FAL,
   UNIVERSAL_FIELD_ACCESS,
-  ENTITY_CATEGORIES,
 } = require('../constants');
+const { NAME_TYPES } = require('../entity-types');
 
 module.exports = {
   // Table name in database
@@ -24,6 +24,16 @@ module.exports = {
   primaryKey: 'id',
 
   // ============================================================================
+  // PLURALIZATION
+  // ============================================================================
+
+  /**
+   * Uncountable noun - no plural form (stays 'inventory', not 'inventories')
+   * Used by route-loader and API endpoints for URL generation
+   */
+  uncountable: true,
+
+  // ============================================================================
   // ENTITY CATEGORY (determines name handling pattern)
   // ============================================================================
 
@@ -31,7 +41,7 @@ module.exports = {
    * Entity category: SIMPLE entities have a direct name field
    * and a unique identifier field (sku for inventory)
    */
-  entityCategory: ENTITY_CATEGORIES.SIMPLE,
+  nameType: NAME_TYPES.SIMPLE,
 
   // ============================================================================
   // IDENTITY CONFIGURATION (Entity Contract v2.0)
@@ -59,6 +69,36 @@ module.exports = {
    * Maps to permissions.json resource names
    */
   rlsResource: 'inventory',
+
+  /**
+   * Row-Level Security policy per role
+   * Inventory is a public resource - all authorized users can read
+   */
+  rlsPolicy: {
+    customer: 'public_resource',
+    technician: 'public_resource',
+    dispatcher: 'public_resource',
+    manager: 'public_resource',
+    admin: 'public_resource',
+  },
+
+  /**
+   * Entity-level permission overrides
+   * Matches permissions.json - technician+ read/update, dispatcher+ create, manager+ delete
+   */
+  entityPermissions: {
+    create: 'dispatcher',
+    read: 'technician',
+    update: 'technician',
+    delete: 'manager',
+  },
+
+  /**
+   * Route configuration - explicit opt-in for generic router
+   */
+  routeConfig: {
+    useGenericRouter: true,
+  },
 
   // ============================================================================
   // FIELD ALIASING (for UI display names)

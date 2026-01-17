@@ -10,6 +10,19 @@
 - Explicit over clever
 - Delete code > Add code
 
+### One Task Per Unit, One Unit Per Task
+- Every function does exactly ONE thing
+- Every responsibility has exactly ONE implementation
+- When duplication exists, **unify** into a single implementation
+- Never create "wrapper" or "shim" functions—make the core function inherently flexible
+- If two functions exist for the same task, one must be deleted
+
+### Unified Data Flow
+- All middleware reads from ONE canonical location on the request object
+- No optional parameters that create branching logic
+- No fallbacks or defaults that mask configuration errors
+- Fail hard on misconfiguration—don't silently handle missing data
+
 ### Security-First
 - Defense in depth: Auth0 + RBAC + RLS + validation
 - Zero trust architecture
@@ -110,17 +123,19 @@ Database (PostgreSQL)        Object Storage
 - Each layer catches different attack vectors
 - Graceful degradation
 
-**Example:**
-```javascript
-// Layer 1: Auth0 verifies JWT
-authenticateToken(req, res, next)
-
-// Layer 2: RBAC checks permission
-requirePermission('customers:read')
-
-// Layer 3: RLS filters by customer_id
-WHERE customer_id = req.user.customer_id
+**Unified Security Flow:**
 ```
+authenticateToken        → Sets req.dbUser
+attachEntityContext      → Sets req.entityMetadata (from metadata registry)
+requirePermission('op')  → Reads req.entityMetadata.rlsResource, checks permission
+enforceRLS               → Reads req.entityMetadata.rlsResource, applies RLS policy
+```
+
+**Critical Principle:**
+- Security middleware does NOT accept resource as a parameter
+- Resource is ALWAYS read from `req.entityMetadata.rlsResource`
+- Every entity-aware route MUST first attach entity context via middleware
+- This creates ONE code path, not conditional "if passed X use X else Y"
 
 ---
 
@@ -209,6 +224,81 @@ const user = await strategy.authenticate(credentials);
 
 ---
 
+### 9. Single Source of Truth (SSOT) Pattern
+**Decision:** Every piece of information has exactly ONE canonical source.
+
+**SSOT Modules:**
+- `role-definitions.js` - Roles, hierarchy, priorities (NO IMPORTS - dependency-free)
+- `status-enums.js` - All status field values (NO IMPORTS - dependency-free)
+- `entity-types.js` - Name field type enum (NO IMPORTS - dependency-free)
+- `config/models/*.js` - All entity metadata
+- `derived-constants.js` - Computes constants FROM metadata at runtime
+
+**Why:**
+- Change one place, effects propagate everywhere
+- No drift between duplicated definitions
+- Runtime derivation from metadata = always in sync
+
+**Anti-Pattern:** 
+```javascript
+// ❌ WRONG: Hardcoded list that duplicates metadata
+const ENTITIES = ['customer', 'work_order', 'invoice'];
+
+// ✅ RIGHT: Derive from metadata
+const ENTITIES = Object.keys(require('./config/models'));
+```
+
+---
+
+### 10. Metadata-Driven Architecture
+**Decision:** Entity behavior is defined by metadata, not code.
+
+**Entity Metadata Defines:**
+- Table name, primary key, identity field
+- Name field type (HUMAN, SIMPLE, COMPUTED)
+- RLS resource and per-role policies
+- Required fields, immutable fields
+- Field-level access control per role
+- Searchable, filterable, sortable fields
+- Relationships and dependents
+
+**Why:**
+- Adding an entity = adding a metadata file, not writing routes
+- Consistent behavior emerges from consistent metadata structure
+- UI can introspect metadata to auto-generate forms
+
+**Name Field Types (Field-Level Metadata):**
+- `HUMAN` - Uses `first_name + last_name` fields
+- `SIMPLE` - Uses direct `name` field  
+- `COMPUTED` - Auto-generated identifier (e.g., WO-2024-001)
+
+This is field-level metadata describing how the name is constructed—like a validation pattern for the name field. It is NOT an entity classification.
+
+---
+
+### 11. Unified Request Context
+**Decision:** All validated data and context lives in canonical locations on the request object.
+
+**Request Shape (After Middleware):**
+```javascript
+req.dbUser          // Authenticated user (from authenticateToken)
+req.entityMetadata  // Entity metadata (from attachEntity/extractEntity)
+req.rlsPolicy       // RLS policy for this user+resource (from enforceRLS)
+req.validated = {
+  body,       // Validated request body
+  query,      // Validated query params
+  params,     // Validated URL params
+  pagination, // Pagination config
+}
+```
+
+**Why:**
+- Every handler knows exactly where to find validated data
+- No guessing between `req.validatedBody` vs `req.validated.body`
+- Middleware can be composed without coordination on naming
+
+---
+
 ## Locked Patterns
 
 **Status:** 🔒 **LOCKED** - Do not modify without review
@@ -224,6 +314,10 @@ These patterns are frozen and battle-tested:
 7. ✅ Schema-driven UI
 8. ✅ Testing pyramid
 9. ✅ Generic file storage (entity_type + entity_id pattern)
+10. ✅ SSOT pattern (one source per piece of information)
+11. ✅ Metadata-driven entity behavior
+12. ✅ Unified request context (`req.validated`, `req.entityMetadata`)
+13. ✅ One task per unit, one unit per task
 
 **To modify a locked pattern:**
 1. Open GitHub issue with rationale
@@ -266,6 +360,10 @@ These patterns are frozen and battle-tested:
 ❌ **Skipping tests** - Tests are not optional  
 ❌ **Hardcoding config** - Use environment variables  
 ❌ **Ignoring errors** - Handle or log, never swallow  
+❌ **Wrapper functions** - Don't wrap; unify into one flexible function  
+❌ **Optional parameters with fallbacks** - Require explicit input, fail on missing  
+❌ **Multiple data sources** - One canonical source, derive everything else  
+❌ **Conditional code paths** - One path, one shape, always  
 
 ---
 

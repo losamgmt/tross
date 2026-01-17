@@ -22,7 +22,6 @@ const {
 const {
   validateIdParam,
   validateIdParams,
-  validateSlugParam,
 } = require('./param-validators');
 
 // Export query string validators
@@ -30,8 +29,7 @@ const {
   validatePagination,
   validateSearch,
   validateSort,
-  validateFilters,
-  validateQuery, // NEW: Metadata-driven query validation
+  validateQuery, // Metadata-driven query validation
 } = require('./query-validators');
 
 // Export logging utilities
@@ -42,29 +40,15 @@ const {
 } = require('./validation-logger');
 
 // Export body validators (request payload validation)
+// Entity CRUD uses genericValidateBody() from middleware/generic-entity.js
+// These are special-case validators for auth flows and profile updates
 const {
-  validateUserCreate,
-  validateUserUpdate,
   validateProfileUpdate,
   validateRoleAssignment,
-  validateRoleCreate,
-  validateRoleUpdate,
   validateAuthCallback,
   validateAuth0Token,
   validateAuth0Refresh,
   validateRefreshToken,
-  validateCustomerCreate,
-  validateCustomerUpdate,
-  validateTechnicianCreate,
-  validateTechnicianUpdate,
-  validateWorkOrderCreate,
-  validateWorkOrderUpdate,
-  validateInvoiceCreate,
-  validateInvoiceUpdate,
-  validateContractCreate,
-  validateContractUpdate,
-  validateInventoryCreate,
-  validateInventoryUpdate,
 } = require('./body-validators');
 
 module.exports = {
@@ -80,38 +64,20 @@ module.exports = {
   // URL Param Validators
   validateIdParam,
   validateIdParams,
-  validateSlugParam,
 
   // Query String Validators
   validatePagination,
   validateSearch,
   validateSort,
-  validateFilters,
-  validateQuery, // NEW: Metadata-driven query validation
+  validateQuery,
 
-  // Body Validators (from existing middleware)
-  validateUserCreate,
-  validateUserUpdate,
+  // Body Validators (special-case only, not entity CRUD)
   validateProfileUpdate,
   validateRoleAssignment,
-  validateRoleCreate,
-  validateRoleUpdate,
   validateAuthCallback,
   validateAuth0Token,
   validateAuth0Refresh,
   validateRefreshToken,
-  validateCustomerCreate,
-  validateCustomerUpdate,
-  validateTechnicianCreate,
-  validateTechnicianUpdate,
-  validateWorkOrderCreate,
-  validateWorkOrderUpdate,
-  validateInvoiceCreate,
-  validateInvoiceUpdate,
-  validateContractCreate,
-  validateContractUpdate,
-  validateInventoryCreate,
-  validateInventoryUpdate,
 
   // Logging
   logValidationFailure,

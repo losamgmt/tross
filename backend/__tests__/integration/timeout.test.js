@@ -70,7 +70,8 @@ describe('Timeout Architecture', () => {
       
       responses.forEach(response => {
         expect(response.status).toBe(HTTP_STATUS.OK);
-        expect(response.body).toHaveProperty('status');
+        // Health endpoint uses ResponseFormatter - data is in response.body.data
+        expect(response.body.data).toHaveProperty('status');
       });
     });
   });

@@ -19,6 +19,7 @@ const { query: db } = require('../db/connection');
 const { logger } = require('../config/logger');
 const preferencesMetadata = require('../config/models/preferences-metadata');
 const { toSafeInteger } = require('../validators/type-coercion');
+const AppError = require('../utils/app-error');
 
 /**
  * Default preference values
@@ -43,11 +44,11 @@ class PreferencesService {
    * @param {number} userId - The user ID to get preferences for
    * @returns {Promise<Object>} The user's preferences
    */
-  async getPreferences(userId) {
+  static async getPreferences(userId) {
     const safeUserId = toSafeInteger(userId, 'userId');
 
     if (!safeUserId) {
-      throw new Error('Valid userId is required');
+      throw new AppError('Valid userId is required', 400, 'BAD_REQUEST');
     }
 
     // Try to get existing preferences (id = userId in shared PK pattern)
@@ -69,7 +70,7 @@ class PreferencesService {
 
     // Create default preferences for user (upsert pattern)
     logger.info('Creating default preferences for user', { userId: safeUserId });
-    return this.initializePreferences(safeUserId);
+    return PreferencesService.initializePreferences(safeUserId);
   }
 
   /**
@@ -79,11 +80,11 @@ class PreferencesService {
    * @param {number} userId - The user ID to initialize preferences for
    * @returns {Promise<Object>} The newly created preferences
    */
-  async initializePreferences(userId) {
+  static async initializePreferences(userId) {
     const safeUserId = toSafeInteger(userId, 'userId');
 
     if (!safeUserId) {
-      throw new Error('Valid userId is required');
+      throw new AppError('Valid userId is required', 400, 'BAD_REQUEST');
     }
 
     // Shared PK: id = userId
@@ -106,19 +107,19 @@ class PreferencesService {
    * @param {Object} updates - Key-value pairs to update
    * @returns {Promise<Object>} The updated preferences
    */
-  async updatePreferences(userId, updates) {
+  static async updatePreferences(userId, updates) {
     const safeUserId = toSafeInteger(userId, 'userId');
 
     if (!safeUserId) {
-      throw new Error('Valid userId is required');
+      throw new AppError('Valid userId is required', 400, 'BAD_REQUEST');
     }
 
     if (!updates || typeof updates !== 'object') {
-      throw new Error('Updates must be an object');
+      throw new AppError('Updates must be an object', 400, 'BAD_REQUEST');
     }
 
     // Validate each preference key and value
-    const validationErrors = this.validatePreferences(updates);
+    const validationErrors = PreferencesService.validatePreferences(updates);
     if (validationErrors.length > 0) {
       const error = new Error('Invalid preference values');
       error.validationErrors = validationErrors;
@@ -126,7 +127,7 @@ class PreferencesService {
     }
 
     // Ensure preferences row exists
-    await this.initializePreferences(safeUserId);
+    await PreferencesService.initializePreferences(safeUserId);
 
     // Update using JSONB merge (preserves existing keys not in updates)
     // Shared PK: id = userId
@@ -140,7 +141,7 @@ class PreferencesService {
     );
 
     if (result.rows.length === 0) {
-      throw new Error('Failed to update preferences');
+      throw new AppError('Failed to update preferences', 500, 'INTERNAL_ERROR');
     }
 
     logger.info('Preferences updated', {
@@ -165,8 +166,8 @@ class PreferencesService {
    * @param {*} value - The new value
    * @returns {Promise<Object>} The updated preferences
    */
-  async updatePreference(userId, key, value) {
-    return this.updatePreferences(userId, { [key]: value });
+  static async updatePreference(userId, key, value) {
+    return PreferencesService.updatePreferences(userId, { [key]: value });
   }
 
   /**
@@ -175,11 +176,11 @@ class PreferencesService {
    * @param {number} userId - The user ID
    * @returns {Promise<Object>} The reset preferences
    */
-  async resetPreferences(userId) {
+  static async resetPreferences(userId) {
     const safeUserId = toSafeInteger(userId, 'userId');
 
     if (!safeUserId) {
-      throw new Error('Valid userId is required');
+      throw new AppError('Valid userId is required', 400, 'BAD_REQUEST');
     }
 
     // Shared PK: id = userId
@@ -194,7 +195,7 @@ class PreferencesService {
 
     if (result.rows.length === 0) {
       // User has no preferences row - create one
-      return this.initializePreferences(safeUserId);
+      return PreferencesService.initializePreferences(safeUserId);
     }
 
     logger.info('Preferences reset to defaults', { userId: safeUserId });
@@ -207,7 +208,7 @@ class PreferencesService {
    * @param {Object} preferences - Key-value pairs to validate
    * @returns {Array<string>} Array of validation error messages (empty if valid)
    */
-  validatePreferences(preferences) {
+  static validatePreferences(preferences) {
     const errors = [];
 
     for (const [key, value] of Object.entries(preferences)) {
@@ -218,7 +219,7 @@ class PreferencesService {
         continue;
       }
 
-      const keyError = this.validatePreferenceValue(key, value, schema);
+      const keyError = PreferencesService.validatePreferenceValue(key, value, schema);
       if (keyError) {
         errors.push(keyError);
       }
@@ -235,7 +236,7 @@ class PreferencesService {
    * @param {Object} schema - The schema definition for this key
    * @returns {string|null} Error message or null if valid
    */
-  validatePreferenceValue(key, value, schema) {
+  static validatePreferenceValue(key, value, schema) {
     switch (schema.type) {
       case 'enum':
         if (!schema.values.includes(value)) {
@@ -285,7 +286,7 @@ class PreferencesService {
    *
    * @returns {Object} The preference schema
    */
-  getPreferenceSchema() {
+  static getPreferenceSchema() {
     return { ...PREFERENCE_SCHEMA };
   }
 
@@ -294,16 +295,13 @@ class PreferencesService {
    *
    * @returns {Object} The default preferences
    */
-  getDefaults() {
+  static getDefaults() {
     return { ...DEFAULT_PREFERENCES };
   }
 }
 
-// Export singleton instance
-module.exports = new PreferencesService();
-
-// Also export class for testing
-module.exports.PreferencesService = PreferencesService;
+// Export static class
+module.exports = PreferencesService;
 
 // Export constants for external use
 module.exports.DEFAULT_PREFERENCES = DEFAULT_PREFERENCES;

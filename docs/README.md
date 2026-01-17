@@ -85,3 +85,12 @@ TrossApp documentation hub.
 |-----|---------|
 | [MVP Scope](project/MVP_SCOPE.md) | Project scope and milestones |
 
+---
+
+## 🔧 Active Refactoring
+
+| Doc | Purpose |
+|-----|---------|
+| [Refactoring Agenda](REFACTORING_AGENDA.md) | **START HERE** - Unified architecture principles and remaining tasks |
+| [Audit Remediation](BACKEND_AUDIT_REMEDIATION.md) | Historical audit findings (reference only) |
+

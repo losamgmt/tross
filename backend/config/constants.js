@@ -4,6 +4,17 @@
  * KISS Principle: Eliminate magic strings and magic numbers
  */
 
+// ============================================================================
+// ROLE DEFINITIONS - Import from single source of truth
+// ============================================================================
+const {
+  USER_ROLES,
+  ROLE_HIERARCHY,
+  ROLE_PRIORITY_TO_NAME,
+  ROLE_NAME_TO_PRIORITY,
+  ROLE_DESCRIPTIONS,
+} = require('./role-definitions');
+
 // Environment Constants
 const ENVIRONMENTS = Object.freeze({
   DEVELOPMENT: 'development',
@@ -35,15 +46,6 @@ const AUTH = Object.freeze({
   }),
 });
 
-// User Role Constants
-const USER_ROLES = Object.freeze({
-  ADMIN: 'admin',
-  MANAGER: 'manager',
-  DISPATCHER: 'dispatcher',
-  TECHNICIAN: 'technician',
-  CLIENT: 'customer',
-});
-
 // HTTP Status Constants
 const HTTP_STATUS = Object.freeze({
   OK: 200,
@@ -54,6 +56,7 @@ const HTTP_STATUS = Object.freeze({
   NOT_FOUND: 404,
   CONFLICT: 409,
   REQUEST_TIMEOUT: 408,
+  TOO_MANY_REQUESTS: 429,
   INTERNAL_SERVER_ERROR: 500,
   NOT_IMPLEMENTED: 501,
   SERVICE_UNAVAILABLE: 503,
@@ -135,31 +138,12 @@ const REDIS = Object.freeze({
 // These define universal rules for field handling across ALL entities.
 // Entity-specific overrides live in metadata files (e.g., role-metadata.js).
 
-/**
- * Entity Categories - determines name handling pattern
- * HUMAN: first_name + last_name → fullName (user, customer, technician)
- * SIMPLE: direct name field with unique identifier (role, inventory)
- * COMPUTED: auto-generated identifier + computed name (work_order, invoice, contract)
- */
-const ENTITY_CATEGORIES = Object.freeze({
-  HUMAN: 'human',
-  SIMPLE: 'simple',
-  COMPUTED: 'computed',
-});
+// Import NAME_TYPES from single source of truth
+const { NAME_TYPES } = require('./entity-types');
 
-/**
- * Entity category assignments
- */
-const ENTITY_CATEGORY_MAP = Object.freeze({
-  user: ENTITY_CATEGORIES.HUMAN,
-  customer: ENTITY_CATEGORIES.HUMAN,
-  technician: ENTITY_CATEGORIES.HUMAN,
-  role: ENTITY_CATEGORIES.SIMPLE,
-  inventory: ENTITY_CATEGORIES.SIMPLE,
-  work_order: ENTITY_CATEGORIES.COMPUTED,
-  invoice: ENTITY_CATEGORIES.COMPUTED,
-  contract: ENTITY_CATEGORIES.COMPUTED,
-});
+// Import ENTITY_CATEGORY_MAP - derived from metadata at runtime
+// This is a getter that lazy-loads to avoid circular dependencies
+const derivedConstants = require('./derived-constants');
 
 const ENTITY_FIELDS = Object.freeze({
   /**
@@ -182,24 +166,7 @@ const ENTITY_FIELDS = Object.freeze({
 // Role hierarchy (lowest to highest): customer < technician < dispatcher < manager < admin
 // Permissions accumulate UPWARD - manager inherits all permissions from dispatcher, technician, customer
 // 'none' = no access at any role level
-
-/**
- * Role names in hierarchy order (index = priority, 0 = lowest)
- * Used by field access helpers to determine cumulative permissions
- */
-const ROLE_HIERARCHY = Object.freeze(['customer', 'technician', 'dispatcher', 'manager', 'admin']);
-
-/**
- * Map role priority numbers to role names
- * Matches database roles.priority values
- */
-const ROLE_PRIORITY_TO_NAME = Object.freeze({
-  1: 'customer',
-  2: 'technician',
-  3: 'dispatcher',
-  4: 'manager',
-  5: 'admin',
-});
+// NOTE: ROLE_HIERARCHY and ROLE_PRIORITY_TO_NAME are imported from ./role-definitions.js
 
 /**
  * Common field access patterns - shortcuts for DRY metadata definitions
@@ -510,14 +477,24 @@ module.exports = Object.freeze({
   SECURITY,
   DATABASE,
   REDIS,
-  ENTITY_CATEGORIES,
-  ENTITY_CATEGORY_MAP,
+  NAME_TYPES,
+  // NAME_TYPE_MAP is derived from metadata at runtime
+  get NAME_TYPE_MAP() {
+    return derivedConstants.NAME_TYPE_MAP;
+  },
   ENTITY_FIELDS,
   ROLE_HIERARCHY,
   ROLE_PRIORITY_TO_NAME,
+  ROLE_NAME_TO_PRIORITY,
+  ROLE_DESCRIPTIONS,
   FIELD_ACCESS_LEVELS,
   UNIVERSAL_FIELD_ACCESS,
   HEALTH,
   API_ENDPOINTS,
   MODEL_ERRORS,
+  // Also export helper functions from derived-constants
+  getNameTypeMap: derivedConstants.getNameTypeMap,
+  getNameType: derivedConstants.getNameType,
+  isNameType: derivedConstants.isNameType,
+  getEntitiesByNameType: derivedConstants.getEntitiesByNameType,
 });

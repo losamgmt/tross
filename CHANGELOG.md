@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Unified AppError System (2026-01-16)
+
+#### Error Handling Architecture Overhaul
+- **AppError Class**: New unified error class (`utils/app-error.js`) with explicit `statusCode` and `code` properties
+  - Eliminates fragile pattern-matching on error messages
+  - Status codes defined at SOURCE, not derived from message text
+  - Supports: 400 BAD_REQUEST, 401 UNAUTHORIZED, 403 FORBIDDEN, 404 NOT_FOUND, 409 CONFLICT, 500 INTERNAL_ERROR, 503 SERVICE_UNAVAILABLE
+
+#### Files Updated (20+ files)
+- **Routes**: auth.js, audit.js, dev-auth.js, entities.js, files.js, schema.js
+- **Services**: audit-service.js, auth-user-service.js, export-service.js, file-attachment-service.js, preferences-service.js, sessions-service.js, stats-service.js, storage-service.js, system-settings-service.js, token-service.js
+- **Auth Strategies**: AuthStrategy.js, DevAuthStrategy.js
+- **Utils**: auth0-mapper.js, identifier-generator.js, response-transform.js, sql-safety.js, validation-loader.js, validation-sync-checker.js
+- **DB Helpers**: default-value-helper.js, delete-helper.js
+
+#### Bug Fixes
+- **token-service.js**: Malformed JWT now returns 400 (bad input) not 401 (auth failure)
+- **integration tests**: Fixed regex word boundary for SQL keyword detection (avoid "Updates" matching "UPDATE")
+- **E2E tests**: Fixed health check assertions to access `health.data.*` wrapper
+
+#### Test Results
+- **Unit Tests**: 1,860 passed
+- **Integration Tests**: 1,161 passed
+- **Flutter Tests**: 4,704 passed
+- **E2E Tests**: 15 passed
+
+---
+
 ### Added - Frontend Coverage: 80%+ Milestone (2026-01-14)
 
 - **New Test Factories**: AuthService (27), WidgetRender (22), ActionBuilders (114 tests)

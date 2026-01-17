@@ -40,9 +40,22 @@ jest.mock("../../../utils/request-helpers");
 jest.mock("jsonwebtoken");
 
 // Mock validators with proper factory functions
-jest.mock("../../../validators", () => ({
-  validateProfileUpdate: jest.fn((req, res, next) => next()),
-}));
+jest.mock("../../../validators", () => {
+  const ResponseFormatter = require("../../../utils/response-formatter");
+  return {
+    validateProfileUpdate: jest.fn((req, res, next) => next()),
+    validateRefreshToken: jest.fn(() => (req, res, next) => next()),
+    validateIdParam: jest.fn(({ paramName = 'id' } = {}) => (req, res, next) => {
+      const value = parseInt(req.params[paramName], 10);
+      if (isNaN(value) || value < 1) {
+        return ResponseFormatter.badRequest(res, `Invalid ${paramName}`);
+      }
+      if (!req.validated) req.validated = {};
+      req.validated[paramName] = value;
+      next();
+    }),
+  };
+});
 
 // Create test app with auth router
 const app = createRouteTestApp(authRoutes, "/api/auth");

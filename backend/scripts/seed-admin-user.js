@@ -6,7 +6,7 @@
 
 require('dotenv').config();
 const Auth0Strategy = require('../services/auth/Auth0Strategy');
-const { UserDataService } = require('../services/user-data');
+const UserDataService = require('../services/user-data');
 const { logger } = require('../config/logger');
 
 const ADMIN_USER_DATA = {

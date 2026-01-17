@@ -10,9 +10,10 @@ const axios = require('axios');
 const { AuthenticationClient, ManagementClient } = require('auth0');
 const AuthStrategy = require('./AuthStrategy');
 const { logger } = require('../../config/logger');
-const { UserDataService } = require('../user-data');
+const UserDataService = require('../user-data');
 const auth0Config = require('../../config/auth0');
 const { toSafeString, toSafeEmail } = require('../../validators');
+const AppError = require('../../utils/app-error');
 
 // JWT Secret - MUST be set in production (validated by env-validator.js on startup)
 // Fallback only exists for local development convenience
@@ -67,7 +68,7 @@ class Auth0Strategy extends AuthStrategy {
   async authenticate(credentials) {
     try {
       if (!credentials.code) {
-        throw new Error('Authorization code is required');
+        throw new AppError('Authorization code is required', 400, 'BAD_REQUEST');
       }
 
       const redirectUri = credentials.redirect_uri || this.config.callbackUrl;
@@ -126,7 +127,7 @@ class Auth0Strategy extends AuthStrategy {
         error: error.message,
         response: error.response?.data,
       });
-      throw new Error(`Auth0 authentication failed: ${error.message}`);
+      throw new AppError(`Auth0 authentication failed: ${error.message}`, 401, 'UNAUTHORIZED');
     }
   }
 
@@ -162,7 +163,7 @@ class Auth0Strategy extends AuthStrategy {
       logger.error('🔐 Auth0: Failed to get user profile', {
         error: error.message,
       });
-      throw new Error(`Failed to get user profile: ${error.message}`);
+      throw new AppError(`Failed to get user profile: ${error.message}`, 401, 'UNAUTHORIZED');
     }
   }
 
@@ -193,7 +194,8 @@ class Auth0Strategy extends AuthStrategy {
       };
     } catch (error) {
       logger.error('🔐 Auth0: Token refresh failed', { error: error.message });
-      throw new Error(`Token refresh failed: ${error.message}`);
+      // Use "expired" in message to trigger 401 in global error handler
+      throw new AppError(`Refresh token expired or unauthorized: ${error.message}`, 401, 'UNAUTHORIZED');
     }
   }
 
@@ -217,7 +219,7 @@ class Auth0Strategy extends AuthStrategy {
       };
     } catch (error) {
       logger.error('🔐 Auth0: Logout failed', { error: error.message });
-      throw new Error(`Logout failed: ${error.message}`);
+      throw new AppError(`Logout failed: ${error.message}`, 500, 'INTERNAL_ERROR');
     }
   }
 
@@ -266,7 +268,7 @@ class Auth0Strategy extends AuthStrategy {
       logger.error('🔐 Auth0: ID token validation failed', {
         error: error.message,
       });
-      throw new Error(`ID token validation failed: ${error.message}`);
+      throw new AppError(`ID token validation failed: ${error.message}`, 401, 'UNAUTHORIZED');
     }
   }
 

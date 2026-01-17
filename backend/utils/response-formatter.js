@@ -8,10 +8,47 @@
  * - Easier frontend parsing
  * - Single place to modify response format
  * - Clear documentation of response schemas
+ * - Machine-readable error codes for programmatic handling
  */
 
 const { HTTP_STATUS } = require('../config/constants');
 const { logger } = require('../config/logger');
+
+/**
+ * Machine-readable error codes for frontend error handling
+ *
+ * Format: CATEGORY_SPECIFIC_ERROR
+ * These allow frontend to display localized messages or take specific actions.
+ */
+const ERROR_CODES = Object.freeze({
+  // Authentication errors (AUTH_*)
+  AUTH_REQUIRED: 'AUTH_REQUIRED',
+  AUTH_INVALID_TOKEN: 'AUTH_INVALID_TOKEN',
+  AUTH_TOKEN_EXPIRED: 'AUTH_TOKEN_EXPIRED',
+  AUTH_INSUFFICIENT_PERMISSIONS: 'AUTH_INSUFFICIENT_PERMISSIONS',
+
+  // Validation errors (VALIDATION_*)
+  VALIDATION_FAILED: 'VALIDATION_FAILED',
+  VALIDATION_MISSING_FIELD: 'VALIDATION_MISSING_FIELD',
+  VALIDATION_INVALID_FORMAT: 'VALIDATION_INVALID_FORMAT',
+
+  // Resource errors (RESOURCE_*)
+  RESOURCE_NOT_FOUND: 'RESOURCE_NOT_FOUND',
+  RESOURCE_ALREADY_EXISTS: 'RESOURCE_ALREADY_EXISTS',
+  RESOURCE_CONFLICT: 'RESOURCE_CONFLICT',
+
+  // Rate limiting (RATE_*)
+  RATE_LIMIT_EXCEEDED: 'RATE_LIMIT_EXCEEDED',
+
+  // Server errors (SERVER_*)
+  SERVER_ERROR: 'SERVER_ERROR',
+  SERVER_UNAVAILABLE: 'SERVER_UNAVAILABLE',
+  SERVER_TIMEOUT: 'SERVER_TIMEOUT',
+
+  // Database errors (DB_*)
+  DB_CONNECTION_ERROR: 'DB_CONNECTION_ERROR',
+  DB_QUERY_ERROR: 'DB_QUERY_ERROR',
+});
 
 class ResponseFormatter {
   /**
@@ -152,11 +189,13 @@ class ResponseFormatter {
    *
    * @param {Object} res - Express response object
    * @param {string} [message] - Custom not found message
+   * @param {string} [code] - Error code (default: RESOURCE_NOT_FOUND)
    */
-  static notFound(res, message = 'Resource not found') {
+  static notFound(res, message = 'Resource not found', code = ERROR_CODES.RESOURCE_NOT_FOUND) {
     res.status(HTTP_STATUS.NOT_FOUND).json({
       success: false,
       error: 'Not Found',
+      code,
       message,
       timestamp: new Date().toISOString(),
     });
@@ -168,11 +207,13 @@ class ResponseFormatter {
    * @param {Object} res - Express response object
    * @param {string} message - Error message
    * @param {Object} [details] - Additional error details
+   * @param {string} [code] - Error code (default: VALIDATION_FAILED)
    */
-  static badRequest(res, message, details = null) {
+  static badRequest(res, message, details = null, code = ERROR_CODES.VALIDATION_FAILED) {
     const response = {
       success: false,
       error: 'Bad Request',
+      code,
       message,
       timestamp: new Date().toISOString(),
     };
@@ -189,11 +230,13 @@ class ResponseFormatter {
    *
    * @param {Object} res - Express response object
    * @param {string} [message] - Custom forbidden message
+   * @param {string} [code] - Error code (default: AUTH_INSUFFICIENT_PERMISSIONS)
    */
-  static forbidden(res, message = 'You do not have permission to perform this action') {
+  static forbidden(res, message = 'You do not have permission to perform this action', code = ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS) {
     res.status(HTTP_STATUS.FORBIDDEN).json({
       success: false,
       error: 'Forbidden',
+      code,
       message,
       timestamp: new Date().toISOString(),
     });
@@ -204,11 +247,13 @@ class ResponseFormatter {
    *
    * @param {Object} res - Express response object
    * @param {string} [message] - Custom unauthorized message
+   * @param {string} [code] - Error code (default: AUTH_REQUIRED)
    */
-  static unauthorized(res, message = 'Authentication required') {
+  static unauthorized(res, message = 'Authentication required', code = ERROR_CODES.AUTH_REQUIRED) {
     res.status(HTTP_STATUS.UNAUTHORIZED).json({
       success: false,
       error: 'Unauthorized',
+      code,
       message,
       timestamp: new Date().toISOString(),
     });
@@ -219,8 +264,9 @@ class ResponseFormatter {
    *
    * @param {Object} res - Express response object
    * @param {Error} error - Error object
+   * @param {string} [code] - Error code (default: SERVER_ERROR)
    */
-  static internalError(res, error) {
+  static internalError(res, error, code = ERROR_CODES.SERVER_ERROR) {
     logger.error('Internal server error', {
       error: error.message,
       stack: error.stack,
@@ -229,6 +275,7 @@ class ResponseFormatter {
     res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
       success: false,
       error: 'Internal Server Error',
+      code,
       message: 'An unexpected error occurred',
       timestamp: new Date().toISOString(),
     });
@@ -240,11 +287,13 @@ class ResponseFormatter {
    * @param {Object} res - Express response object
    * @param {string} [message] - Custom unavailable message
    * @param {Object} [details] - Additional health/status details
+   * @param {string} [code] - Error code (default: SERVER_UNAVAILABLE)
    */
-  static serviceUnavailable(res, message = 'Service temporarily unavailable', details = null) {
+  static serviceUnavailable(res, message = 'Service temporarily unavailable', details = null, code = ERROR_CODES.SERVER_UNAVAILABLE) {
     const response = {
       success: false,
       error: 'Service Unavailable',
+      code,
       message,
       timestamp: new Date().toISOString(),
     };
@@ -319,3 +368,4 @@ class ResponseFormatter {
 }
 
 module.exports = ResponseFormatter;
+module.exports.ERROR_CODES = ERROR_CODES;

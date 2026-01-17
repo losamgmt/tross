@@ -5,13 +5,14 @@
  *
  * KISS: Rate limiters are bypassed in test env,
  * so we just verify they're functions and callable
+ *
+ * NOTE: passwordResetLimiter removed - Auth0 handles all password operations
  */
 
 const {
   apiLimiter,
   authLimiter,
   refreshLimiter,
-  passwordResetLimiter,
 } = require('../../../middleware/rate-limit');
 
 describe('Rate Limit Middleware', () => {
@@ -26,10 +27,6 @@ describe('Rate Limit Middleware', () => {
 
     test('should export refreshLimiter as function', () => {
       expect(typeof refreshLimiter).toBe('function');
-    });
-
-    test('should export passwordResetLimiter as function', () => {
-      expect(typeof passwordResetLimiter).toBe('function');
     });
   });
 
@@ -68,19 +65,6 @@ describe('Rate Limit Middleware', () => {
 
       // Act
       refreshLimiter(req, res, next);
-
-      // Assert
-      expect(next).toHaveBeenCalled();
-    });
-
-    test('should bypass passwordResetLimiter in test env', () => {
-      // Arrange
-      const req = {};
-      const res = {};
-      const next = jest.fn();
-
-      // Act
-      passwordResetLimiter(req, res, next);
 
       // Assert
       expect(next).toHaveBeenCalled();

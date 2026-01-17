@@ -5,7 +5,6 @@
  * - validateIdParam - Single ID parameter validation
  * - validateIdParams - Multiple ID parameters
  * - validatePagination - Query string pagination
- * - validateSlugParam - Slug validation
  *
  * Focus: Ensure middleware sets req.validated and returns 400 on errors
  */
@@ -13,7 +12,6 @@
 const {
   validateIdParam,
   validateIdParams,
-  validateSlugParam,
   validatePagination,
 } = require("../../../validators");
 
@@ -301,76 +299,6 @@ describe("Validator Middleware - Route Protection", () => {
             timestamp: expect.any(String),
           }),
         );
-      });
-    });
-  });
-
-  // ============================================================================
-  // validateSlugParam - Slug validation
-  // ============================================================================
-
-  describe("validateSlugParam()", () => {
-    describe("✅ Valid slugs", () => {
-      test("validates lowercase slug", () => {
-        req.params.slug = "my-slug";
-
-        validateSlugParam()(req, res, next);
-
-        expect(req.validated.slug).toBe("my-slug");
-        expect(next).toHaveBeenCalled();
-      });
-
-      test("validates slug with numbers", () => {
-        req.params.slug = "slug-123";
-
-        validateSlugParam()(req, res, next);
-
-        expect(req.validated.slug).toBe("slug-123");
-        expect(next).toHaveBeenCalled();
-      });
-
-      test("validates single word slug", () => {
-        req.params.slug = "slug";
-
-        validateSlugParam()(req, res, next);
-
-        expect(req.validated.slug).toBe("slug");
-        expect(next).toHaveBeenCalled();
-      });
-    });
-
-    describe("❌ Invalid slugs", () => {
-      test("rejects slug with uppercase", () => {
-        req.params.slug = "My-Slug";
-
-        validateSlugParam()(req, res, next);
-
-        expect(res.status).toHaveBeenCalledWith(400);
-        expect(next).not.toHaveBeenCalled();
-      });
-
-      test("rejects slug with spaces", () => {
-        req.params.slug = "my slug";
-
-        validateSlugParam()(req, res, next);
-
-        expect(res.status).toHaveBeenCalledWith(400);
-      });
-
-      test("rejects slug with special characters", () => {
-        req.params.slug = "my@slug";
-
-        validateSlugParam()(req, res, next);
-
-        expect(res.status).toHaveBeenCalledWith(400);
-      });
-
-      test("rejects empty slug", () => {
-        req.params.slug = "";
-
-        validateSlugParam()(req, res, next);
-
-        expect(res.status).toHaveBeenCalledWith(400);
       });
     });
   });

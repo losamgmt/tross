@@ -24,18 +24,18 @@ jest.mock('../../../utils/validation-loader', () => ({
 describe('utils/validation-sync-checker.js', () => {
   let validateEnumSync;
   let getDbCheckConstraints;
-  let FIELD_TO_DB_MAPPING;
+  let ENTITY_FIELD_TO_DB_MAPPING;
   let mockPool;
 
   beforeEach(() => {
     jest.clearAllMocks();
 
-    // Default mock for validation rules
+    // Default mock for validation rules - uses entityFields structure
     mockLoadValidationRules.mockReturnValue({
-      fields: {
-        role_status: { enum: ['active', 'inactive'] },
-        user_status: { enum: ['active', 'inactive', 'suspended'] },
-        work_order_status: { enum: ['pending', 'in_progress', 'completed', 'cancelled'] },
+      entityFields: {
+        role: { status: { enum: ['active', 'inactive'] } },
+        user: { status: { enum: ['active', 'inactive', 'suspended'] } },
+        work_order: { status: { enum: ['pending', 'in_progress', 'completed', 'cancelled'] } },
       },
     });
 
@@ -48,7 +48,7 @@ describe('utils/validation-sync-checker.js', () => {
     const syncChecker = require('../../../utils/validation-sync-checker');
     validateEnumSync = syncChecker.validateEnumSync;
     getDbCheckConstraints = syncChecker.getDbCheckConstraints;
-    FIELD_TO_DB_MAPPING = syncChecker.FIELD_TO_DB_MAPPING;
+    ENTITY_FIELD_TO_DB_MAPPING = syncChecker.ENTITY_FIELD_TO_DB_MAPPING;
   });
 
   describe('getDbCheckConstraints()', () => {
@@ -174,8 +174,8 @@ describe('utils/validation-sync-checker.js', () => {
       test('should throw error when Joi enum has extra values', async () => {
         // Arrange - Joi has 'extra' but DB doesn't
         mockLoadValidationRules.mockReturnValue({
-          fields: {
-            role_status: { enum: ['active', 'inactive', 'extra'] },
+          entityFields: {
+            role: { status: { enum: ['active', 'inactive', 'extra'] } },
           },
         });
         mockPool.query.mockResolvedValue({
@@ -195,8 +195,8 @@ describe('utils/validation-sync-checker.js', () => {
       test('should throw error when DB enum has extra values', async () => {
         // Arrange - DB has value that Joi doesn't
         mockLoadValidationRules.mockReturnValue({
-          fields: {
-            role_status: { enum: ['active'] },
+          entityFields: {
+            role: { status: { enum: ['active'] } },
           },
         });
         mockPool.query.mockResolvedValue({
@@ -218,7 +218,7 @@ describe('utils/validation-sync-checker.js', () => {
       test('should warn and continue when field definition not found', async () => {
         // Arrange - field in mapping but not in validation rules
         mockLoadValidationRules.mockReturnValue({
-          fields: {}, // Empty fields
+          entityFields: {}, // Empty entityFields
         });
         mockPool.query.mockResolvedValue({ rows: [] });
 
@@ -232,8 +232,8 @@ describe('utils/validation-sync-checker.js', () => {
       test('should warn and continue when field has no enum', async () => {
         // Arrange - field exists but no enum
         mockLoadValidationRules.mockReturnValue({
-          fields: {
-            role_status: { type: 'string' }, // No enum
+          entityFields: {
+            role: { status: { type: 'string' } }, // No enum
           },
         });
         mockPool.query.mockResolvedValue({ rows: [] });
@@ -248,8 +248,8 @@ describe('utils/validation-sync-checker.js', () => {
       test('should warn and continue when no DB constraint found', async () => {
         // Arrange
         mockLoadValidationRules.mockReturnValue({
-          fields: {
-            role_status: { enum: ['active', 'inactive'] },
+          entityFields: {
+            role: { status: { enum: ['active', 'inactive'] } },
           },
         });
         mockPool.query.mockResolvedValue({ rows: [] }); // No constraints
@@ -273,26 +273,33 @@ describe('utils/validation-sync-checker.js', () => {
     });
   });
 
-  describe('FIELD_TO_DB_MAPPING', () => {
-    test('should export field mapping object', () => {
+  describe('ENTITY_FIELD_TO_DB_MAPPING', () => {
+    test('should export entity field mapping object', () => {
       // Assert
-      expect(FIELD_TO_DB_MAPPING).toBeDefined();
-      expect(typeof FIELD_TO_DB_MAPPING).toBe('object');
+      expect(ENTITY_FIELD_TO_DB_MAPPING).toBeDefined();
+      expect(typeof ENTITY_FIELD_TO_DB_MAPPING).toBe('object');
     });
 
-    test('should map Joi field names to table.column format', () => {
+    test('should map entity.field to table.column format', () => {
       // Assert
-      for (const [field, dbKey] of Object.entries(FIELD_TO_DB_MAPPING)) {
-        expect(typeof field).toBe('string');
-        expect(dbKey).toMatch(/^\w+\.\w+$/); // table.column format
+      for (const [entity, fieldMappings] of Object.entries(ENTITY_FIELD_TO_DB_MAPPING)) {
+        expect(typeof entity).toBe('string');
+        expect(typeof fieldMappings).toBe('object');
+        for (const [field, dbKey] of Object.entries(fieldMappings)) {
+          expect(typeof field).toBe('string');
+          expect(dbKey).toMatch(/^\w+\.\w+$/); // table.column format
+        }
       }
     });
 
-    test('should include core status fields', () => {
+    test('should include core entity status fields', () => {
       // Assert
-      expect(FIELD_TO_DB_MAPPING).toHaveProperty('role_status');
-      expect(FIELD_TO_DB_MAPPING).toHaveProperty('user_status');
-      expect(FIELD_TO_DB_MAPPING).toHaveProperty('work_order_status');
+      expect(ENTITY_FIELD_TO_DB_MAPPING).toHaveProperty('role');
+      expect(ENTITY_FIELD_TO_DB_MAPPING.role).toHaveProperty('status', 'roles.status');
+      expect(ENTITY_FIELD_TO_DB_MAPPING).toHaveProperty('user');
+      expect(ENTITY_FIELD_TO_DB_MAPPING.user).toHaveProperty('status', 'users.status');
+      expect(ENTITY_FIELD_TO_DB_MAPPING).toHaveProperty('work_order');
+      expect(ENTITY_FIELD_TO_DB_MAPPING.work_order).toHaveProperty('status', 'work_orders.status');
     });
   });
 });

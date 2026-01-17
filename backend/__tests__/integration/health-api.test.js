@@ -19,11 +19,12 @@ describe('Health Endpoints - Integration Tests', () => {
       // Assert - Health endpoint may return 200 or 503 depending on service health
       // Status can be healthy, degraded, or critical based on underlying services
       expect([200, 503]).toContain(response.status);
-      expect(['healthy', 'degraded', 'critical']).toContain(response.body.status);
-      expect(response.body).toMatchObject({
-        timestamp: expect.any(String),
+      expect(response.body.success).toBe(true);
+      expect(['healthy', 'degraded', 'critical']).toContain(response.body.data.status);
+      expect(response.body.data).toMatchObject({
         uptime: expect.any(Number),
       });
+      expect(response.body.timestamp).toBeDefined();
     });
 
     test('should include uptime greater than or equal to 0', async () => {
@@ -31,14 +32,14 @@ describe('Health Endpoints - Integration Tests', () => {
       const response = await request(app).get('/api/health');
 
       // Assert
-      expect(response.body.uptime).toBeGreaterThanOrEqual(0);
+      expect(response.body.data.uptime).toBeGreaterThanOrEqual(0);
     });
 
     test('should have valid timestamp', async () => {
       // Act
       const response = await request(app).get('/api/health');
 
-      // Assert
+      // Assert - ResponseFormatter puts timestamp at top level
       const timestamp = new Date(response.body.timestamp);
       expect(timestamp).toBeInstanceOf(Date);
       expect(timestamp.getTime()).toBeLessThanOrEqual(Date.now());
@@ -51,7 +52,7 @@ describe('Health Endpoints - Integration Tests', () => {
 
       // Assert - 200 means DB connected; status may be healthy, degraded, or critical based on latency/load
       expect(response.status).toBe(200);
-      expect(['healthy', 'degraded', 'critical']).toContain(response.body.status);
+      expect(['healthy', 'degraded', 'critical']).toContain(response.body.data.status);
     });
   });
 
@@ -171,7 +172,7 @@ describe('Health Endpoints - Integration Tests', () => {
       // Assert - All should succeed; status may vary based on latency/load
       responses.forEach((response) => {
         expect(response.status).toBe(200);
-        expect(['healthy', 'degraded', 'critical']).toContain(response.body.status);
+        expect(['healthy', 'degraded', 'critical']).toContain(response.body.data.status);
       });
     });
 
@@ -262,18 +263,23 @@ describe('Health Endpoints - Integration Tests', () => {
       // Act
       const response = await request(app).get('/api/health');
 
-      // Assert - Test ACTUAL contract, not implementation details
-      const requiredFields = [
+      // Assert - Test ACTUAL contract with ResponseFormatter structure
+      // Top-level: success, data, timestamp
+      expect(response.body).toHaveProperty('success');
+      expect(response.body).toHaveProperty('data');
+      expect(response.body).toHaveProperty('timestamp');
+
+      // Data contains health info
+      const requiredDataFields = [
         'status',
-        'timestamp',
         'uptime',
         'database',
         'memory',
         'nodeVersion',
       ];
 
-      requiredFields.forEach((field) => {
-        expect(response.body).toHaveProperty(field);
+      requiredDataFields.forEach((field) => {
+        expect(response.body.data).toHaveProperty(field);
       });
     });
   });

@@ -41,8 +41,8 @@ test.describe('E2E - Production Health @smoke', () => {
     expect(response.ok()).toBeTruthy();
     
     const health = await response.json();
-    expect(health.status).toBe('healthy');
-    expect(health.database.connected).toBe(true);
+    expect(health.data.status).toBe('healthy');
+    expect(health.data.database.connected).toBe(true);
   });
 
   test('Database connection is responsive', async ({ request }) => {
@@ -50,14 +50,14 @@ test.describe('E2E - Production Health @smoke', () => {
     const health = await response.json();
     
     // Database should respond in reasonable time (< 1 second)
-    expect(health.database.responseTime).toBeLessThan(1000);
+    expect(health.data.database.responseTime).toBeLessThan(1000);
   });
 
   test('Memory usage is healthy', async ({ request }) => {
     const response = await request.get(`${BACKEND_URL}/api/health`);
     const health = await response.json();
     
-    expect(health.memory.status).toBe('healthy');
+    expect(health.data.memory.status).toBe('healthy');
   });
 });
 

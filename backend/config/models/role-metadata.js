@@ -13,8 +13,9 @@
 const {
   FIELD_ACCESS_LEVELS: FAL,
   UNIVERSAL_FIELD_ACCESS,
-  ENTITY_CATEGORIES,
+  ROLE_HIERARCHY,
 } = require('../constants');
+const { NAME_TYPES } = require('../entity-types');
 
 module.exports = {
   // Table name in database
@@ -31,7 +32,7 @@ module.exports = {
    * Entity category: SIMPLE entities have a direct name field
    * and a unique identifier field (priority for roles)
    */
-  entityCategory: ENTITY_CATEGORIES.SIMPLE,
+  nameType: NAME_TYPES.SIMPLE,
 
   // ============================================================================
   // IDENTITY CONFIGURATION (Entity Contract v2.0)
@@ -61,6 +62,36 @@ module.exports = {
    * Maps to permissions.json resource names
    */
   rlsResource: 'roles',
+
+  /**
+   * Row-Level Security policy per role
+   * Roles are a public resource - all authenticated users can read
+   */
+  rlsPolicy: {
+    customer: 'public_resource',
+    technician: 'public_resource',
+    dispatcher: 'public_resource',
+    manager: 'public_resource',
+    admin: 'public_resource',
+  },
+
+  /**
+   * Entity-level permission overrides
+   * Roles are admin-only for CUD, but readable by all
+   */
+  entityPermissions: {
+    create: 'admin',
+    read: 'customer',
+    update: 'admin',
+    delete: 'admin',
+  },
+
+  /**
+   * Route configuration - explicit opt-in for generic router
+   */
+  routeConfig: {
+    useGenericRouter: true,
+  },
 
   // ============================================================================
   // FIELD ALIASING (for UI display names)
@@ -180,8 +211,9 @@ module.exports = {
 
     /**
      * Values of protectedByField that are protected
+     * Derived from ROLE_HIERARCHY (single source of truth)
      */
-    values: ['admin', 'manager', 'dispatcher', 'technician', 'customer'],
+    values: [...ROLE_HIERARCHY],
 
     /**
      * Fields that cannot be modified on protected records
@@ -322,7 +354,20 @@ module.exports = {
   fields: {
     // TIER 1: Universal Entity Contract Fields
     id: { type: 'integer', readonly: true },
-    name: { type: 'string', required: true, maxLength: 50 },
+    name: {
+      type: 'string',
+      required: true,
+      minLength: 2,
+      maxLength: 100,
+      pattern: '^[a-zA-Z0-9\\s_-]+$',
+      trim: true,
+      errorMessages: {
+        required: 'Role name is required',
+        minLength: 'Role name must be at least 2 characters',
+        maxLength: 'Role name cannot exceed 100 characters',
+        pattern: 'Role name can only contain letters, numbers, spaces, underscores, and hyphens',
+      },
+    },
     is_active: { type: 'boolean', default: true },
     created_at: { type: 'timestamp', readonly: true },
     updated_at: { type: 'timestamp', readonly: true },

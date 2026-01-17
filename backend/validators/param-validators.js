@@ -84,61 +84,7 @@ function validateIdParams(paramNames) {
   };
 }
 
-/**
- * Validate string slug parameter (lowercase, alphanumeric + hyphens)
- *
- * Usage:
- *   router.get('/:slug', validateSlugParam(), handler)
- *   // Access: req.validated.slug
- *
- * @param {Object} options - Validation options
- * @param {string} options.paramName - Name of param to validate (default: 'slug')
- * @param {number} options.minLength - Minimum length (default: 1)
- * @param {number} options.maxLength - Maximum length (default: 100)
- * @returns {Function} Express middleware
- */
-function validateSlugParam(options = {}) {
-  const { paramName = 'slug', minLength = 1, maxLength = 100 } = options;
-  const slugPattern = /^[a-z0-9-]+$/;
-
-  return (req, res, next) => {
-    const value = req.params[paramName];
-
-    if (!value || typeof value !== 'string') {
-      return ResponseFormatter.badRequest(
-        res,
-        `${paramName} is required`,
-        [{ field: paramName, message: `${paramName} is required` }],
-      );
-    }
-
-    const trimmed = value.trim();
-
-    if (trimmed.length < minLength || trimmed.length > maxLength) {
-      return ResponseFormatter.badRequest(
-        res,
-        `${paramName} must be between ${minLength} and ${maxLength} characters`,
-        [{ field: paramName, message: `${paramName} must be between ${minLength} and ${maxLength} characters` }],
-      );
-    }
-
-    if (!slugPattern.test(trimmed)) {
-      return ResponseFormatter.badRequest(
-        res,
-        `${paramName} must contain only lowercase letters, numbers, and hyphens`,
-        [{ field: paramName, message: `${paramName} must contain only lowercase letters, numbers, and hyphens` }],
-      );
-    }
-
-    if (!req.validated) {req.validated = {};}
-    req.validated[paramName] = trimmed;
-
-    next();
-  };
-}
-
 module.exports = {
   validateIdParam,
   validateIdParams,
-  validateSlugParam,
 };

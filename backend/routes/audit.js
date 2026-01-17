@@ -11,19 +11,44 @@
  *
  * ROUTE ORDER MATTERS: Specific routes (/all, /user/:id) must come BEFORE catch-all (/:type/:id)
  *
+ * UNIFIED DATA FLOW:
+ * - requirePermission(operation) reads resource from req.entityMetadata.rlsResource
+ * - attachEntity middleware sets req.entityMetadata at factory time
+ *
  * All endpoints require authentication and appropriate permissions.
  */
 const express = require('express');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
+const { attachEntity } = require('../middleware/generic-entity');
 const { validateIdParam, validatePagination } = require('../validators');
 const auditService = require('../services/audit-service');
 const ResponseFormatter = require('../utils/response-formatter');
-const { logger } = require('../config/logger');
+const AppError = require('../utils/app-error');
+const allMetadata = require('../config/models');
+const { asyncHandler } = require('../middleware/utils');
 
 const router = express.Router();
 
 // All routes require authentication
 router.use(authenticateToken);
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Format audit log dates for frontend consumption
+ * Converts Date objects to ISO strings for consistent JSON serialization
+ *
+ * @param {Array} logs - Array of audit log entries
+ * @returns {Array} Logs with formatted dates
+ */
+function formatAuditLogDates(logs) {
+  return logs.map(log => ({
+    ...log,
+    created_at: log.created_at?.toISOString(),
+  }));
+}
 
 // ============================================================================
 // SPECIFIC ROUTES FIRST (before catch-all patterns)
@@ -41,45 +66,35 @@ router.use(authenticateToken);
  */
 router.get(
   '/all',
-  requirePermission('audit_logs', 'read'),
+  attachEntity('audit_log'),
+  requirePermission('read'),
   validatePagination({ defaultLimit: 100, maxLimit: 500 }),
-  async (req, res) => {
-    try {
-      const { limit, offset } = req.validated.pagination;
-      const actionFilter = req.query.filter; // 'data' or 'auth'
+  asyncHandler(async (req, res) => {
+    const { limit, offset } = req.validated.pagination;
+    const actionFilter = req.query.filter; // 'data' or 'auth'
 
-      const result = await auditService.getAllRecentLogs({
-        limit,
-        offset,
-        actionFilter,
-      });
+    const result = await auditService.getAllRecentLogs({
+      limit,
+      offset,
+      actionFilter,
+    });
 
-      // Format dates for frontend
-      const formattedLogs = result.logs.map(log => ({
-        ...log,
-        created_at: log.created_at?.toISOString(),
-      }));
+    // Format dates for frontend
+    const formattedLogs = formatAuditLogDates(result.logs);
 
-      return ResponseFormatter.success(
-        res,
-        formattedLogs,
-        {
-          message: `Retrieved ${formattedLogs.length} audit log entries`,
-          pagination: {
-            total: result.total,
-            limit: result.limit,
-            offset: result.offset,
-          },
+    return ResponseFormatter.success(
+      res,
+      formattedLogs,
+      {
+        message: `Retrieved ${formattedLogs.length} audit log entries`,
+        pagination: {
+          total: result.total,
+          limit: result.limit,
+          offset: result.offset,
         },
-      );
-    } catch (error) {
-      logger.error('Error fetching all audit logs', {
-        error: error.message,
-      });
-
-      return ResponseFormatter.internalError(res, error);
-    }
-  },
+      },
+    );
+  }),
 );
 
 /**
@@ -93,48 +108,30 @@ router.get(
  */
 router.get(
   '/user/:userId',
-  requirePermission('users', 'read'),
+  attachEntity('user'),
+  requirePermission('read'),
   validateIdParam({ paramName: 'userId' }),
   validatePagination(),
-  async (req, res) => {
-    try {
-      const { userId } = req.params;
-      const limit = Math.min(parseInt(req.query.limit) || 50, 100);
-      const requestingUserId = req.dbUser?.id;
-      const isAdmin = req.dbUser?.role === 'admin' || req.dbUser?.role === 'manager';
+  asyncHandler(async (req, res) => {
+    const { userId } = req.params;
+    const limit = Math.min(parseInt(req.query.limit) || 50, 100);
+    const requestingUserId = req.dbUser?.id;
+    const isAdmin = req.dbUser?.role === 'admin' || req.dbUser?.role === 'manager';
 
-      // Non-admins can only view their own audit trail
-      if (!isAdmin && parseInt(userId) !== requestingUserId) {
-        return ResponseFormatter.forbidden(
-          res,
-          'You can only view your own activity history',
-        );
-      }
-
-      const logs = await auditService.getUserAuditTrail(userId, limit);
-
-      // Format dates for frontend
-      const formattedLogs = logs.map(log => ({
-        ...log,
-        created_at: log.created_at?.toISOString(),
-      }));
-
-      return ResponseFormatter.success(res, formattedLogs, {
-        message: `Retrieved ${formattedLogs.length} audit log entries`,
-      });
-    } catch (error) {
-      logger.error('Error fetching user audit trail', {
-        error: error.message,
-        userId: req.params.userId,
-      });
-
-      if (error.message.includes('must be') || error.message.includes('invalid')) {
-        return ResponseFormatter.badRequest(res, error.message);
-      }
-
-      return ResponseFormatter.internalError(res, error);
+    // Non-admins can only view their own audit trail
+    if (!isAdmin && parseInt(userId) !== requestingUserId) {
+      throw new AppError('You can only view your own activity history', 403, 'FORBIDDEN');
     }
-  },
+
+    const logs = await auditService.getUserAuditTrail(userId, limit);
+
+    // Format dates for frontend
+    const formattedLogs = formatAuditLogDates(logs);
+
+    return ResponseFormatter.success(res, formattedLogs, {
+      message: `Retrieved ${formattedLogs.length} audit log entries`,
+    });
+  }),
 );
 
 // ============================================================================
@@ -155,56 +152,37 @@ router.get(
   '/:resourceType/:resourceId',
   validateIdParam({ paramName: 'resourceId' }),
   validatePagination(),
-  async (req, res) => {
-    try {
-      const { resourceType, resourceId } = req.params;
-      const limit = Math.min(parseInt(req.query.limit) || 50, 100);
+  asyncHandler(async (req, res) => {
+    const { resourceType, resourceId } = req.params;
+    const limit = Math.min(parseInt(req.query.limit) || 50, 100);
 
-      // Map resourceType to RLS resource name
-      // Most entities use plural form (user -> users, work_order -> work_orders)
-      const rlsResource = resourceType.endsWith('s')
-        ? resourceType
-        : `${resourceType}s`;
+    // Map resourceType to RLS resource name from metadata
+    // Uses metadata.rlsResource for correct pluralization (e.g., inventory stays inventory)
+    const metadata = allMetadata[resourceType];
+    const rlsResource = metadata && metadata.rlsResource
+      ? metadata.rlsResource
+      : (resourceType.endsWith('s') ? resourceType : `${resourceType}s`);
 
-      // Check read permission for this resource type
-      // This ensures users can only see audit logs for resources they can access
-      const hasPermission = req.permissions?.hasPermission(rlsResource, 'read');
-      if (!hasPermission) {
-        return ResponseFormatter.forbidden(
-          res,
-          `You don't have permission to view ${resourceType} audit logs`,
-        );
-      }
-
-      const logs = await auditService.getResourceAuditTrail(
-        resourceType,
-        resourceId,
-        limit,
-      );
-
-      // Format dates for frontend
-      const formattedLogs = logs.map(log => ({
-        ...log,
-        created_at: log.created_at?.toISOString(),
-      }));
-
-      return ResponseFormatter.success(res, formattedLogs, {
-        message: `Retrieved ${formattedLogs.length} audit log entries`,
-      });
-    } catch (error) {
-      logger.error('Error fetching resource audit trail', {
-        error: error.message,
-        resourceType: req.params.resourceType,
-        resourceId: req.params.resourceId,
-      });
-
-      if (error.message.includes('must be') || error.message.includes('invalid')) {
-        return ResponseFormatter.badRequest(res, error.message);
-      }
-
-      return ResponseFormatter.internalError(res, error);
+    // Check read permission for this resource type
+    // This ensures users can only see audit logs for resources they can access
+    const hasPermission = req.permissions?.hasPermission(rlsResource, 'read');
+    if (!hasPermission) {
+      throw new AppError(`You don't have permission to view ${resourceType} audit logs`, 403, 'FORBIDDEN');
     }
-  },
+
+    const logs = await auditService.getResourceAuditTrail(
+      resourceType,
+      resourceId,
+      limit,
+    );
+
+    // Format dates for frontend
+    const formattedLogs = formatAuditLogDates(logs);
+
+    return ResponseFormatter.success(res, formattedLogs, {
+      message: `Retrieved ${formattedLogs.length} audit log entries`,
+    });
+  }),
 );
 
 module.exports = router;

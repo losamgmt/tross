@@ -1872,7 +1872,7 @@ describe('GenericEntityService', () => {
 
         // Act & Assert
         await expect(
-          GenericEntityService.update('role', 5, { name: 'client', priority: 15 }),
+          GenericEntityService.update('role', 5, { name: 'renamed_customer', priority: 15 }),
         ).rejects.toThrow(/Cannot modify name, priority on system role: customer/);
       });
 

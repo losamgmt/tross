@@ -26,6 +26,37 @@ describe('Schema Routes', () => {
     app = express();
     app.use(express.json());
     app.use('/api/schema', schemaRouter);
+    
+    // Global error handler - mimics server.js pattern-matching behavior
+    // eslint-disable-next-line no-unused-vars
+    app.use((err, req, res, next) => {
+      const messageLower = (err.message || '').toLowerCase();
+      let statusCode = 500;
+      
+      // Pattern match error messages to determine HTTP status (same as server.js)
+      // Note: "Cannot read properties" is an internal JS error, NOT a 400 validation error
+      if (messageLower.includes('not found') || messageLower.includes('does not exist')) {
+        statusCode = 404;
+      } else if (messageLower.includes('invalid') || messageLower.includes('required') || 
+                 messageLower.includes('must be') || messageLower.includes('already') || 
+                 messageLower.includes('yourself') || messageLower.includes('not a foreign key') ||
+                 (messageLower.includes('cannot') && !messageLower.includes('cannot read properties'))) {
+        statusCode = 400;
+      } else if (messageLower.includes('expired') || messageLower.includes('unauthorized')) {
+        statusCode = 401;
+      } else if (messageLower.includes('permission') || messageLower.includes('forbidden') ||
+                 messageLower.includes('access denied') || messageLower.includes('not allowed')) {
+        statusCode = 403;
+      }
+      
+      const errorMessage = err.message || 'Internal server error';
+      res.status(statusCode).json({
+        success: false,
+        error: errorMessage,
+        message: errorMessage,
+        timestamp: new Date().toISOString(),
+      });
+    });
 
     // Mock auth middleware to pass through
     authenticateToken.mockImplementation((req, res, next) => next());
@@ -119,7 +150,7 @@ describe('Schema Routes', () => {
       // Assert
       expect(response.status).toBe(404);
       expect(response.body).toMatchObject({
-        error: 'Not Found',
+        error: expect.stringContaining('does not exist'),
         message: expect.stringContaining('does not exist'),
       });
     });

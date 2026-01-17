@@ -5,6 +5,7 @@ const {
   AuditResults,
 } = require('./audit-constants');
 const { toSafeUserId, toSafeInteger } = require('../validators/type-coercion');
+const AppError = require('../utils/app-error');
 
 /**
  * AuditService - Comprehensive audit logging for security and compliance
@@ -49,7 +50,7 @@ class AuditService {
    * @param {string} params.errorMessage - Error message if failed
    * @returns {Promise<void>}
    */
-  async log({
+  static async log({
     userId = null,
     action,
     resourceType,
@@ -98,12 +99,32 @@ class AuditService {
       });
     } catch (error) {
       // Don't throw - audit logging should never break the application
-      logger.error('Error writing audit log', {
+      // But DO ensure the event is captured for security review
+      logger.error('CRITICAL: Audit log write failed - event captured in logs', {
         error: error.message,
-        action,
-        userId,
+        // Capture full audit event in error log as fallback
+        auditEvent: {
+          userId,
+          action,
+          resourceType,
+          resourceId,
+          result,
+          ipAddress,
+          timestamp: new Date().toISOString(),
+        },
         stack: error.stack,
       });
+
+      // Emit event for monitoring systems to detect audit failures
+      // In production, this should trigger alerts
+      if (typeof process.emit === 'function') {
+        process.emit('audit:failure', {
+          error: error.message,
+          action,
+          resourceType,
+          timestamp: new Date().toISOString(),
+        });
+      }
     }
   }
 
@@ -114,7 +135,7 @@ class AuditService {
    * @returns {Promise<Array>}
    * @throws {Error} If userId or limit is invalid
    */
-  async getUserAuditTrail(userId, limit = 100) {
+  static async getUserAuditTrail(userId, limit = 100) {
     try {
       // TYPE SAFETY: Validate userId and limit before query
       const safeUserId = toSafeInteger(userId, 'userId', {
@@ -151,7 +172,7 @@ class AuditService {
    * @param {number} limit - Maximum records to return
    * @returns {Promise<Array>}
    */
-  async getSecurityEvents(hours = 24, limit = 100) {
+  static async getSecurityEvents(hours = 24, limit = 100) {
     try {
       const result = await db(
         `SELECT * FROM audit_logs
@@ -179,7 +200,7 @@ class AuditService {
    * @param {string} options.actionFilter - Filter by action type ('data' or 'auth')
    * @returns {Promise<{logs: Array, total: number}>}
    */
-  async getAllRecentLogs({ limit = 100, offset = 0, actionFilter = null } = {}) {
+  static async getAllRecentLogs({ limit = 100, offset = 0, actionFilter = null } = {}) {
     try {
       const safeLimit = Math.min(Math.max(1, parseInt(limit) || 100), 500);
       const safeOffset = Math.max(0, parseInt(offset) || 0);
@@ -258,11 +279,11 @@ class AuditService {
    * @returns {Promise<Array>}
    * @throws {Error} If resourceType is empty, resourceId is invalid, or limit is invalid
    */
-  async getResourceAuditTrail(resourceType, resourceId, limit = 50) {
+  static async getResourceAuditTrail(resourceType, resourceId, limit = 50) {
     try {
       // TYPE SAFETY: Validate inputs before query
       if (!resourceType || typeof resourceType !== 'string') {
-        throw new Error('resourceType must be a non-empty string');
+        throw new AppError('resourceType must be a non-empty string', 400, 'BAD_REQUEST');
       }
       const safeResourceId = toSafeInteger(resourceId, 'resourceId', {
         min: 1,
@@ -299,7 +320,7 @@ class AuditService {
    * @param {number} minutes - Minutes to look back
    * @returns {Promise<number>}
    */
-  async getFailedLoginAttempts(ipAddress, minutes = 15) {
+  static async getFailedLoginAttempts(ipAddress, minutes = 15) {
     try {
       const result = await db(
         `SELECT COUNT(*) as count
@@ -325,7 +346,7 @@ class AuditService {
    * @param {number} daysToKeep - Number of days to retain
    * @returns {Promise<number>} - Number of rows deleted
    */
-  async cleanupOldLogs(daysToKeep = 365) {
+  static async cleanupOldLogs(daysToKeep = 365) {
     try {
       const result = await db(
         `DELETE FROM audit_logs
@@ -361,7 +382,7 @@ class AuditService {
    * @param {number} resourceId - Record ID
    * @returns {Promise<{user_id: number|null, created_at: Date}|null>}
    */
-  async getCreator(resourceType, resourceId) {
+  static async getCreator(resourceType, resourceId) {
     try {
       const result = await db(
         `SELECT user_id, created_at
@@ -393,7 +414,7 @@ class AuditService {
    * @param {number} resourceId - Record ID
    * @returns {Promise<{user_id: number|null, updated_at: Date}|null>}
    */
-  async getLastEditor(resourceType, resourceId) {
+  static async getLastEditor(resourceType, resourceId) {
     try {
       const result = await db(
         `SELECT user_id, created_at as updated_at
@@ -427,7 +448,7 @@ class AuditService {
    * @param {number} resourceId - Record ID
    * @returns {Promise<{user_id: number|null, deactivated_at: Date}|null>}
    */
-  async getDeactivator(resourceType, resourceId) {
+  static async getDeactivator(resourceType, resourceId) {
     try {
       // Find the most recent UPDATE that set is_active to false
       const result = await db(
@@ -481,10 +502,369 @@ class AuditService {
    * @param {number} limit - Max records to return
    * @returns {Promise<Array>}
    */
-  async getHistory(resourceType, resourceId, limit = 50) {
+  static async getHistory(resourceType, resourceId, limit = 50) {
     // Reuse existing getResourceAuditTrail method
-    return this.getResourceAuditTrail(resourceType, resourceId, limit);
+    return AuditService.getResourceAuditTrail(resourceType, resourceId, limit);
+  }
+
+  // ============================================================================
+  // ADMIN PANEL LOG QUERIES
+  // ============================================================================
+  // Consolidated from AdminLogsService - specialized queries for admin UI
+
+  /**
+   * Auth-related action types for filtering
+   */
+  static AUTH_ACTIONS = [
+    'login',
+    'logout',
+    'login_success',
+    'login_failure',
+    'token_refresh',
+    'token_revoked',
+    'session_expired',
+    'password_reset',
+    'password_change',
+    'mfa_challenge',
+    'mfa_success',
+    'mfa_failure',
+    'account_locked',
+    'account_unlocked',
+    'maintenance_enabled',
+    'maintenance_disabled',
+  ];
+
+  /**
+   * Data-related action types for filtering
+   */
+  static DATA_ACTIONS = [
+    'create',
+    'read',
+    'update',
+    'delete',
+    'bulk_create',
+    'bulk_update',
+    'bulk_delete',
+    'import',
+    'export',
+  ];
+
+  /**
+   * Format a log entry for API response
+   * @private
+   */
+  static _formatLogEntry(row) {
+    return {
+      id: row.id,
+      userId: row.user_id,
+      user: row.user_email ? {
+        email: row.user_email,
+        fullName: [row.first_name, row.last_name].filter(Boolean).join(' ') || row.user_email,
+      } : null,
+      action: row.action,
+      resourceType: row.resource_type,
+      resourceId: row.resource_id,
+      oldValues: row.old_values,
+      newValues: row.new_values,
+      ipAddress: row.ip_address,
+      userAgent: row.user_agent,
+      result: row.result,
+      errorMessage: row.error_message,
+      createdAt: row.created_at,
+    };
+  }
+
+  /**
+   * Get data transformation logs (CRUD operations) for admin panel
+   * @param {Object} filters - Query filters
+   * @returns {Promise<Object>} Paginated log results
+   */
+  static async getDataLogs(filters = {}) {
+    const {
+      page = 1,
+      limit = 50,
+      userId = null,
+      resourceType = null,
+      action = null,
+      startDate = null,
+      endDate = null,
+      search = null,
+    } = filters;
+
+    const offset = (page - 1) * limit;
+    const params = [];
+    const conditions = [`al.action = ANY($${params.length + 1})`];
+    params.push(AuditService.DATA_ACTIONS);
+
+    if (userId) {
+      params.push(userId);
+      conditions.push(`al.user_id = $${params.length}`);
+    }
+
+    if (resourceType) {
+      params.push(resourceType);
+      conditions.push(`al.resource_type = $${params.length}`);
+    }
+
+    if (action) {
+      params.push(action);
+      conditions.push(`al.action = $${params.length}`);
+    }
+
+    if (startDate) {
+      params.push(startDate);
+      conditions.push(`al.created_at >= $${params.length}`);
+    }
+
+    if (endDate) {
+      params.push(endDate);
+      conditions.push(`al.created_at <= $${params.length}`);
+    }
+
+    if (search) {
+      params.push(`%${search}%`);
+      conditions.push(`(
+        al.resource_type ILIKE $${params.length} OR
+        al.action ILIKE $${params.length} OR
+        u.email ILIKE $${params.length}
+      )`);
+    }
+
+    const whereClause = conditions.length > 0
+      ? `WHERE ${conditions.join(' AND ')}`
+      : '';
+
+    // Count query
+    const countQuery = `
+      SELECT COUNT(*) as total
+      FROM audit_logs al
+      LEFT JOIN users u ON al.user_id = u.id
+      ${whereClause}
+    `;
+
+    // Data query
+    const dataQuery = `
+      SELECT 
+        al.id,
+        al.user_id,
+        al.action,
+        al.resource_type,
+        al.resource_id,
+        al.old_values,
+        al.new_values,
+        al.ip_address,
+        al.result,
+        al.error_message,
+        al.created_at,
+        u.email as user_email,
+        u.first_name,
+        u.last_name
+      FROM audit_logs al
+      LEFT JOIN users u ON al.user_id = u.id
+      ${whereClause}
+      ORDER BY al.created_at DESC
+      LIMIT $${params.length + 1} OFFSET $${params.length + 2}
+    `;
+
+    params.push(limit, offset);
+
+    const [countResult, dataResult] = await Promise.all([
+      db(countQuery, params.slice(0, -2)),
+      db(dataQuery, params),
+    ]);
+
+    const total = parseInt(countResult.rows[0].total, 10);
+
+    return {
+      data: dataResult.rows.map(AuditService._formatLogEntry),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasNext: page * limit < total,
+        hasPrev: page > 1,
+      },
+      filters: {
+        availableActions: AuditService.DATA_ACTIONS,
+        availableResourceTypes: await AuditService._getDistinctResourceTypes('data'),
+      },
+    };
+  }
+
+  /**
+   * Get authentication logs for admin panel
+   * @param {Object} filters - Query filters
+   * @returns {Promise<Object>} Paginated log results
+   */
+  static async getAuthLogs(filters = {}) {
+    const {
+      page = 1,
+      limit = 50,
+      userId = null,
+      action = null,
+      result = null,
+      startDate = null,
+      endDate = null,
+      search = null,
+    } = filters;
+
+    const offset = (page - 1) * limit;
+    const params = [];
+    const conditions = [`al.action = ANY($${params.length + 1})`];
+    params.push(AuditService.AUTH_ACTIONS);
+
+    if (userId) {
+      params.push(userId);
+      conditions.push(`al.user_id = $${params.length}`);
+    }
+
+    if (action) {
+      params.push(action);
+      conditions.push(`al.action = $${params.length}`);
+    }
+
+    if (result) {
+      params.push(result);
+      conditions.push(`al.result = $${params.length}`);
+    }
+
+    if (startDate) {
+      params.push(startDate);
+      conditions.push(`al.created_at >= $${params.length}`);
+    }
+
+    if (endDate) {
+      params.push(endDate);
+      conditions.push(`al.created_at <= $${params.length}`);
+    }
+
+    if (search) {
+      params.push(`%${search}%`);
+      conditions.push(`(
+        al.action ILIKE $${params.length} OR
+        al.ip_address ILIKE $${params.length} OR
+        u.email ILIKE $${params.length}
+      )`);
+    }
+
+    const whereClause = conditions.length > 0
+      ? `WHERE ${conditions.join(' AND ')}`
+      : '';
+
+    // Count query
+    const countQuery = `
+      SELECT COUNT(*) as total
+      FROM audit_logs al
+      LEFT JOIN users u ON al.user_id = u.id
+      ${whereClause}
+    `;
+
+    // Data query
+    const dataQuery = `
+      SELECT 
+        al.id,
+        al.user_id,
+        al.action,
+        al.resource_type,
+        al.ip_address,
+        al.user_agent,
+        al.result,
+        al.error_message,
+        al.created_at,
+        u.email as user_email,
+        u.first_name,
+        u.last_name
+      FROM audit_logs al
+      LEFT JOIN users u ON al.user_id = u.id
+      ${whereClause}
+      ORDER BY al.created_at DESC
+      LIMIT $${params.length + 1} OFFSET $${params.length + 2}
+    `;
+
+    params.push(limit, offset);
+
+    const [countResult, dataResult] = await Promise.all([
+      db(countQuery, params.slice(0, -2)),
+      db(dataQuery, params),
+    ]);
+
+    const total = parseInt(countResult.rows[0].total, 10);
+
+    return {
+      data: dataResult.rows.map(AuditService._formatLogEntry),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasNext: page * limit < total,
+        hasPrev: page > 1,
+      },
+      filters: {
+        availableActions: AuditService.AUTH_ACTIONS,
+        availableResults: ['success', 'failure'],
+      },
+    };
+  }
+
+  /**
+   * Get distinct resource types for filtering
+   * @private
+   */
+  static async _getDistinctResourceTypes(category) {
+    const actions = category === 'data' ? AuditService.DATA_ACTIONS : AuditService.AUTH_ACTIONS;
+    const query = `
+      SELECT DISTINCT resource_type
+      FROM audit_logs
+      WHERE action = ANY($1)
+        AND resource_type IS NOT NULL
+      ORDER BY resource_type
+    `;
+
+    const result = await db(query, [actions]);
+    return result.rows.map(r => r.resource_type);
+  }
+
+  /**
+   * Get log summary statistics for admin dashboard
+   * @param {string} period - 'day', 'week', 'month'
+   * @returns {Promise<Object>} Summary stats
+   */
+  static async getLogSummary(period = 'day') {
+    const intervals = {
+      day: '24 hours',
+      week: '7 days',
+      month: '30 days',
+    };
+
+    const interval = intervals[period] || intervals.day;
+
+    const query = `
+      SELECT 
+        action,
+        COUNT(*) as count,
+        COUNT(CASE WHEN result = 'success' THEN 1 END) as success_count,
+        COUNT(CASE WHEN result = 'failure' THEN 1 END) as failure_count
+      FROM audit_logs
+      WHERE created_at >= NOW() - INTERVAL '${interval}'
+      GROUP BY action
+      ORDER BY count DESC
+    `;
+
+    const result = await db(query);
+
+    return {
+      period,
+      interval,
+      actions: result.rows.map(row => ({
+        action: row.action,
+        total: parseInt(row.count, 10),
+        success: parseInt(row.success_count, 10),
+        failure: parseInt(row.failure_count, 10),
+      })),
+    };
   }
 }
 
-module.exports = new AuditService();
+module.exports = AuditService;

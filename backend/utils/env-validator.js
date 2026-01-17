@@ -109,14 +109,21 @@ const PRODUCTION_CHECKS = {
 /**
  * Validate environment variables at startup
  *
+ * PURE FUNCTION: Returns validation result without side effects.
+ * Caller is responsible for:
+ * - Applying defaults to process.env if desired
+ * - Exiting process on critical errors
+ *
  * @param {Object} options - Validation options
- * @param {boolean} options.exitOnError - Exit process if validation fails (default: true)
- * @returns {Object} Validation result { valid: boolean, errors: string[] }
+ * @param {boolean} options.applyDefaults - Apply default values to process.env (default: true)
+ * @param {boolean} options.exitOnError - Exit process if validation fails (default: false for testability)
+ * @returns {Object} Validation result { valid: boolean, errors: string[], warnings: string[], defaults: Object }
  */
 function validateEnvironment(options = {}) {
-  const { exitOnError = true } = options;
+  const { applyDefaults = true, exitOnError = false } = options;
   const errors = [];
   const warnings = [];
+  const defaults = {}; // Defaults that would be applied
   const isProduction = process.env.NODE_ENV === 'production';
 
   logger.info('🔍 Validating environment variables...');
@@ -129,7 +136,10 @@ function validateEnvironment(options = {}) {
     if (config.required && !value) {
       if (config.default) {
         warnings.push(`${key} not set, using default: ${config.default}`);
-        process.env[key] = config.default;
+        defaults[key] = config.default;
+        if (applyDefaults) {
+          process.env[key] = config.default;
+        }
         continue;
       }
       errors.push(`MISSING: ${key} - ${config.error}`);
@@ -180,11 +190,11 @@ function validateEnvironment(options = {}) {
       process.exit(1);
     }
 
-    return { valid: false, errors };
+    return { valid: false, errors, warnings, defaults };
   }
 
   logger.info('✅ Environment validation passed');
-  return { valid: true, errors: [] };
+  return { valid: true, errors: [], warnings, defaults };
 }
 
 /**

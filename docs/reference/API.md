@@ -423,42 +423,70 @@ DELETE /api/files/:id
 
 ## Error Handling
 
+All errors use the unified `AppError` class with explicit status codes. The response format is consistent:
+
+```json
+{
+  "success": false,
+  "error": "ERROR_CODE",
+  "message": "Human-readable error message",
+  "timestamp": "2026-01-16T10:30:00Z"
+}
+```
+
+### Error Codes
+
+| Code | HTTP Status | Description |
+|------|-------------|-------------|
+| `BAD_REQUEST` | 400 | Invalid input, missing fields, validation errors |
+| `UNAUTHORIZED` | 401 | Authentication failed, token expired/invalid |
+| `FORBIDDEN` | 403 | Permission denied, insufficient role |
+| `NOT_FOUND` | 404 | Resource doesn't exist |
+| `CONFLICT` | 409 | Duplicate entry, already exists |
+| `INTERNAL_ERROR` | 500 | Server error (details hidden in production) |
+| `SERVICE_UNAVAILABLE` | 503 | External service down (storage, database) |
+
 ### Validation Errors
 ```json
 {
-  "error": "Validation failed",
+  "success": false,
+  "error": "BAD_REQUEST",
+  "message": "Validation failed",
   "details": {
     "email": "Email is required",
     "phone": "Phone must be 10-15 digits"
   },
-  "timestamp": "2025-11-19T10:30:00Z"
+  "timestamp": "2026-01-16T10:30:00Z"
 }
 ```
 
 ### Authentication Errors
 ```json
 {
-  "error": "Unauthorized",
+  "success": false,
+  "error": "UNAUTHORIZED",
   "message": "Invalid or expired token",
-  "timestamp": "2025-11-19T10:30:00Z"
+  "timestamp": "2026-01-16T10:30:00Z"
 }
 ```
 
 ### Permission Errors
 ```json
 {
-  "error": "Forbidden",
+  "success": false,
+  "error": "FORBIDDEN",
   "message": "Insufficient permissions for this action",
-  "timestamp": "2025-11-19T10:30:00Z"
+  "timestamp": "2026-01-16T10:30:00Z"
 }
 ```
 
 ### Not Found Errors
 ```json
 {
-  "error": "Not Found",
+  "success": false,
+  "error": "NOT_FOUND",
   "message": "Customer with ID 999 not found",
-  "timestamp": "2025-11-19T10:30:00Z"
+  "timestamp": "2026-01-16T10:30:00Z"
 }
 ```
 

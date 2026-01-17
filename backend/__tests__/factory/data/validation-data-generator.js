@@ -245,11 +245,6 @@ function generateFromPattern(pattern, uniqueId, uniqueSuffix, fieldDef = {}) {
     return `${prefix}-${year}-${String(counterPart).padStart(4, '0')}`;
   }
   
-  // Human names: ^[a-zA-Z\s'-]+$
-  if (pattern === "^[a-zA-Z\\s'-]+$") {
-    return `Test${uniqueSuffix}`;
-  }
-  
   // Alphanumeric with spaces/underscores/hyphens: ^[a-zA-Z0-9\s_-]+$
   if (pattern === "^[a-zA-Z0-9\\s_-]+$") {
     return `TestValue${uniqueSuffix}`;
@@ -441,13 +436,313 @@ function resetCounter() {
   counter = 0;
 }
 
+// ============================================================================
+// FIELD INTROSPECTION HELPERS
+// ============================================================================
+// These functions enable metadata-driven test discovery.
+// Instead of hardcoding field names like 'theme' or 'notificationsEnabled',
+// tests can discover fields by TYPE and test behavior generically.
+
+/**
+ * Get all fields from an entity's schema/metadata
+ * 
+ * PRIORITY ORDER:
+ * 1. Entity metadata fields (config/models/<entity>.fields)
+ * 2. Entity fieldAccess keys (for entities without explicit fields)
+ * 
+ * @param {string} entityName - Entity name (e.g., 'preferences', 'customer')
+ * @param {Object} schemaOverride - Optional schema to use instead of metadata lookup
+ * @returns {Object} { [fieldName]: fieldDef } or empty object
+ */
+function getEntityFields(entityName, schemaOverride = null) {
+  // If schema is provided directly (e.g., PREFERENCE_SCHEMA), use it
+  if (schemaOverride) {
+    return schemaOverride;
+  }
+  
+  try {
+    const allMetadata = require('../../../config/models');
+    const entityMeta = allMetadata[entityName];
+    
+    if (!entityMeta) return {};
+    
+    // Prefer explicit fields definition
+    if (entityMeta.fields && Object.keys(entityMeta.fields).length > 0) {
+      return entityMeta.fields;
+    }
+    
+    // Fallback to fieldAccess keys with inferred types
+    if (entityMeta.fieldAccess) {
+      const fields = {};
+      for (const fieldName of Object.keys(entityMeta.fieldAccess)) {
+        const fieldDef = getFieldDef(fieldName, entityName);
+        if (fieldDef) {
+          fields[fieldName] = fieldDef;
+        }
+      }
+      return fields;
+    }
+    
+    return {};
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Find a field of a specific type in an entity's schema
+ * 
+ * USAGE:
+ *   const [enumField, enumDef] = findFieldByType('preferences', 'enum') || [];
+ *   if (enumField) {
+ *     // Test enum behavior without hardcoding 'theme'
+ *   }
+ * 
+ * @param {string} entityName - Entity name
+ * @param {string} type - Field type (enum, boolean, string, integer, email, etc.)
+ * @param {Object} schemaOverride - Optional schema to use instead of metadata lookup
+ * @returns {[string, Object]|null} [fieldName, fieldDef] tuple or null if not found
+ */
+function findFieldByType(entityName, type, schemaOverride = null) {
+  const fields = getEntityFields(entityName, schemaOverride);
+  
+  for (const [fieldName, fieldDef] of Object.entries(fields)) {
+    if (matchesType(fieldDef, type)) {
+      return [fieldName, fieldDef];
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Find all fields of a specific type in an entity's schema
+ * 
+ * @param {string} entityName - Entity name
+ * @param {string} type - Field type
+ * @param {Object} schemaOverride - Optional schema to use instead of metadata lookup
+ * @returns {Array<[string, Object]>} Array of [fieldName, fieldDef] pairs
+ */
+function findAllFieldsByType(entityName, type, schemaOverride = null) {
+  const fields = getEntityFields(entityName, schemaOverride);
+  const matches = [];
+  
+  for (const [fieldName, fieldDef] of Object.entries(fields)) {
+    if (matchesType(fieldDef, type)) {
+      matches.push([fieldName, fieldDef]);
+    }
+  }
+  
+  return matches;
+}
+
+/**
+ * Check if a field definition matches a type
+ * Handles both direct type matching and format-based matching
+ * 
+ * @param {Object} fieldDef - Field definition
+ * @param {string} type - Type to match
+ * @returns {boolean}
+ */
+function matchesType(fieldDef, type) {
+  if (!fieldDef) return false;
+  
+  // Direct type match
+  if (fieldDef.type === type) return true;
+  
+  // Format-based matching (email is type: string, format: email)
+  if (fieldDef.format === type) return true;
+  
+  // Enum detection: has 'values' or 'enum' array
+  if (type === 'enum' && (fieldDef.values || fieldDef.enum)) return true;
+  
+  return false;
+}
+
+/**
+ * Generate an INVALID value for a field (for negative testing)
+ * 
+ * PRINCIPLE: Generate a value that SHOULD fail validation.
+ * The type of invalid value depends on the field's constraints.
+ * 
+ * @param {string} fieldName - Field name
+ * @param {string} entityName - Entity name
+ * @param {Object} schemaOverride - Optional schema with field definition
+ * @returns {*} An invalid value that should fail validation
+ */
+function generateInvalidValue(fieldName, entityName = null, schemaOverride = null) {
+  let fieldDef;
+  
+  if (schemaOverride && schemaOverride[fieldName]) {
+    fieldDef = schemaOverride[fieldName];
+  } else {
+    fieldDef = getFieldDef(fieldName, entityName);
+  }
+  
+  if (!fieldDef) {
+    // No definition - return obviously wrong type
+    return { invalid: 'object-where-string-expected' };
+  }
+  
+  // Use invalid examples if available
+  if (fieldDef.examples?.invalid?.length > 0) {
+    return fieldDef.examples.invalid[0];
+  }
+  
+  // Generate invalid based on type
+  switch (fieldDef.type) {
+    case 'string':
+      if (fieldDef.format === 'email') {
+        return 'not-an-email'; // Invalid email format
+      }
+      if (fieldDef.pattern) {
+        return '!!!INVALID_PATTERN!!!'; // Unlikely to match any pattern
+      }
+      if (fieldDef.minLength) {
+        return 'x'.repeat(Math.max(0, fieldDef.minLength - 1)); // Too short
+      }
+      if (fieldDef.maxLength) {
+        return 'x'.repeat(fieldDef.maxLength + 10); // Too long
+      }
+      return 12345; // Wrong type (number instead of string)
+      
+    case 'integer':
+    case 'number':
+      if (fieldDef.min !== undefined) {
+        return fieldDef.min - 1; // Below minimum
+      }
+      if (fieldDef.max !== undefined) {
+        return fieldDef.max + 1; // Above maximum
+      }
+      return 'not-a-number'; // Wrong type
+      
+    case 'boolean':
+      return 'not-a-boolean'; // String instead of boolean
+      
+    case 'enum':
+      return 'INVALID_ENUM_VALUE_XYZ'; // Not in allowed values
+      
+    default:
+      // If has enum/values, return invalid enum
+      if (fieldDef.values || fieldDef.enum) {
+        return 'INVALID_ENUM_VALUE_XYZ';
+      }
+      return { invalid: 'wrong-type' };
+  }
+}
+
+/**
+ * Get the expected JavaScript type for a field
+ * Useful for validating response structure
+ * 
+ * @param {string} fieldName - Field name
+ * @param {string} entityName - Entity name
+ * @param {Object} schemaOverride - Optional schema with field definition
+ * @returns {string} JavaScript type name (string, number, boolean, object)
+ */
+function getExpectedJsType(fieldName, entityName = null, schemaOverride = null) {
+  let fieldDef;
+  
+  if (schemaOverride && schemaOverride[fieldName]) {
+    fieldDef = schemaOverride[fieldName];
+  } else {
+    fieldDef = getFieldDef(fieldName, entityName);
+  }
+  
+  if (!fieldDef) return 'string'; // Default assumption
+  
+  switch (fieldDef.type) {
+    case 'integer':
+    case 'number':
+    case 'decimal':
+    case 'currency':
+      return 'number';
+    case 'boolean':
+      return 'boolean';
+    case 'object':
+      return 'object';
+    case 'array':
+      return 'object'; // typeof [] === 'object'
+    default:
+      return 'string';
+  }
+}
+
+/**
+ * Get all expected types for an entity's fields
+ * Useful for validating response structure
+ * 
+ * @param {string} entityName - Entity name
+ * @param {Object} schemaOverride - Optional schema to use
+ * @returns {Object} { [fieldName]: 'string'|'number'|'boolean'|'object' }
+ */
+function getExpectedTypes(entityName, schemaOverride = null) {
+  const fields = getEntityFields(entityName, schemaOverride);
+  const types = {};
+  
+  for (const fieldName of Object.keys(fields)) {
+    types[fieldName] = getExpectedJsType(fieldName, entityName, schemaOverride);
+  }
+  
+  return types;
+}
+
+/**
+ * Find fields by constraint (required, optional, has default, etc.)
+ * 
+ * @param {string} entityName - Entity name
+ * @param {string} constraint - Constraint type: 'required', 'optional', 'hasDefault', 'enum', 'foreignKey'
+ * @param {Object} schemaOverride - Optional schema to use
+ * @returns {string[]} Array of field names matching the constraint
+ */
+function findFieldsByConstraint(entityName, constraint, schemaOverride = null) {
+  const fields = getEntityFields(entityName, schemaOverride);
+  const matches = [];
+  
+  for (const [fieldName, fieldDef] of Object.entries(fields)) {
+    switch (constraint) {
+      case 'required':
+        if (fieldDef.required === true) matches.push(fieldName);
+        break;
+      case 'optional':
+        if (fieldDef.required !== true) matches.push(fieldName);
+        break;
+      case 'hasDefault':
+        if (fieldDef.default !== undefined) matches.push(fieldName);
+        break;
+      case 'enum':
+        if (fieldDef.values || fieldDef.enum || fieldDef.type === 'enum') matches.push(fieldName);
+        break;
+      case 'foreignKey':
+        if (fieldDef.type === 'foreignKey' || fieldName.endsWith('_id')) matches.push(fieldName);
+        break;
+    }
+  }
+  
+  return matches;
+}
+
 module.exports = {
+  // Value generation
   generateValidValue,
+  generateInvalidValue,
   getValidExamples,
   getInvalidExamples,
+  
+  // Field introspection
+  getEntityFields,
+  findFieldByType,
+  findAllFieldsByType,
+  findFieldsByConstraint,
+  getExpectedJsType,
+  getExpectedTypes,
+  
+  // Utilities
   hasValidationRules,
   getFieldDef,
   resetCounter,
+  matchesType,
+  
   // Exposed for testing
   numberToLetters,
   getNextUnique,

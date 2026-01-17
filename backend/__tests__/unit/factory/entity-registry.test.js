@@ -34,7 +34,7 @@ describe('Entity Registry', () => {
     test('discovers all entities from config/models', () => {
       const entities = getAllEntityNames();
 
-      // Should find all 11 entities
+      // Should find all 12 entities (including system tables like audit_log)
       expect(entities).toContain('user');
       expect(entities).toContain('role');
       expect(entities).toContain('customer');
@@ -46,8 +46,9 @@ describe('Entity Registry', () => {
       expect(entities).toContain('preferences');
       expect(entities).toContain('saved_view');
       expect(entities).toContain('file_attachment');
+      expect(entities).toContain('audit_log');
 
-      expect(entities.length).toBe(11);
+      expect(entities.length).toBe(12);
     });
 
     test('getEntityMetadata returns metadata with entityName added', () => {

@@ -33,7 +33,22 @@ jest.mock("../../../middleware/auth", () => ({
   requirePermission: jest.fn(() => (req, res, next) => next()),
   requireMinimumRole: jest.fn(() => (req, res, next) => next()),
 }));
-jest.mock("../../../validators");
+jest.mock("../../../validators", () => {
+  const ResponseFormatter = require("../../../utils/response-formatter");
+  return {
+    validateProfileUpdate: jest.fn(() => (req, res, next) => next()),
+    validateRefreshToken: jest.fn(() => (req, res, next) => next()),
+    validateIdParam: jest.fn(({ paramName = 'id' } = {}) => (req, res, next) => {
+      const value = parseInt(req.params[paramName], 10);
+      if (isNaN(value) || value < 1) {
+        return ResponseFormatter.badRequest(res, `Invalid ${paramName}`);
+      }
+      if (!req.validated) req.validated = {};
+      req.validated[paramName] = value;
+      next();
+    }),
+  };
+});
 jest.mock("../../../utils/request-helpers");
 jest.mock("jsonwebtoken");
 
@@ -260,13 +275,14 @@ describe("routes/auth.js - Profile Operations", () => {
 
       // Act
       const response = await request(app).put("/api/auth/me").send({
-        email: "hacker@evil.com", // Not allowed field
-        role: "admin", // Not allowed field
+        email: "hacker@evil.com", // Not allowed field - will be stripped
+        role: "admin", // Not allowed field - will be stripped
       });
 
       // Assert
+      // Validator strips unknown fields, then min(1) validation fires
       expect(response.status).toBe(400);
-      expect(response.body.message).toBe("No valid fields to update");
+      expect(response.body.message).toBe("At least one field (first_name or last_name) must be provided");
     });
   });
 });

@@ -59,7 +59,7 @@ describe("Constants Service", () => {
         "MANAGER",
         "DISPATCHER",
         "TECHNICIAN",
-        "CLIENT",
+        "CUSTOMER",
       ];
       expectedRoles.forEach((role) => {
         expect(USER_ROLES).toHaveProperty(role);
@@ -77,7 +77,9 @@ describe("Constants Service", () => {
     test("should have unique role values", () => {
       const values = Object.values(USER_ROLES);
       const uniqueValues = [...new Set(values)];
-      expect(values.length).toBe(uniqueValues.length);
+      // 5 roles: admin, manager, dispatcher, technician, customer
+      expect(Object.keys(USER_ROLES).length).toBe(5);
+      expect(uniqueValues.length).toBe(5);
     });
 
     test("should contain expected role hierarchy", () => {
@@ -86,7 +88,7 @@ describe("Constants Service", () => {
       expect(USER_ROLES.MANAGER).toBe("manager");
       expect(USER_ROLES.DISPATCHER).toBe("dispatcher");
       expect(USER_ROLES.TECHNICIAN).toBe("technician");
-      expect(USER_ROLES.CLIENT).toBe("customer");
+      expect(USER_ROLES.CUSTOMER).toBe("customer");
     });
   });
 

@@ -10,7 +10,6 @@ const {
   validatePagination,
   validateSearch,
   validateSort,
-  validateFilters,
   validateQuery,
 } = require('../../../validators/query-validators');
 
@@ -323,105 +322,7 @@ describe('Query Validators', () => {
     });
   });
 
-  describe('validateFilters', () => {
-    test('should validate integer filter', () => {
-      // Arrange
-      req.query = { age: '25' };
-      const schema = { age: { type: 'integer', min: 0, max: 150 } };
-      const middleware = validateFilters(schema);
-
-      // Act
-      middleware(req, res, next);
-
-      // Assert
-      expect(req.validated.query.filters.age).toBe(25);
-      expect(next).toHaveBeenCalled();
-    });
-
-    test('should validate boolean filter', () => {
-      // Arrange
-      req.query = { is_active: 'true' };
-      const schema = { is_active: { type: 'boolean' } };
-      const middleware = validateFilters(schema);
-
-      // Act
-      middleware(req, res, next);
-
-      // Assert
-      expect(req.validated.query.filters.is_active).toBe(true);
-    });
-
-    test('should validate string filter', () => {
-      // Arrange
-      req.query = { status: 'active' };
-      const schema = { status: { type: 'string', allowed: ['active', 'inactive'] } };
-      const middleware = validateFilters(schema);
-
-      // Act
-      middleware(req, res, next);
-
-      // Assert
-      expect(req.validated.query.filters.status).toBe('active');
-    });
-
-    test('should trim string filters', () => {
-      // Arrange
-      req.query = { name: '  test  ' };
-      const schema = { name: { type: 'string' } };
-      const middleware = validateFilters(schema);
-
-      // Act
-      middleware(req, res, next);
-
-      // Assert
-      expect(req.validated.query.filters.name).toBe('test');
-    });
-
-    test('should skip optional filters', () => {
-      // Arrange
-      req.query = {};
-      const schema = { age: { type: 'integer' } };
-      const middleware = validateFilters(schema);
-
-      // Act
-      middleware(req, res, next);
-
-      // Assert
-      expect(req.validated.query.filters).toEqual({});
-      expect(next).toHaveBeenCalled();
-    });
-
-    test('should reject string filter not in allowed list', () => {
-      // Arrange
-      req.query = { status: 'pending' };
-      const schema = { status: { type: 'string', allowed: ['active', 'inactive'] } };
-      const middleware = validateFilters(schema);
-
-      // Act
-      middleware(req, res, next);
-
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: expect.stringContaining('active, inactive'),
-        }),
-      );
-    });
-
-    test('should reject non-string value for string filter', () => {
-      // Arrange
-      req.query = { name: 123 };
-      const schema = { name: { type: 'string' } };
-      const middleware = validateFilters(schema);
-
-      // Act
-      middleware(req, res, next);
-
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(400);
-    });
-  });
+  // NOTE: validateFilters tests removed - replaced by validateQuery (metadata-driven)
 
   describe('validateQuery', () => {
     const metadata = {

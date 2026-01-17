@@ -79,7 +79,7 @@ const ALL_ROLES = [...ACTIVE_ROLES, MOCK_ROLES.inactive];
 /**
  * Protected role names (cannot be modified/deleted)
  */
-const PROTECTED_ROLES = ["admin", "client"];
+const PROTECTED_ROLES = ["admin", "customer"];
 
 module.exports = {
   MOCK_ROLES,

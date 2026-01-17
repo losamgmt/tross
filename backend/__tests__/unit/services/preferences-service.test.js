@@ -43,9 +43,14 @@ describe('services/preferences-service.js', () => {
   describe('getPreferences()', () => {
     test('should return existing preferences merged with defaults', async () => {
       // Arrange - id = userId in shared PK pattern
+      // Pick first enum field from schema for test data
+      const enumField = Object.entries(PREFERENCE_SCHEMA).find(([, def]) => def.type === 'enum');
+      const [testKey, testDef] = enumField || ['theme', { values: ['dark'] }];
+      const testValue = testDef.values[testDef.values.length - 1]; // Use last value (not default)
+
       const mockPrefs = {
         id: 42,
-        preferences: { theme: 'dark' }, // Only theme set
+        preferences: { [testKey]: testValue }, // Only one field set
         created_at: new Date(),
         updated_at: new Date(),
       };
@@ -57,12 +62,14 @@ describe('services/preferences-service.js', () => {
       // Assert
       expect(db.query).toHaveBeenCalledWith(
         expect.stringContaining('SELECT'),
-        [42]
+        [42],
       );
-      expect(result.preferences).toEqual({
-        theme: 'dark',
-        notificationsEnabled: true, // Default merged in
-      });
+      // Should have the user's value preserved
+      expect(result.preferences[testKey]).toBe(testValue);
+      // Should have defaults merged for other fields
+      expect(Object.keys(result.preferences).length).toBeGreaterThanOrEqual(
+        Object.keys(DEFAULT_PREFERENCES).length,
+      );
     });
 
     test('should create default preferences if none exist', async () => {
@@ -195,10 +202,14 @@ describe('services/preferences-service.js', () => {
 
   describe('updatePreference()', () => {
     test('should update single preference key', async () => {
-      // Arrange - id = userId in shared PK pattern
+      // Arrange - metadata-driven: pick first enum field
+      const enumField = Object.entries(PREFERENCE_SCHEMA).find(([, def]) => def.type === 'enum');
+      const [testKey, testDef] = enumField || ['theme', { values: ['dark'] }];
+      const testValue = testDef.values[0];
+
       const mockUpdated = {
         id: 42,
-        preferences: { theme: 'dark', notificationsEnabled: true },
+        preferences: { [testKey]: testValue },
         created_at: new Date(),
         updated_at: new Date(),
       };
@@ -207,12 +218,12 @@ describe('services/preferences-service.js', () => {
         .mockResolvedValueOnce({ rows: [mockUpdated] }); // UPDATE
 
       // Act
-      const result = await preferencesService.updatePreference(42, 'theme', 'dark');
+      await preferencesService.updatePreference(42, testKey, testValue);
 
       // Assert
       expect(db.query).toHaveBeenLastCalledWith(
         expect.stringContaining('preferences || $2::jsonb'),
-        [42, JSON.stringify({ theme: 'dark' })]
+        [42, JSON.stringify({ [testKey]: testValue })],
       );
     });
   });
@@ -313,87 +324,112 @@ describe('services/preferences-service.js', () => {
       );
     });
 
-    // String type validation tests (timezone preference)
-    test('should validate string preference type', () => {
-      const validPrefs = { timezone: 'America/Los_Angeles' };
+    // String type validation tests - metadata-driven
+    // Find a string field dynamically, or skip if none exists
+    const stringField = Object.entries(PREFERENCE_SCHEMA).find(([, def]) => def.type === 'string');
+
+    (stringField ? test : test.skip)('should validate string preference type', () => {
+      const [key] = stringField || [];
+      const validPrefs = { [key]: 'valid-string-value' };
       const errors = preferencesService.validatePreferences(validPrefs);
       expect(errors).toEqual([]);
     });
 
-    test('should return error for non-string value on string preference', () => {
-      const invalidPrefs = { timezone: 12345 };
+    (stringField ? test : test.skip)('should return error for non-string value on string preference', () => {
+      const [key] = stringField || [];
+      const invalidPrefs = { [key]: 12345 };
       const errors = preferencesService.validatePreferences(invalidPrefs);
       expect(errors).toContainEqual(
-        expect.stringContaining('timezone must be a string')
+        expect.stringContaining(`${key} must be a string`),
       );
     });
 
-    test('should return error for string exceeding maxLength', () => {
-      const invalidPrefs = { timezone: 'A'.repeat(100) }; // Over 50 chars
+    (stringField && stringField[1].maxLength ? test : test.skip)('should return error for string exceeding maxLength', () => {
+      const [key, def] = stringField || [];
+      const invalidPrefs = { [key]: 'A'.repeat((def?.maxLength || 50) + 50) };
       const errors = preferencesService.validatePreferences(invalidPrefs);
       expect(errors).toContainEqual(
-        expect.stringContaining('timezone must be at most 50 characters')
+        expect.stringContaining(`${key} must be at most`),
       );
     });
 
-    // Integer type validation tests (autoRefreshInterval preference)
-    test('should validate integer preference type', () => {
-      const validPrefs = { autoRefreshInterval: 60 };
+    // Integer type validation tests - metadata-driven
+    // Find an integer field with min/max dynamically
+    const intField = Object.entries(PREFERENCE_SCHEMA).find(
+      ([, def]) => def.type === 'integer' && def.min !== undefined && def.max !== undefined,
+    );
+
+    (intField ? test : test.skip)('should validate integer preference type', () => {
+      const [key, def] = intField || [];
+      const validPrefs = { [key]: def?.default ?? Math.floor((def?.min + def?.max) / 2) };
       const errors = preferencesService.validatePreferences(validPrefs);
       expect(errors).toEqual([]);
     });
 
-    test('should return error for non-integer value on integer preference', () => {
-      const invalidPrefs = { autoRefreshInterval: 'fast' };
+    (intField ? test : test.skip)('should return error for non-integer value on integer preference', () => {
+      const [key] = intField || [];
+      const invalidPrefs = { [key]: 'fast' };
       const errors = preferencesService.validatePreferences(invalidPrefs);
       expect(errors).toContainEqual(
-        expect.stringContaining('autoRefreshInterval must be an integer')
+        expect.stringContaining(`${key} must be an integer`),
       );
     });
 
-    test('should return error for NaN on integer preference', () => {
-      const invalidPrefs = { autoRefreshInterval: NaN };
+    (intField ? test : test.skip)('should return error for NaN on integer preference', () => {
+      const [key] = intField || [];
+      const invalidPrefs = { [key]: NaN };
       const errors = preferencesService.validatePreferences(invalidPrefs);
       expect(errors).toContainEqual(
-        expect.stringContaining('autoRefreshInterval must be an integer')
+        expect.stringContaining(`${key} must be an integer`),
       );
     });
 
-    test('should return error for integer below min', () => {
-      const invalidPrefs = { autoRefreshInterval: -5 }; // min is 0
+    (intField ? test : test.skip)('should return error for integer below min', () => {
+      const [key, def] = intField || [];
+      const invalidPrefs = { [key]: def?.min - 1 };
       const errors = preferencesService.validatePreferences(invalidPrefs);
       expect(errors).toContainEqual(
-        expect.stringContaining('autoRefreshInterval must be at least 0')
+        expect.stringContaining(`${key} must be at least ${def?.min}`),
       );
     });
 
-    test('should return error for integer above max', () => {
-      const invalidPrefs = { autoRefreshInterval: 500 }; // max is 300
+    (intField ? test : test.skip)('should return error for integer above max', () => {
+      const [key, def] = intField || [];
+      const invalidPrefs = { [key]: def?.max + 1 };
       const errors = preferencesService.validatePreferences(invalidPrefs);
       expect(errors).toContainEqual(
-        expect.stringContaining('autoRefreshInterval must be at most 300')
+        expect.stringContaining(`${key} must be at most ${def?.max}`),
       );
     });
 
-    test('should accept integer at min boundary', () => {
-      const validPrefs = { autoRefreshInterval: 0 }; // min is 0
+    (intField ? test : test.skip)('should accept integer at min boundary', () => {
+      const [key, def] = intField || [];
+      const validPrefs = { [key]: def?.min };
       const errors = preferencesService.validatePreferences(validPrefs);
       expect(errors).toEqual([]);
     });
 
-    test('should accept integer at max boundary', () => {
-      const validPrefs = { autoRefreshInterval: 300 }; // max is 300
+    (intField ? test : test.skip)('should accept integer at max boundary', () => {
+      const [key, def] = intField || [];
+      const validPrefs = { [key]: def?.max };
       const errors = preferencesService.validatePreferences(validPrefs);
       expect(errors).toEqual([]);
     });
 
     test('should validate multiple preference types in one call', () => {
-      const validPrefs = {
-        theme: 'dark',
-        notificationsEnabled: true,
-        timezone: 'Europe/London',
-        autoRefreshInterval: 120,
-      };
+      // Build a valid prefs object from metadata with one of each type
+      const validPrefs = {};
+      const usedTypes = new Set();
+      for (const [key, def] of Object.entries(PREFERENCE_SCHEMA)) {
+        if (!usedTypes.has(def.type)) {
+          validPrefs[key] = def.type === 'enum' ? def.values[0]
+            : def.type === 'boolean' ? true
+            : def.type === 'string' ? 'test-value'
+            : def.type === 'integer' ? (def.default ?? def.min ?? 0)
+            : null;
+          usedTypes.add(def.type);
+        }
+      }
       const errors = preferencesService.validatePreferences(validPrefs);
       expect(errors).toEqual([]);
     });

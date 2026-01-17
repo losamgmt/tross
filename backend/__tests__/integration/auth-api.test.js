@@ -203,8 +203,9 @@ describe('Auth API Endpoints - Integration Tests', () => {
         .send(updates);
 
       // Assert - Should return 400 because no valid fields
+      // Validator strips unknown fields, then .min(1) requires at least one valid field
       expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
-      expect(response.body.message).toContain('No valid fields to update');
+      expect(response.body.message).toMatch(/At least one field|No valid fields/);
     });
 
     test('should validate first_name length', async () => {

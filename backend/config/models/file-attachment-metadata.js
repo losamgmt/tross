@@ -20,7 +20,7 @@
 
 const {
   FIELD_ACCESS_LEVELS: FAL,
-  // No ENTITY_CATEGORIES - this is a system table
+  // No NAME_TYPES - this is a system table
 } = require('../constants');
 
 module.exports = {
@@ -52,6 +52,37 @@ module.exports = {
    */
   rlsResource: null,
 
+  /**
+   * Row-Level Security policy per role
+   * Access controlled by parent entity - admin can see all
+   */
+  rlsPolicy: {
+    customer: 'parent_entity_access',
+    technician: 'parent_entity_access',
+    dispatcher: 'parent_entity_access',
+    manager: 'parent_entity_access',
+    admin: 'all_records',
+  },
+
+  /**
+   * Entity-level permission overrides
+   * Matches permissions.json - technician+ create/update, dispatcher+ delete
+   */
+  entityPermissions: {
+    create: 'technician',
+    read: 'customer',
+    update: 'technician',
+    delete: 'dispatcher',
+  },
+
+  /**
+   * Route configuration - uses CUSTOM routes due to polymorphic attachment pattern
+   * Requires parent entity context and streaming for file downloads
+   */
+  routeConfig: {
+    useGenericRouter: false,
+  },
+
   // ============================================================================
   // ENTITY CATEGORY
   // ============================================================================
@@ -60,7 +91,7 @@ module.exports = {
    * Entity category: null - file_attachments is a system/polymorphic table
    * Not a standalone entity - always attached to a parent
    */
-  entityCategory: null,
+  nameType: null,
 
   // ============================================================================
   // FIELD ALIASING (for UI display names)

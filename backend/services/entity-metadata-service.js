@@ -9,51 +9,68 @@
  * - Generic matrix widget data format for frontend consumption
  * - Per-role permission matrices (RLS and field access)
  * - Validation rules in tabular format
+ * - Uses Node.js require() caching for config files (no singleton needed)
  */
 
 const path = require('path');
-const fs = require('fs');
 const { logger } = require('../config/logger');
 
 // Load entity metadata registry
 const entityMetadata = require('../config/models');
 
-// Load config files
-const permissionsPath = path.join(__dirname, '../../config/permissions.json');
-const validationPath = path.join(__dirname, '../../config/validation-rules.json');
+// Config file paths for reload support
+const _permissionsPath = path.join(__dirname, '../../config/permissions.json');
+const _validationPath = path.join(__dirname, '../../config/validation-rules.json');
 
+// Initial load via require() - Node.js caches these automatically
+let permissions = require('../../config/permissions.json');
+let validationRules = require('../../config/validation-rules.json');
+
+/**
+ * EntityMetadataService - Static class for entity metadata operations
+ * Uses Node.js require() caching for config files
+ */
 class EntityMetadataService {
-  constructor() {
-    this.permissions = null;
-    this.validationRules = null;
-    this.loadConfigs();
+  /**
+   * Get cached permissions config
+   */
+  static get permissions() {
+    return permissions;
   }
 
   /**
-   * Load configuration files (with caching)
+   * Get cached validation rules config
    */
-  loadConfigs() {
+  static get validationRules() {
+    return validationRules;
+  }
+
+  /**
+   * Reload configs (useful for hot-reload during development)
+   * Busts the Node.js require cache and reloads files
+   */
+  static reloadConfigs() {
     try {
-      this.permissions = JSON.parse(fs.readFileSync(permissionsPath, 'utf8'));
-      this.validationRules = JSON.parse(fs.readFileSync(validationPath, 'utf8'));
+      // Bust require cache
+      delete require.cache[require.resolve('../../config/permissions.json')];
+      delete require.cache[require.resolve('../../config/validation-rules.json')];
+
+      // Reload
+      permissions = require('../../config/permissions.json');
+      validationRules = require('../../config/validation-rules.json');
+
+      logger.info('EntityMetadataService configs reloaded');
     } catch (error) {
-      logger.error('Failed to load config files', { error: error.message });
+      logger.error('Failed to reload config files', { error: error.message });
       throw error;
     }
-  }
-
-  /**
-   * Reload configs (useful if files change)
-   */
-  reloadConfigs() {
-    this.loadConfigs();
   }
 
   /**
    * Get list of all available entities with basic info
    * @returns {Array} List of entity summaries
    */
-  getEntityList() {
+  static getEntityList() {
     const entities = [];
 
     for (const [name, metadata] of Object.entries(entityMetadata)) {
@@ -62,7 +79,7 @@ class EntityMetadataService {
         tableName: metadata.tableName,
         primaryKey: metadata.primaryKey,
         identityField: metadata.identityField,
-        category: metadata.entityCategory || 'system',
+        nameType: metadata.nameType || 'system',
         rlsResource: metadata.rlsResource || name,
       });
     }
@@ -75,7 +92,7 @@ class EntityMetadataService {
    * @param {string} entityName - Entity name (e.g., 'customers', 'work_orders')
    * @returns {Object} Complete entity metadata including matrices
    */
-  getEntityMetadata(entityName) {
+  static getEntityMetadata(entityName) {
     const metadata = entityMetadata[entityName];
 
     if (!metadata) {
@@ -87,15 +104,15 @@ class EntityMetadataService {
       tableName: metadata.tableName,
       primaryKey: metadata.primaryKey,
       identityField: metadata.identityField,
-      category: metadata.entityCategory,
+      nameType: metadata.nameType,
       rlsResource: metadata.rlsResource || entityName,
 
       // Permission matrices
-      rlsMatrix: this.buildRlsMatrix(metadata.rlsResource || entityName),
-      fieldAccessMatrix: this.buildFieldAccessMatrix(entityName, metadata),
+      rlsMatrix: EntityMetadataService.buildRlsMatrix(metadata.rlsResource || entityName),
+      fieldAccessMatrix: EntityMetadataService.buildFieldAccessMatrix(entityName, metadata),
 
       // Validation rules
-      validationRules: this.getEntityValidationRules(entityName, metadata),
+      validationRules: EntityMetadataService.getEntityValidationRules(entityName, metadata),
 
       // Display configuration
       displayColumns: metadata.displayColumns || [],
@@ -113,9 +130,9 @@ class EntityMetadataService {
    * @param {string} rlsResource - RLS resource name
    * @returns {Object} Matrix data for frontend widget
    */
-  buildRlsMatrix(rlsResource) {
+  static buildRlsMatrix(rlsResource) {
     // Convert roles object to array
-    const rolesObj = this.permissions.roles || {};
+    const rolesObj = permissions.roles || {};
     const roles = Object.entries(rolesObj).map(([name, config]) => ({
       name,
       level: config.priority || 0,
@@ -126,7 +143,7 @@ class EntityMetadataService {
 
     // Build matrix rows (one per role)
     const rows = roles.map(role => {
-      const resourceConfig = this.permissions.resources?.[rlsResource];
+      const resourceConfig = permissions.resources?.[rlsResource];
       const rolePerms = resourceConfig?.permissions || {};
 
       return {
@@ -159,9 +176,9 @@ class EntityMetadataService {
    * @param {Object} metadata - Entity metadata
    * @returns {Object} Matrix data for frontend widget
    */
-  buildFieldAccessMatrix(entityName, metadata) {
+  static buildFieldAccessMatrix(entityName, metadata) {
     // Convert roles object to array
-    const rolesObj = this.permissions.roles || {};
+    const rolesObj = permissions.roles || {};
     const roles = Object.entries(rolesObj).map(([name, config]) => ({
       name,
       level: config.priority || 0,
@@ -204,7 +221,7 @@ class EntityMetadataService {
     const rows = roles.map(role => {
       const roleLevel = roleLevels[role.name] || 999;
 
-      const permissions = fields.reduce((acc, field) => {
+      const fieldPermissions = fields.reduce((acc, field) => {
         const fieldLevel = fieldAccess[field];
         const levelInfo = accessLevels[fieldLevel];
 
@@ -226,7 +243,7 @@ class EntityMetadataService {
       return {
         role: role.name,
         roleLevel: role.level,
-        permissions,
+        permissions: fieldPermissions,
       };
     });
 
@@ -250,13 +267,13 @@ class EntityMetadataService {
    * @param {Object} metadata - Entity metadata
    * @returns {Array} Validation rules in tabular format
    */
-  getEntityValidationRules(entityName, metadata) {
+  static getEntityValidationRules(entityName, metadata) {
     const rules = [];
     const fieldAliases = metadata.fieldAliases || {};
-    const validationFields = this.validationRules?.fields || {};
+    const validationFields = validationRules?.fields || {};
 
     // Map field names to validation rule names
-    const fieldMapping = this._getFieldValidationMapping(entityName, metadata);
+    const fieldMapping = EntityMetadataService._getFieldValidationMapping(entityName, metadata);
 
     for (const [field, ruleName] of Object.entries(fieldMapping)) {
       const rule = validationFields[ruleName];
@@ -268,7 +285,7 @@ class EntityMetadataService {
           validationKey: ruleName,
           type: rule.type,
           required: rule.required || false,
-          constraints: this._extractConstraints(rule),
+          constraints: EntityMetadataService._extractConstraints(rule),
           errorMessages: rule.errorMessages || {},
         });
       }
@@ -281,14 +298,14 @@ class EntityMetadataService {
    * Map entity fields to validation rule names
    * @private
    */
-  _getFieldValidationMapping(entityName, metadata) {
+  static _getFieldValidationMapping(entityName, metadata) {
     const mapping = {};
     const fieldAccess = metadata.fieldAccess || {};
 
     // Common mappings based on field names
     for (const field of Object.keys(fieldAccess)) {
       // Direct field name match
-      if (this.validationRules?.fields?.[field]) {
+      if (validationRules?.fields?.[field]) {
         mapping[field] = field;
         continue;
       }
@@ -296,7 +313,7 @@ class EntityMetadataService {
       // Entity-prefixed match (e.g., customer_status for customers entity)
       const prefix = entityName.replace(/s$/, ''); // Remove trailing 's'
       const prefixedField = `${prefix}_${field}`;
-      if (this.validationRules?.fields?.[prefixedField]) {
+      if (validationRules?.fields?.[prefixedField]) {
         mapping[field] = prefixedField;
         continue;
       }
@@ -331,7 +348,7 @@ class EntityMetadataService {
    * Extract constraint summary from rule
    * @private
    */
-  _extractConstraints(rule) {
+  static _extractConstraints(rule) {
     const constraints = [];
 
     if (rule.minLength) {
@@ -370,16 +387,16 @@ class EntityMetadataService {
    * @param {string} resourceName - RLS resource name
    * @returns {Object} Permissions by role
    */
-  getRlsPermissions(resourceName) {
-    return this.permissions.resources?.[resourceName] || null;
+  static getRlsPermissions(resourceName) {
+    return permissions.resources?.[resourceName] || null;
   }
 
   /**
    * Get all role definitions
    * @returns {Array} Role definitions with levels
    */
-  getRoles() {
-    const rolesObj = this.permissions.roles || {};
+  static getRoles() {
+    const rolesObj = permissions.roles || {};
     return Object.entries(rolesObj).map(([name, config]) => ({
       name,
       level: config.priority || 0,
@@ -388,4 +405,4 @@ class EntityMetadataService {
   }
 }
 
-module.exports = new EntityMetadataService();
+module.exports = EntityMetadataService;

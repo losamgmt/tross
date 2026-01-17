@@ -27,6 +27,7 @@ const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 const { logger } = require('../config/logger');
+const AppError = require('../utils/app-error');
 
 // Initialize S3 client for R2
 const getS3Client = () => {
@@ -103,7 +104,7 @@ class StorageService {
   async upload({ buffer, storageKey, mimeType, metadata = {} }) {
     const client = getClient();
     if (!client) {
-      throw new Error('Storage service not configured');
+      throw new AppError('Storage service not configured', 503, 'SERVICE_UNAVAILABLE');
     }
 
     try {
@@ -151,7 +152,7 @@ class StorageService {
   async getSignedDownloadUrl(storageKey, expiresIn = 3600) {
     const client = getClient();
     if (!client) {
-      throw new Error('Storage service not configured');
+      throw new AppError('Storage service not configured', 503, 'SERVICE_UNAVAILABLE');
     }
 
     try {
@@ -186,7 +187,7 @@ class StorageService {
   async delete(storageKey) {
     const client = getClient();
     if (!client) {
-      throw new Error('Storage service not configured');
+      throw new AppError('Storage service not configured', 503, 'SERVICE_UNAVAILABLE');
     }
 
     try {
@@ -218,7 +219,7 @@ class StorageService {
   async exists(storageKey) {
     const client = getClient();
     if (!client) {
-      throw new Error('Storage service not configured');
+      throw new AppError('Storage service not configured', 503, 'SERVICE_UNAVAILABLE');
     }
 
     try {
@@ -246,7 +247,7 @@ class StorageService {
   async getMetadata(storageKey) {
     const client = getClient();
     if (!client) {
-      throw new Error('Storage service not configured');
+      throw new AppError('Storage service not configured', 503, 'SERVICE_UNAVAILABLE');
     }
 
     try {

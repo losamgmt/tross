@@ -48,10 +48,10 @@ const RLS_REQUIRED_FIELDS = [
 ];
 
 /**
- * Entity categories that are business entities (vs system tables).
+ * Name types that are business entities (vs system tables).
  * Business entities require full RLS testing.
  */
-const BUSINESS_ENTITY_CATEGORIES = ['human', 'simple', 'computed'];
+const BUSINESS_NAME_TYPES = ['human', 'simple', 'computed'];
 
 // ============================================================================
 // ENTITY DISCOVERY
@@ -94,8 +94,8 @@ function isBusinessEntity(entityName) {
   const meta = allMetadata[entityName];
   if (!meta) return false;
 
-  // Has a business category
-  if (meta.entityCategory && BUSINESS_ENTITY_CATEGORIES.includes(meta.entityCategory.toLowerCase())) {
+  // Has a business name type
+  if (meta.nameType && BUSINESS_NAME_TYPES.includes(meta.nameType.toLowerCase())) {
     return true;
   }
 
@@ -202,10 +202,11 @@ function assertValidMetadata() {
  * - preferences: Uses shared PK pattern (id = user.id), specialized service
  * - file_attachment: Polymorphic S3-based storage, specialized upload flow
  * - saved_view: User-owned entity (user_id auto-injected from auth context)
+ * - audit_log: Read-only system table at /api/audit/*, writes internal only
  * 
  * They should have their own dedicated tests, not run through all-entities.test.js
  */
-const SPECIALIZED_ROUTE_ENTITIES = ['preferences', 'file_attachment', 'saved_view'];
+const SPECIALIZED_ROUTE_ENTITIES = ['preferences', 'file_attachment', 'saved_view', 'audit_log'];
 
 /**
  * Check if an entity uses generic CRUD routes (testable by factory).
@@ -255,7 +256,7 @@ function getEntitiesByCategory() {
 
   for (const entityName of getAllEntityNames()) {
     const meta = allMetadata[entityName];
-    const category = meta.entityCategory?.toLowerCase() || 'system';
+    const category = meta.nameType?.toLowerCase() || 'system';
 
     if (categories[category]) {
       categories[category].push(entityName);
@@ -320,6 +321,6 @@ module.exports = {
   // Constants (for reference)
   REQUIRED_FIELDS,
   RLS_REQUIRED_FIELDS,
-  BUSINESS_ENTITY_CATEGORIES,
+  BUSINESS_NAME_TYPES,
   SPECIALIZED_ROUTE_ENTITIES,
 };

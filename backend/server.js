@@ -18,7 +18,12 @@ require('dotenv').config();
 // Comprehensive validation of all environment variables at startup
 // Skipped during tests to allow test-specific configuration
 if (process.env.NODE_ENV !== 'test') {
-  validateEnvironment();
+  const result = validateEnvironment({ exitOnError: true });
+  if (!result.valid) {
+    // exitOnError: true will have already called process.exit(1)
+    // This is a fallback for defensive programming
+    process.exit(1);
+  }
 }
 
 // Legacy production checks (kept for backwards compatibility)
@@ -148,41 +153,44 @@ const auditRoutes = require('./routes/audit');
 const filesRoutes = require('./routes/files');
 const adminRoutes = require('./routes/admin');
 
-// Generic entity routes (replaces individual entity route files)
-const {
-  usersRouter,
-  rolesRouter,
-  customersRouter,
-  techniciansRouter,
-  inventoryRouter,
-  workOrdersRouter,
-  invoicesRouter,
-  contractsRouter,
-  savedViewsRouter,
-} = require('./routes/entities');
+// Metadata-driven entity route loading (replaces hardcoded entity router imports)
+const { loadEntityRoutes } = require('./config/route-loader');
+const entityRoutes = loadEntityRoutes();
 
+// =============================================================================
+// AUTHENTICATION ROUTES
+// =============================================================================
 app.use('/api/auth', authLimiter, authRoutes);
-app.use('/api/users', apiLimiter, usersRouter); // RESTful user management (generic)
-app.use('/api/roles', apiLimiter, rolesRouter); // Standard CRUD (generic)
+app.use('/api/auth0', authLimiter, auth0Routes); // Auth0 OAuth endpoints
+app.use('/api/dev', devAuthRoutes); // Development auth (no rate limit - dev only)
+
+// =============================================================================
+// ENTITY CRUD ROUTES (Metadata-Driven)
+// Loaded dynamically from config/models/* based on routeConfig.useGenericRouter
+// =============================================================================
+for (const { path, router } of entityRoutes) {
+  app.use(path, apiLimiter, router);
+}
+
+// Entity-specific extensions (not generic - kept explicit)
 app.use('/api/roles', apiLimiter, rolesExtensions); // Extension: /:id/users
-app.use('/api/customers', apiLimiter, customersRouter);
-app.use('/api/technicians', apiLimiter, techniciansRouter);
-app.use('/api/work_orders', apiLimiter, workOrdersRouter);
-app.use('/api/invoices', apiLimiter, invoicesRouter);
-app.use('/api/contracts', apiLimiter, contractsRouter);
-app.use('/api/inventory', apiLimiter, inventoryRouter);
-app.use('/api/saved_views', apiLimiter, savedViewsRouter); // User saved table views
-app.use('/api/preferences', apiLimiter, preferencesRoutes); // User preferences
-app.use('/api/stats', apiLimiter, statsRoutes); // Stats/aggregation endpoints
-app.use('/api/export', apiLimiter, exportRoutes); // CSV export endpoints
-app.use('/api/audit', apiLimiter, auditRoutes); // Audit log endpoints
-app.use('/api/files', apiLimiter, filesRoutes); // File attachment endpoints
-app.use('/api/admin', apiLimiter, adminRoutes); // Admin system management endpoints
-app.use('/api/dev', devAuthRoutes); // Development auth endpoints (no rate limit - dev only)
-app.use('/api/health', apiLimiter, healthRoutes); // Health monitoring endpoints
-app.use('/api/auth0', authLimiter, auth0Routes); // Auth0 OAuth endpoints - rate limited for brute force protection
-app.use('/api/schema', apiLimiter, schemaRoutes); // Schema introspection for auto-generating UIs
-app.use('/api', apiLimiter);
+
+// =============================================================================
+// CUSTOM ENTITY ROUTES (specialized logic, not generic CRUD)
+// =============================================================================
+app.use('/api/preferences', apiLimiter, preferencesRoutes); // Shared-PK pattern
+app.use('/api/files', apiLimiter, filesRoutes); // Polymorphic attachments + streaming
+
+// =============================================================================
+// INFRASTRUCTURE & UTILITY ROUTES (not entity-driven)
+// =============================================================================
+app.use('/api/health', apiLimiter, healthRoutes); // Health monitoring
+app.use('/api/schema', apiLimiter, schemaRoutes); // Schema introspection for UI generation
+app.use('/api/stats', apiLimiter, statsRoutes); // Aggregation endpoints
+app.use('/api/export', apiLimiter, exportRoutes); // CSV export
+app.use('/api/audit', apiLimiter, auditRoutes); // Audit log queries
+app.use('/api/admin', apiLimiter, adminRoutes); // Admin system management
+app.use('/api', apiLimiter); // Catch-all rate limiting
 
 // 404 handler for unknown endpoints
 app.use((req, res) => {
@@ -204,24 +212,99 @@ app.use((req, res) => {
 // Timeout handler (must be before global error handler)
 app.use(timeoutHandler);
 
-// Global error handler
+// Global error handler - SINGLE SOURCE OF TRUTH for error-to-response mapping
+// Services throw plain Error objects; this handler maps them to HTTP responses
 app.use((error, req, res, _next) => {
-  logger.error('Server error', {
-    error: error.message,
-    stack: error.stack,
+  // Determine status code from error properties or message patterns
+  let statusCode = error.statusCode || error.status || HTTP_STATUS.INTERNAL_SERVER_ERROR;
+  let errorCode = error.code || 'INTERNAL_ERROR';
+
+  // Pattern matching for common error messages (services stay simple)
+  const message = error.message || '';
+  const messageLower = message.toLowerCase();
+
+  if (!error.statusCode && !error.status) {
+    // Not Found patterns
+    if (messageLower.includes('not found') || messageLower.includes('does not exist')) {
+      statusCode = HTTP_STATUS.NOT_FOUND;
+      errorCode = 'NOT_FOUND';
+    }
+    // Bad Request patterns
+    // Note: "cannot read properties" is JS internal error, not validation
+    else if (
+      messageLower.includes('invalid') ||
+      messageLower.includes('required') ||
+      (messageLower.includes('cannot') && !messageLower.includes('cannot read properties')) ||
+      messageLower.includes('must be') ||
+      messageLower.includes('already exists') ||
+      messageLower.includes('yourself') ||
+      messageLower.includes('not a foreign key')
+    ) {
+      statusCode = HTTP_STATUS.BAD_REQUEST;
+      errorCode = 'BAD_REQUEST';
+    }
+    // Unauthorized patterns
+    else if (
+      messageLower.includes('expired') ||
+      messageLower.includes('unauthorized') ||
+      messageLower.includes('not authenticated')
+    ) {
+      statusCode = HTTP_STATUS.UNAUTHORIZED;
+      errorCode = 'UNAUTHORIZED';
+    }
+    // Forbidden patterns
+    else if (messageLower.includes('forbidden') || messageLower.includes('not allowed')) {
+      statusCode = HTTP_STATUS.FORBIDDEN;
+      errorCode = 'FORBIDDEN';
+    }
+    // Conflict patterns
+    else if (messageLower.includes('conflict') || messageLower.includes('duplicate')) {
+      statusCode = HTTP_STATUS.CONFLICT;
+      errorCode = 'CONFLICT';
+    }
+  }
+
+  // Log based on severity (5xx = error, 4xx = warn)
+  const logContext = {
+    error: message,
+    code: errorCode,
     url: req.url,
     method: req.method,
     ip: req.ip,
-  });
+  };
 
-  res.status(error.status || HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-    error: 'Internal Server Error',
-    message:
-      process.env.NODE_ENV === 'development'
-        ? error.message
-        : 'Something went wrong',
+  if (statusCode >= 500) {
+    logContext.stack = error.stack;
+    logger.error('Server error', logContext);
+  } else {
+    logger.warn('Client error', logContext);
+  }
+
+  // Build consistent response
+  const response = {
+    success: false,
+    error: errorCode,
+    message: statusCode >= 500 && process.env.NODE_ENV !== 'development'
+      ? 'Something went wrong'
+      : message,
     timestamp: new Date().toISOString(),
-  });
+  };
+
+  // Add details if present (validation errors, etc.)
+  if (error.details) {
+    response.details = error.details;
+  }
+  if (error.errors) {
+    response.details = error.errors;
+  }
+
+  // Add retry-after for rate limits
+  if (error.retryAfter) {
+    response.retryAfter = error.retryAfter;
+    res.set('Retry-After', String(error.retryAfter));
+  }
+
+  res.status(statusCode).json(response);
 });
 
 // Graceful shutdown (no hard dependencies)

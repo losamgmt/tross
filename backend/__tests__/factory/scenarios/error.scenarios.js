@@ -217,25 +217,43 @@ function invalidEmailRejected(meta, ctx) {
 /**
  * Scenario: XSS payloads don't cause errors
  * 
- * Preconditions: Entity has string fields
+ * Preconditions: Entity has free-text string fields (no pattern validation)
  * Tests: XSS payloads are handled without causing server errors
  * Note: Output encoding is frontend's responsibility; backend stores raw data safely
+ * 
+ * UPDATED: Fields with pattern validation (like first_name, last_name) correctly
+ * reject XSS payloads. Only free-text fields should accept arbitrary content.
  */
 function xssHandledSafely(meta, ctx) {
   const { fields, entityName, tableName } = meta;
   if (!fields) return;
 
-  const stringFields = Object.entries(fields)
-    .filter(([_, def]) => def.type === 'string')
+  // Load validation rules to check for patterns
+  const { loadValidationRules } = require('../../../utils/validation-loader');
+  const rules = loadValidationRules();
+
+  // Find string fields that DON'T have pattern validation (free-text fields)
+  // These should accept XSS payloads safely (output encoding is frontend's job)
+  const freeTextFields = Object.entries(fields)
+    .filter(([name, def]) => {
+      if (def.type !== 'string') return false;
+      // Skip fields with pattern validation
+      const fieldRule = rules.fields[name];
+      if (fieldRule?.pattern) return false;
+      if (def.pattern) return false;
+      // Skip known restricted fields (names have letter-only patterns)
+      if (['first_name', 'last_name', 'email'].includes(name)) return false;
+      return true;
+    })
     .map(([name]) => name)
     .slice(0, 1); // Test just 1 field
 
-  if (!stringFields.length) return;
+  if (!freeTextFields.length) return; // Skip if no free-text fields
 
   ctx.it(`POST /api/${tableName} - handles XSS payload without error`, async () => {
     const payload = await ctx.factory.buildMinimalWithFKs(entityName);
     const xssPayload = '<script>alert("xss")</script>';
-    payload[stringFields[0]] = xssPayload;
+    payload[freeTextFields[0]] = xssPayload;
     const auth = await ctx.authHeader('admin');
 
     const response = await ctx.request
@@ -243,7 +261,8 @@ function xssHandledSafely(meta, ctx) {
       .set(auth)
       .send(payload);
 
-    // Should succeed - storing HTML is valid, output encoding is frontend's job
+    // Should succeed - storing HTML is valid for free-text fields
+    // Output encoding is frontend's responsibility
     ctx.expect(response.status).toBe(201);
     ctx.expect(response.body.success).toBe(true);
   });

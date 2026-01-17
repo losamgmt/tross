@@ -16,8 +16,10 @@
  * PREFERENCE KEYS (schema-on-read, validated at application layer):
  * - theme: 'system' | 'light' | 'dark' (UI theme preference)
  * - notificationsEnabled: boolean (notification preferences)
+ * - notificationRetentionDays: integer 1-365 (days to keep notifications, default 30)
  * - pageSize: integer (default table page size: 10, 25, 50, 100)
  * - tableDensity: 'compact' | 'standard' | 'comfortable' (table row spacing)
+ * - autoRefreshInterval: integer 0-300 (seconds between data refreshes, 0 to disable)
  *
  * UI Settings vs Entity Metadata:
  * - pageSize/tableDensity are USER preferences (accessibility, personal comfort)
@@ -27,7 +29,7 @@
 
 const {
   FIELD_ACCESS_LEVELS: FAL,
-  // ENTITY_CATEGORIES not used - preferences is a system table
+  // NAME_TYPES not used - preferences is a system table
 } = require('../constants');
 
 module.exports = {
@@ -59,6 +61,39 @@ module.exports = {
    */
   rlsResource: 'preferences',
 
+  /**
+   * Row-Level Security policy per role
+   * Users can only access their own preferences, admin can see all
+   */
+  rlsPolicy: {
+    customer: 'own_record_only',
+    technician: 'own_record_only',
+    dispatcher: 'own_record_only',
+    manager: 'own_record_only',
+    admin: 'all_records',
+  },
+
+  /**
+   * Entity-level permission overrides
+   * All users can manage their own preferences (RLS enforces own_record_only)
+   * 'admin' is a custom operation for viewing other users' preferences
+   */
+  entityPermissions: {
+    create: 'customer',
+    read: 'customer',
+    update: 'customer',
+    delete: 'admin',
+    admin: 'admin', // Custom operation: view/manage other users' preferences
+  },
+
+  /**
+   * Route configuration - uses CUSTOM routes due to shared-PK pattern
+   * Preferences use user.id as PK (no auto-increment), requires special handling
+   */
+  routeConfig: {
+    useGenericRouter: false,
+  },
+
   // ============================================================================
   // ENTITY CATEGORY
   // ============================================================================
@@ -67,7 +102,7 @@ module.exports = {
    * Entity category: N/A - preferences is a system table, not a business entity
    * It uses SYSTEM category for consistency but doesn't participate in name patterns
    */
-  entityCategory: null,
+  nameType: null,
 
   // ============================================================================
   // FIELD ALIASING (for UI display names)
@@ -284,14 +319,6 @@ module.exports = {
       },
       order: 3,
     },
-    timezone: {
-      type: 'string',
-      default: 'America/New_York',
-      maxLength: 50,
-      label: 'Timezone',
-      description: 'Your preferred timezone for displaying dates and times',
-      order: 4,
-    },
     autoRefreshInterval: {
       type: 'integer',
       default: 30,
@@ -299,6 +326,15 @@ module.exports = {
       max: 300,
       label: 'Auto-Refresh Interval',
       description: 'Seconds between automatic data refreshes (0 to disable)',
+      order: 4,
+    },
+    notificationRetentionDays: {
+      type: 'integer',
+      default: 30,
+      min: 1,
+      max: 365,
+      label: 'Notification Retention',
+      description: 'Number of days to keep notifications in tray before auto-dismissal',
       order: 5,
     },
   },

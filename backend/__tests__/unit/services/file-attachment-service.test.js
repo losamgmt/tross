@@ -70,16 +70,34 @@ describe('FileAttachmentService', () => {
       expect(result).toBe(false);
     });
 
-    test('should return false and log error on database error', async () => {
-      mockQuery.mockRejectedValueOnce(new Error('DB connection failed'));
+    test('should throw on database connection error (not swallow)', async () => {
+      // Connection errors should be thrown, not swallowed
+      mockQuery.mockRejectedValueOnce(Object.assign(new Error('DB connection failed'), { code: 'ECONNREFUSED' }));
 
-      const result = await FileAttachmentService.entityExists('customers', 1);
+      await expect(
+        FileAttachmentService.entityExists('customers', 1),
+      ).rejects.toThrow('Database unavailable');
 
-      expect(result).toBe(false);
       expect(logger.error).toHaveBeenCalledWith(
-        'Error checking entity existence',
+        'Database connection error checking entity existence',
         expect.objectContaining({
           entityType: 'customers',
+          entityId: 1,
+        }),
+      );
+    });
+
+    test('should return false and log warning on non-connection errors', async () => {
+      // Non-connection errors (like table not found) should return false
+      mockQuery.mockRejectedValueOnce(new Error('relation does not exist'));
+
+      const result = await FileAttachmentService.entityExists('unknown_table', 1);
+
+      expect(result).toBe(false);
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Error checking entity existence (non-fatal)',
+        expect.objectContaining({
+          entityType: 'unknown_table',
           entityId: 1,
         }),
       );

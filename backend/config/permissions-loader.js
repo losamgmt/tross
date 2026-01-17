@@ -1,64 +1,61 @@
 /**
  * Permission Configuration Loader
  *
- * Dynamically loads permissions from config/permissions.json
- * Provides runtime validation and hot-reload capability
+ * ARCHITECTURE v4.0: Derives permissions from entity metadata
+ * No more permissions.json file - single source of truth is metadata!
  *
  * BENEFITS:
- * - Change permissions without code changes
- * - Single source of truth shared with frontend
- * - Runtime validation prevents invalid configs
- * - Hot-reload during development
+ * - Change metadata → permissions change automatically
+ * - Zero drift between metadata and permissions
+ * - No manual sync scripts required
+ * - Frontend fetches from API (same derived data)
  */
 
-const fs = require('fs');
-const path = require('path');
 const { logger } = require('./logger');
+const { derivePermissions, clearCache } = require('./permissions-deriver');
 
-// Path to shared permission config
-const PERMISSIONS_CONFIG_PATH = path.join(__dirname, '../../config/permissions.json');
-
-// Cached permission data
+// Cached permission data (derived from metadata)
 let permissionCache = null;
-let lastModified = null;
 
 /**
- * Load and validate permissions from JSON file
- * @param {boolean} forceReload - Skip cache and reload from file
+ * Load permissions derived from entity metadata
+ * @param {boolean} forceReload - Force re-derivation (clear cache)
  * @returns {Object} Validated permission configuration
- * @throws {Error} If config file is invalid or missing
+ * @throws {Error} If derivation fails
  */
 function loadPermissions(forceReload = false) {
   try {
-    // Check if file was modified (for hot-reload)
-    const stats = fs.statSync(PERMISSIONS_CONFIG_PATH);
-    const fileModified = stats.mtime.getTime();
-
-    // Return cache if valid
-    if (!forceReload && permissionCache && lastModified === fileModified) {
+    // Return cache if valid and not forcing reload
+    if (!forceReload && permissionCache) {
       return permissionCache;
     }
 
-    // Load and parse JSON
-    const rawData = fs.readFileSync(PERMISSIONS_CONFIG_PATH, 'utf8');
-    const config = JSON.parse(rawData);
+    // Clear deriver cache if forcing reload
+    if (forceReload) {
+      clearCache();
+    }
 
-    // Validate structure
+    // Derive permissions from entity metadata
+    const config = derivePermissions(forceReload);
+
+    // Validate structure (still validate derived config)
     validatePermissionConfig(config);
 
     // Cache and return
     permissionCache = config;
-    lastModified = fileModified;
 
     // Log initialization info (logger respects test silence)
     if (process.env.NODE_ENV !== 'test') {
-      logger.info('[Permissions] Loaded config:', { roles: Object.keys(config.roles).length, resources: Object.keys(config.resources).length });
+      logger.info('[Permissions] Derived from metadata:', {
+        roles: Object.keys(config.roles).length,
+        resources: Object.keys(config.resources).length,
+      });
     }
 
     return config;
   } catch (error) {
-    logger.error('[Permissions] Failed to load:', { error: error.message });
-    throw new Error(`Permission config error: ${error.message}`);
+    logger.error('[Permissions] Failed to derive:', { error: error.message });
+    throw new Error(`Permission derivation error: ${error.message}`);
   }
 }
 
@@ -263,15 +260,16 @@ function getRowLevelSecurity(roleName, resource) {
 }
 
 /**
- * Reload permissions from disk (useful for hot-reload)
+ * Reload permissions (re-derive from metadata)
  * @returns {Object} New permission configuration
  */
 function reloadPermissions() {
-  logger.info('[Permissions] Hot-reloading...');
+  logger.info('[Permissions] Re-deriving from metadata...');
+  permissionCache = null; // Clear local cache
   return loadPermissions(true);
 }
 
-// Load permissions on module import (fail-fast if invalid)
+// Derive permissions on module import (fail-fast if invalid)
 loadPermissions();
 
 module.exports = {

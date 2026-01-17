@@ -5,6 +5,7 @@
  * Uses express-rate-limit with different limits for different endpoint types.
  *
  * KISS Principle: Simple, focused rate limiting per endpoint type.
+ * Uses a factory pattern to eliminate duplication across limiter configurations.
  *
  * NOTE: Rate limiting is DISABLED when NODE_ENV is undefined, 'test', or 'development'
  * to allow rapid test execution and local development without limits.
@@ -12,11 +13,111 @@
  */
 const rateLimit = require('express-rate-limit');
 const { logger } = require('../config/logger');
+const { HTTP_STATUS } = require('../config/constants');
+
+// ─────────────────────────────────────────────────────────────
+// Environment Detection
+// ─────────────────────────────────────────────────────────────
+
+const isTestOrDevEnvironment =
+  !process.env.NODE_ENV ||
+  ['test', 'development'].includes(process.env.NODE_ENV);
+
+/**
+ * Bypass middleware for test/dev environment
+ * Returns a no-op middleware that just calls next()
+ */
+const bypassLimiter = (req, res, next) => next();
+
+// ─────────────────────────────────────────────────────────────
+// Rate Limit Factory
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Rate limiter configuration options
+ * @typedef {Object} RateLimitConfig
+ * @property {string} name - Limiter name for logging (e.g., 'API', 'Auth')
+ * @property {string} logEmoji - Emoji for log messages
+ * @property {number} windowMs - Time window in milliseconds
+ * @property {number} max - Maximum requests per window
+ * @property {string} errorType - Error message type (e.g., 'Too many requests')
+ * @property {string} errorMessage - Full error message for response
+ * @property {string} retryAfterLabel - Human-readable retry time (e.g., '15 minutes')
+ * @property {number} retryAfterSeconds - Retry time in seconds for response
+ * @property {boolean} [skipSuccessfulRequests] - Don't count successful requests
+ * @property {string[]} [logFields] - Additional request fields to log (e.g., ['email'])
+ */
+
+/**
+ * Creates a rate limiter middleware with the given configuration
+ * @param {RateLimitConfig} config - Rate limiter configuration
+ * @returns {Function} Express middleware (rate limiter or bypass)
+ */
+function createRateLimiter(config) {
+  const {
+    name,
+    logEmoji,
+    windowMs,
+    max,
+    errorType,
+    errorMessage,
+    retryAfterLabel,
+    retryAfterSeconds,
+    skipSuccessfulRequests = false,
+    logFields = [],
+  } = config;
+
+  const limiter = rateLimit({
+    windowMs,
+    max,
+    skipSuccessfulRequests,
+    message: {
+      error: errorType,
+      message: errorMessage,
+      retryAfter: retryAfterLabel,
+    },
+    standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
+    legacyHeaders: false, // Disable `X-RateLimit-*` headers
+    handler: (req, res) => {
+      // Build log context with standard fields
+      const logContext = {
+        ip: req.ip,
+        path: req.path,
+        userAgent: req.get('User-Agent'),
+      };
+
+      // Add optional fields from config
+      if (logFields.includes('method')) {
+        logContext.method = req.method;
+      }
+      if (logFields.includes('email')) {
+        logContext.email = req.body?.email || 'unknown';
+      }
+
+      logger.warn(`${logEmoji} ${name} rate limit exceeded`, logContext);
+
+      res.status(HTTP_STATUS.TOO_MANY_REQUESTS).json({
+        error: errorType,
+        message: errorMessage,
+        retryAfter: retryAfterSeconds,
+      });
+    },
+  });
+
+  // Return bypass in test/dev, real limiter in production
+  return isTestOrDevEnvironment ? bypassLimiter : limiter;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Rate Limiter Configurations
+// ─────────────────────────────────────────────────────────────
 
 /**
  * Get rate limit configuration from environment variables
- * Defaults: 1000 requests per 15 minutes (professional standard)
+ * All limits are configurable for different deployment scenarios
  */
+
+// General API limits (default: 1000 req/15 min - professional standard)
 const RATE_LIMIT_WINDOW_MS = parseInt(
   process.env.RATE_LIMIT_WINDOW_MS || '900000',
   10,
@@ -24,13 +125,27 @@ const RATE_LIMIT_WINDOW_MS = parseInt(
 const RATE_LIMIT_MAX_REQUESTS = parseInt(
   process.env.RATE_LIMIT_MAX_REQUESTS || '1000',
   10,
-); // 1000 req/15min
+);
 
-/**
- * Bypass middleware for test environment
- * Returns a no-op middleware that just calls next()
- */
-const bypassLimiter = (req, res, next) => next();
+// Auth limits (default: 5 failed attempts/15 min - brute force protection)
+const AUTH_RATE_LIMIT_WINDOW_MS = parseInt(
+  process.env.AUTH_RATE_LIMIT_WINDOW_MS || '900000',
+  10,
+); // 15 minutes
+const AUTH_RATE_LIMIT_MAX_REQUESTS = parseInt(
+  process.env.AUTH_RATE_LIMIT_MAX_REQUESTS || '5',
+  10,
+);
+
+// Refresh token limits (default: 10 req/hour - prevents token spam)
+const REFRESH_RATE_LIMIT_WINDOW_MS = parseInt(
+  process.env.REFRESH_RATE_LIMIT_WINDOW_MS || '3600000',
+  10,
+); // 1 hour
+const REFRESH_RATE_LIMIT_MAX_REQUESTS = parseInt(
+  process.env.REFRESH_RATE_LIMIT_MAX_REQUESTS || '10',
+  10,
+);
 
 /**
  * General API rate limit
@@ -38,137 +153,68 @@ const bypassLimiter = (req, res, next) => next();
  * Default: 1000 requests per 15 minutes (professional standard)
  * Protects against general API abuse and DoS attacks
  */
-const apiLimiter = rateLimit({
+const apiLimiter = createRateLimiter({
+  name: 'API',
+  logEmoji: '⚠️',
   windowMs: RATE_LIMIT_WINDOW_MS,
   max: RATE_LIMIT_MAX_REQUESTS,
-  message: {
-    error: 'Too many requests',
-    message: 'You have exceeded the rate limit. Please try again later.',
-    retryAfter: '15 minutes',
-  },
-  standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
-  legacyHeaders: false, // Disable `X-RateLimit-*` headers
-  handler: (req, res) => {
-    logger.warn('⚠️ API rate limit exceeded', {
-      ip: req.ip,
-      path: req.path,
-      method: req.method,
-      userAgent: req.get('User-Agent'),
-    });
-
-    res.status(429).json({
-      error: 'Too many requests',
-      message:
-        'You have exceeded the rate limit. Please try again after 15 minutes.',
-      retryAfter: 900, // seconds
-    });
-  },
+  errorType: 'Too many requests',
+  errorMessage:
+    'You have exceeded the rate limit. Please try again after 15 minutes.',
+  retryAfterLabel: '15 minutes',
+  retryAfterSeconds: 900,
+  logFields: ['method'],
 });
 
 /**
  * Strict authentication endpoint limits
- * 5 failed attempts per 15 minutes (brute force protection)
+ * Configurable via AUTH_RATE_LIMIT_* env vars
+ * Default: 5 failed attempts per 15 minutes (brute force protection)
  * Only counts failed attempts (skipSuccessfulRequests = true)
  */
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Only 5 attempts per window
+const authLimiter = createRateLimiter({
+  name: 'Auth',
+  logEmoji: '🚨',
+  windowMs: AUTH_RATE_LIMIT_WINDOW_MS,
+  max: AUTH_RATE_LIMIT_MAX_REQUESTS,
+  errorType: 'Too many login attempts',
+  errorMessage:
+    'Too many failed login attempts from this IP address. Please try again later.',
+  retryAfterLabel: `${Math.round(AUTH_RATE_LIMIT_WINDOW_MS / 60000)} minutes`,
+  retryAfterSeconds: Math.round(AUTH_RATE_LIMIT_WINDOW_MS / 1000),
   skipSuccessfulRequests: true, // Don't count successful logins
-  message: {
-    error: 'Too many login attempts',
-    message:
-      'Too many failed login attempts. Please try again after 15 minutes.',
-    retryAfter: '15 minutes',
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-  handler: (req, res) => {
-    logger.warn('🚨 Auth rate limit exceeded - possible brute force attack', {
-      ip: req.ip,
-      path: req.path,
-      email: req.body?.email || 'unknown',
-      userAgent: req.get('User-Agent'),
-    });
-
-    res.status(429).json({
-      error: 'Too many login attempts',
-      message:
-        'Too many failed login attempts from this IP address. Please try again after 15 minutes.',
-      retryAfter: 900, // seconds
-    });
-  },
+  logFields: ['email'],
 });
 
 /**
  * Token refresh limit
- * 10 refreshes per hour per IP
+ * Configurable via REFRESH_RATE_LIMIT_* env vars
+ * Default: 10 refreshes per hour per IP
  * Prevents refresh token spam/abuse
  */
-const refreshLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 10, // 10 refreshes per hour
-  message: {
-    error: 'Too many refresh requests',
-    message: 'Too many token refresh requests. Please try again later.',
-    retryAfter: '1 hour',
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-  handler: (req, res) => {
-    logger.warn('⚠️ Refresh rate limit exceeded', {
-      ip: req.ip,
-      userAgent: req.get('User-Agent'),
-    });
-
-    res.status(429).json({
-      error: 'Too many refresh requests',
-      message:
-        'Too many token refresh requests. Please try again after 1 hour.',
-      retryAfter: 3600, // seconds
-    });
-  },
+const refreshLimiter = createRateLimiter({
+  name: 'Refresh',
+  logEmoji: '⚠️',
+  windowMs: REFRESH_RATE_LIMIT_WINDOW_MS,
+  max: REFRESH_RATE_LIMIT_MAX_REQUESTS,
+  errorType: 'Too many refresh requests',
+  errorMessage: 'Too many token refresh requests. Please try again later.',
+  retryAfterLabel: `${Math.round(REFRESH_RATE_LIMIT_WINDOW_MS / 60000)} minutes`,
+  retryAfterSeconds: Math.round(REFRESH_RATE_LIMIT_WINDOW_MS / 1000),
 });
 
-/**
- * Password reset limit
- * 3 requests per hour per IP
- * Prevents email spam and abuse
- */
-const passwordResetLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 3, // Only 3 attempts per hour
-  message: {
-    error: 'Too many password reset requests',
-    message: 'Too many password reset requests. Please try again after 1 hour.',
-    retryAfter: '1 hour',
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-  handler: (req, res) => {
-    logger.warn('⚠️ Password reset rate limit exceeded', {
-      ip: req.ip,
-      email: req.body?.email || 'unknown',
-      userAgent: req.get('User-Agent'),
-    });
+// NOTE: passwordResetLimiter removed - Auth0 handles all password operations
 
-    res.status(429).json({
-      error: 'Too many password reset requests',
-      message:
-        'Too many password reset requests. Please try again after 1 hour.',
-      retryAfter: 3600, // seconds
-    });
-  },
-});
-
-const isTestOrDevEnvironment =
-  !process.env.NODE_ENV ||
-  ['test', 'development'].includes(process.env.NODE_ENV);
+// ─────────────────────────────────────────────────────────────
+// Exports
+// ─────────────────────────────────────────────────────────────
 
 module.exports = {
-  apiLimiter: isTestOrDevEnvironment ? bypassLimiter : apiLimiter,
-  authLimiter: isTestOrDevEnvironment ? bypassLimiter : authLimiter,
-  refreshLimiter: isTestOrDevEnvironment ? bypassLimiter : refreshLimiter,
-  passwordResetLimiter: isTestOrDevEnvironment
-    ? bypassLimiter
-    : passwordResetLimiter,
+  // Rate limiters (already handle test/dev bypass)
+  apiLimiter,
+  authLimiter,
+  refreshLimiter,
+
+  // Factory for custom rate limiters (allows extending with new limiters)
+  createRateLimiter,
 };

@@ -39,67 +39,27 @@ const { hasFieldPermission, normalizeRoleName } = require('./response-transform'
 const schemaCache = new Map();
 
 /**
- * Map entity field names to validation-rules.json field definition keys
- *
- * Some field names differ between database columns and validation rules
- * (e.g., first_name vs firstName). This map handles the translation.
+ * Fields that should NOT be validated (system-managed or free text)
+ * These fields get a permissive Joi.any() schema
+ * All other fields use their field name directly to look up rules in validation-rules.json
  */
-const FIELD_TO_RULE_MAP = {
-  // User fields
-  email: 'email',
-  first_name: 'firstName',
-  last_name: 'lastName',
-  role_id: 'roleId',
-  is_active: 'isActive',
-  auth0_id: null, // No validation - system-managed
-  status: null, // Handled specially per entity
+const SYSTEM_MANAGED_FIELDS = new Set([
+  // System-managed (no user input)
+  'auth0_id',
+  'paid_at',
+  'created_at',
+  'updated_at',
 
-  // Role fields
-  name: 'roleName',
-  priority: 'rolePriority',
-  description: 'roleDescription',
+  // Free text (no specific validation)
+  'billing_address',
+  'service_address',
+  'terms',
+  'notes',
+  'description', // Generic description - entity-specific ones use entityFields
 
-  // Customer fields
-  phone: 'phone',
-  company_name: 'companyName',
-  billing_address: null, // Free text
-  service_address: null, // Free text
-
-  // Technician fields
-  license_number: 'licenseNumber',
-  hourly_rate: 'hourlyRate',
-  user_id: 'userId',
-
-  // Work Order fields
-  title: 'title',
-  customer_id: 'customerId',
-  assigned_technician_id: 'technicianId',
-  scheduled_start: 'startDate',
-  scheduled_end: 'endDate',
-
-  // Invoice fields
-  invoice_number: 'invoiceNumber',
-  work_order_id: 'workOrderId',
-  amount: 'amount',
-  tax: 'tax',
-  total: 'total',
-  due_date: 'dueDate',
-  paid_at: null, // System-managed
-
-  // Contract fields
-  contract_number: 'contractNumber',
-  start_date: 'startDate',
-  end_date: 'endDate',
-  terms: null, // Free text
-  value: 'value',
-  billing_cycle: null, // Enum handled separately
-
-  // Inventory fields
-  sku: 'sku',
-  quantity: 'quantity',
-  unit_cost: 'amount',
-  reorder_level: 'quantity',
-};
+  // Handled specially (status/priority use entityFields)
+  'status',
+]);
 
 /**
  * Get status field definition key based on entity type
@@ -129,31 +89,25 @@ function getStatusRuleKey(entityName) {
  * @returns {Joi.Schema|null} Joi schema or null if no validation needed
  */
 function buildSingleFieldSchema(fieldName, entityName, isRequired, rules) {
-  // Handle status field specially (per-entity enum)
-  if (fieldName === 'status') {
-    const ruleKey = getStatusRuleKey(entityName);
-    const fieldDef = rules.fields[ruleKey];
+  // Entity-specific enum fields (status, priority) - check entityFields
+  if (fieldName === 'status' || fieldName === 'priority') {
+    const fieldDef = rules.entityFields?.[entityName]?.[fieldName];
     if (fieldDef) {
       return buildFieldSchema({ ...fieldDef, required: isRequired }, fieldName);
     }
     return null;
   }
 
-  // Look up the rule key
-  const ruleKey = FIELD_TO_RULE_MAP[fieldName];
-
-  // If explicitly null, no validation (free text or system-managed)
-  if (ruleKey === null) {
-    // Return a permissive schema for free text fields
+  // System-managed or free-text fields - use permissive schema
+  if (SYSTEM_MANAGED_FIELDS.has(fieldName)) {
     if (isRequired) {
       return Joi.any().required();
     }
     return Joi.any().optional();
   }
 
-  // If no mapping, try direct field name
-  const actualRuleKey = ruleKey || fieldName;
-  const fieldDef = rules.fields[actualRuleKey];
+  // Look up field definition directly by field name (snake_case matches JSON)
+  const fieldDef = rules.fields[fieldName];
 
   if (!fieldDef) {
     // No rule found - use permissive schema
@@ -333,6 +287,5 @@ module.exports = {
   deriveCreatableFields,
   deriveUpdateableFields,
   // Exported for testing
-  _FIELD_TO_RULE_MAP: FIELD_TO_RULE_MAP,
-  _getStatusRuleKey: getStatusRuleKey,
+  _SYSTEM_MANAGED_FIELDS: SYSTEM_MANAGED_FIELDS, _getStatusRuleKey: getStatusRuleKey,
 };

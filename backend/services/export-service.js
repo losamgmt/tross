@@ -21,6 +21,7 @@ const { logger } = require('../config/logger');
 const db = require('../db/connection');
 const QueryBuilderService = require('./query-builder-service');
 const { buildRLSFilter } = require('../db/helpers/rls-filter-helper');
+const AppError = require('../utils/app-error');
 
 /**
  * Escape a value for CSV format
@@ -80,7 +81,7 @@ class ExportService {
     const metadata = allMetadata[entityName];
 
     if (!metadata) {
-      throw new Error(`Unknown entity: ${entityName}`);
+      throw new AppError(`Unknown entity: ${entityName}`, 404, 'NOT_FOUND');
     }
 
     const {
@@ -131,7 +132,7 @@ class ExportService {
     }
 
     if (columnsToExport.length === 0) {
-      throw new Error(`No exportable fields found for entity: ${entityName}`);
+      throw new AppError(`No exportable fields found for entity: ${entityName}`, 400, 'BAD_REQUEST');
     }
 
     // Build query (similar to findAll but no pagination)
@@ -237,7 +238,7 @@ class ExportService {
     const metadata = allMetadata[entityName];
 
     if (!metadata) {
-      throw new Error(`Unknown entity: ${entityName}`);
+      throw new AppError(`Unknown entity: ${entityName}`, 404, 'NOT_FOUND');
     }
 
     const { fields = {}, exportableFields = null } = metadata;

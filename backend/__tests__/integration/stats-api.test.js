@@ -1,5 +1,10 @@
 /**
  * Stats API Integration Tests
+ *
+ * UNIFIED DATA FLOW:
+ * - requirePermission reads resource from req.entityMetadata.rlsResource
+ * - enforceRLS reads resource from req.entityMetadata.rlsResource
+ * - extractEntity sets req.entityMetadata from URL param
  */
 
 const request = require('supertest');
@@ -10,16 +15,25 @@ const statsRoutes = require('../../routes/stats');
 const app = express();
 app.use(express.json());
 
-// Mock auth middleware to always authenticate as admin
+// Mock auth middleware - unified signature
 jest.mock('../../middleware/auth', () => ({
   authenticateToken: (req, res, next) => {
     req.user = { role: 'admin', userId: 1, email: 'admin@test.com' };
     next();
   },
   requireMinimumRole: () => (req, res, next) => next(),
+  requirePermission: () => (req, res, next) => next(),
 }));
 
-// Mock generic-entity middleware
+// Mock RLS middleware - unified signature (no args)
+jest.mock('../../middleware/row-level-security', () => ({
+  enforceRLS: (req, res, next) => {
+    req.rlsPolicy = 'all_records';
+    next();
+  },
+}));
+
+// Mock generic-entity middleware - only extractEntity needed now
 jest.mock('../../middleware/generic-entity', () => ({
   extractEntity: (req, res, next) => {
     const entity = req.params.entity;
@@ -34,11 +48,6 @@ jest.mock('../../middleware/generic-entity', () => ({
     
     req.entityName = normalizedName;
     req.entityMetadata = allMetadata[normalizedName];
-    next();
-  },
-  genericRequirePermission: () => (req, res, next) => next(),
-  genericEnforceRLS: (req, res, next) => {
-    req.rlsPolicy = 'all_records';
     next();
   },
 }));

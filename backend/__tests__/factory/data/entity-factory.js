@@ -75,7 +75,7 @@ function buildMinimal(entityName, overrides = {}) {
 
   // For COMPUTED entities, include the identity field (auto-generated in production)
   // These are NOT NULL in the database but not in requiredFields
-  if (meta.entityCategory === 'computed' && meta.identityField) {
+  if (meta.nameType === 'computed' && meta.identityField) {
     if (!payload[meta.identityField] && !overrides[meta.identityField]) {
       payload[meta.identityField] = generateFieldValue(entityName, meta.identityField);
     }
@@ -186,12 +186,29 @@ function resetCounter() {
 }
 
 module.exports = {
+  // Entity metadata
   getMetadata,
   entityNameFromTable,
-  generateFieldValue,
+  
+  // Payload building
   buildMinimal,
   buildComplete,
   getDependencyOrder,
   createWithParents,
+  
+  // Value generation (delegated to validation-data-generator)
+  generateFieldValue,
   resetCounter,
+  
+  // Field introspection (re-exported from validation-data-generator)
+  // These enable metadata-driven test discovery without hardcoding field names
+  getEntityFields: validationGenerator.getEntityFields,
+  findFieldByType: validationGenerator.findFieldByType,
+  findAllFieldsByType: validationGenerator.findAllFieldsByType,
+  findFieldsByConstraint: validationGenerator.findFieldsByConstraint,
+  generateInvalidValue: validationGenerator.generateInvalidValue,
+  getExpectedJsType: validationGenerator.getExpectedJsType,
+  getExpectedTypes: validationGenerator.getExpectedTypes,
+  getFieldDef: validationGenerator.getFieldDef,
+  matchesType: validationGenerator.matchesType,
 };

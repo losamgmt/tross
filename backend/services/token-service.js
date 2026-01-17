@@ -1,9 +1,10 @@
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('../utils/uuid'); // Use CommonJS wrapper for Jest compatibility
 const bcrypt = require('bcrypt');
-const pool = require('../db/connection');
+const db = require('../db/connection');
 const { logger } = require('../config/logger');
 const { toSafeInteger, toSafeUuid } = require('../validators/type-coercion');
+const AppError = require('../utils/app-error');
 
 // JWT Configuration from environment variables
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key';
@@ -24,7 +25,7 @@ class TokenService {
    * @param {string} auth0Id - Optional Auth0 ID (sub claim) - pass explicitly since user object may be filtered
    * @returns {Promise<{accessToken: string, refreshToken: string}>}
    */
-  async generateTokenPair(user, ipAddress = null, userAgent = null, provider = 'auth0', auth0Id = null) {
+  static async generateTokenPair(user, ipAddress = null, userAgent = null, provider = 'auth0', auth0Id = null) {
     try {
       // Generate short-lived access token (15 minutes)
       // Note: sub should be auth0_id for Auth0 compatibility, but we also include userId
@@ -61,7 +62,7 @@ class TokenService {
 
       // Store refresh token in database
       const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
-      await pool.query(
+      await db.query(
         `INSERT INTO refresh_tokens 
          (token_id, user_id, token_hash, expires_at, ip_address, user_agent)
          VALUES ($1, $2, $3, $4, $5, $6)`,
@@ -94,18 +95,18 @@ class TokenService {
    * @param {string} userAgent - Client user agent
    * @returns {Promise<{accessToken: string, refreshToken: string}>}
    */
-  async refreshAccessToken(refreshToken, ipAddress = null, userAgent = null) {
+  static async refreshAccessToken(refreshToken, ipAddress = null, userAgent = null) {
     try {
       // Verify and decode refresh token
       const decoded = jwt.verify(refreshToken, JWT_SECRET);
 
       if (decoded.type !== 'refresh') {
-        throw new Error('Invalid token type');
+        throw new AppError('Invalid token type', 401, 'UNAUTHORIZED');
       }
 
       // Check if token exists and is valid in database
       // Join with roles table via users.role_id FK (one role per user)
-      const result = await pool.query(
+      const result = await db.query(
         `SELECT rt.*, u.email, u.first_name, u.last_name, r.name as role 
          FROM refresh_tokens rt
          JOIN users u ON rt.user_id = u.id
@@ -121,7 +122,7 @@ class TokenService {
           tokenId: decoded.tokenId,
           userId: decoded.userId,
         });
-        throw new Error('Invalid refresh token');
+        throw new AppError('Invalid refresh token', 401, 'UNAUTHORIZED');
       }
 
       const storedToken = result.rows[0];
@@ -136,11 +137,11 @@ class TokenService {
           tokenId: decoded.tokenId,
           userId: decoded.userId,
         });
-        throw new Error('Invalid refresh token');
+        throw new AppError('Invalid refresh token', 401, 'UNAUTHORIZED');
       }
 
       // Update last used timestamp
-      await pool.query(
+      await db.query(
         `UPDATE refresh_tokens 
          SET last_used_at = NOW()
          WHERE token_id = $1`,
@@ -156,7 +157,7 @@ class TokenService {
 
       // Preserve the provider from the original token, default to auth0
       const provider = decoded.provider || 'auth0';
-      const newTokenPair = await this.generateTokenPair(
+      const newTokenPair = await TokenService.generateTokenPair(
         user,
         ipAddress,
         userAgent,
@@ -164,7 +165,7 @@ class TokenService {
       );
 
       // Revoke old refresh token
-      await this.revokeToken(decoded.tokenId, 'rotated');
+      await TokenService.revokeToken(decoded.tokenId, 'rotated');
 
       logger.info('Access token refreshed', {
         userId: decoded.userId,
@@ -176,11 +177,11 @@ class TokenService {
     } catch (error) {
       if (error.name === 'TokenExpiredError') {
         logger.warn('Expired refresh token used', { error: error.message });
-        throw new Error('Refresh token expired');
+        throw new AppError('Refresh token expired', 401, 'UNAUTHORIZED');
       }
       if (error.name === 'JsonWebTokenError') {
         logger.warn('Invalid refresh token format', { error: error.message });
-        throw new Error('Invalid refresh token');
+        throw new AppError('Invalid refresh token format', 400, 'BAD_REQUEST');
       }
       logger.error('Error refreshing token', { error: error.message });
       throw error;
@@ -194,12 +195,12 @@ class TokenService {
    * @returns {Promise<boolean>}
    * @throws {Error} If tokenId is not a valid UUID
    */
-  async revokeToken(tokenId, reason = 'logout') {
+  static async revokeToken(tokenId, reason = 'logout') {
     try {
       // TYPE SAFETY: Validate UUID format before query
       const safeTokenId = toSafeUuid(tokenId, 'tokenId', { allowNull: false });
 
-      const result = await pool.query(
+      const result = await db.query(
         `UPDATE refresh_tokens 
          SET revoked_at = NOW()
          WHERE token_id = $1 AND revoked_at IS NULL`,
@@ -226,7 +227,7 @@ class TokenService {
    * @returns {Promise<number>} - Number of tokens revoked
    * @throws {Error} If userId is invalid
    */
-  async revokeAllUserTokens(userId, reason = 'logout_all') {
+  static async revokeAllUserTokens(userId, reason = 'logout_all') {
     try {
       // TYPE SAFETY: Validate userId before query
       const safeUserId = toSafeInteger(userId, 'userId', {
@@ -234,7 +235,7 @@ class TokenService {
         allowNull: false,
       });
 
-      const result = await pool.query(
+      const result = await db.query(
         `UPDATE refresh_tokens 
          SET revoked_at = NOW()
          WHERE user_id = $1 AND revoked_at IS NULL`,
@@ -261,9 +262,9 @@ class TokenService {
    * Clean up expired and old revoked tokens
    * @returns {Promise<number>} - Number of tokens deleted
    */
-  async cleanupExpiredTokens() {
+  static async cleanupExpiredTokens() {
     try {
-      const result = await pool.query(
+      const result = await db.query(
         `DELETE FROM refresh_tokens 
          WHERE expires_at < NOW() - INTERVAL '30 days'
          OR (revoked_at IS NOT NULL AND revoked_at < NOW() - INTERVAL '30 days')`,
@@ -286,7 +287,7 @@ class TokenService {
    * @returns {Promise<Array>}
    * @throws {Error} If userId is invalid
    */
-  async getUserTokens(userId) {
+  static async getUserTokens(userId) {
     try {
       // TYPE SAFETY: Validate userId before query
       const safeUserId = toSafeInteger(userId, 'userId', {
@@ -294,7 +295,7 @@ class TokenService {
         allowNull: false,
       });
 
-      const result = await pool.query(
+      const result = await db.query(
         `SELECT token_id, created_at, last_used_at, expires_at, ip_address, user_agent
          FROM refresh_tokens
          WHERE user_id = $1 AND revoked_at IS NULL AND expires_at > NOW()
@@ -313,4 +314,4 @@ class TokenService {
   }
 }
 
-module.exports = new TokenService();
+module.exports = TokenService;

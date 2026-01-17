@@ -13,8 +13,9 @@
 const {
   FIELD_ACCESS_LEVELS: FAL,
   UNIVERSAL_FIELD_ACCESS,
-  ENTITY_CATEGORIES,
 } = require('../constants');
+const { NAME_TYPES } = require('../entity-types');
+const { CONTRACT_STATUS } = require('../status-enums');
 
 module.exports = {
   // Table name in database
@@ -31,7 +32,13 @@ module.exports = {
    * Entity category: COMPUTED entities have auto-generated identifiers
    * and computed name from template: "{customer.fullName}: {summary}: {identifier}"
    */
-  entityCategory: ENTITY_CATEGORIES.COMPUTED,
+  nameType: NAME_TYPES.COMPUTED,
+
+  /**
+   * Display field for UI rendering
+   * COMPUTED entities use the identifier field (contract_number)
+   */
+  displayField: 'contract_number',
 
   // ============================================================================
   // IDENTITY CONFIGURATION (Entity Contract v2.0)
@@ -44,6 +51,12 @@ module.exports = {
   identityField: 'contract_number',
 
   /**
+   * Prefix for auto-generated identifiers (COMPUTED entities only)
+   * Format: CTR-YYYY-NNNN
+   */
+  identifierPrefix: 'CTR',
+
+  /**
    * Whether the identity field has a UNIQUE constraint in the database
    */
   identityFieldUnique: true,
@@ -53,6 +66,36 @@ module.exports = {
    * Maps to permissions.json resource names
    */
   rlsResource: 'contracts',
+
+  /**
+   * Row-Level Security policy per role
+   * Customers see own contracts, technicians denied, dispatcher+ see all
+   */
+  rlsPolicy: {
+    customer: 'own_contracts_only',
+    technician: 'deny_all',
+    dispatcher: 'all_records',
+    manager: 'all_records',
+    admin: 'all_records',
+  },
+
+  /**
+   * Entity-level permission overrides
+   * Contracts require manager+ for CUD operations
+   */
+  entityPermissions: {
+    create: 'manager',
+    read: 'customer',
+    update: 'manager',
+    delete: 'manager',
+  },
+
+  /**
+   * Route configuration - explicit opt-in for generic router
+   */
+  routeConfig: {
+    useGenericRouter: true,
+  },
 
   // ============================================================================
   // FIELD ALIASING (for UI display names)
@@ -287,7 +330,15 @@ module.exports = {
   fields: {
     // TIER 1: Universal Entity Contract Fields
     id: { type: 'integer', readonly: true },
-    contract_number: { type: 'string', required: true, maxLength: 100 },
+    contract_number: {
+      type: 'string',
+      readonly: true, // Auto-generated: CTR-YYYY-NNNN
+      maxLength: 100,
+      pattern: '^CTR-[0-9]{4}-[0-9]+$',
+      errorMessages: {
+        pattern: 'Contract number must be in format CTR-YYYY-NNNN',
+      },
+    },
     is_active: { type: 'boolean', default: true },
     created_at: { type: 'timestamp', readonly: true },
     updated_at: { type: 'timestamp', readonly: true },
@@ -295,11 +346,11 @@ module.exports = {
     // TIER 2: Entity-Specific Lifecycle Field
     status: {
       type: 'enum',
-      values: ['draft', 'active', 'expired', 'cancelled'],
-      default: 'draft',
+      values: Object.values(CONTRACT_STATUS),
+      default: CONTRACT_STATUS.DRAFT,
     },
 
-    // COMPUTED entity fields
+    // COMPUTED entity name field - optional because computed from template
     name: { type: 'string', maxLength: 255 },
     summary: { type: 'string', maxLength: 255 },
 

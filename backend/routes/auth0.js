@@ -13,6 +13,8 @@ const auditService = require('../services/audit-service');
 const { AuditActions, ResourceTypes, AuditResults } = require('../services/audit-constants');
 const { logger } = require('../config/logger');
 const { refreshLimiter } = require('../middleware/rate-limit');
+const { getClientIp, getUserAgent } = require('../utils/request-helpers');
+const { asyncHandler } = require('../middleware/utils');
 const {
   validateAuthCallback,
   validateAuth0Token,
@@ -95,8 +97,8 @@ router.post('/callback', validateAuthCallback, async (req, res) => {
     });
 
     // Generate refresh token pair
-    const ipAddress = req.ip || req.connection.remoteAddress;
-    const userAgent = req.headers['user-agent'];
+    const ipAddress = getClientIp(req);
+    const userAgent = getUserAgent(req);
     const tokens = await tokenService.generateTokenPair(
       authResult.user,
       ipAddress,
@@ -115,14 +117,12 @@ router.post('/callback', validateAuthCallback, async (req, res) => {
     });
 
     // Return tokens and user info to client
-    res.json(
-      ResponseFormatter.get({
-        access_token: tokens.accessToken,
-        refresh_token: tokens.refreshToken,
-        user: authResult.user,
-        provider: 'auth0',
-      }),
-    );
+    return ResponseFormatter.get(res, {
+      access_token: tokens.accessToken,
+      refresh_token: tokens.refreshToken,
+      user: authResult.user,
+      provider: 'auth0',
+    });
   } catch (error) {
     logger.error('🔐 Auth0 callback failed', {
       error: error.message,
@@ -130,8 +130,8 @@ router.post('/callback', validateAuthCallback, async (req, res) => {
     });
 
     // Log failed login attempt
-    const ipAddress = req.ip || req.connection.remoteAddress;
-    const userAgent = req.headers['user-agent'];
+    const ipAddress = getClientIp(req);
+    const userAgent = getUserAgent(req);
     await auditService.log({
       userId: null,
       action: AuditActions.LOGIN_FAILED,
@@ -214,8 +214,8 @@ router.post('/validate', validateAuth0Token, async (req, res) => {
 
     // Generate refresh token pair and store in database
     // This enables server-side session management (revocation, logout-all, etc.)
-    const ipAddress = req.ip || req.connection.remoteAddress;
-    const userAgent = req.headers['user-agent'];
+    const ipAddress = getClientIp(req);
+    const userAgent = getUserAgent(req);
     const tokens = await tokenService.generateTokenPair(
       result.user,
       ipAddress,
@@ -291,24 +291,16 @@ router.post('/validate', validateAuth0Token, async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/refresh', refreshLimiter, validateAuth0Refresh, async (req, res) => {
-  try {
-    const { refresh_token } = req.body;
+router.post('/refresh', refreshLimiter, validateAuth0Refresh, asyncHandler(async (req, res) => {
+  const { refresh_token } = req.body;
 
-    const result = await auth0Strategy.refreshToken(refresh_token);
+  const result = await auth0Strategy.refreshToken(refresh_token);
 
-    res.json(
-      ResponseFormatter.get({
-        access_token: result.token,
-        expires_in: result.expires_in,
-      }),
-    );
-  } catch (error) {
-    logger.error('Token refresh failed', { error: error.message });
-
-    return ResponseFormatter.unauthorized(res, error.message);
-  }
-});
+  return ResponseFormatter.get(res, {
+    access_token: result.token,
+    expires_in: result.expires_in,
+  });
+}));
 
 /**
  * @openapi
@@ -339,20 +331,14 @@ router.post('/refresh', refreshLimiter, validateAuth0Refresh, async (req, res) =
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get('/logout', async (req, res) => {
-  try {
-    const result = await auth0Strategy.logout();
+router.get('/logout', asyncHandler(async (req, res) => {
+  const result = await auth0Strategy.logout();
 
-    ResponseFormatter.success(
-      res,
-      { logout_url: result.logoutUrl },
-      { message: 'Redirect to logout_url to complete Auth0 logout' },
-    );
-  } catch (error) {
-    logger.error('Logout failed', { error: error.message });
-
-    return ResponseFormatter.internalError(res, error);
-  }
-});
+  ResponseFormatter.success(
+    res,
+    { logout_url: result.logoutUrl },
+    { message: 'Redirect to logout_url to complete Auth0 logout' },
+  );
+}));
 
 module.exports = router;

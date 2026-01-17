@@ -1,0 +1,318 @@
+/**
+ * Permission Deriver
+ *
+ * SINGLE SOURCE OF TRUTH: Derives all permissions from entity metadata.
+ * No separate permissions.json required - everything comes from:
+ *   1. backend/config/role-definitions.js - role hierarchy (system-wide)
+ *   2. backend/config/models/*-metadata.js - entity permissions
+ *
+ * This eliminates drift between metadata and permissions config.
+ * Change metadata → permissions change automatically.
+ *
+ * @module config/permissions-deriver
+ */
+
+const {
+  ROLE_HIERARCHY,
+  ROLE_PRIORITY_TO_NAME,
+  ROLE_DESCRIPTIONS,
+} = require('./role-definitions');
+
+// Cache for derived permissions (computed once, reused)
+let cachedPermissions = null;
+
+// Synthetic resources not backed by entity metadata
+// These are UI navigation resources or system resources
+const SYNTHETIC_RESOURCES = {
+  audit_logs: {
+    description: 'System audit trail and security events',
+    rlsPolicy: {
+      customer: 'deny_all',
+      technician: 'deny_all',
+      dispatcher: 'deny_all',
+      manager: 'deny_all',
+      admin: 'all_records',
+    },
+    // Entity-level permissions (no fieldAccess to derive from)
+    entityPermissions: {
+      create: 'customer', // System auto-creates
+      read: 'admin',
+      update: 'admin',
+      delete: 'admin',
+    },
+  },
+  dashboard: {
+    description: 'Main dashboard view - role-driven overview',
+    rlsPolicy: {
+      customer: 'own_record_only',
+      technician: 'own_record_only',
+      dispatcher: 'all_records',
+      manager: 'all_records',
+      admin: 'all_records',
+    },
+    entityPermissions: {
+      create: 'admin',
+      read: 'customer',
+      update: 'admin',
+      delete: 'admin',
+    },
+  },
+  admin_panel: {
+    description: 'Admin control center - system health, sessions, audit logs',
+    rlsPolicy: {
+      customer: 'deny_all',
+      technician: 'deny_all',
+      dispatcher: 'deny_all',
+      manager: 'deny_all',
+      admin: 'all_records',
+    },
+    entityPermissions: {
+      create: 'admin',
+      read: 'admin',
+      update: 'admin',
+      delete: 'admin',
+    },
+  },
+  system_settings: {
+    description: 'System-wide configuration (maintenance mode, feature flags)',
+    rlsPolicy: {
+      customer: 'deny_all',
+      technician: 'deny_all',
+      dispatcher: 'deny_all',
+      manager: 'deny_all',
+      admin: 'all_records',
+    },
+    entityPermissions: {
+      create: 'admin',
+      read: 'admin',
+      update: 'admin',
+      delete: 'admin',
+    },
+  },
+};
+
+// Note: ROLE_DESCRIPTIONS is now imported from role-definitions.js
+
+/**
+ * Get role priority from role name
+ * @param {string} roleName - Role name (e.g., 'admin', 'customer')
+ * @returns {number} Priority (1-5), or 0 if invalid
+ */
+function getRolePriorityFromName(roleName) {
+  if (!roleName || roleName === 'none') {
+    return 0;
+  }
+  const index = ROLE_HIERARCHY.indexOf(roleName.toLowerCase());
+  return index >= 0 ? index + 1 : 0;
+}
+
+/**
+ * Derive minimum role for CRUD operation from fieldAccess
+ *
+ * Logic: The minimum role that can perform an operation on ANY field
+ * is the minimum role for the entire entity.
+ *
+ * @param {Object} fieldAccess - Field access map from metadata
+ * @param {string} operation - 'create', 'read', 'update', 'delete'
+ * @returns {string} Minimum role name (e.g., 'customer', 'admin')
+ */
+function deriveMinimumRole(fieldAccess, operation) {
+  if (!fieldAccess || Object.keys(fieldAccess).length === 0) {
+    return 'admin'; // No fieldAccess defined = admin only
+  }
+
+  let minPriority = Infinity;
+  let minRole = 'admin';
+
+  for (const fieldConfig of Object.values(fieldAccess)) {
+    // Skip non-object values or malformed entries
+    if (!fieldConfig || typeof fieldConfig !== 'object') {
+      continue;
+    }
+
+    const roleName = fieldConfig[operation];
+    if (!roleName || roleName === 'none') {
+      continue;
+    }
+
+    const priority = getRolePriorityFromName(roleName);
+    if (priority > 0 && priority < minPriority) {
+      minPriority = priority;
+      minRole = roleName;
+    }
+  }
+
+  return minRole;
+}
+
+/**
+ * Build roles configuration from constants
+ * @returns {Object} Roles object matching permissions.json format
+ */
+function buildRolesConfig() {
+  const roles = {};
+  for (const [priority, roleName] of Object.entries(ROLE_PRIORITY_TO_NAME)) {
+    roles[roleName] = {
+      priority: parseInt(priority, 10),
+      description: ROLE_DESCRIPTIONS[roleName] || `${roleName} role`,
+    };
+  }
+  return roles;
+}
+
+/**
+ * Build resource configuration from entity metadata
+ * @param {Object} metadata - Entity metadata
+ * @param {string} resourceName - Resource name (rlsResource)
+ * @returns {Object} Resource config matching permissions.json format
+ */
+function buildResourceConfig(metadata, resourceName) {
+  const { fieldAccess, rlsPolicy, entityPermissions } = metadata;
+
+  // Standard CRUD operations (always derived or overridden)
+  const standardOps = ['create', 'read', 'update', 'delete'];
+  const permissions = {};
+
+  for (const op of standardOps) {
+    // Use entityPermissions override if provided, else derive from fieldAccess
+    let minRole;
+    let description;
+
+    if (entityPermissions && entityPermissions[op]) {
+      minRole = entityPermissions[op];
+      description = `Entity-level override - ${op} requires ${minRole}`;
+    } else {
+      minRole = deriveMinimumRole(fieldAccess, op);
+      description = `Derived from fieldAccess - minimum role for ${op}`;
+    }
+
+    const priority = getRolePriorityFromName(minRole);
+
+    permissions[op] = {
+      minimumRole: minRole,
+      minimumPriority: priority,
+      description,
+    };
+  }
+
+  // Add any custom operations from entityPermissions (beyond CRUD)
+  if (entityPermissions) {
+    for (const [op, minRole] of Object.entries(entityPermissions)) {
+      if (!standardOps.includes(op)) {
+        const priority = getRolePriorityFromName(minRole);
+        permissions[op] = {
+          minimumRole: minRole,
+          minimumPriority: priority,
+          description: `Custom operation - ${op} requires ${minRole}`,
+        };
+      }
+    }
+  }
+
+  return {
+    description: metadata.description || `${resourceName} resource`,
+    rowLevelSecurity: rlsPolicy || {},
+    permissions,
+  };
+}
+
+/**
+ * Build synthetic resource configuration
+ * @param {string} resourceName - Resource name
+ * @param {Object} config - Synthetic resource config
+ * @returns {Object} Resource config matching permissions.json format
+ */
+function buildSyntheticResourceConfig(resourceName, config) {
+  const permissions = {};
+
+  for (const [op, minRole] of Object.entries(config.entityPermissions)) {
+    const priority = getRolePriorityFromName(minRole);
+    permissions[op] = {
+      minimumRole: minRole,
+      minimumPriority: priority,
+      description: `Synthetic resource - ${op} permission`,
+    };
+  }
+
+  return {
+    description: config.description,
+    rowLevelSecurity: config.rlsPolicy,
+    permissions,
+  };
+}
+
+/**
+ * Derive complete permissions configuration from metadata
+ * This replaces the need for config/permissions.json
+ *
+ * @param {boolean} forceReload - Force re-derivation (ignore cache)
+ * @returns {Object} Complete permissions config
+ */
+function derivePermissions(forceReload = false) {
+  if (cachedPermissions && !forceReload) {
+    return cachedPermissions;
+  }
+
+  // Load all entity metadata
+  const allMetadata = require('./models');
+
+  // Build roles from constants
+  const roles = buildRolesConfig();
+
+  // Build resources from entity metadata
+  const resources = {};
+
+  for (const [entityName, metadata] of Object.entries(allMetadata)) {
+    // Skip entities without rlsResource (like file_attachments)
+    // They're handled specially or use parent entity permissions
+    const resourceName = metadata.rlsResource;
+    if (!resourceName) {
+      // Still add if it has an rlsPolicy (like file_attachments)
+      if (metadata.rlsPolicy) {
+        // Use table name as resource for polymorphic entities
+        const polyResourceName = metadata.tableName || entityName;
+        resources[polyResourceName] = buildResourceConfig(metadata, polyResourceName);
+      }
+      continue;
+    }
+
+    resources[resourceName] = buildResourceConfig(metadata, resourceName);
+  }
+
+  // Add synthetic resources (dashboard, admin_panel, etc.)
+  for (const [resourceName, config] of Object.entries(SYNTHETIC_RESOURCES)) {
+    resources[resourceName] = buildSyntheticResourceConfig(resourceName, config);
+  }
+
+  // Build complete config
+  cachedPermissions = {
+    $schema: 'http://json-schema.org/draft-07/schema#',
+    $id: 'https://trossapp.com/schemas/permissions.json',
+    title: 'TrossApp Permission Configuration (DERIVED)',
+    description: 'Auto-derived from entity metadata - DO NOT EDIT MANUALLY',
+    version: '4.0.0-derived',
+    lastModified: new Date().toISOString().split('T')[0],
+    roles,
+    resources,
+  };
+
+  return cachedPermissions;
+}
+
+/**
+ * Clear the cache (useful for tests or hot-reload)
+ */
+function clearCache() {
+  cachedPermissions = null;
+}
+
+module.exports = {
+  derivePermissions,
+  deriveMinimumRole,
+  getRolePriorityFromName,
+  buildRolesConfig,
+  buildResourceConfig,
+  clearCache,
+  SYNTHETIC_RESOURCES,
+  ROLE_DESCRIPTIONS,
+};

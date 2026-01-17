@@ -39,12 +39,12 @@ const TEST_USERS = {
     role: USER_ROLES.DISPATCHER,
   },
 
-  client: {
-    auth0_id: "auth0|test-client-112",
-    email: "client@trossapp.com",
-    first_name: "Client",
+  customer: {
+    auth0_id: "auth0|test-customer-112",
+    email: "customer@trossapp.com",
+    first_name: "Customer",
     last_name: "User",
-    role: USER_ROLES.CLIENT,
+    role: USER_ROLES.CUSTOMER,
   },
 };
 

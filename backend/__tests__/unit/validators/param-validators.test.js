@@ -4,7 +4,6 @@
  * Tests URL parameter validation:
  * - ID validation and coercion
  * - Multiple ID validation
- * - Slug validation
  *
  * KISS: Test behavior, minimal mocking
  */
@@ -12,7 +11,6 @@
 const {
   validateIdParam,
   validateIdParams,
-  validateSlugParam,
 } = require('../../../validators/param-validators');
 
 describe('Param Validators', () => {
@@ -218,183 +216,6 @@ describe('Param Validators', () => {
       // Assert
       expect(req.validated).toBeDefined();
       expect(req.validated.userId).toBe(123);
-    });
-  });
-
-  describe('validateSlugParam', () => {
-    test('should validate valid slug', () => {
-      // Arrange
-      req.params.slug = 'my-awesome-post';
-      const middleware = validateSlugParam();
-
-      // Act
-      middleware(req, res, next);
-
-      // Assert
-      expect(req.validated.slug).toBe('my-awesome-post');
-      expect(next).toHaveBeenCalled();
-    });
-
-    test('should validate slug with numbers', () => {
-      // Arrange
-      req.params.slug = 'post-123';
-      const middleware = validateSlugParam();
-
-      // Act
-      middleware(req, res, next);
-
-      // Assert
-      expect(req.validated.slug).toBe('post-123');
-      expect(next).toHaveBeenCalled();
-    });
-
-    test('should validate custom param name', () => {
-      // Arrange
-      req.params.category = 'tech-news';
-      const middleware = validateSlugParam({ paramName: 'category' });
-
-      // Act
-      middleware(req, res, next);
-
-      // Assert
-      expect(req.validated.category).toBe('tech-news');
-      expect(next).toHaveBeenCalled();
-    });
-
-    test('should reject uppercase letters', () => {
-      // Arrange
-      req.params.slug = 'My-Post';
-      const middleware = validateSlugParam();
-
-      // Act
-      middleware(req, res, next);
-
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: expect.stringContaining('lowercase letters'),
-        }),
-      );
-    });
-
-    test('should reject special characters', () => {
-      // Arrange
-      req.params.slug = 'my@post';
-      const middleware = validateSlugParam();
-
-      // Act
-      middleware(req, res, next);
-
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: expect.stringContaining('lowercase letters'),
-        }),
-      );
-    });
-
-    test('should reject empty slug', () => {
-      // Arrange
-      req.params.slug = '';
-      const middleware = validateSlugParam();
-
-      // Act
-      middleware(req, res, next);
-
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: expect.stringContaining('required'),
-        }),
-      );
-    });
-
-    test('should reject slug below minimum length', () => {
-      // Arrange
-      req.params.slug = 'ab';
-      const middleware = validateSlugParam({ minLength: 3 });
-
-      // Act
-      middleware(req, res, next);
-
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: expect.stringContaining('between'),
-        }),
-      );
-    });
-
-    test('should reject slug above maximum length', () => {
-      // Arrange
-      req.params.slug = 'a'.repeat(101);
-      const middleware = validateSlugParam({ maxLength: 100 });
-
-      // Act
-      middleware(req, res, next);
-
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: expect.stringContaining('between'),
-        }),
-      );
-    });
-
-    test('should trim whitespace', () => {
-      // Arrange
-      req.params.slug = '  my-slug  ';
-      const middleware = validateSlugParam();
-
-      // Act
-      middleware(req, res, next);
-
-      // Assert
-      expect(req.validated.slug).toBe('my-slug');
-      expect(next).toHaveBeenCalled();
-    });
-
-    test('should reject spaces in slug', () => {
-      // Arrange
-      req.params.slug = 'my slug';
-      const middleware = validateSlugParam();
-
-      // Act
-      middleware(req, res, next);
-
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(400);
-    });
-
-    test('should reject underscores in slug', () => {
-      // Arrange
-      req.params.slug = 'my_slug';
-      const middleware = validateSlugParam();
-
-      // Act
-      middleware(req, res, next);
-
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(400);
-    });
-
-    test('should initialize req.validated if not present', () => {
-      // Arrange
-      delete req.validated;
-      req.params.slug = 'test-slug';
-      const middleware = validateSlugParam();
-
-      // Act
-      middleware(req, res, next);
-
-      // Assert
-      expect(req.validated).toBeDefined();
-      expect(req.validated.slug).toBe('test-slug');
     });
   });
 });

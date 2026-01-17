@@ -3,15 +3,34 @@ const { TEST_USERS } = require('../config/test-users');
 const GenericEntityService = require('./generic-entity-service');
 const AuthUserService = require('./auth-user-service');
 
+/**
+ * Check if we're in config mode (test auth + development)
+ * Reads env vars fresh each call - no caching
+ */
+function isConfigMode() {
+  return (
+    process.env.USE_TEST_AUTH === 'true' &&
+    process.env.NODE_ENV === 'development'
+  );
+}
+
+/**
+ * UserDataService - Static class for user data operations
+ * Handles both config-based (dev/test) and database-based (production) user data
+ */
 class UserDataService {
-  constructor() {
-    this.useTestAuth = process.env.USE_TEST_AUTH === 'true';
-    this.isDevelopment = process.env.NODE_ENV === 'development';
+  /**
+   * Check if we're in config mode
+   */
+  static isConfigMode() {
+    return isConfigMode();
   }
 
-  // Get all users - config or database based
-  async getAllUsers() {
-    if (this.useTestAuth && this.isDevelopment) {
+  /**
+   * Get all users - config or database based
+   */
+  static async getAllUsers() {
+    if (isConfigMode()) {
       // Return test users from config
       return Object.values(TEST_USERS).map((user) => ({
         id: null, // No DB ID in config mode
@@ -31,9 +50,11 @@ class UserDataService {
     }
   }
 
-  // Get user by Auth0 ID - config or database based
-  async getUserByAuth0Id(auth0Id) {
-    if (this.useTestAuth && this.isDevelopment) {
+  /**
+   * Get user by Auth0 ID - config or database based
+   */
+  static async getUserByAuth0Id(auth0Id) {
+    if (isConfigMode()) {
       // Find in test users config
       const testUser = Object.values(TEST_USERS).find(
         (user) => user.auth0_id === auth0Id,
@@ -58,21 +79,18 @@ class UserDataService {
     }
   }
 
-  // Create or find user - config or database based
-  async findOrCreateUser(auth0Data) {
-    if (this.useTestAuth && this.isDevelopment) {
+  /**
+   * Create or find user - config or database based
+   */
+  static async findOrCreateUser(auth0Data) {
+    if (isConfigMode()) {
       // Just return the user from config (don't store anywhere)
-      return this.getUserByAuth0Id(auth0Data.sub);
+      return UserDataService.getUserByAuth0Id(auth0Data.sub);
     } else {
       // Use AuthUserService for Auth0-specific logic (SRP)
       return AuthUserService.findOrCreateFromAuth0(auth0Data);
     }
   }
-
-  // Check if we're in config mode
-  isConfigMode() {
-    return this.useTestAuth && this.isDevelopment;
-  }
 }
 
-module.exports = { UserDataService: new UserDataService() };
+module.exports = UserDataService;

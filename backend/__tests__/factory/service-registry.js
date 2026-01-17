@@ -19,34 +19,7 @@
  */
 
 module.exports = {
-  'admin-logs': {
-    module: '../../../services/admin-logs-service',
-    type: 'query',
-    description: 'Service for retrieving admin operation logs',
-    dependencies: ['db'],
-    methods: {
-      getDataLogs: {
-        async: true,
-        args: [{ name: 'options', type: 'object', optional: true }],
-        returns: 'array',
-        pagination: true,
-        description: 'Get CRUD operation logs',
-      },
-      getAuthLogs: {
-        async: true,
-        args: [{ name: 'options', type: 'object', optional: true }],
-        returns: 'array',
-        pagination: true,
-        description: 'Get authentication logs',
-      },
-      getLogSummary: {
-        async: true,
-        args: [],
-        returns: 'object',
-        description: 'Get log summary statistics',
-      },
-    },
-  },
+  // admin-logs: CONSOLIDATED INTO audit service (see audit entry below)
 
   sessions: {
     module: '../../../services/sessions-service',
@@ -153,11 +126,11 @@ module.exports = {
     },
   },
 
-  // Already has tests, but include for completeness
+  // Audit service - consolidated from AuditService + AdminLogsService
   'audit-service': {
     module: '../../../services/audit-service',
     type: 'action',
-    description: 'Service for audit logging',
+    description: 'Service for audit logging and admin log queries',
     dependencies: ['db'],
     skipAutoTest: true, // Already thoroughly tested
     methods: {
@@ -167,11 +140,38 @@ module.exports = {
         returns: 'void',
         description: 'Log an audit entry',
       },
-      query: {
+      getUserAuditTrail: {
         async: true,
-        args: [{ name: 'filters', type: 'object' }],
+        args: [{ name: 'userId', type: 'id' }, { name: 'limit', type: 'number', optional: true }],
         returns: 'array',
-        description: 'Query audit logs',
+        description: 'Get audit trail for a specific user',
+      },
+      getResourceAuditTrail: {
+        async: true,
+        args: [{ name: 'resourceType', type: 'string' }, { name: 'resourceId', type: 'id' }, { name: 'limit', type: 'number', optional: true }],
+        returns: 'array',
+        description: 'Get audit trail for a specific resource',
+      },
+      // Admin panel log queries (consolidated from AdminLogsService)
+      getDataLogs: {
+        async: true,
+        args: [{ name: 'filters', type: 'object', optional: true }],
+        returns: 'object',
+        pagination: true,
+        description: 'Get CRUD operation logs for admin panel',
+      },
+      getAuthLogs: {
+        async: true,
+        args: [{ name: 'filters', type: 'object', optional: true }],
+        returns: 'object',
+        pagination: true,
+        description: 'Get authentication logs for admin panel',
+      },
+      getLogSummary: {
+        async: true,
+        args: [{ name: 'period', type: 'string', optional: true }],
+        returns: 'object',
+        description: 'Get log summary statistics for admin dashboard',
       },
     },
   },

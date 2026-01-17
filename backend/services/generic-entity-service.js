@@ -31,23 +31,20 @@ const { cascadeDeleteDependents } = require('../db/helpers/cascade-helper');
 const { buildRLSFilter, buildRLSFilterForFindById } = require('../db/helpers/rls-filter-helper');
 const { filterOutput, filterOutputArray } = require('../db/helpers/output-filter-helper');
 const { logEntityAudit, isAuditEnabled } = require('../db/helpers/audit-helper');
-const { ENTITY_FIELDS, ENTITY_CATEGORIES, ENTITY_CATEGORY_MAP } = require('../config/constants');
+const { ENTITY_FIELDS, NAME_TYPES, NAME_TYPE_MAP } = require('../config/constants');
 const { sanitizeData } = require('../utils/data-hygiene');
 const { generateIdentifier, IDENTIFIER_FIELDS } = require('../utils/identifier-generator');
+const AppError = require('../utils/app-error');
 
 /**
  * Table name to entity name mapping for related entity lookups
+ * DYNAMICALLY DERIVED from metadata - no hardcoding!
  */
-const TABLE_TO_ENTITY = {
-  users: 'user',
-  roles: 'role',
-  customers: 'customer',
-  technicians: 'technician',
-  work_orders: 'work_order',
-  contracts: 'contract',
-  invoices: 'invoice',
-  inventory: 'inventory',
-};
+const TABLE_TO_ENTITY = Object.fromEntries(
+  Object.entries(allMetadata)
+    .filter(([, meta]) => meta.tableName)
+    .map(([entityName, meta]) => [meta.tableName, entityName]),
+);
 
 /**
  * Get the display field for a related entity's table
@@ -152,7 +149,7 @@ class GenericEntityService {
   static _getMetadata(entityName) {
     // Validate entityName is provided
     if (!entityName || typeof entityName !== 'string') {
-      throw new Error('Entity name is required and must be a string');
+      throw new AppError('Entity name is required and must be a string', 400, 'BAD_REQUEST');
     }
 
     // Trim whitespace but preserve case (metadata uses snake_case: work_order, not workorder)
@@ -167,8 +164,10 @@ class GenericEntityService {
         validEntities: VALID_ENTITIES,
       });
 
-      throw new Error(
+      throw new AppError(
         `Unknown entity: ${normalizedName}. Valid entities: ${VALID_ENTITIES.join(', ')}`,
+        400,
+        'BAD_REQUEST',
       );
     }
 
@@ -463,9 +462,11 @@ class GenericEntityService {
 
     // Validate field is filterable (security: prevent arbitrary column access)
     if (!filterableFields.includes(field)) {
-      throw new Error(
+      throw new AppError(
         `Field '${field}' is not filterable for ${entityName}. ` +
         `Allowed: ${filterableFields.join(', ')}`,
+        400,
+        'BAD_REQUEST',
       );
     }
 
@@ -641,7 +642,7 @@ class GenericEntityService {
 
     // Validate data is an object
     if (!data || typeof data !== 'object' || Array.isArray(data)) {
-      throw new Error(`Data is required and must be an object for ${entityName}`);
+      throw new AppError(`Data is required and must be an object for ${entityName}`, 400, 'BAD_REQUEST');
     }
 
     // =========================================================================
@@ -655,8 +656,8 @@ class GenericEntityService {
     // COMPUTED entities (work_order, invoice, contract) have auto-generated
     // identifiers in the format PREFIX-YYYY-NNNN (e.g., WO-2025-0001)
     // =========================================================================
-    const category = ENTITY_CATEGORY_MAP[entityName];
-    if (category === ENTITY_CATEGORIES.COMPUTED) {
+    const nameType = NAME_TYPE_MAP[entityName];
+    if (nameType === NAME_TYPES.COMPUTED) {
       const identifierField = IDENTIFIER_FIELDS[entityName];
       if (identifierField && !cleanData[identifierField]) {
         cleanData[identifierField] = await generateIdentifier(entityName);
@@ -674,8 +675,10 @@ class GenericEntityService {
     );
 
     if (missingFields.length > 0) {
-      throw new Error(
+      throw new AppError(
         `Missing required fields for ${entityName}: ${missingFields.join(', ')}`,
+        400,
+        'BAD_REQUEST',
       );
     }
 
@@ -691,7 +694,7 @@ class GenericEntityService {
     // Check we have at least one field to insert
     const fields = Object.keys(filteredData);
     if (fields.length === 0) {
-      throw new Error(`No valid fields provided for ${entityName}`);
+      throw new AppError(`No valid fields provided for ${entityName}`, 400, 'BAD_REQUEST');
     }
 
     // Serialize JSON/JSONB fields for database insertion
@@ -771,7 +774,7 @@ class GenericEntityService {
 
     // Validate data is an object
     if (!data || typeof data !== 'object' || Array.isArray(data)) {
-      throw new Error(`Data is required and must be an object for ${entityName}`);
+      throw new AppError(`Data is required and must be an object for ${entityName}`, 400, 'BAD_REQUEST');
     }
 
     // =========================================================================
@@ -819,8 +822,10 @@ class GenericEntityService {
           const identityValue = record[protectionField];
 
           if (systemProtected.values.includes(identityValue)) {
-            throw new Error(
+            throw new AppError(
               `Cannot modify ${attemptedImmutable.join(', ')} on system ${entityName}: ${identityValue}`,
+              403,
+              'FORBIDDEN',
             );
           }
         }
@@ -839,7 +844,7 @@ class GenericEntityService {
     const { updates, values, hasUpdates } = buildUpdateClause(filteredData, immutableFields, { jsonbFields });
 
     if (!hasUpdates) {
-      throw new Error(`No valid updateable fields provided for ${entityName}`);
+      throw new AppError(`No valid updateable fields provided for ${entityName}`, 400, 'BAD_REQUEST');
     }
 
     // =========================================================================
@@ -947,8 +952,10 @@ class GenericEntityService {
         const identityValue = record[protectionField];
 
         if (systemProtected.values.includes(identityValue)) {
-          throw new Error(
+          throw new AppError(
             `Cannot delete system ${entityName}: ${identityValue}`,
+            403,
+            'FORBIDDEN',
           );
         }
       }
@@ -1066,7 +1073,7 @@ class GenericEntityService {
 
     // Validate operations array
     if (!Array.isArray(operations) || operations.length === 0) {
-      throw new Error('Operations must be a non-empty array');
+      throw new AppError('Operations must be a non-empty array', 400, 'BAD_REQUEST');
     }
 
     // Validate each operation structure before starting transaction
@@ -1075,21 +1082,23 @@ class GenericEntityService {
       const op = operations[i];
 
       if (!op || typeof op !== 'object') {
-        throw new Error(`Operation at index ${i} must be an object`);
+        throw new AppError(`Operation at index ${i} must be an object`, 400, 'BAD_REQUEST');
       }
 
       if (!validOperations.includes(op.operation)) {
-        throw new Error(
+        throw new AppError(
           `Invalid operation '${op.operation}' at index ${i}. Valid: ${validOperations.join(', ')}`,
+          400,
+          'BAD_REQUEST',
         );
       }
 
       if ((op.operation === 'update' || op.operation === 'delete') && !op.id) {
-        throw new Error(`Operation '${op.operation}' at index ${i} requires an id`);
+        throw new AppError(`Operation '${op.operation}' at index ${i} requires an id`, 400, 'BAD_REQUEST');
       }
 
       if ((op.operation === 'create' || op.operation === 'update') && !op.data) {
-        throw new Error(`Operation '${op.operation}' at index ${i} requires data`);
+        throw new AppError(`Operation '${op.operation}' at index ${i} requires data`, 400, 'BAD_REQUEST');
       }
     }
 
@@ -1120,7 +1129,7 @@ class GenericEntityService {
               );
 
               if (missingFields.length > 0) {
-                throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+                throw new AppError(`Missing required fields: ${missingFields.join(', ')}`, 400, 'BAD_REQUEST');
               }
 
               // Filter using EXCLUSION pattern - allow all fields EXCEPT system-managed ones
@@ -1134,7 +1143,7 @@ class GenericEntityService {
 
               const fields = Object.keys(filteredData);
               if (fields.length === 0) {
-                throw new Error('No valid fields provided');
+                throw new AppError('No valid fields provided', 400, 'BAD_REQUEST');
               }
 
               const columns = fields.join(', ');
@@ -1161,7 +1170,7 @@ class GenericEntityService {
               const fetchResult = await client.query(fetchQuery, [safeId]);
 
               if (fetchResult.rows.length === 0) {
-                throw new Error(`Record not found: ${safeId}`);
+                throw new AppError(`Record not found: ${safeId}`, 404, 'NOT_FOUND');
               }
 
               const oldRecord = fetchResult.rows[0];
@@ -1178,7 +1187,7 @@ class GenericEntityService {
 
               const fields = Object.keys(updateData);
               if (fields.length === 0) {
-                throw new Error('No valid fields provided');
+                throw new AppError('No valid fields provided', 400, 'BAD_REQUEST');
               }
 
               // Build UPDATE clause
@@ -1206,7 +1215,7 @@ class GenericEntityService {
               const fetchResult = await client.query(fetchQuery, [safeId]);
 
               if (fetchResult.rows.length === 0) {
-                throw new Error(`Record not found: ${safeId}`);
+                throw new AppError(`Record not found: ${safeId}`, 404, 'NOT_FOUND');
               }
 
               const oldRecord = fetchResult.rows[0];

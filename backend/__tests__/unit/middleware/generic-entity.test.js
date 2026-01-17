@@ -3,15 +3,15 @@
  *
  * Tests for the generic entity middleware stack:
  * - extractEntity
- * - genericRequirePermission
- * - genericEnforceRLS
  * - genericValidateBody
+ *
+ * NOTE: requirePermission and enforceRLS are unified middleware tested in their
+ * respective test files (auth.test.js, row-level-security.test.js).
+ * They now read resource from req.entityMetadata.rlsResource.
  */
 
 const {
   extractEntity,
-  genericRequirePermission,
-  genericEnforceRLS,
   genericValidateBody,
   normalizeEntityName,
   ENTITY_URL_MAP,
@@ -159,24 +159,8 @@ describe('extractEntity', () => {
       expect(mockNext).toHaveBeenCalled();
     });
 
-    test('should validate and attach ID when present', () => {
-      mockReq.params.entity = 'customers';
-      mockReq.params.id = '123';
-
-      extractEntity(mockReq, mockRes, mockNext);
-
-      expect(mockReq.entityId).toBe(123);
-      expect(mockNext).toHaveBeenCalled();
-    });
-
-    test('should handle string ID that is a valid number', () => {
-      mockReq.params.entity = 'customers';
-      mockReq.params.id = '  456  ';
-
-      extractEntity(mockReq, mockRes, mockNext);
-
-      expect(mockReq.entityId).toBe(456);
-    });
+    // NOTE: ID validation is now handled by validateIdParam() middleware, not extractEntity
+    // Tests for ID validation are in param-validators.test.js
   });
 
   describe('error handling', () => {
@@ -195,49 +179,8 @@ describe('extractEntity', () => {
       expect(mockNext).not.toHaveBeenCalled();
     });
 
-    test('should return 400 for invalid ID', () => {
-      mockReq.params.entity = 'customers';
-      mockReq.params.id = 'abc';
-      GenericEntityService._getMetadata = jest.fn().mockReturnValue({
-        tableName: 'customers',
-      });
-
-      extractEntity(mockReq, mockRes, mockNext);
-
-      expect(mockRes.status).toHaveBeenCalledWith(400);
-      expect(mockRes.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          error: 'Bad Request',
-        }),
-      );
-      expect(mockNext).not.toHaveBeenCalled();
-    });
-
-    test('should return 400 for negative ID', () => {
-      mockReq.params.entity = 'customers';
-      mockReq.params.id = '-5';
-      GenericEntityService._getMetadata = jest.fn().mockReturnValue({
-        tableName: 'customers',
-      });
-
-      extractEntity(mockReq, mockRes, mockNext);
-
-      expect(mockRes.status).toHaveBeenCalledWith(400);
-      expect(mockNext).not.toHaveBeenCalled();
-    });
-
-    test('should return 400 for zero ID', () => {
-      mockReq.params.entity = 'customers';
-      mockReq.params.id = '0';
-      GenericEntityService._getMetadata = jest.fn().mockReturnValue({
-        tableName: 'customers',
-      });
-
-      extractEntity(mockReq, mockRes, mockNext);
-
-      expect(mockRes.status).toHaveBeenCalledWith(400);
-      expect(mockNext).not.toHaveBeenCalled();
-    });
+    // NOTE: ID validation tests removed - now handled by validateIdParam() middleware
+    // See param-validators.test.js for ID validation tests
 
     test('should log security event for invalid entity', () => {
       mockReq.params.entity = 'hackme';
@@ -256,205 +199,10 @@ describe('extractEntity', () => {
 });
 
 // =============================================================================
-// genericRequirePermission TESTS
+// NOTE: Tests for requirePermission and enforceRLS have been moved to their
+// respective test files (auth.test.js, row-level-security.test.js).
+// These unified middleware now read resource from req.entityMetadata.rlsResource.
 // =============================================================================
-
-describe('genericRequirePermission', () => {
-  let mockReq, mockRes, mockNext;
-
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockReq = createMockReq({
-      entityName: 'customer',
-      entityMetadata: { rlsResource: 'customers' },
-      dbUser: { id: 1, role: 'admin' },
-    });
-    mockRes = createMockRes();
-    mockNext = createMockNext();
-  });
-
-  describe('permission granted', () => {
-    test('should call next when user has permission', () => {
-      hasPermission.mockReturnValue(true);
-
-      genericRequirePermission('read')(mockReq, mockRes, mockNext);
-
-      expect(hasPermission).toHaveBeenCalledWith('admin', 'customers', 'read');
-      expect(mockNext).toHaveBeenCalled();
-      expect(mockRes.status).not.toHaveBeenCalled();
-    });
-
-    test('should log permission granted event', () => {
-      hasPermission.mockReturnValue(true);
-
-      genericRequirePermission('create')(mockReq, mockRes, mockNext);
-
-      expect(logSecurityEvent).toHaveBeenCalledWith(
-        'GENERIC_PERMISSION_GRANTED',
-        expect.objectContaining({
-          userId: 1,
-          userRole: 'admin',
-          resource: 'customers',
-          operation: 'create',
-        }),
-      );
-    });
-  });
-
-  describe('permission denied', () => {
-    test('should return 403 when user lacks permission', () => {
-      hasPermission.mockReturnValue(false);
-
-      genericRequirePermission('delete')(mockReq, mockRes, mockNext);
-
-      expect(mockRes.status).toHaveBeenCalledWith(403);
-      expect(mockRes.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          error: 'Forbidden',
-          message: 'You do not have permission to delete customers',
-        }),
-      );
-      expect(mockNext).not.toHaveBeenCalled();
-    });
-
-    test('should log permission denied event', () => {
-      hasPermission.mockReturnValue(false);
-
-      genericRequirePermission('delete')(mockReq, mockRes, mockNext);
-
-      expect(logSecurityEvent).toHaveBeenCalledWith(
-        'GENERIC_PERMISSION_DENIED',
-        expect.objectContaining({
-          userRole: 'admin',
-          resource: 'customers',
-          operation: 'delete',
-          severity: 'WARN',
-        }),
-      );
-    });
-  });
-
-  describe('defense-in-depth checks', () => {
-    test('should return 500 if extractEntity not run', () => {
-      mockReq.entityName = undefined;
-      mockReq.entityMetadata = undefined;
-
-      genericRequirePermission('read')(mockReq, mockRes, mockNext);
-
-      expect(mockRes.status).toHaveBeenCalledWith(500);
-      expect(mockRes.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: 'Entity not extracted',
-        }),
-      );
-    });
-
-    test('should return 403 if user has no role', () => {
-      mockReq.dbUser = { id: 1 }; // No role
-
-      genericRequirePermission('read')(mockReq, mockRes, mockNext);
-
-      expect(mockRes.status).toHaveBeenCalledWith(403);
-      expect(mockRes.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: 'User has no assigned role',
-        }),
-      );
-    });
-
-    test('should return 500 if metadata missing rlsResource', () => {
-      mockReq.entityMetadata = { tableName: 'customers' }; // No rlsResource
-
-      genericRequirePermission('read')(mockReq, mockRes, mockNext);
-
-      expect(mockRes.status).toHaveBeenCalledWith(500);
-      expect(mockRes.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: 'Entity missing rlsResource configuration',
-        }),
-      );
-    });
-  });
-});
-
-// =============================================================================
-// genericEnforceRLS TESTS
-// =============================================================================
-
-describe('genericEnforceRLS', () => {
-  let mockReq, mockRes, mockNext;
-
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockReq = createMockReq({
-      entityName: 'customer',
-      entityMetadata: { rlsResource: 'customers' },
-      dbUser: { id: 1, role: 'customer' },
-    });
-    mockRes = createMockRes();
-    mockNext = createMockNext();
-  });
-
-  describe('RLS policy attachment', () => {
-    test('should attach RLS policy to request', () => {
-      getRLSRule.mockReturnValue('own_record_only');
-
-      genericEnforceRLS(mockReq, mockRes, mockNext);
-
-      expect(getRLSRule).toHaveBeenCalledWith('customer', 'customers');
-      expect(mockReq.rlsPolicy).toBe('own_record_only');
-      expect(mockReq.rlsResource).toBe('customers');
-      expect(mockReq.rlsUserId).toBe(1);
-      expect(mockNext).toHaveBeenCalled();
-    });
-
-    test('should attach null policy for all_records', () => {
-      getRLSRule.mockReturnValue(null);
-
-      genericEnforceRLS(mockReq, mockRes, mockNext);
-
-      expect(mockReq.rlsPolicy).toBeNull();
-      expect(mockNext).toHaveBeenCalled();
-    });
-
-    test('should log RLS applied event', () => {
-      getRLSRule.mockReturnValue('own_record_only');
-
-      genericEnforceRLS(mockReq, mockRes, mockNext);
-
-      expect(logSecurityEvent).toHaveBeenCalledWith(
-        'GENERIC_RLS_APPLIED',
-        expect.objectContaining({
-          userId: 1,
-          userRole: 'customer',
-          entityName: 'customer',
-          resource: 'customers',
-          policy: 'own_record_only',
-        }),
-      );
-    });
-  });
-
-  describe('defense-in-depth checks', () => {
-    test('should return 500 if extractEntity not run', () => {
-      mockReq.entityName = undefined;
-
-      genericEnforceRLS(mockReq, mockRes, mockNext);
-
-      expect(mockRes.status).toHaveBeenCalledWith(500);
-      expect(mockNext).not.toHaveBeenCalled();
-    });
-
-    test('should return 403 if user has no role', () => {
-      mockReq.dbUser = { id: 1 }; // No role
-
-      genericEnforceRLS(mockReq, mockRes, mockNext);
-
-      expect(mockRes.status).toHaveBeenCalledWith(403);
-      expect(mockNext).not.toHaveBeenCalled();
-    });
-  });
-});
 
 // =============================================================================
 // genericValidateBody TESTS
@@ -489,7 +237,7 @@ describe('genericValidateBody', () => {
       genericValidateBody('create')(mockReq, mockRes, mockNext);
 
       expect(mockNext).toHaveBeenCalled();
-      expect(mockReq.validatedBody).toEqual({
+      expect(mockReq.validated.body).toEqual({
         email: 'test@example.com',
       });
     });
@@ -505,11 +253,11 @@ describe('genericValidateBody', () => {
       genericValidateBody('create')(mockReq, mockRes, mockNext);
 
       expect(mockNext).toHaveBeenCalled();
-      expect(mockReq.validatedBody).toEqual({
+      expect(mockReq.validated.body).toEqual({
         email: 'test@example.com',
       });
-      expect(mockReq.validatedBody.hacker_field).toBeUndefined();
-      expect(mockReq.validatedBody.id).toBeUndefined();
+      expect(mockReq.validated.body.hacker_field).toBeUndefined();
+      expect(mockReq.validated.body.id).toBeUndefined();
     });
 
     test('should fail if required field missing', () => {
@@ -523,7 +271,8 @@ describe('genericValidateBody', () => {
       expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockRes.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          error: 'Validation Error',
+          success: false,
+          error: 'Bad Request',
           // Joi provides specific error message from validation-rules.json
           message: expect.stringContaining('Email'),
         }),
@@ -541,7 +290,8 @@ describe('genericValidateBody', () => {
       expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockRes.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          error: 'Validation Error',
+          success: false,
+          error: 'Bad Request',
           message: expect.stringContaining('email'),
         }),
       );
@@ -557,7 +307,8 @@ describe('genericValidateBody', () => {
       expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockRes.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          error: 'Validation Error',
+          success: false,
+          error: 'Bad Request',
         }),
       );
     });
@@ -582,7 +333,7 @@ describe('genericValidateBody', () => {
       genericValidateBody('update')(mockReq, mockRes, mockNext);
 
       expect(mockNext).toHaveBeenCalled();
-      expect(mockReq.validatedBody).toEqual({ company_name: 'ACME Corp' });
+      expect(mockReq.validated.body).toEqual({ company_name: 'ACME Corp' });
     });
 
     test('should pass with multiple updateable fields', () => {
@@ -594,7 +345,7 @@ describe('genericValidateBody', () => {
       genericValidateBody('update')(mockReq, mockRes, mockNext);
 
       expect(mockNext).toHaveBeenCalled();
-      expect(mockReq.validatedBody).toEqual({
+      expect(mockReq.validated.body).toEqual({
         company_name: 'ACME Corp',
         is_active: false,
       });
@@ -610,7 +361,7 @@ describe('genericValidateBody', () => {
       genericValidateBody('update')(mockReq, mockRes, mockNext);
 
       expect(mockNext).toHaveBeenCalled();
-      expect(mockReq.validatedBody).toEqual({ company_name: 'ACME Corp' });
+      expect(mockReq.validated.body).toEqual({ company_name: 'ACME Corp' });
     });
 
     test('should fail if no valid updateable fields', () => {
@@ -624,7 +375,8 @@ describe('genericValidateBody', () => {
       expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockRes.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          error: 'Validation Error',
+          success: false,
+          error: 'Bad Request',
         }),
       );
     });
@@ -686,17 +438,22 @@ describe('genericValidateBody', () => {
 // =============================================================================
 
 describe('ENTITY_URL_MAP', () => {
-  test('should have all 8 entities mapped', () => {
-    const internalNames = new Set(Object.values(ENTITY_URL_MAP));
-    expect(internalNames.size).toBe(8);
-    expect(internalNames).toContain('user');
-    expect(internalNames).toContain('role');
-    expect(internalNames).toContain('customer');
-    expect(internalNames).toContain('technician');
-    expect(internalNames).toContain('work_order');
-    expect(internalNames).toContain('invoice');
-    expect(internalNames).toContain('contract');
-    expect(internalNames).toContain('inventory');
+  test('should resolve every metadata entity via normalizeEntityName', () => {
+    // BEHAVIOR TEST: Every entity defined in metadata should be resolvable
+    // This ensures the URL map stays in sync with metadata automatically
+    const allMetadata = require('../../../config/models');
+
+    for (const entityName of Object.keys(allMetadata)) {
+      const metadata = allMetadata[entityName];
+
+      // Singular form (entity name itself) should resolve
+      expect(normalizeEntityName(entityName)).toBe(entityName);
+
+      // Plural form (table name) should resolve to entity name
+      if (metadata.tableName) {
+        expect(normalizeEntityName(metadata.tableName)).toBe(entityName);
+      }
+    }
   });
 
   test('should support both singular and plural forms', () => {

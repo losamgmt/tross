@@ -5,8 +5,12 @@
  * NO MAGIC STRINGS - all audit actions, resource types, and results
  * MUST be defined here and imported where needed.
  *
- * DESIGN DECISION: Deactivate/Reactivate are UPDATE operations, not special actions.
- * Setting is_active=false/true is logged as an UPDATE with oldValues/newValues.
+ * DESIGN DECISIONS:
+ * - Deactivate/Reactivate are UPDATE operations, not special actions.
+ *   Setting is_active=false/true is logged as an UPDATE with oldValues/newValues.
+ * - CRUD actions (create, update, delete) are derived from entity metadata.
+ * - Special actions (e.g., invoice_paid, work_order_status_change) are explicit.
+ * - EntityToResourceType and EntityActionMap are derived from metadata via derived-constants.js
  *
  * USAGE:
  *   const { AuditActions, ResourceTypes, AuditResults } = require('./audit-constants');
@@ -18,6 +22,13 @@
  *     ...
  *   });
  */
+
+const {
+  getEntityToResourceType,
+  getEntityActionMap,
+  getResourceType,
+  getAuditAction,
+} = require('../config/derived-constants');
 
 const AuditActions = {
   // ============================================================================
@@ -105,12 +116,16 @@ const AuditActions = {
  *
  * These correspond to database tables and entity names.
  * Used for polymorphic foreign key in audit_logs table.
+ *
+ * NOTE: AUTH is special (not an entity). Entity resource types
+ * are derived from metadata via getEntityToResourceType().
  */
 const ResourceTypes = {
-  // Authentication
+  // Authentication (special - not an entity)
   AUTH: 'auth',
 
-  // Core entities (all 8)
+  // Core entities - values match entity names from metadata
+  // These are for backwards compatibility and type-safety in code
   USER: 'user',
   ROLE: 'role',
   CUSTOMER: 'customer',
@@ -131,78 +146,116 @@ const AuditResults = {
 };
 
 /**
- * Map entity names (from metadata) to ResourceTypes constants
+ * Map entity names (from metadata) to ResourceTypes.
+ *
+ * DERIVED FROM METADATA via derived-constants.js.
+ * Uses metadata.rlsResource if defined, otherwise entity name.
  *
  * Used by GenericEntityService and audit-helper to convert
  * entity names to snake_case resource types.
+ *
+ * @returns {Object} Frozen map of entityName → resourceType
  */
-const EntityToResourceType = {
-  user: ResourceTypes.USER,
-  role: ResourceTypes.ROLE,
-  customer: ResourceTypes.CUSTOMER,
-  technician: ResourceTypes.TECHNICIAN,
-  work_order: ResourceTypes.WORK_ORDER,
-  invoice: ResourceTypes.INVOICE,
-  contract: ResourceTypes.CONTRACT,
-  inventory: ResourceTypes.INVENTORY,
-};
+function getEntityResourceTypeMap() {
+  return getEntityToResourceType();
+}
 
 /**
- * Map entity names + operations to AuditActions constants
+ * Map entity names + operations to audit action strings.
+ *
+ * DERIVED FROM METADATA via derived-constants.js.
+ * Returns { entityName: { create, update, delete } } map.
  *
  * Used by GenericEntityService to dynamically select audit action.
  * Only CREATE, UPDATE, DELETE - deactivation is an UPDATE with is_active=false.
  *
  * @example
- *   EntityActionMap.customer.create === AuditActions.CUSTOMER_CREATE
+ *   getEntityCrudActionMap().customer.create === 'customer_create'
+ *
+ * @returns {Object} Frozen map of entityName → { create, update, delete }
  */
-const EntityActionMap = {
-  user: {
-    create: AuditActions.USER_CREATE,
-    update: AuditActions.USER_UPDATE,
-    delete: AuditActions.USER_DELETE,
+function getEntityCrudActionMap() {
+  return getEntityActionMap();
+}
+
+// For backwards compatibility, create static objects that match old API
+// These are lazy-initialized on first access
+let _cachedEntityToResourceType = null;
+let _cachedEntityActionMap = null;
+
+/**
+ * Legacy EntityToResourceType getter (backwards compatible)
+ *
+ * @deprecated Use getEntityResourceTypeMap() for clarity
+ */
+const EntityToResourceType = new Proxy(
+  {},
+  {
+    get(_target, prop) {
+      if (!_cachedEntityToResourceType) {
+        _cachedEntityToResourceType = getEntityToResourceType();
+      }
+      return _cachedEntityToResourceType[prop];
+    },
+    ownKeys() {
+      if (!_cachedEntityToResourceType) {
+        _cachedEntityToResourceType = getEntityToResourceType();
+      }
+      return Object.keys(_cachedEntityToResourceType);
+    },
+    getOwnPropertyDescriptor(_target, prop) {
+      if (!_cachedEntityToResourceType) {
+        _cachedEntityToResourceType = getEntityToResourceType();
+      }
+      if (prop in _cachedEntityToResourceType) {
+        return { enumerable: true, configurable: true, value: _cachedEntityToResourceType[prop] };
+      }
+      return undefined;
+    },
   },
-  role: {
-    create: AuditActions.ROLE_CREATE,
-    update: AuditActions.ROLE_UPDATE,
-    delete: AuditActions.ROLE_DELETE,
+);
+
+/**
+ * Legacy EntityActionMap getter (backwards compatible)
+ *
+ * @deprecated Use getEntityCrudActionMap() for clarity
+ */
+const EntityActionMap = new Proxy(
+  {},
+  {
+    get(_target, prop) {
+      if (!_cachedEntityActionMap) {
+        _cachedEntityActionMap = getEntityActionMap();
+      }
+      return _cachedEntityActionMap[prop];
+    },
+    ownKeys() {
+      if (!_cachedEntityActionMap) {
+        _cachedEntityActionMap = getEntityActionMap();
+      }
+      return Object.keys(_cachedEntityActionMap);
+    },
+    getOwnPropertyDescriptor(_target, prop) {
+      if (!_cachedEntityActionMap) {
+        _cachedEntityActionMap = getEntityActionMap();
+      }
+      if (prop in _cachedEntityActionMap) {
+        return { enumerable: true, configurable: true, value: _cachedEntityActionMap[prop] };
+      }
+      return undefined;
+    },
   },
-  customer: {
-    create: AuditActions.CUSTOMER_CREATE,
-    update: AuditActions.CUSTOMER_UPDATE,
-    delete: AuditActions.CUSTOMER_DELETE,
-  },
-  technician: {
-    create: AuditActions.TECHNICIAN_CREATE,
-    update: AuditActions.TECHNICIAN_UPDATE,
-    delete: AuditActions.TECHNICIAN_DELETE,
-  },
-  work_order: {
-    create: AuditActions.WORK_ORDER_CREATE,
-    update: AuditActions.WORK_ORDER_UPDATE,
-    delete: AuditActions.WORK_ORDER_DELETE,
-  },
-  invoice: {
-    create: AuditActions.INVOICE_CREATE,
-    update: AuditActions.INVOICE_UPDATE,
-    delete: AuditActions.INVOICE_DELETE,
-  },
-  contract: {
-    create: AuditActions.CONTRACT_CREATE,
-    update: AuditActions.CONTRACT_UPDATE,
-    delete: AuditActions.CONTRACT_DELETE,
-  },
-  inventory: {
-    create: AuditActions.INVENTORY_CREATE,
-    update: AuditActions.INVENTORY_UPDATE,
-    delete: AuditActions.INVENTORY_DELETE,
-  },
-};
+);
 
 module.exports = {
   AuditActions,
   ResourceTypes,
   AuditResults,
-  EntityToResourceType,
-  EntityActionMap,
+  EntityToResourceType, // Backwards compatible proxy
+  EntityActionMap, // Backwards compatible proxy
+  // New explicit functions
+  getEntityResourceTypeMap,
+  getEntityCrudActionMap,
+  getResourceType,
+  getAuditAction,
 };

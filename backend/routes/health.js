@@ -30,6 +30,8 @@ const { HEALTH } = require('../config/constants');
 const { TIMEOUTS } = require('../config/timeouts');
 const auth0Config = require('../config/auth0');
 const ResponseFormatter = require('../utils/response-formatter');
+const { asyncHandler } = require('../middleware/utils');
+const { ServiceUnavailableError: _ServiceUnavailableError } = require('../utils/errors');
 
 // ============================================================================
 // CACHE LAYER (SRP: Simple in-memory cache for health responses)
@@ -232,54 +234,47 @@ function determineOverallStatus(...statuses) {
  *       503:
  *         description: Service is unhealthy
  */
-router.get('/', async (req, res) => {
-  try {
-    // Check cache first
-    if (healthCache.liveness && isCacheValid(healthCache.livenessTimestamp)) {
-      return res.json(healthCache.liveness);
-    }
-
-    // Perform health checks
-    const database = await checkDatabase();
-    const memory = getMemoryMetrics();
-    const overallStatus = determineOverallStatus(database.status, memory.status);
-
-    const response = {
-      status: overallStatus,
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      cached: false,
-      database: {
-        connected: database.connected,
-        responseTime: database.responseTime,
-        status: database.status,
-      },
-      memory: {
-        rss: memory.rss,
-        heapUsed: memory.heapUsed,
-        heapTotal: memory.heapTotal,
-        status: memory.status,
-      },
-      nodeVersion: process.version,
-    };
-
-    // Cache the response
-    healthCache.liveness = { ...response, cached: true };
-    healthCache.livenessTimestamp = Date.now();
-
-    // Return 503 if critical
-    if (overallStatus === HEALTH.STATUS.CRITICAL) {
-      return ResponseFormatter.serviceUnavailable(res, 'Service health critical', response);
-    }
-
-    res.json(response);
-  } catch (error) {
-    logger.error('Health check failed:', error);
-    return ResponseFormatter.serviceUnavailable(res, error.message, {
-      status: HEALTH.STATUS.UNHEALTHY,
-    });
+router.get('/', asyncHandler(async (req, res) => {
+  // Check cache first
+  if (healthCache.liveness && isCacheValid(healthCache.livenessTimestamp)) {
+    return ResponseFormatter.get(res, healthCache.liveness);
   }
-});
+
+  // Perform health checks
+  const database = await checkDatabase();
+  const memory = getMemoryMetrics();
+  const overallStatus = determineOverallStatus(database.status, memory.status);
+
+  const response = {
+    status: overallStatus,
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    cached: false,
+    database: {
+      connected: database.connected,
+      responseTime: database.responseTime,
+      status: database.status,
+    },
+    memory: {
+      rss: memory.rss,
+      heapUsed: memory.heapUsed,
+      heapTotal: memory.heapTotal,
+      status: memory.status,
+    },
+    nodeVersion: process.version,
+  };
+
+  // Cache the response
+  healthCache.liveness = { ...response, cached: true };
+  healthCache.livenessTimestamp = Date.now();
+
+  // Return 503 if critical (business logic, not error)
+  if (overallStatus === HEALTH.STATUS.CRITICAL) {
+    return ResponseFormatter.serviceUnavailable(res, 'Service health critical', response);
+  }
+
+  return ResponseFormatter.get(res, response);
+}));
 
 /**
  * @openapi
@@ -300,49 +295,42 @@ router.get('/', async (req, res) => {
  *       503:
  *         description: Service is not ready
  */
-router.get('/ready', async (req, res) => {
-  try {
-    // Run checks in parallel (uncached - always live)
-    const [database, auth0] = await Promise.all([
-      checkDatabase(),
-      checkAuth0(),
-    ]);
+router.get('/ready', asyncHandler(async (req, res) => {
+  // Run checks in parallel (uncached - always live)
+  const [database, auth0] = await Promise.all([
+    checkDatabase(),
+    checkAuth0(),
+  ]);
 
-    const overallStatus = determineOverallStatus(database.status, auth0.status);
-    const ready = database.connected && (auth0.status !== HEALTH.STATUS.CRITICAL || !auth0.configured);
+  const overallStatus = determineOverallStatus(database.status, auth0.status);
+  const ready = database.connected && (auth0.status !== HEALTH.STATUS.CRITICAL || !auth0.configured);
 
-    const response = {
-      ready,
-      status: overallStatus,
-      timestamp: new Date().toISOString(),
-      checks: {
-        database: {
-          connected: database.connected,
-          status: database.status,
-          responseTime: database.responseTime,
-        },
-        auth0: {
-          configured: auth0.configured,
-          reachable: auth0.reachable,
-          status: auth0.status,
-          responseTime: auth0.responseTime,
-        },
+  const response = {
+    ready,
+    status: overallStatus,
+    timestamp: new Date().toISOString(),
+    checks: {
+      database: {
+        connected: database.connected,
+        status: database.status,
+        responseTime: database.responseTime,
       },
-    };
+      auth0: {
+        configured: auth0.configured,
+        reachable: auth0.reachable,
+        status: auth0.status,
+        responseTime: auth0.responseTime,
+      },
+    },
+  };
 
-    if (!ready) {
-      return ResponseFormatter.serviceUnavailable(res, 'Service not ready', response);
-    }
-
-    res.json(response);
-  } catch (error) {
-    logger.error('Readiness check failed:', error);
-    return ResponseFormatter.serviceUnavailable(res, error.message, {
-      ready: false,
-      status: HEALTH.STATUS.UNHEALTHY,
-    });
+  // Return 503 if not ready (business logic, not error)
+  if (!ready) {
+    return ResponseFormatter.serviceUnavailable(res, 'Service not ready', response);
   }
-});
+
+  return ResponseFormatter.get(res, response);
+}));
 
 /**
  * @openapi
@@ -365,33 +353,28 @@ router.get('/ready', async (req, res) => {
  *       403:
  *         description: Admin access required
  */
-router.get('/databases', authenticateToken, requireMinimumRole('admin'), async (req, res) => {
-  try {
-    const database = await checkDatabase();
+router.get('/databases', authenticateToken, requireMinimumRole('admin'), asyncHandler(async (req, res) => {
+  const database = await checkDatabase();
 
-    const databases = [{
-      name: 'PostgreSQL (Main)',
-      status: database.status,
-      responseTime: database.responseTime,
-      connectionCount: database.connectionCount,
-      maxConnections: database.maxConnections,
-      poolUsage: `${Math.round((database.connectionCount / database.maxConnections) * 100)}%`,
-      lastChecked: new Date().toISOString(),
-      message: database.message,
-      thresholds: {
-        degradedMs: HEALTH.THRESHOLDS.DB_DEGRADED_MS,
-        criticalMs: HEALTH.THRESHOLDS.DB_CRITICAL_MS,
-        degradedPoolPercent: `${Math.round(HEALTH.THRESHOLDS.POOL_DEGRADED_PERCENT * 100)}%`,
-        criticalPoolPercent: `${Math.round(HEALTH.THRESHOLDS.POOL_CRITICAL_PERCENT * 100)}%`,
-      },
-    }];
+  const databases = [{
+    name: 'PostgreSQL (Main)',
+    status: database.status,
+    responseTime: database.responseTime,
+    connectionCount: database.connectionCount,
+    maxConnections: database.maxConnections,
+    poolUsage: `${Math.round((database.connectionCount / database.maxConnections) * 100)}%`,
+    lastChecked: new Date().toISOString(),
+    message: database.message,
+    thresholds: {
+      degradedMs: HEALTH.THRESHOLDS.DB_DEGRADED_MS,
+      criticalMs: HEALTH.THRESHOLDS.DB_CRITICAL_MS,
+      degradedPoolPercent: `${Math.round(HEALTH.THRESHOLDS.POOL_DEGRADED_PERCENT * 100)}%`,
+      criticalPoolPercent: `${Math.round(HEALTH.THRESHOLDS.POOL_CRITICAL_PERCENT * 100)}%`,
+    },
+  }];
 
-    ResponseFormatter.get(res, { databases });
-  } catch (error) {
-    logger.error('Database health check failed:', error);
-    ResponseFormatter.internalError(res, error);
-  }
-});
+  ResponseFormatter.get(res, { databases });
+}));
 
 // Export router and helper functions
 module.exports = router;

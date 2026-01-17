@@ -7,8 +7,6 @@
  * All validators attach validated values to req.validated.query = {}
  */
 const {
-  toSafeInteger,
-  toSafeBoolean,
   toSafePagination,
 } = require('./type-coercion');
 const { logValidationFailure } = require('./validation-logger');
@@ -178,77 +176,7 @@ function validateSort(
   };
 }
 
-/**
- * Validate filter query parameters
- *
- * Usage:
- *   const filters = {
- *     status: { type: 'string', allowed: ['active', 'inactive'] },
- *     is_admin: { type: 'boolean' },
- *     age: { type: 'integer', min: 0, max: 150 }
- *   };
- *   router.get('/', validateFilters(filters), handler)
- *   // Access: req.validated.query.filters.status, req.validated.query.filters.is_admin
- *
- * @param {Object} filterSchema - Schema defining allowed filters
- * @returns {Function} Express middleware
- */
-function validateFilters(filterSchema) {
-  return (req, res, next) => {
-    try {
-      const filters = {};
-
-      for (const [key, config] of Object.entries(filterSchema)) {
-        const value = req.query[key];
-
-        // Skip if not provided (filters are optional)
-        if (value === undefined) {continue;}
-
-        // Validate based on type
-        if (config.type === 'integer') {
-          filters[key] = toSafeInteger(value, key, {
-            min: config.min,
-            max: config.max,
-            allowNull: false,
-          });
-        } else if (config.type === 'boolean') {
-          filters[key] = toSafeBoolean(value, key);
-        } else if (config.type === 'string') {
-          if (typeof value !== 'string') {
-            throw new Error(`${key} must be a string`);
-          }
-
-          // Check allowed values
-          if (config.allowed && !config.allowed.includes(value)) {
-            throw new Error(
-              `${key} must be one of: ${config.allowed.join(', ')}`,
-            );
-          }
-
-          filters[key] = value.trim();
-        }
-      }
-
-      if (!req.validated) {req.validated = {};}
-      if (!req.validated.query) {req.validated.query = {};}
-      req.validated.query.filters = filters;
-
-      next();
-    } catch (error) {
-      logValidationFailure({
-        validator: 'validateFilters',
-        field: 'filters',
-        value: req.query,
-        reason: error.message,
-        context: { url: req.url, method: req.method },
-      });
-
-      return ResponseFormatter.badRequest(res, error.message, [
-        { field: 'filters', message: error.message },
-      ]);
-    }
-  };
-}
+// NOTE: validateFilters has been removed - replaced by validateQuery (metadata-driven)
 
 /**
  * Validate query parameters using model metadata
@@ -377,6 +305,5 @@ module.exports = {
   validatePagination,
   validateSearch,
   validateSort,
-  validateFilters,
-  validateQuery, // NEW: Metadata-driven query validation
+  validateQuery, // Metadata-driven query validation (replaced validateFilters)
 };

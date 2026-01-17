@@ -8,36 +8,17 @@
  * Production mode ONLY accepts Auth0 tokens.
  */
 const jwt = require('jsonwebtoken');
-const { UserDataService: userDataService } = require('../services/user-data');
-const { HTTP_STATUS } = require('../config/constants');
+const UserDataService = require('../services/user-data');
 const { hasPermission, hasMinimumRole } = require('../config/permissions-loader');
 const { logSecurityEvent } = require('../config/logger');
 const { getClientIp, getUserAgent } = require('../utils/request-helpers');
 const AppConfig = require('../config/app-config');
 const { TEST_USERS } = require('../config/test-users');
+const ResponseFormatter = require('../utils/response-formatter');
+const { ERROR_CODES } = require('../utils/response-formatter');
+const AppError = require('../utils/app-error');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key';
-
-// ============================================================================
-// CENTRALIZED AUTH ERROR HELPER (follows same pattern as routes)
-// ============================================================================
-
-/**
- * Send standardized auth error response
- * Uses same JSON structure as route error handling for consistency
- *
- * @param {Object} res - Express response object
- * @param {number} statusCode - HTTP status code (401 or 403)
- * @param {string} message - User-facing error message
- * @returns {Object} Express response (for chaining)
- */
-const sendAuthError = (res, statusCode, message) => {
-  return res.status(statusCode).json({
-    error: statusCode === HTTP_STATUS.UNAUTHORIZED ? 'Unauthorized' : 'Forbidden',
-    message,
-    timestamp: new Date().toISOString(),
-  });
-};
 
 const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -51,7 +32,7 @@ const authenticateToken = async (req, res, next) => {
       userAgent: getUserAgent(req),
       url: req.url,
     });
-    return sendAuthError(res, HTTP_STATUS.UNAUTHORIZED, 'Access token required');
+    return ResponseFormatter.unauthorized(res, 'Access token required', ERROR_CODES.AUTH_REQUIRED);
   }
 
   try {
@@ -59,7 +40,7 @@ const authenticateToken = async (req, res, next) => {
 
     // Validate required standard claims (RFC 7519)
     if (!decoded.sub) {
-      throw new Error('Missing required "sub" claim');
+      throw new AppError('Missing required "sub" claim', 401, 'UNAUTHORIZED');
     }
 
     // Accept both development and auth0 providers
@@ -67,7 +48,7 @@ const authenticateToken = async (req, res, next) => {
       !decoded.provider ||
       !['development', 'auth0'].includes(decoded.provider)
     ) {
-      throw new Error('Invalid token provider');
+      throw new AppError('Invalid token provider', 401, 'UNAUTHORIZED');
     }
 
     // SECURITY CHECK: Reject development tokens in production
@@ -80,9 +61,11 @@ const authenticateToken = async (req, res, next) => {
         environment: AppConfig.environment,
         severity: 'CRITICAL',
       });
-      throw new Error(
+      throw new AppError(
         'Development authentication is not permitted in production mode. ' +
           'Only Auth0 authentication is allowed.',
+        403,
+        'FORBIDDEN',
       );
     }
 
@@ -110,7 +93,7 @@ const authenticateToken = async (req, res, next) => {
       );
 
       if (!testUser) {
-        throw new Error('Development user not found in TEST_USERS');
+        throw new AppError('Development user not found in TEST_USERS', 401, 'UNAUTHORIZED');
       }
 
       // Use the complete test user data (already matches DB schema)
@@ -134,7 +117,7 @@ const authenticateToken = async (req, res, next) => {
           userId: req.dbUser.id,
           email: req.dbUser.email,
         });
-        return sendAuthError(res, HTTP_STATUS.FORBIDDEN, 'Account has been deactivated');
+        return ResponseFormatter.forbidden(res, 'Account has been deactivated', ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS);
       }
 
       // ========================================================================
@@ -158,10 +141,10 @@ const authenticateToken = async (req, res, next) => {
           email: req.dbUser.email,
           role: req.dbUser.role,
         });
-        return sendAuthError(
+        return ResponseFormatter.forbidden(
           res,
-          HTTP_STATUS.FORBIDDEN,
           'Development users are read-only. Authenticate with Auth0 to modify data.',
+          ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS,
         );
       }
 
@@ -169,7 +152,7 @@ const authenticateToken = async (req, res, next) => {
     } else {
       // Auth0 provider: find or create user in database
       // SECURITY: decoded.role comes from JWT (signed by Auth0 Action - tamper-proof)
-      const dbUser = await userDataService.findOrCreateUser(decoded);
+      const dbUser = await UserDataService.findOrCreateUser(decoded);
 
       // Normalize role field: prefer JWT role (signed), then DB role from JOIN
       // JOIN now returns: role (identity field), role_priority, role_description
@@ -198,7 +181,7 @@ const authenticateToken = async (req, res, next) => {
           userId: req.dbUser.id,
           email: req.dbUser.email,
         });
-        return sendAuthError(res, HTTP_STATUS.FORBIDDEN, 'Account has been deactivated');
+        return ResponseFormatter.forbidden(res, 'Account has been deactivated', ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS);
       }
 
       next();
@@ -210,7 +193,7 @@ const authenticateToken = async (req, res, next) => {
     if (isExpiredToken) {
       // Token expiration is normal auth flow - user needs to refresh/re-login
       // Don't log as security event to reduce noise
-      return sendAuthError(res, HTTP_STATUS.FORBIDDEN, 'Token expired');
+      return ResponseFormatter.forbidden(res, 'Token expired', ERROR_CODES.AUTH_TOKEN_EXPIRED);
     }
 
     // Actual invalid tokens ARE a security concern
@@ -220,7 +203,7 @@ const authenticateToken = async (req, res, next) => {
       url: req.url,
       error: error.message,
     });
-    return sendAuthError(res, HTTP_STATUS.FORBIDDEN, 'Invalid or expired token');
+    return ResponseFormatter.forbidden(res, 'Invalid or expired token', ERROR_CODES.AUTH_INVALID_TOKEN);
   }
 };
 
@@ -230,15 +213,32 @@ const authenticateToken = async (req, res, next) => {
  *
  * Uses role hierarchy - higher roles inherit lower role permissions
  *
- * @param {string} resource - Resource name (e.g., 'users', 'roles')
+ * UNIFIED PATTERN: Resource is ALWAYS read from req.entityMetadata.rlsResource
+ * Routes must attach entity metadata via middleware BEFORE this runs.
+ *
  * @param {string} operation - Operation (create, read, update, delete)
  * @returns {Function} Express middleware function
  *
  * @example
- * router.post('/users', requirePermission('users', 'create'), createUser);
- * router.get('/users', requirePermission('users', 'read'), getUsers);
+ * router.post('/users', attachEntity, requirePermission('create'), createUser);
+ * router.get('/users', attachEntity, requirePermission('read'), getUsers);
  */
-const requirePermission = (resource, operation) => (req, res, next) => {
+const requirePermission = (operation) => (req, res, next) => {
+  // Resource comes from entity metadata - ONE source, no fallbacks
+  const resource = req.entityMetadata?.rlsResource;
+
+  if (!resource) {
+    // This is a configuration error - route is missing entity attachment middleware
+    logSecurityEvent('AUTH_NO_ENTITY_METADATA', {
+      ip: getClientIp(req),
+      userAgent: getUserAgent(req),
+      url: req.url,
+      operation,
+      severity: 'ERROR',
+    });
+    return ResponseFormatter.internalError(res, new Error('Route misconfiguration: entity metadata not attached'));
+  }
+
   const userRole = req.dbUser?.role;
 
   if (!userRole) {
@@ -250,7 +250,7 @@ const requirePermission = (resource, operation) => (req, res, next) => {
       resource,
       operation,
     });
-    return sendAuthError(res, HTTP_STATUS.FORBIDDEN, 'User has no assigned role');
+    return ResponseFormatter.forbidden(res, 'User has no assigned role', ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS);
   }
 
   if (!hasPermission(userRole, resource, operation)) {
@@ -263,7 +263,7 @@ const requirePermission = (resource, operation) => (req, res, next) => {
       resource,
       operation,
     });
-    return sendAuthError(res, HTTP_STATUS.FORBIDDEN, `Insufficient permissions to ${operation} ${resource}`);
+    return ResponseFormatter.forbidden(res, `Insufficient permissions to ${operation} ${resource}`, ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS);
   }
 
   next();
@@ -293,7 +293,7 @@ const requireMinimumRole = (minimumRole) => (req, res, next) => {
       userId: req.dbUser?.id,
       minimumRole,
     });
-    return sendAuthError(res, HTTP_STATUS.FORBIDDEN, 'User has no assigned role');
+    return ResponseFormatter.forbidden(res, 'User has no assigned role', ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS);
   }
 
   if (!hasMinimumRole(userRole, minimumRole)) {
@@ -305,7 +305,7 @@ const requireMinimumRole = (minimumRole) => (req, res, next) => {
       userRole,
       minimumRole,
     });
-    return sendAuthError(res, HTTP_STATUS.FORBIDDEN, `Minimum role required: ${minimumRole}`);
+    return ResponseFormatter.forbidden(res, `Minimum role required: ${minimumRole}`, ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS);
   }
 
   next();

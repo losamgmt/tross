@@ -22,13 +22,13 @@ const MOCK_USERS = {
     updated_at: new Date("2025-01-01T00:00:00Z"),
   },
 
-  client: {
+  customer: {
     id: 2,
-    email: "client@example.com",
-    auth0_id: "auth0|client123",
+    email: "customer@example.com",
+    auth0_id: "auth0|customer123",
     first_name: "John",
     last_name: "Doe",
-    role_id: 2,
+    role_id: 5, // customer role_id
     is_active: true,
     created_at: new Date("2025-01-02T00:00:00Z"),
     updated_at: new Date("2025-01-02T00:00:00Z"),
@@ -81,10 +81,10 @@ const MOCK_USERS_WITH_ROLES = {
     role_description: "System administrator with full access",
   },
 
-  client: {
-    ...MOCK_USERS.client,
-    role_name: "client",
-    role_description: "Client user with limited access",
+  customer: {
+    ...MOCK_USERS.customer,
+    role_name: "customer",
+    role_description: "Customer user with limited access",
   },
 
   technician: {

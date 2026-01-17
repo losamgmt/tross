@@ -8,46 +8,55 @@
  *
  * Uses raw pg pool (NOT Knex) - consistent with TrossApp patterns.
  *
+ * Configuration is derived from entity metadata (single source of truth).
+ *
  * @module utils/identifier-generator
  */
 
 'use strict';
 
 const db = require('../db/connection');
+const { sanitizeIdentifier } = require('./sql-safety');
+const AppError = require('./app-error');
+const {
+  getEntityPrefixes,
+  getIdentifierFields,
+  getTableNames,
+  getEntityPrefix,
+  getIdentifierField,
+  getTableName,
+} = require('../config/derived-constants');
 
 // ============================================================================
-// CONFIGURATION
+// CONFIGURATION (Derived from metadata - see config/derived-constants.js)
 // ============================================================================
 
-/**
- * Entity prefix configuration
- * Maps entity type to its identifier prefix
- */
-const ENTITY_PREFIXES = Object.freeze({
-  work_order: 'WO',
-  invoice: 'INV',
-  contract: 'CTR',
-});
+// For backwards compatibility, expose getters that return the derived maps
+// These are lazy-loaded from metadata on first access
 
 /**
- * Entity identifier field names
- * Maps entity type to its identifier column name
+ * Get entity prefix configuration
+ * @returns {Object} Map of entity type → identifier prefix
  */
-const IDENTIFIER_FIELDS = Object.freeze({
-  work_order: 'work_order_number',
-  invoice: 'invoice_number',
-  contract: 'contract_number',
-});
+function getEntityPrefixConfig() {
+  return getEntityPrefixes();
+}
 
 /**
- * Entity table names
- * Maps entity type to its database table
+ * Get identifier field configuration
+ * @returns {Object} Map of entity type → identifier column name
  */
-const TABLE_NAMES = Object.freeze({
-  work_order: 'work_orders',
-  invoice: 'invoices',
-  contract: 'contracts',
-});
+function getIdentifierFieldConfig() {
+  return getIdentifierFields();
+}
+
+/**
+ * Get table name configuration
+ * @returns {Object} Map of entity type → database table
+ */
+function getTableNameConfig() {
+  return getTableNames();
+}
 
 /**
  * Identifier format regex pattern
@@ -87,22 +96,26 @@ function formatIdentifier(prefix, year, sequence) {
  * await generateIdentifier('invoice') // 'INV-2025-0001'
  */
 async function generateIdentifier(entityType) {
-  const prefix = ENTITY_PREFIXES[entityType];
-  const identifierField = IDENTIFIER_FIELDS[entityType];
-  const tableName = TABLE_NAMES[entityType];
+  const prefix = getEntityPrefix(entityType);
+  const identifierField = getIdentifierField(entityType);
+  const tableName = getTableName(entityType);
 
   if (!prefix || !tableName || !identifierField) {
-    throw new Error(`Unknown entity type: ${entityType}`);
+    throw new AppError(`Unknown entity type: ${entityType}`, 400, 'BAD_REQUEST');
   }
 
   const year = new Date().getFullYear();
   const yearPrefix = `${prefix}-${year}-`;
 
+  // SECURITY: Defense-in-depth validation even for config-sourced values
+  const safeTable = sanitizeIdentifier(tableName, 'table name');
+  const safeField = sanitizeIdentifier(identifierField, 'identifier field');
+
   // Find the highest sequence number for this year using raw pg
   const result = await db.query(
-    `SELECT ${identifierField} FROM ${tableName} 
-     WHERE ${identifierField} LIKE $1 
-     ORDER BY ${identifierField} DESC 
+    `SELECT ${safeField} FROM ${safeTable} 
+     WHERE ${safeField} LIKE $1 
+     ORDER BY ${safeField} DESC 
      LIMIT 1`,
     [`${yearPrefix}%`],
   );
@@ -137,10 +150,10 @@ async function generateIdentifier(entityType) {
  * generateIdentifierSync('invoice', 42, 2024) // 'INV-2024-0042'
  */
 function generateIdentifierSync(entityType, sequence = 1, year = new Date().getFullYear()) {
-  const prefix = ENTITY_PREFIXES[entityType];
+  const prefix = getEntityPrefix(entityType);
 
   if (!prefix) {
-    throw new Error(`Unknown entity type: ${entityType}`);
+    throw new AppError(`Unknown entity type: ${entityType}`, 400, 'BAD_REQUEST');
   }
 
   return formatIdentifier(prefix, year, sequence);
@@ -175,7 +188,7 @@ function parseIdentifier(identifier) {
   const sequence = parseInt(sequenceStr, 10);
 
   // Find entity type from prefix
-  const entityType = Object.entries(ENTITY_PREFIXES)
+  const entityType = Object.entries(getEntityPrefixes())
     .find(([, p]) => p === prefix)?.[0] || null;
 
   return { prefix, year, sequence, entityType };
@@ -199,42 +212,24 @@ function isValidIdentifier(identifier, entityType) {
     return false;
   }
 
-  const expectedPrefix = ENTITY_PREFIXES[entityType];
+  const expectedPrefix = getEntityPrefix(entityType);
   return parsed.prefix === expectedPrefix;
 }
 
 // ============================================================================
-// HELPER FUNCTIONS
+// HELPER FUNCTIONS (delegating to derived-constants)
 // ============================================================================
 
-/**
- * Get table name for entity type
- *
- * @param {string} entityType - Entity type
- * @returns {string|undefined} Table name or undefined if not found
- */
-function getTableName(entityType) {
-  return TABLE_NAMES[entityType];
-}
+// Note: getTableName, getIdentifierField, getEntityPrefix are imported from derived-constants
 
 /**
- * Get identifier field name for entity type
- *
- * @param {string} entityType - Entity type
- * @returns {string|undefined} Identifier field name or undefined if not found
- */
-function getIdentifierField(entityType) {
-  return IDENTIFIER_FIELDS[entityType];
-}
-
-/**
- * Get prefix for entity type
+ * Get prefix for entity type (alias for getEntityPrefix)
  *
  * @param {string} entityType - Entity type
  * @returns {string|undefined} Prefix or undefined if not found
  */
 function getPrefix(entityType) {
-  return ENTITY_PREFIXES[entityType];
+  return getEntityPrefix(entityType);
 }
 
 /**
@@ -244,7 +239,7 @@ function getPrefix(entityType) {
  * @returns {boolean} True if COMPUTED entity
  */
 function isComputedEntity(entityType) {
-  return entityType in ENTITY_PREFIXES;
+  return getEntityPrefix(entityType) !== null;
 }
 
 // ============================================================================
@@ -252,10 +247,21 @@ function isComputedEntity(entityType) {
 // ============================================================================
 
 module.exports = {
-  // Configuration (frozen objects)
-  ENTITY_PREFIXES,
-  IDENTIFIER_FIELDS,
-  TABLE_NAMES,
+  // Configuration getters (derived from metadata)
+  getEntityPrefixConfig,
+  getIdentifierFieldConfig,
+  getTableNameConfig,
+
+  // For backwards compatibility, expose as getters
+  get ENTITY_PREFIXES() {
+    return getEntityPrefixes();
+  },
+  get IDENTIFIER_FIELDS() {
+    return getIdentifierFields();
+  },
+  get TABLE_NAMES() {
+    return getTableNames();
+  },
 
   // Generation functions
   generateIdentifier,

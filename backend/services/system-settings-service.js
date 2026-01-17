@@ -12,10 +12,12 @@
  * - No entity metadata (simple table, not a business entity)
  * - Admin-only write access enforced at route level
  * - Maintenance mode has special helper for middleware use
+ * - Static class (no instance state)
  */
 
 const { query: db } = require('../db/connection');
 const { logger, logSecurityEvent } = require('../config/logger');
+const AppError = require('../utils/app-error');
 
 /**
  * Known setting keys with their default values
@@ -42,9 +44,9 @@ class SystemSettingsService {
    * @param {string} key - The setting key
    * @returns {Promise<Object|null>} The setting value (JSONB) or default
    */
-  async getSetting(key) {
+  static async getSetting(key) {
     if (!key || typeof key !== 'string') {
-      throw new Error('Setting key is required');
+      throw new AppError('Setting key is required', 400, 'BAD_REQUEST');
     }
 
     const result = await db(
@@ -78,7 +80,7 @@ class SystemSettingsService {
    *
    * @returns {Promise<Array>} All settings
    */
-  async getAllSettings() {
+  static async getAllSettings() {
     const result = await db(
       `SELECT key, value, description, updated_at, updated_by
        FROM system_settings
@@ -96,13 +98,13 @@ class SystemSettingsService {
    * @param {number} userId - The user making the update
    * @returns {Promise<Object>} The updated setting
    */
-  async updateSetting(key, value, userId) {
+  static async updateSetting(key, value, userId) {
     if (!key || typeof key !== 'string') {
-      throw new Error('Setting key is required');
+      throw new AppError('Setting key is required', 400, 'BAD_REQUEST');
     }
 
     if (value === undefined) {
-      throw new Error('Setting value is required');
+      throw new AppError('Setting value is required', 400, 'BAD_REQUEST');
     }
 
     const result = await db(
@@ -134,8 +136,8 @@ class SystemSettingsService {
    *
    * @returns {Promise<Object>} Maintenance mode state
    */
-  async getMaintenanceMode() {
-    const setting = await this.getSetting('maintenance_mode');
+  static async getMaintenanceMode() {
+    const setting = await SystemSettingsService.getSetting('maintenance_mode');
     return setting?.value || DEFAULT_SETTINGS.maintenance_mode;
   }
 
@@ -149,8 +151,8 @@ class SystemSettingsService {
    * @param {number} userId - Admin user enabling maintenance
    * @returns {Promise<Object>} Updated setting
    */
-  async enableMaintenanceMode(options, userId) {
-    const currentMode = await this.getMaintenanceMode();
+  static async enableMaintenanceMode(options, userId) {
+    const currentMode = await SystemSettingsService.getMaintenanceMode();
 
     const newValue = {
       ...currentMode,
@@ -165,7 +167,7 @@ class SystemSettingsService {
       estimatedEnd: newValue.estimated_end,
     });
 
-    return this.updateSetting('maintenance_mode', newValue, userId);
+    return SystemSettingsService.updateSetting('maintenance_mode', newValue, userId);
   }
 
   /**
@@ -174,8 +176,8 @@ class SystemSettingsService {
    * @param {number} userId - Admin user disabling maintenance
    * @returns {Promise<Object>} Updated setting
    */
-  async disableMaintenanceMode(userId) {
-    const currentMode = await this.getMaintenanceMode();
+  static async disableMaintenanceMode(userId) {
+    const currentMode = await SystemSettingsService.getMaintenanceMode();
 
     const newValue = {
       ...currentMode,
@@ -185,7 +187,7 @@ class SystemSettingsService {
 
     logSecurityEvent('MAINTENANCE_MODE_DISABLED', { userId });
 
-    return this.updateSetting('maintenance_mode', newValue, userId);
+    return SystemSettingsService.updateSetting('maintenance_mode', newValue, userId);
   }
 
   /**
@@ -194,8 +196,8 @@ class SystemSettingsService {
    * @param {string} role - Role to check
    * @returns {Promise<boolean>} True if role can access during maintenance
    */
-  async isRoleAllowedDuringMaintenance(role) {
-    const mode = await this.getMaintenanceMode();
+  static async isRoleAllowedDuringMaintenance(role) {
+    const mode = await SystemSettingsService.getMaintenanceMode();
 
     if (!mode.enabled) {
       return true; // Maintenance not active
@@ -213,8 +215,8 @@ class SystemSettingsService {
    *
    * @returns {Promise<Object>} Feature flags object
    */
-  async getFeatureFlags() {
-    const setting = await this.getSetting('feature_flags');
+  static async getFeatureFlags() {
+    const setting = await SystemSettingsService.getSetting('feature_flags');
     return setting?.value || DEFAULT_SETTINGS.feature_flags;
   }
 
@@ -224,10 +226,10 @@ class SystemSettingsService {
    * @param {string} featureName - Feature to check
    * @returns {Promise<boolean>} True if feature is enabled
    */
-  async isFeatureEnabled(featureName) {
-    const flags = await this.getFeatureFlags();
+  static async isFeatureEnabled(featureName) {
+    const flags = await SystemSettingsService.getFeatureFlags();
     return flags[featureName] === true;
   }
 }
 
-module.exports = new SystemSettingsService();
+module.exports = SystemSettingsService;

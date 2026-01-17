@@ -161,9 +161,9 @@ describe('Health Routes', () => {
 
         // Assert
         expect(response.status).toBe(200);
-        expect(response.body).toMatchObject({
+        expect(response.body.success).toBe(true);
+        expect(response.body.data).toMatchObject({
           status: 'healthy',
-          timestamp: expect.any(String),
           uptime: expect.any(Number),
         });
         expect(db.query).toHaveBeenCalledWith('SELECT 1');
@@ -192,11 +192,9 @@ describe('Health Routes', () => {
         expect(response.body).toMatchObject({
           success: false,
           error: 'Service Unavailable',
-          status: 'critical', // New implementation uses HEALTH.STATUS values
-          timestamp: expect.any(String),
         });
-        // Database should show as not connected
-        expect(response.body.database.connected).toBe(false);
+        // Database connection failure info in error response
+        expect(response.body.status).toBe('critical');
         testLog('TEST END: unhealthy status test - PASSED');
       } catch (error) {
         testLog('TEST ERROR:', error.message);
@@ -214,6 +212,7 @@ describe('Health Routes', () => {
         const response = await request(app).get('/api/health');
 
         // Assert
+        expect(response.body.timestamp).toBeDefined();
         const timestamp = new Date(response.body.timestamp);
         expect(timestamp.toISOString()).toBe(response.body.timestamp);
         testLog('TEST END: timestamp format test - PASSED');
@@ -233,7 +232,7 @@ describe('Health Routes', () => {
         const response = await request(app).get('/api/health');
 
         // Assert
-        expect(response.body.uptime).toBeGreaterThan(0);
+        expect(response.body.data.uptime).toBeGreaterThan(0);
         testLog('TEST END: uptime test - PASSED');
       } catch (error) {
         testLog('TEST ERROR:', error.message);
@@ -262,6 +261,7 @@ describe('Health Routes', () => {
         testLog('ACT: Response received, status:', response.status);
 
         // Assert
+        // Assert - ResponseFormatter adds timestamp at top level
         expect(response.body.timestamp).toBeDefined();
         const timestamp = new Date(response.body.timestamp);
         expect(timestamp.toISOString()).toBe(response.body.timestamp);

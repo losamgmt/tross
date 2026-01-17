@@ -25,6 +25,23 @@
 
 const db = require('../connection');
 const { logger } = require('../../config/logger');
+const { allMetadata } = require('../../config/models');
+const AppError = require('../../utils/app-error');
+
+// Build allowed tables from metadata at load time (prevents drift)
+const ALLOWED_TABLES = Object.freeze([
+  'roles', // System table, not in entity metadata
+  ...Object.values(allMetadata).map((m) => m.tableName),
+]);
+
+// Allowed ordinal field names (security whitelist)
+const ALLOWED_FIELDS = Object.freeze([
+  'priority',
+  'sequence_number',
+  'sort_order',
+  'display_order',
+  'order_number',
+]);
 
 /**
  * Get the next ordinal value for a field (max + 1 strategy)
@@ -52,39 +69,19 @@ const { logger } = require('../../config/logger');
 async function getNextOrdinalValue(tableName, fieldName, defaultValue = 1) {
   // Validate inputs (security: prevent SQL injection via whitelist)
   if (!tableName || typeof tableName !== 'string') {
-    throw new Error('tableName is required and must be a string');
+    throw new AppError('tableName is required and must be a string', 400, 'BAD_REQUEST');
   }
   if (!fieldName || typeof fieldName !== 'string') {
-    throw new Error('fieldName is required and must be a string');
+    throw new AppError('fieldName is required and must be a string', 400, 'BAD_REQUEST');
   }
 
-  // Whitelist of allowed table names (add as needed)
-  const ALLOWED_TABLES = [
-    'roles',
-    'users',
-    'customers',
-    'technicians',
-    'work_orders',
-    'invoices',
-    'contracts',
-    'inventory',
-  ];
-
-  // Whitelist of allowed field names (add as needed)
-  const ALLOWED_FIELDS = [
-    'priority',
-    'sequence_number',
-    'sort_order',
-    'display_order',
-    'order_number',
-  ];
-
+  // Validate against module-level whitelists (derived from metadata)
   if (!ALLOWED_TABLES.includes(tableName)) {
-    throw new Error(`Table '${tableName}' is not in the allowed list for ordinal generation`);
+    throw new AppError(`Table '${tableName}' is not in the allowed list for ordinal generation`, 400, 'BAD_REQUEST');
   }
 
   if (!ALLOWED_FIELDS.includes(fieldName)) {
-    throw new Error(`Field '${fieldName}' is not in the allowed list for ordinal generation`);
+    throw new AppError(`Field '${fieldName}' is not in the allowed list for ordinal generation`, 400, 'BAD_REQUEST');
   }
 
   try {

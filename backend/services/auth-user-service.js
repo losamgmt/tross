@@ -15,6 +15,7 @@
 const GenericEntityService = require('./generic-entity-service');
 const db = require('../db/connection');
 const { logger } = require('../config/logger');
+const AppError = require('../utils/app-error');
 
 class AuthUserService {
   /**
@@ -89,7 +90,7 @@ class AuthUserService {
       // Look up the role ID from role name
       const role = await GenericEntityService.findByField('role', 'name', mappedData.roleName);
       if (!role) {
-        throw new Error(`Default role '${mappedData.roleName}' not found`);
+        throw new AppError(`Default role '${mappedData.roleName}' not found`, 500, 'INTERNAL_ERROR');
       }
 
       logger.info('Creating new user from Auth0', {

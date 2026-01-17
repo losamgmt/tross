@@ -3,9 +3,12 @@
  *
  * This is the foundation API documentation for TrossApp MVP.
  * As business logic grows, this will be expanded with new endpoints.
+ *
+ * DERIVED FROM METADATA: Entity paths are derived from metadata via derived-constants.js
  */
 
 const swaggerJsdoc = require('swagger-jsdoc');
+const { getSwaggerEntityConfigs } = require('./derived-constants');
 
 // =============================================================================
 // HELPER: Generate CRUD paths for an entity
@@ -77,17 +80,13 @@ function generateEntityPaths(basePath, tag, schemaRef, displayName) {
   };
 }
 
-// Generate all entity paths
-const entityPaths = {
-  ...generateEntityPaths('users', 'Users', 'User', 'Users'),
-  ...generateEntityPaths('roles', 'Roles', 'Role', 'Roles'),
-  ...generateEntityPaths('customers', 'Customers', 'Customer', 'Customers'),
-  ...generateEntityPaths('technicians', 'Technicians', 'Technician', 'Technicians'),
-  ...generateEntityPaths('work_orders', 'Work Orders', 'Work_Order', 'Work Orders'),
-  ...generateEntityPaths('invoices', 'Invoices', 'Invoice', 'Invoices'),
-  ...generateEntityPaths('contracts', 'Contracts', 'Contract', 'Contracts'),
-  ...generateEntityPaths('inventory', 'Inventory', 'Inventory', 'Inventory Items'),
-};
+// Generate all entity paths from metadata-derived configurations
+const entityPaths = getSwaggerEntityConfigs().reduce((paths, config) => {
+  return {
+    ...paths,
+    ...generateEntityPaths(config.basePath, config.tag, config.schemaRef, config.displayName),
+  };
+}, {});
 
 const options = {
   definition: {

@@ -31,23 +31,10 @@
  */
 
 const { getRLSRule } = require('../config/permissions-loader');
-const { HTTP_STATUS } = require('../config/constants');
 const { logSecurityEvent, logger } = require('../config/logger');
 const { getClientIp, getUserAgent } = require('../utils/request-helpers');
-
-/**
- * Send standardized RLS error response
- * @param {Object} res - Express response object
- * @param {string} message - User-facing error message
- * @returns {Object} Express response
- */
-const sendRLSError = (res, message) => {
-  return res.status(HTTP_STATUS.FORBIDDEN).json({
-    error: 'Forbidden',
-    message,
-    timestamp: new Date().toISOString(),
-  });
-};
+const ResponseFormatter = require('../utils/response-formatter');
+const { ERROR_CODES } = require('../utils/response-formatter');
 
 /**
  * Enforce Row-Level Security for a resource
@@ -55,22 +42,39 @@ const sendRLSError = (res, message) => {
  * Attaches RLS policy to request object for model-level filtering.
  * Models use this policy in their buildRLSQuery() method.
  *
- * @param {string} resource - Resource name (e.g., 'customers', 'work_orders')
+ * UNIFIED PATTERN: Resource is ALWAYS read from req.entityMetadata.rlsResource
+ * Routes must attach entity metadata via middleware BEFORE this runs.
+ *
  * @returns {Function} Express middleware function
  *
  * @example
  * // In routes file:
  * router.get('/customers',
  *   authenticateToken,
- *   requirePermission('customers', 'read'),
- *   enforceRLS('customers'),
+ *   attachEntity,
+ *   requirePermission('read'),
+ *   enforceRLS,
  *   async (req, res) => {
  *     // req.rlsPolicy is now available for filtering
  *     const customers = await Customer.findAll(req);
  *   }
  * );
  */
-const enforceRLS = (resource) => (req, res, next) => {
+const enforceRLS = (req, res, next) => {
+  // Resource comes from entity metadata - ONE source, no fallbacks
+  const resource = req.entityMetadata?.rlsResource;
+
+  if (!resource) {
+    // This is a configuration error - route is missing entity attachment middleware
+    logSecurityEvent('RLS_NO_ENTITY_METADATA', {
+      ip: getClientIp(req),
+      userAgent: getUserAgent(req),
+      url: req.url,
+      severity: 'ERROR',
+    });
+    return ResponseFormatter.internalError(res, new Error('Route misconfiguration: entity metadata not attached'));
+  }
+
   const userRole = req.dbUser?.role;
   const userId = req.dbUser?.id;
 
@@ -82,7 +86,7 @@ const enforceRLS = (resource) => (req, res, next) => {
       userId,
       resource,
     });
-    return sendRLSError(res, 'User has no assigned role');
+    return ResponseFormatter.forbidden(res, 'User has no assigned role', ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS);
   }
 
   // Get RLS policy from permissions.json
@@ -123,8 +127,9 @@ const enforceRLS = (resource) => (req, res, next) => {
  * @example
  * router.get('/customers',
  *   authenticateToken,
- *   requirePermission('customers', 'read'),
- *   enforceRLS('customers'),
+ *   attachEntity,
+ *   requirePermission('read'),
+ *   enforceRLS,
  *   async (req, res) => {
  *     const customers = await Customer.findAll(req);
  *     validateRLSApplied(req, customers);

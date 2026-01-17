@@ -13,6 +13,7 @@
 const db = require('../connection');
 const { logger } = require('../../config/logger');
 const { MODEL_ERRORS } = require('../../config/constants');
+const AppError = require('../../utils/app-error');
 
 /**
  * Delete a record with transaction + audit cascade + hooks
@@ -83,7 +84,7 @@ async function deleteWithAuditCascade(config) {
       // Determine which model error to use based on table name
       const modelKey = tableName.toUpperCase().slice(0, -1); // 'users' -> 'USER'
       const errorMessage = MODEL_ERRORS[modelKey]?.NOT_FOUND || `${tableName} not found`;
-      throw new Error(errorMessage);
+      throw new AppError(errorMessage, 404, 'NOT_FOUND');
     }
 
     const record = fetchResult.rows[0];
@@ -134,7 +135,7 @@ async function deleteWithAuditCascade(config) {
       // This shouldn't happen (we already checked), but safety check
       const modelKey = tableName.toUpperCase().slice(0, -1); // 'users' -> 'USER'
       const errorMessage = MODEL_ERRORS[modelKey]?.NOT_FOUND || `${tableName} not found`;
-      throw new Error(errorMessage);
+      throw new AppError(errorMessage, 404, 'NOT_FOUND');
     }
 
     await client.query('COMMIT');
