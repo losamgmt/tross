@@ -1,11 +1,14 @@
 /**
- * Name Utilities for Entity Display
+ * Name Utilities for Test Data Generation
+ *
+ * TEST HELPER: These utilities are used for generating test data.
+ * If production code needs these functions, promote this file back to utils/.
  *
  * Provides consistent name handling across all entity categories:
  * - HUMAN entities: fullName from first_name + last_name
  * - COMPUTED entities: name from template with related data
  *
- * @module utils/name-utils
+ * @module __tests__/helpers/name-utils
  */
 
 'use strict';

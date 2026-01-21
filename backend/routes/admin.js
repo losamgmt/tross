@@ -13,9 +13,9 @@
  *   ├── logs/data             - GET CRUD operation logs
  *   ├── logs/auth             - GET authentication logs
  *   ├── logs/summary          - GET log summary
- *   └── config/               - Raw config viewers
+ *   └── config/               - Config viewers
  *       ├── permissions       - GET permissions.json
- *       └── validation        - GET validation-rules.json
+ *       └── validation        - GET validation (derived from metadata - SSOT)
  *
  * /api/admin/:entity          - Per-entity metadata (parity with /api/:entity)
  *   ├── GET /                 - Entity metadata (RLS, field access, validation)
@@ -36,11 +36,11 @@ const systemSettingsService = require('../services/system-settings-service');
 const sessionsService = require('../services/sessions-service');
 const EntityMetadataService = require('../services/entity-metadata-service');
 const AuditService = require('../services/audit-service');
-const { logger: _logger } = require('../config/logger');
+// Logger available if needed: const { logger } = require('../config/logger');
 const { validateIdParam } = require('../validators');
 const { getClientIp, getUserAgent } = require('../utils/request-helpers');
 const { asyncHandler } = require('../middleware/utils');
-const { NotFoundError, BadRequestError: _BadRequestError } = require('../utils/errors');
+const AppError = require('../utils/app-error');
 const allMetadata = require('../config/models');
 
 // ============================================================================
@@ -350,11 +350,30 @@ router.get('/system/config/permissions', asyncHandler(async (req, res) => {
 
 /**
  * GET /api/admin/system/config/validation
- * View the validation-rules.json configuration (raw)
+ * View validation rules derived from entity metadata (SSOT)
+ *
+ * Returns all field definitions from all entities, organized by entity.
+ * This replaces the old validation-rules.json file.
  */
 router.get('/system/config/validation', asyncHandler(async (req, res) => {
-  const validationPath = path.join(__dirname, '../../config/validation-rules.json');
-  const validation = JSON.parse(fs.readFileSync(validationPath, 'utf8'));
+  // Build validation from entity metadata (SSOT)
+  const validation = {
+    source: 'entity-metadata',
+    description: 'Validation rules derived from *-metadata.js files',
+    entities: {},
+  };
+
+  for (const [entityName, metadata] of Object.entries(allMetadata)) {
+    if (metadata.fields) {
+      validation.entities[entityName] = {
+        tableName: metadata.tableName,
+        fields: metadata.fields,
+        requiredFields: metadata.requiredFields || [],
+        immutableFields: metadata.immutableFields || [],
+      };
+    }
+  }
+
   return ResponseFormatter.success(res, validation);
 }));
 
@@ -388,7 +407,7 @@ router.get('/:entity', asyncHandler(async (req, res) => {
   const metadata = EntityMetadataService.getEntityMetadata(entity);
 
   if (!metadata) {
-    throw new NotFoundError(`Entity '${entity}' not found`);
+    throw new AppError(`Entity '${entity}' not found`, 404, 'NOT_FOUND');
   }
 
   return ResponseFormatter.success(res, metadata);
@@ -402,7 +421,7 @@ router.get('/:entity/raw', asyncHandler(async (req, res) => {
   const { entity } = req.params;
 
   if (!allMetadata[entity]) {
-    throw new NotFoundError(`Entity '${entity}' not found`);
+    throw new AppError(`Entity '${entity}' not found`, 404, 'NOT_FOUND');
   }
 
   return ResponseFormatter.success(res, allMetadata[entity]);

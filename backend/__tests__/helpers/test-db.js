@@ -11,6 +11,7 @@ const path = require("path");
 const { pool: centralPool } = require("../../db/connection");
 const { logger } = require("../../config/logger");
 const testLogger = require("../../config/test-logger");
+const { getTableNames } = require("../../config/derived-constants");
 const {
   TEST_EMAIL_PREFIXES,
   TEST_ROLES,
@@ -138,19 +139,18 @@ async function runMigrations(pool) {
  */
 async function cleanupTestDatabase() {
   try {
+    // Derive table names from metadata (SSOT)
+    const tableNames = Object.values(getTableNames());
+    // Add non-entity tables that need cleanup
+    const allTables = [...tableNames, 'audit_logs', 'refresh_tokens'];
+    // Exclude 'roles' (seed data) and join into SQL
+    const tablesToTruncate = allTables.filter(t => t !== 'roles').join(',\n        ');
+    
     // KISS: Truncate test data tables (preserve roles as they're seeded by schema)
     // CASCADE handles foreign key dependencies automatically
     await centralPool.query(`
       TRUNCATE TABLE 
-        audit_logs,
-        refresh_tokens,
-        inventory,
-        contracts,
-        invoices,
-        work_orders,
-        technicians,
-        customers,
-        users
+        ${tablesToTruncate}
       RESTART IDENTITY CASCADE;
     `);
 

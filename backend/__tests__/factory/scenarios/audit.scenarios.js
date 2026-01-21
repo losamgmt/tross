@@ -9,6 +9,7 @@
  */
 
 const db = require('../../../db/connection');
+const { getCapabilities } = require('./scenario-helpers');
 
 /**
  * Check if entity has auditing enabled
@@ -25,11 +26,13 @@ function isAuditEnabled(meta) {
 /**
  * Scenario: CREATE generates audit log entry
  *
- * Preconditions: Entity has auditing enabled
+ * Preconditions: Entity has auditing enabled AND API create is not disabled
  * Tests: POST creates an audit_logs entry with action=create
  */
 function createGeneratesAuditLog(meta, ctx) {
+  const caps = getCapabilities(meta);
   if (!isAuditEnabled(meta)) return;
+  if (!caps.canCreate) return; // Create disabled = scenario N/A
 
   ctx.it(`POST /api/${meta.tableName} - generates audit log entry`, async () => {
     const beforeCreate = new Date();

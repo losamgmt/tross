@@ -62,7 +62,7 @@ function getPluralForm(singular) {
 /**
  * Transform backend field definition to frontend format
  */
-function transformField(fieldName, fieldDef, foreignKeys, relationships) {
+function transformField(fieldName, fieldDef, foreignKeys, relationships, enums) {
   const result = { type: fieldDef.type };
   
   // Check if this is a foreign key field
@@ -88,8 +88,9 @@ function transformField(fieldName, fieldDef, foreignKeys, relationships) {
   }
   
   // Copy other properties
+  // Note: backend uses both 'readonly' and 'readOnly' (camelCase) - check both
   if (fieldDef.required) result.required = true;
-  if (fieldDef.readonly) result.readonly = true;
+  if (fieldDef.readonly || fieldDef.readOnly) result.readonly = true;
   if (fieldDef.maxLength) result.maxLength = fieldDef.maxLength;
   if (fieldDef.minLength) result.minLength = fieldDef.minLength;
   if (fieldDef.min !== undefined) result.min = fieldDef.min;
@@ -97,6 +98,12 @@ function transformField(fieldName, fieldDef, foreignKeys, relationships) {
   if (fieldDef.default !== undefined) result.default = fieldDef.default;
   if (fieldDef.values) result.values = fieldDef.values;
   if (fieldDef.pattern) result.pattern = fieldDef.pattern;
+  
+  // Merge enum values from enums definition
+  // Note: Frontend FieldDefinition.fromJson reads 'values' not 'enumValues'
+  if (fieldDef.type === 'enum' && enums?.[fieldName]?.values) {
+    result.values = enums[fieldName].values;
+  }
   
   return result;
 }
@@ -235,7 +242,8 @@ function transformModel(entityName, backendMeta) {
       fieldName,
       fieldDef,
       backendMeta.foreignKeys,
-      backendMeta.relationships
+      backendMeta.relationships,
+      backendMeta.enums
     );
   }
 

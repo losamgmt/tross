@@ -3,8 +3,13 @@
  *
  * SINGLE SOURCE OF TRUTH: Derives all permissions from entity metadata.
  * No separate permissions.json required - everything comes from:
- *   1. backend/config/role-definitions.js - role hierarchy (system-wide)
+ *   1. Database `roles` table (via role-hierarchy-loader.js) - role hierarchy
  *   2. backend/config/models/*-metadata.js - entity permissions
+ *
+ * ROLE HIERARCHY SSOT:
+ *   - In production: Loaded from database at server startup
+ *   - In tests: Falls back to role-definitions.js (bootstrap constants)
+ *   - See: config/role-hierarchy-loader.js for initialization details
  *
  * This eliminates drift between metadata and permissions config.
  * Change metadata → permissions change automatically.
@@ -13,10 +18,10 @@
  */
 
 const {
-  ROLE_HIERARCHY,
-  ROLE_PRIORITY_TO_NAME,
-  ROLE_DESCRIPTIONS,
-} = require('./role-definitions');
+  getRoleHierarchy,
+  getRolePriorityToName,
+  getRoleDescriptions,
+} = require('./role-hierarchy-loader');
 
 // Cache for derived permissions (computed once, reused)
 let cachedPermissions = null;
@@ -91,8 +96,6 @@ const SYNTHETIC_RESOURCES = {
   },
 };
 
-// Note: ROLE_DESCRIPTIONS is now imported from role-definitions.js
-
 /**
  * Get role priority from role name
  * @param {string} roleName - Role name (e.g., 'admin', 'customer')
@@ -102,7 +105,8 @@ function getRolePriorityFromName(roleName) {
   if (!roleName || roleName === 'none') {
     return 0;
   }
-  const index = ROLE_HIERARCHY.indexOf(roleName.toLowerCase());
+  const hierarchy = getRoleHierarchy();
+  const index = hierarchy.indexOf(roleName.toLowerCase());
   return index >= 0 ? index + 1 : 0;
 }
 
@@ -146,15 +150,17 @@ function deriveMinimumRole(fieldAccess, operation) {
 }
 
 /**
- * Build roles configuration from constants
+ * Build roles configuration from role hierarchy (loaded from DB in production)
  * @returns {Object} Roles object matching permissions.json format
  */
 function buildRolesConfig() {
+  const priorityToName = getRolePriorityToName();
+  const descriptions = getRoleDescriptions();
   const roles = {};
-  for (const [priority, roleName] of Object.entries(ROLE_PRIORITY_TO_NAME)) {
+  for (const [priority, roleName] of Object.entries(priorityToName)) {
     roles[roleName] = {
       priority: parseInt(priority, 10),
-      description: ROLE_DESCRIPTIONS[roleName] || `${roleName} role`,
+      description: descriptions[roleName] || `${roleName} role`,
     };
   }
   return roles;
@@ -178,8 +184,23 @@ function buildResourceConfig(metadata, resourceName) {
     let minRole;
     let description;
 
-    if (entityPermissions && entityPermissions[op]) {
-      minRole = entityPermissions[op];
+    // Check for explicit entityPermissions
+    if (entityPermissions && op in entityPermissions) {
+      const permValue = entityPermissions[op];
+
+      // null or 'none' means operation is disabled (system-only)
+      if (permValue === null || permValue === 'none') {
+        // Use special marker: priority 0 means "no one can access via API"
+        permissions[op] = {
+          minimumRole: null,
+          minimumPriority: 0,
+          description: `Operation disabled - ${op} is system-only (not available via API)`,
+          disabled: true,
+        };
+        continue;
+      }
+
+      minRole = permValue;
       description = `Entity-level override - ${op} requires ${minRole}`;
     } else {
       minRole = deriveMinimumRole(fieldAccess, op);
@@ -314,5 +335,6 @@ module.exports = {
   buildResourceConfig,
   clearCache,
   SYNTHETIC_RESOURCES,
-  ROLE_DESCRIPTIONS,
+  // Re-export accessor for backwards compatibility (consumers should migrate to role-hierarchy-loader)
+  getRoleDescriptions,
 };

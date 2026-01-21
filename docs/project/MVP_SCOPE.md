@@ -1,5 +1,9 @@
 # TrossApp MVP Scope Definition
 
+> **Status:** HISTORICAL DOCUMENT  
+> This document captured the original MVP planning. The core platform is now complete.  
+> For current architecture, see `docs/architecture/ARCHITECTURE.md`.
+
 ## Executive Summary
 
 This document defines a realistic Minimum Viable Product (MVP) scope for TrossApp that can be delivered within the $50,000 budget and 14-week timeline with a 2-developer team.

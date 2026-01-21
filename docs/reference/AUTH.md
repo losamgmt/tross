@@ -129,19 +129,26 @@ return { token: internalJwt, user };
 ## Authorization (RBAC)
 
 ### Role Hierarchy
+
+Roles are a **database entity** with a `priority` field that defines the hierarchy:
+
 ```
-Admin (5)       Full system access
+Admin (priority=5)       Full system access
   ↓
-Manager (4)     Team management, reports
+Manager (priority=4)     Team management, reports
   ↓
-Dispatcher (3)  Work order assignment
+Dispatcher (priority=3)  Work order assignment
   ↓
-Technician (2)  Own work orders
+Technician (priority=2)  Own work orders
   ↓
-Customer (1)    Own data only
+Customer (priority=1)    Own data only
 ```
 
-**Hierarchy rule:** Higher roles inherit lower permissions.
+> **SSOT:** The `roles` table in the database is the single source of truth for role definitions. 
+> The `priority` column determines hierarchy — higher priority = more permissions.
+> See `backend/schema.sql` for the roles table definition.
+
+**Hierarchy rule:** Higher priority roles inherit lower priority permissions.
 
 ### Permission Format
 ```

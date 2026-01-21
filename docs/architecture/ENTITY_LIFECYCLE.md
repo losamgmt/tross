@@ -2,346 +2,158 @@
 
 ## Overview
 
-This document defines the pattern for implementing lifecycle states in TrossApp entities using the `status` field.
+This document defines the architectural pattern for lifecycle states in TrossApp entities. It addresses the design question: when should an entity use `is_active` alone versus adding a `status` field?
 
-## Core Principle: Two-Tier System
+## Core Principle
 
-TrossApp uses a **two-tier system** for entity state management:
+> **`is_active` controls visibility; `status` controls workflow.**
 
-### **TIER 1: Universal Soft Delete (`is_active`)**
+These fields serve distinct purposes and are **not mutually exclusive**. Many entities legitimately need both.
 
-**Purpose:** Record existence flag  
+## Two-Tier System
+
+### Tier 1: Universal Deactivation (`is_active`)
+
+**Purpose:** Record visibility flag  
 **Applies To:** ALL business entities  
-**Values:** `true` (exists) / `false` (soft deleted)
+**Meaning:** `false` = "deactivated" — hidden from normal queries, but data preserved
 
-```sql
-is_active BOOLEAN DEFAULT true NOT NULL
-```
+> **Terminology:** We use "deactivation" (not "soft delete") to distinguish from hard delete.
+> - **Deactivation** = `is_active = false` (UPDATE operation, data preserved)
+> - **Delete** = Hard DELETE (data removed permanently)
 
-### **TIER 2: Entity-Specific Lifecycle (`status`)**
+### Tier 2: Entity-Specific Lifecycle (`status`)
 
 **Purpose:** Workflow state tracking  
-**Applies To:** Entities with multi-stage lifecycles  
-**Values:** Entity-specific strings  
+**Applies To:** Only entities with multi-stage lifecycles  
+**Meaning:** Current position in the entity's workflow
 
-```sql
-status VARCHAR(50) DEFAULT '<default_state>' 
-    CHECK (status IN ('state1', 'state2', ...))
-```
+**Key Invariant:** `is_active = false` ALWAYS means "deactivated". The `status` field can never resurrect a deactivated record.
 
-## The Distinction
+## Decision Criteria
 
-| Scenario | `is_active` | `status` | Interpretation |
-|----------|-------------|----------|----------------|
-| Normal operation | `true` | `'active'` | Record exists and is operational |
-| Pending state | `true` | `'pending_activation'` | Record exists but not yet ready |
-| Temporary pause | `true` | `'suspended'` | Record exists but temporarily disabled |
-| Soft deleted | `false` | (any) | Record removed, status frozen |
-| Hard deleted | N/A | N/A | Record physically removed (rare) |
+### Add `status` Field When:
 
-**Key Insight:** `is_active = false` ALWAYS means "deleted". The `status` field can never resurrect a deleted record.
+- Entity has distinct lifecycle stages
+- Different business rules apply per state
+- Status-based reporting is needed
+- Workflow visibility is important to users
+- Approval or activation processes exist
 
-## Implementation Pattern
+### Use Only `is_active` When:
 
-### Step 1: Identify If Status Is Needed
+- Entity has no meaningful workflow
+- Entity is simply "exists" or "doesn't exist"
+- Reference/lookup data only
+- No business rules depend on intermediate states
 
-**Use `status` field when:**
-- ✅ Entity has multiple operational states
-- ✅ Workflow or approval process exists
-- ✅ Temporary states are meaningful
-- ✅ State transitions need tracking
+## Architectural Decisions
 
-**Skip `status` field when:**
-- ❌ Entity is simple (only active/inactive matters)
-- ❌ No workflow exists
-- ❌ `is_active` alone is sufficient
+### Decision: Separation of Concerns
 
-### Step 2: Define Status Values
+**Why we separate `is_active` from `status`:**
+- `is_active = false` means "deactivated" — hidden from normal queries
+- `status` captures meaningful business workflow only
+- Queries remain simple and consistent
+- Avoids conflating "deactivated" with "suspended" or other states
 
-Choose clear, business-meaningful names:
+### Decision: Status Values in Metadata
 
-```javascript
-// Good: Descriptive, business-aligned
-'pending_activation', 'active', 'suspended'
-'draft', 'submitted', 'approved', 'rejected'
-'available', 'in_use', 'maintenance', 'retired'
+**Why status enums live in entity metadata files:**
+- Single source of truth for all validation
+- CHECK constraints derived, not duplicated
+- Frontend and backend automatically synchronized
+- Changes propagate through the entire stack
 
-// Bad: Technical jargon, unclear
-'state1', 'state2', 'state3'
-'flag_a', 'flag_b'
-'enabled', 'disabled'  // Use is_active for this!
-```
+### Decision: Default to Operational State
 
-### Step 3: Create Migration
+**Why new records default to an operational status:**
+- Minimizes special-case handling
+- Matches user expectation (created = ready to use)
+- Exceptions (like pending approval) are explicit in business rules
 
-```sql
--- Migration: XXX_add_entity_status.sql
+### Decision: Non-Nullable Status
 
--- Add status column with sensible default
-ALTER TABLE entity_name 
-    ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'active';
+**Why status fields have NOT NULL constraints:**
+- Forces explicit lifecycle state
+- Simplifies query logic (no NULL checks)
+- Every record has a defined state
 
--- Add check constraint for data integrity
-DO $$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'entity_name_status_check'
-    ) THEN
-        ALTER TABLE entity_name 
-            ADD CONSTRAINT entity_name_status_check 
-            CHECK (status IN ('state1', 'state2', 'state3'));
-    END IF;
-END $$;
+### Decision: HUMAN Entities Share Status
 
--- Add performance indexes
-CREATE INDEX IF NOT EXISTS idx_entity_name_status 
-    ON entity_name(status);
+**Why User, Customer, and Technician have identical status values:**
+- They represent the same lifecycle pattern (humans in the system)
+- Simplifies authentication and authorization logic
+- Allows consistent admin interfaces
+- Operational concerns (like technician availability) are separate fields
 
-CREATE INDEX IF NOT EXISTS idx_entity_name_status_active 
-    ON entity_name(status, is_active) 
-    WHERE is_active = true;
+## When NOT to Add Status
 
--- Migrate existing data if needed
-UPDATE entity_name 
-    SET status = 'appropriate_state' 
-    WHERE some_condition;
-```
+Entities that should NEVER have a status field:
+- Pure reference data (lookup tables)
+- Join/association tables
+- Configuration entities
+- Anything without a meaningful lifecycle
 
-### Step 4: Update Model Validation
+**The question to ask:** "Does this entity move through stages, or does it just exist?"
 
-Add centralized validation in the model:
+## Anti-Patterns
 
-```javascript
-// backend/db/models/Entity.js
+### Duplicating `is_active` Logic
 
-static _validateEntityData(entity, context = {}) {
-  const status = entity.status || 'active';
-  
-  // Business rules based on status
-  if (status === 'pending' && !entity.required_field) {
-    logger.warn('Pending entity missing required field', {
-      entityId: entity.id,
-      status
-    });
-  }
-  
-  // Dev mode handling if needed
-  if (context.isDev && context.isApiResponse) {
-    // Add synthetic data if appropriate
-  }
-  
-  return entity;
-}
-```
+Status values should NOT replicate the deactivation semantic. If you need "enabled/disabled", use `is_active`.
 
-### Step 5: Update Metadata Config
+### Optional Status on Workflow Entities
 
-```javascript
-// backend/config/models/entity-metadata.js
+If an entity needs status, it should be required with a sensible default.
 
-module.exports = {
-  tableName: 'entity_name',
-  
-  filterableFields: [
-    'id',
-    'name',
-    'is_active',
-    'status',  // ← Add status
-    'created_at',
-    'updated_at',
-  ],
-  
-  sortableFields: [
-    'id',
-    'name',
-    'is_active',
-    'status',  // ← Add status
-    'created_at',
-    'updated_at',
-  ],
-};
-```
+### Mixing Status with is_active in Queries
 
-### Step 6: Update Tests
+Keep concerns separate. Filter by `is_active` for existence, by `status` for workflow state.
 
-```javascript
-// __tests__/unit/models/Entity.test.js
+### Status on Reference Entities
 
-describe('Entity status field', () => {
-  test('fromJson handles status field', () => {
-    const json = {
-      id: 1,
-      name: 'Test',
-      is_active: true,
-      status: 'pending',
-      created_at: '2025-01-01T00:00:00.000Z',
-      updated_at: '2025-01-01T00:00:00.000Z',
-    };
-    
-    const entity = Entity.fromJson(json);
-    expect(entity.status).toBe('pending');
-  });
-  
-  test('defaults status to active when missing', () => {
-    const json = {
-      id: 1,
-      name: 'Test',
-      is_active: true,
-      created_at: '2025-01-01T00:00:00.000Z',
-      updated_at: '2025-01-01T00:00:00.000Z',
-      // No status field
-    };
-    
-    const entity = Entity.fromJson(json);
-    expect(entity.status).toBe('active');
-  });
-});
-```
-
-## Current Implementations
-
-### Users (`pending_activation` → `active` → `suspended`)
-
-**Status Values:**
-- `pending_activation`: Admin created, awaiting first Auth0 login
-- `active`: Fully operational
-- `suspended`: Temporarily disabled (can be reactivated)
-
-**Business Rules:**
-- `auth0_id` can be null for `pending_activation` users
-- `auth0_id` should exist for `active` users (logs warning if missing)
-- Status transitions: `pending_activation` → `active` (on first login)
-
-**Files:**
-- Migration: `backend/migrations/007_add_user_status_field.sql`
-- Model: `backend/db/models/User.js` (see `_validateUserData`)
-- Docs: `docs/USER_STATUS_IMPLEMENTATION.md`
-
-## Future Implementations
-
-### Work Orders (Planned)
-
-**Suggested Status Values:**
-- `draft`: Created but not submitted
-- `pending`: Awaiting assignment
-- `assigned`: Technician assigned
-- `in_progress`: Technician working on it
-- `completed`: Work finished
-- `cancelled`: Cancelled before completion
-
-### Assets (Planned)
-
-**Suggested Status Values:**
-- `available`: Ready for use
-- `in_use`: Currently deployed
-- `maintenance`: Under repair
-- `retired`: No longer in service
-
-## Anti-Patterns to Avoid
-
-### ❌ **Don't Duplicate `is_active` Logic**
-
-```javascript
-// BAD: Status duplicates is_active
-status IN ('enabled', 'disabled')
-
-// GOOD: Use is_active for existence, status for lifecycle
-is_active: true/false
-status: 'pending', 'active', 'suspended'
-```
-
-### ❌ **Don't Make Status Optional for Workflow Entities**
-
-```sql
--- BAD: Status nullable makes queries complex
-status VARCHAR(50) NULL
-
--- GOOD: Always have a default
-status VARCHAR(50) DEFAULT 'active' NOT NULL
-```
-
-### ❌ **Don't Mix Status with is_active in Queries**
-
-```javascript
-// BAD: Confusing logic
-WHERE (is_active = false OR status = 'deleted')
-
-// GOOD: Clear separation
-WHERE is_active = true AND status = 'active'
-```
-
-### ❌ **Don't Use Status for Non-Workflow Entities**
-
-```javascript
-// BAD: Roles don't need status
-CREATE TABLE roles (
-  id SERIAL PRIMARY KEY,
-  name VARCHAR(50),
-  status VARCHAR(50),  // ← Unnecessary!
-  is_active BOOLEAN
-);
-
-// GOOD: Keep it simple
-CREATE TABLE roles (
-  id SERIAL PRIMARY KEY,
-  name VARCHAR(50),
-  is_active BOOLEAN  // Sufficient
-);
-```
+Lookup tables, categories, and static reference data don't need lifecycle—just existence.
 
 ## Query Patterns
 
-### Get All Active Records in Specific Status
+Standard patterns for lifecycle-aware queries:
 
-```sql
-SELECT * FROM entity_name 
-WHERE is_active = true 
-  AND status = 'active';
-```
+1. **Active records in operational state** - Filter by both fields
+2. **All non-deactivated records** - Filter only by `is_active = true`
+3. **Records in specific lifecycle stage** - Filter by status with `is_active = true`
+4. **Status distribution** - Group by status, partition by `is_active`
 
-### Get All Active Records (Any Status)
+## Transition Validation
 
-```sql
-SELECT * FROM entity_name 
-WHERE is_active = true;
-```
+Not all status transitions are valid. The business logic should:
+- Define which transitions are allowed
+- Determine what side effects occur on transition
+- Control who can perform each transition
 
-### Get Records in Pending State
+## Audit Requirements
 
-```sql
-SELECT * FROM entity_name 
-WHERE is_active = true 
-  AND status = 'pending_activation';
-```
+All status changes should be logged because:
+- Status changes represent business events
+- Compliance may require transition history
+- Debugging requires understanding state changes
 
-### Status Distribution Report
+## SSOT Integration
 
-```sql
-SELECT 
-  status,
-  COUNT(*) as count,
-  COUNT(*) FILTER (WHERE is_active = true) as active_count
-FROM entity_name
-GROUP BY status
-ORDER BY count DESC;
-```
+Status values are defined in entity metadata files. From there:
+- Database CHECK constraints are derived
+- API validation is derived
+- Swagger documentation is derived
+- Frontend validation is synchronized
 
-## Best Practices
-
-1. **Default to Active:** New records should default to operational state
-2. **Validate Transitions:** Not all status changes make sense (e.g., `completed` → `draft`)
-3. **Log State Changes:** Use audit_logs for all status transitions
-4. **Document Business Rules:** Each status should have clear meaning and usage
-5. **Index Smart:** Composite index on `(status, is_active)` for common queries
-6. **Keep It Simple:** Don't add status field unless genuinely needed
+See `VALIDATION_ARCHITECTURE.md` for the derivation flow.
 
 ## References
 
-- **Entity Contract v2.0:** See `DATABASE_ARCHITECTURE.md`
-- **User Implementation:** See `USER_STATUS_IMPLEMENTATION.md`
-- **Migration Pattern:** See `backend/migrations/007_add_user_status_field.sql`
-- **Model Validation:** See `backend/db/models/User.js:_validateUserData()`
+- **Entity Metadata:** See `*-metadata.js` files for status definitions
+- **Entity Contract:** See `DATABASE_ARCHITECTURE.md` for field requirements
+- **Validation Flow:** See `VALIDATION_ARCHITECTURE.md`
 
 ---
 
-**Architecture Status:** 🔒 **LOCKED** - This pattern is production-ready and should be followed for all future entity lifecycle implementations.
+**Architecture Status:** 🔒 **LOCKED** - This pattern applies to all entity lifecycle implementations

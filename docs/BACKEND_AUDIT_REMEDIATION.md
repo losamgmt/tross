@@ -1,8 +1,9 @@
 # Backend Audit Remediation Plan
 
-> **Created:** January 15, 2026  
-> **Updated:** January 16, 2026  
-> **Status:** Phases 1-3 Complete, Phase 4 in progress (67% overall)
+> **Status:** HISTORICAL DOCUMENT  
+> This document tracked remediation work from the initial backend audit.  
+> **All critical work (Phases 1-3) is complete.** Remaining items (Phase 4-5) are optional polish.  
+> For current architecture, see [ARCHITECTURE.md](architecture/ARCHITECTURE.md).
 
 ---
 
@@ -10,7 +11,8 @@
 
 This document tracked issues identified during the initial backend audit. The audit identified ~120 issues across security, architecture, and code quality categories.
 
-**Phases 1-3 are complete.** Remaining cleanup (Phase 4-5) is lower priority polish work.
+**Phases 1-3: COMPLETE** - All security, architecture, and consistency issues resolved.  
+**Phases 4-5: Optional** - Low-priority polish items. Address opportunistically or ignore.
 
 ---
 
@@ -146,8 +148,15 @@ This document tracks all issues identified during the comprehensive backend audi
 **Severity:** 🟠 HIGH  
 **Issue:** USER_ROLES, ROLE_HIERARCHY, ROLE_PRIORITY_TO_NAME duplicated in 3+ places
 
-**Fix:** Created `role-definitions.js` as SSOT; all others derive at runtime  
-**Status:** ✅ COMPLETED (Jan 15, 2026)
+**Fix:** Created `role-definitions.js` as fallback constants; production loads from database  
+**Status:** ✅ COMPLETED (Jan 21, 2026) - Full SSOT implemented
+
+> **Architecture:**
+> - Database `roles` table is the true SSOT
+> - `role-hierarchy-loader.js` reads from DB at server startup and caches in memory
+> - `role-definitions.js` is FALLBACK ONLY (tests + pre-DB bootstrap)
+> - Production permission checks use `role-hierarchy-loader.js` accessors
+> - See `ARCHITECTURE_LOCK.md` for the locked pattern
 
 ### 2.3 Derive ENTITY_CATEGORY_MAP from Metadata
 
@@ -461,7 +470,7 @@ This document tracks all issues identified during the comprehensive backend audi
 **Issue:** Module-level cache with no reset function
 
 **Fix:** Export clearValidationCache()  
-**Status:** ⬜ Not Started
+**Status:** ✅ COMPLETED
 
 ### 4.9 Fix env-validator.js Side Effects
 
@@ -497,7 +506,7 @@ This document tracks all issues identified during the comprehensive backend audi
 **Issue:** Manual try-catch instead of asyncHandler pattern
 
 **Fix:** Use createAsyncHandler or similar  
-**Status:** ⬜ Not Started
+**Status:** ✅ COMPLETED - All routes now use asyncHandler
 
 ---
 
@@ -626,9 +635,9 @@ This document tracks all issues identified during the comprehensive backend audi
 | Phase 1: Security | 6 | 6 | 0 ✅ |
 | Phase 2: Architecture | 10 | 10 | 0 ✅ |
 | Phase 3: Consistency | 15 | 15 | 0 ✅ |
-| Phase 4: Cleanup | 12 | 6 | 6 |
+| Phase 4: Cleanup | 12 | 8 | 4 |
 | Phase 5: Polish | 12 | 0 | 12 |
-| **TOTAL** | **55** | **37** | **18** |
+| **TOTAL** | **55** | **39** | **16** |
 
 ### Completion Log
 

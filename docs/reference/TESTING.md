@@ -357,9 +357,9 @@ void main() {
 
 **Philosophy:**
 - E2E tests verify **production is up and secure** - nothing more
-- Unit tests verify logic (1900+ tests)
-- Integration tests verify API contracts with test auth (1100+ tests)
-- E2E tests verify production deployment works (15 tests)
+- Unit tests verify isolated logic (vast majority of tests)
+- Integration tests verify API contracts with test auth
+- E2E tests verify production deployment works (minimal)
 
 **Key Insight:** Tests that can't run in production are cruft. We don't skip them—we remove them. All auth-dependent testing happens in integration tests where test auth is enabled.
 
@@ -371,12 +371,12 @@ void main() {
 
 **What's NOT in E2E (and why):**
 - Dev token tests → Dev tokens don't work in production (correct security!)
-- RBAC tests → Tested in 1100+ integration tests with test auth
+- RBAC tests → Tested in integration tests with test auth
 - Read-only protection → Tested in integration tests
 - Pagination/API contracts → Tested in integration tests
 
 **Test File:**
-- `e2e/production.spec.ts` - Production health & security (15 tests)
+- `e2e/production.spec.ts` - Production health & security
 
 **Configuration:**
 - `e2e/config/constants.ts` - URLs (supports `BACKEND_URL` env var for production)
@@ -422,9 +422,9 @@ E2E tests run **after** unit and integration tests pass, and target the **real R
 
 ```
 Push to main
-    ├─► Unit Tests (1900+) ─────┐
-    │                           ├─► E2E (15 tests) ─► Deploy Notify
-    ├─► Integration Tests (1100+)┘   against Railway
+    ├─► Unit Tests ─────────────┐
+    │                           ├─► E2E ─► Deploy Notify
+    ├─► Integration Tests ──────┘   against Railway
     │
     └─► Railway auto-deploys (parallel)
 ```

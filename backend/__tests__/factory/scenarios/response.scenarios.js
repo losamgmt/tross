@@ -5,6 +5,8 @@
  * Tests content-type, success/error formats, and response shape.
  */
 
+const { getCapabilities } = require('./scenario-helpers');
+
 /**
  * Scenario: Response includes proper content-type
  *
@@ -68,6 +70,8 @@ function successFormat(meta, ctx) {
  * Tests: Error responses have expected structure
  */
 function errorFormat(meta, ctx) {
+  const caps = getCapabilities(meta);
+  
   ctx.it(`GET /api/${meta.tableName}/99999 - returns consistent error format`, async () => {
     const auth = await ctx.authHeader('admin');
 
@@ -82,18 +86,21 @@ function errorFormat(meta, ctx) {
     ctx.expect(response.body.error || response.body.message).toBeDefined();
   });
 
-  ctx.it(`POST /api/${meta.tableName} with invalid data - returns error format`, async () => {
-    const auth = await ctx.authHeader('admin');
+  // Only test POST error format if create is enabled
+  if (caps.canCreate) {
+    ctx.it(`POST /api/${meta.tableName} with invalid data - returns error format`, async () => {
+      const auth = await ctx.authHeader('admin');
 
-    const response = await ctx.request
-      .post(`/api/${meta.tableName}`)
-      .set(auth)
-      .send({}); // Empty payload
+      const response = await ctx.request
+        .post(`/api/${meta.tableName}`)
+        .set(auth)
+        .send({}); // Empty payload
 
-    ctx.expect(response.status).toBe(400);
-    ctx.expect(response.body).toBeDefined();
-    ctx.expect(response.body.error || response.body.message || response.body.errors).toBeDefined();
-  });
+      ctx.expect(response.status).toBe(400);
+      ctx.expect(response.body).toBeDefined();
+      ctx.expect(response.body.error || response.body.message || response.body.errors).toBeDefined();
+    });
+  }
 }
 
 /**

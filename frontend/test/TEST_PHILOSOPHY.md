@@ -130,28 +130,19 @@ expect(find.text('Developer Login'), findsOneWidget);  // ❌
 expect(find.text(AppConstants.devLoginButton), findsWidgets);  // ✅
 ```
 
-## Migration Status
+## Guidelines for New Tests
 
-### ✅ Completed (Audit Fixes Applied)
-- Created `behavioral_test_helpers.dart` with good patterns
-- Documented philosophy and examples
-- Established test infrastructure
-- **Removed `findsNWidgets` from widget tests** (generic_form, detail_panel, data_table)
-- **Migrated `login_screen_test.dart` to use AppConstants**
-- **Added UI string constants to AppConstants** (devLoginCardTitle, etc.)
-- **All 1,427 tests passing** (60% line coverage)
-
-### 📋 Remaining Anti-Patterns (Low Priority)
-Some tests still use:
-- `findsOneWidget` where `findsWidgets` would be safer (acceptable in most cases)
-- Hardcoded strings for test fixture values (acceptable - these ARE test values)
-- Implementation detail assertions in design system tests (acceptable - testing config)
-
-### 📋 Guidelines for New Tests
 1. Use `findsWidgets` instead of `findsOneWidget` unless count matters
 2. Test callbacks fire, not internal state
 3. Use constants for UI strings when possible
 4. Test user-visible behavior, not widget composition
 5. Prefer `pumpTestWidget()` helper over raw `tester.pumpWidget(MaterialApp(...))`
 6. Use `TestData` builders for test fixtures
+
+## Acceptable Patterns
+
+Some patterns that look like anti-patterns but are actually fine:
+- `findsOneWidget` where count genuinely matters
+- Hardcoded strings for test fixture values (these ARE test values)
+- Implementation detail assertions in design system tests (testing config)
 

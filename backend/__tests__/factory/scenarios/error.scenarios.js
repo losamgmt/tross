@@ -11,6 +11,8 @@
  * 4. Consistent response structure
  */
 
+const { getCapabilities } = require('./scenario-helpers');
+
 /**
  * Scenario: Update non-existent entity returns 404
  * 
@@ -69,6 +71,8 @@ function deleteNonExistent(meta, ctx) {
  * Tests: All CRUD operations without auth header return 401
  */
 function noAuthReturns401(meta, ctx) {
+  const caps = getCapabilities(meta);
+  
   ctx.it(`GET /api/${meta.tableName} - returns 401 without auth`, async () => {
     const response = await ctx.request
       .get(`/api/${meta.tableName}`);
@@ -76,24 +80,30 @@ function noAuthReturns401(meta, ctx) {
     ctx.expect(response.status).toBe(401);
   });
 
-  ctx.it(`POST /api/${meta.tableName} - returns 401 without auth`, async () => {
-    const payload = ctx.factory.buildMinimal(meta.entityName);
+  // Only test POST 401 if create is not disabled
+  if (caps.canCreate) {
+    ctx.it(`POST /api/${meta.tableName} - returns 401 without auth`, async () => {
+      const payload = ctx.factory.buildMinimal(meta.entityName);
 
     const response = await ctx.request
       .post(`/api/${meta.tableName}`)
       .send(payload);
 
     ctx.expect(response.status).toBe(401);
-  });
+    });
+  }
 }
 
 /**
  * Scenario: Invalid JSON body returns 400
  * 
- * Preconditions: None
+ * Preconditions: API create is not disabled
  * Tests: Malformed JSON in request body returns 400
  */
 function invalidJsonBody(meta, ctx) {
+  const caps = getCapabilities(meta);
+  if (!caps.canCreate) return; // Create disabled = scenario N/A
+
   ctx.it(`POST /api/${meta.tableName} - returns 400 for invalid JSON`, async () => {
     const auth = await ctx.authHeader('admin');
 
@@ -110,11 +120,13 @@ function invalidJsonBody(meta, ctx) {
 /**
  * Scenario: Empty body on create returns 400
  * 
- * Preconditions: Entity has required fields
+ * Preconditions: Entity has required fields AND create is not disabled
  * Tests: Empty body on POST returns 400
  */
 function emptyBodyOnCreate(meta, ctx) {
+  const caps = getCapabilities(meta);
   if (!meta.requiredFields?.length) return;
+  if (!caps.canCreate) return; // Create disabled = scenario N/A
 
   ctx.it(`POST /api/${meta.tableName} - returns 400 for empty body`, async () => {
     const auth = await ctx.authHeader('admin');
@@ -131,12 +143,14 @@ function emptyBodyOnCreate(meta, ctx) {
 /**
  * Scenario: Null values for required fields returns 400
  * 
- * Preconditions: Entity has required fields
+ * Preconditions: Entity has required fields AND create is not disabled
  * Tests: Null for required field returns 400
  */
 function nullRequiredFieldReturns400(meta, ctx) {
   const { requiredFields, entityName, tableName } = meta;
+  const caps = getCapabilities(meta);
   if (!requiredFields?.length) return;
+  if (!caps.canCreate) return; // Create disabled = scenario N/A
 
   for (const field of requiredFields) {
     ctx.it(`POST /api/${tableName} - rejects null for ${field}`, async () => {
@@ -157,12 +171,14 @@ function nullRequiredFieldReturns400(meta, ctx) {
 /**
  * Scenario: Invalid enum values rejected
  * 
- * Preconditions: Entity has enum fields
+ * Preconditions: Entity has enum fields AND create is not disabled
  * Tests: Invalid enum value returns 400
  */
 function invalidEnumRejected(meta, ctx) {
   const { fields, entityName, tableName } = meta;
+  const caps = getCapabilities(meta);
   if (!fields) return;
+  if (!caps.canCreate) return; // Create disabled = scenario N/A
 
   const enumFields = Object.entries(fields)
     .filter(([_, def]) => def.type === 'enum' && def.values?.length)
@@ -187,12 +203,14 @@ function invalidEnumRejected(meta, ctx) {
 /**
  * Scenario: Invalid email format rejected
  * 
- * Preconditions: Entity has email fields
+ * Preconditions: Entity has email fields AND create is not disabled
  * Tests: Invalid email format returns 400
  */
 function invalidEmailRejected(meta, ctx) {
   const { fields, entityName, tableName } = meta;
+  const caps = getCapabilities(meta);
   if (!fields) return;
+  if (!caps.canCreate) return; // Create disabled = scenario N/A
 
   const emailFields = Object.entries(fields)
     .filter(([_, def]) => def.type === 'email')
@@ -217,7 +235,7 @@ function invalidEmailRejected(meta, ctx) {
 /**
  * Scenario: XSS payloads don't cause errors
  * 
- * Preconditions: Entity has free-text string fields (no pattern validation)
+ * Preconditions: Entity has free-text string fields (no pattern validation) AND create is not disabled
  * Tests: XSS payloads are handled without causing server errors
  * Note: Output encoding is frontend's responsibility; backend stores raw data safely
  * 
@@ -226,7 +244,9 @@ function invalidEmailRejected(meta, ctx) {
  */
 function xssHandledSafely(meta, ctx) {
   const { fields, entityName, tableName } = meta;
+  const caps = getCapabilities(meta);
   if (!fields) return;
+  if (!caps.canCreate) return; // Create disabled = scenario N/A
 
   // Load validation rules to check for patterns
   const { loadValidationRules } = require('../../../utils/validation-loader');

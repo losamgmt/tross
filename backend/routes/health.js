@@ -31,7 +31,7 @@ const { TIMEOUTS } = require('../config/timeouts');
 const auth0Config = require('../config/auth0');
 const ResponseFormatter = require('../utils/response-formatter');
 const { asyncHandler } = require('../middleware/utils');
-const { ServiceUnavailableError: _ServiceUnavailableError } = require('../utils/errors');
+// ServiceUnavailableError available if needed: const { ServiceUnavailableError } = require('../utils/errors');
 
 // ============================================================================
 // CACHE LAYER (SRP: Simple in-memory cache for health responses)
@@ -63,6 +63,35 @@ function isCacheValid(timestamp) {
 function clearCache() {
   healthCache.liveness = null;
   healthCache.livenessTimestamp = 0;
+}
+
+/**
+ * Sanitize error message for external exposure
+ * Prevents leaking internal details (DB connection strings, paths, etc.)
+ * @param {Error} error - The error object
+ * @returns {string} Safe error message
+ */
+function sanitizeErrorMessage(error) {
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  if (!isProduction) {
+    // In dev/test, show full error for debugging
+    return error.message;
+  }
+
+  // In production, only expose safe categories
+  const msg = error.message?.toLowerCase() || '';
+  if (msg.includes('timeout') || msg.includes('timed out')) {
+    return 'Connection timeout';
+  }
+  if (msg.includes('connection') || msg.includes('connect')) {
+    return 'Connection failed';
+  }
+  if (msg.includes('authentication') || msg.includes('auth')) {
+    return 'Authentication error';
+  }
+  // Generic fallback - never expose raw error
+  return 'Service unavailable';
 }
 
 // ============================================================================
@@ -126,7 +155,7 @@ async function checkDatabase() {
       responseTime: Date.now() - start,
       connectionCount: 0,
       maxConnections: 0,
-      message: error.message,
+      message: sanitizeErrorMessage(error),
     };
   }
 }
@@ -170,7 +199,7 @@ async function checkAuth0() {
       reachable: false,
       status: HEALTH.STATUS.CRITICAL,
       responseTime: Date.now() - start,
-      message: error.message,
+      message: sanitizeErrorMessage(error),
     };
   }
 }

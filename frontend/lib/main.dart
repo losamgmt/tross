@@ -29,7 +29,6 @@ import 'services/export_service.dart';
 import 'services/file_service.dart';
 import 'services/audit_log_service.dart';
 import 'services/saved_view_service.dart';
-import 'config/validation_rules.dart';
 
 void main() async {
   // Ensure Flutter bindings are initialized before async operations
@@ -42,10 +41,8 @@ void main() async {
   await NavConfigService.initialize();
 
   // Initialize entity metadata registry (loads from entity-metadata.json)
+  // This is the SSOT for all entity definitions, fields, and validation rules
   await EntityMetadataRegistry.instance.initialize();
-
-  // Initialize centralized validation rules
-  await ValidationRules.load();
 
   // ============================================================================
   // FLUTTER GLOBAL ERROR HANDLING

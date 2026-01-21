@@ -458,10 +458,12 @@ class GenericEntityService {
     // Get metadata (throws if invalid entityName)
     const metadata = this._getMetadata(entityName);
 
-    const { tableName, filterableFields = [], defaultIncludes = [], relationships = {} } = metadata;
+    const { tableName, primaryKey, filterableFields = [], defaultIncludes = [], relationships = {} } = metadata;
 
     // Validate field is filterable (security: prevent arbitrary column access)
-    if (!filterableFields.includes(field)) {
+    // SYSTEMIC: Primary key is ALWAYS allowed (for findById to work)
+    const isPrimaryKey = field === primaryKey;
+    if (!isPrimaryKey && !filterableFields.includes(field)) {
       throw new AppError(
         `Field '${field}' is not filterable for ${entityName}. ` +
         `Allowed: ${filterableFields.join(', ')}`,

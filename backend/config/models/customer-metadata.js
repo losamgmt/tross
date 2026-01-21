@@ -297,6 +297,7 @@ module.exports = {
     updated_at: { type: 'timestamp', readonly: true },
 
     // TIER 2: Entity-Specific Lifecycle Field
+    // SSOT: Must match User and Technician status values
     status: {
       type: 'enum',
       values: ['pending', 'active', 'suspended'],

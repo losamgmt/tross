@@ -22,9 +22,10 @@ const path = require('path');
 const ROOT_CONFIG = path.join(__dirname, '..', 'config');
 const FRONTEND_ASSETS = path.join(__dirname, '..', 'frontend', 'assets', 'config');
 
+// NOTE: validation-rules.json removed - validation is now derived from metadata
+// via validation-deriver.js and exposed via /api/schema endpoints
 const CONFIG_FILES = [
   'permissions.json',
-  'validation-rules.json'
 ];
 
 function syncConfig() {

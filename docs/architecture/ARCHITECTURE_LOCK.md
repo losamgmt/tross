@@ -4,240 +4,149 @@
 
 ## Overview
 
-This document certifies that the TrossApp backend architecture has been finalized and locked. All core patterns, contracts, and structures are now **frozen** and should not be modified without thorough review.
+This document certifies which architectural patterns are locked and explains the change management process. Locked patterns represent battle-tested decisions that should not be modified without significant justification.
 
----## ✅ Verified Components
+## Locked Patterns
 
 ### 1. Entity Contract v2.0
 
-**TIER 1 - Universal Fields (ALL entities):**
-```sql
-id SERIAL PRIMARY KEY                    -- Unique identifier
-[identity_field] VARCHAR(X) UNIQUE NOT NULL  -- name, email, title, etc.
-is_active BOOLEAN DEFAULT true NOT NULL  -- Soft delete flag
-created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
-updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
-```
+**What's locked:**
+- Tier 1 universal fields (id, identity field, is_active, created_at, updated_at)
+- Tier 2 optional lifecycle field (status)
+- Deactivation via is_active (never use status for deactivation)
+- Automatic timestamp management
 
-**TIER 2 - Entity-Specific Fields (Optional):**
-```sql
-status VARCHAR(50) DEFAULT 'active'  -- Lifecycle state management
-  CHECK (status IN ([entity_specific_values]))
-```
+**See:** `DATABASE_ARCHITECTURE.md`
 
-**Status:** ✅ Documented in `DATABASE_ARCHITECTURE.md` and `schema.sql`
+### 2. Two-Tier Lifecycle System
 
-### 2. Field Separation: `is_active` vs `status`
+**What's locked:**
+- `is_active` = record visibility (universal deactivation flag)
+- `status` = workflow state (entity-specific)
+- These fields serve different purposes and both may be needed
+- `is_active = false` always means "deactivated" regardless of status
 
-| Field | Purpose | Scope | Values | When to Use |
-|-------|---------|-------|--------|-------------|
-| `is_active` | Soft delete | Universal (TIER 1) | `true`/`false` | Record exists in system? |
-| `status` | Lifecycle state | Entity-specific (TIER 2) | Entity-defined | What stage is record in? |
+**Terminology:**
+- **Deactivation** = `is_active = false` (UPDATE, data preserved)
+- **Delete** = Hard DELETE (data removed permanently)
 
-**Example:**
-```javascript
-// Pending user (exists, awaiting activation)
-{ is_active: true, status: 'pending_activation' }
+**See:** `ENTITY_LIFECYCLE.md`
 
-// Suspended user (exists, temporarily disabled)
-{ is_active: true, status: 'suspended' }
+### 3. SSOT Pattern
 
-// Deleted user (soft deleted)
-{ is_active: false, status: 'active' }  // Status frozen at deletion
-```
+**What's locked:**
+- Entity metadata files as the single source of truth
+- All validation, documentation, and UI derived from metadata
+- No parallel definitions of the same information
+- Runtime derivation over static duplication
 
-**Status:** ✅ Documented in `ENTITY_LIFECYCLE.md`
+**See:** `VALIDATION_ARCHITECTURE.md`
 
-### 3. Database Schema
+### 4. Triple-Tier Security
 
-**Current Entities:**
-- ✅ `roles` - TIER 1 only (no status needed)
-- ✅ `users` - TIER 1 + TIER 2 (status: pending_activation, active, suspended)
-- ✅ `audit_logs` - System table (exempt from contract)
+**What's locked:**
+- Auth0 for identity verification
+- RBAC for role-based permissions
+- RLS for row-level data isolation
+- Defense in depth (each layer catches different attack vectors)
 
-**Migration Status:**
-- ✅ Migration 007 applied (user status field)
-- ✅ Schema.sql synchronized
-- ✅ All indexes created
-- ✅ Check constraints in place
+**See:** `ARCHITECTURE.md` (Security section)
 
-**Status:** ✅ Verified in `schema.sql`
+### 5. Role Hierarchy SSOT
 
-### 4. Backend Implementation
+**What's locked:**
+- Database `roles` table is the Single Source of Truth for role priorities
+- At server startup, `role-hierarchy-loader.js` reads from DB and caches in memory
+- Permission checks use the in-memory cache (O(1) lookups)
+- `role-definitions.js` is FALLBACK ONLY (tests + pre-DB bootstrap)
 
-**User Model (`backend/db/models/User.js`):**
-- ✅ Centralized validation: `_validateUserData()`
-- ✅ Contextual logic (dev mode, pending users, data quality warnings)
-- ✅ All CRUD methods updated
-- ✅ Metadata configuration includes status field
+**Initialization sequence (server.js):**
+1. Database connection established
+2. `initRoleHierarchy(db)` called to load roles from DB
+3. Routes registered (permissions system is now ready)
+4. Server accepts requests
 
-**Implementation Complete:** Backend fully updated and tested
+**See:** `backend/config/role-hierarchy-loader.js`
 
-### 5. Frontend Implementation
+### 6. Naming Conventions
 
-**User Model (`frontend/lib/models/user_model.dart`):**
-- ✅ Nullable `auth0_id` support
-- ✅ Status field added
-- ✅ Helper methods: `isPendingActivation`, `isSuspended`, `isFullyActive`
-- ✅ Data quality detection: `hasDataQualityIssue`
+**What's locked:**
+- Snake case for database fields
+- Camel case for JavaScript
+- Status values: lowercase with underscores
+- Identity field varies by entity (name, email, title, etc.)
 
-**UI Updates:**
-- ✅ Lifecycle column added to user table
-- ✅ Status badges with color coding
-- ✅ Warning icons for data quality issues
+### 7. Schema-Driven UI
 
-**Test Coverage:**
-**Frontend Implementation Complete:** User model fully updated and tested
+**What's locked:**
+- Database schema drives UI generation
+- Metadata fetched at runtime
+- Generic components introspect metadata
+- Customization layer for overrides
 
-### 6. Documentation
+**See:** `SCHEMA_DRIVEN_UI.md`
 
-**Complete Documentation Set:**
-- ✅ `DATABASE_ARCHITECTURE.md` - Entity Contract v2.0, TIER system
-- ✅ `ENTITY_LIFECYCLE.md` - Status field pattern and implementation guide
-- ✅ `USER_STATUS_IMPLEMENTATION.md` - Migration 007 details
-- ✅ `schema.sql` - Single source of truth for database structure
-- ✅ `ARCHITECTURE_LOCK.md` - This document
+## Anti-Patterns (Never Do This)
 
-**All documentation aligned with implementation**
+### Import role-definitions.js in production code
 
----## 🔒 Locked Patterns
+The `role-definitions.js` file is FALLBACK ONLY. For production permission checks:
+- Use `role-hierarchy-loader.js` accessor functions
+- Role data is loaded from database at startup
+- Never import role constants directly in middleware or services
 
-### 1. Entity Contract
+### Merge `is_active` and `status`
 
-**DO NOT CHANGE** without major version bump:
-- TIER 1 field names (`id`, `is_active`, `created_at`, `updated_at`)
-- TIER 1 field types and constraints
-- Soft delete pattern via `is_active`
-- Audit trail pattern via `audit_logs` table
+The fields serve different purposes. Don't use status values like "deleted" or "inactive" — use `is_active = false` for deactivation.
 
-### 2. Status Field Pattern
+### Skip CHECK constraints on status
 
-**IF adding status to entity:**
-- Must be TIER 2 (entity-specific)
-- Must have CHECK constraint for allowed values
-- Must add performance indexes
-- Must document in ENTITY_LIFECYCLE.md
-- Must keep `is_active` separate (soft delete only)
+If an entity has a status field, constrain the allowed values.
 
-### 3. Naming Conventions
+### Use status for authentication decisions alone
 
-**LOCKED:**
-- Snake case for database fields: `is_active`, `created_at`, `auth0_id`
-- Camel case for JavaScript: `isActive`, `createdAt`, `auth0Id`
-- Status values: lowercase with underscores: `pending_activation`, `in_progress`
+Always check both: `is_active` (does record exist?) AND `status` (what's its lifecycle state?).
 
-## 🚫 Anti-Patterns
+### Hardcode enum values in multiple places
 
-**NEVER DO THIS:**
+Define once in metadata, derive everywhere else.
 
-1. **Merge is_active and status**
-   ```javascript
-   // ❌ BAD
-   status: 'deleted'  // Don't use status for soft deletes
-   
-   // ✅ GOOD
-   is_active: false  // Use is_active for soft deletes
-   status: 'active'  // Status reflects lifecycle at deletion time
-   ```
+## Change Management
 
-2. **Add TIER 1 fields to contract**
-   ```sql
-   -- ❌ BAD: Adding status to TIER 1
-   -- Entities without workflows would need fake statuses
-   
-   -- ✅ GOOD: Keep status in TIER 2
-   -- Only entities with workflows get it
-   ```
+To modify a locked pattern:
 
-3. **Skip check constraints on status**
-   ```sql
-   -- ❌ BAD
-   status VARCHAR(50)  -- No constraint, anything goes
-   
-   -- ✅ GOOD
-   status VARCHAR(50) CHECK (status IN ('value1', 'value2'))
-   ```
+1. **Open issue** with rationale
+2. **Architecture review** - discuss alternatives and trade-offs
+3. **Breaking change analysis** - identify migration path
+4. **Update ADR** with superseding decision
+5. **Major version consideration** if breaking contracts
 
-4. **Use status for authentication**
-   ```javascript
-   // ❌ BAD
-   if (user.status === 'active') { allowLogin(); }
-   
-   // ✅ GOOD
-   if (user.is_active && user.status === 'active') { allowLogin(); }
-   // Check both: is_active (exists?) AND status (lifecycle state?)
-   ```
+## Future Entity Guidelines
 
-## 📊 Quality Metrics
+When adding new entities:
 
-**Architecture Health:**
-- ✅ Zero circular dependencies
-- ✅ Zero hardcoded magic strings (all in metadata)
-- ✅ Zero TODO/FIXME in core models
-- ✅ 100% test coverage for contracts
-- ✅ All migrations idempotent
-- ✅ All indexes documented
+1. **Start with Tier 1** - add universal fields per Entity Contract
+2. **Evaluate workflow needs** - does entity have lifecycle states?
+3. **Add Tier 2 if needed** - status field with CHECK constraint
+4. **Create metadata file** - defines all entity configuration
+5. **Derive everything** - validation, docs, UI from metadata
 
-**Code Quality:**
-- ✅ Single Responsibility Principle (SRP) compliant
-- ✅ KISS (Keep It Simple) principles followed
-- ✅ Defensive programming (warnings vs errors)
-- ✅ Centralized validation logic
-- ✅ Context-aware behavior
+## Quality Invariants
 
-## 🎯 Future Entity Guidelines
+These should always be true:
 
-When adding new entities (work_orders, assets, etc.):
+- Zero circular dependencies in core modules
+- Zero hardcoded enum values (all in metadata)
+- All migrations idempotent (safe to run multiple times)
+- All entity behavior derived from metadata
 
-1. **Start with TIER 1 only**
-   - Add: `id`, `name`, `is_active`, `created_at`, `updated_at`
-   - Verify Entity Contract compliance
+## References
 
-2. **Evaluate if workflow exists**
-   - Has lifecycle states? → Add TIER 2 `status` field
-   - Simple CRUD only? → Skip status field
+- [Entity Contract](DATABASE_ARCHITECTURE.md)
+- [Lifecycle Pattern](ENTITY_LIFECYCLE.md)
+- [Validation SSOT](VALIDATION_ARCHITECTURE.md)
+- [Core Architecture](ARCHITECTURE.md)
 
-3. **Document status values**
-   - Add to `ENTITY_LIFECYCLE.md`
-   - Create CHECK constraint
-   - Add performance indexes
+---
 
-4. **Update metadata**
-   - Add to entity metadata config
-   - Include `status` in filterable/sortable fields
-
-5. **Write migration**
-   - Follow `007_add_user_status_field.sql` pattern
-   - Make it idempotent
-   - Include rollback script
-
-## ✅ Sign-Off Checklist
-
-- [x] All tests passing
-- [x] Documentation complete and aligned
-- [x] No TODO/FIXME in core code
-- [x] Migration tested and verified
-- [x] Schema synchronized
-- [x] Entity Contract v2.0 documented
-- [x] Status field pattern documented
-- [x] Anti-patterns documented
-- [x] Future guidelines written
-
-## 🔐 Lock Status
-
-**This architecture is now LOCKED.**
-
-Any changes to:
-- Entity Contract TIER 1 fields
-- Soft delete pattern
-- Audit trail pattern
-- Status field semantics
-
-Must go through:
-1. Architecture review
-2. Breaking change analysis
-3. Migration path planning
-4. Major version bump consideration
-
-**Locked By:** Architecture Audit  
-**Next Review:** When adding first non-user entity with status field
+**This architecture is LOCKED. Review required for changes.**

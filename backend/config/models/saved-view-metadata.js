@@ -134,7 +134,8 @@ module.exports = {
   // ============================================================================
 
   fieldAccess: {
-    id: FAL.SYSTEM_ONLY,
+    // Note: id inherits from UNIVERSAL_FIELD_ACCESS (PUBLIC_READONLY)
+    // Do NOT override with SYSTEM_ONLY - that blocks read access and breaks API responses
     user_id: {
       create: 'system', // Set automatically from auth context
       read: 'customer',
@@ -145,8 +146,7 @@ module.exports = {
     view_name: FAL.SELF_EDITABLE,
     settings: FAL.SELF_EDITABLE,
     is_default: FAL.SELF_EDITABLE,
-    created_at: FAL.SYSTEM_ONLY,
-    updated_at: FAL.SYSTEM_ONLY,
+    // Note: created_at, updated_at inherit from UNIVERSAL_FIELD_ACCESS (SYSTEM_READONLY)
   },
 
   // ============================================================================

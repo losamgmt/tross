@@ -135,6 +135,9 @@ function buildTestContext(app, db) {
     /**
      * Create entity via HTTP and track for cleanup.
      * Uses fixtures for FK dependencies when available.
+     * 
+     * For entities with entityPermissions.create: null (system-only creation),
+     * this bypasses the API and inserts directly to the database.
      */
     async create(entityName, overrides = {}) {
       const meta = entityFactory.getMetadata(entityName);
@@ -150,6 +153,40 @@ function buildTestContext(app, db) {
 
       // Apply overrides after FK resolution
       Object.assign(payload, overrides);
+
+      // Check if API create is disabled (system-only entities like notifications)
+      const createDisabled = meta.entityPermissions?.create === null;
+      
+      if (createDisabled) {
+        // SYSTEMIC FIX: For entities with own_record_only RLS, set the owner field
+        // to the admin test user's ID so the record is accessible via API.
+        // This uses rlsFilterConfig.ownRecordField to find the owner field.
+        const ownRecordField = meta.rlsFilterConfig?.ownRecordField;
+        const isOwnRecordOnly = Object.values(meta.rlsPolicy || {}).some(
+          policy => policy === 'own_record_only'
+        );
+        
+        if (isOwnRecordOnly && ownRecordField && !overrides[ownRecordField]) {
+          const { user } = await getTestUser('admin');
+          payload[ownRecordField] = user.id;
+        }
+        
+        // Insert directly to database (bypassing API)
+        const fields = Object.keys(payload);
+        const values = Object.values(payload);
+        const placeholders = fields.map((_, i) => `$${i + 1}`).join(', ');
+        
+        const insertQuery = `
+          INSERT INTO ${meta.tableName} (${fields.join(', ')})
+          VALUES (${placeholders})
+          RETURNING *
+        `;
+        
+        const result = await db.query(insertQuery, values);
+        const entityData = result.rows[0];
+        createdEntities.push({ table: meta.tableName, id: entityData.id });
+        return entityData;
+      }
 
       const auth = await authHeader('admin');
       const response = await supertestRequest

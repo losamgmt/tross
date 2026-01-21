@@ -68,7 +68,8 @@ function getFieldDef(fieldName, entityName) {
       const entityMeta = allMetadata[entityName];
       if (entityMeta?.fields?.[fieldName]) {
         const metaField = entityMeta.fields[fieldName];
-        return convertMetadataToFieldDef(metaField, fieldName);
+        // Pass full entity metadata for enum lookup
+        return convertMetadataToFieldDef(metaField, fieldName, entityMeta);
       }
     } catch {
       // Fall through to validation-rules.json
@@ -84,16 +85,19 @@ function getFieldDef(fieldName, entityName) {
  * 
  * @param {Object} metaField - Field from entity metadata
  * @param {string} fieldName - Field name for context
+ * @param {Object} entityMeta - Full entity metadata (for enum lookup)
  * @returns {Object} Field definition in validation-rules.json format
  */
-function convertMetadataToFieldDef(metaField, fieldName) {
+function convertMetadataToFieldDef(metaField, fieldName, entityMeta = {}) {
   const fieldDef = {};
   
   // Handle type mapping
   switch (metaField.type) {
     case 'enum':
-      fieldDef.type = 'string';
-      fieldDef.enum = metaField.values;
+      // Keep type as 'enum' so generateFromConstraints handles it correctly
+      fieldDef.type = 'enum';
+      // Look up enum values: field.values > entityMeta.enums[fieldName].values
+      fieldDef.enum = metaField.values || entityMeta.enums?.[fieldName]?.values || [];
       break;
     case 'email':
       fieldDef.type = 'string';
@@ -128,6 +132,10 @@ function convertMetadataToFieldDef(metaField, fieldName) {
     case 'uuid':
       fieldDef.type = 'string';
       fieldDef.format = 'uuid';
+      break;
+    case 'text':
+      // Text is just a long string
+      fieldDef.type = 'string';
       break;
     default:
       fieldDef.type = metaField.type || 'string';
@@ -271,12 +279,19 @@ function generateFromPattern(pattern, uniqueId, uniqueSuffix, fieldDef = {}) {
 
 /**
  * Generate value from field constraints (type, min, max, etc.)
+ * 
+ * SYSTEMIC: Every supported type must have an explicit case.
+ * Unknown types throw an error to catch metadata issues early.
  */
 function generateFromConstraints(fieldDef, fieldName, uniqueId, uniqueSuffix) {
   const counterPart = parseInt(uniqueId.split('_')[1]) || 1;
   
   switch (fieldDef.type) {
     case 'string':
+      // Check for enum values first (string type with enum constraint)
+      if (fieldDef.enum && fieldDef.enum.length > 0) {
+        return fieldDef.enum[counterPart % fieldDef.enum.length];
+      }
       // Email format
       if (fieldDef.format === 'email') {
         return `test_${uniqueId}@example.com`;
@@ -289,14 +304,25 @@ function generateFromConstraints(fieldDef, fieldName, uniqueId, uniqueSuffix) {
       if (fieldDef.format === 'timestamp' || fieldDef.format === 'date-time') {
         return new Date().toISOString();
       }
+      // UUID format
+      if (fieldDef.format === 'uuid') {
+        return `00000000-0000-4000-8000-${String(counterPart).padStart(12, '0')}`;
+      }
       // Pattern-based (pass fieldDef for metadata-driven generation)
       if (fieldDef.pattern) {
         return generateFromPattern(fieldDef.pattern, uniqueId, uniqueSuffix, fieldDef);
       }
       // Plain string with length constraints
       const minLen = fieldDef.minLength || 1;
-      const base = `Test_${fieldName}_${uniqueId}`;
-      return base.length >= minLen ? base : base.padEnd(minLen, 'x');
+      const maxLen = fieldDef.maxLength || 255;
+      let base = `Test_${fieldName}_${uniqueId}`;
+      if (base.length < minLen) {
+        base = base.padEnd(minLen, 'x');
+      }
+      if (base.length > maxLen) {
+        base = base.substring(0, maxLen);
+      }
+      return base;
       
     case 'integer':
       const intMin = fieldDef.min ?? 1;
@@ -313,8 +339,40 @@ function generateFromConstraints(fieldDef, fieldName, uniqueId, uniqueSuffix) {
     case 'date':
       return new Date().toISOString().split('T')[0]; // YYYY-MM-DD
       
+    case 'enum':
+      // Pick a valid enum value (cycle through based on counter)
+      const enumValues = fieldDef.enum || fieldDef.values || [];
+      if (enumValues.length > 0) {
+        return enumValues[counterPart % enumValues.length];
+      }
+      // No enum values defined - this is a metadata error
+      throw new Error(
+        `Enum field '${fieldName}' has no values defined. ` +
+        `Add values to field definition or entityMeta.enums.${fieldName}.values`
+      );
+      
+    case 'json':
+      return {};
+    
+    case 'jsonb':
+      // PostgreSQL JSONB - return empty object
+      return {};
+      
+    case 'array':
+      return [];
+    
+    case 'phone':
+      // Phone number format
+      return `555-${String(counterPart).padStart(3, '0')}-${String(counterPart + 1000).slice(-4)}`;
+      
     default:
-      return `value_${uniqueId}`;
+      // FAIL FAST: Unknown types should be caught at metadata validation time,
+      // but throw here as a safety net
+      throw new Error(
+        `Unknown field type '${fieldDef.type}' for field '${fieldName}'. ` +
+        `Supported types: string, integer, number, boolean, date, enum, json, jsonb, array, phone. ` +
+        `Add support in validation-data-generator.js or fix the field metadata.`
+      );
   }
 }
 

@@ -18,7 +18,7 @@
  * INTEGRATION:
  * - Uses validation-loader.js for field definitions
  * - Uses entity metadata for field lists
- * - Uses response-transform.js for role permission checks
+ * - Uses field-access-controller.js for role permission checks
  * - Returns Joi schemas for middleware to validate against
  *
  * USAGE:
@@ -32,7 +32,7 @@
 
 const Joi = require('joi');
 const { loadValidationRules, buildFieldSchema } = require('./validation-loader');
-const { hasFieldPermission, normalizeRoleName } = require('./response-transform');
+const { hasFieldPermission, normalizeRoleName } = require('./field-access-controller');
 
 // Cache for built schemas (entityName:operation:role -> Joi schema)
 // Role is included in cache key for role-aware schemas

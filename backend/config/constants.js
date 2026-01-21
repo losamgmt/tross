@@ -5,7 +5,14 @@
  */
 
 // ============================================================================
-// ROLE DEFINITIONS - Import from single source of truth
+// ROLE DEFINITIONS - DEPRECATED RE-EXPORTS
+// ============================================================================
+// ⚠️  DEPRECATION WARNING: These re-exports exist for backwards compatibility.
+// For production permission checks, use role-hierarchy-loader.js instead:
+//   const { getRoleHierarchy, getRolePriority } = require('./role-hierarchy-loader');
+//
+// These constants are from role-definitions.js (FALLBACK ONLY).
+// Production loads role hierarchy from database at server startup.
 // ============================================================================
 const {
   USER_ROLES,
@@ -181,6 +188,15 @@ const ENTITY_FIELDS = Object.freeze({
  *   }
  */
 const FIELD_ACCESS_LEVELS = Object.freeze({
+  // System-only fields - never exposed or writable by any role
+  // Used for: id, created_at, updated_at on system tables
+  SYSTEM_ONLY: Object.freeze({
+    create: 'none',
+    read: 'none',
+    update: 'none',
+    delete: 'none',
+  }),
+
   // System-generated fields - readable by internal roles, never writable
   SYSTEM_READONLY: Object.freeze({
     create: 'none',

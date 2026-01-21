@@ -204,7 +204,8 @@ tross-app/
 ├── backend/           # Node.js API
 │   ├── server.js      # Entry point
 │   ├── routes/        # API endpoints
-│   ├── db/models/     # Database models
+│   ├── config/models/ # Entity metadata (SSOT)
+│   ├── db/helpers/    # Database helpers
 │   └── __tests__/     # Jest tests
 ├── frontend/          # Flutter app
 │   ├── lib/           # Source code

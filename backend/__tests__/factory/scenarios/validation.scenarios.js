@@ -5,10 +5,12 @@
  * Driven by metadata.fields and database constraints.
  */
 
+const { getCapabilities } = require('./scenario-helpers');
+
 /**
  * Scenario: Unique constraint violation
  *
- * Preconditions: Entity has identityField AND identityFieldUnique flag is true
+ * Preconditions: Entity has identityField AND identityFieldUnique flag is true AND create is not disabled
  * Tests: Duplicate identity field value rejected with 409
  *
  * Note: Not all identity fields have unique constraints.
@@ -25,6 +27,8 @@ function uniqueConstraintViolation(meta, ctx) {
   // Skip if no identity field or it's not marked as unique
   if (!identityField) return;
   if (!identityFieldUnique) return;
+  const caps = getCapabilities(meta);
+  if (!caps.canCreate) return; // Create disabled = scenario N/A
 
   // Skip if identity field is auto-generated (create: 'none')
   // COMPUTED entities have auto-generated identifiers that users cannot set
@@ -56,12 +60,14 @@ function uniqueConstraintViolation(meta, ctx) {
 /**
  * Scenario: Foreign key constraint violation
  *
- * Preconditions: Entity has foreignKeys defined
+ * Preconditions: Entity has foreignKeys defined AND create is not disabled
  * Tests: Invalid FK values rejected with appropriate error
  */
 function foreignKeyViolation(meta, ctx) {
   const { foreignKeys } = meta;
+  const caps = getCapabilities(meta);
   if (!foreignKeys) return;
+  if (!caps.canCreate) return; // Create disabled = scenario N/A
 
   for (const [fkField, fkDef] of Object.entries(foreignKeys)) {
     ctx.it(`POST /api/${meta.tableName} - rejects invalid ${fkField} reference`, async () => {
@@ -161,12 +167,14 @@ function invalidIdRange(meta, ctx) {
 /**
  * Scenario: Empty strings rejected for required fields
  *
- * Preconditions: Entity has requiredFields
+ * Preconditions: Entity has requiredFields AND create is not disabled
  * Tests: Empty string for required field returns 400
  */
 function emptyStringRejected(meta, ctx) {
   const { requiredFields, entityName, tableName } = meta;
+  const caps = getCapabilities(meta);
   if (!requiredFields?.length) return;
+  if (!caps.canCreate) return; // Create disabled = scenario N/A
 
   // Only test string-type required fields
   const stringFields = requiredFields.filter(field => {
@@ -193,11 +201,13 @@ function emptyStringRejected(meta, ctx) {
 /**
  * Scenario: Unknown fields stripped from request
  *
- * Preconditions: None
+ * Preconditions: API create is not disabled
  * Tests: Unknown fields don't appear in response or cause errors
  */
 function unknownFieldsStripped(meta, ctx) {
   const { entityName, tableName } = meta;
+  const caps = getCapabilities(meta);
+  if (!caps.canCreate) return; // Create disabled = scenario N/A
 
   ctx.it(`POST /api/${tableName} - unknown fields stripped`, async () => {
     const payload = await ctx.factory.buildMinimalWithFKs(entityName);

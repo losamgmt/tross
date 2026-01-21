@@ -4,7 +4,7 @@
 
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> **Quick Start:** [docs/QUICK_START.md](docs/QUICK_START.md) | **Development:** [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | **Architecture:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+> **Quick Start:** [docs/getting-started/QUICK_START.md](docs/getting-started/QUICK_START.md) | **Development:** [docs/getting-started/DEVELOPMENT.md](docs/getting-started/DEVELOPMENT.md) | **Architecture:** [docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md)
 
 ---
 
@@ -22,15 +22,13 @@
 - Database: PostgreSQL on Railway
 - Authentication: Auth0 OAuth2/OIDC
 
-**Monitoring:** See [docs/HEALTH_MONITORING.md](docs/HEALTH_MONITORING.md) for setup
+**Monitoring:** See [docs/operations/HEALTH_MONITORING.md](docs/operations/HEALTH_MONITORING.md) for setup
 
 ---
 
 ## 🎯 Overview
 
 The Tross App is a modern, full-stack application for efficient work order management with intelligent skills-based matching. Built with Flutter for cross-platform frontend and Node.js/Express for a robust REST API backend.
-
-**Current Status:** Core platform complete with full authentication, user/role management, and comprehensive testing. Ready for work order feature implementation.
 
 ### ✨ Architecture Principles
 
@@ -109,20 +107,20 @@ npm run dev:frontend   # Frontend
 ## 📚 Documentation
 
 **Getting Started:**
-- [Quick Start](docs/QUICK_START.md) - Get running in 5 minutes
-- [Development](docs/DEVELOPMENT.md) - Daily workflow, code organization
+- [Quick Start](docs/getting-started/QUICK_START.md) - Get running in 5 minutes
+- [Development](docs/getting-started/DEVELOPMENT.md) - Daily workflow, code organization
 
 **Architecture & Design:**
-- [Architecture](docs/ARCHITECTURE.md) - Core patterns and decisions
-- [Security](docs/SECURITY.md) - Defense-in-depth (Auth0 + RBAC + RLS)
-- [Authentication](docs/AUTH.md) - Dual auth strategy
-- [API](docs/API.md) - RESTful conventions
+- [Architecture](docs/architecture/ARCHITECTURE.md) - Core patterns and decisions
+- [Security](docs/reference/SECURITY.md) - Defense-in-depth (Auth0 + RBAC + RLS)
+- [Authentication](docs/reference/AUTH.md) - Dual auth strategy
+- [API](docs/reference/API.md) - RESTful conventions
 
 **Quality & Operations:**
-- [Testing](docs/TESTING.md) - Philosophy, pyramid, patterns
-- [CI/CD](docs/CI_CD_GUIDE.md) - Pipeline and automation
-- [Health Monitoring](docs/HEALTH_MONITORING.md) - Observability
-- [Rollback](docs/ROLLBACK.md) - Emergency procedures
+- [Testing](docs/reference/TESTING.md) - Philosophy, pyramid, patterns
+- [CI/CD](docs/operations/CI_CD_GUIDE.md) - Pipeline and automation
+- [Health Monitoring](docs/operations/HEALTH_MONITORING.md) - Observability
+- [Rollback](docs/operations/ROLLBACK.md) - Emergency procedures
 
 **Deep Dives:**
 - [Database Architecture](docs/architecture/DATABASE_ARCHITECTURE.md)

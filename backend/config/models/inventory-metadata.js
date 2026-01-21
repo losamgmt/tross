@@ -131,7 +131,7 @@ module.exports = {
   displayColumns: ['sku', 'name', 'category', 'quantity', 'unit_price', 'status'],
 
   // ============================================================================
-  // FIELD-LEVEL ACCESS CONTROL (for response-transform.js)
+  // FIELD-LEVEL ACCESS CONTROL (for field-access-controller.js)
   // ============================================================================
 
   /**

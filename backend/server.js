@@ -12,6 +12,7 @@ const { requestTimeout, timeoutHandler } = require('./middleware/timeout');
 const { validateEnvironment } = require('./utils/env-validator');
 const { getAllowedOrigins } = require('./config/deployment-adapter');
 const { initializeDatabase } = require('./scripts/init-database');
+const { initializeFromDatabase: initRoleHierarchy } = require('./config/role-hierarchy-loader');
 require('dotenv').config();
 
 // Environment Validation
@@ -371,6 +372,16 @@ if (process.env.NODE_ENV !== 'test') {
       try {
         const db = require('./db/connection');
         await db.testConnection();
+
+        // Initialize role hierarchy from database (SSOT for permissions)
+        // This MUST happen before any authenticated requests are processed
+        try {
+          await initRoleHierarchy(db);
+          logger.info('✅ Role hierarchy loaded from database');
+        } catch (roleError) {
+          logger.error('❌ CRITICAL: Failed to load role hierarchy from database:', roleError.message);
+          logger.error('   Permission checks will use fallback constants (may be stale!)');
+        }
 
         // Validate enum synchronization between Joi and PostgreSQL
         const { validateEnumSync } = require('./utils/validation-sync-checker');

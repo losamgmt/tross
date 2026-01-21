@@ -21,6 +21,7 @@
 DROP TABLE IF EXISTS file_attachments CASCADE;
 DROP TABLE IF EXISTS system_settings CASCADE;
 DROP TABLE IF EXISTS entity_settings CASCADE;  -- Legacy table cleanup
+DROP TABLE IF EXISTS notifications CASCADE;
 DROP TABLE IF EXISTS saved_views CASCADE;
 DROP TABLE IF EXISTS preferences CASCADE;
 DROP TABLE IF EXISTS audit_logs CASCADE;
@@ -102,8 +103,9 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     
     -- TIER 2: Entity-Specific Lifecycle Field
-    status VARCHAR(50) DEFAULT 'active'
-        CHECK (status IN ('pending_activation', 'active', 'suspended')),
+    -- SSOT: Must match Customer and Technician status values
+    status VARCHAR(50) DEFAULT 'pending'
+        CHECK (status IN ('pending', 'active', 'suspended')),
     
     -- HUMAN entity name fields
     first_name VARCHAR(100) NOT NULL,
@@ -251,6 +253,43 @@ CREATE TABLE IF NOT EXISTS saved_views (
 );
 
 -- ============================================================================
+-- NOTIFICATIONS TABLE
+-- ============================================================================
+-- User notifications for the notification tray (bell icon)
+-- RLS: Each user can only see their own notifications (user_id filter)
+-- Category: N/A (system table, not a business entity)
+--
+-- Pattern: Per-user data (same as saved_views)
+-- Backend creates notifications; users only read/mark-read/delete
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS notifications (
+    id SERIAL PRIMARY KEY,
+    
+    -- Recipient (FK to users, RLS filter field)
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    
+    -- Notification content
+    title VARCHAR(255) NOT NULL,
+    body TEXT,
+    
+    -- Type for UI styling (info, success, warning, error, assignment, reminder)
+    type VARCHAR(20) NOT NULL DEFAULT 'info'
+        CHECK (type IN ('info', 'success', 'warning', 'error', 'assignment', 'reminder')),
+    
+    -- Optional link to related entity for navigation on click
+    resource_type VARCHAR(50),  -- e.g., 'work_order', 'invoice', 'customer'
+    resource_id INTEGER,
+    
+    -- Read status
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    read_at TIMESTAMP,
+    
+    -- Timestamps
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================================================
 -- FILE ATTACHMENTS TABLE
 -- ============================================================================
 -- System table for storing file metadata (actual files in Cloudflare R2)
@@ -322,6 +361,12 @@ CREATE INDEX IF NOT EXISTS idx_users_status_active ON users(status, is_active) W
 CREATE INDEX IF NOT EXISTS idx_saved_views_user_entity ON saved_views(user_id, entity_name);
 CREATE INDEX IF NOT EXISTS idx_saved_views_default ON saved_views(user_id, entity_name, is_default) WHERE is_default = true;
 
+-- Notifications indexes
+CREATE INDEX IF NOT EXISTS idx_notifications_user_unread ON notifications(user_id, is_read, created_at DESC) WHERE is_read = FALSE;
+CREATE INDEX IF NOT EXISTS idx_notifications_user_created ON notifications(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_type ON notifications(type);
+CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications(created_at);
+
 -- Audit logs indexes (critical for performance)
 CREATE INDEX IF NOT EXISTS idx_audit_logs_resource ON audit_logs(resource_type, resource_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
@@ -371,6 +416,31 @@ CREATE TRIGGER update_saved_views_updated_at
     BEFORE UPDATE ON saved_views
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_notifications_updated_at ON notifications;
+CREATE TRIGGER update_notifications_updated_at
+    BEFORE UPDATE ON notifications
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Auto-set read_at when is_read changes to true
+CREATE OR REPLACE FUNCTION set_notification_read_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.is_read = TRUE AND OLD.is_read = FALSE THEN
+        NEW.read_at = CURRENT_TIMESTAMP;
+    ELSIF NEW.is_read = FALSE THEN
+        NEW.read_at = NULL;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_notification_read_at ON notifications;
+CREATE TRIGGER trigger_notification_read_at
+    BEFORE UPDATE ON notifications
+    FOR EACH ROW
+    EXECUTE FUNCTION set_notification_read_at();
 
 -- ============================================================================
 -- UTILITY FUNCTIONS
@@ -462,8 +532,13 @@ CREATE TABLE IF NOT EXISTS technicians (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     
     -- TIER 2: Entity-Specific Lifecycle Field
-    status VARCHAR(50) DEFAULT 'available'
-        CHECK (status IN ('available', 'on_job', 'off_duty', 'suspended')),
+    -- SSOT: Must match User and Customer status values
+    status VARCHAR(50) DEFAULT 'pending'
+        CHECK (status IN ('pending', 'active', 'suspended')),
+    
+    -- Operational availability (separate from lifecycle status)
+    availability VARCHAR(50) DEFAULT 'available'
+        CHECK (availability IN ('available', 'on_job', 'off_duty')),
     
     -- HUMAN entity name fields
     first_name VARCHAR(100) NOT NULL,

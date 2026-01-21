@@ -15,7 +15,6 @@ const {
   UNIVERSAL_FIELD_ACCESS,
 } = require('../constants');
 const { NAME_TYPES } = require('../entity-types');
-const { CONTRACT_STATUS } = require('../status-enums');
 
 module.exports = {
   // Table name in database
@@ -144,7 +143,7 @@ module.exports = {
   displayColumns: ['contract_number', 'customer_id', 'status', 'start_date', 'end_date', 'value'],
 
   // ============================================================================
-  // FIELD-LEVEL ACCESS CONTROL (for response-transform.js)
+  // FIELD-LEVEL ACCESS CONTROL (for field-access-controller.js)
   // ============================================================================
 
   /**
@@ -346,8 +345,8 @@ module.exports = {
     // TIER 2: Entity-Specific Lifecycle Field
     status: {
       type: 'enum',
-      values: Object.values(CONTRACT_STATUS),
-      default: CONTRACT_STATUS.DRAFT,
+      values: ['draft', 'active', 'expired', 'cancelled', 'terminated'],
+      default: 'draft',
     },
 
     // COMPUTED entity name field - optional because computed from template

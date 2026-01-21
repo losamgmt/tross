@@ -1,8 +1,8 @@
 # Notification System Design
 
-> **Status:** Planned  
-> **Created:** 2026-01-13  
-> **Last Updated:** 2026-01-13
+> **Status:** In Progress (Phase 1 Complete)
+> **Last Updated:** 2026-01-21
+> **Pattern:** Follows `saved_views` - metadata + generic router, NO custom code
 
 ## Table of Contents
 
@@ -20,8 +20,7 @@
 TrossApp requires a notification system to alert users of important events:
 
 - **Work order assignments** - Technicians notified when assigned new work
-- **Status changes** - Customers notified when their work order status changes  
-- **Scheduled reminders** - Upcoming appointments for technicians and customers
+- **Status changes** - Customers notified when their work order status changes
 - **System events** - Export ready, background job complete, etc.
 
 ### Two Notification Systems
@@ -29,7 +28,7 @@ TrossApp requires a notification system to alert users of important events:
 | System | Purpose | Persistence | Transport |
 |--------|---------|-------------|-----------|
 | **Toasts** | Immediate feedback (save success, errors) | None (transient) | Frontend only |
-| **Notification Tray** | Async events, reminders | Database (per-user) | WebSocket (Socket.IO) |
+| **Notification Tray** | Async events, user alerts | Database (per-user) | Fetch on navigation |
 
 This document covers the **Notification Tray** system. Toasts are already implemented via `NotificationService` and `AppSnackbar`.
 
@@ -37,29 +36,38 @@ This document covers the **Notification Tray** system. Toasts are already implem
 
 ## Architecture Decisions
 
-### Confirmed Decisions
+### Core Principle: Follow `saved_views` Pattern
+
+Notifications are **identical in architecture** to `saved_views`:
+- Per-user data with RLS (`own_record_only`)
+- Standard CRUD via generic router
+- **NO custom routes**
+- **NO custom services**
+- **NO WebSocket/polling**
+
+### Decisions
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
-| **UI Location** | Bell icon in top nav bar | Standard UX pattern, unread badge |
-| **Delivery** | Socket.IO (WebSocket) | Real-time delivery, built-in reconnection |
-| **Who Creates** | Backend only | Single source of truth, works with all API consumers |
-| **Scheduled Reminders** | Railway cron + app endpoint | Testable, extensible, platform-agnostic |
-| **Retention** | User preference (default: 30 days) | Leverages existing preferences system |
-| **Unread Badge** | Cap at 99+ | Prevents UI overflow |
-| **Mark All Read** | All notifications ever | Simple single API call |
-| **Delete Behavior** | Hard delete | Matches audit_logs pattern (append-only events) |
-| **Grouping** | None | KISS - no scope creep |
-| **Action URL** | Computed from resource_type + resource_id | No redundant field storage |
-| **Entity Registry** | NOT included | System table pattern (like audit_logs) |
+| **UI Location** | Bell icon in top nav bar | Standard UX pattern |
+| **Delivery** | Fetch on navigation | KISS - no WebSocket complexity |
+| **Backend Creation** | `GenericEntityService.create()` | Use existing infrastructure |
+| **Custom Endpoints** | **NONE** | Generic CRUD is sufficient |
+| **Unread Count** | Computed from list response | No custom `/unread-count` endpoint |
+| **Mark All Read** | Loop PATCH calls (or defer bulk) | No custom `/mark-all-read` endpoint |
+| **Delete Behavior** | Hard delete via generic router | Standard DELETE |
+| **Action URL** | Computed from `resource_type` + `resource_id` | No redundant field storage |
 
-### Why Not In Entity Registry?
+### What We DON'T Build
 
-Notifications follow the `audit_logs` pattern:
-- Created by **backend** (not users via forms)
-- Users only **read**, **mark read**, **delete**
-- No generic CRUD forms needed
-- Dedicated service, model, and UI components
+| ❌ Rejected | Why |
+|-------------|-----|
+| `/unread-count` endpoint | Count from list response in frontend |
+| `/mark-all-read` endpoint | Loop PATCH calls (bulk can be Phase 2) |
+| `/cleanup` endpoint | Scheduled job, not API |
+| `NotificationService` class | Use `GenericEntityService.create()` |
+| Socket.IO / WebSocket | Overkill for MVP |
+| Polling | Fetch on navigation is sufficient |
 
 ---
 
@@ -67,180 +75,116 @@ Notifications follow the `audit_logs` pattern:
 
 ### Notifications Table
 
-Add to `backend/schema.sql` (version 3.1):
+✅ **IMPLEMENTED** in `backend/schema.sql`:
 
 ```sql
--- ============================================================================
--- USER NOTIFICATIONS TABLE
--- ============================================================================
--- User-specific notification inbox
--- RLS: Each user can only see their own notifications (user_id filter)
--- Pattern: Similar to saved_views (per-user, simple fields)
--- ============================================================================
 CREATE TABLE IF NOT EXISTS notifications (
     id SERIAL PRIMARY KEY,
-    
-    -- Owner of this notification (RLS filter field)
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    
-    -- Message content
     title VARCHAR(255) NOT NULL,
     body TEXT,
-    
-    -- Navigation context (optional - where to go when clicked)
-    -- Pattern matches audit_logs: resource_type + resource_id
-    resource_type VARCHAR(50),    -- 'work_order', 'invoice', etc. (nullable)
-    resource_id INTEGER,          -- ID of related entity (nullable)
-    
-    -- Read status
-    is_read BOOLEAN DEFAULT false NOT NULL,
+    type VARCHAR(20) NOT NULL DEFAULT 'info'
+        CHECK (type IN ('info', 'success', 'warning', 'error', 'assignment', 'reminder')),
+    resource_type VARCHAR(50),
+    resource_id INTEGER,
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
     read_at TIMESTAMP,
-    
-    -- Timestamps (TIER 1 compliance)
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-
--- Indexes for common queries
-CREATE INDEX IF NOT EXISTS idx_notifications_user_unread 
-    ON notifications(user_id, is_read) WHERE is_read = false;
-CREATE INDEX IF NOT EXISTS idx_notifications_user_created 
-    ON notifications(user_id, created_at DESC);
 ```
 
-### Drop Table Addition
+### Indexes & Triggers
 
-Add to the DROP TABLE section at the top of schema.sql:
+✅ **IMPLEMENTED** - See `backend/schema.sql` for:
+- `idx_notifications_user_unread` - Fast unread queries
+- `idx_notifications_user_created` - Paged list queries
+- `update_notifications_updated_at` trigger
+- `trigger_notification_read_at` trigger (auto-sets `read_at`)
 
-```sql
-DROP TABLE IF EXISTS notifications CASCADE;
-```
+### Metadata Definition
 
-### Preference Schema Addition
-
-Add to `backend/config/models/preferences-metadata.js` in `preferenceSchema`:
+✅ **IMPLEMENTED** in `backend/config/models/notification-metadata.js`:
 
 ```javascript
-notificationRetentionDays: {
-  type: 'enum',
-  values: ['30', '60', '90', '180', '365', '-1'],
-  default: '30',
-  label: 'Notification History',
-  description: 'How long to keep read notifications',
-  displayLabels: {
-    '30': '30 days',
-    '60': '60 days',
-    '90': '90 days',
-    '180': '6 months',
-    '365': '1 year',
-    '-1': 'Forever',
+{
+  tableName: 'notifications',
+  rlsResource: 'notifications',
+  routeConfig: { useGenericRouter: true },
+  rlsPolicy: {
+    customer: 'own_record_only',
+    technician: 'own_record_only',
+    dispatcher: 'own_record_only',
+    manager: 'own_record_only',
+    admin: 'own_record_only',  // Even admins only see their own
   },
-  order: 6,
-},
+  entityPermissions: {
+    create: null,      // System only - API returns 403
+    read: 'customer',
+    update: 'customer',
+    delete: 'customer',
+  },
+}
 ```
-
-### Deployment Command
-
-```bash
-npm run db:rebuild
-```
-
-This drops and rebuilds dev database with new schema.
 
 ---
 
 ## Backend Implementation
 
-### New Files Required
+### Routes: 100% Generic (No Custom Code)
 
-| File | Purpose |
-|------|---------|
-| `services/notification-service.js` | CRUD for notifications + WebSocket broadcast |
-| `routes/notifications.js` | REST API endpoints |
-| `routes/internal/reminders.js` | Cron endpoint for scheduled reminders |
-| `config/socket.js` | Socket.IO server setup |
-
-### REST API Endpoints
+The generic router auto-implements all needed endpoints:
 
 | Method | Endpoint | Purpose |
 |--------|----------|---------|
-| `GET` | `/api/notifications` | List user's notifications (paginated) |
-| `GET` | `/api/notifications/unread-count` | Get unread count for badge |
-| `PATCH` | `/api/notifications/:id/read` | Mark single notification as read |
-| `POST` | `/api/notifications/mark-all-read` | Mark all as read |
-| `DELETE` | `/api/notifications/:id` | Delete (dismiss) notification |
+| `GET` | `/api/notifications` | List user's notifications (RLS filtered) |
+| `GET` | `/api/notifications/:id` | Get single notification |
+| `PATCH` | `/api/notifications/:id` | Mark as read: `{ is_read: true }` |
+| `DELETE` | `/api/notifications/:id` | Dismiss notification |
+| `POST` | `/api/notifications` | **Returns 403** (create disabled) |
 
-### Socket.IO Events
+### Creating Notifications (Backend Only)
 
-| Event | Direction | Purpose |
-|-------|-----------|---------|
-| `notification:new` | Server → Client | Push new notification |
-| `notification:read` | Server → Client | Sync read status |
-| `notification:deleted` | Server → Client | Sync deletion |
-
-### WebSocket Authentication
+When backend code needs to create a notification (e.g., work order assignment):
 
 ```javascript
-io.use(async (socket, next) => {
-  const token = socket.handshake.auth.token;
-  try {
-    const decoded = await verifyAuth0Token(token);
-    socket.userId = decoded.sub;
-    next();
-  } catch (err) {
-    next(new Error('Authentication failed'));
-  }
-});
-```
+// In the work order route handler or service
+const GenericEntityService = require('../services/generic-entity-service');
 
-### Cron Endpoint
-
-`POST /api/internal/check-reminders` (Railway cron calls this every minute)
-
-```javascript
-// Checks for upcoming work orders and creates reminder notifications
-// Scheduled: Every minute
-// Triggers: 24h, 1h, 15min before scheduled_start
-```
-
-### Notification Creation Pattern
-
-```javascript
-// NotificationService.create() does two things:
-// 1. INSERT into database
-// 2. Push via Socket.IO to connected user
-
-await notificationService.create({
-  userId: technicianUserId,
+await GenericEntityService.create('notification', {
+  user_id: technicianUserId,
   title: 'New Work Order Assigned',
-  body: `You've been assigned ${workOrderNumber}`,
-  resourceType: 'work_order',
-  resourceId: workOrderId,
-});
+  body: `You've been assigned WO-2026-001`,
+  type: 'assignment',
+  resource_type: 'work_order',
+  resource_id: workOrderId,
+}, { auditContext });
 ```
+
+**No separate NotificationService needed** - use `GenericEntityService.create()`.
 
 ---
 
 ## Frontend Implementation
 
-### New Files Required
+### Files to Create
 
 | File | Purpose |
 |------|---------|
-| `lib/models/notification.dart` | Notification data model |
-| `lib/services/notification_api_service.dart` | REST API calls |
-| `lib/services/websocket_service.dart` | Socket.IO connection management |
-| `lib/providers/notification_provider.dart` | State management |
-| `lib/widgets/organisms/navigation/notification_bell.dart` | Bell icon with badge |
+| `lib/models/notification.dart` | Data model |
+| `lib/providers/notification_provider.dart` | State + API calls |
+| `lib/widgets/organisms/navigation/notification_bell.dart` | Bell icon + badge |
 | `lib/widgets/organisms/navigation/notification_dropdown.dart` | Dropdown list |
 
 ### Notification Model
 
 ```dart
-class Notification {
+class AppNotification {
   final int id;
   final int userId;
   final String title;
   final String? body;
+  final String type;
   final String? resourceType;
   final int? resourceId;
   final bool isRead;
@@ -250,22 +194,30 @@ class Notification {
   /// Computed navigation path
   String? get actionPath {
     if (resourceType == null || resourceId == null) return null;
-    return '/${_pluralize(resourceType!)}/$resourceId';
+    // Convert snake_case to route: 'work_order' -> '/work-orders/123'
+    final route = resourceType!.replaceAll('_', '-');
+    return '/${route}s/$resourceId';
   }
-}
-```
 
-### WebSocket Service
+  /// Icon based on type
+  IconData get icon => switch (type) {
+    'success' => Icons.check_circle,
+    'warning' => Icons.warning,
+    'error' => Icons.error,
+    'assignment' => Icons.assignment_ind,
+    'reminder' => Icons.schedule,
+    _ => Icons.info,
+  };
 
-```dart
-class WebSocketService {
-  // Connects on login, disconnects on logout
-  // Reconnects automatically on connection loss
-  // Dispatches received notifications to NotificationProvider
-  
-  void connect(String token);
-  void disconnect();
-  Stream<Notification> get onNotification;
+  /// Color based on type
+  Color get color => switch (type) {
+    'success' => Colors.green,
+    'warning' => Colors.orange,
+    'error' => Colors.red,
+    'assignment' => Colors.blue,
+    'reminder' => Colors.purple,
+    _ => Colors.grey,
+  };
 }
 ```
 
@@ -273,104 +225,108 @@ class WebSocketService {
 
 ```dart
 class NotificationProvider extends ChangeNotifier {
-  List<Notification> _notifications = [];
-  int _unreadCount = 0;
-  
-  int get unreadCount => _unreadCount;
-  String get unreadBadge => _unreadCount > 99 ? '99+' : '$_unreadCount';
-  
-  Future<void> fetchNotifications();
-  Future<void> markAsRead(int id);
-  Future<void> markAllAsRead();
-  Future<void> deleteNotification(int id);
+  List<AppNotification> _notifications = [];
+  bool _loading = false;
+
+  List<AppNotification> get notifications => _notifications;
+  int get unreadCount => _notifications.where((n) => !n.isRead).length;
+  String get unreadBadge => unreadCount > 99 ? '99+' : '$unreadCount';
+
+  /// Fetch notifications (call on navigation, not polling)
+  Future<void> fetch() async {
+    _loading = true;
+    notifyListeners();
+
+    final response = await apiClient.get('/notifications?sort=created_at&order=desc');
+    _notifications = (response['data'] as List)
+        .map((json) => AppNotification.fromJson(json))
+        .toList();
+
+    _loading = false;
+    notifyListeners();
+  }
+
+  /// Mark single notification as read
+  Future<void> markAsRead(int id) async {
+    await apiClient.patch('/notifications/$id', {'is_read': true});
+    final index = _notifications.indexWhere((n) => n.id == id);
+    if (index >= 0) {
+      _notifications[index] = _notifications[index].copyWith(isRead: true);
+      notifyListeners();
+    }
+  }
+
+  /// Delete notification
+  Future<void> delete(int id) async {
+    await apiClient.delete('/notifications/$id');
+    _notifications.removeWhere((n) => n.id == id);
+    notifyListeners();
+  }
 }
 ```
 
-### Bell Icon Integration
+### Integration Points
 
-Add to `AdaptiveShell` or top navigation:
-
+**AdaptiveShell** - Add bell icon to app bar:
 ```dart
 NotificationBell(
-  unreadCount: notificationProvider.unreadCount,
+  unreadCount: context.watch<NotificationProvider>().unreadCount,
   onTap: () => _showNotificationDropdown(context),
 )
 ```
 
-### Preferences Integration
-
-Add notification retention setting to Settings screen (auto-rendered from preferenceSchema).
+**Fetch on navigation** - Call `notificationProvider.fetch()` when:
+- User logs in
+- User navigates to home/dashboard
+- User opens notification dropdown
 
 ---
 
 ## Implementation Checklist
 
-### Phase 1: Database
-- [ ] Add `DROP TABLE IF EXISTS notifications CASCADE` to schema.sql
-- [ ] Add `CREATE TABLE notifications` to schema.sql
-- [ ] Add notification indexes to schema.sql
-- [ ] Update schema version to 3.1
-- [ ] Add `notificationRetentionDays` to preferences-metadata.js
-- [ ] Run `npm run db:rebuild` to apply changes
-- [ ] Verify with `npm run test:backend:unit`
+### Phase 1: Database & Metadata ✅ COMPLETE
+- [x] Database table with indexes and triggers
+- [x] `notification-metadata.js` with generic router config
+- [x] Permissions auto-derived (`create: null` = disabled)
+- [x] Frontend metadata synced
 
-### Phase 2: Backend Service & Routes
-- [ ] Create `services/notification-service.js`
-- [ ] Create `routes/notifications.js`
-- [ ] Add routes to `server.js`
-- [ ] Add `notifications` to `permissions.json`
-- [ ] Write unit tests for NotificationService
-- [ ] Write integration tests for notification routes
+### Phase 2: Verify Backend Routes ✅ COMPLETE
+- [x] Confirm `GET /api/notifications` returns user's notifications (RLS filtered)
+- [x] Confirm `PATCH /api/notifications/:id` marks as read (generic router)
+- [x] Confirm `DELETE /api/notifications/:id` works (generic router)
+- [x] Confirm `POST /api/notifications` returns 403 (disabled)
+- [x] Integration tests auto-generated from factory (`all-entities.test.js`)
 
-### Phase 3: Backend WebSocket
-- [ ] Install `socket.io` package
-- [ ] Create `config/socket.js` (Socket.IO setup)
-- [ ] Integrate Socket.IO with Express server
-- [ ] Add authentication middleware
-- [ ] Add user connection tracking
-- [ ] Update NotificationService to broadcast on create
-
-### Phase 4: Backend Cron
-- [ ] Create `routes/internal/reminders.js`
-- [ ] Implement reminder check logic
-- [ ] Add internal auth for cron endpoint
-- [ ] Configure Railway cron job
-
-### Phase 5: Frontend Model & Service
-- [ ] Create `lib/models/notification.dart`
-- [ ] Create `lib/services/notification_api_service.dart`
-- [ ] Write tests for notification model
-- [ ] Write tests for notification service
-
-### Phase 6: Frontend WebSocket
-- [ ] Add `socket_io_client` to pubspec.yaml
-- [ ] Create `lib/services/websocket_service.dart`
-- [ ] Connect on login, disconnect on logout
-- [ ] Handle reconnection
-
-### Phase 7: Frontend Provider
-- [ ] Create `lib/providers/notification_provider.dart`
-- [ ] Wire up to WebSocketService
-- [ ] Add to provider tree in main.dart
-- [ ] Write tests for notification provider
-
-### Phase 8: Frontend UI
-- [ ] Create `notification_bell.dart` organism
-- [ ] Create `notification_dropdown.dart` organism
-- [ ] Integrate into AdaptiveShell
-- [ ] Style with design system
+### Phase 3: Frontend Implementation
+- [ ] Create `AppNotification` model
+- [ ] Create `NotificationProvider`
+- [ ] Create `NotificationBell` organism
+- [ ] Create `NotificationDropdown` organism
+- [ ] Integrate into `AdaptiveShell`
 - [ ] Write widget tests
 
-### Phase 9: Integration
-- [ ] Hook work order assignment → notification
-- [ ] Hook status change → notification
-- [ ] Test end-to-end flow
-- [ ] Add notification retention cleanup job
+### Phase 4: Backend Triggers (Future)
+- [ ] Work order assignment → create notification
+- [ ] Status change → create notification
+- [ ] Other business events as needed
+
+---
+
+## Anti-Patterns to Avoid
+
+| ❌ Don't Do This | ✅ Do This Instead |
+|------------------|-------------------|
+| Create `notification-service.js` | Use `GenericEntityService.create()` |
+| Create custom routes | Use generic router |
+| Add `/unread-count` endpoint | Count from list in frontend |
+| Add Socket.IO | Fetch on navigation |
+| Add polling | Fetch on navigation |
+| Create notification from frontend | Backend creates, frontend reads |
 
 ---
 
 ## Related Documents
 
-- [ARCHITECTURE.md](./ARCHITECTURE.md) - Overall system architecture
-- [AUTH.md](./AUTH.md) - Authentication with Auth0
-- [API.md](./API.md) - API design patterns
+- [ARCHITECTURE.md](../architecture/ARCHITECTURE.md) - SSOT and metadata patterns
+- [ADMIN_FRONTEND_ARCHITECTURE.md](ADMIN_FRONTEND_ARCHITECTURE.md) - Provider patterns
+- `saved-view-metadata.js` - Reference pattern for per-user data

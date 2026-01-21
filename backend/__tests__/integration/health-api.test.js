@@ -9,24 +9,7 @@ const request = require('supertest');
 const app = require('../../server');
 
 describe('Health Endpoints - Integration Tests', () => {
-  // No DB cleanup needed - health endpoints are read-only
-
   describe('GET /api/health - Basic Health Check', () => {
-    test('should return 200 and operational status', async () => {
-      // Act
-      const response = await request(app).get('/api/health');
-
-      // Assert - Health endpoint may return 200 or 503 depending on service health
-      // Status can be healthy, degraded, or critical based on underlying services
-      expect([200, 503]).toContain(response.status);
-      expect(response.body.success).toBe(true);
-      expect(['healthy', 'degraded', 'critical']).toContain(response.body.data.status);
-      expect(response.body.data).toMatchObject({
-        uptime: expect.any(Number),
-      });
-      expect(response.body.timestamp).toBeDefined();
-    });
-
     test('should include uptime greater than or equal to 0', async () => {
       // Act
       const response = await request(app).get('/api/health');

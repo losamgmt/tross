@@ -7,17 +7,25 @@
  *   - Returns early (if preconditions not met)
  *
  * PRINCIPLE: No if/else per entity. Metadata drives behavior.
+ * 
+ * CAPABILITIES: Uses getCapabilities() from scenario-helpers as the
+ * SINGLE SOURCE OF TRUTH for what operations an entity supports.
  */
+
+const { getCapabilities } = require('./scenario-helpers');
 
 /**
  * Scenario: Create with required fields only
  *
- * Preconditions: Entity has requiredFields defined
+ * Preconditions: Entity has requiredFields defined AND create is enabled
  * Tests: Minimal valid payload succeeds
  */
 function createWithRequiredFields(meta, ctx) {
   const { entityName, requiredFields } = meta;
+  const caps = getCapabilities(meta);
+  
   if (!requiredFields?.length) return; // No required fields = scenario N/A
+  if (!caps.canCreate) return; // Create not available = scenario N/A
 
   ctx.it(`POST /api/${meta.tableName} - creates with required fields only`, async () => {
     // Use buildMinimalWithFKs to resolve any FK dependencies
@@ -46,12 +54,15 @@ function createWithRequiredFields(meta, ctx) {
 /**
  * Scenario: Create fails when required field missing
  *
- * Preconditions: Entity has requiredFields defined
+ * Preconditions: Entity has requiredFields defined AND create is enabled
  * Tests: Each required field, when omitted, causes 400
  */
 function createFailsWithMissingRequired(meta, ctx) {
   const { entityName, requiredFields } = meta;
+  const caps = getCapabilities(meta);
+  
   if (!requiredFields?.length) return;
+  if (!caps.canCreate) return; // Create not available = scenario N/A
 
   for (const field of requiredFields) {
     ctx.it(`POST /api/${meta.tableName} - fails without ${field}`, async () => {
@@ -83,6 +94,16 @@ function readById(meta, ctx) {
     const response = await ctx.request
       .get(`/api/${meta.tableName}/${created.id}`)
       .set(auth);
+
+    // Debug: log actual response for failures
+    if (response.status !== 200) {
+      console.log(`[DEBUG] ${meta.entityName} GET /:id failed:`, {
+        status: response.status,
+        body: response.body,
+        createdId: created.id,
+        createdUserId: created.user_id,
+      });
+    }
 
     ctx.expect(response.status).toBe(200);
     const data = response.body.data || response.body;

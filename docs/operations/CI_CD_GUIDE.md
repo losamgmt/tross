@@ -73,15 +73,15 @@ Guide to TrossApp's continuous integration and deployment pipeline.
 
 ### What's NOT in E2E
 
-Tests requiring authentication are in **integration tests** (1100+ tests) where test auth is enabled. Production doesn't accept dev tokens (correct security!).
+Tests requiring authentication are in **integration tests** where test auth is enabled. Production doesn't accept dev tokens (correct security!).
 
 ### CI Pipeline Flow
 
 ```
 Push to main
-    ├─► Backend Unit (1900+) ────┐
-    │                            ├─► E2E (15 tests) ─► Deploy Notify
-    ├─► Backend Integration (1100+)┘   against Railway
+    ├─► Backend Unit ───────────┐
+    │                            ├─► E2E ─► Deploy Notify
+    ├─► Backend Integration ─────┘   against Railway
     │
     ├─► Frontend Tests
     │

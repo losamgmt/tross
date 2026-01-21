@@ -52,7 +52,6 @@ flutter:
   # Application assets
   assets:
     - assets/config/permissions.json
-    - assets/config/validation-rules.json
     - assets/config/entity-metadata.json
     - assets/config/nav-config.json
 

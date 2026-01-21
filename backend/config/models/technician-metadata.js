@@ -119,7 +119,7 @@ module.exports = {
    * Default columns to display in table views (ordered)
    * Used by admin panel and frontend table widgets
    */
-  displayColumns: ['first_name', 'last_name', 'email', 'phone', 'skills', 'status'],
+  displayColumns: ['first_name', 'last_name', 'email', 'phone', 'skills', 'status', 'availability'],
 
   // ============================================================================
   // FIELD ACCESS CONTROL (role-based field-level CRUD permissions)
@@ -167,6 +167,10 @@ module.exports = {
 
     // Skills - publicly visible, self-editable by technician
     skills: FAL.SELF_EDITABLE,
+
+    // Availability - operational state, self-editable by technician
+    // (separate from lifecycle status which is manager-controlled)
+    availability: FAL.SELF_EDITABLE,
   },
 
   // ============================================================================
@@ -224,6 +228,7 @@ module.exports = {
     'license_number',
     'is_active',
     'status',
+    'availability',
     'created_at',
     'updated_at',
   ],
@@ -240,6 +245,7 @@ module.exports = {
     'license_number',
     'is_active',
     'status',
+    'availability',
     'hourly_rate',
     'created_at',
     'updated_at',
@@ -263,9 +269,17 @@ module.exports = {
     updated_at: { type: 'timestamp', readonly: true },
 
     // TIER 2: Entity-Specific Lifecycle Field
+    // SSOT: Must match User and Customer status values
     status: {
       type: 'enum',
-      values: ['available', 'on_job', 'off_duty', 'suspended'],
+      values: ['pending', 'active', 'suspended'],
+      default: 'pending',
+    },
+
+    // Operational availability (separate from lifecycle status)
+    availability: {
+      type: 'enum',
+      values: ['available', 'on_job', 'off_duty'],
       default: 'available',
     },
 

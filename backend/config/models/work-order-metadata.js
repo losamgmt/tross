@@ -15,7 +15,6 @@ const {
   UNIVERSAL_FIELD_ACCESS,
 } = require('../constants');
 const { NAME_TYPES } = require('../entity-types');
-const { WORK_ORDER_STATUS, PRIORITY } = require('../status-enums');
 
 module.exports = {
   // Table name in database
@@ -145,7 +144,7 @@ module.exports = {
   displayColumns: ['work_order_number', 'name', 'customer_id', 'status', 'priority', 'assigned_technician_id', 'scheduled_start'],
 
   // ============================================================================
-  // FIELD-LEVEL ACCESS CONTROL (for response-transform.js)
+  // FIELD-LEVEL ACCESS CONTROL (for field-access-controller.js)
   // ============================================================================
 
   fieldAccess: {
@@ -361,8 +360,8 @@ module.exports = {
     // TIER 2: Entity-Specific Lifecycle Field
     status: {
       type: 'enum',
-      values: Object.values(WORK_ORDER_STATUS),
-      default: WORK_ORDER_STATUS.PENDING,
+      values: ['pending', 'assigned', 'in_progress', 'completed', 'cancelled'],
+      default: 'pending',
     },
 
     // COMPUTED entity name field (aliased as "Title" in UI)
@@ -373,8 +372,8 @@ module.exports = {
     // Entity-specific fields
     priority: {
       type: 'enum',
-      values: Object.values(PRIORITY),
-      default: PRIORITY.NORMAL,
+      values: ['low', 'normal', 'high', 'urgent'],
+      default: 'normal',
     },
     customer_id: {
       type: 'foreignKey',

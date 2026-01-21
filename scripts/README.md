@@ -28,4 +28,3 @@ See `backend/scripts/`:
 - `manual-curl-tests.sh` - API testing
 - `run-migration.js` - Database migrations
 
-**Status**: v1.0.0-backend-lock ���

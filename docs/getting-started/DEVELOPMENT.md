@@ -228,18 +228,31 @@ npm run migrate:create add_entity_table
 npm run migrate
 ```
 
-**2. Create Model** (`backend/db/models/Entity.js`)
+**2. Create Entity Metadata** (`backend/config/models/entity-metadata.js`)
+
+Entity metadata is the SINGLE SOURCE OF TRUTH for entity configuration.
+See existing metadata files for the complete pattern.
+
 ```javascript
-class Entity {
-  static async findAll(filters = {}, options = {}) { }
-  static async findById(id) { }
-  static async create(data) { }
-  static async update(id, data) { }
-  static async delete(id) { }  // Soft delete (is_active = false)
-}
+module.exports = {
+  tableName: 'entities',
+  primaryKey: 'id',
+  identityField: 'name',
+  rlsResource: 'entities',
+  rlsPolicy: {
+    customer: 'own_record_only',
+    admin: 'all_records',
+  },
+  routeConfig: { useGenericRouter: true },
+  // ... fields, validation, etc.
+};
 ```
 
-**3. Create Routes** (`backend/routes/entities.js`)
+**3. Register in Index** (`backend/config/models/index.js`)
+
+Add your entity to the metadata exports.
+
+**4. Create Routes** (automatic via generic router)
 ```javascript
 router.get('/', authenticateToken, requirePermission('entities:read'), async (req, res) => {
   // GET /api/entities

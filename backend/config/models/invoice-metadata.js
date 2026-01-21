@@ -15,7 +15,6 @@ const {
   UNIVERSAL_FIELD_ACCESS,
 } = require('../constants');
 const { NAME_TYPES } = require('../entity-types');
-const { INVOICE_STATUS } = require('../status-enums');
 
 module.exports = {
   // Table name in database
@@ -144,7 +143,7 @@ module.exports = {
   displayColumns: ['invoice_number', 'customer_id', 'status', 'total', 'due_date', 'created_at'],
 
   // ============================================================================
-  // FIELD-LEVEL ACCESS CONTROL (for response-transform.js)
+  // FIELD-LEVEL ACCESS CONTROL (for field-access-controller.js)
   // ============================================================================
 
   /**
@@ -390,8 +389,8 @@ module.exports = {
     // TIER 2: Entity-Specific Lifecycle Field
     status: {
       type: 'enum',
-      values: Object.values(INVOICE_STATUS),
-      default: INVOICE_STATUS.DRAFT,
+      values: ['draft', 'sent', 'paid', 'overdue', 'cancelled', 'void'],
+      default: 'draft',
     },
 
     // COMPUTED entity name field - optional because computed from template

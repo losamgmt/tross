@@ -13,8 +13,8 @@
 const {
   FIELD_ACCESS_LEVELS: FAL,
   UNIVERSAL_FIELD_ACCESS,
-  ROLE_HIERARCHY,
 } = require('../constants');
+const { getRoleHierarchy } = require('../role-hierarchy-loader');
 const { NAME_TYPES } = require('../entity-types');
 
 module.exports = {
@@ -211,9 +211,11 @@ module.exports = {
 
     /**
      * Values of protectedByField that are protected
-     * Derived from ROLE_HIERARCHY (single source of truth)
+     * Derived dynamically from role-hierarchy-loader (DB SSOT at runtime)
      */
-    values: [...ROLE_HIERARCHY],
+    get values() {
+      return [...getRoleHierarchy()];
+    },
 
     /**
      * Fields that cannot be modified on protected records

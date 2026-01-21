@@ -9,9 +9,11 @@ library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tross_app/services/entity_metadata.dart';
 
-/// All known entity names - single source of truth for tests.
-/// Derived from backend schema.sql and entity-metadata.json.
-const allKnownEntities = <String>[
+/// CORE business entities that must always exist.
+/// Used for pre-initialization tests only.
+/// NOTE: After initialization, use EntityTestRegistry.allEntityNames instead!
+/// This list should be a SUBSET of what's in entity-metadata.json.
+const coreBusinessEntities = <String>[
   'user',
   'role',
   'customer',
@@ -20,9 +22,18 @@ const allKnownEntities = <String>[
   'contract',
   'invoice',
   'inventory',
+];
+
+/// @deprecated Use EntityTestRegistry.allEntityNames after initialization.
+/// This exists only for backward compatibility with tests that need
+/// entity names before registry initialization.
+const allKnownEntities = <String>[
+  ...coreBusinessEntities,
   'preferences',
   'saved_view',
   'file_attachment',
+  'notification',
+  'audit_log',
 ];
 
 /// Test-friendly wrapper for EntityMetadataRegistry

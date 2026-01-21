@@ -105,14 +105,15 @@ function hasRole(req, roleName) {
  * @returns {boolean} True if user meets or exceeds role level
  */
 function hasMinimumRole(req, minRole) {
-  const { ROLE_NAME_TO_PRIORITY } = require('../config/role-definitions');
+  const { getRoleNameToPriority } = require('../config/role-hierarchy-loader');
 
   if (!req.user || !req.user.roleName) {
     return false;
   }
 
-  const userPriority = ROLE_NAME_TO_PRIORITY[req.user.roleName.toLowerCase()];
-  const requiredPriority = ROLE_NAME_TO_PRIORITY[minRole.toLowerCase()];
+  const roleNameToPriority = getRoleNameToPriority();
+  const userPriority = roleNameToPriority[req.user.roleName.toLowerCase()];
+  const requiredPriority = roleNameToPriority[minRole.toLowerCase()];
 
   if (userPriority === undefined || requiredPriority === undefined) {
     logger.warn('Unknown role in priority check', {

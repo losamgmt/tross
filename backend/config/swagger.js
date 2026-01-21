@@ -4,11 +4,15 @@
  * This is the foundation API documentation for TrossApp MVP.
  * As business logic grows, this will be expanded with new endpoints.
  *
- * DERIVED FROM METADATA: Entity paths are derived from metadata via derived-constants.js
+ * DERIVED FROM METADATA:
+ * - Entity paths are derived from metadata via derived-constants.js
+ * - Entity schemas are derived from metadata.fields via derived-constants.js
+ *
+ * SSOT: All enum values and field types come from *-metadata.js files
  */
 
 const swaggerJsdoc = require('swagger-jsdoc');
-const { getSwaggerEntityConfigs } = require('./derived-constants');
+const { getSwaggerEntityConfigs, getSwaggerEntitySchemas } = require('./derived-constants');
 
 // =============================================================================
 // HELPER: Generate CRUD paths for an entity
@@ -87,6 +91,9 @@ const entityPaths = getSwaggerEntityConfigs().reduce((paths, config) => {
     ...generateEntityPaths(config.basePath, config.tag, config.schemaRef, config.displayName),
   };
 }, {});
+
+// Generate all entity schemas from metadata.fields - SSOT for enum values and field types
+const derivedEntitySchemas = getSwaggerEntitySchemas();
 
 const options = {
   definition: {
@@ -395,96 +402,11 @@ const options = {
           },
         },
         // =====================================================================
-        // BUSINESS ENTITY SCHEMAS
+        // BUSINESS ENTITY SCHEMAS - DERIVED FROM METADATA (SSOT)
+        // These schemas are auto-generated from *-metadata.js files.
+        // DO NOT HARDCODE - update the metadata files instead.
         // =====================================================================
-        Customer: {
-          type: 'object',
-          properties: {
-            id: { type: 'integer', description: 'Customer ID', example: 1 },
-            email: { type: 'string', format: 'email', description: 'Customer email (unique)', example: 'customer@example.com' },
-            phone: { type: 'string', nullable: true, description: 'Phone number', example: '+1-555-123-4567' },
-            company_name: { type: 'string', nullable: true, description: 'Company name', example: 'Acme Corp' },
-            billing_address: { type: 'string', nullable: true, description: 'Billing address' },
-            is_active: { type: 'boolean', description: 'Soft delete flag', example: true },
-            created_at: { type: 'string', format: 'date-time' },
-            updated_at: { type: 'string', format: 'date-time' },
-          },
-        },
-        Technician: {
-          type: 'object',
-          properties: {
-            id: { type: 'integer', description: 'Technician ID', example: 1 },
-            email: { type: 'string', format: 'email', description: 'Technician email (unique)', example: 'tech@example.com' },
-            phone: { type: 'string', nullable: true, description: 'Phone number' },
-            skill_level: { type: 'string', nullable: true, description: 'Skill level', example: 'senior' },
-            certifications: { type: 'array', items: { type: 'string' }, nullable: true, description: 'List of certifications' },
-            is_active: { type: 'boolean', description: 'Soft delete flag', example: true },
-            created_at: { type: 'string', format: 'date-time' },
-            updated_at: { type: 'string', format: 'date-time' },
-          },
-        },
-        WorkOrder: {
-          type: 'object',
-          properties: {
-            id: { type: 'integer', description: 'Work Order ID', example: 1 },
-            title: { type: 'string', description: 'Work order title', example: 'HVAC Repair' },
-            description: { type: 'string', nullable: true, description: 'Detailed description' },
-            status: { type: 'string', enum: ['pending', 'in_progress', 'completed', 'cancelled'], example: 'pending' },
-            priority: { type: 'string', enum: ['low', 'medium', 'high', 'urgent'], example: 'medium' },
-            customer_id: { type: 'integer', description: 'FK to customers', example: 1 },
-            assigned_technician_id: { type: 'integer', nullable: true, description: 'FK to technicians' },
-            scheduled_date: { type: 'string', format: 'date', nullable: true },
-            completed_date: { type: 'string', format: 'date', nullable: true },
-            is_active: { type: 'boolean', description: 'Soft delete flag', example: true },
-            created_at: { type: 'string', format: 'date-time' },
-            updated_at: { type: 'string', format: 'date-time' },
-          },
-        },
-        Invoice: {
-          type: 'object',
-          properties: {
-            id: { type: 'integer', description: 'Invoice ID', example: 1 },
-            invoice_number: { type: 'string', description: 'Invoice number', example: 'INV-2025-001' },
-            amount: { type: 'number', format: 'decimal', description: 'Invoice amount', example: 250.00 },
-            status: { type: 'string', enum: ['draft', 'sent', 'paid', 'overdue', 'cancelled'], example: 'draft' },
-            customer_id: { type: 'integer', description: 'FK to customers', example: 1 },
-            work_order_id: { type: 'integer', nullable: true, description: 'FK to work_orders' },
-            due_date: { type: 'string', format: 'date', nullable: true },
-            paid_date: { type: 'string', format: 'date', nullable: true },
-            is_active: { type: 'boolean', description: 'Soft delete flag', example: true },
-            created_at: { type: 'string', format: 'date-time' },
-            updated_at: { type: 'string', format: 'date-time' },
-          },
-        },
-        Contract: {
-          type: 'object',
-          properties: {
-            id: { type: 'integer', description: 'Contract ID', example: 1 },
-            title: { type: 'string', description: 'Contract title', example: 'Annual Maintenance Agreement' },
-            customer_id: { type: 'integer', description: 'FK to customers', example: 1 },
-            start_date: { type: 'string', format: 'date' },
-            end_date: { type: 'string', format: 'date' },
-            value: { type: 'number', format: 'decimal', description: 'Contract value', example: 5000.00 },
-            status: { type: 'string', enum: ['draft', 'active', 'expired', 'cancelled'], example: 'active' },
-            is_active: { type: 'boolean', description: 'Soft delete flag', example: true },
-            created_at: { type: 'string', format: 'date-time' },
-            updated_at: { type: 'string', format: 'date-time' },
-          },
-        },
-        Inventory: {
-          type: 'object',
-          properties: {
-            id: { type: 'integer', description: 'Inventory item ID', example: 1 },
-            name: { type: 'string', description: 'Item name', example: 'HVAC Filter 20x25' },
-            sku: { type: 'string', nullable: true, description: 'Stock keeping unit', example: 'HVAC-F-2025' },
-            quantity: { type: 'integer', description: 'Current quantity', example: 50 },
-            unit_price: { type: 'number', format: 'decimal', description: 'Unit price', example: 12.99 },
-            reorder_level: { type: 'integer', nullable: true, description: 'Reorder threshold', example: 10 },
-            is_active: { type: 'boolean', description: 'Soft delete flag', example: true },
-            created_at: { type: 'string', format: 'date-time' },
-            updated_at: { type: 'string', format: 'date-time' },
-          },
-        },
+        ...derivedEntitySchemas,
         // =====================================================================
         // COMMON RESPONSE SCHEMAS
         // =====================================================================

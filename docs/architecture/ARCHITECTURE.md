@@ -158,12 +158,12 @@ status VARCHAR(50) DEFAULT 'active'
 ```
 
 **Field Separation:**
-- `is_active` = Does record exist? (soft delete)
+- `is_active` = Record visibility (deactivation flag)
 - `status` = What lifecycle stage? (pending, active, suspended, etc.)
 
 **Why:**
 - Consistent patterns reduce cognitive load
-- Soft deletes prevent data loss
+- Deactivation (`is_active=false`) preserves data while hiding records
 - Status enables workflow modeling
 
 ---
@@ -228,11 +228,10 @@ const user = await strategy.authenticate(credentials);
 **Decision:** Every piece of information has exactly ONE canonical source.
 
 **SSOT Modules:**
-- `role-definitions.js` - Roles, hierarchy, priorities (NO IMPORTS - dependency-free)
-- `status-enums.js` - All status field values (NO IMPORTS - dependency-free)
-- `entity-types.js` - Name field type enum (NO IMPORTS - dependency-free)
-- `config/models/*.js` - All entity metadata
+- `config/models/*-metadata.js` - Entity definitions including field types, constraints, and allowed values
 - `derived-constants.js` - Computes constants FROM metadata at runtime
+- `validation-deriver.js` - Derives Joi schemas FROM metadata
+- `sync-entity-metadata.js` - Syncs to frontend entity-metadata.json
 
 **Why:**
 - Change one place, effects propagate everywhere
@@ -242,10 +241,10 @@ const user = await strategy.authenticate(credentials);
 **Anti-Pattern:** 
 ```javascript
 // ❌ WRONG: Hardcoded list that duplicates metadata
-const ENTITIES = ['customer', 'work_order', 'invoice'];
+const STATUS_VALUES = ['pending', 'active', 'suspended'];
 
 // ✅ RIGHT: Derive from metadata
-const ENTITIES = Object.keys(require('./config/models'));
+const STATUS_VALUES = entityMetadata.fields.status.enum;
 ```
 
 ---

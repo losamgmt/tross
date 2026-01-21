@@ -10,10 +10,10 @@
  * - Each field has CRUD permissions: { create, read, update, delete }
  * - Each permission specifies the MINIMUM role required ('none' = never allowed)
  * - Permissions accumulate UPWARD through role hierarchy
- * - Role hierarchy: customer < technician < dispatcher < manager < admin
+ * - Role hierarchy: SSOT from database (loaded at startup via role-hierarchy-loader)
  *
  * Usage:
- *   const { getFieldsForOperation, filterDataByRole } = require('../utils/response-transform');
+ *   const { getFieldsForOperation, filterDataByRole } = require('../utils/field-access-controller');
  *
  *   // Get fields user can read
  *   const readableFields = getFieldsForOperation(metadata, 'dispatcher', 'read');
@@ -22,11 +22,11 @@
  *   const sanitizedData = filterDataByRole(data, metadata, 'customer', 'read');
  */
 
+const { UNIVERSAL_FIELD_ACCESS } = require('../config/constants');
 const {
-  ROLE_HIERARCHY,
-  ROLE_PRIORITY_TO_NAME,
-  UNIVERSAL_FIELD_ACCESS,
-} = require('../config/constants');
+  getRoleHierarchy,
+  getRolePriorityToName,
+} = require('../config/role-hierarchy-loader');
 const AppError = require('./app-error');
 
 /**
@@ -37,7 +37,8 @@ const AppError = require('./app-error');
  */
 function getRoleIndex(role) {
   const roleName = normalizeRoleName(role);
-  return ROLE_HIERARCHY.indexOf(roleName);
+  const roleHierarchy = getRoleHierarchy();
+  return roleHierarchy.indexOf(roleName);
 }
 
 /**
@@ -52,9 +53,10 @@ function normalizeRoleName(role) {
     return role.toLowerCase();
   }
 
-  // Map priority numbers to role names
-  if (typeof role === 'number' && ROLE_PRIORITY_TO_NAME[role]) {
-    return ROLE_PRIORITY_TO_NAME[role];
+  // Map priority numbers to role names (from DB-loaded hierarchy)
+  const priorityToName = getRolePriorityToName();
+  if (typeof role === 'number' && priorityToName[role]) {
+    return priorityToName[role];
   }
 
   return 'customer'; // Default to lowest permission

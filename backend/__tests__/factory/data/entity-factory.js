@@ -12,6 +12,12 @@
 
 const allMetadata = require('../../../config/models');
 const validationGenerator = require('./validation-data-generator');
+const { deriveCapabilities } = require('../../../config/entity-metadata-validator');
+
+/**
+ * Cache for entity capabilities (derived once per entity)
+ */
+const capabilitiesCache = new Map();
 
 /**
  * Get metadata for entity by name
@@ -22,6 +28,27 @@ function getMetadata(entityName) {
     throw new Error(`Unknown entity: ${entityName}. Available: ${Object.keys(allMetadata).join(', ')}`);
   }
   return { ...meta, entityName };
+}
+
+/**
+ * Get entity capabilities - SINGLE SOURCE OF TRUTH
+ * 
+ * Returns capabilities object with:
+ * - canCreate, canRead, canUpdate, canDelete (boolean)
+ * - isCreateDisabled (true if API create is disabled)
+ * - isOwnRecordOnly, hasRls (RLS configuration)
+ * - usesGenericRouter (routing config)
+ * - getMinimumRole(operation) (role lookup)
+ * 
+ * @param {string} entityName - Entity name
+ * @returns {Object} Capabilities object
+ */
+function getCapabilities(entityName) {
+  if (!capabilitiesCache.has(entityName)) {
+    const meta = getMetadata(entityName);
+    capabilitiesCache.set(entityName, deriveCapabilities(meta));
+  }
+  return capabilitiesCache.get(entityName);
 }
 
 /**
@@ -186,8 +213,9 @@ function resetCounter() {
 }
 
 module.exports = {
-  // Entity metadata
+  // Entity metadata and capabilities
   getMetadata,
+  getCapabilities,
   entityNameFromTable,
   
   // Payload building

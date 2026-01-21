@@ -1,8 +1,6 @@
 # Admin Frontend Architecture
 
-> **Last Updated**: January 1, 2026  
-> **Purpose**: Complete context for continuing admin frontend development  
-> **Status**: Phase 1 Complete, Phases 2-7 Pending
+> **Purpose**: Architecture decisions and context for admin frontend development
 
 ---
 
@@ -13,12 +11,10 @@
 3. [Frontend Architecture Principles](#3-frontend-architecture-principles)
 4. [Component Inventory](#4-component-inventory)
 5. [Security Implementation](#5-security-implementation)
-6. [Development Plan](#6-development-plan)
-7. [Configuration Files](#7-configuration-files)
-8. [State Management](#8-state-management)
-9. [Testing Patterns](#9-testing-patterns)
-10. [Open Decisions](#10-open-decisions)
-11. [Next Session Checklist](#11-next-session-checklist)
+6. [Configuration Files](#6-configuration-files)
+7. [State Management](#7-state-management)
+8. [Testing Patterns](#8-testing-patterns)
+9. [Architecture Decisions](#9-architecture-decisions)
 
 ---
 
@@ -36,19 +32,14 @@ A metadata-driven admin frontend with **zero specificity** - generic templates a
 - **Responsive First**: All views adapt to mobile/tablet/desktop
 - **Atomic Design**: Atoms → Molecules → Organisms → Templates → Screens
 
-### Current Test Status: ✅ ALL PASSING
-| Suite | Tests | Status |
-|-------|-------|--------|
-| Backend Unit | 1619 | ✅ Passing |
-| Backend Integration | 742 | ✅ Passing |
-| Frontend Flutter | 1950 | ✅ Passing |
-| E2E Playwright | 30 | ✅ Passing |
+### Current Test Status
+All test suites should pass before making changes. Run `npm run test:all` to verify.
 
-### Phase 1 Status: ✅ COMPLETE
-- Router now uses centralized `RouteGuard.checkAccess()` for ALL routes
+### Current Implementation Status
+- Router uses centralized `RouteGuard.checkAccess()` for ALL routes
 - `AdaptiveShell` has defense-in-depth guard (second tier)
-- All 29 route guard tests passing
-- `/admin/*` routes properly protected (was only protecting exact `/admin`)
+- Route guard tests are comprehensive
+- `/admin/*` routes properly protected
 
 ---
 
@@ -82,7 +73,7 @@ A metadata-driven admin frontend with **zero specificity** - generic templates a
 /api/admin/system/logs/data          - CRUD operation logs
 /api/admin/system/logs/auth          - Authentication logs
 /api/admin/system/config/permissions - View permissions.json
-/api/admin/system/config/validation  - View validation-rules.json
+/api/admin/system/config/validation  - View validation (derived from metadata)
 /api/admin/{entity}/                 - Entity metadata (RLS, field access)
 ```
 
@@ -233,15 +224,14 @@ abstract class MetadataProvider {
 | **2** | Shell Guard | `AdaptiveShell.build()` | Secondary check before rendering |
 | **3** | Backend Guard | `/api/admin/*` routes | 403 Forbidden if not admin |
 
-### Phase 1 Changes (COMPLETED)
+### Security Implementation Details
 
 **File: `app_router.dart`**
-- Replaced inline admin check with `RouteGuard.checkAccess()`
-- Now protects ALL `/admin/*` routes, not just exact `/admin`
-- Import changed: `route_guard.dart` instead of `auth_profile_service.dart`
+- Uses `RouteGuard.checkAccess()` for protection
+- Protects ALL `/admin/*` routes via path matching
 
 **File: `adaptive_shell.dart`**  
-- Added `RouteGuard.checkAccess()` check at start of `build()`
+- Has defense-in-depth `RouteGuard.checkAccess()` check
 - If access denied, renders inline error with "Go to Home" button
 - Safety net if router guard somehow bypassed
 
@@ -268,84 +258,17 @@ if (AppRoutes.requiresAdmin(route)) {  // Uses startsWith('/admin')
 
 ---
 
-## 6. Development Plan
-
-### Phase Overview
-
-| Phase | Name | Status | Description |
-|-------|------|--------|-------------|
-| 1 | Security Foundation | ✅ COMPLETE | Router + Shell guards |
-| 2 | Display Primitives | ❌ TODO | DataMatrix, KeyValueList |
-| 3 | Data Layer | ❌ TODO | MetadataProvider interface |
-| 4 | Page Templates | ❌ TODO | TabbedPage, DashboardPage |
-| 5 | State Management | ❌ TODO | EditableFormProvider |
-| 6 | Route Composition | ❌ TODO | Wire up admin routes |
-| 7 | Admin Widgets | ❌ TODO | Health, Sessions, Panels |
-
-### Phase 2: Display Primitives
-```
-Create:
-- frontend/lib/widgets/molecules/display/data_matrix.dart
-- frontend/lib/widgets/molecules/display/key_value_list.dart
-Update:
-- frontend/lib/widgets/molecules/molecules.dart (exports)
-```
-
-### Phase 3: Data Layer
-```
-Create:
-- frontend/lib/services/metadata/metadata_provider.dart (interface)
-- frontend/lib/services/metadata/json_metadata_provider.dart (impl)
-Update:
-- frontend/lib/main.dart (register provider)
-```
-
-### Phase 4: Page Templates
-```
-Create:
-- frontend/lib/widgets/templates/tabbed_page.dart
-- frontend/lib/widgets/templates/dashboard_page.dart
-Update:
-- frontend/lib/widgets/templates/templates.dart (exports)
-```
-
-### Phase 5: State Management
-```
-Create:
-- frontend/lib/providers/editable_form_provider.dart
-- frontend/lib/widgets/molecules/forms/save_discard_bar.dart
-```
-
-### Phase 6: Route Composition
-```
-Update:
-- frontend/lib/core/routing/app_router.dart (admin routes)
-- frontend/assets/config/nav-config.json (admin sidebar)
-```
-
-### Phase 7: Admin Widgets
-```
-Create:
-- frontend/lib/widgets/organisms/admin/health_status_widget.dart
-- frontend/lib/widgets/organisms/admin/sessions_widget.dart
-- frontend/lib/widgets/organisms/admin/maintenance_toggle.dart
-- frontend/lib/widgets/organisms/admin/permissions_panel.dart
-- frontend/lib/widgets/organisms/admin/validation_panel.dart
-- frontend/lib/widgets/organisms/admin/audit_log_table.dart
-```
-
----
-
-## 7. Configuration Files
+## 6. Configuration Files
 
 ### Location: `frontend/assets/config/`
 
 | File | Purpose | Used By |
 |------|---------|---------|
-| `entity-metadata.json` | Entity definitions, fields, relationships | GenericEntityService, forms |
+| `entity-metadata.json` | Entity definitions, fields, validation, relationships | GenericEntityService, forms, JsonMetadataProvider |
 | `nav-config.json` | Sidebar/menu structure, route strategies | NavMenuBuilder, AdaptiveShell |
 | `permissions.json` | RLS policies, role permissions | PermissionGate, backend |
-| `validation-rules.json` | Field validation rules | Form validation |
+
+> **Note**: Validation rules are included in `entity-metadata.json` (SSOT). There is no separate validation-rules.json file.
 
 ### nav-config.json Admin Strategy
 ```json
@@ -384,7 +307,7 @@ Create:
 
 ---
 
-## 8. State Management
+## 7. State Management
 
 ### Current Stack
 - **Package**: `provider: ^6.1.2` (already installed)
@@ -443,7 +366,7 @@ class EditableFormProvider extends ChangeNotifier {
 
 ---
 
-## 9. Testing Patterns
+## 8. Testing Patterns
 
 ### Critical Testing Infrastructure
 
@@ -521,9 +444,7 @@ npm run test:e2e
 
 ---
 
-## 10. Open Decisions
-
-### Resolved ✅
+## 9. Architecture Decisions
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
@@ -537,82 +458,6 @@ npm run test:e2e
 | Logs: separate routes vs tabs | Single route with tabs | Simpler sidebar |
 | Screen test strategy | Test organisms/templates, not thin wrappers | Avoids fragile tests |
 | Mock auth in tests | `MockAuthProvider.authenticated()` | Bypasses platform channels |
-
-### Pending ❓
-
-| Decision | Options | Notes |
-|----------|---------|-------|
-| Tab component | Build custom vs use package | Need to evaluate flutter packages |
-| Dashboard grid columns | Fixed vs fully responsive | Leaning responsive |
-| Entity list in admin sidebar | All vs filtered by permission | Leaning all (admins see all) |
-
----
-
-## 11. Next Session Checklist
-
-### Quick Context Load
-1. Read this document: `docs/ADMIN_FRONTEND_ARCHITECTURE.md`
-2. Current phase: **Phase 2 - Display Primitives**
-3. All tests passing (1619 + 742 + 1950 + 30 = 4341 tests)
-4. Analysis clean: `flutter analyze lib/` and `npm run lint` (no issues)
-
-### Verify Environment
-```bash
-# Ensure all tests still pass
-npm run test:all
-
-# Check for lint issues
-cd backend && npm run lint
-cd frontend && flutter analyze lib/
-```
-
-### Phase 2 Tasks
-- [ ] Create `DataMatrix` molecule (`molecules/display/data_matrix.dart`)
-- [ ] Create `KeyValueList` molecule (`molecules/display/key_value_list.dart`)
-- [ ] Update exports (`molecules/molecules.dart`)
-- [ ] Write tests (use `MockAuthProvider.authenticated()` if needed)
-- [ ] Run `flutter analyze lib/`
-
-### Key Files to Reference
-```
-# Architecture & Routing
-frontend/lib/core/routing/app_router.dart      # Routes with guards
-frontend/lib/core/routing/route_guard.dart     # Access control logic
-frontend/lib/widgets/templates/adaptive_shell.dart  # Shell with guard
-
-# Configuration
-frontend/assets/config/nav-config.json         # Navigation structure
-frontend/assets/config/entity-metadata.json    # Entity definitions
-config/permissions.json                         # Role permissions
-
-# Testing
-frontend/test/mocks/mock_services.dart         # MockAuthProvider
-frontend/test/helpers/                          # Test utilities
-```
-
-### Test Commands
-```bash
-# Quick validation
-cd frontend && flutter test --reporter=compact
-
-# Failures only
-npm run test:frontend:failures
-
-# Full suite
-npm run test:all
-
-# Backend only
-npm run test:unit && npm run test:integration
-
-# E2E only
-npm run test:e2e
-```
-
-### Session Resume Prompt
-> "I'm continuing work on TrossApp admin frontend. Please read 
-> `docs/ADMIN_FRONTEND_ARCHITECTURE.md` for full context. We completed 
-> Phase 1 (security). Ready to start Phase 2 (display primitives).
-> All tests are currently passing."
 
 ---
 

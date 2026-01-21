@@ -221,11 +221,17 @@ void main() {
           );
 
           final opConfig = permissions[op] as Map<String, dynamic>?;
-          expect(
-            opConfig?['minimumRole'],
-            isNotNull,
-            reason: '$resourceName.$op should have minimumRole',
-          );
+
+          // minimumRole can be null for disabled operations (system-only, not available via API)
+          final isDisabled = opConfig?['disabled'] == true;
+          if (!isDisabled) {
+            expect(
+              opConfig?['minimumRole'],
+              isNotNull,
+              reason:
+                  '$resourceName.$op should have minimumRole (unless disabled)',
+            );
+          }
           expect(
             opConfig?['minimumPriority'],
             isNotNull,

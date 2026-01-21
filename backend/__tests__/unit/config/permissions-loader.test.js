@@ -91,6 +91,10 @@ describe('Permission System - Data-Driven Tests', () => {
       
       for (const [resource, operations] of Object.entries(PERMISSIONS)) {
         for (const [operation, priority] of Object.entries(operations)) {
+          // Priority 0 means operation is disabled (system-only) - this is valid
+          if (priority === 0) {
+            continue;
+          }
           expect(validPriorities).toContain(priority);
         }
       }
@@ -123,13 +127,20 @@ describe('Permission System - Data-Driven Tests', () => {
   });
 
   describe('hasPermission()', () => {
-    test('should allow admin all permissions', () => {
-      // Admin should be able to do everything
-      for (const resource of Object.keys(PERMISSIONS)) {
-        expect(hasPermission('admin', resource, 'create')).toBe(true);
-        expect(hasPermission('admin', resource, 'read')).toBe(true);
-        expect(hasPermission('admin', resource, 'update')).toBe(true);
-        expect(hasPermission('admin', resource, 'delete')).toBe(true);
+    test('should allow admin all enabled permissions', () => {
+      // Admin should be able to do everything THAT IS ENABLED
+      // Some entities have disabled operations (e.g., create: null for system-only entities)
+      for (const [resource, operations] of Object.entries(PERMISSIONS)) {
+        for (const [operation, priority] of Object.entries(operations)) {
+          // Priority 0 means operation is disabled (system-only)
+          if (priority === 0) {
+            // Disabled operations should return false even for admin
+            expect(hasPermission('admin', resource, operation)).toBe(false);
+          } else {
+            // Enabled operations should allow admin
+            expect(hasPermission('admin', resource, operation)).toBe(true);
+          }
+        }
       }
     });
 
@@ -137,6 +148,9 @@ describe('Permission System - Data-Driven Tests', () => {
       // For each resource and operation, verify hierarchy
       for (const [resource, operations] of Object.entries(PERMISSIONS)) {
         for (const [operation, minPriority] of Object.entries(operations)) {
+          // Skip disabled operations (priority 0)
+          if (minPriority === 0) continue;
+          
           // All roles with priority >= minPriority should have permission
           for (const [role, rolePriority] of Object.entries(ROLE_HIERARCHY)) {
             const hasAccess = hasPermission(role, resource, operation);
@@ -217,13 +231,19 @@ describe('Permission System - Data-Driven Tests', () => {
   });
 
   describe('getMinimumRole()', () => {
-    test('should return minimum role for each permission', () => {
+    test('should return minimum role for each enabled permission', () => {
       for (const [resource, operations] of Object.entries(PERMISSIONS)) {
-        for (const operation of Object.keys(operations)) {
+        for (const [operation, priority] of Object.entries(operations)) {
           const minRole = getMinimumRole(resource, operation);
-          expect(minRole).toBeDefined();
-          expect(typeof minRole).toBe('string');
-          expect(ROLE_HIERARCHY).toHaveProperty(minRole);
+          
+          // Disabled operations (priority 0) return null for minimumRole
+          if (priority === 0) {
+            expect(minRole).toBeNull();
+          } else {
+            expect(minRole).toBeDefined();
+            expect(typeof minRole).toBe('string');
+            expect(ROLE_HIERARCHY).toHaveProperty(minRole);
+          }
         }
       }
     });

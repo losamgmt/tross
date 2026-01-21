@@ -113,6 +113,17 @@ function validatePermissionConfig(config) {
         throw new Error(`Invalid minimumPriority for ${resourceName}.${op}`);
       }
 
+      // Handle disabled operations (minimumRole: null, minimumPriority: 0)
+      if (permission.disabled === true) {
+        if (permission.minimumPriority !== 0 || permission.minimumRole !== null) {
+          throw new Error(
+            `Invalid disabled operation for ${resourceName}.${op}: ` +
+            'expected minimumPriority=0 and minimumRole=null',
+          );
+        }
+        continue; // Skip further validation for disabled operations
+      }
+
       if (!permission.minimumRole || !config.roles[permission.minimumRole]) {
         throw new Error(`Invalid minimumRole "${permission.minimumRole}" for ${resourceName}.${op}`);
       }
@@ -201,6 +212,11 @@ function hasPermission(roleName, resource, operation) {
   const requiredPriority = resourcePermissions[operation];
   if (requiredPriority === undefined) {
     return false; // Unknown operation = no permission
+  }
+
+  // Priority 0 means operation is disabled (system-only, no API access)
+  if (requiredPriority === 0) {
+    return false;
   }
 
   // User must have priority >= required priority

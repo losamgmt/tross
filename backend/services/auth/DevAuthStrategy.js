@@ -8,7 +8,7 @@ const jwt = require('jsonwebtoken');
 const AuthStrategy = require('./AuthStrategy');
 const AppError = require('../../utils/app-error');
 const { TEST_USERS } = require('../../config/test-users');
-const { AUTH, USER_ROLES: _USER_ROLES } = require('../../config/constants');
+const { AUTH } = require('../../config/constants');
 const { logger } = require('../../config/logger');
 
 class DevAuthStrategy extends AuthStrategy {

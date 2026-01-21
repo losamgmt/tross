@@ -36,11 +36,11 @@ TrossApp documentation hub.
 | [Architecture Overview](architecture/ARCHITECTURE.md) | Core patterns, KISS, security-first |
 | [Database Architecture](architecture/DATABASE_ARCHITECTURE.md) | Entity Contract v2.0, schema design |
 | [Entity Lifecycle](architecture/ENTITY_LIFECYCLE.md) | `is_active` vs `status` patterns |
+| [ERD](architecture/ERD.md) | Entity relationship diagram |
 | [Schema-Driven UI](architecture/SCHEMA_DRIVEN_UI.md) | Single source of truth |
 | [Validation Architecture](architecture/VALIDATION_ARCHITECTURE.md) | Multi-layer validation |
 | [Architecture Lock](architecture/ARCHITECTURE_LOCK.md) | Frozen patterns |
 | [Architecture Decisions](architecture/decisions/) | ADRs for key choices |
-| [Database ERD](database/ERD.md) | Entity relationship diagram |
 
 ---
 
@@ -79,18 +79,11 @@ TrossApp documentation hub.
 
 ---
 
-## 📋 Project
+## 📋 Historical
 
 | Doc | Purpose |
 |-----|---------|
-| [MVP Scope](project/MVP_SCOPE.md) | Project scope and milestones |
-
----
-
-## 🔧 Active Refactoring
-
-| Doc | Purpose |
-|-----|---------|
-| [Refactoring Agenda](REFACTORING_AGENDA.md) | **START HERE** - Unified architecture principles and remaining tasks |
-| [Audit Remediation](BACKEND_AUDIT_REMEDIATION.md) | Historical audit findings (reference only) |
+| [MVP Scope](project/MVP_SCOPE.md) | Original project scope |
+| [Refactoring Agenda](REFACTORING_AGENDA.md) | Unified middleware refactoring (Phases 1-3 complete) |
+| [Audit Remediation](BACKEND_AUDIT_REMEDIATION.md) | Backend audit findings (Phases 1-3 complete) |
 

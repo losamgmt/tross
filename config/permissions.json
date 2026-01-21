@@ -2,133 +2,64 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://trossapp.com/schemas/permissions.json",
   "title": "TrossApp Permission Configuration",
-  "description": "Single source of truth for role-based access control (RBAC). Used by both backend and frontend to ensure permission parity.",
-  "version": "3.0.1",
-  "lastModified": "2025-12-18",
-  
+  "description": "Single source of truth for role-based access control (RBAC). AUTO-GENERATED from entity metadata - run sync-permissions.js to regenerate.",
+  "version": "4.0.0-derived",
+  "lastModified": "2026-01-21",
   "roles": {
-    "admin": {
-      "priority": 5,
-      "description": "Full system access - can manage users, roles, and all resources"
-    },
-    "manager": {
-      "priority": 4,
-      "description": "Manages operations - can view roles, manage work orders"
-    },
-    "dispatcher": {
-      "priority": 3,
-      "description": "Creates and assigns work orders"
+    "customer": {
+      "priority": 1,
+      "description": "Basic access - can view own data and work orders"
     },
     "technician": {
       "priority": 2,
       "description": "Executes work orders, can view user list"
     },
-    "customer": {
-      "priority": 1,
-      "description": "Basic access - can view own data and work orders"
+    "dispatcher": {
+      "priority": 3,
+      "description": "Creates and assigns work orders"
+    },
+    "manager": {
+      "priority": 4,
+      "description": "Manages operations - can view roles, manage work orders"
+    },
+    "admin": {
+      "priority": 5,
+      "description": "Full system access - can manage users, roles, and all resources"
     }
   },
-
   "resources": {
-    "users": {
-      "description": "User accounts and profiles",
+    "admin_panel": {
+      "description": "Admin control center - system health, sessions, audit logs",
       "rowLevelSecurity": {
-        "customer": "own_record_only",
-        "technician": "all_records",
-        "dispatcher": "all_records",
-        "manager": "all_records",
+        "customer": "deny_all",
+        "technician": "deny_all",
+        "dispatcher": "deny_all",
+        "manager": "deny_all",
         "admin": "all_records"
       },
       "permissions": {
         "create": {
           "minimumRole": "admin",
           "minimumPriority": 5,
-          "description": "Only admins can create new user accounts"
+          "description": "Synthetic resource - create permission"
         },
         "read": {
-          "minimumRole": "customer",
-          "minimumPriority": 1,
-          "description": "Everyone can read users (row-level security applies)"
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "Synthetic resource - read permission"
         },
         "update": {
           "minimumRole": "admin",
           "minimumPriority": 5,
-          "description": "Only admins can update user accounts"
+          "description": "Synthetic resource - update permission"
         },
         "delete": {
           "minimumRole": "admin",
           "minimumPriority": 5,
-          "description": "Only admins can delete user accounts"
+          "description": "Synthetic resource - delete permission"
         }
       }
     },
-
-    "roles": {
-      "description": "User roles and permissions",
-      "rowLevelSecurity": {
-        "customer": "public_resource",
-        "technician": "public_resource",
-        "dispatcher": "public_resource",
-        "manager": "public_resource",
-        "admin": "public_resource"
-      },
-      "permissions": {
-        "create": {
-          "minimumRole": "admin",
-          "minimumPriority": 5,
-          "description": "Only admins can create roles"
-        },
-        "read": {
-          "minimumRole": "customer",
-          "minimumPriority": 1,
-          "description": "Everyone can view roles (needed for UI dropdowns and role awareness)"
-        },
-        "update": {
-          "minimumRole": "admin",
-          "minimumPriority": 5,
-          "description": "Only admins can modify roles"
-        },
-        "delete": {
-          "minimumRole": "admin",
-          "minimumPriority": 5,
-          "description": "Only admins can delete roles"
-        }
-      }
-    },
-
-    "work_orders": {
-      "description": "Work orders and job assignments",
-      "rowLevelSecurity": {
-        "customer": "own_work_orders_only",
-        "technician": "assigned_work_orders_only",
-        "dispatcher": "all_records",
-        "manager": "all_records",
-        "admin": "all_records"
-      },
-      "permissions": {
-        "create": {
-          "minimumRole": "customer",
-          "minimumPriority": 1,
-          "description": "Customers can create their own work orders (self-service), dispatcher+ can create work orders for any customer"
-        },
-        "read": {
-          "minimumRole": "customer",
-          "minimumPriority": 1,
-          "description": "Everyone can read work orders (row-level security applies)"
-        },
-        "update": {
-          "minimumRole": "customer",
-          "minimumPriority": 1,
-          "description": "Customers can update their own work orders, technicians can update assigned work orders, dispatcher+ can update any work order"
-        },
-        "delete": {
-          "minimumRole": "manager",
-          "minimumPriority": 4,
-          "description": "Managers and above can delete work orders. Customers can only cancel (status change), not hard delete."
-        }
-      }
-    },
-
     "audit_logs": {
       "description": "System audit trail and security events",
       "rowLevelSecurity": {
@@ -142,127 +73,27 @@
         "create": {
           "minimumRole": "customer",
           "minimumPriority": 1,
-          "description": "System automatically creates audit logs for all users"
+          "description": "Synthetic resource - create permission"
         },
         "read": {
           "minimumRole": "admin",
           "minimumPriority": 5,
-          "description": "Only admins can view audit logs"
+          "description": "Synthetic resource - read permission"
         },
         "update": {
           "minimumRole": "admin",
           "minimumPriority": 5,
-          "description": "Audit logs are immutable (admin override only)"
+          "description": "Synthetic resource - update permission"
         },
         "delete": {
           "minimumRole": "admin",
           "minimumPriority": 5,
-          "description": "Only admins can delete old audit logs"
+          "description": "Synthetic resource - delete permission"
         }
       }
     },
-
-    "customers": {
-      "description": "Customer profiles and contact information",
-      "rowLevelSecurity": {
-        "customer": "own_record_only",
-        "technician": "all_records",
-        "dispatcher": "all_records",
-        "manager": "all_records",
-        "admin": "all_records"
-      },
-      "permissions": {
-        "create": {
-          "minimumRole": "dispatcher",
-          "minimumPriority": 3,
-          "description": "Dispatchers and above can create customer profiles (manual intake). Public signup uses /api/auth/signup endpoint."
-        },
-        "read": {
-          "minimumRole": "customer",
-          "minimumPriority": 1,
-          "description": "Everyone can read customer profiles (row-level security applies)"
-        },
-        "update": {
-          "minimumRole": "customer",
-          "minimumPriority": 1,
-          "description": "Customers can update their own profiles, dispatcher+ can update any customer"
-        },
-        "delete": {
-          "minimumRole": "manager",
-          "minimumPriority": 4,
-          "description": "Managers and above can deactivate customer accounts (soft delete only)"
-        }
-      }
-    },
-
-    "technicians": {
-      "description": "Technician profiles, certifications, and availability",
-      "rowLevelSecurity": {
-        "customer": "all_records",
-        "technician": "all_records",
-        "dispatcher": "all_records",
-        "manager": "all_records",
-        "admin": "all_records"
-      },
-      "permissions": {
-        "create": {
-          "minimumRole": "manager",
-          "minimumPriority": 4,
-          "description": "Managers and above can create technician profiles (hiring process)"
-        },
-        "read": {
-          "minimumRole": "customer",
-          "minimumPriority": 1,
-          "description": "Everyone can read technician profiles (customers see assigned tech). Field-level filtering applies."
-        },
-        "update": {
-          "minimumRole": "technician",
-          "minimumPriority": 2,
-          "description": "Technicians can update their own profiles, manager+ can update any technician"
-        },
-        "delete": {
-          "minimumRole": "manager",
-          "minimumPriority": 4,
-          "description": "Managers and above can deactivate technician accounts (soft delete only)"
-        }
-      }
-    },
-
-    "invoices": {
-      "description": "Customer invoices and billing",
-      "rowLevelSecurity": {
-        "customer": "own_invoices_only",
-        "technician": "deny_all",
-        "dispatcher": "all_records",
-        "manager": "all_records",
-        "admin": "all_records"
-      },
-      "permissions": {
-        "create": {
-          "minimumRole": "dispatcher",
-          "minimumPriority": 3,
-          "description": "Dispatchers and above can create invoices"
-        },
-        "read": {
-          "minimumRole": "customer",
-          "minimumPriority": 1,
-          "description": "Customers can read their own invoices, dispatcher+ can read all invoices"
-        },
-        "update": {
-          "minimumRole": "dispatcher",
-          "minimumPriority": 3,
-          "description": "Dispatchers and above can update invoices"
-        },
-        "delete": {
-          "minimumRole": "manager",
-          "minimumPriority": 4,
-          "description": "Managers and above can delete invoices"
-        }
-      }
-    },
-
     "contracts": {
-      "description": "Service contracts and agreements",
+      "description": "contracts resource",
       "rowLevelSecurity": {
         "customer": "own_contracts_only",
         "technician": "deny_all",
@@ -274,132 +105,59 @@
         "create": {
           "minimumRole": "manager",
           "minimumPriority": 4,
-          "description": "Managers and above can create contracts"
+          "description": "Entity-level override - create requires manager"
         },
         "read": {
           "minimumRole": "customer",
           "minimumPriority": 1,
-          "description": "Customers can read their own contracts, technicians can read contracts for assigned customers, dispatcher+ can read all contracts"
+          "description": "Entity-level override - read requires customer"
         },
         "update": {
           "minimumRole": "manager",
           "minimumPriority": 4,
-          "description": "Managers and above can update contracts"
+          "description": "Entity-level override - update requires manager"
         },
         "delete": {
           "minimumRole": "manager",
           "minimumPriority": 4,
-          "description": "Managers and above can delete contracts"
+          "description": "Entity-level override - delete requires manager"
         }
       }
     },
-
-    "inventory": {
-      "description": "Parts and supplies inventory management",
+    "customers": {
+      "description": "customers resource",
       "rowLevelSecurity": {
-        "customer": "public_resource",
-        "technician": "public_resource",
-        "dispatcher": "public_resource",
-        "manager": "public_resource",
-        "admin": "public_resource"
+        "customer": "own_record_only",
+        "technician": "all_records",
+        "dispatcher": "all_records",
+        "manager": "all_records",
+        "admin": "all_records"
       },
       "permissions": {
         "create": {
           "minimumRole": "dispatcher",
           "minimumPriority": 3,
-          "description": "Dispatchers and above can add inventory items"
+          "description": "Entity-level override - create requires dispatcher"
         },
         "read": {
-          "minimumRole": "technician",
-          "minimumPriority": 2,
-          "description": "Technicians and above can view inventory (all records visible)"
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Entity-level override - read requires customer"
         },
         "update": {
-          "minimumRole": "technician",
-          "minimumPriority": 2,
-          "description": "Technicians and above can update inventory (mark parts used, update quantities)"
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Entity-level override - update requires customer"
         },
         "delete": {
           "minimumRole": "manager",
           "minimumPriority": 4,
-          "description": "Managers and above can delete inventory items"
+          "description": "Entity-level override - delete requires manager"
         }
       }
     },
-
-    "preferences": {
-      "description": "User preferences and settings (theme, notifications, etc.)",
-      "rowLevelSecurity": {
-        "customer": "own_record_only",
-        "technician": "own_record_only",
-        "dispatcher": "own_record_only",
-        "manager": "own_record_only",
-        "admin": "all_records"
-      },
-      "permissions": {
-        "create": {
-          "minimumRole": "customer",
-          "minimumPriority": 1,
-          "description": "System creates preferences for all users automatically"
-        },
-        "read": {
-          "minimumRole": "customer",
-          "minimumPriority": 1,
-          "description": "Users can read their own preferences (row-level security applies)"
-        },
-        "update": {
-          "minimumRole": "customer",
-          "minimumPriority": 1,
-          "description": "Users can update their own preferences"
-        },
-        "delete": {
-          "minimumRole": "admin",
-          "minimumPriority": 5,
-          "description": "Only admins can delete preference records (typically only on user deletion)"
-        },
-        "admin": {
-          "minimumRole": "admin",
-          "minimumPriority": 5,
-          "description": "Only admins can view/manage other users' preferences"
-        }
-      }
-    },
-
-    "saved_views": {
-      "description": "User saved table views (filters, columns, sort, density)",
-      "rowLevelSecurity": {
-        "customer": "own_record_only",
-        "technician": "own_record_only",
-        "dispatcher": "own_record_only",
-        "manager": "own_record_only",
-        "admin": "all_records"
-      },
-      "permissions": {
-        "create": {
-          "minimumRole": "customer",
-          "minimumPriority": 1,
-          "description": "All users can create their own saved views"
-        },
-        "read": {
-          "minimumRole": "customer",
-          "minimumPriority": 1,
-          "description": "Users can read their own saved views (RLS applies)"
-        },
-        "update": {
-          "minimumRole": "customer",
-          "minimumPriority": 1,
-          "description": "Users can update their own saved views"
-        },
-        "delete": {
-          "minimumRole": "customer",
-          "minimumPriority": 1,
-          "description": "Users can delete their own saved views"
-        }
-      }
-    },
-
     "dashboard": {
-      "description": "Main dashboard view - role-driven overview of relevant data (synthetic resource for nav)",
+      "description": "Main dashboard view - role-driven overview",
       "rowLevelSecurity": {
         "customer": "own_record_only",
         "technician": "own_record_only",
@@ -411,61 +169,27 @@
         "create": {
           "minimumRole": "admin",
           "minimumPriority": 5,
-          "description": "N/A - synthetic resource, no data to create"
+          "description": "Synthetic resource - create permission"
         },
         "read": {
           "minimumRole": "customer",
           "minimumPriority": 1,
-          "description": "All authenticated users can access the dashboard"
+          "description": "Synthetic resource - read permission"
         },
         "update": {
           "minimumRole": "admin",
           "minimumPriority": 5,
-          "description": "N/A - synthetic resource, no data to update"
+          "description": "Synthetic resource - update permission"
         },
         "delete": {
           "minimumRole": "admin",
           "minimumPriority": 5,
-          "description": "N/A - synthetic resource, no data to delete"
+          "description": "Synthetic resource - delete permission"
         }
       }
     },
-
-    "admin_panel": {
-      "description": "Admin control center - system health, sessions, audit logs (synthetic resource for nav)",
-      "rowLevelSecurity": {
-        "customer": "deny_all",
-        "technician": "deny_all",
-        "dispatcher": "deny_all",
-        "manager": "deny_all",
-        "admin": "all_records"
-      },
-      "permissions": {
-        "create": {
-          "minimumRole": "admin",
-          "minimumPriority": 5,
-          "description": "N/A - synthetic resource, no data to create"
-        },
-        "read": {
-          "minimumRole": "admin",
-          "minimumPriority": 5,
-          "description": "Only admins can access the admin panel"
-        },
-        "update": {
-          "minimumRole": "admin",
-          "minimumPriority": 5,
-          "description": "N/A - synthetic resource, no data to update"
-        },
-        "delete": {
-          "minimumRole": "admin",
-          "minimumPriority": 5,
-          "description": "N/A - synthetic resource, no data to delete"
-        }
-      }
-    },
-
     "file_attachments": {
-      "description": "Polymorphic file attachments - actual access controlled by parent entity (work_order, customer, etc.)",
+      "description": "file_attachments resource",
       "rowLevelSecurity": {
         "customer": "parent_entity_access",
         "technician": "parent_entity_access",
@@ -477,28 +201,225 @@
         "create": {
           "minimumRole": "technician",
           "minimumPriority": 2,
-          "description": "Technicians and above can upload files to entities they have access to"
+          "description": "Entity-level override - create requires technician"
         },
         "read": {
           "minimumRole": "customer",
           "minimumPriority": 1,
-          "description": "Users can read attachments on entities they have access to"
+          "description": "Entity-level override - read requires customer"
         },
         "update": {
           "minimumRole": "technician",
           "minimumPriority": 2,
-          "description": "Technicians and above can update file metadata"
+          "description": "Entity-level override - update requires technician"
         },
         "delete": {
           "minimumRole": "dispatcher",
           "minimumPriority": 3,
-          "description": "Dispatchers and above can delete file attachments"
+          "description": "Entity-level override - delete requires dispatcher"
         }
       }
     },
-
+    "inventory": {
+      "description": "inventory resource",
+      "rowLevelSecurity": {
+        "customer": "public_resource",
+        "technician": "public_resource",
+        "dispatcher": "public_resource",
+        "manager": "public_resource",
+        "admin": "public_resource"
+      },
+      "permissions": {
+        "create": {
+          "minimumRole": "dispatcher",
+          "minimumPriority": 3,
+          "description": "Entity-level override - create requires dispatcher"
+        },
+        "read": {
+          "minimumRole": "technician",
+          "minimumPriority": 2,
+          "description": "Entity-level override - read requires technician"
+        },
+        "update": {
+          "minimumRole": "technician",
+          "minimumPriority": 2,
+          "description": "Entity-level override - update requires technician"
+        },
+        "delete": {
+          "minimumRole": "manager",
+          "minimumPriority": 4,
+          "description": "Entity-level override - delete requires manager"
+        }
+      }
+    },
+    "invoices": {
+      "description": "invoices resource",
+      "rowLevelSecurity": {
+        "customer": "own_invoices_only",
+        "technician": "deny_all",
+        "dispatcher": "all_records",
+        "manager": "all_records",
+        "admin": "all_records"
+      },
+      "permissions": {
+        "create": {
+          "minimumRole": "dispatcher",
+          "minimumPriority": 3,
+          "description": "Entity-level override - create requires dispatcher"
+        },
+        "read": {
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Entity-level override - read requires customer"
+        },
+        "update": {
+          "minimumRole": "dispatcher",
+          "minimumPriority": 3,
+          "description": "Entity-level override - update requires dispatcher"
+        },
+        "delete": {
+          "minimumRole": "manager",
+          "minimumPriority": 4,
+          "description": "Entity-level override - delete requires manager"
+        }
+      }
+    },
+    "notifications": {
+      "description": "notifications resource",
+      "rowLevelSecurity": {
+        "customer": "own_record_only",
+        "technician": "own_record_only",
+        "dispatcher": "own_record_only",
+        "manager": "own_record_only",
+        "admin": "own_record_only"
+      },
+      "permissions": {
+        "create": {
+          "minimumRole": null,
+          "minimumPriority": 0,
+          "description": "Operation disabled - create is system-only (not available via API)",
+          "disabled": true
+        },
+        "read": {
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Entity-level override - read requires customer"
+        },
+        "update": {
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Entity-level override - update requires customer"
+        },
+        "delete": {
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Entity-level override - delete requires customer"
+        }
+      }
+    },
+    "preferences": {
+      "description": "preferences resource",
+      "rowLevelSecurity": {
+        "customer": "own_record_only",
+        "technician": "own_record_only",
+        "dispatcher": "own_record_only",
+        "manager": "own_record_only",
+        "admin": "all_records"
+      },
+      "permissions": {
+        "create": {
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Entity-level override - create requires customer"
+        },
+        "read": {
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Entity-level override - read requires customer"
+        },
+        "update": {
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Entity-level override - update requires customer"
+        },
+        "delete": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "Entity-level override - delete requires admin"
+        },
+        "admin": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "Custom operation - admin requires admin"
+        }
+      }
+    },
+    "roles": {
+      "description": "roles resource",
+      "rowLevelSecurity": {
+        "customer": "public_resource",
+        "technician": "public_resource",
+        "dispatcher": "public_resource",
+        "manager": "public_resource",
+        "admin": "public_resource"
+      },
+      "permissions": {
+        "create": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "Entity-level override - create requires admin"
+        },
+        "read": {
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Entity-level override - read requires customer"
+        },
+        "update": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "Entity-level override - update requires admin"
+        },
+        "delete": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "Entity-level override - delete requires admin"
+        }
+      }
+    },
+    "saved_views": {
+      "description": "saved_views resource",
+      "rowLevelSecurity": {
+        "customer": "own_record_only",
+        "technician": "own_record_only",
+        "dispatcher": "own_record_only",
+        "manager": "own_record_only",
+        "admin": "all_records"
+      },
+      "permissions": {
+        "create": {
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Entity-level override - create requires customer"
+        },
+        "read": {
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Entity-level override - read requires customer"
+        },
+        "update": {
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Entity-level override - update requires customer"
+        },
+        "delete": {
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Entity-level override - delete requires customer"
+        }
+      }
+    },
     "system_settings": {
-      "description": "System-wide configuration (maintenance mode, feature flags, etc.)",
+      "description": "System-wide configuration (maintenance mode, feature flags)",
       "rowLevelSecurity": {
         "customer": "deny_all",
         "technician": "deny_all",
@@ -510,45 +431,120 @@
         "create": {
           "minimumRole": "admin",
           "minimumPriority": 5,
-          "description": "Only admins can create system settings"
+          "description": "Synthetic resource - create permission"
         },
         "read": {
           "minimumRole": "admin",
           "minimumPriority": 5,
-          "description": "Only admins can view system settings"
+          "description": "Synthetic resource - read permission"
         },
         "update": {
           "minimumRole": "admin",
           "minimumPriority": 5,
-          "description": "Only admins can update system settings"
+          "description": "Synthetic resource - update permission"
         },
         "delete": {
           "minimumRole": "admin",
           "minimumPriority": 5,
-          "description": "Only admins can delete system settings"
+          "description": "Synthetic resource - delete permission"
+        }
+      }
+    },
+    "technicians": {
+      "description": "technicians resource",
+      "rowLevelSecurity": {
+        "customer": "all_records",
+        "technician": "all_records",
+        "dispatcher": "all_records",
+        "manager": "all_records",
+        "admin": "all_records"
+      },
+      "permissions": {
+        "create": {
+          "minimumRole": "manager",
+          "minimumPriority": 4,
+          "description": "Entity-level override - create requires manager"
+        },
+        "read": {
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Entity-level override - read requires customer"
+        },
+        "update": {
+          "minimumRole": "technician",
+          "minimumPriority": 2,
+          "description": "Entity-level override - update requires technician"
+        },
+        "delete": {
+          "minimumRole": "manager",
+          "minimumPriority": 4,
+          "description": "Entity-level override - delete requires manager"
+        }
+      }
+    },
+    "users": {
+      "description": "users resource",
+      "rowLevelSecurity": {
+        "customer": "own_record_only",
+        "technician": "all_records",
+        "dispatcher": "all_records",
+        "manager": "all_records",
+        "admin": "all_records"
+      },
+      "permissions": {
+        "create": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "Entity-level override - create requires admin"
+        },
+        "read": {
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Entity-level override - read requires customer"
+        },
+        "update": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "Entity-level override - update requires admin"
+        },
+        "delete": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "Entity-level override - delete requires admin"
+        }
+      }
+    },
+    "work_orders": {
+      "description": "work_orders resource",
+      "rowLevelSecurity": {
+        "customer": "own_work_orders_only",
+        "technician": "assigned_work_orders_only",
+        "dispatcher": "all_records",
+        "manager": "all_records",
+        "admin": "all_records"
+      },
+      "permissions": {
+        "create": {
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Entity-level override - create requires customer"
+        },
+        "read": {
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Entity-level override - read requires customer"
+        },
+        "update": {
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Entity-level override - update requires customer"
+        },
+        "delete": {
+          "minimumRole": "manager",
+          "minimumPriority": 4,
+          "description": "Entity-level override - delete requires manager"
         }
       }
     }
-  },
-
-  "_comments": {
-    "usage": "This file is the single source of truth for permissions. Both backend and frontend load this file dynamically.",
-    "rowLevelSecurity": "Defines what records a role can see. Frontend uses this for UI, backend enforces in queries.",
-    "syntheticResources": "dashboard and admin_panel are synthetic (non-entity) resources for nav visibility. file_attachments is a polymorphic resource - permissions are defined here but actual access is controlled by the parent entity context. All use the same permission structure as entities.",
-    "rlsPolicies": {
-      "all_records": "No filtering - role can see all records (applied: false)",
-      "own_record_only": "Filter by user ID - user sees only their own record (applied: true)",
-      "own_work_orders_only": "Filter by customer_id - customers see their work orders (applied: true)",
-      "assigned_work_orders_only": "Filter by assigned_technician_id - technicians see assigned work orders (applied: true)",
-      "own_invoices_only": "Filter by customer_id - customers see their invoices (applied: true)",
-      "own_contracts_only": "Filter by customer_id - customers see their contracts (applied: true)",
-      "public_resource": "No filtering - resource is public to all authorized users (applied: false)",
-      "deny_all": "Deny all access - role cannot access any records (applied: true, returns 1=0)",
-      "admin_only": "Admin-only resource - non-admins get deny_all (applied: varies by role)"
-    },
-    "minimumPriority": "Due to hierarchy, all roles with priority >= minimumPriority inherit the permission.",
-    "testing": "Tests are data-driven - they validate structure and parity, not hardcoded values.",
-    "deployment": "Changing this file does NOT require code deployment, only config reload.",
-    "validation": "Backend validates this schema on startup. Invalid config prevents server start."
   }
 }

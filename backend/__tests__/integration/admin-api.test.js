@@ -446,14 +446,16 @@ describe('Admin API - Integration Tests', () => {
   });
 
   describe('GET /api/admin/system/config/validation', () => {
-    test('should return validation-rules.json content', async () => {
+    test('should return derived validation rules from entity metadata', async () => {
       const response = await request(app)
         .get('/api/admin/system/config/validation')
         .set('Authorization', `Bearer ${adminToken}`);
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
-      expect(response.body.data).toHaveProperty('fields');
+      // Validation is now derived from entity metadata (SSOT pattern)
+      expect(response.body.data).toHaveProperty('entities');
+      expect(response.body.data).toHaveProperty('source', 'entity-metadata');
     });
   });
 

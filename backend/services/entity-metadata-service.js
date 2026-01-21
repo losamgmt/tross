@@ -18,13 +18,17 @@ const { logger } = require('../config/logger');
 // Load entity metadata registry
 const entityMetadata = require('../config/models');
 
+// Validation is now derived from entity metadata (SSOT pattern)
+const { deriveValidationRules, clearCache: clearValidationCache } = require('../config/validation-deriver');
+
 // Config file paths for reload support
 const _permissionsPath = path.join(__dirname, '../../config/permissions.json');
-const _validationPath = path.join(__dirname, '../../config/validation-rules.json');
 
-// Initial load via require() - Node.js caches these automatically
+// Initial load via require() - Node.js caches permissions automatically
 let permissions = require('../../config/permissions.json');
-let validationRules = require('../../config/validation-rules.json');
+
+// Validation rules derived from metadata (cached internally by validation-deriver)
+let validationRules = deriveValidationRules();
 
 /**
  * EntityMetadataService - Static class for entity metadata operations
@@ -47,17 +51,19 @@ class EntityMetadataService {
 
   /**
    * Reload configs (useful for hot-reload during development)
-   * Busts the Node.js require cache and reloads files
+   * Busts the Node.js require cache and re-derives validation rules
    */
   static reloadConfigs() {
     try {
-      // Bust require cache
+      // Bust require cache for permissions
       delete require.cache[require.resolve('../../config/permissions.json')];
-      delete require.cache[require.resolve('../../config/validation-rules.json')];
 
-      // Reload
+      // Reload permissions
       permissions = require('../../config/permissions.json');
-      validationRules = require('../../config/validation-rules.json');
+
+      // Clear validation cache and re-derive from metadata
+      clearValidationCache();
+      validationRules = deriveValidationRules();
 
       logger.info('EntityMetadataService configs reloaded');
     } catch (error) {

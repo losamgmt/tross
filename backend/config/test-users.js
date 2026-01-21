@@ -21,7 +21,8 @@
 // 🔧 Non-DB Fields (dev-only routing):
 //    - provider (string) - signals "development" vs "auth0" auth strategy
 //
-// ROLE PRIORITY: Derived from role-definitions.js (single source of truth)
+// ROLE PRIORITY: Uses role-definitions.js fallback constants (acceptable for dev-auth)
+// This file is part of the dev auth strategy - not used in production Auth0 flow.
 
 const { ROLE_NAME_TO_PRIORITY } = require('./role-definitions');
 

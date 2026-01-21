@@ -441,6 +441,170 @@ function getSwaggerEntityConfigs() {
   return _swaggerEntityConfigs;
 }
 
+// ============================================================================
+// SWAGGER SCHEMA DERIVATION (from metadata.fields)
+// ============================================================================
+
+// Lazy cache for swagger schemas
+let _swaggerEntitySchemas = null;
+
+/**
+ * Map metadata field type to OpenAPI type
+ * @param {Object} field - Field definition from metadata
+ * @returns {Object} OpenAPI property definition
+ */
+function metadataFieldToOpenAPI(field) {
+  const base = {};
+
+  switch (field.type) {
+    case 'integer':
+    case 'foreignKey':
+      base.type = 'integer';
+      break;
+
+    case 'string':
+    case 'text':
+      base.type = 'string';
+      if (field.maxLength) {
+        base.maxLength = field.maxLength;
+      }
+      if (field.pattern) {
+        base.pattern = field.pattern;
+      }
+      break;
+
+    case 'email':
+      base.type = 'string';
+      base.format = 'email';
+      break;
+
+    case 'boolean':
+      base.type = 'boolean';
+      break;
+
+    case 'enum':
+      base.type = 'string';
+      if (field.values && field.values.length > 0) {
+        base.enum = [...field.values]; // Clone to avoid mutation
+      }
+      break;
+
+    case 'timestamp':
+    case 'datetime':
+      base.type = 'string';
+      base.format = 'date-time';
+      break;
+
+    case 'date':
+      base.type = 'string';
+      base.format = 'date';
+      break;
+
+    case 'decimal':
+    case 'number':
+    case 'money':
+      base.type = 'number';
+      base.format = 'decimal';
+      break;
+
+    case 'json':
+    case 'array':
+      base.type = 'object';
+      break;
+
+    default:
+      base.type = 'string'; // Safe default
+  }
+
+  // Add description if available
+  if (field.description) {
+    base.description = field.description;
+  }
+
+  // Add default if available
+  if (field.default !== undefined) {
+    base.example = field.default;
+  }
+
+  // Mark readonly fields
+  if (field.readonly) {
+    base.readOnly = true;
+  }
+
+  return base;
+}
+
+/**
+ * Build OpenAPI schema for a single entity from its metadata
+ * @param {string} entityName - Entity name
+ * @param {Object} entityMetadata - Entity metadata object
+ * @returns {Object} OpenAPI schema object
+ */
+function buildEntitySchema(entityName, entityMetadata) {
+  if (!entityMetadata.fields) {
+    return null;
+  }
+
+  const properties = {};
+  const required = [];
+
+  for (const [fieldName, fieldDef] of Object.entries(entityMetadata.fields)) {
+    properties[fieldName] = metadataFieldToOpenAPI(fieldDef);
+
+    // Check if required
+    if (fieldDef.required) {
+      required.push(fieldName);
+    }
+  }
+
+  const schema = {
+    type: 'object',
+    properties,
+  };
+
+  if (required.length > 0) {
+    schema.required = required;
+  }
+
+  return schema;
+}
+
+/**
+ * Build all swagger entity schemas from metadata
+ * @returns {Object} Map of schemaRef → OpenAPI schema
+ */
+function buildSwaggerEntitySchemas() {
+  const metadata = getAllMetadata();
+  const schemas = {};
+
+  for (const entityName of SWAGGER_ENTITY_NAMES) {
+    const entityMetadata = metadata[entityName];
+    if (!entityMetadata) {
+      continue;
+    }
+
+    const schemaRef = toSwaggerSchemaRef(entityName);
+    const schema = buildEntitySchema(entityName, entityMetadata);
+
+    if (schema) {
+      schemas[schemaRef] = schema;
+    }
+  }
+
+  return schemas;
+}
+
+/**
+ * Get swagger entity schemas (lazy, cached)
+ * @returns {Object} Map of schemaRef → OpenAPI schema
+ */
+function getSwaggerEntitySchemas() {
+  if (!_swaggerEntitySchemas) {
+    _swaggerEntitySchemas = buildSwaggerEntitySchemas();
+  }
+  return _swaggerEntitySchemas;
+}
+
 /**
  * Clear cache (for testing or hot reload)
  */
@@ -453,6 +617,7 @@ function clearCache() {
   _entityToResourceType = null;
   _entityActionMap = null;
   _swaggerEntityConfigs = null;
+  _swaggerEntitySchemas = null;
 }
 
 module.exports = {
@@ -483,9 +648,12 @@ module.exports = {
   // Swagger configuration functions
   SWAGGER_ENTITY_NAMES,
   getSwaggerEntityConfigs,
+  getSwaggerEntitySchemas,
   toSwaggerDisplayName,
   toSwaggerSchemaRef,
   toSwaggerTag,
+  metadataFieldToOpenAPI,
+  buildEntitySchema,
 
   // For testing
   clearCache,

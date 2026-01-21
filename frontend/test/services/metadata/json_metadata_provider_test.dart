@@ -2,8 +2,7 @@
 ///
 /// Tests the metadata provider's ability to:
 /// - Load and parse permissions.json
-/// - Load and parse validation-rules.json
-/// - Load and parse entity-metadata.json
+/// - Load and parse entity-metadata.json (SSOT for entities and validation)
 /// - Return typed data structures
 /// - Handle caching correctly
 library;
@@ -153,7 +152,10 @@ void main() {
 
         expect(validation, isNotNull);
         expect(validation!.fieldName, 'email');
-        expect(validation.type, 'string');
+        expect(
+          validation.type,
+          'email',
+        ); // email fields have 'email' type, not 'string'
         expect(validation.required, isTrue);
       });
 
@@ -188,7 +190,8 @@ void main() {
         final raw = await provider.getRawValidation();
 
         expect(raw, isA<Map<String, dynamic>>());
-        expect(raw.containsKey('fields'), isTrue);
+        // Raw validation is entity-metadata.json - has entity keys, not 'fields'
+        expect(raw.containsKey('user'), isTrue);
       });
 
       test('getEntityValidationRules returns rules for valid entity', () async {

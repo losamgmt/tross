@@ -117,6 +117,14 @@ class PermissionService {
       return false; // Unknown permission = no permission
     }
 
+    // Priority 0 means operation is disabled (system-only, not available via API)
+    if (requiredPriority == 0) {
+      ErrorService.logDebug(
+        '[PermCheck] $resourceKey.$operationKey is disabled (priority 0)',
+      );
+      return false; // Disabled operation = no permission
+    }
+
     // Permission checks are frequent - only log in debug mode
     // This eliminates the massive log spam in production
     final result = userPriority >= requiredPriority;

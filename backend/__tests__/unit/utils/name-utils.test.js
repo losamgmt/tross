@@ -14,7 +14,7 @@ const {
   truncate,
   computeName,
   formatTemplate,
-} = require('../../../utils/name-utils');
+} = require('../../helpers/name-utils');
 
 describe('Name Utils', () => {
   // ==========================================================================

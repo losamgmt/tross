@@ -5,13 +5,18 @@
  * Driven by Entity Contract v2.0 universal fields.
  */
 
+const { getCapabilities } = require('./scenario-helpers');
+
 /**
  * Scenario: created_at set on create
  *
- * Preconditions: None (all entities have created_at)
+ * Preconditions: API create is not disabled
  * Tests: created_at is auto-populated on create
  */
 function createdAtSetOnCreate(meta, ctx) {
+  const caps = getCapabilities(meta);
+  if (!caps.canCreate) return; // Create disabled = scenario N/A
+
   ctx.it(`POST /api/${meta.tableName} - sets created_at automatically`, async () => {
     const beforeCreate = new Date();
     const auth = await ctx.authHeader('admin');
@@ -34,10 +39,13 @@ function createdAtSetOnCreate(meta, ctx) {
 /**
  * Scenario: is_active defaults to true
  *
- * Preconditions: None (Entity Contract v2.0)
+ * Preconditions: API create is not disabled
  * Tests: New entities have is_active=true by default
  */
 function isActiveDefaultsToTrue(meta, ctx) {
+  const caps = getCapabilities(meta);
+  if (!caps.canCreate) return; // Create disabled = scenario N/A
+
   ctx.it(`POST /api/${meta.tableName} - defaults is_active to true`, async () => {
     // Use buildMinimalWithFKs to resolve any FK dependencies
     const payload = await ctx.factory.buildMinimalWithFKs(meta.entityName);
@@ -57,13 +65,16 @@ function isActiveDefaultsToTrue(meta, ctx) {
 /**
  * Scenario: GET list excludes inactive records by default
  *
- * Preconditions: None (Entity Contract v2.0 - all entities have is_active)
+ * Preconditions: API create is not disabled
  * Tests: Records with is_active=false are NOT returned in list without explicit flag
  *
  * This tests the server-side filter in GenericEntityService.findAll():
  *   if (!includeInactive) { filterOptions.is_active = true; }
  */
 function getListExcludesInactiveRecords(meta, ctx) {
+  const caps = getCapabilities(meta);
+  if (!caps.canCreate) return; // Create disabled = scenario N/A
+
   ctx.it(`GET /api/${meta.tableName} - excludes inactive records by default`, async () => {
     const auth = await ctx.authHeader('admin');
 

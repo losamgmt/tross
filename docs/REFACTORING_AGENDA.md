@@ -1,6 +1,9 @@
 # Refactoring Agenda
 
-> **Last Updated:** January 16, 2026
+> **Status:** HISTORICAL DOCUMENT  
+> This document tracked the unified middleware refactoring.  
+> **Phases 1-3: COMPLETE.** Phase 4 items are optional test polish.  
+> For current architecture, see [ARCHITECTURE.md](architecture/ARCHITECTURE.md).
 
 ---
 
@@ -50,11 +53,17 @@ These modules are the Single Sources of Truth. NO duplication of their contents 
 
 | Module | Purpose | Rule |
 |--------|---------|------|
-| `role-definitions.js` | Roles, hierarchy, priorities | NO IMPORTS (dependency-free) |
+| `roles` table (database) | Role definitions with `priority` | DATABASE is the source of truth |
 | `status-enums.js` | All status field values | NO IMPORTS (dependency-free) |
 | `entity-types.js` | Name field type enum | NO IMPORTS (dependency-free) |
 | `config/models/*.js` | All entity metadata | One file per entity |
 | `derived-constants.js` | Computes from metadata | Lazy-load, cache, getters |
+
+> **Note:** `role-definitions.js` is a **FALLBACK ONLY** for tests and pre-DB bootstrap.
+> The database `roles` table is the true SSOT.
+> At server startup, `role-hierarchy-loader.js` reads roles from DB and caches in memory.
+> Production permission checks use this cached data, NOT the fallback constants.
+> See `backend/config/role-hierarchy-loader.js` for the initialization pattern.
 
 ---
 

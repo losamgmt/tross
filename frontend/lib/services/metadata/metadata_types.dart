@@ -138,7 +138,7 @@ class FieldValidation {
     this.errorMessages = const {},
   });
 
-  /// Create from validation-rules.json field structure
+  /// Create from entity-metadata.json field structure
   factory FieldValidation.fromJson(String name, Map<String, dynamic> json) {
     final errorMsgs = <String, String>{};
     final errorsJson = json['errorMessages'] as Map<String, dynamic>?;

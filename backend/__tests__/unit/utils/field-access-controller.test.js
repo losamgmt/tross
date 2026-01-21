@@ -20,7 +20,7 @@ const {
   validateFieldAccess,
   pickFields,
   omitFields,
-} = require('../../../utils/response-transform');
+} = require('../../../utils/field-access-controller');
 
 // =============================================================================
 // TEST FIXTURES
@@ -60,7 +60,7 @@ const sampleWorkOrder = {
 // HELPER FUNCTION TESTS
 // =============================================================================
 
-describe('response-transform', () => {
+describe('field-access-controller', () => {
   describe('normalizeRoleName', () => {
     test('converts string roles to lowercase', () => {
       expect(normalizeRoleName('Admin')).toBe('admin');

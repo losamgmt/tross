@@ -140,27 +140,24 @@ router.get('/api/customers',
 **Purpose:** Filter data by ownership
 
 **Implementation:**
-- SQL queries add `WHERE customer_id = req.user.customer_id`
-- Technicians see only assigned work orders
-- Clients see only own data
-- Admins/Managers bypass RLS (see all data)
+- SQL queries add ownership filters via RLS policies
+- Technicians see only assigned work orders (`assigned_work_orders_only`)
+- Customers see only own data (`own_record_only`, `own_work_orders_only`)
+- Admins bypass RLS via `all_records` policy
 
-**Code:**
+**Architecture:**
 ```javascript
-// backend/db/models/Customer.js
-static async findAll(filters = {}, options = {}, user = {}) {
-  let query = 'SELECT * FROM customers WHERE is_active = true';
-  const params = [];
-  
-  // RLS: Non-admins see only own customer
-  if (user.role !== 'admin' && user.role !== 'manager') {
-    params.push(user.customer_id);
-    query += ` AND customer_id = $${params.length}`;
-  }
-  
-  const result = await db.query(query, params);
-  return result.rows;
-}
+// RLS policies defined in backend/config/models/*-metadata.js
+rlsPolicy: {
+  customer: 'own_work_orders_only',    // Filter by customer_id
+  technician: 'assigned_work_orders_only', // Filter by assigned_technician_id
+  dispatcher: 'all_records',            // No filtering
+  manager: 'all_records',
+  admin: 'all_records',
+},
+
+// RLS filter applied by db/helpers/rls-filter-helper.js
+// Middleware: middleware/row-level-security.js
 ```
 
 ---

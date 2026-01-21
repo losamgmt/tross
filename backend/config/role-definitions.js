@@ -1,9 +1,32 @@
 /**
- * Role Definitions - SINGLE SOURCE OF TRUTH
+ * Role Definitions - FALLBACK CONSTANTS ONLY
  *
- * ARCHITECTURE: This file is the canonical source for all role-related constants.
- * All other files (constants.js, test-users.js, permissions-deriver.js) MUST
- * derive their role information from this file.
+ * ============================================================================
+ * ⚠️  WARNING: This file is NOT used in production permission checks!
+ * ============================================================================
+ *
+ * SSOT ARCHITECTURE:
+ *   - The database `roles` table is the TRUE Single Source of Truth
+ *   - At server startup, role hierarchy is loaded from DB (see role-hierarchy-loader.js)
+ *   - This file is ONLY used as a fallback in these scenarios:
+ *
+ * ALLOWED USAGES (FALLBACK ONLY):
+ *   1. Unit tests that run without a database connection
+ *   2. Server bootstrap before DB is available (auto-fallback in role-hierarchy-loader.js)
+ *   3. Dev auth strategy (test-users.js) for local development
+ *
+ * FORBIDDEN USAGES:
+ *   ❌ DO NOT import this file directly in production middleware
+ *   ❌ DO NOT use these constants for runtime permission checks
+ *   ❌ DO NOT add new consumers - use role-hierarchy-loader.js instead
+ *
+ * SYNCHRONIZATION REQUIREMENT:
+ *   These values MUST match the database seed data in:
+ *   - backend/seeds/seed-data.sql (INSERT INTO roles)
+ *   - backend/schema.sql (roles table structure)
+ *
+ * If you need role hierarchy data at runtime, use:
+ *   const { getRoleHierarchy, getRolePriority } = require('./role-hierarchy-loader');
  *
  * NO IMPORTS ALLOWED - This file must be dependency-free to avoid circular imports.
  *

@@ -162,8 +162,8 @@ module.exports = {
   // Access is derived from parent entity permissions
 
   fieldAccess: {
-    // Primary key
-    id: FAL.SYSTEM_ONLY,
+    // Note: id inherits from UNIVERSAL_FIELD_ACCESS (PUBLIC_READONLY)
+    // Do NOT override with SYSTEM_ONLY - that blocks read access and breaks API responses
 
     // Polymorphic reference - set at creation, immutable
     entity_type: {

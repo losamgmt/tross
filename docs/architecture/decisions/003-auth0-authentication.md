@@ -293,8 +293,7 @@ class Auth0Config {
 
 - [Auth0 Documentation](https://auth0.com/docs)
 - [Auth0 Flutter SDK](https://github.com/auth0/auth0-flutter)
-- Auth Guide: `docs/AUTH.md`
+- Auth Guide: `docs/reference/AUTH.md`
 - Implementation:
   - Backend: `backend/middleware/auth.js`
   - Frontend: `frontend/lib/services/auth/`
-**Status:** Active in production, dev mode working perfectly

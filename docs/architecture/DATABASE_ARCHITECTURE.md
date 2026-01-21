@@ -1,482 +1,200 @@
 # Database Architecture & Schema Management
 
-**Entity Contract v2.0 - Two-Tier System**
+## Overview
 
----## 🎯 Architectural Principles
+This document defines the architectural principles for database schema design in TrossApp. It establishes the Entity Contract pattern and explains the rationale behind key decisions.
 
-### 1. **TIER 1: Universal Entity Contract Fields**
+## Core Principle
 
-Every business entity in TrossApp MUST have these fields:
+> **The database schema is the source of truth for data structure.**
 
-```sql
-CREATE TABLE entity_name (
-    -- TIER 1: Required by Entity Contract v2.0
-    id SERIAL PRIMARY KEY,                          -- Unique identifier
-    <identity_field> VARCHAR(X) UNIQUE NOT NULL,    -- name/email/title (human-readable)
-    is_active BOOLEAN DEFAULT true NOT NULL,        -- Soft delete flag
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    
-    -- Entity-specific fields (TIER 2)
-    -- ... varies by entity ...
-);
-```
+All entities follow a standardized contract ensuring consistency across the application.
 
-**TIER 1 Fields (Universal):**
+## Entity Contract v2.0
 
-- ✅ **`id`**: Auto-incrementing primary key
-- ✅ **`identity_field`**: Human-readable identifier (varies: `name` for roles, `email` for users, `title` for work_orders)
-- ✅ **`is_active`**: Soft delete mechanism (false = record deleted from system)
-- ✅ **`created_at`**: Performance cache for creation time (source of truth: audit_logs)
-- ✅ **`updated_at`**: Auto-managed by trigger on every UPDATE
+### Tier 1: Universal Fields (Required)
 
-**Benefits:**
+Every business entity MUST have these fields:
 
-- ✅ Consistent soft delete pattern across ALL entities
-- ✅ Predictable API responses
-- ✅ Easy filtering: `WHERE is_active = true`
-- ✅ Audit trail foundation
+| Field | Purpose |
+|-------|---------|
+| `id` | Auto-incrementing primary key |
+| Identity field | Human-readable unique identifier (varies by entity) |
+| `is_active` | Deactivation flag (false = hidden from normal queries) |
+| `created_at` | Creation timestamp (cached from audit_logs) |
+| `updated_at` | Auto-managed modification timestamp |
 
-### 2. **TIER 2: Entity-Specific Lifecycle Fields (Optional)**
+### Tier 2: Lifecycle Fields (Optional)
 
-Some entities require workflow state management beyond soft deletes:
+Entities with workflow requirements add:
 
-```sql
--- Example: Users need lifecycle states
-status VARCHAR(50) DEFAULT 'active' 
-    CHECK (status IN ('pending_activation', 'active', 'suspended'))
-```
+| Field | Purpose |
+|-------|---------|
+| `status` | Lifecycle state (values defined in entity metadata) |
 
-**Critical Distinction: `is_active` vs `status`**
+**See `ENTITY_LIFECYCLE.md` for when to add status fields.**
 
-| Field | Purpose | Scope | Values | Meaning |
-|-------|---------|-------|--------|---------|
-| **`is_active`** | Soft delete | ALL entities | `true`/`false` | "Does this record exist?" |
-| **`status`** | Lifecycle state | Workflow entities only | Entity-specific strings | "What stage is this at?" |
+## Architectural Decisions
 
-**Example: User States**
+### Decision: Deactivation via `is_active`
 
-```javascript
-// Pending user (exists, not yet logged in)
-{ is_active: true, status: 'pending_activation' }
+**Terminology:**
+- **Deactivation** = Set `is_active = false` (UPDATE operation, data preserved)
+- **Delete** = Hard DELETE (data removed permanently from database)
 
-// Active user (fully operational)
-{ is_active: true, status: 'active' }
-
-// Suspended user (temporarily disabled, can be reactivated)
-{ is_active: true, status: 'suspended' }
-
-// Deleted user (soft deleted, status frozen)
-{ is_active: false, status: 'active' }  // Status preserved at deletion time
-```
-
-**When to Use Status Fields:**
+**Why we use deactivation instead of hard deletes:**
+- Preserves data for audit trails
+- Enables easy reactivation if needed
+- Maintains referential integrity
+- Prevents orphaned foreign keys
 
-- ✅ Entity has multiple operational states (users, work_orders, assets)
-- ✅ Need to track lifecycle progression (draft → pending → approved)
-- ✅ Temporary states exist (suspended, on_hold, in_review)
+**Invariant:** `is_active = false` means "deactivated" — always filter by `is_active = true` in normal queries.
 
-**When NOT to Use Status Fields:**
-
-- ❌ Entity is simple (roles: just active/inactive)
-- ❌ No workflow or lifecycle (permissions, settings)
-- ❌ Soft delete is sufficient (use `is_active`)
-
-**Implementation Pattern:**
-
-```sql
--- 1. Add status column with sensible default
-ALTER TABLE entity_name ADD COLUMN status VARCHAR(50) DEFAULT 'active';
-
--- 2. Add check constraint for allowed values
-ALTER TABLE entity_name ADD CONSTRAINT entity_name_status_check 
-    CHECK (status IN ('state1', 'state2', 'state3'));
-
--- 3. Add performance index
-CREATE INDEX idx_entity_name_status ON entity_name(status);
-
--- 4. Add composite index for common query pattern
-CREATE INDEX idx_entity_name_status_active 
-    ON entity_name(status, is_active) WHERE is_active = true;
-```
-
-See `docs/USER_STATUS_IMPLEMENTATION.md` for detailed example.
-
-### 3. **Single Source of Truth**
-
-- **Master Schema:** `backend/schema.sql`
-- **Applied To:** Both `trossapp_dev` (port 5433) and `trossapp_test` (port 5434)
-- **Enforcement:** Automated via `backend/scripts/apply-schema.js`
-
-### 3. **Migration Strategy**
-
-- **Migrations:** `backend/migrations/*.sql`
-- **Naming:** `001_description.sql`, `002_description.sql`, etc.
-- **Idempotent:** Safe to run multiple times
-- **Documented:** Each migration explains WHAT and WHY
-
-## 📊 Current Schema
-
-### **Roles Table**
-
-```sql
-CREATE TABLE roles (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(50) UNIQUE NOT NULL,
-    description TEXT,
-    is_active BOOLEAN DEFAULT true,        -- ✨ System-level field
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP -- ✨ System-level field
-);
-```
-
-**Core Roles:**
-
-1. `admin` - Full system access and user management
-2. `manager` - Full data access, manages work orders and technicians
-3. `dispatcher` - Medium access, assigns and schedules work orders
-4. `technician` - Limited access, updates assigned work orders
-5. `client` - Basic access, submits and tracks service requests
-
-### **Users Table**
-
-```sql
-CREATE TABLE users (
-    -- TIER 1: Entity Contract required fields
-    id SERIAL PRIMARY KEY,
-    email VARCHAR(255) UNIQUE NOT NULL,    -- Identity field (name equivalent)
-    is_active BOOLEAN DEFAULT true NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    
-    -- Entity-specific fields
-    auth0_id VARCHAR(255) UNIQUE,          -- Auth0 SSO identifier (nullable for pending users)
-    first_name VARCHAR(100),
-    last_name VARCHAR(100),
-    role_id INTEGER REFERENCES roles(id) ON DELETE SET NULL,
-    status VARCHAR(50) DEFAULT 'active'    -- Lifecycle: pending_activation, active, suspended
-        CHECK (status IN ('pending_activation', 'active', 'suspended'))
-);
-
--- Indexes for performance
-CREATE INDEX idx_users_auth0_id ON users(auth0_id);
-CREATE INDEX idx_users_role_id ON users(role_id);
-CREATE INDEX idx_users_status ON users(status);
-CREATE INDEX idx_users_status_active ON users(status, is_active) WHERE is_active = true;
-```
-
-**User Status Lifecycle:**
-
-- **`pending_activation`**: Admin created user, awaiting first Auth0 login (auth0_id can be null)
-- **`active`**: Fully activated user with Auth0 account
-- **`suspended`**: Temporarily disabled (can be reactivated without re-auth)
-
-### **Audit Logs Table**
-
-```sql
-CREATE TABLE audit_logs (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id),
-    action VARCHAR(50) NOT NULL,
-    resource_type VARCHAR(100),
-    resource_id INTEGER,
-    old_values JSONB,
-    new_values JSONB,
-    ip_address VARCHAR(45),
-    user_agent TEXT,
-    result VARCHAR(20),
-    error_message TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-### **Refresh Tokens Table**
-
-```sql
-CREATE TABLE refresh_tokens (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    token_id UUID NOT NULL DEFAULT uuid_generate_v4(),
-    token_hash TEXT NOT NULL,
-    expires_at TIMESTAMP NOT NULL,
-    is_active BOOLEAN DEFAULT true,        -- ✨ System-level field
-    ip_address VARCHAR(45),
-    user_agent TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    last_used_at TIMESTAMP,
-    revoked_at TIMESTAMP
-);
-```
-
-## 🔧 Database Management
-
-### **Development Database**
-
-- **Container:** `trossapp-postgres`
-- **Port:** 5433
-- **Database:** `trossapp_dev`
-- **User:** `postgres` / `postgres`
-
-### **Test Database**
-
-- **Container:** `trossapp-postgres-test`
-- **Port:** 5434
-- **Database:** `trossapp_test`
-- **User:** `test_user` / `test_password`
-
-### **Commands**
-
-#### Start Databases
-
-```bash
-npm run db:start          # Start dev database
-npm run db:test:start     # Start test database
-docker ps                 # Verify both running
-```
-
-#### Apply Schema (Both Databases)
-
-```bash
-node backend/scripts/apply-schema.js           # Apply to BOTH
-node backend/scripts/apply-schema.js --dev-only   # Dev only
-node backend/scripts/apply-schema.js --test-only  # Test only
-```
-
-#### Reset Databases (Clean Slate)
-
-```bash
-npm run db:reset          # Dev: Drop, recreate, apply schema
-npm run db:test:reset     # Test: Drop, recreate, apply schema
-```
+### Decision: Identity Field Varies by Entity
 
-#### Check Status
+**Why each entity chooses its own identity field:**
+- Some entities use `name` (roles, skills)
+- Some use `email` (users)
+- Some use `title` (work orders)
+- The identity field is the human-readable unique identifier
 
-```bash
-npm run db:status         # Check dev database health
-docker ps                 # Check container health
-```
-
-## 🛡️ Schema Consistency Protection
-
-### **1. Pre-Commit Hook (Future)**
+**Invariant:** Every entity has exactly ONE identity field with a UNIQUE constraint.
 
-```bash
-# .git/hooks/pre-commit
-# Verify schema.sql is syntactically valid
-node backend/scripts/validate-schema.js
-```
+### Decision: Automatic Timestamps
 
-### **2. CI/CD Pipeline**
+**Why `updated_at` is trigger-managed:**
+- Ensures consistency (no developer can forget)
+- Single implementation for all tables
+- Reduces boilerplate in application code
 
-```yaml
-# In .github/workflows/ci.yml
-- name: Verify Schema Consistency
-  run: |
-    npm run db:test:start
-    node backend/scripts/apply-schema.js --test-only
-    npm run test:integration
-```
-
-### **3. Developer Workflow**
-
-When adding a new table:
-
-1. ✅ Update `backend/schema.sql` (single source of truth)
-2. ✅ Add migration in `backend/migrations/` (for existing databases)
-3. ✅ Run `node backend/scripts/apply-schema.js` (apply to both DBs)
-4. ✅ Update backend models in `backend/db/models/`
-5. ✅ Add tests for new entity
-
-### **4. Automatic updated_at Triggers**
-
-All tables with `updated_at` automatically maintain timestamps:
-
-```sql
-CREATE TRIGGER update_<table>_updated_at
-    BEFORE UPDATE ON <table>
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-```
-
-## 🎨 Best Practices
-
-### **Soft Deletes (is_active)**
-
-Instead of `DELETE FROM users WHERE id = 1`:
-
-```sql
-UPDATE users SET is_active = false WHERE id = 1;
-```
-
-**Benefits:**
-
-- ✅ Data preservation for audit trails
-- ✅ Easy restoration if needed
-- ✅ Maintains referential integrity
-- ✅ Prevents orphaned foreign keys
-
-### **Querying Active Records**
-
-Always filter by `is_active` in queries:
-
-```sql
-SELECT * FROM users WHERE is_active = true;
-SELECT * FROM roles WHERE is_active = true;
-```
-
-**Index Support:**
-
-```sql
-CREATE INDEX idx_users_active ON users(is_active);
-CREATE INDEX idx_roles_active ON roles(is_active);
-```
-
-### **Foreign Key Protection**
-
-```sql
-role_id INTEGER REFERENCES roles(id) ON DELETE SET NULL
-```
-
-- If role is deleted, user's `role_id` becomes `NULL` (not orphaned)
-- Application handles null role appropriately
-
-## 🔌 Database Connection Architecture
-
-### **Platform-Agnostic Connection Layer**
-
-**Location:** `backend/db/connection.js` with `backend/config/deployment-adapter.js`
-
-TrossApp uses a **deployment-adapter pattern** to support multiple hosting platforms without code changes. The connection layer automatically detects the deployment environment and configures the database accordingly.
-
-#### **Supported Platforms**
-
-- **Railway** - Uses `DATABASE_URL` (auto-detected via `RAILWAY_ENVIRONMENT`)
-- **Render** - Uses `DATABASE_URL` (auto-detected via `RENDER`)
-- **Fly.io** - Uses `DATABASE_URL` (auto-detected via `FLY_APP_NAME`)
-- **Heroku** - Uses `DATABASE_URL` (auto-detected via `DYNO`)
-- **AWS/GCP/Local** - Uses individual DB environment variables
-
-#### **Configuration Formats**
-
-The adapter supports two formats and automatically chooses the correct one:
-
-**Format 1: Connection String (Cloud Platforms)**
-```bash
-DATABASE_URL=postgresql://user:password@host:5432/database
-```
-
-**Format 2: Individual Variables (AWS/Local)**
-```bash
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=trossapp_dev
-DB_USER=postgres
-DB_PASSWORD=postgres
-DB_POOL_MIN=2
-DB_POOL_MAX=10
-```
-
-#### **Connection Pool Configuration**
-
-```javascript
-// Automatic pool sizing based on environment
-const poolConfig = {
-  min: 2,    // Minimum connections
-  max: 10,   // Maximum connections (20 in production)
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
-  statement_timeout: 10000,
-  query_timeout: 10000
-};
-```
-
-#### **Test Database Isolation**
-
-Test environment uses **separate database and port**:
-- **Development:** `trossapp_dev` on port `5432`
-- **Test:** `trossapp_test` on port `5433` (smaller pool, faster cleanup)
-
-This ensures integration tests never interfere with development data.
-
-#### **Health Checks & Monitoring**
-
-```javascript
-// Connection test with retry logic
-await testConnection(retries = 3, delay = 1000);
-
-// Slow query logging (threshold: 1000ms)
-// Automatic logging of queries exceeding threshold
-
-// Graceful shutdown
-await closePool(); // Drains connections before exit
-```
-
-See `backend/config/deployment-adapter.js` for platform detection logic and `backend/db/connection.js` for pool management.
+**Why `created_at` is a cache:**
+- True source of truth is `audit_logs.created_at`
+- Cached on entity for query performance
+- Never updated after initial insert
+
+### Decision: Status Values in Metadata
+
+**Why status enums are NOT hardcoded in schema:**
+- Entity metadata files are the SSOT
+- CHECK constraints can be derived from metadata
+- Keeps all entity configuration in one place
+- Easier to modify and keep synchronized
+
+### Decision: Foreign Key Policies
+
+**Why we use `ON DELETE SET NULL`:**
+- Prevents cascade deletes that could be destructive
+- Leaves clear trail (NULL indicates "was referenced, now gone")
+- Application can handle NULL explicitly
+
+**When to use `ON DELETE CASCADE`:**
+- Only for true composition (child cannot exist without parent)
+- Examples: refresh_tokens when user is hard deleted
+
+## Schema Management Principles
+
+### Single Source of Truth
+
+- Master schema lives in `backend/schema.sql`
+- Migrations apply incremental changes
+- Both dev and test databases use same schema
+
+### Idempotent Migrations
+
+- Migrations must be safe to run multiple times
+- Use `IF NOT EXISTS` and `IF EXISTS` guards
+- Each migration documents WHAT and WHY
+
+### Environment Isolation
+
+- Development and test databases are separate
+- Same schema, different data
+- Tests never affect development data
+
+## Query Patterns
+
+### Standard Filtering
+
+All normal queries should filter by existence:
+- `WHERE is_active = true` for basic queries
+- Add `AND status = ?` when filtering by lifecycle
+
+### Indexing Strategy
+
+- Always index `is_active` for filtering performance
+- Composite indexes on common filter combinations
+- Status fields get their own index when frequently queried
+
+## Connection Architecture
+
+### Platform Agnostic
+
+The database connection layer automatically adapts to deployment platform:
+- Detects platform from environment
+- Supports both connection strings and individual variables
+- Pool sizing adjusts for environment
+
+### Test Isolation
+
+Test environment uses separate:
+- Database name
+- Port
+- Connection pool (smaller, faster cleanup)
+
+This ensures tests never interfere with development.
+
+### Health & Monitoring
+
+- Connection retry logic with backoff
+- Slow query logging
+- Graceful shutdown (drain connections before exit)
+
+## Evolution Guidelines
+
+### Adding an Entity
+
+1. Follow Entity Contract v2.0 (Tier 1 required)
+2. Determine if Tier 2 status field needed
+3. Create migration for existing databases
+4. Update master schema
+5. Add entity metadata file
+
+### Modifying Schema
+
+1. Create migration (never edit schema.sql directly for existing tables)
+2. Migration must be idempotent
+3. Update schema.sql to reflect final state
+4. Apply to both dev and test
+
+## Anti-Patterns
+
+### Skipping `is_active`
+
+Every business entity needs deactivation capability. The only exceptions are:
+- Join tables (many-to-many relationships)
+- System tables (migrations tracking, etc.)
+
+### Nullable Status on Workflow Entities
+
+If an entity has a status field, it should have a DEFAULT and NOT NULL constraint.
+
+### Hard Deletes for Business Data
+
+Use deactivation (`is_active = false`) for business data. Hard deletes are only for:
+- Test cleanup
+- GDPR "right to erasure" compliance
+- True system-level cleanup
+
+### Duplicating Status Values
+
+Status values are defined ONCE in entity metadata. Database CHECK constraints should be derived, not hand-maintained.
+
+## References
+
+- **Entity Lifecycle:** See `ENTITY_LIFECYCLE.md` for status field patterns
+- **Entity Metadata:** See `config/models/*-metadata.js` for definitions
+- **Migrations:** See `backend/migrations/README.md` for migration workflow
 
 ---
 
-## 📈 Future Enhancements
-
-### **Phase 8: Production Hardening**
-
-- [ ] Add `deleted_at` timestamp for soft delete auditing
-- [ ] Implement database replication (read replicas)
-- [x] ~~Add connection pooling with PgBouncer~~ (Using pg Pool with platform-agnostic adapter)
-- [ ] Set up automated backups with retention policy
-
-### **Phase 9: Work Orders Module**
-
-```sql
-CREATE TABLE work_orders (
-    id SERIAL PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,           -- Name equivalent
-    -- ... entity-specific fields ...
-    is_active BOOLEAN DEFAULT true,        -- System-level field
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-## 🚨 Emergency Procedures
-
-### **Database Corrupted**
-
-```bash
-# 1. Stop containers
-docker-compose down
-
-# 2. Remove volumes (nuclear option)
-docker volume prune -f
-
-# 3. Restart with fresh schema
-npm run db:start
-npm run db:test:start
-node backend/scripts/apply-schema.js
-
-# 4. Verify
-npm run db:status
-```
-
-### **Schema Drift Detected**
-
-```bash
-# Compare schemas between dev and test
-docker exec trossapp-postgres pg_dump -U postgres -s trossapp_dev > dev_schema.sql
-docker exec trossapp-postgres-test pg_dump -U test_user -s trossapp_test > test_schema.sql
-diff dev_schema.sql test_schema.sql
-
-# Fix: Reapply canonical schema
-node backend/scripts/apply-schema.js
-```
-
-## 📚 Related Documentation
-
-- [MVP Scope](../guides/MVP_SCOPE.md)
-- [Development Workflow](../guides/DEVELOPMENT_WORKFLOW.md)
-- [Testing Guide](../testing/TESTING_GUIDE.md)
-
----
-
-**Maintained by:** TrossApp Development Team  
-**Review Cycle:** Every major schema change  
-**Contact:** See [CONTRIBUTORS.md](../CONTRIBUTORS.md)
+**Architecture Status:** 🔒 **LOCKED** - Entity Contract v2.0 is frozen

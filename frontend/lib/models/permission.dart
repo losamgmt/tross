@@ -64,11 +64,14 @@ enum ResourceType {
   technicians,
   preferences,
   savedViews('saved_views'),
+  notifications,
   // Polymorphic entities (permissions tied to parent entity context)
   fileAttachments('file_attachments'),
   // Synthetic resources (nav visibility, not entity CRUD)
   dashboard,
-  adminPanel('admin_panel');
+  adminPanel('admin_panel'),
+  // System-managed resources (not directly editable via UI)
+  systemSettings('system_settings');
 
   final String? _value;
   const ResourceType([this._value]);

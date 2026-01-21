@@ -5,8 +5,7 @@
 /// This is the read-only implementation of MetadataProvider.
 /// Reads from:
 /// - assets/config/permissions.json
-/// - assets/config/validation-rules.json
-/// - assets/config/entity-metadata.json
+/// - assets/config/entity-metadata.json (SSOT for entities, fields, and validation)
 ///
 /// USAGE:
 /// ```dart
@@ -28,10 +27,8 @@ import 'metadata_types.dart';
 class JsonMetadataProvider implements MetadataProvider {
   // Cache for loaded JSON data with per-cache timestamps
   Map<String, dynamic>? _permissionsCache;
-  Map<String, dynamic>? _validationCache;
   Map<String, dynamic>? _entityMetadataCache;
   DateTime? _permissionsLoadedAt;
-  DateTime? _validationLoadedAt;
   DateTime? _entityMetadataLoadedAt;
 
   // Cache duration (5 minutes)
@@ -147,35 +144,83 @@ class JsonMetadataProvider implements MetadataProvider {
   // ===========================================================================
   // Validation Metadata
   // ===========================================================================
+  // All validation rules are derived from entity-metadata.json (SSOT).
+  // There is no separate validation-rules.json file.
+
+  /// Meta keys to skip when iterating entity metadata
+  static const _metaKeys = {
+    r'$schema',
+    r'$id',
+    'title',
+    'description',
+    'version',
+    'lastModified',
+  };
 
   @override
   Future<List<String>> getValidationFields() async {
-    final json = await _loadValidation();
-    final fields = json['fields'] as Map<String, dynamic>? ?? {};
-    return fields.keys.toList();
+    // Collect all unique field names across all entities
+    final entityMetadata = await _loadEntityMetadata();
+    final allFields = <String>{};
+
+    for (final entry in entityMetadata.entries) {
+      // Skip schema metadata keys and non-entity values
+      if (_metaKeys.contains(entry.key)) continue;
+      if (entry.value is! Map<String, dynamic>) continue;
+
+      final entityJson = entry.value as Map<String, dynamic>;
+      final fields = entityJson['fields'] as Map<String, dynamic>? ?? {};
+      allFields.addAll(fields.keys);
+    }
+
+    return allFields.toList()..sort();
   }
 
   @override
   Future<FieldValidation?> getFieldValidation(String fieldName) async {
-    final json = await _loadValidation();
-    final fields = json['fields'] as Map<String, dynamic>? ?? {};
-    final fieldJson = fields[fieldName] as Map<String, dynamic>?;
+    // Search for the field across all entities and return the first match
+    final entityMetadata = await _loadEntityMetadata();
 
-    if (fieldJson == null) return null;
-    return FieldValidation.fromJson(fieldName, fieldJson);
+    for (final entry in entityMetadata.entries) {
+      // Skip schema metadata keys and non-entity values
+      if (_metaKeys.contains(entry.key)) continue;
+      if (entry.value is! Map<String, dynamic>) continue;
+
+      final entityJson = entry.value as Map<String, dynamic>;
+      final fields = entityJson['fields'] as Map<String, dynamic>? ?? {};
+      final fieldJson = fields[fieldName] as Map<String, dynamic>?;
+
+      if (fieldJson != null) {
+        return FieldValidation.fromJson(fieldName, fieldJson);
+      }
+    }
+
+    return null;
   }
 
   @override
   Future<Map<String, FieldValidation>> getAllFieldValidations() async {
-    final json = await _loadValidation();
-    final fields = json['fields'] as Map<String, dynamic>? ?? {};
+    // Collect all fields from all entities
+    final entityMetadata = await _loadEntityMetadata();
     final result = <String, FieldValidation>{};
 
-    for (final entry in fields.entries) {
-      result[entry.key] = FieldValidation.fromJson(
-        entry.key,
-        entry.value as Map<String, dynamic>,
-      );
+    for (final entry in entityMetadata.entries) {
+      // Skip schema metadata keys and non-entity values
+      if (_metaKeys.contains(entry.key)) continue;
+      if (entry.value is! Map<String, dynamic>) continue;
+
+      final entityJson = entry.value as Map<String, dynamic>;
+      final fields = entityJson['fields'] as Map<String, dynamic>? ?? {};
+
+      for (final fieldEntry in fields.entries) {
+        // Don't overwrite if already exists (first entity wins)
+        if (!result.containsKey(fieldEntry.key)) {
+          result[fieldEntry.key] = FieldValidation.fromJson(
+            fieldEntry.key,
+            fieldEntry.value as Map<String, dynamic>,
+          );
+        }
+      }
     }
 
     return result;
@@ -183,47 +228,29 @@ class JsonMetadataProvider implements MetadataProvider {
 
   @override
   Future<Map<String, dynamic>> getRawValidation() async {
-    return await _loadValidation();
+    // Return entity metadata as the validation source (SSOT)
+    return await _loadEntityMetadata();
   }
 
   @override
   Future<EntityValidationRules?> getEntityValidationRules(String entity) async {
-    // Get entity metadata to find entity's fields
+    // Get entity metadata - this is the SSOT for all fields and validation
     final entityMetadata = await _loadEntityMetadata();
     final entityJson = entityMetadata[entity] as Map<String, dynamic>?;
 
     if (entityJson == null) return null;
 
-    // Get entity's field definitions
+    // Get entity's field definitions directly from entity-metadata.json
     final entityFields = entityJson['fields'] as Map<String, dynamic>? ?? {};
 
-    // Get global validation rules
-    final validationJson = await _loadValidation();
-    final globalFields =
-        validationJson['fields'] as Map<String, dynamic>? ?? {};
-
-    // Build field validations by merging entity fields with global rules
+    // Build field validations from entity fields
     final fields = <String, FieldValidation>{};
 
     for (final fieldEntry in entityFields.entries) {
       final fieldName = fieldEntry.key;
-      final entityFieldJson = fieldEntry.value as Map<String, dynamic>;
+      final fieldJson = fieldEntry.value as Map<String, dynamic>;
 
-      // Start with entity field definition
-      final mergedJson = Map<String, dynamic>.from(entityFieldJson);
-
-      // Merge in global validation rules if they exist for this field
-      final globalFieldJson = globalFields[fieldName] as Map<String, dynamic>?;
-      if (globalFieldJson != null) {
-        // Global rules override entity-level rules
-        for (final entry in globalFieldJson.entries) {
-          if (!mergedJson.containsKey(entry.key)) {
-            mergedJson[entry.key] = entry.value;
-          }
-        }
-      }
-
-      fields[fieldName] = FieldValidation.fromJson(fieldName, mergedJson);
+      fields[fieldName] = FieldValidation.fromJson(fieldName, fieldJson);
     }
 
     return EntityValidationRules(entity: entity, fields: fields);
@@ -261,10 +288,8 @@ class JsonMetadataProvider implements MetadataProvider {
   @override
   void clearCache() {
     _permissionsCache = null;
-    _validationCache = null;
     _entityMetadataCache = null;
     _permissionsLoadedAt = null;
-    _validationLoadedAt = null;
     _entityMetadataLoadedAt = null;
     ErrorService.logDebug('[$providerName] Cache cleared');
   }
@@ -272,11 +297,7 @@ class JsonMetadataProvider implements MetadataProvider {
   @override
   Future<void> reload() async {
     clearCache();
-    await Future.wait([
-      _loadPermissions(),
-      _loadValidation(),
-      _loadEntityMetadata(),
-    ]);
+    await Future.wait([_loadPermissions(), _loadEntityMetadata()]);
     ErrorService.logDebug('[$providerName] All data reloaded');
   }
 
@@ -305,29 +326,6 @@ class JsonMetadataProvider implements MetadataProvider {
     } catch (e, stackTrace) {
       ErrorService.logError(
         '[$providerName] Failed to load permissions.json',
-        error: e,
-        stackTrace: stackTrace,
-      );
-      rethrow;
-    }
-  }
-
-  Future<Map<String, dynamic>> _loadValidation() async {
-    if (_validationCache != null && _isCacheValid(_validationLoadedAt)) {
-      return _validationCache!;
-    }
-
-    try {
-      final jsonString = await rootBundle.loadString(
-        'assets/config/validation-rules.json',
-      );
-      _validationCache = json.decode(jsonString) as Map<String, dynamic>;
-      _validationLoadedAt = DateTime.now();
-      ErrorService.logDebug('[$providerName] Loaded validation-rules.json');
-      return _validationCache!;
-    } catch (e, stackTrace) {
-      ErrorService.logError(
-        '[$providerName] Failed to load validation-rules.json',
         error: e,
         stackTrace: stackTrace,
       );

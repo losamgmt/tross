@@ -185,23 +185,31 @@ class ResourceConfig {
 
 /// Permission Detail
 class PermissionDetail {
-  final String minimumRole;
+  final String? minimumRole; // null means operation is disabled
   final int minimumPriority;
   final String description;
+  final bool
+  disabled; // true for system-only operations (not available via API)
 
   const PermissionDetail({
     required this.minimumRole,
     required this.minimumPriority,
     required this.description,
+    this.disabled = false,
   });
 
   factory PermissionDetail.fromJson(Map<String, dynamic> json) {
     return PermissionDetail(
-      minimumRole: json['minimumRole'] as String,
+      minimumRole:
+          json['minimumRole'] as String?, // null for disabled operations
       minimumPriority: json['minimumPriority'] as int,
       description: json['description'] as String,
+      disabled: json['disabled'] as bool? ?? false,
     );
   }
+
+  /// Check if this operation is disabled (system-only)
+  bool get isDisabled => disabled || minimumRole == null;
 }
 
 /// Permission Configuration Loader

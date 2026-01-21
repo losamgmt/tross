@@ -239,7 +239,7 @@ PUT /api/users/:id/role
 }
 ```
 
-**Delete User** (Soft delete)
+**Deactivate User** (Sets is_active=false)
 ```http
 DELETE /api/users/:id
 ```
@@ -278,7 +278,7 @@ PATCH /api/customers/:id
 }
 ```
 
-**Delete Customer** (Soft delete)
+**Deactivate Customer** (Sets is_active=false)
 ```http
 DELETE /api/customers/:id
 ```
@@ -318,7 +318,7 @@ PATCH /api/work_orders/:id
 }
 ```
 
-**Delete Work Order** (Soft delete)
+**Deactivate Work Order** (Sets is_active=false)
 ```http
 DELETE /api/work_orders/:id
 ```
@@ -402,7 +402,7 @@ GET /api/files/:id/download
 }
 ```
 
-**Delete File** (Soft delete)
+**Deactivate File** (Sets is_active=false)
 ```http
 DELETE /api/files/:id
 ```

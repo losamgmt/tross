@@ -102,7 +102,11 @@ void main() {
 
       for (final resourceEntry in config.resources.entries) {
         for (final permEntry in resourceEntry.value.permissions.entries) {
-          final minimumRole = permEntry.value.minimumRole;
+          final permission = permEntry.value;
+          // Skip disabled operations (system-only, not available via API)
+          if (permission.isDisabled) continue;
+
+          final minimumRole = permission.minimumRole;
           expect(
             validRoles.contains(minimumRole),
             isTrue,
@@ -118,8 +122,12 @@ void main() {
 
       for (final resourceEntry in config.resources.entries) {
         for (final permEntry in resourceEntry.value.permissions.entries) {
-          final minimumRole = permEntry.value.minimumRole;
-          final minimumPriority = permEntry.value.minimumPriority;
+          final permission = permEntry.value;
+          // Skip disabled operations (system-only, not available via API)
+          if (permission.isDisabled) continue;
+
+          final minimumRole = permission.minimumRole!;
+          final minimumPriority = permission.minimumPriority;
           final expectedPriority = config.getRolePriority(minimumRole);
 
           expect(
@@ -264,9 +272,20 @@ void main() {
     });
 
     test('admin has all permissions (highest priority)', () {
-      // Admin should be able to do everything
+      final config = PermissionService.config!;
+
+      // Admin should be able to do everything that's not explicitly disabled
       for (final resource in ResourceType.values) {
         for (final operation in CrudOperation.values) {
+          final resourceKey = resource.toBackendString();
+          final minimumPriority = config.getMinimumPriority(
+            resourceKey,
+            operation.toString(),
+          );
+
+          // Skip disabled operations (priority 0) - no one can do these
+          if (minimumPriority == 0) continue;
+
           expect(
             PermissionService.hasPermission('admin', resource, operation),
             isTrue,
@@ -292,6 +311,10 @@ void main() {
             resourceKey,
             operation.toString(),
           );
+
+          // Skip null priorities (unknown operation)
+          if (minimumPriority == null) continue;
+
           final hasPermission = PermissionService.hasPermission(
             'customer',
             resource,
@@ -306,6 +329,7 @@ void main() {
                   'Client should have $resourceKey.${operation.toString()} (requires priority 1)',
             );
           } else {
+            // Priority 0 = disabled (system-only), any other value = higher role required
             expect(
               hasPermission,
               isFalse,

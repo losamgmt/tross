@@ -250,7 +250,7 @@ Next Steps: [Plan for fix and redeployment]
 
 ### Pre-Deployment Checklist
 
-- [ ] All tests passing (1,736+ backend tests)
+- [ ] All tests passing
 - [ ] Manual smoke test on staging/preview
 - [ ] Database migrations tested locally
 - [ ] Environment variables verified
