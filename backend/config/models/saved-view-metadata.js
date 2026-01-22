@@ -24,6 +24,9 @@ module.exports = {
   // Primary key
   primaryKey: 'id',
 
+  // Material icon for navigation menus and entity displays
+  icon: 'bookmark',
+
   // ============================================================================
   // IDENTITY CONFIGURATION
   // ============================================================================

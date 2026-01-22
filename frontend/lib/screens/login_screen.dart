@@ -100,10 +100,14 @@ class LoginScreen extends StatelessWidget {
 
                           // Backend health status
                           AppBadge(
-                            label: appProvider.isBackendHealthy
+                            label: !appProvider.isInitialized
+                                ? 'Checking...'
+                                : appProvider.isBackendHealthy
                                 ? 'Connected'
                                 : 'Disconnected',
-                            style: appProvider.isBackendHealthy
+                            style: !appProvider.isInitialized
+                                ? BadgeStyle.secondary
+                                : appProvider.isBackendHealthy
                                 ? BadgeStyle.success
                                 : BadgeStyle.error,
                           ),

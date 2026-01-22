@@ -206,8 +206,12 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Tap the user menu button
-      await tester.tap(find.byType(PopupMenuButton<String>));
+      // Tap the user menu button (identified by CircleAvatar icon)
+      final userMenuFinder = find.ancestor(
+        of: find.byType(CircleAvatar),
+        matching: find.byType(PopupMenuButton<String>),
+      );
+      await tester.tap(userMenuFinder);
       await tester.pumpAndSettle();
 
       // User menu items should appear (account-related only)

@@ -188,6 +188,8 @@ function transformModel(entityName, backendMeta) {
     primaryKey: backendMeta.primaryKey || 'id',
     identityField: backendMeta.identityField,
     rlsResource: backendMeta.rlsResource,
+    // Material icon for navigation menus and entity displays
+    icon: backendMeta.icon,
   };
   
   // Display names

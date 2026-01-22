@@ -4,6 +4,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
+import 'error_service.dart';
 
 enum ServiceStatus { healthy, degraded, critical, unknown, offline }
 
@@ -42,12 +43,31 @@ class ServiceHealthManager {
           .timeout(_timeout);
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body) as Map<String, dynamic>;
-        _lastHealthData = data;
+        final responseData = json.decode(response.body) as Map<String, dynamic>;
         _lastCheck = DateTime.now();
 
-        // Parse backend status
-        switch (data['status'] as String?) {
+        ErrorService.logDebug(
+          'Health check response received',
+          context: {
+            'success': responseData['success'],
+            'hasData': responseData['data'] != null,
+          },
+        );
+
+        // Response is wrapped: {"success": true, "data": {"status": "healthy", ...}}
+        final healthData = responseData['data'] as Map<String, dynamic>?;
+        _lastHealthData = healthData ?? responseData;
+
+        // Parse backend status from the nested data object
+        final status =
+            healthData?['status'] as String? ??
+            responseData['status'] as String?;
+        ErrorService.logDebug(
+          'Parsed health status',
+          context: {'status': status},
+        );
+
+        switch (status) {
           case 'healthy':
             _backendStatus = ServiceStatus.healthy;
           case 'degraded':

@@ -79,11 +79,8 @@ TrossApp documentation hub.
 
 ---
 
-## 📋 Historical
+## 📋 Project
 
 | Doc | Purpose |
 |-----|---------|
 | [MVP Scope](project/MVP_SCOPE.md) | Original project scope |
-| [Refactoring Agenda](REFACTORING_AGENDA.md) | Unified middleware refactoring (Phases 1-3 complete) |
-| [Audit Remediation](BACKEND_AUDIT_REMEDIATION.md) | Backend audit findings (Phases 1-3 complete) |
-

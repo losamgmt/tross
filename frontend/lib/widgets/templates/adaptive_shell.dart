@@ -34,8 +34,10 @@ import '../../config/constants.dart';
 import '../../core/routing/app_routes.dart';
 import '../../core/routing/route_guard.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/generic_entity_service.dart';
 import '../../services/nav_menu_builder.dart';
 import '../organisms/navigation/nav_menu_item.dart';
+import '../organisms/navigation/notification_tray.dart';
 
 /// Responsive layout shell with sidebar/drawer navigation
 class AdaptiveShell extends StatelessWidget {
@@ -237,6 +239,8 @@ class AdaptiveShell extends StatelessWidget {
       centerTitle: false,
       automaticallyImplyLeading: !isWideScreen, // Hamburger on narrow screens
       actions: [
+        // Notification bell with dropdown
+        const _NotificationTraySection(),
         _UserMenuButton(
           authProvider: authProvider,
           userItems: userItems,
@@ -583,5 +587,102 @@ class _UserMenuButton extends StatelessWidget {
     if (menuItem.route != null && menuItem.route != currentRoute) {
       context.go(menuItem.route!);
     }
+  }
+}
+
+// ============================================================================
+// NOTIFICATION TRAY SECTION
+// ============================================================================
+
+/// Stateful wrapper that manages notification data for the pure NotificationTray
+///
+/// This handles:
+/// - Fetching notifications from GenericEntityService on dropdown open
+/// - Maintaining the current list in state
+/// - Passing plain props to the pure NotificationTray widget
+class _NotificationTraySection extends StatefulWidget {
+  const _NotificationTraySection();
+
+  @override
+  State<_NotificationTraySection> createState() =>
+      _NotificationTraySectionState();
+}
+
+class _NotificationTraySectionState extends State<_NotificationTraySection> {
+  List<Map<String, dynamic>> _notifications = [];
+
+  @override
+  void initState() {
+    super.initState();
+    // Initial load of notifications (only if authenticated)
+    _loadNotificationsIfAuthenticated();
+  }
+
+  Future<void> _loadNotificationsIfAuthenticated() async {
+    final authProvider = context.read<AuthProvider>();
+    if (!authProvider.isAuthenticated) return;
+    await _loadNotifications();
+  }
+
+  Future<void> _loadNotifications() async {
+    try {
+      final entityService = context.read<GenericEntityService>();
+      final result = await entityService.getAll(
+        'notification',
+        limit: 10,
+        sortBy: 'created_at',
+        sortOrder: 'DESC',
+      );
+      if (mounted) {
+        setState(() => _notifications = result.data);
+      }
+    } catch (e) {
+      // Silently fail - notifications are non-critical
+      if (mounted) {
+        setState(() => _notifications = []);
+      }
+    }
+  }
+
+  Future<void> _handleNotificationTap(Map<String, dynamic> notification) async {
+    // Mark as read
+    try {
+      final entityService = context.read<GenericEntityService>();
+      final id = notification['id'];
+      if (id != null) {
+        await entityService.update('notification', id, {'is_read': true});
+        // Refresh the list
+        await _loadNotifications();
+      }
+    } catch (e) {
+      // Silently fail
+    }
+
+    // Navigate to related entity if available
+    final relatedEntity = notification['related_entity_type'] as String?;
+    final relatedId = notification['related_entity_id'];
+    if (relatedEntity != null && relatedId != null && mounted) {
+      context.go('/$relatedEntity/$relatedId');
+    }
+  }
+
+  void _handleViewAll() {
+    context.go('/notifications');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Only show notification tray when authenticated
+    final authProvider = context.watch<AuthProvider>();
+    if (!authProvider.isAuthenticated) {
+      return const SizedBox.shrink();
+    }
+
+    return NotificationTray(
+      notifications: _notifications,
+      onOpen: _loadNotifications,
+      onNotificationTap: _handleNotificationTap,
+      onViewAll: _handleViewAll,
+    );
   }
 }

@@ -291,6 +291,20 @@ function validateRlsPolicy(meta, errors) {
 }
 
 /**
+ * Validate UI display properties
+ * These are required for frontend rendering (navigation, headers, etc.)
+ */
+function validateDisplayProperties(meta, errors) {
+  // icon is required for navigation menus and entity displays
+  // Uses Material Icons naming (e.g., 'people', 'work', 'notifications')
+  if (!meta.icon) {
+    errors.add('icon', 'Required property missing. Use Material Icons name (e.g., \'people\', \'work\')');
+  } else if (typeof meta.icon !== 'string') {
+    errors.add('icon', 'Must be a string (Material Icons name)');
+  }
+}
+
+/**
  * Validate a single entity's metadata
  */
 function validateEntity(entityName, meta, allMetadata) {
@@ -306,6 +320,7 @@ function validateEntity(entityName, meta, allMetadata) {
   }
 
   // Run all validators
+  validateDisplayProperties(meta, errors);
   validateFieldTypes(meta, errors);
   validateFieldAccess(meta, errors);
   validateEntityPermissions(meta, errors);

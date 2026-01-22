@@ -39,6 +39,9 @@ module.exports = {
   // Primary key (shared with users.id)
   primaryKey: 'id',
 
+  // Material icon for navigation menus and entity displays
+  icon: 'settings',
+
   // ============================================================================
   // IDENTITY CONFIGURATION
   // ============================================================================

@@ -1,6 +1,6 @@
 # Notification System Design
 
-> **Status:** In Progress (Phase 1 Complete)
+> **Status:** Phase 3 Complete (Frontend Implemented)
 > **Last Updated:** 2026-01-21
 > **Pattern:** Follows `saved_views` - metadata + generic router, NO custom code
 
@@ -167,118 +167,76 @@ await GenericEntityService.create('notification', {
 
 ## Frontend Implementation
 
-### Files to Create
+### Architecture Decision: Pure Props Pattern
+
+Instead of a dedicated `NotificationProvider`, we follow the same pattern as `AppSidebar`:
+- **Parent manages state** (`_NotificationTraySection` in `AdaptiveShell`)
+- **Child receives plain props** (`NotificationTray` widget)
+- **Data fetching** via `GenericEntityService.getAll('notification')`
+
+This keeps widgets pure and testable, with no additional providers.
+
+### Files Created
 
 | File | Purpose |
 |------|---------|
-| `lib/models/notification.dart` | Data model |
-| `lib/providers/notification_provider.dart` | State + API calls |
-| `lib/widgets/organisms/navigation/notification_bell.dart` | Bell icon + badge |
-| `lib/widgets/organisms/navigation/notification_dropdown.dart` | Dropdown list |
+| `lib/widgets/organisms/navigation/notification_tray.dart` | Bell icon + dropdown (pure StatelessWidget) |
+| `test/widgets/organisms/navigation/notification_tray_test.dart` | 19 widget tests |
 
-### Notification Model
+### NotificationTray Widget
 
 ```dart
-class AppNotification {
-  final int id;
-  final int userId;
-  final String title;
-  final String? body;
-  final String type;
-  final String? resourceType;
-  final int? resourceId;
-  final bool isRead;
-  final DateTime? readAt;
-  final DateTime createdAt;
+/// Pure presentation widget - receives notifications as props
+class NotificationTray extends StatelessWidget {
+  final List<Map<String, dynamic>> notifications;
+  final VoidCallback? onOpen;
+  final void Function(Map<String, dynamic>)? onNotificationTap;
+  final VoidCallback? onViewAll;
 
-  /// Computed navigation path
-  String? get actionPath {
-    if (resourceType == null || resourceId == null) return null;
-    // Convert snake_case to route: 'work_order' -> '/work-orders/123'
-    final route = resourceType!.replaceAll('_', '-');
-    return '/${route}s/$resourceId';
-  }
-
-  /// Icon based on type
-  IconData get icon => switch (type) {
-    'success' => Icons.check_circle,
-    'warning' => Icons.warning,
-    'error' => Icons.error,
-    'assignment' => Icons.assignment_ind,
-    'reminder' => Icons.schedule,
-    _ => Icons.info,
-  };
-
-  /// Color based on type
-  Color get color => switch (type) {
-    'success' => Colors.green,
-    'warning' => Colors.orange,
-    'error' => Colors.red,
-    'assignment' => Colors.blue,
-    'reminder' => Colors.purple,
-    _ => Colors.grey,
-  };
+  /// Derived from notifications list - no separate prop needed
+  int get unreadCount => notifications.where((n) => n['is_read'] != true).length;
 }
 ```
 
-### Notification Provider
+### Integration in AdaptiveShell
 
 ```dart
-class NotificationProvider extends ChangeNotifier {
-  List<AppNotification> _notifications = [];
-  bool _loading = false;
+/// Stateful section that manages data fetching
+class _NotificationTraySection extends StatefulWidget { ... }
 
-  List<AppNotification> get notifications => _notifications;
-  int get unreadCount => _notifications.where((n) => !n.isRead).length;
-  String get unreadBadge => unreadCount > 99 ? '99+' : '$unreadCount';
+class _NotificationTraySectionState extends State<_NotificationTraySection> {
+  List<Map<String, dynamic>> _notifications = [];
 
-  /// Fetch notifications (call on navigation, not polling)
-  Future<void> fetch() async {
-    _loading = true;
-    notifyListeners();
-
-    final response = await apiClient.get('/notifications?sort=created_at&order=desc');
-    _notifications = (response['data'] as List)
-        .map((json) => AppNotification.fromJson(json))
-        .toList();
-
-    _loading = false;
-    notifyListeners();
+  Future<void> _loadNotifications() async {
+    final entityService = context.read<GenericEntityService>();
+    final result = await entityService.getAll(
+      'notification',
+      limit: 10,
+      sortBy: 'created_at',
+      sortOrder: 'DESC',
+    );
+    setState(() => _notifications = result.data);
   }
 
-  /// Mark single notification as read
-  Future<void> markAsRead(int id) async {
-    await apiClient.patch('/notifications/$id', {'is_read': true});
-    final index = _notifications.indexWhere((n) => n.id == id);
-    if (index >= 0) {
-      _notifications[index] = _notifications[index].copyWith(isRead: true);
-      notifyListeners();
+  @override
+  Widget build(BuildContext context) {
+    // Only show when authenticated
+    if (!context.watch<AuthProvider>().isAuthenticated) {
+      return const SizedBox.shrink();
     }
-  }
-
-  /// Delete notification
-  Future<void> delete(int id) async {
-    await apiClient.delete('/notifications/$id');
-    _notifications.removeWhere((n) => n.id == id);
-    notifyListeners();
+    return NotificationTray(notifications: _notifications, ...);
   }
 }
 ```
 
-### Integration Points
+### Key Behaviors
 
-**AdaptiveShell** - Add bell icon to app bar:
-```dart
-NotificationBell(
-  unreadCount: context.watch<NotificationProvider>().unreadCount,
-  onTap: () => _showNotificationDropdown(context),
-)
-```
-
-**Fetch on navigation** - Call `notificationProvider.fetch()` when:
-- User logs in
-- User navigates to home/dashboard
-- User opens notification dropdown
+- **Bell icon** with red badge showing unread count
+- **Dropdown** opens on tap with notification list
+- **Tap notification** → marks as read + navigates to related entity
+- **"View All"** → routes to `/notifications`
+- **Empty state** → "No notifications"
+- **Auth guard** → hidden on login page
 
 ---
 
@@ -297,13 +255,13 @@ NotificationBell(
 - [x] Confirm `POST /api/notifications` returns 403 (disabled)
 - [x] Integration tests auto-generated from factory (`all-entities.test.js`)
 
-### Phase 3: Frontend Implementation
-- [ ] Create `AppNotification` model
-- [ ] Create `NotificationProvider`
-- [ ] Create `NotificationBell` organism
-- [ ] Create `NotificationDropdown` organism
-- [ ] Integrate into `AdaptiveShell`
-- [ ] Write widget tests
+### Phase 3: Frontend Implementation ✅ COMPLETE
+- [x] Create `NotificationTray` organism (bell icon + dropdown)
+- [x] Use pure props pattern (no dedicated provider)
+- [x] Use `GenericEntityService.getAll('notification')` for data fetching
+- [x] Integrate into `AdaptiveShell` via `_NotificationTraySection`
+- [x] Widget tests (19 tests)
+- [x] Auth guard (hide tray when not authenticated)
 
 ### Phase 4: Backend Triggers (Future)
 - [ ] Work order assignment → create notification
