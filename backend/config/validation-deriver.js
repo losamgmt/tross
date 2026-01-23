@@ -17,6 +17,8 @@
  */
 
 const allMetadata = require('./models');
+const { FIELD, ADDRESS_SUFFIXES } = require('./field-type-standards');
+const { ALL_SUBDIVISIONS, SUPPORTED_COUNTRIES } = require('./geo-standards');
 
 // ============================================================================
 // SHARED FIELD DEFINITIONS (cross-entity fields)
@@ -25,13 +27,17 @@ const allMetadata = require('./models');
 /**
  * Shared field definitions used across multiple entities.
  * These provide consistent validation for common patterns.
+ *
+ * ARCHITECTURE: Base constraints come from FIELD (field-type-standards.js).
+ * Validation-specific properties (trim, lowercase, errorMessages) are added here.
+ * This ensures constraints stay in sync while validation adds its own concerns.
  */
 const SHARED_FIELD_DEFS = {
   // ---- Identity Fields ----
   email: {
-    type: 'string',
+    ...FIELD.EMAIL,
+    type: 'string', // Override for Joi (email is validated via format, not type)
     format: 'email',
-    maxLength: 255,
     tldRestriction: false,
     trim: true,
     lowercase: true,
@@ -39,42 +45,39 @@ const SHARED_FIELD_DEFS = {
     errorMessages: {
       required: 'Email is required',
       format: 'Email must be a valid email address',
-      maxLength: 'Email cannot exceed 255 characters',
+      maxLength: `Email cannot exceed ${FIELD.EMAIL.maxLength} characters`,
     },
   },
 
   // ---- Name Fields (HUMAN entities) ----
   // NOTE: No pattern restriction - allows international Unicode names
   first_name: {
-    type: 'string',
+    ...FIELD.FIRST_NAME,
     minLength: 1,
-    maxLength: 100,
     trim: true,
     errorMessages: {
       required: 'First name is required',
       minLength: 'First name cannot be empty',
-      maxLength: 'First name cannot exceed 100 characters',
+      maxLength: `First name cannot exceed ${FIELD.FIRST_NAME.maxLength} characters`,
     },
   },
 
   // NOTE: No pattern restriction - allows international Unicode names
   last_name: {
-    type: 'string',
+    ...FIELD.LAST_NAME,
     minLength: 1,
-    maxLength: 100,
     trim: true,
     errorMessages: {
       required: 'Last name is required',
       minLength: 'Last name cannot be empty',
-      maxLength: 'Last name cannot exceed 100 characters',
+      maxLength: `Last name cannot exceed ${FIELD.LAST_NAME.maxLength} characters`,
     },
   },
 
   // ---- Phone ----
   phone: {
-    type: 'string',
+    ...FIELD.PHONE,
     pattern: '^\\+?[1-9]\\d{1,14}$',
-    maxLength: 50,
     trim: true,
     errorMessages: {
       pattern: 'Phone number must be in international format (E.164)',
@@ -83,32 +86,29 @@ const SHARED_FIELD_DEFS = {
 
   // ---- Generic Fields ----
   name: {
-    type: 'string',
+    ...FIELD.NAME,
     minLength: 1,
-    maxLength: 255,
     trim: true,
     errorMessages: {
       required: 'Name is required',
       minLength: 'Name cannot be empty',
-      maxLength: 'Name cannot exceed 255 characters',
+      maxLength: `Name cannot exceed ${FIELD.NAME.maxLength} characters`,
     },
   },
 
   summary: {
-    type: 'string',
-    maxLength: 255,
+    ...FIELD.SUMMARY,
     trim: true,
     errorMessages: {
-      maxLength: 'Summary cannot exceed 255 characters',
+      maxLength: `Summary cannot exceed ${FIELD.SUMMARY.maxLength} characters`,
     },
   },
 
   description: {
-    type: 'string',
-    maxLength: 5000,
+    ...FIELD.DESCRIPTION,
     trim: true,
     errorMessages: {
-      maxLength: 'Description cannot exceed 5000 characters',
+      maxLength: `Description cannot exceed ${FIELD.DESCRIPTION.maxLength} characters`,
     },
   },
 
@@ -123,6 +123,82 @@ const SHARED_FIELD_DEFS = {
   // ---- Universal FK pattern ----
   // Note: Specific FKs (customer_id, technician_id) are derived from metadata
 };
+
+// ============================================================================
+// ADDRESS FIELD VALIDATION DEFINITIONS
+// ============================================================================
+
+/**
+ * Generate validation definitions for address fields
+ * Used when deriving validation for address field groups
+ *
+ * @param {string} prefix - Address field prefix (e.g., 'location', 'billing')
+ * @returns {Object} Validation definitions for all 6 address fields
+ */
+function generateAddressFieldValidations(prefix) {
+  return {
+    [`${prefix}_line1`]: {
+      ...FIELD.ADDRESS_LINE1,
+      trim: true,
+      errorMessages: {
+        required: 'Street address is required',
+        maxLength: `Street address cannot exceed ${FIELD.ADDRESS_LINE1.maxLength} characters`,
+      },
+    },
+    [`${prefix}_line2`]: {
+      ...FIELD.ADDRESS_LINE2,
+      trim: true,
+      errorMessages: {
+        maxLength: `Address line 2 cannot exceed ${FIELD.ADDRESS_LINE2.maxLength} characters`,
+      },
+    },
+    [`${prefix}_city`]: {
+      ...FIELD.ADDRESS_CITY,
+      trim: true,
+      errorMessages: {
+        required: 'City is required',
+        maxLength: `City cannot exceed ${FIELD.ADDRESS_CITY.maxLength} characters`,
+      },
+    },
+    [`${prefix}_state`]: {
+      type: 'string',
+      enum: ALL_SUBDIVISIONS,
+      errorMessages: {
+        enum: 'State/Province must be a valid code (e.g., OR, WA, BC)',
+      },
+    },
+    [`${prefix}_postal_code`]: {
+      ...FIELD.ADDRESS_POSTAL_CODE,
+      trim: true,
+      errorMessages: {
+        maxLength: `Postal code cannot exceed ${FIELD.ADDRESS_POSTAL_CODE.maxLength} characters`,
+      },
+    },
+    [`${prefix}_country`]: {
+      type: 'string',
+      enum: SUPPORTED_COUNTRIES,
+      errorMessages: {
+        enum: `Country must be one of: ${SUPPORTED_COUNTRIES.join(', ')}`,
+      },
+    },
+  };
+}
+
+/**
+ * Check if a field name is an address field and get its validation
+ * @param {string} fieldName - Field name to check
+ * @returns {Object|null} Validation definition or null if not an address field
+ */
+function getAddressFieldValidation(fieldName) {
+  for (const suffix of ADDRESS_SUFFIXES) {
+    if (fieldName.endsWith(`_${suffix}`)) {
+      const prefix = fieldName.slice(0, -(suffix.length + 1));
+      const validations = generateAddressFieldValidations(prefix);
+      return validations[fieldName] || null;
+    }
+  }
+  return null;
+}
 
 /**
  * Generate error messages for an enum field
@@ -184,6 +260,16 @@ function deriveFieldValidation(fieldName, fieldDef, _entityName) {
       shared.required = fieldDef.required;
     }
     return shared;
+  }
+
+  // Check for address field (e.g., location_city, billing_line1)
+  const addressValidation = getAddressFieldValidation(fieldName);
+  if (addressValidation) {
+    // Override required from metadata
+    if (fieldDef.required !== undefined) {
+      addressValidation.required = fieldDef.required;
+    }
+    return addressValidation;
   }
 
   // Build from metadata field definition
@@ -493,4 +579,7 @@ module.exports = {
   SHARED_FIELD_DEFS,
   deriveFieldValidation,
   deriveCompositeValidation,
+  // Address validation helpers
+  generateAddressFieldValidations,
+  getAddressFieldValidation,
 };

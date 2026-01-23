@@ -82,6 +82,18 @@ function buildFieldSchema(fieldDef, fieldName) {
     case 'string':
       schema = Joi.string();
       break;
+    case 'email':
+      // Email is a SEMANTIC TYPE, not "string with format"
+      // Joi.string().email() with TLD policy
+      schema = Joi.string().email({
+        tlds: fieldDef.tldRestriction === false ? false : { allow: true },
+      });
+      break;
+    case 'phone':
+      // Phone is a SEMANTIC TYPE, not "string with pattern"
+      // E.164 format: optional + followed by 1-15 digits
+      schema = Joi.string().pattern(/^\+?[1-9]\d{1,14}$/);
+      break;
     case 'integer':
       schema = Joi.number().integer();
       break;
@@ -99,9 +111,10 @@ function buildFieldSchema(fieldDef, fieldName) {
       throw new AppError(`Unsupported field type: ${fieldDef.type} for ${fieldName}`, 500, 'INTERNAL_ERROR');
   }
 
-  // Apply string-specific rules
-  if (fieldDef.type === 'string') {
-    if (fieldDef.format === 'email') {
+  // Apply string-specific rules (for string, email, phone types)
+  if (fieldDef.type === 'string' || fieldDef.type === 'email' || fieldDef.type === 'phone') {
+    // Legacy format support for backward compatibility
+    if (fieldDef.type === 'string' && fieldDef.format === 'email') {
       // Email format with TLD policy
       schema = schema.email({
         tlds: fieldDef.tldRestriction === false ? false : { allow: true },
