@@ -66,8 +66,9 @@ module.exports = {
   },
 
   fieldAccess: {
+    // For sharedPrimaryKey, users must provide their own id on create
     id: {
-      create: 'admin',
+      create: 'customer', // Users create their own preferences (id = their userId)
       read: 'customer',
       update: 'none',
       delete: 'none',
