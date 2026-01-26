@@ -81,7 +81,15 @@ function publicEndpointsAccessible(routeMeta, endpointMeta, ctx) {
     const response = await makeRequest(ctx.request, endpointMeta.method, fullPath, null);
     // Should return success, not 401/403
     ctx.expect([401, 403]).not.toContain(response.status);
-    ctx.expect(response.status).toBeLessThan(500);
+    // Health endpoints may return 503 when services are unhealthy - that's valid
+    // 503 still proves endpoint is accessible (not auth-blocked)
+    const isHealthEndpoint = routeMeta.basePath.includes('/health');
+    if (isHealthEndpoint) {
+      // Health endpoints: 503 is acceptable (means service unhealthy, not auth failure)
+      ctx.expect([200, 503]).toContain(response.status);
+    } else {
+      ctx.expect(response.status).toBeLessThan(500);
+    }
   });
 }
 
