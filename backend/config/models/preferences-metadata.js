@@ -15,6 +15,7 @@ module.exports = {
   identityFieldUnique: true,
   rlsResource: 'preferences',
   sharedPrimaryKey: true,
+  uncountable: true, // 'preferences' doesn't pluralize to 'preferencess'
   nameType: null,
 
   rlsPolicy: {
