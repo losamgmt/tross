@@ -205,7 +205,7 @@ void main() {
 
     test('load requires service to be set', () async {
       // No service set - load should handle gracefully
-      await provider.load('test-token');
+      await provider.load('test-token', 123);
 
       // Should not error, but also not load
       expect(provider.isLoading, isFalse);

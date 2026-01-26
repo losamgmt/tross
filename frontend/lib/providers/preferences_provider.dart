@@ -48,6 +48,7 @@ class PreferencesProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   String? _token;
+  int? _userId;
 
   // Auth provider reference for listening to auth changes
   AuthProvider? _authProvider;
@@ -79,14 +80,31 @@ class PreferencesProvider extends ChangeNotifier {
   ///
   /// This is the ONLY typed getter because MaterialApp needs ThemeMode.
   /// All other preferences use getPreference(key).
+  /// Returns 'system' during early startup before preferences load.
   ThemePreference get theme {
-    final value = getPreference('theme');
-    return ThemePreference.fromString(value as String?);
+    // Check loaded preferences first
+    if (_preferences.containsKey('theme')) {
+      return ThemePreference.fromString(_preferences['theme'] as String?);
+    }
+
+    // Try schema default
+    _ensureSchemaLoaded();
+    final fieldDef = _schema?['theme'];
+    if (fieldDef != null) {
+      return ThemePreference.fromString(fieldDef.defaultValue as String?);
+    }
+
+    // Hardcoded fallback for early startup (before metadata loads)
+    // This prevents warning logs during the initial app build
+    return ThemePreference.system;
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
   // GENERIC PREFERENCE ACCESS (100% Metadata-Driven)
   // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Track if preferences have been loaded at least once
+  bool _hasLoadedOnce = false;
 
   /// Get preference value by key
   ///
@@ -105,10 +123,13 @@ class PreferencesProvider extends ChangeNotifier {
       return fieldDef.defaultValue;
     }
 
-    // Unknown key
-    ErrorService.logWarning(
-      '[PreferencesProvider] Unknown preference key: $key',
-    );
+    // Only warn about unknown keys AFTER preferences have been loaded once
+    // During startup, it's normal for preferences to be empty
+    if (_hasLoadedOnce) {
+      ErrorService.logWarning(
+        '[PreferencesProvider] Unknown preference key: $key',
+      );
+    }
     return null;
   }
 
@@ -118,7 +139,7 @@ class PreferencesProvider extends ChangeNotifier {
   /// [key] is the preference key from preferenceSchema.
   /// [value] is the new value (type must match schema).
   Future<void> updatePreference(String key, dynamic value) async {
-    if (_token == null) {
+    if (_token == null || _userId == null) {
       ErrorService.logWarning(
         '[PreferencesProvider] Cannot update - not authenticated',
       );
@@ -139,8 +160,10 @@ class PreferencesProvider extends ChangeNotifier {
         );
         return;
       }
-      final updated = await _preferencesService!.updatePreference(
+      // Use generic entity pattern: PATCH /preferences/:userId
+      final updated = await _preferencesService!.updateField(
         _token!,
+        _userId!,
         key,
         value,
       );
@@ -241,8 +264,10 @@ class PreferencesProvider extends ChangeNotifier {
     authProvider.addListener(_onAuthChanged);
 
     // If already authenticated, load preferences immediately
-    if (authProvider.isAuthenticated && authProvider.token != null) {
-      load(authProvider.token!);
+    if (authProvider.isAuthenticated &&
+        authProvider.token != null &&
+        authProvider.userId != null) {
+      load(authProvider.token!, authProvider.userId!);
     }
   }
 
@@ -250,13 +275,17 @@ class PreferencesProvider extends ChangeNotifier {
   void _onAuthChanged() {
     final isNowAuthenticated = _authProvider?.isAuthenticated ?? false;
     final token = _authProvider?.token;
+    final userId = _authProvider?.userId;
 
     // Detect transition: not authenticated → authenticated
-    if (!_wasAuthenticated && isNowAuthenticated && token != null) {
+    if (!_wasAuthenticated &&
+        isNowAuthenticated &&
+        token != null &&
+        userId != null) {
       ErrorService.logDebug(
         '[PreferencesProvider] Auth state changed - loading preferences',
       );
-      load(token);
+      load(token, userId);
     }
 
     // Detect transition: authenticated → not authenticated (logout)
@@ -284,12 +313,14 @@ class PreferencesProvider extends ChangeNotifier {
   ///
   /// Called after user authentication to load their preferences.
   /// [token] is the auth token for API calls.
-  Future<void> load(String token) async {
+  /// [userId] is the user's ID (preferences.id = users.id via shared-PK).
+  Future<void> load(String token, int userId) async {
     if (_isLoading) return;
 
     _isLoading = true;
     _error = null;
     _token = token;
+    _userId = userId;
     notifyListeners();
 
     try {
@@ -301,9 +332,11 @@ class PreferencesProvider extends ChangeNotifier {
         );
         return;
       }
-      final result = await _preferencesService!.loadRaw(token);
+      // Use generic entity pattern: GET /preferences/:userId
+      final result = await _preferencesService!.load(token, userId);
       _preferences = result;
       _error = null;
+      _hasLoadedOnce = true; // Mark that we've completed initial load
 
       ErrorService.logDebug(
         '[PreferencesProvider] Preferences loaded',
@@ -327,18 +360,41 @@ class PreferencesProvider extends ChangeNotifier {
     _preferences = {};
     _error = null;
     _token = null;
+    _userId = null;
+    _hasLoadedOnce = false; // Reset so we don't warn on next session
     notifyListeners();
   }
 
   /// Reset all preferences to defaults
+  ///
+  /// Uses metadata defaults to build a reset payload, then updates via
+  /// the generic entity PATCH endpoint.
   Future<void> reset() async {
-    if (_token == null || _preferencesService == null) return;
+    if (_token == null || _userId == null || _preferencesService == null) {
+      return;
+    }
 
     _isLoading = true;
     notifyListeners();
 
     try {
-      final result = await _preferencesService!.resetRaw(_token!);
+      // Build defaults from metadata schema
+      _ensureSchemaLoaded();
+      final defaults = <String, dynamic>{};
+      if (_schema != null) {
+        for (final entry in _schema!.entries) {
+          if (entry.value.defaultValue != null) {
+            defaults[entry.key] = entry.value.defaultValue;
+          }
+        }
+      }
+
+      // Update with defaults via generic PATCH
+      final result = await _preferencesService!.update(
+        _token!,
+        _userId!,
+        defaults,
+      );
       _preferences = result ?? {};
       _error = null;
     } catch (e) {

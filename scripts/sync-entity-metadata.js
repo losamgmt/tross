@@ -279,9 +279,29 @@ function transformModel(entityName, backendMeta, allModels) {
   }
 
   // Preference schema (for preferences entity)
-  // Copy as-is with frontend-friendly additions (label, displayLabels, order)
+  // If the entity is 'preferences', generate preferenceSchema from fields
+  // This allows the PreferencesProvider to get defaults from metadata
   if (backendMeta.preferenceSchema) {
     result.preferenceSchema = transformPreferenceSchema(backendMeta.preferenceSchema);
+  } else if (entityName === 'preferences' && backendMeta.fields) {
+    // Auto-generate preferenceSchema from fields for the preferences entity
+    // Exclude system fields (id, created_at, updated_at)
+    const systemFields = ['id', 'created_at', 'updated_at'];
+    const preferenceFields = {};
+    
+    for (const [fieldName, fieldDef] of Object.entries(backendMeta.fields)) {
+      if (!systemFields.includes(fieldName)) {
+        preferenceFields[fieldName] = {
+          type: fieldDef.type,
+          default: fieldDef.default,
+          ...(fieldDef.values && { values: fieldDef.values }),
+          ...(fieldDef.min !== undefined && { min: fieldDef.min }),
+          ...(fieldDef.max !== undefined && { max: fieldDef.max }),
+        };
+      }
+    }
+    
+    result.preferenceSchema = transformPreferenceSchema(preferenceFields);
   }
   
   return result;

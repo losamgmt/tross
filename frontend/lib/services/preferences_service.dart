@@ -1,25 +1,23 @@
-/// PreferencesService - User Preferences API Client
+/// PreferencesService - User Preferences API Client (Generic Entity Pattern)
 ///
-/// SOLE RESPONSIBILITY: Communicate with backend preferences API
+/// SOLE RESPONSIBILITY: Communicate with backend preferences entity API
+///
+/// Uses the GENERIC ENTITY PATTERN:
+/// - GET /preferences/:userId - Load user's preferences
+/// - PATCH /preferences/:userId - Update preferences (partial update)
 ///
 /// This service is 100% METADATA-DRIVEN:
 /// - Returns raw Map (no typed classes)
 /// - Provider handles defaults from metadata
-/// - Works with ANY preference key without code changes
+/// - Works with ANY preference field defined in preferences-metadata
 ///
 /// USAGE:
 /// ```dart
-/// // Get from Provider
-/// final prefsService = context.read<PreferencesService>();
+/// // Get from Provider (userId comes from AuthProvider)
+/// final prefs = await prefsService.load(token, userId);
 ///
-/// // Get current preferences as raw map
-/// final prefs = await prefsService.loadRaw(token);
-///
-/// // Update single preference
-/// final updated = await prefsService.updatePreference(token, 'theme', 'dark');
-///
-/// // Reset to defaults
-/// final reset = await prefsService.resetRaw(token);
+/// // Update preferences
+/// final updated = await prefsService.update(token, userId, {'theme': 'dark'});
 /// ```
 library;
 
@@ -29,7 +27,7 @@ import 'error_service.dart';
 
 /// PreferencesService - API client for user preferences
 ///
-/// Returns raw Map - no typed wrapper classes.
+/// Uses generic entity endpoints. Returns raw Map - no typed wrapper classes.
 /// Defaults are handled by PreferencesProvider using metadata.
 class PreferencesService {
   /// API client for HTTP requests - injected via constructor
@@ -38,24 +36,24 @@ class PreferencesService {
   /// Constructor - requires ApiClient injection
   PreferencesService(this._apiClient);
 
-  // API endpoints (baseUrl already includes /api)
+  // API endpoint (generic entity pattern)
   static const String _baseEndpoint = '/preferences';
-  static const String _schemaEndpoint = '/preferences/schema';
-  static const String _resetEndpoint = '/preferences/reset';
 
   /// Load user preferences from backend
   ///
+  /// [userId] is the user's ID (preferences.id = users.id due to shared-PK).
   /// Returns raw preferences map from API.
   /// Returns empty map on error (provider uses metadata defaults).
-  Future<Map<String, dynamic>> loadRaw(String token) async {
+  Future<Map<String, dynamic>> load(String token, int userId) async {
     try {
       ErrorService.logDebug(
         '[PreferencesService] Loading preferences from API',
+        context: {'userId': userId},
       );
 
       final response = await _apiClient.authenticatedRequest(
         'GET',
-        _baseEndpoint,
+        '$_baseEndpoint/$userId',
         token: token,
       );
 
@@ -64,14 +62,23 @@ class PreferencesService {
         final data = body['data'] as Map<String, dynamic>?;
 
         if (data != null) {
-          // Extract just the preferences JSONB, not the wrapper
-          final prefs = data['preferences'] as Map<String, dynamic>? ?? {};
+          // Generic entity returns the full record directly
+          // Extract preference fields (exclude system fields)
+          final prefs = _extractPreferenceFields(data);
           ErrorService.logDebug(
             '[PreferencesService] Preferences loaded successfully',
             context: {'keys': prefs.keys.toList()},
           );
           return prefs;
         }
+      }
+
+      // 404 means no preferences record yet - that's OK, use defaults
+      if (response.statusCode == 404) {
+        ErrorService.logDebug(
+          '[PreferencesService] No preferences record found, using defaults',
+        );
+        return {};
       }
 
       ErrorService.logWarning(
@@ -89,80 +96,25 @@ class PreferencesService {
     }
   }
 
-  /// Update a single preference
+  /// Update preferences (partial update via PATCH)
   ///
-  /// [key] is the preference key from preferenceSchema.
-  /// [value] is the new value.
+  /// [userId] is the user's ID.
+  /// [updates] is a map of preference fields to new values.
   /// Returns updated preferences map on success, null on failure.
-  Future<Map<String, dynamic>?> updatePreference(
+  Future<Map<String, dynamic>?> update(
     String token,
-    String key,
-    dynamic value,
-  ) async {
-    try {
-      ErrorService.logInfo(
-        '[PreferencesService] Updating single preference',
-        context: {'key': key, 'value': value},
-      );
-
-      final response = await _apiClient.authenticatedRequest(
-        'PUT',
-        '$_baseEndpoint/$key',
-        token: token,
-        body: {'value': value},
-      );
-
-      if (response.statusCode == 200) {
-        final body = json.decode(response.body) as Map<String, dynamic>;
-        final data = body['data'] as Map<String, dynamic>?;
-
-        if (data != null) {
-          final prefs = data['preferences'] as Map<String, dynamic>? ?? {};
-          ErrorService.logInfo(
-            '[PreferencesService] Preference updated successfully',
-            context: {'key': key},
-          );
-          return prefs;
-        }
-      }
-
-      ErrorService.logWarning(
-        '[PreferencesService] Failed to update preference',
-        context: {
-          'key': key,
-          'statusCode': response.statusCode,
-          'body': response.body,
-        },
-      );
-
-      return null;
-    } catch (e) {
-      ErrorService.logError(
-        '[PreferencesService] Error updating preference',
-        error: e,
-        context: {'key': key},
-      );
-      return null;
-    }
-  }
-
-  /// Update multiple preferences at once
-  ///
-  /// [updates] is a map of preference keys to new values.
-  /// Returns updated preferences map on success, null on failure.
-  Future<Map<String, dynamic>?> updatePreferences(
-    String token,
+    int userId,
     Map<String, dynamic> updates,
   ) async {
     try {
       ErrorService.logInfo(
         '[PreferencesService] Updating preferences',
-        context: {'keys': updates.keys.toList()},
+        context: {'userId': userId, 'keys': updates.keys.toList()},
       );
 
       final response = await _apiClient.authenticatedRequest(
-        'PUT',
-        _baseEndpoint,
+        'PATCH',
+        '$_baseEndpoint/$userId',
         token: token,
         body: updates,
       );
@@ -172,7 +124,7 @@ class PreferencesService {
         final data = body['data'] as Map<String, dynamic>?;
 
         if (data != null) {
-          final prefs = data['preferences'] as Map<String, dynamic>? ?? {};
+          final prefs = _extractPreferenceFields(data);
           ErrorService.logInfo(
             '[PreferencesService] Preferences updated successfully',
           );
@@ -195,80 +147,30 @@ class PreferencesService {
     }
   }
 
-  /// Reset preferences to defaults
+  /// Update a single preference field
   ///
-  /// Returns reset preferences map on success, null on failure.
-  Future<Map<String, dynamic>?> resetRaw(String token) async {
-    try {
-      ErrorService.logInfo('[PreferencesService] Resetting preferences');
-
-      final response = await _apiClient.authenticatedRequest(
-        'POST',
-        _resetEndpoint,
-        token: token,
-      );
-
-      if (response.statusCode == 200) {
-        final body = json.decode(response.body) as Map<String, dynamic>;
-        final data = body['data'] as Map<String, dynamic>?;
-
-        if (data != null) {
-          final prefs = data['preferences'] as Map<String, dynamic>? ?? {};
-          ErrorService.logInfo(
-            '[PreferencesService] Preferences reset successfully',
-          );
-          return prefs;
-        }
-      }
-
-      ErrorService.logWarning(
-        '[PreferencesService] Failed to reset preferences',
-        context: {'statusCode': response.statusCode, 'body': response.body},
-      );
-
-      return null;
-    } catch (e) {
-      ErrorService.logError(
-        '[PreferencesService] Error resetting preferences',
-        error: e,
-      );
-      return null;
-    }
+  /// Convenience method that wraps update() for single-field updates.
+  /// [key] is the preference field name (e.g., 'theme', 'density').
+  /// [value] is the new value.
+  Future<Map<String, dynamic>?> updateField(
+    String token,
+    int userId,
+    String key,
+    dynamic value,
+  ) async {
+    return update(token, userId, {key: value});
   }
 
-  /// Get preference schema from backend
+  /// Extract preference fields from entity record
   ///
-  /// Returns schema map on success, null on failure.
-  /// Note: Frontend typically uses synced metadata instead of this endpoint.
-  Future<Map<String, dynamic>?> getSchema(String token) async {
-    try {
-      ErrorService.logInfo('[PreferencesService] Fetching preference schema');
+  /// Filters out system fields (id, created_at, updated_at) to return
+  /// only the actual preference values.
+  Map<String, dynamic> _extractPreferenceFields(Map<String, dynamic> record) {
+    // System fields to exclude from preferences map
+    const systemFields = {'id', 'created_at', 'updated_at'};
 
-      final response = await _apiClient.authenticatedRequest(
-        'GET',
-        _schemaEndpoint,
-        token: token,
-      );
-
-      if (response.statusCode == 200) {
-        final body = json.decode(response.body) as Map<String, dynamic>;
-        final data = body['data'] as Map<String, dynamic>?;
-
-        if (data != null) {
-          ErrorService.logInfo(
-            '[PreferencesService] Schema loaded successfully',
-          );
-          return data;
-        }
-      }
-
-      return null;
-    } catch (e) {
-      ErrorService.logError(
-        '[PreferencesService] Error fetching schema',
-        error: e,
-      );
-      return null;
-    }
+    return Map.fromEntries(
+      record.entries.where((e) => !systemFields.contains(e.key)),
+    );
   }
 }

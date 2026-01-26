@@ -12,7 +12,7 @@
 /// - FileService: listFiles, getDownloadUrl, deleteFile (factory)
 /// - ExportService: getExportableFields (factory)
 /// - GenericEntityService: getAll, getById, create, update, delete (manual)
-/// - PreferencesService: loadRaw, updatePreference, resetRaw (manual)
+/// - PreferencesService: load, update, updateField (generic entity pattern)
 ///
 /// Each service gets tests for:
 /// - Authentication (no token)
@@ -470,13 +470,14 @@ void main() {
   });
 
   // ===========================================================================
-  // PREFERENCES SERVICE - loadRaw, updatePreference, resetRaw
-  // Pattern: ApiClient only, token passed as parameter
+  // PREFERENCES SERVICE - load, update, updateField (Generic Entity Pattern)
+  // Pattern: ApiClient only, token and userId passed as parameters
   // ===========================================================================
   group('PreferencesService Error Paths', () {
     late MockApiClient mockApiClient;
     late PreferencesService service;
     const testToken = 'test-token';
+    const testUserId = 123;
 
     setUpAll(() {
       initializeTestBinding();
@@ -491,87 +492,102 @@ void main() {
       mockApiClient.reset();
     });
 
-    group('loadRaw', () {
+    group('load', () {
       test('returns preferences on success', () async {
-        mockApiClient.mockResponse('/preferences', {
+        mockApiClient.mockResponse('/preferences/$testUserId', {
           'success': true,
           'data': {
-            'preferences': {'theme': 'dark', 'language': 'en'},
+            'id': testUserId,
+            'theme': 'dark',
+            'density': 'comfortable',
+            'created_at': '2026-01-01T00:00:00Z',
+            'updated_at': '2026-01-01T00:00:00Z',
           },
         });
 
-        final result = await service.loadRaw(testToken);
+        final result = await service.load(testToken, testUserId);
         expect(result['theme'], equals('dark'));
+        expect(result['density'], equals('comfortable'));
+        // System fields should be excluded
+        expect(result.containsKey('id'), isFalse);
+        expect(result.containsKey('created_at'), isFalse);
       });
 
       test('returns empty map on error (graceful)', () async {
-        mockApiClient.mockStatusCode('/preferences', 500, {
+        mockApiClient.mockStatusCode('/preferences/$testUserId', 500, {
           'error': 'Server Error',
         });
 
-        final result = await service.loadRaw(testToken);
+        final result = await service.load(testToken, testUserId);
         expect(result, isEmpty);
       });
 
-      test('returns empty map on 403 (graceful)', () async {
-        mockApiClient.mockStatusCode('/preferences', 403, {
-          'error': 'Forbidden',
+      test('returns empty map on 404 (no preferences yet)', () async {
+        mockApiClient.mockStatusCode('/preferences/$testUserId', 404, {
+          'error': 'Not Found',
         });
 
-        final result = await service.loadRaw(testToken);
+        final result = await service.load(testToken, testUserId);
         expect(result, isEmpty);
       });
     });
 
-    group('updatePreference', () {
+    group('update', () {
       test('returns updated preferences on success', () async {
-        mockApiClient.mockResponse('/preferences', {
+        mockApiClient.mockResponse('/preferences/$testUserId', {
           'success': true,
-          'data': {
-            'preferences': {'theme': 'light'},
-          },
+          'data': {'id': testUserId, 'theme': 'light', 'density': 'compact'},
         });
 
-        final result = await service.updatePreference(
-          testToken,
-          'theme',
-          'light',
-        );
+        final result = await service.update(testToken, testUserId, {
+          'theme': 'light',
+          'density': 'compact',
+        });
         expect(result, isNotNull);
         expect(result!['theme'], equals('light'));
+        expect(result['density'], equals('compact'));
       });
 
       test('returns null on error (graceful)', () async {
-        mockApiClient.mockStatusCode('/preferences', 500, {
+        mockApiClient.mockStatusCode('/preferences/$testUserId', 500, {
           'error': 'Server Error',
         });
 
-        final result = await service.updatePreference(
-          testToken,
-          'theme',
-          'light',
-        );
+        final result = await service.update(testToken, testUserId, {
+          'theme': 'light',
+        });
         expect(result, isNull);
       });
     });
 
-    group('resetRaw', () {
-      test('returns reset preferences on success', () async {
-        mockApiClient.mockResponse('/preferences/reset', {
+    group('updateField', () {
+      test('returns updated preferences on success', () async {
+        mockApiClient.mockResponse('/preferences/$testUserId', {
           'success': true,
-          'data': {'preferences': {}},
+          'data': {'id': testUserId, 'theme': 'dark'},
         });
 
-        final result = await service.resetRaw(testToken);
-        expect(result, isEmpty);
+        final result = await service.updateField(
+          testToken,
+          testUserId,
+          'theme',
+          'dark',
+        );
+        expect(result, isNotNull);
+        expect(result!['theme'], equals('dark'));
       });
 
       test('returns null on error (graceful)', () async {
-        mockApiClient.mockStatusCode('/preferences/reset', 500, {
+        mockApiClient.mockStatusCode('/preferences/$testUserId', 500, {
           'error': 'Server Error',
         });
 
-        final result = await service.resetRaw(testToken);
+        final result = await service.updateField(
+          testToken,
+          testUserId,
+          'theme',
+          'dark',
+        );
         expect(result, isNull);
       });
     });
