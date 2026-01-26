@@ -101,6 +101,8 @@ class PreferencesService {
   /// [userId] is the user's ID.
   /// [updates] is a map of preference fields to new values.
   /// Returns updated preferences map on success, null on failure.
+  ///
+  /// If no preferences record exists (404), automatically creates one.
   Future<Map<String, dynamic>?> update(
     String token,
     int userId,
@@ -132,6 +134,15 @@ class PreferencesService {
         }
       }
 
+      // 404 means no preferences record exists yet - create it
+      if (response.statusCode == 404) {
+        ErrorService.logInfo(
+          '[PreferencesService] No preferences record, creating one',
+          context: {'userId': userId},
+        );
+        return _createPreferences(token, userId, updates);
+      }
+
       ErrorService.logWarning(
         '[PreferencesService] Failed to update preferences',
         context: {'statusCode': response.statusCode, 'body': response.body},
@@ -141,6 +152,53 @@ class PreferencesService {
     } catch (e) {
       ErrorService.logError(
         '[PreferencesService] Error updating preferences',
+        error: e,
+      );
+      return null;
+    }
+  }
+
+  /// Create preferences record (internal - used when PATCH returns 404)
+  ///
+  /// Uses sharedPrimaryKey pattern: preferences.id = users.id
+  Future<Map<String, dynamic>?> _createPreferences(
+    String token,
+    int userId,
+    Map<String, dynamic> initialValues,
+  ) async {
+    try {
+      // For sharedPrimaryKey entities, we must provide the id
+      final body = {'id': userId, ...initialValues};
+
+      final response = await _apiClient.authenticatedRequest(
+        'POST',
+        _baseEndpoint,
+        token: token,
+        body: body,
+      );
+
+      if (response.statusCode == 201) {
+        final responseBody = json.decode(response.body) as Map<String, dynamic>;
+        final data = responseBody['data'] as Map<String, dynamic>?;
+
+        if (data != null) {
+          final prefs = _extractPreferenceFields(data);
+          ErrorService.logInfo(
+            '[PreferencesService] Preferences created successfully',
+          );
+          return prefs;
+        }
+      }
+
+      ErrorService.logWarning(
+        '[PreferencesService] Failed to create preferences',
+        context: {'statusCode': response.statusCode, 'body': response.body},
+      );
+
+      return null;
+    } catch (e) {
+      ErrorService.logError(
+        '[PreferencesService] Error creating preferences',
         error: e,
       );
       return null;
