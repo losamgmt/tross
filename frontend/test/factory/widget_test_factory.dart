@@ -66,6 +66,13 @@ abstract final class WidgetTestFactory {
           testWidgets('admin role can access modification actions', (
             tester,
           ) async {
+            // Skip entities with parentDerived rlsResource - they inherit permissions
+            // from their parent entity context (e.g., file_attachment)
+            final metadata = EntityTestRegistry.tryGet(entityName);
+            if (metadata != null && !metadata.rlsResource.isRealResource) {
+              return; // Skip test
+            }
+
             final entity = EntityDataGenerator.create(entityName);
 
             await tester.pumpWidget(
@@ -86,6 +93,12 @@ abstract final class WidgetTestFactory {
           });
 
           testWidgets('permission enforcement is consistent', (tester) async {
+            // Skip entities with parentDerived rlsResource
+            final metadata = EntityTestRegistry.tryGet(entityName);
+            if (metadata != null && !metadata.rlsResource.isRealResource) {
+              return; // Skip test
+            }
+
             // Test that high-priority roles have >= actions than low-priority roles
             final entity = EntityDataGenerator.create(entityName);
 

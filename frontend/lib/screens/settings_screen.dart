@@ -4,15 +4,16 @@
 /// - AdaptiveShell template (responsive navigation)
 /// - TitledCard molecules (consistent card backing for all sections)
 /// - EntityDetailCard organism (user data - metadata-driven)
-/// - Preferences settings rows (metadata-driven from preferenceSchema)
+/// - GenericForm organism (preferences - 100% metadata-driven)
 ///
 /// All content wrapped in cards - NO loose page elements.
 /// Auth is 100% delegated to Auth0 - no password/security management.
 ///
 /// Preferences are 100% METADATA-DRIVEN:
-/// - Schema loaded from EntityMetadataRegistry.get('preferences').preferenceSchema
-/// - Each preference field rendered using existing generic molecules
-/// - NO hardcoded preference fields - iterate schema and compose widgets
+/// - Fields generated from MetadataFieldConfigFactory.forEntity('preferences')
+/// - Field groups from EntityMetadata.sortedFieldGroups
+/// - Uses same GenericForm as all other entity forms
+/// - NO hardcoded preference fields or custom widgets
 ///
 /// Preferences loading is handled by PreferencesProvider listening to auth state.
 /// This screen only DISPLAYS and UPDATES preferences - no loading logic here.
@@ -25,6 +26,7 @@ import '../core/routing/app_routes.dart';
 import '../providers/auth_provider.dart';
 import '../providers/preferences_provider.dart';
 import '../services/entity_metadata.dart';
+import '../services/metadata_field_config_factory.dart';
 import '../widgets/templates/templates.dart';
 import '../widgets/organisms/organisms.dart';
 import '../widgets/molecules/molecules.dart';
@@ -38,9 +40,15 @@ class SettingsScreen extends StatelessWidget {
     final prefsProvider = Provider.of<PreferencesProvider>(context);
     final spacing = context.spacing;
 
-    // Get preference schema from metadata
+    // Get preferences metadata for field groups
     final preferencesMetadata = EntityMetadataRegistry.get('preferences');
-    final preferenceSchema = preferencesMetadata.preferenceSchema;
+
+    // Generate field configs from metadata - generic pattern, no special handling
+    // Context is null because preferences has no FK fields needing async loading
+    final fieldConfigs = MetadataFieldConfigFactory.forEntity(
+      null, // No context needed - preferences has no FK fields
+      'preferences',
+    );
 
     return AdaptiveShell(
       currentRoute: AppRoutes.settings,
@@ -66,7 +74,7 @@ class SettingsScreen extends StatelessWidget {
 
                 SizedBox(height: spacing.xl),
 
-                // Preferences card - 100% METADATA-DRIVEN
+                // Preferences card - 100% METADATA-DRIVEN via GenericForm
                 TitledCard(
                   title: 'Preferences',
                   child: Column(
@@ -78,13 +86,19 @@ class SettingsScreen extends StatelessWidget {
                           child: LinearProgressIndicator(),
                         ),
 
-                      // Iterate preferenceSchema and render appropriate widgets
-                      if (preferenceSchema != null)
-                        ..._buildPreferenceWidgets(
-                          context: context,
-                          preferenceSchema: preferenceSchema,
-                          prefsProvider: prefsProvider,
-                          spacing: spacing,
+                      // GenericForm with grouped layout - same pattern as all entities
+                      if (fieldConfigs.isNotEmpty)
+                        GenericForm<Map<String, dynamic>>(
+                          value: prefsProvider.preferencesMap,
+                          fields: fieldConfigs,
+                          layout: preferencesMetadata.hasFieldGroups
+                              ? FormLayout.grouped
+                              : FormLayout.flat,
+                          fieldGroups: preferencesMetadata.hasFieldGroups
+                              ? preferencesMetadata.sortedFieldGroups
+                              : null,
+                          enabled: !prefsProvider.isLoading,
+                          onChange: prefsProvider.updatePreferences,
                         ),
 
                       // Error display
@@ -109,95 +123,5 @@ class SettingsScreen extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  /// Build preference widgets from metadata schema
-  ///
-  /// Iterates the preferenceSchema sorted by order, renders the appropriate
-  /// existing generic molecule for each field type. ZERO hardcoded fields.
-  List<Widget> _buildPreferenceWidgets({
-    required BuildContext context,
-    required Map<String, PreferenceFieldDefinition> preferenceSchema,
-    required PreferencesProvider prefsProvider,
-    required AppSpacing spacing,
-  }) {
-    // Sort fields by order
-    final sortedFields = preferenceSchema.values.toList()
-      ..sort((a, b) => a.order.compareTo(b.order));
-
-    final widgets = <Widget>[];
-
-    for (int i = 0; i < sortedFields.length; i++) {
-      final field = sortedFields[i];
-
-      // Add spacing between fields (not before first)
-      if (i > 0) {
-        widgets.add(SizedBox(height: spacing.md));
-      }
-
-      // Build widget based on field type using existing generic molecules
-      final widget = _buildPreferenceField(
-        field: field,
-        prefsProvider: prefsProvider,
-      );
-
-      if (widget != null) {
-        widgets.add(widget);
-      }
-    }
-
-    return widgets;
-  }
-
-  /// Build a single preference field widget from metadata
-  ///
-  /// Maps PreferenceFieldType to existing generic molecules:
-  /// - boolean → SettingToggleRow
-  /// - enum → SettingDropdownRow
-  /// - string → SettingTextRow
-  /// - integer → SettingNumberRow
-  Widget? _buildPreferenceField({
-    required PreferenceFieldDefinition field,
-    required PreferencesProvider prefsProvider,
-  }) {
-    final currentValue = prefsProvider.getPreference(field.key);
-    final isEnabled = !prefsProvider.isLoading;
-
-    return switch (field.type) {
-      PreferenceFieldType.boolean => SettingToggleRow(
-        label: field.label,
-        description: field.description ?? '',
-        value: currentValue as bool? ?? field.defaultValue as bool? ?? false,
-        onChanged: (value) => prefsProvider.updatePreference(field.key, value),
-        enabled: isEnabled,
-      ),
-      PreferenceFieldType.enumType => SettingDropdownRow<String>(
-        label: field.label,
-        description: field.description ?? '',
-        value: currentValue as String? ?? field.defaultValue as String?,
-        items: field.enumValues ?? [],
-        displayText: (value) => field.getDisplayText(value),
-        onChanged: (value) {
-          if (value != null) {
-            prefsProvider.updatePreference(field.key, value);
-          }
-        },
-        enabled: isEnabled,
-      ),
-      PreferenceFieldType.string => SettingTextRow(
-        label: field.label,
-        description: field.description ?? '',
-        value: currentValue as String? ?? field.defaultValue as String? ?? '',
-        onChanged: (value) => prefsProvider.updatePreference(field.key, value),
-        enabled: isEnabled,
-      ),
-      PreferenceFieldType.integer => SettingNumberRow(
-        label: field.label,
-        description: field.description ?? '',
-        value: currentValue as int? ?? field.defaultValue as int? ?? 0,
-        onChanged: (value) => prefsProvider.updatePreference(field.key, value),
-        enabled: isEnabled,
-      ),
-    };
   }
 }

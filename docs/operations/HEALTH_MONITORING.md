@@ -253,7 +253,7 @@ railway logs -f
 
 ## Performance Baselines
 
-**Established Benchmarks (as of 2025-11-21):**
+**Target Benchmarks:**
 
 | Metric | Target | Warning | Critical |
 |--------|--------|---------|----------|

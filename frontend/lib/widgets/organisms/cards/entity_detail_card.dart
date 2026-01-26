@@ -176,6 +176,7 @@ class EntityDetailCard extends StatelessWidget {
     }
 
     // Normal state - display entity data
+    final metadata = EntityMetadataRegistry.get(entityName);
     final fieldConfigs = MetadataFieldConfigFactory.forDisplay(
       context,
       entityName,
@@ -183,6 +184,9 @@ class EntityDetailCard extends StatelessWidget {
       excludeFields: excludeFields,
       includeSystemFields: showSystemFields,
     );
+
+    // Auto-detect grouped layout from metadata
+    final useGroupedLayout = metadata.hasFieldGroups;
 
     return Card(
       elevation: elevation ?? 2,
@@ -205,6 +209,12 @@ class EntityDetailCard extends StatelessWidget {
                   value: entity!,
                   fields: fieldConfigs,
                   spacing: spacing.md,
+                  layout: useGroupedLayout
+                      ? FormLayout.grouped
+                      : FormLayout.flat,
+                  fieldGroups: useGroupedLayout
+                      ? metadata.sortedFieldGroups
+                      : null,
                 ),
               ),
             ),

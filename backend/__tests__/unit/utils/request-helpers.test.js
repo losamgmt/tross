@@ -7,7 +7,6 @@
 const {
   getClientIp,
   getUserAgent,
-  getAuditMetadata,
 } = require("../../../utils/request-helpers");
 
 describe("utils/request-helpers.js", () => {
@@ -175,84 +174,6 @@ describe("utils/request-helpers.js", () => {
 
       // Assert
       expect(result).toBe("");
-    });
-  });
-
-  describe("getAuditMetadata()", () => {
-    test("should return both ip and userAgent", () => {
-      // Arrange
-      const req = {
-        ip: "192.168.1.50",
-        connection: { remoteAddress: "10.0.0.1" },
-        headers: {
-          "user-agent": "TestAgent/1.0",
-        },
-      };
-
-      // Act
-      const result = getAuditMetadata(req);
-
-      // Assert
-      expect(result).toEqual({
-        ip: "192.168.1.50",
-        userAgent: "TestAgent/1.0",
-      });
-    });
-
-    test("should handle missing user-agent", () => {
-      // Arrange
-      const req = {
-        ip: "10.0.0.100",
-        connection: { remoteAddress: "192.168.1.1" },
-        headers: {},
-      };
-
-      // Act
-      const result = getAuditMetadata(req);
-
-      // Assert
-      expect(result).toEqual({
-        ip: "10.0.0.100",
-        userAgent: undefined,
-      });
-    });
-
-    test("should use fallback IP when req.ip unavailable", () => {
-      // Arrange
-      const req = {
-        ip: undefined,
-        connection: { remoteAddress: "172.16.0.200" },
-        headers: {
-          "user-agent": "Bot/2.0",
-        },
-      };
-
-      // Act
-      const result = getAuditMetadata(req);
-
-      // Assert
-      expect(result).toEqual({
-        ip: "172.16.0.200",
-        userAgent: "Bot/2.0",
-      });
-    });
-
-    test("should handle completely missing request data", () => {
-      // Arrange
-      const req = {
-        ip: undefined,
-        connection: undefined,
-        headers: {},
-      };
-
-      // Act
-      const result = getAuditMetadata(req);
-
-      // Assert
-      expect(result).toEqual({
-        ip: "unknown",
-        userAgent: undefined,
-      });
     });
   });
 });

@@ -65,8 +65,9 @@ describe('All Entities Integration Tests', () => {
 
     test(`${specializedEntities.length} entities use specialized routes`, () => {
       // This test documents which entities are NOT tested here
-      expect(specializedEntities).toContain('preferences');
+      // preferences was moved to generic router (2026-01-23)
       expect(specializedEntities).toContain('file_attachment');
+      expect(specializedEntities).toContain('audit_log');
 
       // Log for visibility
       console.log(`Specialized route entities (tested separately): ${specializedEntities.join(', ')}`);

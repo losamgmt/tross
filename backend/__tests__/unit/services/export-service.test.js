@@ -178,4 +178,88 @@ describe('ExportService', () => {
       );
     });
   });
+
+  describe('CSV escaping edge cases', () => {
+    it('should handle null values', async () => {
+      db.query.mockResolvedValueOnce({
+        rows: [
+          { id: 1, first_name: null, last_name: 'Doe', email: 'john@example.com', phone: null, is_active: true, created_at: '2024-01-01' },
+        ],
+      });
+
+      const result = await ExportService.exportToCSV('customer');
+
+      expect(result.csv).toContain('1');
+      expect(result.csv).toContain('Doe');
+    });
+
+    it('should handle newlines in values', async () => {
+      db.query.mockResolvedValueOnce({
+        rows: [
+          { id: 1, first_name: 'John\nDoe', last_name: 'Smith', email: 'john@example.com', phone: '555-1234', is_active: true, created_at: '2024-01-01' },
+        ],
+      });
+
+      const result = await ExportService.exportToCSV('customer');
+
+      // Newline in value should be quoted
+      expect(result.csv).toContain('"John\nDoe"');
+    });
+
+    it('should handle carriage return in values', async () => {
+      db.query.mockResolvedValueOnce({
+        rows: [
+          { id: 1, first_name: 'John\rDoe', last_name: 'Smith', email: 'john@example.com', phone: '555-1234', is_active: true, created_at: '2024-01-01' },
+        ],
+      });
+
+      const result = await ExportService.exportToCSV('customer');
+
+      expect(result.csv).toContain('"John\rDoe"');
+    });
+
+    it('should handle undefined values', async () => {
+      db.query.mockResolvedValueOnce({
+        rows: [
+          { id: 1, first_name: 'John', last_name: undefined, email: 'john@example.com', phone: '555-1234', is_active: true, created_at: '2024-01-01' },
+        ],
+      });
+
+      const result = await ExportService.exportToCSV('customer');
+
+      expect(result.csv).toContain('john@example.com');
+    });
+  });
+
+  describe('sorting options', () => {
+    it('should apply sort order to query', async () => {
+      db.query.mockResolvedValueOnce({ rows: [] });
+
+      await ExportService.exportToCSV('customer', { sortBy: 'first_name', sortOrder: 'ASC' });
+
+      const queryCall = db.query.mock.calls[0];
+      expect(queryCall[0]).toContain('ORDER BY');
+    });
+  });
+
+  describe('includeInactive option', () => {
+    it('should filter to active records by default', async () => {
+      db.query.mockResolvedValueOnce({ rows: [] });
+
+      await ExportService.exportToCSV('customer', {});
+
+      const queryCall = db.query.mock.calls[0];
+      expect(queryCall[0]).toContain('is_active');
+    });
+
+    it('should include inactive when specified', async () => {
+      db.query.mockResolvedValueOnce({
+        rows: [{ id: 1, first_name: 'John', last_name: 'Doe', email: 'john@example.com', phone: '555', is_active: false, created_at: '2024-01-01' }],
+      });
+
+      const result = await ExportService.exportToCSV('customer', { includeInactive: true });
+
+      expect(result.count).toBe(1);
+    });
+  });
 });

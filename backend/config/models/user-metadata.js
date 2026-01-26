@@ -15,6 +15,7 @@ const {
   UNIVERSAL_FIELD_ACCESS,
 } = require('../constants');
 const { NAME_TYPES } = require('../entity-types');
+const { FIELD } = require('../field-type-standards');
 
 module.exports = {
   // Table name in database
@@ -90,13 +91,14 @@ module.exports = {
     useGenericRouter: true,
   },
 
-  // ============================================================================
-  // ENTITY CATEGORY (determines name handling pattern)
-  // ============================================================================
+  fieldGroups: {
+    identity: {
+      label: 'Identity',
+      fields: ['first_name', 'last_name'],
+      order: 1,
+    },
+  },
 
-  /**
-   * Entity category: HUMAN entities use first_name + last_name for display
-   */
   nameType: NAME_TYPES.HUMAN,
 
   /**
@@ -383,7 +385,7 @@ module.exports = {
   fields: {
     // TIER 1: Universal Entity Contract Fields
     id: { type: 'integer', readonly: true },
-    email: { type: 'email', required: true, maxLength: 255 },
+    email: { ...FIELD.EMAIL, required: true },
     is_active: { type: 'boolean', default: true },
     created_at: { type: 'timestamp', readonly: true },
     updated_at: { type: 'timestamp', readonly: true },
@@ -398,18 +400,20 @@ module.exports = {
 
     // Entity-specific fields
     auth0_id: { type: 'string', maxLength: 255, readonly: true },
-    first_name: { type: 'string', maxLength: 100 },
-    last_name: { type: 'string', maxLength: 100 },
-    role_id: { type: 'integer' },
+    first_name: FIELD.FIRST_NAME,
+    last_name: FIELD.LAST_NAME,
+    role_id: { type: 'foreignKey', relatedEntity: 'role' },
 
     // Multi-profile FKs (readonly - managed via profile creation flows)
     customer_profile_id: {
-      type: 'integer',
+      type: 'foreignKey',
+      relatedEntity: 'customer',
       readonly: true,
       description: 'FK to customers table - set when user becomes a customer',
     },
     technician_profile_id: {
-      type: 'integer',
+      type: 'foreignKey',
+      relatedEntity: 'technician',
       readonly: true,
       description: 'FK to technicians table - set when user becomes a technician',
     },

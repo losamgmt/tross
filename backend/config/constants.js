@@ -148,6 +148,36 @@ const REDIS = Object.freeze({
 // Import NAME_TYPES from single source of truth
 const { NAME_TYPES } = require('./entity-types');
 
+// ============================================================================
+// RLS (ROW-LEVEL SECURITY) RESOURCE TYPES
+// ============================================================================
+// Special resource values for polymorphic/child entities that derive access
+// from their parent entity rather than having their own resource type.
+
+/**
+ * Special RLS resource types for non-standard access patterns.
+ *
+ * Standard entities use their table name as rlsResource (e.g., 'customers').
+ * Polymorphic child tables use PARENT_DERIVED to indicate that RLS should
+ * be evaluated based on the parent entity's permissions.
+ *
+ * Usage in metadata:
+ *   const { RLS_RESOURCE_TYPES } = require('../constants');
+ *   rlsResource: RLS_RESOURCE_TYPES.PARENT_DERIVED,
+ */
+const RLS_RESOURCE_TYPES = Object.freeze({
+  /**
+   * Resource permissions derived from parent entity.
+   * Used by: file_attachments, audit_logs (polymorphic child tables)
+   *
+   * When rlsResource is PARENT_DERIVED:
+   * - RLS middleware skips standard resource check
+   * - Routes must handle parent entity validation before child access
+   * - The parent entity's rlsResource is used for permission checks
+   */
+  PARENT_DERIVED: '_parent_derived',
+});
+
 // Import ENTITY_CATEGORY_MAP - derived from metadata at runtime
 // This is a getter that lazy-loads to avoid circular dependencies
 const derivedConstants = require('./derived-constants');
@@ -494,6 +524,7 @@ module.exports = Object.freeze({
   DATABASE,
   REDIS,
   NAME_TYPES,
+  RLS_RESOURCE_TYPES,
   // NAME_TYPE_MAP is derived from metadata at runtime
   get NAME_TYPE_MAP() {
     return derivedConstants.NAME_TYPE_MAP;

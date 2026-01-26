@@ -15,6 +15,7 @@ const {
   UNIVERSAL_FIELD_ACCESS,
 } = require('../constants');
 const { NAME_TYPES } = require('../entity-types');
+const { FIELD } = require('../field-type-standards');
 
 module.exports = {
   // Table name in database
@@ -99,14 +100,8 @@ module.exports = {
     useGenericRouter: true,
   },
 
-  // ============================================================================
-  // FIELD ALIASING (for UI display names)
-  // ============================================================================
+  fieldGroups: {},
 
-  /**
-   * Field aliases for UI display. Key = field name, Value = display label
-   * Empty object = use field names as-is
-   */
   fieldAliases: {},
 
   // ============================================================================
@@ -377,9 +372,8 @@ module.exports = {
     // TIER 1: Universal Entity Contract Fields
     id: { type: 'integer', readonly: true },
     invoice_number: {
-      type: 'string',
+      ...FIELD.IDENTIFIER,
       readonly: true, // Auto-generated: INV-YYYY-NNNN
-      maxLength: 100,
       pattern: '^INV-[0-9]{4}-[0-9]+$',
       errorMessages: {
         pattern: 'Invoice number must be in format INV-YYYY-NNNN',
@@ -397,15 +391,22 @@ module.exports = {
     },
 
     // COMPUTED entity name field - optional because computed from template
-    name: { type: 'string', maxLength: 255 },
-    summary: { type: 'string', maxLength: 255 },
+    name: FIELD.NAME,
+    summary: FIELD.SUMMARY,
 
     // Entity-specific fields
-    work_order_id: { type: 'integer' },
-    customer_id: { type: 'integer', required: true },
-    amount: { type: 'decimal', required: true },
-    tax: { type: 'decimal', default: 0 },
-    total: { type: 'decimal', required: true },
+    work_order_id: {
+      type: 'foreignKey',
+      relatedEntity: 'work_order',
+    },
+    customer_id: {
+      type: 'foreignKey',
+      relatedEntity: 'customer',
+      required: true,
+    },
+    amount: { ...FIELD.CURRENCY, required: true },
+    tax: { ...FIELD.CURRENCY, default: 0 },
+    total: { ...FIELD.CURRENCY, required: true },
     due_date: { type: 'date' },
     paid_at: { type: 'timestamp' },
   },

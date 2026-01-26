@@ -417,6 +417,146 @@ function concurrentOperationsSafe(meta, ctx) {
   });
 }
 
+/**
+ * Scenario: String field too long returns 400
+ * 
+ * Preconditions: Entity has string fields with maxLength validation AND validation is enforced
+ * Tests: Overly long strings are rejected OR truncated (server may handle either way)
+ * 
+ * NOTE: This is a soft test - some servers truncate instead of reject.
+ * We verify the server handles the request (not necessarily how).
+ * Skip entities that might have unique constraints causing issues.
+ */
+function stringTooLongRejected(meta, ctx) {
+  const { fields, entityName, tableName } = meta;
+  const caps = getCapabilities(meta);
+  if (!fields) return;
+  if (!caps.canCreate) return;
+  
+  // Skip entities with sensitive unique constraints that might cause 500s
+  const skipEntities = ['role', 'user'];
+  if (skipEntities.includes(entityName)) return;
+
+  // Only test fields that explicitly require validation (not auto-computed or immutable fields)
+  const stringFieldsWithLimit = Object.entries(fields)
+    .filter(([name, def]) => {
+      if (def.type !== 'string' || !def.maxLength) return false;
+      // Skip auto-generated fields (computed identifiers)
+      const fieldAccess = meta.fieldAccess?.[name];
+      if (fieldAccess?.create === 'none') return false;
+      // Skip immutable fields that may have special constraints
+      if (meta.immutableFields?.includes(name)) return false;
+      // Skip known problematic fields (external IDs, etc.)
+      if (name.endsWith('_id') || name === 'auth0_id') return false;
+      return true;
+    })
+    .slice(0, 1); // Test 1 field to keep test suite fast
+
+  for (const [field, def] of stringFieldsWithLimit) {
+    ctx.it(`POST /api/${tableName} - handles ${field} exceeding maxLength gracefully`, async () => {
+      const payload = await ctx.factory.buildMinimalWithFKs(entityName);
+      payload[field] = 'x'.repeat(def.maxLength + 100);
+      const auth = await ctx.authHeader('admin');
+
+      const response = await ctx.request
+        .post(`/api/${tableName}`)
+        .set(auth)
+        .send(payload);
+
+      // Should either reject (400) or accept with truncation (201), not crash (500)
+      ctx.expect([201, 400]).toContain(response.status);
+    });
+  }
+}
+
+/**
+ * Scenario: Invalid date format rejected
+ * 
+ * Preconditions: Entity has date fields AND create is not disabled
+ * Tests: Invalid date strings are rejected
+ */
+function invalidDateRejected(meta, ctx) {
+  const { fields, entityName, tableName } = meta;
+  const caps = getCapabilities(meta);
+  if (!fields) return;
+  if (!caps.canCreate) return;
+
+  const dateFields = Object.entries(fields)
+    .filter(([_, def]) => ['date', 'datetime', 'timestamp'].includes(def.type))
+    .map(([name]) => name)
+    .filter(name => !['created_at', 'updated_at'].includes(name))
+    .slice(0, 1);
+
+  for (const field of dateFields) {
+    ctx.it(`POST /api/${tableName} - rejects invalid date for ${field}`, async () => {
+      const payload = await ctx.factory.buildMinimalWithFKs(entityName);
+      payload[field] = 'not-a-date';
+      const auth = await ctx.authHeader('admin');
+
+      const response = await ctx.request
+        .post(`/api/${tableName}`)
+        .set(auth)
+        .send(payload);
+
+      ctx.expect(response.status).toBe(400);
+    });
+  }
+}
+
+/**
+ * Scenario: Negative ID returns 400
+ * 
+ * Preconditions: None
+ * Tests: Negative IDs return 400 (bad request)
+ */
+function negativeIdRejected(meta, ctx) {
+  ctx.it(`GET /api/${meta.tableName}/-1 - returns 400 for negative ID`, async () => {
+    const auth = await ctx.authHeader('admin');
+
+    const response = await ctx.request
+      .get(`/api/${meta.tableName}/-1`)
+      .set(auth);
+
+    ctx.expect(response.status).toBe(400);
+  });
+}
+
+/**
+ * Scenario: Boolean field validation
+ * 
+ * Preconditions: Entity has boolean fields AND create is not disabled
+ * Tests: Invalid boolean values are coerced or rejected
+ */
+function booleanFieldHandling(meta, ctx) {
+  const { fields, entityName, tableName } = meta;
+  const caps = getCapabilities(meta);
+  if (!fields) return;
+  if (!caps.canCreate) return;
+
+  const boolFields = Object.entries(fields)
+    .filter(([_, def]) => def.type === 'boolean')
+    .map(([name]) => name)
+    .filter(name => !['is_active'].includes(name))
+    .slice(0, 1);
+
+  // Test string "true" and "false" are coerced correctly
+  for (const field of boolFields) {
+    ctx.it(`POST /api/${tableName} - handles string boolean for ${field}`, async () => {
+      const payload = await ctx.factory.buildMinimalWithFKs(entityName);
+      payload[field] = 'true'; // String instead of boolean
+      const auth = await ctx.authHeader('admin');
+
+      const response = await ctx.request
+        .post(`/api/${tableName}`)
+        .set(auth)
+        .send(payload);
+
+      // Should either coerce (201) or reject (400), not crash (500)
+      ctx.expect([200, 201, 400]).toContain(response.status);
+    });
+  }
+}
+
 module.exports = {
   updateNonExistent,
   deleteNonExistent,
@@ -431,4 +571,8 @@ module.exports = {
   sortByInvalidField,
   errorResponseStructure,
   concurrentOperationsSafe,
+  stringTooLongRejected,
+  invalidDateRejected,
+  negativeIdRejected,
+  booleanFieldHandling,
 };

@@ -84,8 +84,15 @@ class _GenericFormFieldState<T, V> extends State<GenericFormField<T, V>> {
       children: [
         // Label with required indicator (molecule's responsibility)
         Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Text(widget.config.label, style: theme.textTheme.labelMedium),
+            Flexible(
+              child: Text(
+                widget.config.label,
+                style: theme.textTheme.labelMedium,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
             if (widget.config.required) ...[
               SizedBox(width: spacing.xxs),
               Text(

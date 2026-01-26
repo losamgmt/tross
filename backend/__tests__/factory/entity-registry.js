@@ -22,6 +22,7 @@
  */
 
 const allMetadata = require('../../config/models');
+const { RLS_RESOURCE_TYPES } = require('../../config/constants');
 
 // ============================================================================
 // REQUIRED METADATA FIELDS
@@ -99,8 +100,10 @@ function isBusinessEntity(entityName) {
     return true;
   }
 
-  // Has RLS resource (participates in permission system)
-  if (meta.rlsResource) {
+  // Has RLS resource that's NOT parent-derived (participates directly in permission system)
+  // Parent-derived entities (like file_attachment) get their RLS from parent, so they're
+  // considered system/polymorphic entities for testing purposes.
+  if (meta.rlsResource && meta.rlsResource !== RLS_RESOURCE_TYPES.PARENT_DERIVED) {
     return true;
   }
 
@@ -189,24 +192,18 @@ function assertValidMetadata() {
 // ============================================================================
 
 /**
- * Entities that use specialized routes (not GenericEntityService).
- * These entities cannot be tested with standard CRUD factory scenarios.
- *
- * - preferences: Uses /api/preferences with GET/PUT pattern (no POST/DELETE)
- * - file_attachment: Uses /api/:entityType/:entityId/files (polymorphic)
- */
-/**
  * Entities that use specialized routes (not the generic CRUD factory).
  * 
  * These entities require custom route handling:
- * - preferences: Uses shared PK pattern (id = user.id), specialized service
  * - file_attachment: Polymorphic S3-based storage, specialized upload flow
  * - saved_view: User-owned entity (user_id auto-injected from auth context)
  * - audit_log: Read-only system table at /api/audit/*, writes internal only
  * 
+ * NOTE: preferences was moved to generic router (2026-01-23)
+ * 
  * They should have their own dedicated tests, not run through all-entities.test.js
  */
-const SPECIALIZED_ROUTE_ENTITIES = ['preferences', 'file_attachment', 'saved_view', 'audit_log'];
+const SPECIALIZED_ROUTE_ENTITIES = ['file_attachment', 'saved_view', 'audit_log'];
 
 /**
  * Check if an entity uses generic CRUD routes (testable by factory).

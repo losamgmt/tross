@@ -15,6 +15,7 @@ const {
   UNIVERSAL_FIELD_ACCESS,
 } = require('../constants');
 const { NAME_TYPES } = require('../entity-types');
+const { FIELD } = require('../field-type-standards');
 
 module.exports = {
   // Table name in database
@@ -99,14 +100,8 @@ module.exports = {
     useGenericRouter: true,
   },
 
-  // ============================================================================
-  // FIELD ALIASING (for UI display names)
-  // ============================================================================
+  fieldGroups: {},
 
-  /**
-   * Field aliases for UI display. Key = field name, Value = display label
-   * Empty object = use field names as-is
-   */
   fieldAliases: {},
 
   // ============================================================================
@@ -333,9 +328,8 @@ module.exports = {
     // TIER 1: Universal Entity Contract Fields
     id: { type: 'integer', readonly: true },
     contract_number: {
-      type: 'string',
+      ...FIELD.IDENTIFIER,
       readonly: true, // Auto-generated: CTR-YYYY-NNNN
-      maxLength: 100,
       pattern: '^CTR-[0-9]{4}-[0-9]+$',
       errorMessages: {
         pattern: 'Contract number must be in format CTR-YYYY-NNNN',
@@ -353,15 +347,19 @@ module.exports = {
     },
 
     // COMPUTED entity name field - optional because computed from template
-    name: { type: 'string', maxLength: 255 },
-    summary: { type: 'string', maxLength: 255 },
+    name: FIELD.NAME,
+    summary: FIELD.SUMMARY,
 
     // Entity-specific fields
-    customer_id: { type: 'integer', required: true },
+    customer_id: {
+      type: 'foreignKey',
+      relatedEntity: 'customer',
+      required: true,
+    },
     start_date: { type: 'date', required: true },
     end_date: { type: 'date' },
-    terms: { type: 'text' },
-    value: { type: 'decimal' },
+    terms: FIELD.TERMS,
+    value: FIELD.CURRENCY,
     billing_cycle: {
       type: 'enum',
       values: ['monthly', 'quarterly', 'annually', 'one_time'],

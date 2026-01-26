@@ -190,23 +190,37 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
 --
 -- Design rationale:
 --   - SHARED PRIMARY KEY pattern: id = users.id (true 1:1 identifying relationship)
---   - Uses JSONB for flexible preference storage (schema-on-read)
+--   - FLAT FIELDS for type safety (no JSONB - per field type standards)
 --   - CASCADE delete when user is deleted
 --   - Trigger-managed updated_at for consistency
---
--- Preference keys (documented but schema-on-read):
---   - theme: 'system' | 'light' | 'dark' (UI theme preference)
---   - notificationsEnabled: boolean (notification preferences)
---   - pageSize: integer (default table page size, e.g., 10, 25, 50, 100)
---   - tableDensity: 'compact' | 'standard' | 'comfortable' (table row spacing)
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS preferences (
     -- Primary key = users.id (shared PK pattern for 1:1)
     -- NOT SERIAL - id is provided, not auto-generated
     id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
     
-    -- Preferences storage (JSONB for flexibility)
-    preferences JSONB NOT NULL DEFAULT '{}',
+    -- UI Theme preference
+    theme VARCHAR(20) NOT NULL DEFAULT 'system'
+        CHECK (theme IN ('system', 'light', 'dark')),
+    
+    -- Table display density
+    density VARCHAR(20) NOT NULL DEFAULT 'comfortable'
+        CHECK (density IN ('compact', 'standard', 'comfortable')),
+    
+    -- Notification preference
+    notifications_enabled BOOLEAN NOT NULL DEFAULT true,
+    
+    -- Default page size for tables
+    items_per_page INTEGER NOT NULL DEFAULT 25
+        CHECK (items_per_page IN (10, 25, 50, 100)),
+    
+    -- Notification retention (days to keep)
+    notification_retention_days INTEGER NOT NULL DEFAULT 30
+        CHECK (notification_retention_days BETWEEN 1 AND 365),
+    
+    -- Auto-refresh interval (seconds, 0 = disabled)
+    auto_refresh_interval INTEGER NOT NULL DEFAULT 0
+        CHECK (auto_refresh_interval BETWEEN 0 AND 300),
     
     -- Timestamps (TIER 1 compliance)
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -507,8 +521,22 @@ CREATE TABLE IF NOT EXISTS customers (
     -- Entity-specific data fields
     phone VARCHAR(50),
     organization_name VARCHAR(255),  -- Optional company/org they represent
-    billing_address JSONB,  -- { street, city, state, zip, country }
-    service_address JSONB   -- { street, city, state, zip, country }
+    
+    -- Billing Address (flat fields per field-type-standards)
+    billing_line1 VARCHAR(255),
+    billing_line2 VARCHAR(255),
+    billing_city VARCHAR(100),
+    billing_state VARCHAR(10),
+    billing_postal_code VARCHAR(20),
+    billing_country VARCHAR(2) DEFAULT 'US',
+    
+    -- Service Address (flat fields per field-type-standards)
+    service_line1 VARCHAR(255),
+    service_line2 VARCHAR(255),
+    service_city VARCHAR(100),
+    service_state VARCHAR(10),
+    service_postal_code VARCHAR(20),
+    service_country VARCHAR(2) DEFAULT 'US'
 );
 
 -- ============================================================================
@@ -546,9 +574,12 @@ CREATE TABLE IF NOT EXISTS technicians (
     
     -- Entity-specific data fields
     license_number VARCHAR(100),  -- Informational, not identity
-    certifications JSONB,  -- [{ name, issued_by, expires_at }]
-    skills JSONB,          -- ['plumbing', 'electrical', 'hvac']
-    hourly_rate DECIMAL(10, 2)
+    hourly_rate DECIMAL(10, 2),
+    
+    -- Skills and certifications as comma-separated text
+    -- Simple MVP approach - can migrate to junction tables later if needed
+    certifications TEXT,  -- e.g., "EPA 608, NATE HVAC, Master Plumber"
+    skills TEXT           -- e.g., "plumbing, electrical, hvac"
 );
 
 -- ============================================================================
@@ -587,6 +618,14 @@ CREATE TABLE IF NOT EXISTS work_orders (
     -- Relationships
     customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE RESTRICT,
     assigned_technician_id INTEGER REFERENCES technicians(id) ON DELETE SET NULL,
+    
+    -- Location Address (where work is performed - flat fields per field-type-standards)
+    location_line1 VARCHAR(255),
+    location_line2 VARCHAR(255),
+    location_city VARCHAR(100),
+    location_state VARCHAR(10),
+    location_postal_code VARCHAR(20),
+    location_country VARCHAR(2) DEFAULT 'US',
     
     -- Scheduling
     scheduled_start TIMESTAMP,

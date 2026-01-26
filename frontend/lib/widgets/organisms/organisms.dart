@@ -25,7 +25,6 @@ export 'forms/generic_form.dart';
 // Layout
 export 'layout/action_grid.dart';
 export 'layout/card_grid.dart';
-export 'layout/settings_section.dart';
 export 'layout/tabbed_container.dart';
 
 // Login

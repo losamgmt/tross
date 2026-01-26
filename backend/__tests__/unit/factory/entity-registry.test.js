@@ -130,7 +130,7 @@ describe('Entity Registry', () => {
       // These are system tables with limited/no RLS
       expect(isBusinessEntity('preferences')).toBe(true); // Has rlsResource
       expect(isBusinessEntity('saved_view')).toBe(true);  // Has rlsResource
-      expect(isBusinessEntity('file_attachment')).toBe(false); // No rlsResource (polymorphic)
+      expect(isBusinessEntity('file_attachment')).toBe(false); // Parent-derived RLS (polymorphic)
     });
 
     test('getBusinessEntityNames returns business entities', () => {
@@ -144,7 +144,7 @@ describe('Entity Registry', () => {
     test('getSystemEntityNames returns system entities', () => {
       const systemEntities = getSystemEntityNames();
 
-      // file_attachment is the only true system entity (no rlsResource)
+      // file_attachment is a polymorphic entity with parent-derived RLS
       expect(systemEntities).toContain('file_attachment');
     });
 

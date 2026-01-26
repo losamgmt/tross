@@ -50,7 +50,8 @@ void main() {
     });
 
     test('no orphan ResourceType values (not in permissions.json)', () {
-      final frontendResources = ResourceType.values
+      // Only check real resources - parentDerived is a special marker
+      final frontendResources = ResourceType.realResources
           .map((r) => r.toBackendString())
           .toSet();
 
@@ -68,7 +69,8 @@ void main() {
     test(
       'all ResourceType values convert to valid snake_case backend strings',
       () {
-        for (final resource in ResourceType.values) {
+        // Only check real resources - parentDerived uses underscore prefix intentionally
+        for (final resource in ResourceType.realResources) {
           final backendString = resource.toBackendString();
 
           expect(
@@ -183,7 +185,12 @@ void main() {
       // Uses metadata.rlsResource directly - no hardcoded mapping needed
       for (final entityName in EntityTestRegistry.allEntityNames) {
         final metadata = EntityTestRegistry.get(entityName);
-        final rlsResourceString = metadata.rlsResource.toBackendString();
+        final rlsResource = metadata.rlsResource;
+
+        // Skip entities with parentDerived - they inherit permissions from parent
+        if (!rlsResource.isRealResource) continue;
+
+        final rlsResourceString = rlsResource.toBackendString();
 
         expect(
           backendResources.contains(rlsResourceString),

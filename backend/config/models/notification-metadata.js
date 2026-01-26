@@ -17,6 +17,7 @@
 const {
   FIELD_ACCESS_LEVELS: FAL,
 } = require('../constants');
+const { FIELD } = require('../field-type-standards');
 
 module.exports = {
   // Table name in database (matches route: /api/notifications)
@@ -78,14 +79,8 @@ module.exports = {
     useGenericRouter: true,
   },
 
-  // ============================================================================
-  // RLS FILTER CONFIGURATION
-  // ============================================================================
+  fieldGroups: {},
 
-  /**
-   * RLS filter configuration for own_record_only policy
-   * Filter by user_id
-   */
   rlsFilterConfig: {
     ownRecordField: 'user_id',
   },
@@ -273,15 +268,15 @@ module.exports = {
       description: 'Primary key',
     },
     user_id: {
-      type: 'integer',
+      type: 'foreignKey',
+      relatedEntity: 'user',
       required: true,
       readonly: true,
       description: 'Notification recipient (FK to users)',
     },
     title: {
-      type: 'string',
+      ...FIELD.TITLE,
       required: true,
-      maxLength: 255,
       readonly: true,
       description: 'Notification title/summary',
     },

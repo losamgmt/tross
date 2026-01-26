@@ -16,6 +16,7 @@
 const {
   FIELD_ACCESS_LEVELS: FAL,
 } = require('../constants');
+const { FIELD } = require('../field-type-standards');
 
 module.exports = {
   // Table name in database (matches route: /api/saved_views)
@@ -75,14 +76,8 @@ module.exports = {
     useGenericRouter: true,
   },
 
-  // ============================================================================
-  // RLS FILTER CONFIGURATION
-  // ============================================================================
+  fieldGroups: {},
 
-  /**
-   * RLS filter configuration for own_record_only policy
-   * Filter by user_id (not id like preferences)
-   */
   rlsFilterConfig: {
     ownRecordField: 'user_id',
   },
@@ -211,7 +206,8 @@ module.exports = {
       description: 'Primary key',
     },
     user_id: {
-      type: 'integer',
+      type: 'foreignKey',
+      relatedEntity: 'user',
       required: true,
       readonly: true,
       description: 'Owner user ID (FK to users)',
@@ -223,7 +219,7 @@ module.exports = {
       description: 'Which entity this view applies to',
     },
     view_name: {
-      type: 'string',
+      ...FIELD.NAME,
       required: true,
       maxLength: 100,
       description: 'User-defined name for this view',

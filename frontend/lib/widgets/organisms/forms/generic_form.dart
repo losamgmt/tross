@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:tross_app/models/entity_metadata.dart'
+    show FieldGroup, FormLayout;
 import 'package:tross_app/widgets/molecules/forms/field_config.dart';
+import 'package:tross_app/widgets/molecules/containers/form_section.dart';
 import 'package:tross_app/widgets/organisms/forms/form_field.dart';
 import 'package:tross_app/config/app_spacing.dart';
 import 'package:tross_app/services/error_service.dart';
@@ -9,6 +12,10 @@ import 'package:tross_app/services/error_service.dart';
 /// **SOLE RESPONSIBILITY:** Manage form field state and render fields ONLY
 /// - Context-agnostic: NO Expanded, NO title, NO buttons
 /// - Parent handles: Container sizing, title rendering, action buttons
+///
+/// **Layout Modes:**
+/// - [FormLayout.flat]: Simple vertical list of all fields (default)
+/// - [FormLayout.grouped]: Fields organized into sections using fieldGroups
 ///
 /// Type parameter:
 /// - T: The model type (e.g., User, Role)
@@ -22,14 +29,23 @@ import 'package:tross_app/services/error_service.dart';
 ///
 /// Usage:
 /// ```dart
-/// final formKey = GlobalKey<GenericFormState<User>>();
+/// // Flat layout (default)
 /// GenericForm<User>(
 ///   key: formKey,
 ///   value: currentUser,
 ///   fields: [emailConfig, nameConfig, activeConfig],
 ///   onChange: (user) => setState(() => _user = user),
 /// )
-/// // Later: formKey.currentState?.validateAll()
+///
+/// // Grouped layout
+/// GenericForm<Map<String, dynamic>>(
+///   key: formKey,
+///   value: preferences,
+///   fields: allFieldConfigs,
+///   fieldGroups: metadata.sortedFieldGroups,
+///   layout: FormLayout.grouped,
+///   onChange: (prefs) => provider.updatePreferences(prefs),
+/// )
 /// ```
 class GenericForm<T> extends StatefulWidget {
   final T value;
@@ -37,12 +53,21 @@ class GenericForm<T> extends StatefulWidget {
   final void Function(T)? onChange;
   final bool enabled;
 
+  /// Layout strategy for rendering fields
+  final FormLayout layout;
+
+  /// Field groups for grouped layout (required when layout is [FormLayout.grouped])
+  /// Should be sorted by order (use EntityMetadata.sortedFieldGroups)
+  final List<FieldGroup>? fieldGroups;
+
   const GenericForm({
     super.key,
     required this.value,
     required this.fields,
     this.onChange,
     this.enabled = true,
+    this.layout = FormLayout.flat,
+    this.fieldGroups,
   });
 
   @override
@@ -126,23 +151,167 @@ class GenericFormState<T> extends State<GenericForm<T>> {
   Widget build(BuildContext context) {
     final spacing = context.spacing;
 
-    // Context-agnostic: Just render fields, NO container assumptions
+    // Choose layout strategy
+    return switch (widget.layout) {
+      FormLayout.flat => _buildFlatLayout(spacing),
+      FormLayout.grouped => _buildGroupedLayout(spacing),
+      FormLayout.tabbed => _buildFlatLayout(
+        spacing,
+      ), // Fallback to flat for now
+    };
+  }
+
+  /// Build flat layout - simple vertical list of all fields
+  Widget _buildFlatLayout(AppSpacing spacing) {
     return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: widget.fields.length,
       separatorBuilder: (context, index) => SizedBox(height: spacing.md),
-      itemBuilder: (context, index) {
-        final field = widget.fields[index];
-        return GenericFormField(
-          config: field,
-          value: _currentValue,
-          onChanged: _handleFieldChange,
-          onError: (error) => _handleFieldError(index, error),
-          externalError: _fieldErrors[index],
-          enabled: widget.enabled,
-        );
-      },
+      itemBuilder: (context, index) => _buildField(index),
     );
+  }
+
+  /// Build grouped layout - fields organized into sections
+  Widget _buildGroupedLayout(AppSpacing spacing) {
+    final groups = widget.fieldGroups;
+    if (groups == null || groups.isEmpty) {
+      // Fallback to flat if no groups defined
+      return _buildFlatLayout(spacing);
+    }
+
+    // Build a map of fieldName -> field index for quick lookup
+    final fieldIndexMap = <String, int>{};
+    for (int i = 0; i < widget.fields.length; i++) {
+      // Use explicit fieldName if available, fallback to label parsing
+      final field = widget.fields[i];
+      final fieldName = field.fieldName ?? _labelToFieldName(field.label);
+      fieldIndexMap[fieldName] = i;
+    }
+
+    // Track all fields in groups
+    final fieldsInGroups = <String>{};
+    for (final group in groups) {
+      fieldsInGroups.addAll(group.fields);
+    }
+
+    final sections = <Widget>[];
+
+    for (int groupIdx = 0; groupIdx < groups.length; groupIdx++) {
+      final group = groups[groupIdx];
+      final fieldWidgets = <Widget>[];
+      final processedFields =
+          <String>{}; // Track fields already rendered in rows
+
+      for (int i = 0; i < group.fields.length; i++) {
+        final fieldName = group.fields[i];
+
+        // Skip if already processed as part of a row
+        if (processedFields.contains(fieldName)) continue;
+
+        final fieldIndex = fieldIndexMap[fieldName];
+
+        if (fieldIndex != null) {
+          // Add spacing between fields within a group
+          if (fieldWidgets.isNotEmpty) {
+            fieldWidgets.add(SizedBox(height: spacing.md));
+          }
+
+          // Check if this field is part of a row layout
+          final row = group.getRowFor(fieldName);
+          if (row != null && row.length > 1) {
+            // Build row of fields
+            final rowWidgets = <Widget>[];
+            for (int j = 0; j < row.length; j++) {
+              final rowFieldName = row[j];
+              final rowFieldIndex = fieldIndexMap[rowFieldName];
+              if (rowFieldIndex != null) {
+                if (rowWidgets.isNotEmpty) {
+                  rowWidgets.add(SizedBox(width: spacing.md));
+                }
+                rowWidgets.add(Expanded(child: _buildField(rowFieldIndex)));
+                processedFields.add(rowFieldName);
+              }
+            }
+            if (rowWidgets.isNotEmpty) {
+              fieldWidgets.add(
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: rowWidgets,
+                ),
+              );
+            }
+          } else {
+            // Single field, full width
+            fieldWidgets.add(_buildField(fieldIndex));
+          }
+        }
+      }
+
+      if (fieldWidgets.isNotEmpty) {
+        sections.add(
+          Padding(
+            padding: EdgeInsets.only(top: groupIdx > 0 ? spacing.lg : 0),
+            child: FormSection(
+              label: group.label,
+              showDivider: groupIdx > 0,
+              children: fieldWidgets,
+            ),
+          ),
+        );
+      }
+    }
+
+    // Add "Other" section for fields not in any group
+    final ungroupedWidgets = <Widget>[];
+    for (int i = 0; i < widget.fields.length; i++) {
+      final field = widget.fields[i];
+      final fieldName = field.fieldName ?? _labelToFieldName(field.label);
+      if (!fieldsInGroups.contains(fieldName)) {
+        if (ungroupedWidgets.isNotEmpty) {
+          ungroupedWidgets.add(SizedBox(height: spacing.md));
+        }
+        ungroupedWidgets.add(_buildField(i));
+      }
+    }
+
+    if (ungroupedWidgets.isNotEmpty) {
+      sections.add(
+        Padding(
+          padding: EdgeInsets.only(top: sections.isNotEmpty ? spacing.lg : 0),
+          child: FormSection(
+            label: 'Other',
+            showDivider: sections.isNotEmpty,
+            children: ungroupedWidgets,
+          ),
+        ),
+      );
+    }
+
+    return ListView(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      children: sections,
+    );
+  }
+
+  /// Build a single field widget
+  Widget _buildField(int index) {
+    final field = widget.fields[index];
+    return GenericFormField(
+      config: field,
+      value: _currentValue,
+      onChanged: _handleFieldChange,
+      onError: (error) => _handleFieldError(index, error),
+      externalError: _fieldErrors[index],
+      enabled: widget.enabled,
+    );
+  }
+
+  /// Convert label back to field_name format for lookup (fallback only)
+  /// "First Name" -> "first_name"
+  /// NOTE: Prefer using FieldConfig.fieldName when available
+  String _labelToFieldName(String label) {
+    return label.toLowerCase().replaceAll(' ', '_');
   }
 }

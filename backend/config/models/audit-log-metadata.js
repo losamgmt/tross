@@ -59,15 +59,15 @@ module.exports = {
    * This is the SSOT for "admin only" access control.
    */
   permissionOverrides: {
-    read: 'admin', // Only admin can read
-    create: null, // No API creation - system only
-    update: null, // Immutable records
-    delete: null, // No deletion - retention policy only
+    read: 'admin',
+    create: null,
+    update: null,
+    delete: null,
   },
 
-  // ============================================================================
-  // FIELD DEFINITIONS
-  // ============================================================================
+  fieldGroups: {},
+
+  // Field definitions
 
   fields: {
     id: {
@@ -91,7 +91,8 @@ module.exports = {
       readOnly: true,
     },
     user_id: {
-      type: 'integer',
+      type: 'foreignKey',
+      relatedEntity: 'user',
       required: false,
       readOnly: true,
     },

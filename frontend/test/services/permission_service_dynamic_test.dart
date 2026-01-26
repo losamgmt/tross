@@ -43,8 +43,9 @@ void main() {
     test('all expected resources are defined', () {
       final config = PermissionService.config!;
 
-      // Verify all ResourceType enum values have corresponding config
-      for (final resource in ResourceType.values) {
+      // Verify all real ResourceType enum values have corresponding config
+      // Skip parentDerived - it's a marker, not a real resource
+      for (final resource in ResourceType.realResources) {
         final resourceKey = resource.toBackendString();
         expect(
           config.resources.containsKey(resourceKey),
@@ -275,7 +276,8 @@ void main() {
       final config = PermissionService.config!;
 
       // Admin should be able to do everything that's not explicitly disabled
-      for (final resource in ResourceType.values) {
+      // Skip parentDerived - it's a marker, not a real resource
+      for (final resource in ResourceType.realResources) {
         for (final operation in CrudOperation.values) {
           final resourceKey = resource.toBackendString();
           final minimumPriority = config.getMinimumPriority(

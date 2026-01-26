@@ -686,9 +686,13 @@ class GenericEntityService {
 
     // Filter data using EXCLUSION pattern - allow all fields EXCEPT system-managed ones
     // Uses centralized constant from config/constants.js
+    // EXCEPTION: sharedPrimaryKey entities (e.g., preferences) allow 'id' to be provided
     const filteredData = {};
+    const allowedSystemFields = metadata.sharedPrimaryKey ? ['id'] : [];
     for (const [field, value] of Object.entries(cleanData)) {
-      if (!ENTITY_FIELDS.SYSTEM_MANAGED_ON_CREATE.includes(field) && value !== undefined) {
+      const isSystemManaged = ENTITY_FIELDS.SYSTEM_MANAGED_ON_CREATE.includes(field);
+      const isAllowedSystemField = allowedSystemFields.includes(field);
+      if ((!isSystemManaged || isAllowedSystemField) && value !== undefined) {
         filteredData[field] = value;
       }
     }
@@ -1136,9 +1140,13 @@ class GenericEntityService {
 
               // Filter using EXCLUSION pattern - allow all fields EXCEPT system-managed ones
               // Uses centralized constant from config/constants.js
+              // EXCEPTION: sharedPrimaryKey entities (e.g., preferences) allow 'id' to be provided
               const filteredData = {};
+              const allowedSystemFields = metadata.sharedPrimaryKey ? ['id'] : [];
               for (const [field, value] of Object.entries(op.data)) {
-                if (!ENTITY_FIELDS.SYSTEM_MANAGED_ON_CREATE.includes(field) && value !== undefined) {
+                const isSystemManaged = ENTITY_FIELDS.SYSTEM_MANAGED_ON_CREATE.includes(field);
+                const isAllowedSystemField = allowedSystemFields.includes(field);
+                if ((!isSystemManaged || isAllowedSystemField) && value !== undefined) {
                   filteredData[field] = value;
                 }
               }

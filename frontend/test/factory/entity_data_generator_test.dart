@@ -295,7 +295,9 @@ void main() {
 /// Helper to verify type matches field type
 bool _isCorrectType(FieldType type, dynamic value) {
   return switch (type) {
-    FieldType.integer || FieldType.foreignKey => value is int,
+    FieldType.integer ||
+    FieldType.foreignKey ||
+    FieldType.currency => value is int,
     FieldType.string ||
     FieldType.text ||
     FieldType.email ||

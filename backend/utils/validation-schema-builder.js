@@ -42,6 +42,8 @@ const schemaCache = new Map();
  * Fields that should NOT be validated (system-managed or free text)
  * These fields get a permissive Joi.any() schema
  * All other fields use their field name directly to look up rules in validation-rules.json
+ *
+ * NOTE: status is NOT in this set - it uses entity-specific enum validation from entityFields
  */
 const SYSTEM_MANAGED_FIELDS = new Set([
   // System-managed (no user input)
@@ -56,9 +58,6 @@ const SYSTEM_MANAGED_FIELDS = new Set([
   'terms',
   'notes',
   'description', // Generic description - entity-specific ones use entityFields
-
-  // Handled specially (status/priority use entityFields)
-  'status',
 ]);
 
 /**
@@ -89,15 +88,6 @@ function getStatusRuleKey(entityName) {
  * @returns {Joi.Schema|null} Joi schema or null if no validation needed
  */
 function buildSingleFieldSchema(fieldName, entityName, isRequired, rules) {
-  // Entity-specific enum fields (status, priority) - check entityFields
-  if (fieldName === 'status' || fieldName === 'priority') {
-    const fieldDef = rules.entityFields?.[entityName]?.[fieldName];
-    if (fieldDef) {
-      return buildFieldSchema({ ...fieldDef, required: isRequired }, fieldName);
-    }
-    return null;
-  }
-
   // System-managed or free-text fields - use permissive schema
   if (SYSTEM_MANAGED_FIELDS.has(fieldName)) {
     if (isRequired) {
@@ -106,19 +96,25 @@ function buildSingleFieldSchema(fieldName, entityName, isRequired, rules) {
     return Joi.any().optional();
   }
 
-  // Look up field definition directly by field name (snake_case matches JSON)
-  const fieldDef = rules.fields[fieldName];
-
-  if (!fieldDef) {
-    // No rule found - use permissive schema
-    if (isRequired) {
-      return Joi.any().required();
-    }
-    return Joi.any().optional();
+  // PRIORITY 1: Entity-specific fields (status, priority, address fields, etc.)
+  // These are derived from the entity's metadata.fields definitions
+  const entityFieldDef = rules.entityFields?.[entityName]?.[fieldName];
+  if (entityFieldDef) {
+    return buildFieldSchema({ ...entityFieldDef, required: isRequired }, fieldName);
   }
 
-  // Build schema with correct required flag
-  return buildFieldSchema({ ...fieldDef, required: isRequired }, fieldName);
+  // PRIORITY 2: Shared/global field definitions (email, phone, names)
+  // These are common patterns used across multiple entities
+  const sharedFieldDef = rules.fields[fieldName];
+  if (sharedFieldDef) {
+    return buildFieldSchema({ ...sharedFieldDef, required: isRequired }, fieldName);
+  }
+
+  // No rule found - use permissive schema
+  if (isRequired) {
+    return Joi.any().required();
+  }
+  return Joi.any().optional();
 }
 
 /**

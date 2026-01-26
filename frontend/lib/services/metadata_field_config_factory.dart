@@ -63,13 +63,17 @@ class MetadataFieldConfigFactory {
 
   /// Generate all visible field configs for an entity
   ///
-  /// [context] - BuildContext for accessing Provider
+  /// [context] - BuildContext for accessing Provider (optional if no FK fields)
   /// [entityName] - Name of the entity (e.g., 'customer')
   /// [includeFields] - If provided, only include these fields
   /// [excludeFields] - Fields to exclude (e.g., system fields)
   /// [forEdit] - If true, marks immutable fields as readOnly
+  ///
+  /// Note: GenericEntityService is only required for entities with foreignKey
+  /// fields that need async loading. For entities without FK fields (like
+  /// preferences), context can be null.
   static List<FieldConfig<Map<String, dynamic>, dynamic>> forEntity(
-    BuildContext context,
+    BuildContext? context,
     String entityName, {
     List<String>? includeFields,
     List<String>? excludeFields,
@@ -77,7 +81,9 @@ class MetadataFieldConfigFactory {
   }) {
     final metadata = meta.EntityMetadataRegistry.get(entityName);
     final configs = <FieldConfig<Map<String, dynamic>, dynamic>>[];
-    final entityService = context.read<GenericEntityService>();
+
+    // Lazy-load entity service only when needed for FK fields
+    GenericEntityService? entityService;
 
     // Default exclusions - system fields not shown in forms
     final defaultExclusions = {'id', 'created_at', 'updated_at'};
@@ -95,6 +101,15 @@ class MetadataFieldConfigFactory {
 
       // Skip readonly fields for create/edit forms
       if (fieldDef.readonly) continue;
+
+      // Lazy-load entity service for FK fields
+      if (fieldDef.type == meta.FieldType.foreignKey && entityService == null) {
+        if (context == null) {
+          // Skip FK field if no context - can't load async options
+          continue;
+        }
+        entityService = context.read<GenericEntityService>();
+      }
 
       // Generate the config
       final config = _createFieldConfig(
@@ -154,13 +169,13 @@ class MetadataFieldConfigFactory {
   /// Includes ALL fields (even readonly ones like timestamps)
   /// All configs marked as readOnly since this is for display only.
   ///
-  /// [context] - BuildContext for accessing Provider
+  /// [context] - BuildContext for accessing Provider (optional if no FK fields)
   /// [entityName] - Name of the entity (e.g., 'customer')
   /// [includeFields] - If provided, only include these fields
   /// [excludeFields] - Fields to exclude
   /// [includeSystemFields] - If true, includes id, created_at, updated_at
   static List<FieldConfig<Map<String, dynamic>, dynamic>> forDisplay(
-    BuildContext context,
+    BuildContext? context,
     String entityName, {
     List<String>? includeFields,
     List<String>? excludeFields,
@@ -168,7 +183,9 @@ class MetadataFieldConfigFactory {
   }) {
     final metadata = meta.EntityMetadataRegistry.get(entityName);
     final configs = <FieldConfig<Map<String, dynamic>, dynamic>>[];
-    final entityService = context.read<GenericEntityService>();
+
+    // Lazy-load entity service only when needed for FK fields
+    GenericEntityService? entityService;
 
     // Default exclusions - system fields unless explicitly included
     final defaultExclusions = includeSystemFields
@@ -185,6 +202,15 @@ class MetadataFieldConfigFactory {
 
       // Skip if includeFields specified and field not in list
       if (includeFields != null && !includeFields.contains(fieldName)) continue;
+
+      // Lazy-load entity service for FK fields
+      if (fieldDef.type == meta.FieldType.foreignKey && entityService == null) {
+        if (context == null) {
+          // Skip FK field if no context - can't load async options
+          continue;
+        }
+        entityService = context.read<GenericEntityService>();
+      }
 
       // Generate the config - always readonly for display
       final config = _createFieldConfig(
@@ -208,7 +234,7 @@ class MetadataFieldConfigFactory {
     required String fieldName,
     required meta.FieldDefinition fieldDef,
     required meta.EntityMetadata metadata,
-    required GenericEntityService entityService,
+    GenericEntityService? entityService,
     bool readOnly = false,
   }) {
     // Generate label from field name
@@ -241,7 +267,8 @@ class MetadataFieldConfigFactory {
         readOnly: readOnly,
       ),
       meta.FieldType.integer ||
-      meta.FieldType.decimal => _createNumberFieldConfig(
+      meta.FieldType.decimal ||
+      meta.FieldType.currency => _createNumberFieldConfig(
         fieldName: fieldName,
         fieldDef: fieldDef,
         label: label,
@@ -409,6 +436,7 @@ class MetadataFieldConfigFactory {
     required bool readOnly,
   }) {
     return FieldConfig<Map<String, dynamic>, dynamic>(
+      fieldName: fieldName,
       fieldType: fieldDef.type == meta.FieldType.text
           ? FieldType.textArea
           : FieldType.text,
@@ -434,6 +462,7 @@ class MetadataFieldConfigFactory {
     required bool readOnly,
   }) {
     return FieldConfig<Map<String, dynamic>, dynamic>(
+      fieldName: fieldName,
       fieldType: FieldType.text,
       label: label,
       getValue: (map) => _safeToString(map[fieldName]),
@@ -457,6 +486,7 @@ class MetadataFieldConfigFactory {
     required bool readOnly,
   }) {
     return FieldConfig<Map<String, dynamic>, dynamic>(
+      fieldName: fieldName,
       fieldType: FieldType.text,
       label: label,
       getValue: (map) => _safeToString(map[fieldName]),
@@ -480,6 +510,7 @@ class MetadataFieldConfigFactory {
     required bool readOnly,
   }) {
     return FieldConfig<Map<String, dynamic>, dynamic>(
+      fieldName: fieldName,
       fieldType: FieldType.number,
       label: label,
       getValue: (map) {
@@ -509,6 +540,7 @@ class MetadataFieldConfigFactory {
     required bool readOnly,
   }) {
     return FieldConfig<Map<String, dynamic>, dynamic>(
+      fieldName: fieldName,
       fieldType: FieldType.boolean,
       label: label,
       getValue: (map) =>
@@ -528,6 +560,7 @@ class MetadataFieldConfigFactory {
     required bool readOnly,
   }) {
     return FieldConfig<Map<String, dynamic>, dynamic>(
+      fieldName: fieldName,
       fieldType: FieldType.date,
       label: label,
       getValue: (map) {
@@ -564,6 +597,7 @@ class MetadataFieldConfigFactory {
     final items = fieldDef.enumValues ?? <String>[];
 
     return FieldConfig<Map<String, dynamic>, dynamic>(
+      fieldName: fieldName,
       fieldType: FieldType.select,
       label: label,
       getValue: (map) {
@@ -588,14 +622,16 @@ class MetadataFieldConfigFactory {
   ///
   /// Loads related entities and displays them by their display field (e.g., name, email)
   /// while storing the ID value.
-  static FieldConfig<Map<String, dynamic>, dynamic>
+  ///
+  /// Returns null if entityService is not provided (FK fields require async loading).
+  static FieldConfig<Map<String, dynamic>, dynamic>?
   _createForeignKeyFieldConfig({
     required String fieldName,
     required meta.FieldDefinition fieldDef,
     required String label,
     required String? Function(dynamic)? validator,
     required bool readOnly,
-    required GenericEntityService entityService,
+    required GenericEntityService? entityService,
   }) {
     final relatedEntity = fieldDef.relatedEntity;
     final displayField = fieldDef.displayField ?? 'name';
@@ -603,6 +639,7 @@ class MetadataFieldConfigFactory {
     if (relatedEntity == null) {
       // Fallback to number input if no relationship defined
       return FieldConfig<Map<String, dynamic>, dynamic>(
+        fieldName: fieldName,
         fieldType: FieldType.number,
         label: label,
         getValue: (map) => map[fieldName] as int?,
@@ -615,10 +652,16 @@ class MetadataFieldConfigFactory {
       );
     }
 
+    // FK fields require entityService for async loading
+    if (entityService == null) {
+      return null;
+    }
+
     // Create human-readable label (remove "_id" suffix)
     final displayLabel = label.replaceAll(' Id', '').replaceAll(' ID', '');
 
     return FieldConfig<Map<String, dynamic>, dynamic>(
+      fieldName: fieldName,
       fieldType: FieldType.asyncSelect,
       label: displayLabel,
       getValue: (map) => map[fieldName] as int?,

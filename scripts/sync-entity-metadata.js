@@ -36,6 +36,11 @@ const PLURAL_OVERRIDES = {
   'Contract': 'Contracts',
   'Invoice': 'Invoices',
   'Inventory': 'Inventory',  // Inventory is uncountable - no 's'
+  'Preferences': 'Preferences',  // Already plural (or singular form of preferences)
+  'Notification': 'Notifications',
+  'Saved View': 'Saved Views',
+  'File Attachment': 'File Attachments',
+  'Audit Log': 'Audit Logs',
 };
 
 /**
@@ -62,7 +67,7 @@ function getPluralForm(singular) {
 /**
  * Transform backend field definition to frontend format
  */
-function transformField(fieldName, fieldDef, foreignKeys, relationships, enums) {
+function transformField(fieldName, fieldDef, foreignKeys, relationships, enums, allModels) {
   const result = { type: fieldDef.type };
   
   // Check if this is a foreign key field
@@ -71,19 +76,35 @@ function transformField(fieldName, fieldDef, foreignKeys, relationships, enums) 
     rel => rel.foreignKey === fieldName
   );
   
-  if (fkConfig || (fieldDef.type === 'integer' && fieldName.endsWith('_id') && relConfig)) {
+  // Helper to get display field for a related entity
+  const getDisplayFieldForEntity = (entityName) => {
+    const relatedMeta = allModels?.[entityName];
+    // Prefer identityField (e.g., 'email' for user, 'name' for role)
+    return relatedMeta?.identityField || 'name';
+  };
+  
+  // Handle foreignKey type - can come from:
+  // 1. Field type is directly 'foreignKey' with relatedEntity
+  // 2. FK config in foreignKeys section
+  // 3. Relationship config that references this field
+  // 4. Integer type field ending in _id with relationship
+  if (fieldDef.type === 'foreignKey' && fieldDef.relatedEntity) {
+    // Type is explicitly foreignKey with relatedEntity (e.g., audit_log.user_id)
+    result.relatedEntity = fieldDef.relatedEntity;
+    result.displayField = fieldDef.displayField || getDisplayFieldForEntity(fieldDef.relatedEntity);
+  } else if (fkConfig || (fieldDef.type === 'integer' && fieldName.endsWith('_id') && relConfig)) {
     result.type = 'foreignKey';
     
     // Determine related entity from relationship or FK config
     if (relConfig) {
       // Convert table name to entity name (e.g., 'roles' -> 'role')
       result.relatedEntity = relConfig.table.replace(/s$/, '');
-      // Use first non-id field as display field, or default to 'name'
+      // Use first non-id field as display field, or default to entity's identityField
       const displayFields = relConfig.fields?.filter(f => f !== 'id') || [];
-      result.displayField = displayFields[0] || 'name';
+      result.displayField = displayFields[0] || getDisplayFieldForEntity(result.relatedEntity);
     } else if (fkConfig) {
       result.relatedEntity = fkConfig.table.replace(/s$/, '');
-      result.displayField = 'name';
+      result.displayField = getDisplayFieldForEntity(result.relatedEntity);
     }
   }
   
@@ -181,8 +202,11 @@ function transformPreferenceSchema(schema) {
 
 /**
  * Transform a single backend model to frontend format
+ * @param {string} entityName - Entity name (snake_case)
+ * @param {object} backendMeta - Backend metadata for this entity
+ * @param {object} allModels - All backend models (for resolving FK display fields)
  */
-function transformModel(entityName, backendMeta) {
+function transformModel(entityName, backendMeta, allModels) {
   const result = {
     tableName: backendMeta.tableName,
     primaryKey: backendMeta.primaryKey || 'id',
@@ -228,6 +252,10 @@ function transformModel(entityName, backendMeta) {
     result.systemProtected = backendMeta.systemProtected;
   }
   
+  // Field groups (for semantic grouping in forms/UI)
+  // Always include to maintain consistent contract
+  result.fieldGroups = backendMeta.fieldGroups || {};
+  
   // Relationships
   const relationships = transformRelationships(
     backendMeta.foreignKeys,
@@ -245,7 +273,8 @@ function transformModel(entityName, backendMeta) {
       fieldDef,
       backendMeta.foreignKeys,
       backendMeta.relationships,
-      backendMeta.enums
+      backendMeta.enums,
+      allModels
     );
   }
 
@@ -280,7 +309,7 @@ function syncMetadata() {
     // Use entityName directly - camelCase is the canonical format across all layers
     // No conversion! Backend and frontend use the SAME entity names.
     console.log(`  ✓ ${entityName}`);
-    frontendMetadata[entityName] = transformModel(entityName, backendMeta);
+    frontendMetadata[entityName] = transformModel(entityName, backendMeta, backendModels);
     entities.push(entityName);
   }
   

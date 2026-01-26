@@ -15,6 +15,7 @@ const {
   UNIVERSAL_FIELD_ACCESS,
 } = require('../constants');
 const { NAME_TYPES } = require('../entity-types');
+const { createAddressFields, createAddressFieldAccess } = require('../field-type-standards');
 
 module.exports = {
   // Table name in database
@@ -99,14 +100,32 @@ module.exports = {
     useGenericRouter: true,
   },
 
-  // ============================================================================
-  // FIELD ALIASING (for UI display names)
-  // ============================================================================
+  fieldGroups: {
+    identity: {
+      label: 'Work Order Details',
+      fields: ['work_order_number', 'name', 'summary'],
+      order: 1,
+    },
+    assignment: {
+      label: 'Assignment',
+      fields: ['customer_id', 'assigned_technician_id', 'priority', 'status'],
+      rows: [['priority', 'status']],
+      order: 2,
+    },
+    scheduling: {
+      label: 'Scheduling',
+      fields: ['scheduled_start', 'scheduled_end', 'completed_at'],
+      rows: [['scheduled_start', 'scheduled_end']],
+      order: 3,
+    },
+    location_address: {
+      label: 'Work Location',
+      fields: ['location_line1', 'location_line2', 'location_city', 'location_state', 'location_postal_code', 'location_country'],
+      rows: [['location_city', 'location_state', 'location_postal_code']],
+      order: 4,
+    },
+  },
 
-  /**
-   * Field aliases for UI display. Key = field name, Value = display label
-   * work_order.name is displayed as "Title" in the UI
-   */
   fieldAliases: {
     name: 'Title',
   },
@@ -223,6 +242,9 @@ module.exports = {
       update: 'technician',
       delete: 'none',
     },
+
+    // Location address fields - customer creates, dispatcher+ edits
+    ...createAddressFieldAccess('location', 'customer', { updateRole: 'dispatcher' }),
   },
 
   // ============================================================================
@@ -394,5 +416,8 @@ module.exports = {
     scheduled_start: { type: 'timestamp' },
     scheduled_end: { type: 'timestamp' },
     completed_at: { type: 'timestamp' },
+
+    // Flat address fields for work location (using field-type-standards generators)
+    ...createAddressFields('location'),
   },
 };

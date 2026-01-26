@@ -15,6 +15,7 @@ const {
   UNIVERSAL_FIELD_ACCESS,
 } = require('../constants');
 const { NAME_TYPES } = require('../entity-types');
+const { FIELD } = require('../field-type-standards');
 
 module.exports = {
   // Table name in database
@@ -103,13 +104,8 @@ module.exports = {
     useGenericRouter: true,
   },
 
-  // ============================================================================
-  // FIELD ALIASING (for UI display names)
-  // ============================================================================
-  /**
-   * Field aliases for UI display. Key = field name, Value = display label
-   * Empty object = use field names as-is
-   */
+  fieldGroups: {},
+
   fieldAliases: {},
 
   // ============================================================================
@@ -306,7 +302,7 @@ module.exports = {
   fields: {
     // TIER 1: Universal Entity Contract Fields
     id: { type: 'integer', readonly: true },
-    name: { type: 'string', required: true, maxLength: 255 },
+    name: { ...FIELD.NAME, required: true },
     is_active: { type: 'boolean', default: true },
     created_at: { type: 'timestamp', readonly: true },
     updated_at: { type: 'timestamp', readonly: true },
@@ -319,12 +315,12 @@ module.exports = {
     },
 
     // Entity-specific fields
-    sku: { type: 'string', required: true, maxLength: 100 },
-    description: { type: 'text' },
+    sku: { ...FIELD.SKU, required: true },
+    description: FIELD.DESCRIPTION,
     quantity: { type: 'integer', default: 0 },
     reorder_level: { type: 'integer', default: 10 },
-    unit_cost: { type: 'decimal' },
-    location: { type: 'string', maxLength: 255 },
-    supplier: { type: 'string', maxLength: 255 },
+    unit_cost: FIELD.CURRENCY,
+    location: FIELD.NAME,
+    supplier: FIELD.NAME,
   },
 };

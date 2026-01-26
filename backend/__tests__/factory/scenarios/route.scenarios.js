@@ -67,6 +67,24 @@ function adminCanAccess(routeMeta, endpointMeta, ctx) {
   });
 }
 
+/**
+ * Test: Public endpoints are accessible without auth
+ */
+function publicEndpointsAccessible(routeMeta, endpointMeta, ctx) {
+  // Only test endpoints explicitly marked as public
+  if (endpointMeta.auth !== 'public') return;
+  if (routeMeta.auth?.required && !endpointMeta.auth) return;
+
+  const fullPath = buildPath(routeMeta.basePath, endpointMeta.path);
+
+  ctx.it(`is accessible without authentication`, async () => {
+    const response = await makeRequest(ctx.request, endpointMeta.method, fullPath, null);
+    // Should return success, not 401/403
+    ctx.expect([401, 403]).not.toContain(response.status);
+    ctx.expect(response.status).toBeLessThan(500);
+  });
+}
+
 // =============================================================================
 // PARAMETER VALIDATION SCENARIOS
 // =============================================================================
@@ -83,7 +101,7 @@ function validatesIdParams(routeMeta, endpointMeta, ctx) {
 
   for (const [paramName] of idParams) {
     ctx.it(`validates ${paramName} as integer`, async () => {
-      const auth = await ctx.authHeader('admin');
+      const auth = await getAppropriateAuth(routeMeta, endpointMeta, ctx);
       const badPath = buildPath(
         routeMeta.basePath,
         endpointMeta.path.replace(`:${paramName}`, 'invalid'),
@@ -107,7 +125,7 @@ function rejectsNegativeIds(routeMeta, endpointMeta, ctx) {
 
   for (const [paramName] of idParams) {
     ctx.it(`rejects negative ${paramName}`, async () => {
-      const auth = await ctx.authHeader('admin');
+      const auth = await getAppropriateAuth(routeMeta, endpointMeta, ctx);
       const badPath = buildPath(
         routeMeta.basePath,
         endpointMeta.path.replace(`:${paramName}`, '-1'),
@@ -132,7 +150,7 @@ function supportsPagination(routeMeta, endpointMeta, ctx) {
   const fullPath = buildPath(routeMeta.basePath, endpointMeta.path);
 
   ctx.it(`accepts limit and offset query params`, async () => {
-    const auth = await ctx.authHeader('admin');
+    const auth = await getAppropriateAuth(routeMeta, endpointMeta, ctx);
     const response = await makeRequest(
       ctx.request,
       endpointMeta.method,
@@ -153,7 +171,7 @@ function handlesExcessiveLimit(routeMeta, endpointMeta, ctx) {
   const fullPath = buildPath(routeMeta.basePath, endpointMeta.path);
 
   ctx.it(`handles excessive limit gracefully`, async () => {
-    const auth = await ctx.authHeader('admin');
+    const auth = await getAppropriateAuth(routeMeta, endpointMeta, ctx);
     const response = await makeRequest(
       ctx.request,
       endpointMeta.method,
@@ -174,7 +192,7 @@ function rejectsInvalidPagination(routeMeta, endpointMeta, ctx) {
   const fullPath = buildPath(routeMeta.basePath, endpointMeta.path);
 
   ctx.it(`handles invalid offset gracefully`, async () => {
-    const auth = await ctx.authHeader('admin');
+    const auth = await getAppropriateAuth(routeMeta, endpointMeta, ctx);
     const response = await makeRequest(
       ctx.request,
       endpointMeta.method,
@@ -201,7 +219,7 @@ function hasConsistentResponseFormat(routeMeta, endpointMeta, ctx) {
   const fullPath = buildPath(routeMeta.basePath, endpointMeta.path);
 
   ctx.it(`returns consistent response format`, async () => {
-    const auth = await ctx.authHeader('admin');
+    const auth = await getAppropriateAuth(routeMeta, endpointMeta, ctx);
     const response = await makeRequest(ctx.request, endpointMeta.method, fullPath, auth);
 
     // If successful, should have standard format
@@ -224,7 +242,7 @@ function listReturnsArray(routeMeta, endpointMeta, ctx) {
   const fullPath = buildPath(routeMeta.basePath, endpointMeta.path);
 
   ctx.it(`returns array or paginated response for list behavior`, async () => {
-    const auth = await ctx.authHeader('admin');
+    const auth = await getAppropriateAuth(routeMeta, endpointMeta, ctx);
     const response = await makeRequest(ctx.request, endpointMeta.method, fullPath, auth);
 
     if (response.status === 200) {
@@ -257,7 +275,7 @@ function handlesNotFound(routeMeta, endpointMeta, ctx) {
   const fullPath = buildPath(routeMeta.basePath, endpointMeta.path.replace(':id', '999999'));
 
   ctx.it(`returns 404 for non-existent resource`, async () => {
-    const auth = await ctx.authHeader('admin');
+    const auth = await getAppropriateAuth(routeMeta, endpointMeta, ctx);
     const response = await makeRequest(ctx.request, endpointMeta.method, fullPath, auth);
     // Either 404 or 200 with null/empty (both acceptable patterns)
     ctx.expect([200, 404]).toContain(response.status);
@@ -274,7 +292,7 @@ function deleteHandlesNotFound(routeMeta, endpointMeta, ctx) {
   const fullPath = buildPath(routeMeta.basePath, endpointMeta.path.replace(':id', '999999'));
 
   ctx.it(`returns 404 for DELETE on non-existent`, async () => {
-    const auth = await ctx.authHeader('admin');
+    const auth = await getAppropriateAuth(routeMeta, endpointMeta, ctx);
     const response = await makeRequest(ctx.request, endpointMeta.method, fullPath, auth);
     ctx.expect([404, 204]).toContain(response.status);
   });
@@ -291,7 +309,7 @@ function rejectsEmptyBody(routeMeta, endpointMeta, ctx) {
   const fullPath = buildPath(routeMeta.basePath, endpointMeta.path);
 
   ctx.it(`rejects empty body on ${endpointMeta.behavior}`, async () => {
-    const auth = await ctx.authHeader('admin');
+    const auth = await getAppropriateAuth(routeMeta, endpointMeta, ctx);
     const response = await makeRequest(ctx.request, endpointMeta.method, fullPath, auth, {});
     // Should reject with 400 or 422
     ctx.expect([400, 422]).toContain(response.status);
@@ -315,7 +333,7 @@ function actionHandlesInvalidInput(routeMeta, endpointMeta, ctx) {
     .replace('/1/', '/999999/'); // Replace test ID with non-existent
 
   ctx.it(`handles action on non-existent resource`, async () => {
-    const auth = await ctx.authHeader('admin');
+    const auth = await getAppropriateAuth(routeMeta, endpointMeta, ctx);
     const response = await makeRequest(ctx.request, endpointMeta.method, fullPath, auth);
     // Should return 404 or 400, not 500
     ctx.expect([400, 404, 409, 422]).toContain(response.status);
@@ -332,7 +350,7 @@ function errorsDoNotLeakData(routeMeta, endpointMeta, ctx) {
   const badPath = buildPath(routeMeta.basePath, endpointMeta.path.replace(/:id\b/g, 'invalid'));
 
   ctx.it(`error responses don't leak sensitive data`, async () => {
-    const auth = await ctx.authHeader('admin');
+    const auth = await getAppropriateAuth(routeMeta, endpointMeta, ctx);
     const response = await makeRequest(ctx.request, endpointMeta.method, badPath, auth);
 
     if (response.status >= 400) {
@@ -378,6 +396,27 @@ function getInsufficientRole(requiredRole) {
 }
 
 /**
+ * Determine the appropriate auth for a request based on route/endpoint metadata.
+ * Returns null for public endpoints, otherwise returns admin auth.
+ * 
+ * PRINCIPLE: Non-auth scenarios test FUNCTIONALITY, not permissions.
+ * For authenticated routes, use admin to ensure access so we can test
+ * response formats, error handling, etc. without permission interference.
+ * Auth-specific scenarios (requiresAuthentication, requiresMinimumRole, etc.)
+ * test permissions separately.
+ */
+async function getAppropriateAuth(routeMeta, endpointMeta, ctx) {
+  // If endpoint is explicitly public, no auth needed
+  if (endpointMeta.auth === 'public') return null;
+  
+  // If route doesn't require auth and endpoint doesn't override, no auth needed
+  if (!routeMeta.auth?.required && !endpointMeta.minRole) return null;
+  
+  // For authenticated routes, use admin to guarantee access for functional tests
+  return ctx.authHeader('admin');
+}
+
+/**
  * Make HTTP request with optional auth
  */
 async function makeRequest(request, method, path, auth = null, body = null) {
@@ -404,6 +443,7 @@ module.exports = {
   requiresAuthentication,
   requiresMinimumRole,
   adminCanAccess,
+  publicEndpointsAccessible,
 
   // Validation scenarios
   validatesIdParams,

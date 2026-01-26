@@ -14,6 +14,7 @@ const {
   UNIVERSAL_FIELD_ACCESS,
 } = require('../constants');
 const { NAME_TYPES } = require('../entity-types');
+const { createAddressFields, createAddressFieldAccess } = require('../field-type-standards');
 
 module.exports = {
   // Table name in database
@@ -93,6 +94,32 @@ module.exports = {
     useGenericRouter: true,
   },
 
+  fieldGroups: {
+    identity: {
+      label: 'Identity',
+      fields: ['first_name', 'last_name'],
+      rows: [['first_name', 'last_name']],
+      order: 1,
+    },
+    contact: {
+      label: 'Contact Information',
+      fields: ['email', 'phone', 'organization_name'],
+      order: 2,
+    },
+    billing_address: {
+      label: 'Billing Address',
+      fields: ['billing_line1', 'billing_line2', 'billing_city', 'billing_state', 'billing_postal_code', 'billing_country'],
+      rows: [['billing_city', 'billing_state', 'billing_postal_code']],
+      order: 3,
+    },
+    service_address: {
+      label: 'Service Address',
+      fields: ['service_line1', 'service_line2', 'service_city', 'service_state', 'service_postal_code', 'service_country'],
+      rows: [['service_city', 'service_state', 'service_postal_code']],
+      order: 4,
+    },
+  },
+
   // ============================================================================
   // FIELD ALIASING (for UI display names)
   // ============================================================================
@@ -169,19 +196,9 @@ module.exports = {
       delete: 'none',
     },
 
-    // Addresses - customer can update their own, internal teams can view
-    billing_address: {
-      create: 'dispatcher',
-      read: 'customer',
-      update: 'customer',
-      delete: 'none',
-    },
-    service_address: {
-      create: 'dispatcher',
-      read: 'customer',
-      update: 'customer',
-      delete: 'none',
-    },
+    // Flat address fields - customer can update their own, internal teams can view
+    ...createAddressFieldAccess('billing', 'customer'),
+    ...createAddressFieldAccess('service', 'customer'),
   },
 
   // ============================================================================
@@ -314,7 +331,9 @@ module.exports = {
     // Entity-specific fields
     phone: { type: 'phone', maxLength: 50 },
     organization_name: { type: 'string', maxLength: 255 },
-    billing_address: { type: 'jsonb' },
-    service_address: { type: 'jsonb' },
+
+    // Flat address fields (using field-type-standards generators)
+    ...createAddressFields('billing'),
+    ...createAddressFields('service'),
   },
 };

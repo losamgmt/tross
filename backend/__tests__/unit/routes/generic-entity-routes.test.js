@@ -69,7 +69,6 @@ jest.mock('../../../services/audit-service');
 jest.mock('../../../utils/request-helpers', () => ({
   getClientIp: jest.fn(() => '127.0.0.1'),
   getUserAgent: jest.fn(() => 'test-agent'),
-  getAuditMetadata: jest.fn(() => ({ ip: '127.0.0.1', userAgent: 'test' })),
 }));
 
 jest.mock('../../../middleware/auth', () => {

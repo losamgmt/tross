@@ -4,25 +4,24 @@
  * Coverage Threshold Checker
  *
  * Reads coverage/coverage-summary.json and validates against thresholds.
+ * Uses config/coverage-standards.js as SSOT for threshold value.
  * Exits with code 1 if any threshold is not met.
  *
  * Usage:
- *   node scripts/check-coverage.js [--threshold=80]
+ *   node scripts/check-coverage.js
  */
 
 const fs = require('fs');
 const path = require('path');
 
-// Parse command line args
-const args = process.argv.slice(2);
-const thresholdArg = args.find(arg => arg.startsWith('--threshold='));
-const THRESHOLD = thresholdArg ? parseInt(thresholdArg.split('=')[1]) : 80;
+// Import threshold from SSOT
+const { COVERAGE_THRESHOLD } = require('../config/coverage-standards');
 
 const COVERAGE_FILE = path.join(__dirname, '../coverage/coverage-summary.json');
 
 function checkCoverage() {
   console.log('\n📊 Coverage Threshold Check');
-  console.log(`Required: ${THRESHOLD}% for all metrics\n`);
+  console.log(`Required: ${COVERAGE_THRESHOLD}% for all metrics (from coverage-standards.js)\n`);
 
   // Check if coverage file exists
   if (!fs.existsSync(COVERAGE_FILE)) {
@@ -60,7 +59,7 @@ function checkCoverage() {
     }
 
     const percentage = data.pct;
-    const passed = percentage >= THRESHOLD;
+    const passed = percentage >= COVERAGE_THRESHOLD;
     allPassed = allPassed && passed;
 
     const icon = passed ? '✅' : '❌';
@@ -93,7 +92,7 @@ function checkCoverage() {
     console.log('\n✅ All coverage thresholds met!\n');
     process.exit(0);
   } else {
-    console.log(`\n❌ Coverage thresholds not met. Required: ${THRESHOLD}%\n`);
+    console.log(`\n❌ Coverage thresholds not met. Required: ${COVERAGE_THRESHOLD}%\n`);
     process.exit(1);
   }
 }

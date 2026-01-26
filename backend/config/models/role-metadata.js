@@ -16,6 +16,7 @@ const {
 } = require('../constants');
 const { getRoleHierarchy } = require('../role-hierarchy-loader');
 const { NAME_TYPES } = require('../entity-types');
+const { FIELD } = require('../field-type-standards');
 
 module.exports = {
   // Table name in database
@@ -96,14 +97,8 @@ module.exports = {
     useGenericRouter: true,
   },
 
-  // ============================================================================
-  // FIELD ALIASING (for UI display names)
-  // ============================================================================
+  fieldGroups: {},
 
-  /**
-   * Field aliases for UI display. Key = field name, Value = display label
-   * Empty object = use field names as-is
-   */
   fieldAliases: {},
 
   // ============================================================================
@@ -359,8 +354,9 @@ module.exports = {
   fields: {
     // TIER 1: Universal Entity Contract Fields
     id: { type: 'integer', readonly: true },
+    // Role name - uses FIELD.NAME with custom validation for role-specific pattern
     name: {
-      type: 'string',
+      ...FIELD.NAME,
       required: true,
       minLength: 2,
       maxLength: 100,
@@ -386,7 +382,7 @@ module.exports = {
     },
 
     // Entity-specific fields
-    description: { type: 'text' },
+    description: FIELD.DESCRIPTION,
     // Priority starts at 10 in examples to avoid seed data (priorities 1-5)
     priority: { type: 'integer', required: true, min: 1, examples: { valid: [10, 20, 30] } },
   },

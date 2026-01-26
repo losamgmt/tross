@@ -99,8 +99,74 @@ describe('field-type-standards', () => {
     describe('DESCRIPTION', () => {
       it('should have correct structure', () => {
         expect(FIELD.DESCRIPTION).toEqual({
-          type: 'string',
+          type: 'text',  // Semantic type for long-form content
           maxLength: 5000,
+        });
+      });
+    });
+
+    // ---- New FIELD constants added in Phase 1 ----
+
+    describe('TITLE', () => {
+      it('should have correct structure', () => {
+        expect(FIELD.TITLE).toEqual({
+          type: 'string',
+          maxLength: 150,
+        });
+      });
+    });
+
+    describe('NOTES', () => {
+      it('should have correct structure', () => {
+        expect(FIELD.NOTES).toEqual({
+          type: 'text',
+          maxLength: 10000,
+        });
+      });
+    });
+
+    describe('TERMS', () => {
+      it('should have correct structure', () => {
+        expect(FIELD.TERMS).toEqual({
+          type: 'text',
+          maxLength: 50000,
+        });
+      });
+    });
+
+    describe('IDENTIFIER', () => {
+      it('should have correct structure', () => {
+        expect(FIELD.IDENTIFIER).toEqual({
+          type: 'string',
+          maxLength: 100,
+        });
+      });
+    });
+
+    describe('SKU', () => {
+      it('should have correct structure', () => {
+        expect(FIELD.SKU).toEqual({
+          type: 'string',
+          maxLength: 50,
+        });
+      });
+    });
+
+    describe('CURRENCY', () => {
+      it('should have correct structure', () => {
+        expect(FIELD.CURRENCY).toEqual({
+          type: 'currency',
+          precision: 2,
+          min: 0,
+        });
+      });
+    });
+
+    describe('URL', () => {
+      it('should have correct structure', () => {
+        expect(FIELD.URL).toEqual({
+          type: 'url',
+          maxLength: 2048,
         });
       });
     });

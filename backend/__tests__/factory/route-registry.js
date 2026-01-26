@@ -20,6 +20,16 @@
  */
 
 module.exports = {
+  health: {
+    basePath: '/api/health',
+    auth: { required: false }, // Public endpoints (liveness/readiness probes)
+    endpoints: [
+      { method: 'GET', path: '/', behavior: 'getOne', auth: 'public', description: 'Liveness probe - basic health check' },
+      { method: 'GET', path: '/ready', behavior: 'getOne', auth: 'public', description: 'Readiness probe - checks DB and Auth0' },
+      { method: 'GET', path: '/databases', behavior: 'getOne', auth: 'admin', minRole: 'admin', description: 'Detailed database health (admin only)' },
+    ],
+  },
+
   admin: {
     basePath: '/api/admin',
     auth: { required: true, minRole: 'admin' },
@@ -84,12 +94,15 @@ module.exports = {
   preferences: {
     basePath: '/api/preferences',
     auth: { required: true, minRole: 'viewer' },
+    // Uses generic entity router with sharedPrimaryKey pattern
+    // Tested via entity runner, not route runner
+    isDynamic: true,
     endpoints: [
-      { method: 'GET', path: '/', behavior: 'getOne', description: 'Get user preferences' },
-      { method: 'PUT', path: '/', behavior: 'update', body: { preferences: 'object' }, description: 'Update preferences' },
-      { method: 'PUT', path: '/:key', behavior: 'update', paramTypes: { key: 'string' }, description: 'Update specific preference' },
-      { method: 'POST', path: '/reset', behavior: 'action', description: 'Reset preferences to defaults' },
-      { method: 'GET', path: '/schema', behavior: 'getOne', public: true, description: 'Get preference schema (public)' },
+      { method: 'GET', path: '/', behavior: 'list', pagination: true, description: 'List preferences' },
+      { method: 'GET', path: '/:id', behavior: 'getOne', paramTypes: { id: 'id' }, description: 'Get preferences by ID (= userId)' },
+      { method: 'POST', path: '/', behavior: 'create', description: 'Create preferences (id = userId required)' },
+      { method: 'PATCH', path: '/:id', behavior: 'update', paramTypes: { id: 'id' }, description: 'Update preferences' },
+      { method: 'DELETE', path: '/:id', behavior: 'delete', paramTypes: { id: 'id' }, description: 'Delete preferences' },
     ],
   },
 

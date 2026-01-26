@@ -62,6 +62,10 @@ enum FieldType {
 /// )
 /// ```
 class FieldConfig<T, V> {
+  /// The canonical field name (e.g., 'first_name', 'email')
+  /// Used for field grouping lookup - more reliable than parsing from label.
+  final String? fieldName;
+
   final FieldType fieldType;
   final String label;
   final V Function(T) getValue;
@@ -119,6 +123,7 @@ class FieldConfig<T, V> {
   final int? maxLines;
 
   const FieldConfig({
+    this.fieldName,
     required this.fieldType,
     required this.label,
     required this.getValue,

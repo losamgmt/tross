@@ -338,6 +338,9 @@ class _EntityFormDialogState extends State<_EntityFormDialog> {
         ? 'Edit ${widget.metadata.displayName}'
         : 'Create ${widget.metadata.displayName}';
 
+    // Use grouped layout if metadata has field groups
+    final useGroupedLayout = widget.metadata.hasFieldGroups;
+
     // Pure composition: GenericModal + GenericForm
     return GenericModal(
       title: title,
@@ -347,6 +350,10 @@ class _EntityFormDialogState extends State<_EntityFormDialog> {
         key: _formKey,
         value: _data,
         fields: widget.fields,
+        layout: useGroupedLayout ? FormLayout.grouped : FormLayout.flat,
+        fieldGroups: useGroupedLayout
+            ? widget.metadata.sortedFieldGroups
+            : null,
         onChange: (data) => setState(() => _data = data),
         enabled: !_isSaving,
       ),

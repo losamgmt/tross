@@ -146,7 +146,6 @@ const devAuthRoutes = require('./routes/dev-auth');
 const auth0Routes = require('./routes/auth0');
 const healthRoutes = require('./routes/health');
 const schemaRoutes = require('./routes/schema');
-const preferencesRoutes = require('./routes/preferences');
 const rolesExtensions = require('./routes/roles-extensions');
 const statsRoutes = require('./routes/stats');
 const exportRoutes = require('./routes/export');
@@ -179,7 +178,6 @@ app.use('/api/roles', apiLimiter, rolesExtensions); // Extension: /:id/users
 // =============================================================================
 // CUSTOM ENTITY ROUTES (specialized logic, not generic CRUD)
 // =============================================================================
-app.use('/api/preferences', apiLimiter, preferencesRoutes); // Shared-PK pattern
 app.use('/api/files', apiLimiter, filesRoutes); // Polymorphic attachments + streaming
 
 // =============================================================================

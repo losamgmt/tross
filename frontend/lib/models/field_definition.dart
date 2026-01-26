@@ -15,6 +15,7 @@ enum FieldType {
   date,
   jsonb,
   decimal,
+  currency, // Monetary amounts (stored as int cents)
   enumType, // 'enum' is reserved in Dart
   text,
   uuid,
@@ -99,6 +100,7 @@ class FieldDefinition {
       'date' => FieldType.date,
       'jsonb' || 'json' => FieldType.jsonb,
       'decimal' || 'float' || 'double' || 'number' => FieldType.decimal,
+      'currency' => FieldType.currency,
       'enum' => FieldType.enumType,
       'text' => FieldType.text,
       'uuid' => FieldType.uuid,

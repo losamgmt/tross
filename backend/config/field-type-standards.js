@@ -116,8 +116,83 @@ const FIELD = Object.freeze({
    * - Max length: 5000
    */
   DESCRIPTION: Object.freeze({
-    type: 'string',
+    type: 'text',
     maxLength: 5000,
+  }),
+
+  // ---- Additional Text Fields ----
+
+  /**
+   * Standard title field (for documents, items)
+   * - Max length: 150
+   */
+  TITLE: Object.freeze({
+    type: 'string',
+    maxLength: 150,
+  }),
+
+  /**
+   * Internal notes field
+   * - Max length: 10000
+   */
+  NOTES: Object.freeze({
+    type: 'text',
+    maxLength: 10000,
+  }),
+
+  /**
+   * Legal terms field (contracts, invoices)
+   * - Max length: 50000
+   */
+  TERMS: Object.freeze({
+    type: 'text',
+    maxLength: 50000,
+  }),
+
+  // ---- Identifier Fields ----
+
+  /**
+   * General identifier field (order numbers, etc.)
+   * - Max length: 100
+   * - Typically immutable and unique
+   */
+  IDENTIFIER: Object.freeze({
+    type: 'string',
+    maxLength: 100,
+  }),
+
+  /**
+   * SKU field (products, inventory)
+   * - Max length: 50
+   * - Typically immutable and unique
+   */
+  SKU: Object.freeze({
+    type: 'string',
+    maxLength: 50,
+  }),
+
+  // ---- Currency/Financial Fields ----
+
+  /**
+   * Standard currency field
+   * - Decimal with 2 decimal places
+   * - Minimum 0 (no negative amounts)
+   */
+  CURRENCY: Object.freeze({
+    type: 'currency',
+    precision: 2,
+    min: 0,
+  }),
+
+  // ---- URL Field ----
+
+  /**
+   * Standard URL field
+   * - Max length: 2048 (browser URL limit)
+   */
+  URL: Object.freeze({
+    type: 'url',
+    maxLength: 2048,
   }),
 
   // ---- Address Component Fields ----
@@ -250,9 +325,10 @@ function createAddressFields(prefix, options = {}) {
  * Generate field access rules for address fields
  *
  * @param {string} prefix - Field name prefix (e.g., 'location', 'billing')
- * @param {string} minRole - Minimum role for create/update (e.g., 'customer', 'dispatcher')
+ * @param {string} minRole - Minimum role for create (e.g., 'customer', 'dispatcher')
  * @param {Object} [options={}] - Configuration options
  * @param {string} [options.readRole='customer'] - Minimum role for read access
+ * @param {string} [options.updateRole] - Minimum role for update access (defaults to minRole)
  * @returns {Object} Object with 6 field access definitions
  *
  * @example
@@ -266,14 +342,20 @@ function createAddressFields(prefix, options = {}) {
  * fieldAccess: {
  *   ...createAddressFieldAccess('billing', 'dispatcher', { readRole: 'customer' }),
  * }
+ *
+ * @example
+ * // Customer creates, dispatcher updates
+ * fieldAccess: {
+ *   ...createAddressFieldAccess('location', 'customer', { updateRole: 'dispatcher' }),
+ * }
  */
 function createAddressFieldAccess(prefix, minRole, options = {}) {
-  const { readRole = 'customer' } = options;
+  const { readRole = 'customer', updateRole = minRole } = options;
 
   const accessDef = Object.freeze({
     create: minRole,
     read: readRole,
-    update: minRole,
+    update: updateRole,
     delete: 'none',
   });
 

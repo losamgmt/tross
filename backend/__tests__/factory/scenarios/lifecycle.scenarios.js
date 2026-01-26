@@ -3,19 +3,40 @@
  *
  * Pure functions testing entity lifecycle: timestamps, status, soft-delete.
  * Driven by Entity Contract v2.0 universal fields.
+ *
+ * NOTE: Not all entities have all lifecycle fields. For example:
+ * - preferences: No is_active (1:1 user settings table, lifecycle bound to user)
+ * - Some entities may not expose created_at in their response
  */
 
 const { getCapabilities } = require('./scenario-helpers');
 
 /**
+ * Check if entity has a specific field that is visible to admin (read access)
+ * @param {Object} meta - Entity metadata
+ * @param {string} fieldName - Field to check
+ * @returns {boolean} Whether entity has this field readable by admin
+ */
+function hasVisibleField(meta, fieldName) {
+  if (!meta.fieldAccess) return false;
+  const access = meta.fieldAccess[fieldName];
+  if (!access) return false;
+  // Field must be readable by at least admin (not 'none')
+  return access.read !== 'none';
+}
+
+/**
  * Scenario: created_at set on create
  *
- * Preconditions: API create is not disabled
+ * Preconditions:
+ * - API create is not disabled
+ * - Entity has created_at field
  * Tests: created_at is auto-populated on create
  */
 function createdAtSetOnCreate(meta, ctx) {
   const caps = getCapabilities(meta);
   if (!caps.canCreate) return; // Create disabled = scenario N/A
+  if (!hasVisibleField(meta, 'created_at')) return; // Entity doesn't have visible created_at
 
   ctx.it(`POST /api/${meta.tableName} - sets created_at automatically`, async () => {
     const beforeCreate = new Date();
@@ -39,12 +60,15 @@ function createdAtSetOnCreate(meta, ctx) {
 /**
  * Scenario: is_active defaults to true
  *
- * Preconditions: API create is not disabled
+ * Preconditions:
+ * - API create is not disabled
+ * - Entity has is_active field
  * Tests: New entities have is_active=true by default
  */
 function isActiveDefaultsToTrue(meta, ctx) {
   const caps = getCapabilities(meta);
   if (!caps.canCreate) return; // Create disabled = scenario N/A
+  if (!hasVisibleField(meta, 'is_active')) return; // Entity doesn't have visible is_active
 
   ctx.it(`POST /api/${meta.tableName} - defaults is_active to true`, async () => {
     // Use buildMinimalWithFKs to resolve any FK dependencies
@@ -65,7 +89,9 @@ function isActiveDefaultsToTrue(meta, ctx) {
 /**
  * Scenario: GET list excludes inactive records by default
  *
- * Preconditions: API create is not disabled
+ * Preconditions:
+ * - API create is not disabled
+ * - Entity has is_active field
  * Tests: Records with is_active=false are NOT returned in list without explicit flag
  *
  * This tests the server-side filter in GenericEntityService.findAll():
@@ -74,6 +100,7 @@ function isActiveDefaultsToTrue(meta, ctx) {
 function getListExcludesInactiveRecords(meta, ctx) {
   const caps = getCapabilities(meta);
   if (!caps.canCreate) return; // Create disabled = scenario N/A
+  if (!hasVisibleField(meta, 'is_active')) return; // Entity doesn't have visible is_active
 
   ctx.it(`GET /api/${meta.tableName} - excludes inactive records by default`, async () => {
     const auth = await ctx.authHeader('admin');

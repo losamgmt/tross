@@ -52,16 +52,29 @@ ON CONFLICT (email) DO UPDATE SET
 
 -- ============================================================================
 -- USER PREFERENCES (linked to admin user)
+-- Uses individual columns per schema.sql (NOT JSONB)
 -- ============================================================================
 INSERT INTO preferences (
     id,
-    preferences
+    theme,
+    density,
+    notifications_enabled,
+    items_per_page,
+    notification_retention_days,
+    auto_refresh_interval
 ) VALUES (
     (SELECT id FROM users WHERE email = 'zarika.amber@gmail.com'),
-    '{"theme": "system", "notificationsEnabled": true}'::jsonb
+    'system',
+    'comfortable',
+    true,
+    25,
+    30,
+    0
 )
 ON CONFLICT (id) DO UPDATE SET
-    preferences = EXCLUDED.preferences;
+    theme = EXCLUDED.theme,
+    density = EXCLUDED.density,
+    notifications_enabled = EXCLUDED.notifications_enabled;
 
 -- ============================================================================
 -- VERIFICATION

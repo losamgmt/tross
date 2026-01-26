@@ -334,24 +334,39 @@ function deriveFieldValidation(fieldName, fieldDef, _entityName) {
 
 /**
  * Map metadata field type to validation type
+ *
+ * MUST match TYPE_BUILDERS in validation-loader.js exactly.
+ * Supported types: string, text, email, phone, url, time,
+ *                  integer, decimal, boolean, object,
+ *                  date, timestamp, enum
  */
 function mapFieldType(metaType) {
   const typeMap = {
+    // String-based types
     string: 'string',
+    text: 'text',
+    email: 'email',
+    phone: 'phone',
+    url: 'url',
+    time: 'time',
+
+    // Numeric types
     integer: 'integer',
-    number: 'number',
+    decimal: 'decimal',
+    currency: 'currency', // First-class currency type
+    foreignKey: 'integer',
+
+    // Other types
     boolean: 'boolean',
-    email: 'string',
-    phone: 'string',
-    timestamp: 'date',
-    date: 'date',
     jsonb: 'object',
     json: 'object',
-    enum: 'string',
-    foreignKey: 'integer',
-    decimal: 'number',
-    currency: 'number',
-    text: 'string',
+
+    // Date/time types
+    timestamp: 'timestamp',
+    date: 'date',
+
+    // Enum handled specially by caller
+    enum: 'enum',
   };
   return typeMap[metaType] || 'string';
 }
@@ -366,7 +381,7 @@ function generateDefaultErrorMessages(fieldName, validation) {
   if (validation.required) {
     messages.required = `${capitalize(humanName)} is required`;
   }
-  if (validation.type === 'integer' || validation.type === 'number') {
+  if (validation.type === 'integer' || validation.type === 'decimal' || validation.type === 'currency') {
     messages.type = `${capitalize(humanName)} must be a number`;
   }
   if (validation.min !== undefined) {

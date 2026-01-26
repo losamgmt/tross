@@ -15,6 +15,7 @@ const {
   UNIVERSAL_FIELD_ACCESS,
 } = require('../constants');
 const { NAME_TYPES } = require('../entity-types');
+const { FIELD } = require('../field-type-standards');
 
 module.exports = {
   // Table name in database
@@ -94,14 +95,14 @@ module.exports = {
     useGenericRouter: true,
   },
 
-  // ============================================================================
-  // FIELD ALIASING (for UI display names)
-  // ============================================================================
+  fieldGroups: {
+    identity: {
+      label: 'Identity',
+      fields: ['first_name', 'last_name'],
+      order: 1,
+    },
+  },
 
-  /**
-   * Field aliases for UI display. Key = field name, Value = display label
-   * Empty object = use field names as-is
-   */
   fieldAliases: {},
 
   // ============================================================================
@@ -266,7 +267,7 @@ module.exports = {
   fields: {
     // TIER 1: Universal Entity Contract Fields
     id: { type: 'integer', readonly: true },
-    email: { type: 'email', required: true, maxLength: 255 },
+    email: { ...FIELD.EMAIL, required: true },
     is_active: { type: 'boolean', default: true },
     created_at: { type: 'timestamp', readonly: true },
     updated_at: { type: 'timestamp', readonly: true },
@@ -287,13 +288,15 @@ module.exports = {
     },
 
     // HUMAN entity name fields
-    first_name: { type: 'string', required: true, maxLength: 100 },
-    last_name: { type: 'string', required: true, maxLength: 100 },
+    first_name: { ...FIELD.FIRST_NAME, required: true },
+    last_name: { ...FIELD.LAST_NAME, required: true },
 
     // Entity-specific fields
-    license_number: { type: 'string', maxLength: 100 },
-    certifications: { type: 'jsonb' },
-    skills: { type: 'jsonb' },
-    hourly_rate: { type: 'decimal' },
+    license_number: FIELD.IDENTIFIER,
+    hourly_rate: FIELD.CURRENCY,
+
+    // Skills and certifications as comma-separated text (flat, no JSONB)
+    certifications: { type: 'text', maxLength: 1000 },
+    skills: { type: 'text', maxLength: 500 },
   },
 };

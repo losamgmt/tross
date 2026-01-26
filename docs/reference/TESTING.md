@@ -16,9 +16,11 @@ cd backend && npm run test:all -- --coverage
 cd frontend && flutter test --coverage
 ```
 
-**Coverage Thresholds (enforced in CI):**
-- Backend: 80% minimum for statements, branches, functions, and lines
-- Frontend: Target 80% line coverage
+**Coverage Thresholds:**
+- Backend: Defined in `backend/jest.config.unit.json` under `coverageThreshold`
+- Frontend: Defined in Flutter test configuration
+
+> **Note**: Run the test commands above to see current coverage. Thresholds are enforced by the test runner.
 
 ---
 

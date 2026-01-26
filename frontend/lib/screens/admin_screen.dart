@@ -20,7 +20,6 @@ import '../widgets/atoms/indicators/loading_indicator.dart';
 import '../widgets/molecules/cards/error_card.dart';
 import '../widgets/molecules/cards/titled_card.dart';
 import '../widgets/molecules/display/key_value_list.dart';
-import '../widgets/molecules/forms/setting_toggle_row.dart';
 import '../widgets/organisms/providers/async_data_provider.dart';
 import '../widgets/organisms/tables/data_table.dart';
 import '../widgets/templates/templates.dart';
@@ -327,7 +326,7 @@ class _HealthBadge extends StatelessWidget {
   }
 }
 
-/// Maintenance mode panel - composed from SettingToggleRow
+/// Maintenance mode panel - uses standard Switch with labels
 class _MaintenancePanel extends StatelessWidget {
   final bool enabled;
   final String? message;
@@ -341,23 +340,27 @@ class _MaintenancePanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SettingToggleRow(
-          label: 'Enable Maintenance Mode',
-          description: 'Blocks all non-admin access to the system',
+        SwitchListTile(
+          title: const Text('Enable Maintenance Mode'),
+          subtitle: const Text('Blocks all non-admin access to the system'),
           value: enabled,
           onChanged: onToggle,
-          activeColor: Theme.of(context).colorScheme.error,
+          activeTrackColor: theme.colorScheme.error.withValues(alpha: 0.5),
+          activeThumbColor: theme.colorScheme.error,
+          contentPadding: EdgeInsets.zero,
         ),
         if (enabled && message != null)
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: Text(
               'Message: $message',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.error,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.error,
               ),
             ),
           ),

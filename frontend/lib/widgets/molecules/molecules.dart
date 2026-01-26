@@ -17,6 +17,7 @@ export 'cards/stat_card.dart';
 export 'cards/titled_card.dart';
 
 // Containers
+export 'containers/form_section.dart';
 export 'containers/page_scaffold.dart';
 export 'containers/scrollable_content.dart';
 
@@ -46,12 +47,6 @@ export 'feedback/info_banner.dart';
 // Forms
 export 'forms/field_config.dart';
 export 'forms/filter_bar.dart';
-export 'forms/setting_conditional_row.dart';
-export 'forms/setting_dropdown_row.dart';
-export 'forms/setting_number_row.dart';
-export 'forms/setting_radio_group.dart';
-export 'forms/setting_text_row.dart';
-export 'forms/setting_toggle_row.dart';
 
 // Indicators
 export 'indicators/dev_mode_indicator.dart';

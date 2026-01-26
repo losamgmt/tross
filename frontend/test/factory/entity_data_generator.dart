@@ -187,6 +187,7 @@ abstract final class FieldValueGenerator {
 
     return switch (field.type) {
       FieldType.integer => _integer(field, random),
+      FieldType.currency => _currency(field, random),
       FieldType.string => _string(field, entityName, entityId),
       FieldType.text => _text(entityName),
       FieldType.email => _email(entityName, entityId),
@@ -226,6 +227,14 @@ abstract final class FieldValueGenerator {
   static int _integer(FieldDefinition field, Random random) {
     final min = (field.min ?? 1).toInt();
     final max = (field.max ?? 100).toInt();
+    return min + random.nextInt(max - min + 1);
+  }
+
+  /// Generate currency value in cents (integers for precision)
+  static int _currency(FieldDefinition field, Random random) {
+    // Generate realistic monetary amounts: $0.00 to $9999.99 (in cents)
+    final min = (field.min ?? 0).toInt();
+    final max = (field.max ?? 999999).toInt(); // Max ~$9999.99 in cents
     return min + random.nextInt(max - min + 1);
   }
 

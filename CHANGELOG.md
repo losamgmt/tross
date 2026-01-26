@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Test Coverage 80%+ Milestone (2026-01-25)
+
+#### Backend Coverage Above 80% Threshold
+- **Branches**: 80.21% (was 78.5%)
+- **Statements**: 90.49%
+- **Functions**: 91.49%
+- **Lines**: 90.61%
+
+#### New Backend Tests
+- **sql-safety.test.js**: 24 tests for `sanitizeIdentifier` and `validateFieldAgainstWhitelist`
+- **update-helper.test.js**: 21 tests for `buildUpdateClause` and `ImmutableFieldError`
+- **entity-metadata-service.test.js**: 24 comprehensive tests
+- **Enhanced services**: stats-service, system-settings-service, sessions-service, export-service
+
+#### New Factory Error Scenarios
+- `stringTooLongRejected` - maxLength validation
+- `invalidDateRejected` - date format validation
+- `negativeIdRejected` - negative ID rejection
+- `booleanFieldHandling` - boolean coercion
+
+#### Frontend Tests: 5,000+ Milestone
+- **New helper tests**: string_helper (31), pagination_helper (29), input_type_helpers (6)
+- **Frontend line coverage**: 80.65%
+- **Total frontend tests**: 5,045 (was 4,979)
+
+#### Total Project Tests: 8,390
+- Backend: 3,345 tests
+- Frontend: 5,045 tests
+
+---
+
 ### Added - Unified AppError System (2026-01-16)
 
 #### Error Handling Architecture Overhaul

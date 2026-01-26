@@ -2,7 +2,7 @@
 
 **Status:** Accepted  
 **Decision Makers:** Development Team  
-**Outcome:** Comprehensive Multi-Layer Testing with 90%+ Coverage Target
+**Outcome:** Comprehensive Multi-Layer Testing with High Coverage Target
 
 ---
 
@@ -150,10 +150,10 @@ testWidgets('User can complete login flow', (tester) async {
 **Metrics:**
 
 - ✅ Comprehensive test coverage across all layers
-- ✅ High code coverage (target: 90%+)
+- ✅ Coverage thresholds enforced by test runner (see `jest.config.*.json`)
 - ✅ Fast test execution
 - ✅ Zero flaky tests
-- ✅ 100% coverage on critical paths:
+- ✅ Critical paths fully tested:
   - Authentication flows
   - Role-based access control
   - API error handling

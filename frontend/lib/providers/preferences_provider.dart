@@ -181,6 +181,39 @@ class PreferencesProvider extends ChangeNotifier {
     }
   }
 
+  /// Update multiple preferences from a map
+  ///
+  /// Generic batch update for use with GenericForm. Compares incoming
+  /// values against current state and only persists changed fields.
+  /// Works with ANY preference keys defined in the fields metadata.
+  ///
+  /// [newValues] - Map of preference key -> value pairs
+  void updatePreferences(Map<String, dynamic> newValues) {
+    // Find changed fields by comparing with current values
+    final changedKeys = <String>[];
+    for (final entry in newValues.entries) {
+      final key = entry.key;
+      final newValue = entry.value;
+      final currentValue = _preferences[key];
+
+      // Skip if value hasn't changed
+      if (currentValue == newValue) continue;
+
+      changedKeys.add(key);
+    }
+
+    // Update each changed preference
+    for (final key in changedKeys) {
+      updatePreference(key, newValues[key]);
+    }
+  }
+
+  /// Get all current preferences as a map
+  ///
+  /// Returns a copy of the current preferences map for use with GenericForm.
+  /// The returned map can be passed as the initial value to GenericForm.
+  Map<String, dynamic> get preferencesMap => Map.from(_preferences);
+
   /// Ensure preference schema is loaded from metadata
   void _ensureSchemaLoaded() {
     if (_schema != null) return;

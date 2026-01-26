@@ -195,6 +195,10 @@ class _EntityFormModalState extends State<EntityFormModal> {
   Widget build(BuildContext context) {
     final spacing = context.spacing;
 
+    // Get metadata for grouping support
+    final metadata = EntityMetadataRegistry.get(widget.entityName);
+    final useGroupedLayout = metadata.hasFieldGroups;
+
     // Get field configs based on mode
     final fieldConfigs = widget.mode.isCreate
         ? MetadataFieldConfigFactory.forCreate(
@@ -217,6 +221,8 @@ class _EntityFormModalState extends State<EntityFormModal> {
         key: _formKey,
         value: _currentValue,
         fields: fieldConfigs,
+        layout: useGroupedLayout ? FormLayout.grouped : FormLayout.flat,
+        fieldGroups: useGroupedLayout ? metadata.sortedFieldGroups : null,
         onChange: _handleFormChange,
         enabled: widget.mode.isEditable && !_isSaving,
       ),

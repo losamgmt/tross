@@ -1,8 +1,8 @@
 # Field Type Standards Implementation Plan
 
 > **Created**: January 23, 2026  
-> **Status**: In Progress (Phase 0 Complete)  
-> **Purpose**: Comprehensive plan for implementing standardized field types across TrossApp
+> **Status**: Backend Complete (Phases 0-5) ✅  
+> **Purpose**: Reference for standardized field types across TrossApp
 
 ---
 
@@ -10,14 +10,14 @@
 
 1. [Executive Summary](#executive-summary)
 2. [Design Decisions](#design-decisions)
-3. [Phase 0: Foundation (COMPLETE)](#phase-0-foundation-complete)
-4. [Phase 1: Complete Field Type Standards](#phase-1-complete-field-type-standards)
-5. [Phase 2: Flatten Preferences](#phase-2-flatten-preferences)
-6. [Phase 3: Flatten Customer Addresses](#phase-3-flatten-customer-addresses)
-7. [Phase 4: Add Work Order Location](#phase-4-add-work-order-location)
-8. [Phase 5: Refactor All Entity Metadata](#phase-5-refactor-all-entity-metadata)
-9. [Phase 6: Frontend Address UI](#phase-6-frontend-address-ui)
-10. [Phase 7: Documentation & Cleanup](#phase-7-documentation-cleanup)
+3. [Phase 0: Foundation](#phase-0-foundation-complete) ✅
+4. [Phase 1: Complete Field Type Standards](#phase-1-complete-field-type-standards) ✅
+5. [Phase 2: Flatten Preferences](#phase-2-flatten-preferences) ✅
+6. [Phase 3: Flatten Customer Addresses](#phase-3-flatten-customer-addresses) ✅
+7. [Phase 4: Add Work Order Location](#phase-4-add-work-order-location) ✅
+8. [Phase 5: Refactor All Entity Metadata](#phase-5-refactor-all-entity-metadata) ✅
+9. [Phase 6: Frontend Address UI](#phase-6-frontend-address-ui) ✅
+10. [Phase 7: Documentation & Cleanup](#phase-7-documentation-cleanup) ⏳
 11. [Appendix: Complete Type Reference](#appendix-complete-type-reference)
 
 ---
@@ -146,8 +146,8 @@ npm run test:unit  # 1942 tests passing
 
 ## Phase 1: Complete Field Type Standards
 
-**Status**: Not Started  
-**Estimated Time**: 2-3 hours  
+**Status**: ✅ Complete  
+**Completed**: January 23, 2026  
 **Dependencies**: Phase 0 (complete)
 
 ### Tasks
@@ -217,8 +217,8 @@ npm run test:unit  # All tests pass
 
 ## Phase 2: Flatten Preferences
 
-**Status**: Not Started  
-**Estimated Time**: 3-4 hours  
+**Status**: ✅ Complete  
+**Completed**: January 23, 2026  
 **Dependencies**: Phase 1
 
 ### Context
@@ -299,8 +299,8 @@ ALTER TABLE user_preferences DROP COLUMN preferences;
 
 ## Phase 3: Flatten Customer Addresses
 
-**Status**: Not Started  
-**Estimated Time**: 4-5 hours  
+**Status**: ✅ Complete  
+**Completed**: January 23, 2026  
 **Dependencies**: Phase 1
 
 ### Context
@@ -407,8 +407,8 @@ ALTER TABLE customers
 
 ## Phase 4: Add Work Order Location
 
-**Status**: Not Started  
-**Estimated Time**: 3-4 hours  
+**Status**: ✅ Complete  
+**Completed**: January 23, 2026  
 **Dependencies**: Phases 1, 3  
 **Note**: This was the original user request that sparked this entire architecture effort!
 
@@ -489,8 +489,8 @@ flutter test
 
 ## Phase 5: Refactor All Entity Metadata
 
-**Status**: Not Started  
-**Estimated Time**: 4-6 hours  
+**Status**: ✅ Complete  
+**Completed**: January 23, 2026  
 **Dependencies**: Phases 1-4
 
 ### Context
@@ -569,124 +569,107 @@ flutter test
 
 ## Phase 6: Frontend Address UI Component
 
-**Status**: Not Started  
-**Estimated Time**: 3-4 hours  
-**Dependencies**: Phases 1-3
+**Status**: ✅ Complete  
+**Dependencies**: Phases 1-3 (complete)
 
 ### Context
-Create a reusable Flutter widget that renders address fields as a coherent group based on the flat field pattern.
+Address fields now render as coherent groups with proper row layouts using the generic metadata-driven system. No specialized `AddressFieldGroup` widget is needed - the existing `GenericForm`, `DetailPanel`, and `FormSection` widgets handle address layout automatically based on `fieldGroups` and `rows` metadata.
 
-### Tasks
+### Implemented Solution
 
-#### 6.1 Create AddressFieldGroup Widget
+#### 6.1 Metadata-Driven Row Layouts
 
-**File**: `frontend/lib/widgets/address_field_group.dart`
+Instead of a specialized widget, address layouts are defined in backend entity metadata using `rows` hints:
 
-```dart
-import 'package:flutter/material.dart';
+**File**: `backend/config/models/customer-metadata.js`
 
-class AddressFieldGroup extends StatelessWidget {
-  final String prefix;  // 'billing', 'service', 'location'
-  final Map<String, dynamic> values;
-  final Function(String field, dynamic value) onChanged;
-  final bool readOnly;
-  
-  const AddressFieldGroup({
-    required this.prefix,
-    required this.values,
-    required this.onChanged,
-    this.readOnly = false,
-    Key? key,
-  }) : super(key: key);
-  
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Line 1 (required)
-        TextFormField(
-          initialValue: values['${prefix}_line1'],
-          decoration: InputDecoration(labelText: 'Address Line 1'),
-          onChanged: (v) => onChanged('${prefix}_line1', v),
-          readOnly: readOnly,
-        ),
-        // Line 2 (optional)
-        TextFormField(
-          initialValue: values['${prefix}_line2'],
-          decoration: InputDecoration(labelText: 'Address Line 2'),
-          onChanged: (v) => onChanged('${prefix}_line2', v),
-          readOnly: readOnly,
-        ),
-        // City, State, Postal row
-        Row(
-          children: [
-            Expanded(flex: 2, child: _cityField()),
-            SizedBox(width: 8),
-            Expanded(flex: 1, child: _stateDropdown()),
-            SizedBox(width: 8),
-            Expanded(flex: 1, child: _postalField()),
-          ],
-        ),
-        // Country dropdown
-        _countryDropdown(),
-      ],
-    );
-  }
-  
-  // State dropdown uses geo-standards via sync'd metadata
-  Widget _stateDropdown() {
-    // Options populated from entity metadata
-  }
-  
-  Widget _countryDropdown() {
-    // Default to US, show CA as option
-  }
+```javascript
+fieldGroups: {
+  billing_address: {
+    label: 'Billing Address',
+    fields: ['billing_line1', 'billing_line2', 'billing_city', 'billing_state', 'billing_postal_code', 'billing_country'],
+    rows: [['billing_city', 'billing_state', 'billing_postal_code']], // These 3 render on same row
+    order: 3,
+  },
 }
 ```
 
-#### 6.2 Auto-Detect Address Groups in Form Builder
+#### 6.2 FieldGroup Model Extended
 
-**File**: `frontend/lib/services/form_builder_service.dart`
+**File**: `frontend/lib/models/entity_metadata.dart`
 
 ```dart
-// Detect address groups by suffix pattern
-List<String> _detectAddressGroups(Map<String, FieldMetadata> fields) {
-  final addressSuffixes = ['_line1', '_line2', '_city', '_state', '_postal_code', '_country'];
-  final prefixes = <String>{};
-  
-  for (final fieldName in fields.keys) {
-    for (final suffix in addressSuffixes) {
-      if (fieldName.endsWith(suffix)) {
-        prefixes.add(fieldName.substring(0, fieldName.length - suffix.length));
-        break;
-      }
-    }
-  }
-  
-  return prefixes.where((p) => 
-    fields.containsKey('${p}_line1') && 
-    fields.containsKey('${p}_city')
-  ).toList();
+class FieldGroup {
+  final String label;
+  final List<String> fields;
+  final int order;
+  final List<List<String>> rows; // Row layout hints
+
+  // Helper methods
+  bool isInRow(String fieldName);
+  List<String>? getRowFor(String fieldName);
 }
 ```
 
-#### 6.3 Update FormGenerator to Use AddressFieldGroup
+#### 6.3 GenericForm/DetailPanel Row Rendering
 
-When rendering forms, detect address groups and render as `AddressFieldGroup` instead of individual fields.
+Both `GenericForm` and `DetailPanel` now detect row layouts and render fields in `Row` widgets with `Expanded` children:
 
-#### 6.4 Verification Gate
+```dart
+// Check if this field is part of a row layout
+final row = group.getRowFor(fieldName);
+if (row != null && row.length > 1) {
+  // Build row of fields with Expanded
+  final rowWidgets = row.map((f) => Expanded(child: _buildField(f))).toList();
+  fieldWidgets.add(Row(children: rowWidgets));
+}
+```
+
+#### 6.4 Backend Address Field Generators
+
+Flat address fields are generated using reusable helpers:
+
+**File**: `backend/config/field-type-standards.js`
+
+```javascript
+// Generate 6 flat address fields with geo-standard enums
+const fields = createAddressFields('billing');
+// => { billing_line1, billing_line2, billing_city, billing_state, billing_postal_code, billing_country }
+
+// Generate field access rules for all 6 fields
+const access = createAddressFieldAccess('billing', 'customer', { updateRole: 'dispatcher' });
+```
+
+#### 6.5 Geo Standards Flow
+
+State/Country enum values flow from `geo-standards.js` through `field-type-standards.js` to entity metadata, synced to frontend `entity-metadata.json`. Frontend forms render appropriate dropdowns automatically based on field type `enum` with the geo values.
+
+### Entities Using Address Groups
+
+| Entity | Address Groups | Row Layout |
+|--------|---------------|------------|
+| customer | billing_address, service_address | city \| state \| postal_code |
+| work_order | location_address | city \| state \| postal_code |
+
+### Why Generic Over Specialized
+
+1. **Single pattern** - Same row layout system works for any field grouping, not just addresses
+2. **Backend SSOT** - Layout defined in metadata, not hardcoded in widgets
+3. **Sync-based** - Changes to backend metadata automatically flow to frontend
+4. **Extensible** - Can add flex ratios, responsive breakpoints later in metadata
+
+#### 6.6 Verification Gate
 ```bash
-flutter test
-# Manual: Create customer/work order, verify address UI works correctly
+dart analyze --fatal-infos  # No issues
+node scripts/sync-entity-metadata.js  # Syncs row hints to frontend
+# Manual: View customer/work_order forms, verify city|state|zip row layout
 ```
 
 ---
 
 ## Phase 7: Documentation & Cleanup
 
-**Status**: Not Started  
-**Estimated Time**: 2-3 hours  
+**Status**: ⏳ In Progress  
 **Dependencies**: Phases 1-6
 
 ### Tasks
@@ -812,11 +795,17 @@ Each phase has its own rollback path:
 ## Change Log
 
 | Date | Phase | Changes |
-|------|-------|---------|
-| 2025-01-XX | 0 | Created geo-standards.js, field-type-standards.js, tests |
-| 2025-01-XX | - | Created this plan document |
+|------|-------|---------|  
+| 2026-01-23 | 0 | Created geo-standards.js, field-type-standards.js, tests |
+| 2026-01-23 | 1 | Added validation layer support for all semantic types (116 tests) |
+| 2026-01-23 | 2 | Flattened preferences JSONB to 6 individual columns, uses generic router |
+| 2026-01-23 | 3 | Flattened customer addresses to 12 flat columns (billing_*, service_*) |
+| 2026-01-23 | 4 | Added work_order location with 6 flat columns (location_*) |
+| 2026-01-23 | 5 | Refactored all 13 entities to use FIELD.* constants, foreignKey types |
+| 2026-01-23 | - | Backend complete! 2019 unit tests passing |
+| 2026-01-27 | 6 | Frontend address UI: row layouts via fieldGroups.rows, GenericForm/DetailPanel row rendering |
 
 ---
 
-*Last Updated: [Current Session]*  
+*Last Updated: January 27, 2026*  
 *Author: Development Team + AI Assistant*

@@ -64,23 +64,6 @@ function sanitizeIdentifier(identifier, context = 'identifier') {
 }
 
 /**
- * Validate multiple identifiers at once
- *
- * @param {Object} identifiers - Object with context as key, identifier as value
- * @returns {Object} The same object if all valid
- * @throws {Error} If any identifier is invalid
- *
- * @example
- * validateIdentifiers({ table: 'users', column: 'email' });
- */
-function validateIdentifiers(identifiers) {
-  for (const [context, identifier] of Object.entries(identifiers)) {
-    sanitizeIdentifier(identifier, context);
-  }
-  return identifiers;
-}
-
-/**
  * Check if a field name is in an allowed list (whitelist validation)
  *
  * @param {string} fieldName - The field to check
@@ -106,44 +89,7 @@ function validateFieldAgainstWhitelist(fieldName, allowedFields, context = 'fiel
   return fieldName;
 }
 
-/**
- * Validate a table name against known entity metadata
- *
- * @param {string} tableName - The table name to validate
- * @param {Object} allMetadata - The metadata object from config/models
- * @returns {string} The table name if valid
- * @throws {Error} If table is not a known entity table
- */
-function validateTableName(tableName, allMetadata) {
-  // First, basic sanitization
-  sanitizeIdentifier(tableName, 'table name');
-
-  // Then, check against known tables
-  const knownTables = Object.values(allMetadata)
-    .map(meta => meta.tableName)
-    .filter(Boolean);
-
-  // Also include system tables
-  const systemTables = ['audit_logs', 'refresh_tokens', 'file_attachments'];
-  const allValidTables = [...knownTables, ...systemTables];
-
-  if (!allValidTables.includes(tableName)) {
-    throw new AppError(
-      `Invalid table name: "${tableName}" is not a known table. ` +
-      'This may indicate a configuration error.',
-      400,
-      'BAD_REQUEST',
-    );
-  }
-
-  return tableName;
-}
-
 module.exports = {
   sanitizeIdentifier,
-  validateIdentifiers,
   validateFieldAgainstWhitelist,
-  validateTableName,
-  VALID_IDENTIFIER_PATTERN,
-  MAX_IDENTIFIER_LENGTH,
 };

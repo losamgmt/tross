@@ -20,6 +20,14 @@ const AppError = require('./app-error');
 const DEFAULT_ROLE_NAME = userMetadata.defaultRoleName || 'customer';
 
 /**
+ * Default values for missing name fields
+ * Used when Auth0 doesn't provide given_name/family_name
+ * (e.g., social logins, passwordless, etc.)
+ */
+const DEFAULT_FIRST_NAME = 'New';
+const DEFAULT_LAST_NAME = 'User';
+
+/**
  * Map Auth0 token fields to local user fields
  *
  * Auth0 Standard Claims:
@@ -57,8 +65,10 @@ function mapAuth0ToUser(auth0Data) {
   return {
     auth0_id: sub,
     email: email,
-    first_name: given_name || '',
-    last_name: family_name || '',
+    // Use defaults if Auth0 doesn't provide names (social logins, etc.)
+    // These satisfy required field constraints while signaling incomplete profile
+    first_name: given_name || DEFAULT_FIRST_NAME,
+    last_name: family_name || DEFAULT_LAST_NAME,
     // Role from JWT custom claim, or configurable default
     roleName: role || DEFAULT_ROLE_NAME,
   };

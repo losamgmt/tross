@@ -20,8 +20,10 @@
 
 const {
   FIELD_ACCESS_LEVELS: FAL,
+  RLS_RESOURCE_TYPES,
   // No NAME_TYPES - this is a system table
 } = require('../constants');
+const { FIELD } = require('../field-type-standards');
 
 module.exports = {
   // Table name in database
@@ -50,10 +52,10 @@ module.exports = {
   identityFieldUnique: false,
 
   /**
-   * RLS resource: NONE - permissions derived from parent entity
-   * This is intentional for polymorphic child tables
+   * RLS resource: PARENT_DERIVED - permissions come from parent entity
+   * Polymorphic child tables use this pattern instead of their own resource
    */
-  rlsResource: null,
+  rlsResource: RLS_RESOURCE_TYPES.PARENT_DERIVED,
 
   /**
    * Row-Level Security policy per role
@@ -86,14 +88,8 @@ module.exports = {
     useGenericRouter: false,
   },
 
-  // ============================================================================
-  // ENTITY CATEGORY
-  // ============================================================================
+  fieldGroups: {},
 
-  /**
-   * Entity category: null - file_attachments is a system/polymorphic table
-   * Not a standalone entity - always attached to a parent
-   */
   nameType: null,
 
   // ============================================================================
@@ -296,17 +292,21 @@ module.exports = {
     entity_id: { type: 'integer', required: true },
 
     // File metadata
-    original_filename: { type: 'string', required: true, maxLength: 255 },
+    original_filename: { ...FIELD.NAME, required: true },
     storage_key: { type: 'string', required: true, maxLength: 500, readonly: true },
     mime_type: { type: 'string', required: true, maxLength: 100 },
     file_size: { type: 'integer', required: true },
 
     // Categorization
     category: { type: 'string', maxLength: 50, default: 'attachment' },
-    description: { type: 'text' },
+    description: FIELD.DESCRIPTION,
 
     // Upload tracking
-    uploaded_by: { type: 'integer', readonly: true },
+    uploaded_by: {
+      type: 'foreignKey',
+      relatedEntity: 'user',
+      readonly: true,
+    },
 
     // Soft delete and timestamps
     is_active: { type: 'boolean', default: true },
