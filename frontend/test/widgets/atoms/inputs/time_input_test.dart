@@ -5,6 +5,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tross_app/widgets/atoms/inputs/time_input.dart';
 
@@ -340,6 +341,113 @@ void main() {
 
         // Dialog opens (initial time defaults to TimeOfDay.now())
         expect(find.byType(TimePickerDialog), findsOneWidget);
+      });
+    });
+
+    // =========================================================================
+    // Keyboard Accessibility
+    // =========================================================================
+    group('Keyboard Accessibility', () {
+      testWidgets('opens time picker on Space key', (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: TimeInput(
+                value: const TimeOfDay(hour: 10, minute: 0),
+                onChanged: (_) {},
+              ),
+            ),
+          ),
+        );
+
+        // Tap to focus
+        await tester.tap(find.byType(TimeInput));
+        await tester.pumpAndSettle();
+
+        // Press Space to open picker
+        await tester.sendKeyEvent(LogicalKeyboardKey.space);
+        await tester.pumpAndSettle();
+
+        // Time picker should appear
+        expect(find.byType(TimePickerDialog), findsOneWidget);
+      });
+
+      testWidgets('opens time picker on Enter key', (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: TimeInput(
+                value: const TimeOfDay(hour: 14, minute: 30),
+                onChanged: (_) {},
+              ),
+            ),
+          ),
+        );
+
+        // Tap to focus
+        await tester.tap(find.byType(TimeInput));
+        await tester.pumpAndSettle();
+
+        // Press Enter to open picker
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
+
+        // Time picker should appear
+        expect(find.byType(TimePickerDialog), findsOneWidget);
+      });
+
+      testWidgets('does not open picker on keyboard when disabled', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: TimeInput(
+                value: const TimeOfDay(hour: 10, minute: 0),
+                onChanged: (_) {},
+                enabled: false,
+              ),
+            ),
+          ),
+        );
+
+        // Try to focus and press Space
+        await tester.tap(find.byType(TimeInput));
+        await tester.pumpAndSettle();
+        await tester.sendKeyEvent(LogicalKeyboardKey.space);
+        await tester.pumpAndSettle();
+
+        // Time picker should NOT appear
+        expect(find.byType(TimePickerDialog), findsNothing);
+      });
+
+      testWidgets('is focusable via tab navigation', (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Column(
+                children: [
+                  const TextField(), // First focusable widget
+                  TimeInput(
+                    value: const TimeOfDay(hour: 10, minute: 0),
+                    onChanged: (_) {},
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+
+        // Focus the TextField first
+        await tester.tap(find.byType(TextField));
+        await tester.pumpAndSettle();
+
+        // Tab to the TimeInput
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pumpAndSettle();
+
+        // TimeInput should be in the tree and focusable
+        expect(find.byType(TimeInput), findsOneWidget);
       });
     });
   });

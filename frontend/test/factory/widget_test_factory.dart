@@ -33,6 +33,7 @@ import 'package:tross_app/utils/generic_table_action_builders.dart';
 import 'package:tross_app/widgets/atoms/buttons/app_button.dart';
 import 'package:tross_app/widgets/organisms/forms/form_field.dart';
 import 'package:tross_app/services/metadata_field_config_factory.dart';
+import 'package:tross_app/widgets/atoms/inputs/boolean_toggle.dart';
 import '../mocks/mock_services.dart';
 import 'entity_registry.dart';
 import 'entity_data_generator.dart';
@@ -266,18 +267,48 @@ abstract final class WidgetTestFactory {
               ),
             );
 
-            // Find any TextField and try to interact
-            final textFields = find.byType(TextField);
-            if (textFields.evaluate().isNotEmpty) {
-              await tester.enterText(textFields.first, 'test input');
-              await tester.pump();
+            // Try multiple interaction strategies since entities have
+            // different field types. The goal is to verify SOME interaction
+            // triggers onChanged - not that every field type is tested.
 
-              expect(
-                formChanged,
-                isTrue,
-                reason: 'Form should respond to user input',
-              );
+            // Strategy 1: Try interacting with a BooleanToggle (custom boolean widget)
+            final booleanToggles = find.byType(BooleanToggle);
+            if (booleanToggles.evaluate().isNotEmpty) {
+              await tester.tap(booleanToggles.first);
+              await tester.pump();
+              if (formChanged) return; // Success!
             }
+
+            // Strategy 2: Try entering text into TextFormField
+            // (Avoids DropdownMenu's filter TextField which doesn't trigger onChanged)
+            final textFormFields = find.byType(TextFormField);
+            if (textFormFields.evaluate().isNotEmpty) {
+              await tester.enterText(textFormFields.first, 'test input');
+              await tester.pump();
+              if (formChanged) return; // Success!
+            }
+
+            // Strategy 3: Try interacting with an IconButton (number +/- buttons)
+            final iconButtons = find.byType(IconButton);
+            if (iconButtons.evaluate().isNotEmpty) {
+              await tester.tap(iconButtons.first);
+              await tester.pump();
+              if (formChanged) return; // Success!
+            }
+
+            // If we found interactive elements but none triggered changes,
+            // the test should fail. If no interactive elements were found,
+            // skip gracefully (edge case entities with no editable fields).
+            final hasInteractiveElements =
+                booleanToggles.evaluate().isNotEmpty ||
+                iconButtons.evaluate().isNotEmpty ||
+                textFormFields.evaluate().isNotEmpty;
+
+            expect(
+              formChanged || !hasInteractiveElements,
+              isTrue,
+              reason: 'Form should respond to user input',
+            );
           });
 
           testWidgets('form preserves valid initial values', (tester) async {

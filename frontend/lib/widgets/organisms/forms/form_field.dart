@@ -224,6 +224,16 @@ class _GenericFormFieldState<T, V> extends State<GenericFormField<T, V>> {
           enabled: isAsyncSelectEditable,
         );
 
+      case FieldType.lookup:
+        final isLookupEditable = widget.enabled && !widget.config.readOnly;
+        return _LookupField<T, V>(
+          config: widget.config,
+          value: fieldValue,
+          onChanged: _handleChange,
+          errorText: _errorText,
+          enabled: isLookupEditable,
+        );
+
       case FieldType.boolean:
         // Boolean is special - toggle doesn't need label wrapper
         // (already handled above in main Column)
@@ -426,6 +436,96 @@ class _AsyncSelectFieldState<T, V> extends State<_AsyncSelectField<T, V>> {
       errorText: widget.errorText,
       enabled: widget.enabled,
       prefixIcon: widget.config.icon,
+    );
+  }
+}
+
+/// Lookup field for large FK datasets using search-based Autocomplete
+///
+/// Unlike _AsyncSelectField which loads all items upfront, this uses
+/// LookupInput with debounced search for large datasets (100k+ records).
+class _LookupField<T, V> extends StatelessWidget {
+  final FieldConfig<T, V> config;
+  final V? value;
+  final ValueChanged<dynamic> onChanged;
+  final String? errorText;
+  final bool enabled;
+
+  const _LookupField({
+    required this.config,
+    required this.value,
+    required this.onChanged,
+    required this.enabled,
+    this.errorText,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final valueField = config.valueField ?? 'id';
+    final displayField = config.asyncDisplayField ?? 'name';
+    final displayFields = config.asyncDisplayFields;
+    final displayTemplate = config.asyncDisplayTemplate;
+
+    // Build display string from item using template or fields
+    String buildDisplayString(Map<String, dynamic> item) {
+      // If template provided, use it with placeholder substitution
+      if (displayTemplate != null) {
+        var result = displayTemplate;
+        for (final key in item.keys) {
+          result = result.replaceAll('{$key}', item[key]?.toString() ?? '');
+        }
+        result = result
+            .replaceAll(RegExp(r'^\s*-\s*'), '')
+            .replaceAll(RegExp(r'\s*-\s*$'), '')
+            .replaceAll(RegExp(r'\s*-\s*-\s*'), ' - ')
+            .trim();
+        return result.isNotEmpty ? result : 'ID: ${item[valueField]}';
+      }
+
+      // If multiple displayFields provided, join them
+      if (displayFields != null && displayFields.isNotEmpty) {
+        final parts = displayFields
+            .map((f) => item[f]?.toString())
+            .where((v) => v != null && v.isNotEmpty)
+            .toList();
+        return parts.isNotEmpty ? parts.join(' - ') : 'ID: ${item[valueField]}';
+      }
+
+      // Fallback to single displayField
+      return item[displayField]?.toString() ?? 'ID: ${item[valueField]}';
+    }
+
+    if (config.asyncSearchItems == null) {
+      return Text(
+        'No search function configured for lookup field',
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: Theme.of(context).colorScheme.error,
+        ),
+      );
+    }
+
+    return LookupInput<Map<String, dynamic>>(
+      value: null, // LookupInput manages its own display from the search
+      searchItems: config.asyncSearchItems!,
+      displayText: buildDisplayString,
+      onChanged: (item) {
+        if (item != null) {
+          final id = item[valueField];
+          onChanged(id);
+        } else {
+          onChanged(null);
+        }
+      },
+      placeholder: config.placeholder ?? 'Search ${config.label}...',
+      helperText: config.readOnly
+          ? '${config.helperText ?? ''} (Read-only)'.trim()
+          : config.helperText,
+      errorText: errorText,
+      enabled: enabled,
+      prefixIcon: config.icon,
+      minSearchLength: config.minSearchLength ?? 2,
+      debounceDuration: Duration(milliseconds: config.searchDebounceMs ?? 300),
+      allowClear: config.allowEmpty ?? !config.required,
     );
   }
 }

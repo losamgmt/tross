@@ -225,9 +225,10 @@ Run `flutter test` to see current test counts and coverage.
 
 **What to test:**
 - Widget rendering
-- User interactions (taps, input)
+- User interactions (taps, input, keyboard)
 - State changes
 - Error states
+- **Keyboard accessibility** (see below)
 
 **Example:** Button widget (using test helpers)
 ```dart
@@ -260,6 +261,67 @@ void main() {
     await tester.tap(find.byType(ElevatedButton));
     expect(pressed, isTrue);
   });
+}
+```
+
+---
+
+### Keyboard Accessibility Testing
+
+**Why test keyboard accessibility:**
+- WCAG compliance requires keyboard-only navigation
+- Power users prefer keyboard shortcuts
+- Screen reader users depend on proper focus management
+
+**What to test for every form input:**
+
+```dart
+group('Keyboard Accessibility', () {
+  testWidgets('is focusable via tab navigation', (tester) async {
+    await tester.pumpWidget(/* widget */);
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pumpAndSettle();
+    // Verify focus is on the widget
+  });
+
+  testWidgets('activates with Space key', (tester) async {
+    await tester.pumpWidget(/* widget */);
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.sendKeyEvent(LogicalKeyboardKey.space);
+    await tester.pumpAndSettle();
+    // Verify activation (picker opens, toggle changes, etc.)
+  });
+
+  testWidgets('activates with Enter key', (tester) async {
+    // Same pattern as Space
+  });
+
+  testWidgets('Escape closes menu/picker', (tester) async {
+    // For dropdowns, date pickers, etc.
+  });
+});
+```
+
+**Required imports:**
+```dart
+import 'package:flutter/services.dart'; // For LogicalKeyboardKey
+```
+
+**Pattern for checking control keys in custom widgets:**
+```dart
+// Helper to filter out control keys that shouldn't trigger typeahead
+bool _isControlKey(LogicalKeyboardKey key) {
+  return key == LogicalKeyboardKey.control ||
+         key == LogicalKeyboardKey.alt ||
+         key == LogicalKeyboardKey.shift ||
+         key == LogicalKeyboardKey.meta ||
+         key == LogicalKeyboardKey.arrowUp ||
+         key == LogicalKeyboardKey.arrowDown ||
+         key == LogicalKeyboardKey.arrowLeft ||
+         key == LogicalKeyboardKey.arrowRight ||
+         key == LogicalKeyboardKey.escape ||
+         key == LogicalKeyboardKey.enter ||
+         key == LogicalKeyboardKey.tab;
 }
 ```
 

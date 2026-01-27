@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../config/app_spacing.dart';
 
 /// Generic multi-line text input atom for ANY text area field on ANY model
 ///
@@ -66,17 +67,21 @@ class TextAreaInput extends StatefulWidget {
 
 class _TextAreaInputState extends State<TextAreaInput> {
   late TextEditingController _controller;
+  late FocusNode _focusNode;
 
   @override
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.value);
+    _focusNode = FocusNode();
   }
 
   @override
   void didUpdateWidget(TextAreaInput oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.value != oldWidget.value) {
+    // Only sync controller when value changed externally AND user is not actively typing
+    // This prevents cursor jumping/text selection during typing
+    if (widget.value != oldWidget.value && !_focusNode.hasFocus) {
       _controller.text = widget.value;
     }
   }
@@ -84,6 +89,7 @@ class _TextAreaInputState extends State<TextAreaInput> {
   @override
   void dispose() {
     _controller.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -99,9 +105,12 @@ class _TextAreaInputState extends State<TextAreaInput> {
 
   @override
   Widget build(BuildContext context) {
+    final spacing = context.spacing;
+
     // Pure input rendering: Just the multi-line TextField
     return TextField(
       controller: _controller,
+      focusNode: _focusNode,
       enabled: widget.enabled,
       minLines: widget.minLines,
       maxLines: widget.maxLines ?? widget.minLines + 5,
@@ -116,9 +125,9 @@ class _TextAreaInputState extends State<TextAreaInput> {
         helperText: widget.helperText,
         counterText: _getCounterText(),
         border: const OutlineInputBorder(),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 12,
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: spacing.sm,
+          vertical: spacing.sm,
         ),
         alignLabelWithHint: true,
       ),

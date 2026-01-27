@@ -20,6 +20,8 @@
 /// - Optional "All" option for clearing filter
 /// - Custom display text transformation
 /// - Disabled state
+/// - **Keyboard typeahead filtering** - type to filter options
+/// - Full keyboard navigation (arrow keys, Enter, Escape)
 ///
 /// Usage:
 /// ```dart
@@ -44,9 +46,10 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../config/app_spacing.dart';
 
-class FilterDropdown<T> extends StatelessWidget {
+class FilterDropdown<T> extends StatefulWidget {
   /// Currently selected value (null = "All" or nothing selected)
   final T? value;
 
@@ -87,8 +90,82 @@ class FilterDropdown<T> extends StatelessWidget {
     this.compact = false,
   });
 
+  @override
+  State<FilterDropdown<T>> createState() => _FilterDropdownState<T>();
+}
+
+class _FilterDropdownState<T> extends State<FilterDropdown<T>> {
+  final MenuController _menuController = MenuController();
+  final FocusNode _focusNode = FocusNode();
+  String _filterText = '';
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
   String _getDisplayText(T item) {
-    return displayText?.call(item) ?? item.toString();
+    return widget.displayText?.call(item) ?? item.toString();
+  }
+
+  /// Filter items based on keyboard input
+  List<T> get _filteredItems {
+    if (_filterText.isEmpty) return widget.items;
+    final query = _filterText.toLowerCase();
+    return widget.items
+        .where((item) => _getDisplayText(item).toLowerCase().contains(query))
+        .toList();
+  }
+
+  /// Check if key is a control key (non-printable)
+  bool _isControlKey(LogicalKeyboardKey key) {
+    return key == LogicalKeyboardKey.control ||
+        key == LogicalKeyboardKey.controlLeft ||
+        key == LogicalKeyboardKey.controlRight ||
+        key == LogicalKeyboardKey.alt ||
+        key == LogicalKeyboardKey.altLeft ||
+        key == LogicalKeyboardKey.altRight ||
+        key == LogicalKeyboardKey.shift ||
+        key == LogicalKeyboardKey.shiftLeft ||
+        key == LogicalKeyboardKey.shiftRight ||
+        key == LogicalKeyboardKey.meta ||
+        key == LogicalKeyboardKey.metaLeft ||
+        key == LogicalKeyboardKey.metaRight ||
+        key == LogicalKeyboardKey.capsLock ||
+        key == LogicalKeyboardKey.tab ||
+        key == LogicalKeyboardKey.arrowUp ||
+        key == LogicalKeyboardKey.arrowDown ||
+        key == LogicalKeyboardKey.arrowLeft ||
+        key == LogicalKeyboardKey.arrowRight;
+  }
+
+  void _handleKeyEvent(KeyEvent event) {
+    if (event is KeyDownEvent) {
+      final key = event.logicalKey;
+
+      // Close on Escape
+      if (key == LogicalKeyboardKey.escape) {
+        _menuController.close();
+        _filterText = '';
+        return;
+      }
+
+      // Handle character input for filtering
+      if (event.character != null &&
+          event.character!.isNotEmpty &&
+          !_isControlKey(key)) {
+        setState(() {
+          _filterText += event.character!;
+        });
+        // Clear filter after a delay
+        Future.delayed(const Duration(milliseconds: 1000), () {
+          if (mounted) {
+            setState(() => _filterText = '');
+          }
+        });
+      }
+    }
   }
 
   @override
@@ -96,123 +173,125 @@ class FilterDropdown<T> extends StatelessWidget {
     final spacing = context.spacing;
     final theme = Theme.of(context);
 
-    final horizontalPadding = compact ? spacing.xs : spacing.sm;
-    final verticalPadding = compact ? spacing.xxs : spacing.xs;
-    final fontSize = compact ? 12.0 : 13.0;
+    final horizontalPadding = widget.compact ? spacing.xs : spacing.sm;
+    final verticalPadding = widget.compact ? spacing.xxs : spacing.xs;
+    final fontSize = widget.compact ? 12.0 : 13.0;
 
     // Determine display text for current value
-    final selectedDisplayText = value != null
-        ? _getDisplayText(value as T)
-        : allOptionText;
+    final selectedDisplayText = widget.value != null
+        ? _getDisplayText(widget.value as T)
+        : widget.allOptionText;
 
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(
-          color: enabled
-              ? theme.colorScheme.outline.withValues(alpha: 0.5)
-              : theme.colorScheme.outline.withValues(alpha: 0.3),
-        ),
-        borderRadius: spacing.radiusSM,
-        color: enabled
-            ? theme.colorScheme.surface
-            : theme.colorScheme.onSurface.withValues(alpha: 0.05),
-      ),
-      child: InkWell(
-        onTap: enabled ? () => _showDropdown(context) : null,
-        borderRadius: spacing.radiusSM,
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: horizontalPadding,
-            vertical: verticalPadding,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (label != null) ...[
-                Text(
-                  '$label:',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                    fontSize: fontSize,
-                  ),
-                ),
-                SizedBox(width: spacing.xs),
-              ],
-              Text(
-                selectedDisplayText,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontSize: fontSize,
-                  fontWeight: FontWeight.w500,
-                  color: enabled
-                      ? theme.colorScheme.onSurface
-                      : theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                ),
-              ),
-              SizedBox(width: spacing.xxs),
-              Icon(
-                Icons.arrow_drop_down,
-                size: compact ? 18 : 20,
-                color: enabled
-                    ? theme.colorScheme.onSurface.withValues(alpha: 0.6)
-                    : theme.colorScheme.onSurface.withValues(alpha: 0.3),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showDropdown(BuildContext context) {
-    final theme = Theme.of(context);
-    final RenderBox button = context.findRenderObject() as RenderBox;
-    final RenderBox overlay =
-        Overlay.of(context).context.findRenderObject() as RenderBox;
-    final Offset position = button.localToGlobal(
-      Offset.zero,
-      ancestor: overlay,
-    );
-
-    showMenu<T?>(
-      context: context,
-      position: RelativeRect.fromLTRB(
-        position.dx,
-        position.dy + button.size.height,
-        position.dx + button.size.width,
-        position.dy,
-      ),
-      items: [
+    return MenuAnchor(
+      controller: _menuController,
+      menuChildren: [
         // "All" option
-        if (showAllOption)
-          PopupMenuItem<T?>(
-            value: null,
+        if (widget.showAllOption)
+          MenuItemButton(
+            onPressed: () {
+              widget.onChanged(null);
+              _menuController.close();
+              _filterText = '';
+            },
             child: Text(
-              allOptionText,
+              widget.allOptionText,
               style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: value == null ? FontWeight.w600 : FontWeight.normal,
+                fontWeight: widget.value == null
+                    ? FontWeight.w600
+                    : FontWeight.normal,
               ),
             ),
           ),
-        // Actual items
-        ...items.map(
-          (item) => PopupMenuItem<T?>(
-            value: item,
+        // Filtered items
+        ..._filteredItems.map(
+          (item) => MenuItemButton(
+            onPressed: () {
+              widget.onChanged(item);
+              _menuController.close();
+              _filterText = '';
+            },
             child: Text(
               _getDisplayText(item),
               style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: item == value ? FontWeight.w600 : FontWeight.normal,
+                fontWeight: item == widget.value
+                    ? FontWeight.w600
+                    : FontWeight.normal,
               ),
             ),
           ),
         ),
       ],
-    ).then((selected) {
-      // Only fire callback if selection actually changed
-      // Note: showMenu returns null on dismiss without selection
-      // We use a sentinel pattern to distinguish "selected All" from "dismissed"
-      if (selected != value) {
-        onChanged(selected);
-      }
-    });
+      child: KeyboardListener(
+        focusNode: _focusNode,
+        onKeyEvent: widget.enabled ? _handleKeyEvent : null,
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: widget.enabled
+                  ? theme.colorScheme.outline.withValues(alpha: 0.5)
+                  : theme.colorScheme.outline.withValues(alpha: 0.3),
+            ),
+            borderRadius: spacing.radiusSM,
+            color: widget.enabled
+                ? theme.colorScheme.surface
+                : theme.colorScheme.onSurface.withValues(alpha: 0.05),
+          ),
+          child: InkWell(
+            onTap: widget.enabled
+                ? () {
+                    if (_menuController.isOpen) {
+                      _menuController.close();
+                    } else {
+                      _menuController.open();
+                      _focusNode.requestFocus();
+                    }
+                  }
+                : null,
+            borderRadius: spacing.radiusSM,
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: horizontalPadding,
+                vertical: verticalPadding,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (widget.label != null) ...[
+                    Text(
+                      '${widget.label}:',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.6,
+                        ),
+                        fontSize: fontSize,
+                      ),
+                    ),
+                    SizedBox(width: spacing.xs),
+                  ],
+                  Text(
+                    selectedDisplayText,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontSize: fontSize,
+                      fontWeight: FontWeight.w500,
+                      color: widget.enabled
+                          ? theme.colorScheme.onSurface
+                          : theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  SizedBox(width: spacing.xxs),
+                  Icon(
+                    Icons.arrow_drop_down,
+                    size: widget.compact ? 18 : 20,
+                    color: widget.enabled
+                        ? theme.colorScheme.onSurface.withValues(alpha: 0.6)
+                        : theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

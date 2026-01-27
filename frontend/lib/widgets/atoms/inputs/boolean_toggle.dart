@@ -1,14 +1,23 @@
 /// BooleanToggle - Generic toggle button for boolean values
 ///
 /// SINGLE RESPONSIBILITY: Display boolean state and emit toggle event
+///
+/// Features:
+/// - True/false visual states with custom icons
+/// - **Keyboard accessible** - Space/Enter to toggle when focused
+/// - Proper focus ring for keyboard navigation
+/// - Tab navigation support
+/// - Custom icons and colors
+/// - Tooltips for accessibility
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../config/app_borders.dart';
 import '../../../config/app_colors.dart';
 import '../../../config/app_spacing.dart';
 
-class BooleanToggle extends StatelessWidget {
+class BooleanToggle extends StatefulWidget {
   /// Current boolean value
   final bool value;
 
@@ -101,47 +110,98 @@ class BooleanToggle extends StatelessWidget {
   }
 
   @override
+  State<BooleanToggle> createState() => _BooleanToggleState();
+}
+
+class _BooleanToggleState extends State<BooleanToggle> {
+  late final FocusNode _focusNode;
+  bool _isFocused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode = FocusNode();
+    _focusNode.addListener(_handleFocusChange);
+  }
+
+  @override
+  void dispose() {
+    _focusNode.removeListener(_handleFocusChange);
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _handleFocusChange() {
+    setState(() => _isFocused = _focusNode.hasFocus);
+  }
+
+  void _handleKeyEvent(KeyEvent event) {
+    if (event is KeyDownEvent && widget.onToggle != null) {
+      // Toggle on Space or Enter
+      if (event.logicalKey == LogicalKeyboardKey.space ||
+          event.logicalKey == LogicalKeyboardKey.enter) {
+        widget.onToggle!();
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final spacing = context.spacing;
 
     // Visual state based on value
-    final icon = value ? trueIcon : falseIcon;
-    final color = value
-        ? (trueColor ?? theme.colorScheme.primary)
-        : (falseColor ?? theme.colorScheme.error);
-    final tooltip = value ? tooltipTrue : tooltipFalse;
+    final icon = widget.value ? widget.trueIcon : widget.falseIcon;
+    final color = widget.value
+        ? (widget.trueColor ?? theme.colorScheme.primary)
+        : (widget.falseColor ?? theme.colorScheme.error);
+    final tooltip = widget.value ? widget.tooltipTrue : widget.tooltipFalse;
 
     // Sizing
-    final size = compact ? spacing.xxl : spacing.xxl * 1.25;
-    final iconSize = compact ? spacing.iconSizeSM : spacing.iconSizeMD;
+    final size = widget.compact ? spacing.xxl : spacing.xxl * 1.25;
+    final iconSize = widget.compact ? spacing.iconSizeSM : spacing.iconSizeMD;
 
-    return Tooltip(
-      message: tooltip,
-      waitDuration: const Duration(milliseconds: 500),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onToggle,
-          borderRadius: spacing.radiusSM,
-          child: Container(
-            width: size,
-            height: size,
-            decoration: BoxDecoration(
-              border: Border.all(
-                color: onToggle == null
-                    ? theme.disabledColor.withValues(
-                        alpha: AppColors.opacityHint,
-                      )
-                    : color.withValues(alpha: AppColors.opacityHint),
-                width: AppBorders.widthMedium,
-              ),
+    return Semantics(
+      button: true,
+      enabled: widget.onToggle != null,
+      toggled: widget.value,
+      label: tooltip,
+      child: Tooltip(
+        message: tooltip,
+        waitDuration: const Duration(milliseconds: 500),
+        child: KeyboardListener(
+          focusNode: _focusNode,
+          onKeyEvent: _handleKeyEvent,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: widget.onToggle,
               borderRadius: spacing.radiusSM,
-            ),
-            child: Icon(
-              icon,
-              size: iconSize,
-              color: onToggle == null ? theme.disabledColor : color,
+              canRequestFocus: false, // Focus is handled by KeyboardListener
+              child: Container(
+                width: size,
+                height: size,
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: _isFocused
+                        ? theme.colorScheme.primary
+                        : widget.onToggle == null
+                        ? theme.disabledColor.withValues(
+                            alpha: AppColors.opacityHint,
+                          )
+                        : color.withValues(alpha: AppColors.opacityHint),
+                    width: _isFocused
+                        ? AppBorders.widthThick
+                        : AppBorders.widthMedium,
+                  ),
+                  borderRadius: spacing.radiusSM,
+                ),
+                child: Icon(
+                  icon,
+                  size: iconSize,
+                  color: widget.onToggle == null ? theme.disabledColor : color,
+                ),
+              ),
             ),
           ),
         ),

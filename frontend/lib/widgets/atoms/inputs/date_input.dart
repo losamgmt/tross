@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../config/app_spacing.dart';
 import '../../../utils/helpers/helpers.dart';
 
@@ -13,6 +14,8 @@ import '../../../utils/helpers/helpers.dart';
 /// - Prefix/suffix icons
 /// - Disabled state
 /// - Clear button
+/// - **Keyboard shortcuts** - Space/Enter to open picker when focused
+/// - Tab navigation support
 ///
 /// **SRP: Pure Input Rendering**
 /// - Returns ONLY the date input field
@@ -29,7 +32,7 @@ import '../../../utils/helpers/helpers.dart';
 ///   maxDate: DateTime.now(),
 /// )
 /// ```
-class DateInput extends StatelessWidget {
+class DateInput extends StatefulWidget {
   final DateTime? value;
   final ValueChanged<DateTime?> onChanged;
   final DateTime? minDate;
@@ -61,21 +64,57 @@ class DateInput extends StatelessWidget {
     this.showClearButton = true,
   });
 
+  @override
+  State<DateInput> createState() => _DateInputState();
+}
+
+class _DateInputState extends State<DateInput> {
+  late final FocusNode _focusNode;
+  bool _isFocused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode = FocusNode();
+    _focusNode.addListener(_handleFocusChange);
+  }
+
+  @override
+  void dispose() {
+    _focusNode.removeListener(_handleFocusChange);
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _handleFocusChange() {
+    setState(() => _isFocused = _focusNode.hasFocus);
+  }
+
+  void _handleKeyEvent(KeyEvent event) {
+    if (event is KeyDownEvent && widget.enabled) {
+      // Open picker on Space or Enter
+      if (event.logicalKey == LogicalKeyboardKey.space ||
+          event.logicalKey == LogicalKeyboardKey.enter) {
+        _selectDate(context);
+      }
+    }
+  }
+
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: value ?? DateTime.now(),
-      firstDate: minDate ?? DateTime(1900),
-      lastDate: maxDate ?? DateTime(2100),
+      initialDate: widget.value ?? DateTime.now(),
+      firstDate: widget.minDate ?? DateTime(1900),
+      lastDate: widget.maxDate ?? DateTime(2100),
     );
 
     if (picked != null) {
-      onChanged(picked);
+      widget.onChanged(picked);
     }
   }
 
   void _clearDate() {
-    onChanged(null);
+    widget.onChanged(null);
   }
 
   @override
@@ -84,36 +123,45 @@ class DateInput extends StatelessWidget {
     final theme = Theme.of(context);
 
     // Pure input rendering: Just the date input field
-    return InkWell(
-      onTap: enabled ? () => _selectDate(context) : null,
-      child: InputDecorator(
-        decoration: InputDecoration(
-          hintText: placeholder ?? 'Select date',
-          errorText: errorText,
-          helperText: helperText,
-          prefixIcon: prefixIcon != null
-              ? Icon(prefixIcon)
-              : const Icon(Icons.calendar_today),
-          suffixIcon: value != null && showClearButton && enabled
-              ? IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: _clearDate,
-                  tooltip: 'Clear date',
-                )
-              : (suffixIcon != null ? Icon(suffixIcon) : null),
-          border: const OutlineInputBorder(),
-          contentPadding: EdgeInsets.symmetric(
-            horizontal: spacing.sm,
-            vertical: spacing.md,
+    return KeyboardListener(
+      focusNode: _focusNode,
+      onKeyEvent: _handleKeyEvent,
+      child: InkWell(
+        onTap: widget.enabled ? () => _selectDate(context) : null,
+        canRequestFocus: false, // Focus is handled by KeyboardListener
+        child: InputDecorator(
+          isFocused: _isFocused,
+          decoration: InputDecoration(
+            hintText: widget.placeholder ?? 'Select date',
+            errorText: widget.errorText,
+            helperText: widget.helperText,
+            prefixIcon: widget.prefixIcon != null
+                ? Icon(widget.prefixIcon)
+                : const Icon(Icons.calendar_today),
+            suffixIcon:
+                widget.value != null && widget.showClearButton && widget.enabled
+                ? IconButton(
+                    icon: const Icon(Icons.clear),
+                    onPressed: _clearDate,
+                    tooltip: 'Clear date',
+                  )
+                : (widget.suffixIcon != null ? Icon(widget.suffixIcon) : null),
+            border: const OutlineInputBorder(),
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: spacing.sm,
+              vertical: spacing.md,
+            ),
+            enabled: widget.enabled,
           ),
-          enabled: enabled,
-        ),
-        child: Text(
-          value != null ? DateTimeHelpers.formatDate(value!) : '',
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: enabled
-                ? theme.colorScheme.onSurface
-                : theme.colorScheme.onSurface.withValues(alpha: 0.38),
+          child: Text(
+            widget.value != null
+                ? DateTimeHelpers.formatDate(widget.value!)
+                : '',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: widget.enabled
+                  ? theme.colorScheme.onSurface
+                  : theme.colorScheme.onSurface.withValues(alpha: 0.38),
+            ),
           ),
         ),
       ),

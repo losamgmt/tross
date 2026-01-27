@@ -12,10 +12,56 @@ Cross-platform frontend for TrossApp built with Flutter, featuring:
 
 - **Material 3 Design System** with custom TrossApp branding
 - **Atomic Design Pattern** (atoms → molecules → organisms → screens)
+- **Accessibility-First Form Inputs** with full keyboard navigation
 - **Provider State Management** with defensive error handling
 - **Auth0 Integration** supporting web, iOS, and Android
 - **Type-Safe API Client** with auto token refresh
 - **Comprehensive Test Coverage** across all layers
+
+---
+
+## ♿ Accessibility
+
+**Every form input is keyboard-accessible.** This is a core architectural principle, not an afterthought.
+
+### Design Principles
+
+| Principle | Implementation |
+|-----------|----------------|
+| **Keyboard navigable** | Tab focuses all inputs, no mouse required |
+| **Visual focus states** | Clear focus rings on all focusable elements |
+| **Activation shortcuts** | Space/Enter opens pickers, toggles values |
+| **Native when possible** | Use Flutter's `DropdownMenu`, `Checkbox`, `Radio` |
+| **Semantics for custom** | `Semantics` widget wraps custom controls |
+
+### Input Widget Patterns
+
+All input atoms in `widgets/atoms/inputs/` follow consistent patterns:
+
+```dart
+// Custom widgets use FocusNode + KeyboardListener
+KeyboardListener(
+  focusNode: _focusNode,
+  onKeyEvent: (event) {
+    if (event.logicalKey == LogicalKeyboardKey.space ||
+        event.logicalKey == LogicalKeyboardKey.enter) {
+      _activate();
+    }
+  },
+  child: Semantics(
+    label: 'Descriptive label for screen readers',
+    child: /* visual widget */,
+  ),
+)
+```
+
+### Testing
+
+Every input has a "Keyboard Accessibility" test group covering:
+- Tab navigation focuses the widget
+- Space/Enter activates the control
+- Escape closes menus/pickers
+- Arrow keys navigate options
 
 ---
 
