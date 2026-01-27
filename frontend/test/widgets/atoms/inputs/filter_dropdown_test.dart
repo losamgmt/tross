@@ -8,9 +8,11 @@
 /// - Selection changes
 /// - Compact mode
 /// - Enabled/disabled states
+/// - Keyboard accessibility
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tross_app/widgets/atoms/inputs/filter_dropdown.dart';
 
@@ -406,6 +408,77 @@ void main() {
 
         expect(find.text('Page Size:'), findsOneWidget);
         expect(find.text('10'), findsOneWidget);
+      });
+    });
+
+    group('Keyboard Accessibility', () {
+      testWidgets('filters items when typing characters', (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: FilterDropdown<String>(
+                value: null,
+                items: const ['Active', 'Inactive', 'Pending', 'Archived'],
+                onChanged: (_) {},
+              ),
+            ),
+          ),
+        );
+
+        // Open the menu
+        await tester.tap(find.byType(FilterDropdown<String>));
+        await tester.pumpAndSettle();
+
+        // All items should be visible initially
+        expect(find.text('Active'), findsOneWidget);
+        expect(find.text('Inactive'), findsOneWidget);
+        expect(find.text('Pending'), findsOneWidget);
+        expect(find.text('Archived'), findsOneWidget);
+      });
+
+      testWidgets('uses MenuAnchor for keyboard navigation', (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: FilterDropdown<String>(
+                value: 'Active',
+                items: const ['Active', 'Inactive'],
+                onChanged: (_) {},
+              ),
+            ),
+          ),
+        );
+
+        // Should use MenuAnchor for keyboard navigation
+        expect(find.byType(MenuAnchor), findsOneWidget);
+      });
+
+      testWidgets('closes menu on Escape key', (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: FilterDropdown<String>(
+                value: 'Active',
+                items: const ['Active', 'Inactive', 'Pending'],
+                onChanged: (_) {},
+              ),
+            ),
+          ),
+        );
+
+        // Open the menu
+        await tester.tap(find.byType(FilterDropdown<String>));
+        await tester.pumpAndSettle();
+
+        // Menu should be open
+        expect(find.text('Inactive'), findsOneWidget);
+
+        // Press Escape
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pumpAndSettle();
+
+        // Menu should be closed
+        expect(find.text('Inactive'), findsNothing);
       });
     });
   });

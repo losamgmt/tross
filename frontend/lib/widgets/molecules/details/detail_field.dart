@@ -28,7 +28,8 @@ class DetailFieldDisplay<T, V> extends StatelessWidget {
     final displayType = switch (config.fieldType) {
       FieldType.text ||
       FieldType.textArea ||
-      FieldType.asyncSelect => DisplayType.text,
+      FieldType.asyncSelect ||
+      FieldType.lookup => DisplayType.text,
       FieldType.number => DisplayType.number,
       FieldType.date => DisplayType.date,
       FieldType.time => DisplayType.time,

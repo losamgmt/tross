@@ -119,20 +119,23 @@ class TextInput extends StatefulWidget {
 
 class _TextInputState extends State<TextInput> {
   late TextEditingController _controller;
+  late FocusNode _focusNode;
   bool _obscureText = false;
 
   @override
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.value);
+    _focusNode = FocusNode();
     _obscureText = widget.obscureText;
   }
 
   @override
   void didUpdateWidget(TextInput oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Update controller if value changed externally
-    if (oldWidget.value != widget.value && _controller.text != widget.value) {
+    // Only sync controller when value changed externally AND user is not actively typing
+    // This prevents cursor jumping/text selection during typing
+    if (oldWidget.value != widget.value && !_focusNode.hasFocus) {
       _controller.text = widget.value;
     }
   }
@@ -140,6 +143,7 @@ class _TextInputState extends State<TextInput> {
   @override
   void dispose() {
     _controller.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -150,6 +154,7 @@ class _TextInputState extends State<TextInput> {
     // Pure input rendering: just the TextField
     return TextField(
       controller: _controller,
+      focusNode: _focusNode,
       enabled: widget.enabled,
       obscureText: _obscureText,
       maxLength: widget.maxLength,

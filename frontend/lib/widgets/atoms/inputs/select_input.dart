@@ -9,17 +9,24 @@ import '../../../config/app_spacing.dart';
 /// Features:
 /// - Fully generic - works with any type
 /// - Custom display text transformation
+/// - **Keyboard typeahead filtering** - type to filter options
 /// - Validation callback
 /// - Error/helper text display
-/// - Prefix/suffix icons
+/// - Leading icon support
 /// - Disabled state
 /// - Optional "empty" selection
 ///
 /// **SRP: Pure Input Rendering**
-/// - Returns ONLY the DropdownButtonFormField
+/// - Returns ONLY the DropdownMenu
 /// - NO label rendering (molecule's job)
 /// - NO Column wrapper (molecule handles layout)
 /// - Context-agnostic: Can be used anywhere
+///
+/// **Material 3 DropdownMenu** provides built-in:
+/// - Keyboard navigation (arrow keys)
+/// - Type-to-filter (type 'OR' to filter to 'Oregon')
+/// - Proper focus management
+/// - Accessibility support
 ///
 /// Usage:
 /// ```dart
@@ -77,51 +84,80 @@ class SelectInput<T> extends StatelessWidget {
     final theme = Theme.of(context);
 
     // Ensure value is valid: must be in items or null
-    // Null is allowed when: allowEmpty is true, OR placeholder is set (to show hint)
-    // This prevents the Flutter dropdown assertion error
     final bool canBeNull = allowEmpty || placeholder != null;
     final effectiveValue = (value != null && items.contains(value))
         ? value
         : (canBeNull ? null : (items.isNotEmpty ? items.first : null));
 
-    // Pure input rendering: Just the DropdownButtonFormField
-    return DropdownButtonFormField<T>(
-      // Use initialValue (not deprecated 'value') with validated effectiveValue
-      initialValue: effectiveValue,
-      items: [
-        // Optional empty item
-        if (allowEmpty)
-          DropdownMenuItem<T>(
-            value: null,
+    // Build dropdown menu entries
+    final List<DropdownMenuEntry<T?>> entries = [
+      // Optional empty item
+      if (allowEmpty)
+        DropdownMenuEntry<T?>(
+          value: null,
+          label: emptyText ?? '-- Select --',
+          style: MenuItemButton.styleFrom(
+            foregroundColor: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
+        ),
+      // All items
+      ...items.map(
+        (item) => DropdownMenuEntry<T?>(value: item, label: displayText(item)),
+      ),
+    ];
+
+    // Material 3 DropdownMenu with keyboard filtering
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        DropdownMenu<T?>(
+          initialSelection: effectiveValue,
+          dropdownMenuEntries: entries,
+          onSelected: enabled ? onChanged : null,
+          enabled: enabled,
+          enableFilter: true, // ✅ Type-to-filter keyboard support
+          enableSearch: true, // ✅ Search within options
+          expandedInsets: EdgeInsets.zero, // Expand to full width
+          hintText: placeholder,
+          leadingIcon: prefixIcon != null ? Icon(prefixIcon) : null,
+          trailingIcon: suffixIcon != null ? Icon(suffixIcon) : null,
+          inputDecorationTheme: InputDecorationTheme(
+            border: const OutlineInputBorder(),
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: spacing.sm,
+              vertical: spacing.xs,
+            ),
+          ),
+          menuStyle: MenuStyle(
+            maximumSize: WidgetStatePropertyAll(
+              Size(double.infinity, spacing.xxxl * 8), // Max height for menu
+            ),
+          ),
+        ),
+        // Helper text
+        if (helperText != null && errorText == null)
+          Padding(
+            padding: EdgeInsets.only(top: spacing.xxs, left: spacing.sm),
             child: Text(
-              emptyText!,
-              style: theme.textTheme.bodyMedium?.copyWith(
+              helperText!,
+              style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ),
-        // All items
-        ...items.map((item) {
-          return DropdownMenuItem<T>(
-            value: item,
-            child: Text(displayText(item)),
-          );
-        }),
+        // Error text
+        if (errorText != null)
+          Padding(
+            padding: EdgeInsets.only(top: spacing.xxs, left: spacing.sm),
+            child: Text(
+              errorText!,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.error,
+              ),
+            ),
+          ),
       ],
-      onChanged: enabled ? onChanged : null,
-      decoration: InputDecoration(
-        hintText: placeholder,
-        errorText: errorText,
-        helperText: helperText,
-        prefixIcon: prefixIcon != null ? Icon(prefixIcon) : null,
-        suffixIcon: suffixIcon != null ? Icon(suffixIcon) : null,
-        border: const OutlineInputBorder(),
-        contentPadding: EdgeInsets.symmetric(
-          horizontal: spacing.sm,
-          vertical: spacing.xs,
-        ),
-      ),
-      isExpanded: true,
     );
   }
 }

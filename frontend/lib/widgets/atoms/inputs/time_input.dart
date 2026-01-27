@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../config/app_spacing.dart';
 
 /// Generic time input atom for ANY time field on ANY model
@@ -11,6 +12,8 @@ import '../../../config/app_spacing.dart';
 /// - Prefix/suffix icons
 /// - Disabled state
 /// - Clear button
+/// - **Keyboard shortcuts** - Space/Enter to open picker when focused
+/// - Tab navigation support
 ///
 /// **SRP: Pure Input Rendering**
 /// - Returns ONLY the time input field
@@ -25,7 +28,7 @@ import '../../../config/app_spacing.dart';
 ///   onChanged: (time) => setState(() => startTime = time),
 /// )
 /// ```
-class TimeInput extends StatelessWidget {
+class TimeInput extends StatefulWidget {
   final TimeOfDay? value;
   final ValueChanged<TimeOfDay?> onChanged;
   final String? Function(TimeOfDay?)? validator;
@@ -53,31 +56,67 @@ class TimeInput extends StatelessWidget {
     this.showClearButton = true,
   });
 
+  @override
+  State<TimeInput> createState() => _TimeInputState();
+}
+
+class _TimeInputState extends State<TimeInput> {
+  late final FocusNode _focusNode;
+  bool _isFocused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode = FocusNode();
+    _focusNode.addListener(_handleFocusChange);
+  }
+
+  @override
+  void dispose() {
+    _focusNode.removeListener(_handleFocusChange);
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _handleFocusChange() {
+    setState(() => _isFocused = _focusNode.hasFocus);
+  }
+
+  void _handleKeyEvent(KeyEvent event) {
+    if (event is KeyDownEvent && widget.enabled) {
+      // Open picker on Space or Enter
+      if (event.logicalKey == LogicalKeyboardKey.space ||
+          event.logicalKey == LogicalKeyboardKey.enter) {
+        _selectTime(context);
+      }
+    }
+  }
+
   Future<void> _selectTime(BuildContext context) async {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
-      initialTime: value ?? TimeOfDay.now(),
+      initialTime: widget.value ?? TimeOfDay.now(),
       builder: (context, child) {
         return MediaQuery(
           data: MediaQuery.of(
             context,
-          ).copyWith(alwaysUse24HourFormat: use24HourFormat),
+          ).copyWith(alwaysUse24HourFormat: widget.use24HourFormat),
           child: child!,
         );
       },
     );
 
     if (picked != null) {
-      onChanged(picked);
+      widget.onChanged(picked);
     }
   }
 
   void _clearTime() {
-    onChanged(null);
+    widget.onChanged(null);
   }
 
   String _formatTime(TimeOfDay time) {
-    if (use24HourFormat) {
+    if (widget.use24HourFormat) {
       return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
     } else {
       final hour = time.hourOfPeriod == 0 ? 12 : time.hourOfPeriod;
@@ -93,36 +132,45 @@ class TimeInput extends StatelessWidget {
     final theme = Theme.of(context);
 
     // Pure input rendering: Just the time input field
-    return InkWell(
-      onTap: enabled ? () => _selectTime(context) : null,
-      child: InputDecorator(
-        decoration: InputDecoration(
-          hintText: placeholder ?? 'Select time',
-          errorText: errorText,
-          helperText: helperText,
-          prefixIcon: prefixIcon != null
-              ? Icon(prefixIcon)
-              : const Icon(Icons.access_time),
-          suffixIcon: value != null && showClearButton && enabled
-              ? IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: _clearTime,
-                  tooltip: 'Clear',
-                )
-              : (suffixIcon != null ? Icon(suffixIcon) : null),
-          enabled: enabled,
-          contentPadding: EdgeInsets.symmetric(
-            horizontal: spacing.md,
-            vertical: spacing.sm,
+    return KeyboardListener(
+      focusNode: _focusNode,
+      onKeyEvent: _handleKeyEvent,
+      child: InkWell(
+        onTap: widget.enabled ? () => _selectTime(context) : null,
+        canRequestFocus: false, // Focus is handled by KeyboardListener
+        child: InputDecorator(
+          isFocused: _isFocused,
+          decoration: InputDecoration(
+            hintText: widget.placeholder ?? 'Select time',
+            errorText: widget.errorText,
+            helperText: widget.helperText,
+            prefixIcon: widget.prefixIcon != null
+                ? Icon(widget.prefixIcon)
+                : const Icon(Icons.access_time),
+            suffixIcon:
+                widget.value != null && widget.showClearButton && widget.enabled
+                ? IconButton(
+                    icon: const Icon(Icons.clear),
+                    onPressed: _clearTime,
+                    tooltip: 'Clear',
+                  )
+                : (widget.suffixIcon != null ? Icon(widget.suffixIcon) : null),
+            enabled: widget.enabled,
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: spacing.md,
+              vertical: spacing.sm,
+            ),
+            border: OutlineInputBorder(borderRadius: spacing.radiusSM),
           ),
-          border: OutlineInputBorder(borderRadius: spacing.radiusSM),
-        ),
-        child: Text(
-          value != null ? _formatTime(value!) : placeholder ?? 'Select time',
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: value != null
-                ? theme.colorScheme.onSurface
-                : theme.colorScheme.onSurface.withValues(alpha: 0.6),
+          child: Text(
+            widget.value != null
+                ? _formatTime(widget.value!)
+                : widget.placeholder ?? 'Select time',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: widget.value != null
+                  ? theme.colorScheme.onSurface
+                  : theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
           ),
         ),
       ),

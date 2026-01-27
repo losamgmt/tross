@@ -67,17 +67,21 @@ class NumberInput extends StatefulWidget {
 
 class _NumberInputState extends State<NumberInput> {
   late TextEditingController _controller;
+  late FocusNode _focusNode;
 
   @override
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.value?.toString() ?? '');
+    _focusNode = FocusNode();
   }
 
   @override
   void didUpdateWidget(NumberInput oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.value != oldWidget.value) {
+    // Only sync controller when value changed externally AND user is not actively typing
+    // This prevents cursor jumping/text selection during typing
+    if (widget.value != oldWidget.value && !_focusNode.hasFocus) {
       _controller.text = widget.value?.toString() ?? '';
     }
   }
@@ -85,6 +89,7 @@ class _NumberInputState extends State<NumberInput> {
   @override
   void dispose() {
     _controller.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -151,6 +156,7 @@ class _NumberInputState extends State<NumberInput> {
         Expanded(
           child: TextField(
             controller: _controller,
+            focusNode: _focusNode,
             enabled: widget.enabled,
             keyboardType: TextInputType.numberWithOptions(
               decimal: !widget.isInteger,

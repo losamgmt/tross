@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tross_app/widgets/atoms/inputs/date_input.dart';
 
@@ -337,6 +338,101 @@ void main() {
       );
 
       expect(find.byIcon(Icons.clear), findsNothing);
+    });
+
+    group('Keyboard Accessibility', () {
+      testWidgets('opens date picker on Space key', (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: DateInput(value: DateTime(2024, 1, 1), onChanged: (_) {}),
+            ),
+          ),
+        );
+
+        // Tap to focus
+        await tester.tap(find.byType(DateInput));
+        await tester.pumpAndSettle();
+
+        // Press Space to open picker
+        await tester.sendKeyEvent(LogicalKeyboardKey.space);
+        await tester.pumpAndSettle();
+
+        // Date picker should appear
+        expect(find.byType(DatePickerDialog), findsOneWidget);
+      });
+
+      testWidgets('opens date picker on Enter key', (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: DateInput(value: DateTime(2024, 1, 1), onChanged: (_) {}),
+            ),
+          ),
+        );
+
+        // Tap to focus
+        await tester.tap(find.byType(DateInput));
+        await tester.pumpAndSettle();
+
+        // Press Enter to open picker
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
+
+        // Date picker should appear
+        expect(find.byType(DatePickerDialog), findsOneWidget);
+      });
+
+      testWidgets('does not open picker on keyboard when disabled', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: DateInput(
+                value: DateTime(2024, 1, 1),
+                onChanged: (_) {},
+                enabled: false,
+              ),
+            ),
+          ),
+        );
+
+        // Try to focus and press Space
+        await tester.tap(find.byType(DateInput));
+        await tester.pumpAndSettle();
+        await tester.sendKeyEvent(LogicalKeyboardKey.space);
+        await tester.pumpAndSettle();
+
+        // Date picker should NOT appear
+        expect(find.byType(DatePickerDialog), findsNothing);
+      });
+
+      testWidgets('is focusable via tab navigation', (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Column(
+                children: [
+                  const TextField(), // First focusable widget
+                  DateInput(value: DateTime(2024, 1, 1), onChanged: (_) {}),
+                ],
+              ),
+            ),
+          ),
+        );
+
+        // Focus the TextField first
+        await tester.tap(find.byType(TextField));
+        await tester.pumpAndSettle();
+
+        // Tab to the DateInput
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pumpAndSettle();
+
+        // DateInput should be in the tree and focusable
+        expect(find.byType(DateInput), findsOneWidget);
+      });
     });
   });
 }

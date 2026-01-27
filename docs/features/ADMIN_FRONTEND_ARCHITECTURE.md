@@ -146,7 +146,29 @@ abstract class MetadataProvider {
 | `StatusBadge` | `display/` | Color-coded status labels |
 | Various buttons | `buttons/` | Icon buttons, action buttons |
 | Typography | `typography/` | Text styles |
-| Inputs | `inputs/` | Form input atoms |
+| Inputs | `inputs/` | Form input atoms (see below) |
+
+**Input Atoms - Accessibility-First Design:**
+
+All form inputs follow these principles:
+- **Keyboard navigable** - Tab to focus, Space/Enter to activate
+- **Focus states visible** - Clear visual indicator when focused  
+- **Native widgets preferred** - Use Flutter's `DropdownMenu`, `Checkbox`, `Radio` for built-in accessibility
+- **Custom widgets accessible** - `FocusNode` + `KeyboardListener` + `Semantics` wrapper
+
+| Input | Type | Keyboard Support |
+|-------|------|------------------|
+| `TextInput` | Native TextField | Full native support |
+| `NumberInput` | Native TextField | Full native support |
+| `TextAreaInput` | Native TextField | Full native support |
+| `SelectInput` | DropdownMenu | Arrow keys, typeahead, Enter to select |
+| `LookupInput` | Async search dropdown | Search + arrow keys + Enter |
+| `FilterDropdown` | MenuAnchor | Typeahead filtering, arrow keys |
+| `DateInput` | Custom + DatePicker | Space/Enter opens picker |
+| `TimeInput` | Custom + TimePicker | Space/Enter opens picker |
+| `BooleanToggle` | Custom icon button | Space/Enter toggles, focus ring |
+| `CheckboxInput` | Native Checkbox | Full native support |
+| `RadioInput` | Native Radio | Full native support |
 
 #### Molecules (`widgets/molecules/`)
 | Component | Subdirectory | Purpose |

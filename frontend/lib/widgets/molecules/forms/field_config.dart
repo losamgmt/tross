@@ -25,8 +25,13 @@ enum FieldType {
   /// Toggle/switch input
   boolean,
 
-  /// Async-loaded dropdown (foreign key)
+  /// Async-loaded dropdown (foreign key) - loads all items upfront
+  /// Use for small FK datasets (< 100 items)
   asyncSelect,
+
+  /// Lookup field with search (foreign key) - debounced search API
+  /// Use for large FK datasets (100+ items like customers, products)
+  lookup,
 }
 
 /// Generic field configuration for ANY field on ANY model
@@ -122,6 +127,18 @@ class FieldConfig<T, V> {
   final int? minLines;
   final int? maxLines;
 
+  // Lookup field specific (for large FK datasets with search)
+  /// Async function to search items by query - returns matching items
+  /// Use for large datasets where loading all items is impractical
+  final Future<List<Map<String, dynamic>>> Function(String query)?
+  asyncSearchItems;
+
+  /// Minimum characters before search triggers (default 2)
+  final int? minSearchLength;
+
+  /// Debounce duration for search in milliseconds (default 300)
+  final int? searchDebounceMs;
+
   const FieldConfig({
     this.fieldName,
     required this.fieldType,
@@ -159,5 +176,9 @@ class FieldConfig<T, V> {
     // TextArea specific
     this.minLines,
     this.maxLines,
+    // Lookup specific
+    this.asyncSearchItems,
+    this.minSearchLength,
+    this.searchDebounceMs,
   });
 }

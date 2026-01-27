@@ -39,29 +39,83 @@ widgets/
 
 ### Hierarchy Rules
 
-**Atoms (20 components)**
+**Atoms (20+ components)**
 
 - Single-purpose, no dependencies
-- Examples: `ActionButton`, `StatusBadge`, `DataValue`
+- Examples: `ActionButton`, `StatusBadge`, `DataValue`, form inputs
 - Cannot import from molecules/organisms
+- **Must be fully accessible** (see Accessibility Principles below)
 
-**Molecules (15 components)**
+**Molecules (15+ components)**
 
 - Composed of 2-5 atoms
 - Examples: `ErrorCard`, `PaginationControls`, `TableHeader`
 - Can import atoms only
 
-**Organisms (8 components)**
+**Organisms (8+ components)**
 
 - Complex, feature-complete components
 - Examples: `AppDataTable<T>`, `AppHeader`, `ErrorDisplay`
 - Can import atoms + molecules
 
-**Screens (5 pages)**
+**Screens (5+ pages)**
 
 - Full page layouts
 - Examples: `LoginScreen`, `HomeScreen`, `AdminDashboard`
 - Can import all lower levels
+
+---
+
+## Accessibility Principles
+
+**Why Accessibility is Non-Negotiable:**
+- Web Content Accessibility Guidelines (WCAG) compliance
+- Keyboard-only users, screen readers, motor impairments
+- Better UX for everyone (keyboard power users, mobile users)
+- Legal requirements in many jurisdictions
+
+**Every form input atom MUST:**
+
+1. **Be focusable via Tab** - Users navigate forms without a mouse
+2. **Show visual focus state** - Clear indication of which element has focus
+3. **Support keyboard activation** - Space/Enter to activate toggles/pickers
+4. **Use native widgets when possible** - Flutter's `Checkbox`, `Radio`, `DropdownMenu` have built-in accessibility
+5. **Provide `Semantics` for custom widgets** - Screen readers need proper labels
+
+**Implementation Patterns:**
+
+```dart
+// Pattern: FocusNode + KeyboardListener for custom widgets
+class AccessibleToggle extends StatefulWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Focus(
+      focusNode: _focusNode,
+      child: KeyboardListener(
+        onKeyEvent: _handleKeyEvent, // Space/Enter to toggle
+        child: Semantics(
+          label: 'Toggle active status',
+          toggled: isActive,
+          child: /* visual widget */,
+        ),
+      ),
+    );
+  }
+}
+
+// Pattern: Use Flutter's accessible widgets
+DropdownMenu<T>(...)  // Preferred over showMenu() - has keyboard nav
+Checkbox(...)         // Native - already accessible
+Radio<T>(...)         // Native - already accessible
+```
+
+**Testing Accessibility:**
+
+Every input atom has a "Keyboard Accessibility" test group verifying:
+- Tab navigation focuses the widget
+- Space/Enter activates the widget
+- Escape closes menus/pickers
+- Arrow keys navigate options (where applicable)
 
 ---
 

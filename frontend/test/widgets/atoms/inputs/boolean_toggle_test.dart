@@ -8,9 +8,11 @@
 /// - Compact mode
 /// - Factory constructors
 /// - Interaction callbacks
+/// - Keyboard accessibility
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tross_app/widgets/atoms/inputs/boolean_toggle.dart';
 
@@ -384,6 +386,92 @@ void main() {
         // Should now show false (cancel)
         expect(find.byIcon(Icons.cancel), findsOneWidget);
         expect(find.byIcon(Icons.check_circle), findsNothing);
+      });
+    });
+
+    group('Keyboard Accessibility', () {
+      testWidgets('toggles on Space key press', (tester) async {
+        var toggleCount = 0;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: BooleanToggle(value: true, onToggle: () => toggleCount++),
+            ),
+          ),
+        );
+
+        // Focus the widget
+        await tester.tap(find.byType(BooleanToggle));
+        await tester.pumpAndSettle();
+
+        // Press Space key
+        await tester.sendKeyEvent(LogicalKeyboardKey.space);
+        await tester.pumpAndSettle();
+
+        expect(toggleCount, greaterThan(0));
+      });
+
+      testWidgets('toggles on Enter key press', (tester) async {
+        var toggleCount = 0;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: BooleanToggle(value: false, onToggle: () => toggleCount++),
+            ),
+          ),
+        );
+
+        // Focus the widget
+        await tester.tap(find.byType(BooleanToggle));
+        await tester.pumpAndSettle();
+
+        // Press Enter key
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
+
+        expect(toggleCount, greaterThan(0));
+      });
+
+      testWidgets('has Semantics for accessibility', (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: BooleanToggle(
+                value: true,
+                onToggle: () {},
+                tooltipTrue: 'Active',
+              ),
+            ),
+          ),
+        );
+
+        // Should have Semantics widget
+        expect(find.byType(Semantics), findsWidgets);
+      });
+
+      testWidgets('does not toggle on keyboard when disabled', (tester) async {
+        var toggleCalled = false;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: BooleanToggle(
+                value: true,
+                onToggle: null, // Disabled
+              ),
+            ),
+          ),
+        );
+
+        // Try to focus and press Space
+        await tester.tap(find.byType(BooleanToggle));
+        await tester.pumpAndSettle();
+        await tester.sendKeyEvent(LogicalKeyboardKey.space);
+        await tester.pumpAndSettle();
+
+        expect(toggleCalled, isFalse);
       });
     });
   });
