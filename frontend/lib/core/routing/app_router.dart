@@ -20,6 +20,7 @@ import '../../screens/settings_screen.dart';
 import '../../screens/entity_screen.dart';
 import '../../screens/entity_detail_screen.dart';
 import '../../widgets/organisms/feedback/error_display.dart';
+import '../../widgets/organisms/feedback/under_construction_display.dart';
 import '../../widgets/organisms/dashboards/db_health_dashboard.dart';
 import '../../widgets/organisms/layout/tabbed_container.dart';
 import '../../widgets/templates/templates.dart';
@@ -177,6 +178,17 @@ class AppRouter {
                 child: _AdminLogsScreen(
                   activeTab: state.uri.queryParameters['tab'] ?? 'data',
                 ),
+                transitionsBuilder: _slideTransition,
+              ),
+            ),
+
+            // System Files - File attachments viewer (placeholder)
+            GoRoute(
+              path: 'system/files',
+              name: 'adminFiles',
+              pageBuilder: (context, state) => CustomTransitionPage(
+                key: state.pageKey,
+                child: const _AdminFilesScreen(),
                 transitionsBuilder: _slideTransition,
               ),
             ),
@@ -574,6 +586,30 @@ class _ResultBadge extends StatelessWidget {
           fontWeight: FontWeight.bold,
           color: isSuccess ? Colors.green : Colors.red,
         ),
+      ),
+    );
+  }
+}
+
+/// Admin Files Screen - File attachments viewer placeholder
+///
+/// TODO: Implement file attachments browser with upload/download capabilities
+class _AdminFilesScreen extends StatelessWidget {
+  const _AdminFilesScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return AdaptiveShell(
+      currentRoute: '/admin/system/files',
+      pageTitle: 'File Attachments',
+      sidebarStrategy: 'admin',
+      body: const UnderConstructionDisplay(
+        title: 'File Attachments',
+        message:
+            'The file attachments browser is under development. '
+            'This feature will allow you to view, search, and manage '
+            'all file attachments across the system.',
+        icon: Icons.folder_outlined,
       ),
     );
   }

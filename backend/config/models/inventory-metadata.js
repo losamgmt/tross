@@ -87,6 +87,12 @@ module.exports = {
   },
 
   /**
+   * Navigation visibility - minimum role to see this entity in nav menus
+   * Inventory is visible to technician+ (those who use it for work orders)
+   */
+  navVisibility: 'technician',
+
+  /**
    * Entity-level permission overrides
    * Matches permissions.json - technician+ read/update, dispatcher+ create, manager+ delete
    */

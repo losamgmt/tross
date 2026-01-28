@@ -89,6 +89,12 @@ module.exports = {
   },
 
   /**
+   * Navigation visibility - minimum role to see this entity in nav menus
+   * Technicians can see other technicians (for scheduling), but not customers
+   */
+  navVisibility: 'technician',
+
+  /**
    * Route configuration - explicit opt-in for generic router
    */
   routeConfig: {

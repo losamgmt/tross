@@ -85,12 +85,37 @@ class NavMenuBuilder {
   /// Removes items the user doesn't have access to.
   /// DEFENSIVE: If filtering fails for any reason, returns all items
   /// (backend validates permissions anyway).
+  ///
+  /// RECURSIVE: Also filters children of section headers
   static List<NavMenuItem> filterForUser(
     List<NavMenuItem> items,
     Map<String, dynamic>? user,
   ) {
     try {
-      final filtered = items.where((item) => item.isVisibleFor(user)).toList();
+      final filtered = <NavMenuItem>[];
+
+      for (final item in items) {
+        // Check if this item is visible
+        if (!item.isVisibleFor(user)) {
+          continue; // Skip invisible items
+        }
+
+        // If item has children, recursively filter them
+        if (item.children != null && item.children!.isNotEmpty) {
+          final filteredChildren = _filterChildrenForUser(item.children!, user);
+
+          // If all children were filtered out, check if parent should still show
+          if (filteredChildren.isEmpty && item.isSectionHeader) {
+            continue; // Hide empty section headers
+          }
+
+          // Create new item with filtered children
+          filtered.add(item.copyWith(children: filteredChildren));
+        } else {
+          filtered.add(item);
+        }
+      }
+
       ErrorService.logDebug(
         '[NavMenu] filterForUser result',
         context: {
@@ -109,6 +134,33 @@ class NavMenuBuilder {
       );
       return items; // Defensive: show all items on error
     }
+  }
+
+  /// Recursively filter children for user permissions
+  static List<NavMenuItem> _filterChildrenForUser(
+    List<NavMenuItem> children,
+    Map<String, dynamic>? user,
+  ) {
+    final filtered = <NavMenuItem>[];
+
+    for (final child in children) {
+      if (!child.isVisibleFor(user)) {
+        continue;
+      }
+
+      // Recursively filter nested children (if any)
+      if (child.children != null && child.children!.isNotEmpty) {
+        final filteredNested = _filterChildrenForUser(child.children!, user);
+        if (filteredNested.isEmpty && child.isSectionHeader) {
+          continue; // Hide empty nested sections
+        }
+        filtered.add(child.copyWith(children: filteredNested));
+      } else {
+        filtered.add(child);
+      }
+    }
+
+    return filtered;
   }
 
   // ============================================================================
@@ -138,6 +190,15 @@ class NavMenuBuilder {
     // If strategy has custom sections, build from section definitions
     if (strategy.hasSections) {
       for (final section in strategy.sections) {
+        // Get permission check for this section (if permissionResource is set)
+        final sectionResourceType = ResourceType.fromString(
+          section.permissionResource,
+        );
+        final sectionVisibleWhen = sectionResourceType != null
+            ? (Map<String, dynamic>? user) =>
+                  _canAccessResource(sectionResourceType, user)
+            : null;
+
         // Type 1: Clickable item (has route, not a grouper)
         if (section.hasRoute && !section.isGrouper) {
           items.add(
@@ -148,7 +209,8 @@ class NavMenuBuilder {
                   ? EntityIconResolver.getStaticIcon(section.icon!)
                   : null,
               route: section.route,
-              requiresAuth: false,
+              requiresAuth: sectionResourceType == null,
+              visibleWhen: sectionVisibleWhen,
             ),
           );
           continue;
@@ -180,7 +242,9 @@ class NavMenuBuilder {
                   : null,
               isSectionHeader: entityChildren.isNotEmpty,
               children: entityChildren.isNotEmpty ? entityChildren : null,
-              requiresAuth: false,
+              // Entity grouper uses section permission if set, else visible to authenticated
+              requiresAuth: sectionResourceType == null,
+              visibleWhen: sectionVisibleWhen,
             ),
           );
           continue;
@@ -189,6 +253,14 @@ class NavMenuBuilder {
         // Type 3: Static grouper (has children defined in config)
         if (section.hasChildren) {
           final staticChildren = section.children.map((child) {
+            // Child can have its own permissionResource, or inherit from section
+            final childResourceType = ResourceType.fromString(
+              child.permissionResource ?? section.permissionResource,
+            );
+            final childVisibleWhen = childResourceType != null
+                ? (Map<String, dynamic>? user) =>
+                      _canAccessResource(childResourceType, user)
+                : null;
             return NavMenuItem(
               id: 'section_${section.id}_${child.id}',
               label: child.label,
@@ -196,7 +268,8 @@ class NavMenuBuilder {
                   ? EntityIconResolver.getStaticIcon(child.icon!)
                   : null,
               route: child.route,
-              requiresAuth: false,
+              requiresAuth: childResourceType == null,
+              visibleWhen: childVisibleWhen,
             );
           }).toList();
 
@@ -209,7 +282,9 @@ class NavMenuBuilder {
                   : null,
               isSectionHeader: true,
               children: staticChildren,
-              requiresAuth: false,
+              // Section headers use section permission if set
+              requiresAuth: sectionResourceType == null,
+              visibleWhen: sectionVisibleWhen,
             ),
           );
           continue;
@@ -427,8 +502,9 @@ class NavMenuBuilder {
   ) {
     try {
       if (user == null) {
-        ErrorService.logWarning(
-          '[NavMenu] _canAccessResource: user is null',
+        // DEBUG not WARNING: user is null is expected during login/logout transitions
+        ErrorService.logDebug(
+          '[NavMenu] _canAccessResource: user is null (expected during auth transitions)',
           context: {'resource': resource.toBackendString()},
         );
         return false;
@@ -446,13 +522,11 @@ class NavMenuBuilder {
         );
         return true; // Defensive: show menu item, let backend reject if unauthorized
       }
-      final result = PermissionService.hasPermission(
-        role,
-        resource,
-        CrudOperation.read,
-      );
+      // Use hasNavVisibility for nav menu visibility (not hasPermission)
+      // This respects explicit navVisibility settings in permissions.json
+      final result = PermissionService.hasNavVisibility(role, resource);
       ErrorService.logDebug(
-        '[NavMenu] _canAccessResource check',
+        '[NavMenu] _canAccessResource check (using navVisibility)',
         context: {
           'resource': resource.toBackendString(),
           'role': role,
@@ -471,7 +545,11 @@ class NavMenuBuilder {
     }
   }
 
-  /// Check if user can access an entity
+  /// Check if user can see an entity in navigation menus
+  ///
+  /// Uses navVisibility from permissions.json (explicit) or falls back to
+  /// read permission. This is separate from data access because RLS may
+  /// further restrict what data a user can actually see.
   static bool _canAccessEntity(String entityName, Map<String, dynamic>? user) {
     if (user == null) return false;
     final role = user['role'] as String?;
@@ -488,11 +566,8 @@ class NavMenuBuilder {
       return true; // Unknown resource type, allow access
     }
 
-    return PermissionService.hasPermission(
-      role,
-      resourceType,
-      CrudOperation.read,
-    );
+    // Use navVisibility check (explicit navVisibility or falls back to read)
+    return PermissionService.hasNavVisibility(role, resourceType);
   }
 
   // ============================================================================

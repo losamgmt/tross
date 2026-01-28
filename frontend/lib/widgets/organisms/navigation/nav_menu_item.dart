@@ -110,4 +110,35 @@ class NavMenuItem {
       return true;
     }
   }
+
+  /// Create a copy with optional field overrides
+  NavMenuItem copyWith({
+    String? id,
+    String? label,
+    IconData? icon,
+    String? route,
+    void Function(BuildContext context)? onTap,
+    bool Function(Map<String, dynamic>? user)? visibleWhen,
+    List<NavMenuItem>? children,
+    bool? isSectionHeader,
+    bool? isDivider,
+    int? badgeCount,
+    bool? requiresAdmin,
+    bool? requiresAuth,
+  }) {
+    return NavMenuItem(
+      id: id ?? this.id,
+      label: label ?? this.label,
+      icon: icon ?? this.icon,
+      route: route ?? this.route,
+      onTap: onTap ?? this.onTap,
+      visibleWhen: visibleWhen ?? this.visibleWhen,
+      children: children ?? this.children,
+      isSectionHeader: isSectionHeader ?? this.isSectionHeader,
+      isDivider: isDivider ?? this.isDivider,
+      badgeCount: badgeCount ?? this.badgeCount,
+      requiresAdmin: requiresAdmin ?? this.requiresAdmin,
+      requiresAuth: requiresAuth ?? this.requiresAuth,
+    );
+  }
 }

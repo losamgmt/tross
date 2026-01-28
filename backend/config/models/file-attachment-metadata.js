@@ -70,6 +70,12 @@ module.exports = {
   },
 
   /**
+   * Navigation visibility - null means not shown in nav menus
+   * File attachments are child records, accessed from parent entity UI
+   */
+  navVisibility: null,
+
+  /**
    * Entity-level permission overrides
    * Matches permissions.json - technician+ create/update, dispatcher+ delete
    */

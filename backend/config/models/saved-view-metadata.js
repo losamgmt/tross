@@ -60,6 +60,12 @@ module.exports = {
     admin: 'all_records',
   },
 
+  /**
+   * Navigation visibility - null means not shown in nav menus
+   * Saved views are a system table, accessed via table UI not nav
+   */
+  navVisibility: null,
+
   /**   * Entity-level permission overrides
    * Matches permissions.json - all users can manage their own saved views
    */

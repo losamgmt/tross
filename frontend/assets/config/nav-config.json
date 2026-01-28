@@ -11,7 +11,7 @@
   "sidebarStrategies": {
     "app": {
       "label": "Main Navigation",
-      "groups": ["crm", "operations", "finance"],
+      "groups": ["crm", "operations", "finance", "admin"],
       "includeEntities": true,
       "showDashboard": true
     },
@@ -25,21 +25,32 @@
           "label": "Home", 
           "icon": "dashboard_outlined", 
           "route": "/admin",
-          "order": 0 
+          "order": 0,
+          "permissionResource": "admin_panel"
         },
         { 
           "id": "entities", 
           "label": "Entities", 
           "icon": "dataset_outlined", 
           "order": 1,
-          "isGrouper": true
+          "isGrouper": true,
+          "permissionResource": "admin_panel"
         },
         { 
           "id": "logs", 
           "label": "Logs", 
           "icon": "history_outlined", 
           "order": 2,
-          "route": "/admin/system/logs"
+          "route": "/admin/system/logs",
+          "permissionResource": "admin_panel"
+        },
+        { 
+          "id": "files", 
+          "label": "Files", 
+          "icon": "folder_outlined", 
+          "order": 3,
+          "route": "/admin/system/files",
+          "permissionResource": "admin_panel"
         }
       ]
     }

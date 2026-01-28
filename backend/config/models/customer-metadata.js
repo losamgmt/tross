@@ -77,6 +77,12 @@ module.exports = {
   },
 
   /**
+   * Navigation visibility - minimum role to see this entity in nav menus
+   * Customers are visible to all authenticated users
+   */
+  navVisibility: 'customer',
+
+  /**
    * Entity-level permission overrides
    * Matches permissions.json - dispatcher+ create, customer+ read/update, manager+ delete
    */

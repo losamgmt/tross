@@ -65,7 +65,6 @@ enum ResourceType {
   preferences,
   savedViews('saved_views'),
   notifications,
-  fileAttachments('file_attachments'),
   // Synthetic resources (nav visibility, not entity CRUD)
   dashboard,
   adminPanel('admin_panel'),

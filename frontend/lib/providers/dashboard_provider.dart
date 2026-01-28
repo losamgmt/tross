@@ -35,6 +35,7 @@ library;
 import 'package:flutter/foundation.dart';
 import '../services/stats_service.dart';
 import '../services/error_service.dart';
+import '../models/permission.dart';
 import 'auth_provider.dart';
 
 /// Work order statistics
@@ -181,6 +182,12 @@ class DashboardProvider extends ChangeNotifier {
   // STATS LOADING
   // ═══════════════════════════════════════════════════════════════════════════
 
+  // TODO(dashboard): Customize dashboard content per role:
+  // - Customer: Only work orders and customer info
+  // - Technician: Add inventory stats, available jobs
+  // - Dispatcher+: Full financial stats visibility
+  // - Admin: All resources including user management stats
+
   /// Load all dashboard stats from backend
   ///
   /// Loads work order, financial, and resource stats in parallel.
@@ -255,15 +262,45 @@ class DashboardProvider extends ChangeNotifier {
     }
   }
 
+  /// Check if the current user can read a specific resource
+  bool _canRead(ResourceType resource) {
+    return _authProvider?.hasPermission(resource, CrudOperation.read) ?? false;
+  }
+
   Future<void> _loadFinancialStats() async {
     if (_statsService == null) return;
 
+    // Financial stats require dispatcher+ role for invoice/contract access
+    final canViewInvoice = _canRead(ResourceType.invoices);
+    final canViewContract = _canRead(ResourceType.contracts);
+
+    if (!canViewInvoice && !canViewContract) {
+      // No financial permissions - skip entirely
+      return;
+    }
+
     try {
-      final results = await Future.wait([
-        _statsService!.sum('invoice', 'total', filters: {'status': 'paid'}),
-        _statsService!.sum('invoice', 'total', filters: {'status': 'sent'}),
-        _statsService!.count('contract', filters: {'status': 'active'}),
-      ]);
+      final futures = <Future<dynamic>>[
+        canViewInvoice
+            ? _statsService!.sum(
+                'invoice',
+                'total',
+                filters: {'status': 'paid'},
+              )
+            : Future.value(0.0),
+        canViewInvoice
+            ? _statsService!.sum(
+                'invoice',
+                'total',
+                filters: {'status': 'sent'},
+              )
+            : Future.value(0.0),
+        canViewContract
+            ? _statsService!.count('contract', filters: {'status': 'active'})
+            : Future.value(0),
+      ];
+
+      final results = await Future.wait(futures);
 
       _financialStats = FinancialStats(
         revenue: results[0] as double,
@@ -282,13 +319,33 @@ class DashboardProvider extends ChangeNotifier {
   Future<void> _loadResourceStats() async {
     if (_statsService == null) return;
 
+    // Check permissions for each resource
+    final canViewCustomer = _canRead(ResourceType.customers);
+    final canViewTechnician = _canRead(ResourceType.technicians);
+    final canViewInventory = _canRead(ResourceType.inventory);
+    final canViewUser = _canRead(ResourceType.users);
+
     try {
-      final results = await Future.wait([
-        _statsService!.count('customer'),
-        _statsService!.count('technician', filters: {'status': 'available'}),
-        _statsService!.count('inventory', filters: {'status': 'low_stock'}),
-        _statsService!.count('user', filters: {'status': 'active'}),
-      ]);
+      final futures = <Future<int>>[
+        canViewCustomer ? _statsService!.count('customer') : Future.value(0),
+        canViewTechnician
+            ? _statsService!.count(
+                'technician',
+                filters: {'status': 'available'},
+              )
+            : Future.value(0),
+        canViewInventory
+            ? _statsService!.count(
+                'inventory',
+                filters: {'status': 'low_stock'},
+              )
+            : Future.value(0),
+        canViewUser
+            ? _statsService!.count('user', filters: {'status': 'active'})
+            : Future.value(0),
+      ];
+
+      final results = await Future.wait(futures);
 
       _resourceStats = ResourceStats(
         customers: results[0],

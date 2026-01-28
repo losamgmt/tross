@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### TODO - Pending Features
+
+#### Dashboard Role Customization
+- [ ] Present different dashboard stats/widgets per user role
+- [ ] Customer role: Show only work orders and customer info
+- [ ] Technician role: Add inventory stats, available jobs
+- [ ] Dispatcher+: Full financial stats visibility
+- [ ] Admin: All resources including user management stats
+
+#### File Attachment Admin Page
+- [ ] Implement file attachment management page in admin section
+- [ ] List all attachments with filters (entity type, date range, file type)
+- [ ] Bulk delete orphaned attachments
+- [ ] Storage usage statistics
+
+---
+
+### Fixed - Navigation Visibility Regression (2026-01-27)
+
+#### Root Cause
+- `user-metadata.js` and `role-metadata.js` were missing `navVisibility` property
+- Permissions deriver was falling back to read permission (customer) instead of admin
+- Admin section and user/role entities appeared for all users
+
+#### Changes Made
+- Added `navVisibility` to ALL 13 entity metadata files
+- Made `navVisibility` REQUIRED in `entity-metadata-validator.js`
+- Added permission-aware stat loading to `DashboardProvider`:
+  - Only fetches stats for resources the user can read
+  - Eliminates "No permission" warnings for role-restricted resources
+- Regenerated `permissions.json` with correct admin-level visibility
+
+---
+
 ### Added - Test Coverage 80%+ Milestone (2026-01-25)
 
 #### Backend Coverage Above 80% Threshold

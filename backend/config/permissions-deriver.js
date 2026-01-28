@@ -230,10 +230,31 @@ function buildResourceConfig(metadata, resourceName) {
     }
   }
 
+  // Build navVisibility (for UI navigation filtering)
+  // If explicit navVisibility provided, use it; otherwise fall back to read permission
+  let navVisibility = null;
+  if (metadata.navVisibility) {
+    const navRole = metadata.navVisibility;
+    const navPriority = getRolePriorityFromName(navRole);
+    navVisibility = {
+      minimumRole: navRole,
+      minimumPriority: navPriority,
+      description: 'Explicit navVisibility - minimum role to see in nav menus',
+    };
+  } else if (permissions.read && !permissions.read.disabled) {
+    // Fall back to read permission for nav visibility
+    navVisibility = {
+      minimumRole: permissions.read.minimumRole,
+      minimumPriority: permissions.read.minimumPriority,
+      description: 'Derived from read permission - nav visibility follows read access',
+    };
+  }
+
   return {
     description: metadata.description || `${resourceName} resource`,
     rowLevelSecurity: rlsPolicy || {},
     permissions,
+    navVisibility,
   };
 }
 
@@ -255,10 +276,28 @@ function buildSyntheticResourceConfig(resourceName, config) {
     };
   }
 
+  // For synthetic resources, nav visibility follows read permission
+  // (or explicit navVisibility if defined on the synthetic resource)
+  const readPerm = permissions.read;
+  const navVisibility = config.navVisibility
+    ? {
+      minimumRole: config.navVisibility,
+      minimumPriority: getRolePriorityFromName(config.navVisibility),
+      description: 'Explicit navVisibility for synthetic resource',
+    }
+    : readPerm
+      ? {
+        minimumRole: readPerm.minimumRole,
+        minimumPriority: readPerm.minimumPriority,
+        description: 'Derived from read permission - nav visibility follows read access',
+      }
+      : null;
+
   return {
     description: config.description,
     rowLevelSecurity: config.rlsPolicy,
     permissions,
+    navVisibility,
   };
 }
 

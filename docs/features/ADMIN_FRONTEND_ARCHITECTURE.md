@@ -292,16 +292,38 @@ if (AppRoutes.requiresAdmin(route)) {  // Uses startsWith('/admin')
 
 > **Note**: Validation rules are included in `entity-metadata.json` (SSOT). There is no separate validation-rules.json file.
 
-### nav-config.json Admin Strategy
+### nav-config.json Strategies
+
+**App Strategy** (Main Business Navigation):
+```json
+{
+  "sidebarStrategies": {
+    "app": {
+      "label": "Main Navigation",
+      "groups": ["crm", "operations", "finance", "admin"],
+      "includeEntities": true,
+      "showDashboard": true
+    }
+  }
+}
+```
+
+- **Groups**: `crm`, `operations`, `finance`, `admin`
+- **Admin Group**: Contains `user` and `role` entities (admin-only visibility)
+- **Permission Gating**: Nav items filtered by `PermissionService.hasPermission(role, resource, read)`
+
+**Admin Strategy** (System Configuration):
 ```json
 {
   "sidebarStrategies": {
     "admin": {
       "label": "Administration",
+      "groups": ["crm", "operations", "finance", "admin"],
       "sections": [
         { "id": "home", "label": "Home", "route": "/admin" },
-        { "id": "entities", "label": "Entities", "isGrouper": true, "dynamic": true },
-        { "id": "logs", "label": "Logs", "route": "/admin/logs" }
+        { "id": "entities", "label": "Entities", "isGrouper": true },
+        { "id": "logs", "label": "Logs", "route": "/admin/system/logs" },
+        { "id": "files", "label": "Files", "route": "/admin/system/files" }
       ]
     }
   },
@@ -312,19 +334,13 @@ if (AppRoutes.requiresAdmin(route)) {  // Uses startsWith('/admin')
 }
 ```
 
-### Admin Routes (Current)
+### Admin Routes
 ```
-/admin                    → AdminScreen (placeholder)
-/admin/system/logs/data   → _AdminSectionScreen('logs/data')
-/admin/system/logs/auth   → _AdminSectionScreen('logs/auth')
-/admin/:entity            → _AdminSectionScreen(entity)
-```
-
-### Admin Routes (Target)
-```
-/admin                    → DashboardPage(health, sessions, maintenance)
-/admin/logs               → TabbedPage(Data | Auth tabs)
-/admin/:entity            → TabbedPage(Permissions | Validation | Settings)
+/admin                    → AdminScreen (dashboard)
+/admin/system/health      → System health dashboard
+/admin/system/logs        → TabbedPage (Data Changes | Auth Events)
+/admin/system/files       → File attachments browser (placeholder)
+/admin/:entity            → Entity metadata/settings viewer
 ```
 
 ---

@@ -136,6 +136,63 @@ class PermissionService {
     return result;
   }
 
+  /// Check if role can see resource in navigation menus
+  ///
+  /// Uses explicit navVisibility from permissions.json if present,
+  /// otherwise falls back to read permission check.
+  ///
+  /// This is SEPARATE from hasPermission because some entities may be
+  /// visible in nav but have RLS restrictions on actual data access.
+  ///
+  /// @param roleName - User's role ('admin', 'manager', etc.)
+  /// @param resource - Resource type to check nav visibility for
+  /// @returns true if role can see this resource in nav
+  ///
+  /// Example:
+  /// ```dart
+  /// PermissionService.hasNavVisibility('technician', ResourceType.contracts);
+  /// // false - contracts only visible to dispatcher+
+  /// ```
+  static bool hasNavVisibility(String? roleName, ResourceType resource) {
+    if (roleName == null || roleName.isEmpty) {
+      return false;
+    }
+
+    if (!isInitialized) {
+      ErrorService.logDebug('[NavVisibility] not initialized - returning true');
+      return true;
+    }
+
+    final config = _ensureConfig;
+    final userPriority = config.getRolePriority(roleName);
+    if (userPriority == null) {
+      ErrorService.logDebug(
+        '[NavVisibility] userPriority null for role: $roleName',
+      );
+      return false;
+    }
+
+    final resourceKey = resource.toBackendString();
+    final requiredPriority = config.getNavVisibilityPriority(resourceKey);
+
+    if (requiredPriority == null) {
+      ErrorService.logDebug(
+        '[NavVisibility] requiredPriority null for $resourceKey',
+      );
+      return false;
+    }
+
+    // Priority 0 means never visible
+    if (requiredPriority == 0) {
+      return false;
+    }
+
+    final result = userPriority >= requiredPriority;
+    ErrorService.logDebug('[NavVisibility] $roleName:$resourceKey = $result');
+
+    return result;
+  }
+
   /// Get detailed permission check result with denial reason
   ///
   /// Useful for showing users WHY they can't perform an action

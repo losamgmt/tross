@@ -139,6 +139,10 @@ class SidebarSection {
   final String? route; // If set, section is clickable
   final bool isGrouper; // If true, section is a collapsible grouper
   final List<SidebarSectionChild> children; // Static children (for logs, etc.)
+  /// Permission resource for nav visibility check.
+  /// Maps to permissions.json resource name.
+  /// If null, item is visible to all authenticated users.
+  final String? permissionResource;
 
   const SidebarSection({
     required this.id,
@@ -148,6 +152,7 @@ class SidebarSection {
     this.route,
     this.isGrouper = false,
     this.children = const [],
+    this.permissionResource,
   });
 
   /// Check if this section has a direct route (clickable)
@@ -168,6 +173,7 @@ class SidebarSection {
       children: childrenJson
           .map((e) => SidebarSectionChild.fromJson(e as Map<String, dynamic>))
           .toList(),
+      permissionResource: json['permissionResource'] as String?,
     );
   }
 }
@@ -179,11 +185,17 @@ class SidebarSectionChild {
   final String? icon;
   final String route;
 
+  /// Permission resource for nav visibility check.
+  /// Maps to permissions.json resource name.
+  /// If null, inherits from parent section or visible to all authenticated users.
+  final String? permissionResource;
+
   const SidebarSectionChild({
     required this.id,
     required this.label,
     this.icon,
     required this.route,
+    this.permissionResource,
   });
 
   factory SidebarSectionChild.fromJson(Map<String, dynamic> json) {
@@ -192,6 +204,7 @@ class SidebarSectionChild {
       label: json['label'] as String,
       icon: json['icon'] as String?,
       route: json['route'] as String,
+      permissionResource: json['permissionResource'] as String?,
     );
   }
 }

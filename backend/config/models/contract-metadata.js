@@ -94,6 +94,13 @@ module.exports = {
   },
 
   /**
+   * Navigation visibility - minimum role to see this entity in nav menus
+   * Separate from read permission because RLS may restrict actual data access
+   * Contracts are financial docs - only dispatcher+ should see in nav
+   */
+  navVisibility: 'dispatcher',
+
+  /**
    * Route configuration - explicit opt-in for generic router
    */
   routeConfig: {

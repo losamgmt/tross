@@ -119,6 +119,28 @@ class PermissionConfig {
     return permission?.minimumRole;
   }
 
+  /// Get nav visibility minimum priority for resource
+  /// Returns null if resource not found, the navVisibility priority, or
+  /// falls back to read permission priority if no explicit navVisibility
+  int? getNavVisibilityPriority(String resource) {
+    final resourceConfig = resources[resource];
+    if (resourceConfig == null) {
+      ErrorService.logDebug(
+        '[PermConfig] navVisibility: resource "$resource" not found',
+      );
+      return null;
+    }
+
+    // Use explicit navVisibility if present
+    if (resourceConfig.navVisibility != null) {
+      return resourceConfig.navVisibility!.minimumPriority;
+    }
+
+    // Fall back to read permission priority
+    final readPerm = resourceConfig.permissions['read'];
+    return readPerm?.minimumPriority;
+  }
+
   /// Get row-level security policy for role and resource
   String? getRowLevelSecurity(String? roleName, String resource) {
     if (roleName == null || roleName.isEmpty) return null;
@@ -153,11 +175,13 @@ class ResourceConfig {
   final String description;
   final Map<String, String>? rowLevelSecurity;
   final Map<String, PermissionDetail> permissions;
+  final NavVisibility? navVisibility;
 
   const ResourceConfig({
     required this.description,
     required this.rowLevelSecurity,
     required this.permissions,
+    this.navVisibility,
   });
 
   factory ResourceConfig.fromJson(Map<String, dynamic> json) {
@@ -175,10 +199,40 @@ class ResourceConfig {
       rlsMap = rlsJson.map((k, v) => MapEntry(k, v as String));
     }
 
+    NavVisibility? navVis;
+    if (json['navVisibility'] != null) {
+      navVis = NavVisibility.fromJson(
+        json['navVisibility'] as Map<String, dynamic>,
+      );
+    }
+
     return ResourceConfig(
       description: json['description'] as String,
       rowLevelSecurity: rlsMap,
       permissions: permissionsMap,
+      navVisibility: navVis,
+    );
+  }
+}
+
+/// Navigation Visibility Configuration
+/// Determines minimum role required to see entity in navigation menus
+class NavVisibility {
+  final String? minimumRole;
+  final int minimumPriority;
+  final String description;
+
+  const NavVisibility({
+    required this.minimumRole,
+    required this.minimumPriority,
+    required this.description,
+  });
+
+  factory NavVisibility.fromJson(Map<String, dynamic> json) {
+    return NavVisibility(
+      minimumRole: json['minimumRole'] as String?,
+      minimumPriority: json['minimumPriority'] as int,
+      description: json['description'] as String,
     );
   }
 }

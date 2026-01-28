@@ -201,12 +201,14 @@ GET /api/health
 
 ### Users
 
+> **All User CRUD operations require admin role.** Non-admin users cannot read, create, update, or delete user records via the API.
+
 **List Users** (Admin only)
 ```http
 GET /api/users?page=1&limit=20
 ```
 
-**Get User**
+**Get User** (Admin only)
 ```http
 GET /api/users/:id
 ```

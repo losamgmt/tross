@@ -73,6 +73,12 @@ module.exports = {
   },
 
   /**
+   * Navigation visibility - minimum role to see this entity in nav menus
+   * Separate from read permission (users can read own record, but shouldn't see Users in nav)
+   */
+  navVisibility: 'admin',
+
+  /**
    * Entity-level permission overrides
    * When entity-level access differs from field-level minimums
    * (e.g., only admin can call PATCH /users/:id even if some fields are self-editable)

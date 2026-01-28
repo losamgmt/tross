@@ -26,6 +26,12 @@ module.exports = {
     admin: 'all_records',
   },
 
+  /**
+   * Navigation visibility - null means not shown in nav menus
+   * Preferences accessed via Settings page, not nav
+   */
+  navVisibility: null,
+
   entityPermissions: {
     create: 'customer',
     read: 'customer',

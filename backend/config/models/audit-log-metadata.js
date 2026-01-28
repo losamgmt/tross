@@ -54,6 +54,12 @@ module.exports = {
   },
 
   /**
+   * Navigation visibility - null means not shown in entity nav
+   * Audit logs are accessed via admin Logs section, not entity list
+   */
+  navVisibility: null,
+
+  /**
    * Entity-level permission overrides
    * Only admin can read audit logs. No create/update/delete via API.
    * This is the SSOT for "admin only" access control.

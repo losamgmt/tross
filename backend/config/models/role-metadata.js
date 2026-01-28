@@ -80,6 +80,12 @@ module.exports = {
   },
 
   /**
+   * Navigation visibility - minimum role to see this entity in nav menus
+   * Roles are public for reading (dropdowns) but shouldn't appear in nav for non-admins
+   */
+  navVisibility: 'admin',
+
+  /**
    * Entity-level permission overrides
    * Roles are admin-only for CUD, but readable by all
    */

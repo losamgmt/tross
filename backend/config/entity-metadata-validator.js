@@ -305,6 +305,44 @@ function validateDisplayProperties(meta, errors) {
 }
 
 /**
+ * Validate navVisibility property
+ * REQUIRED: Every entity must explicitly declare its navigation visibility.
+ * This ensures intentional decisions about which entities appear in nav menus.
+ *
+ * Valid values:
+ * - null: Entity is not shown in navigation (system tables, child tables)
+ * - Role name: Minimum role required to see entity in nav (e.g., 'admin', 'dispatcher')
+ */
+function validateNavVisibility(meta, errors) {
+  // navVisibility is REQUIRED - every entity must explicitly declare it
+  if (!('navVisibility' in meta)) {
+    errors.add(
+      'navVisibility',
+      'REQUIRED: Every entity must declare navVisibility. ' +
+      'Use null for system/child tables (not in nav), or a role name (e.g., \'customer\', \'admin\') ' +
+      'for the minimum role that can see this entity in navigation menus.',
+    );
+    return;
+  }
+
+  const value = meta.navVisibility;
+
+  // null is valid (entity not shown in nav)
+  if (value === null) {
+    return;
+  }
+
+  // Must be a valid role name
+  const validRoles = getValidEntityPermissionValues();
+  if (!validRoles.has(value)) {
+    errors.add(
+      'navVisibility',
+      `Invalid value '${value}'. Valid: null (not in nav), or role name: ${[...getRoleHierarchy()].join(', ')}`,
+    );
+  }
+}
+
+/**
  * Validate a single entity's metadata
  */
 function validateEntity(entityName, meta, allMetadata) {
@@ -321,6 +359,7 @@ function validateEntity(entityName, meta, allMetadata) {
 
   // Run all validators
   validateDisplayProperties(meta, errors);
+  validateNavVisibility(meta, errors);
   validateFieldTypes(meta, errors);
   validateFieldAccess(meta, errors);
   validateEntityPermissions(meta, errors);

@@ -4,7 +4,7 @@
   "title": "TrossApp Permission Configuration",
   "description": "Single source of truth for role-based access control (RBAC). AUTO-GENERATED from entity metadata - run sync-permissions.js to regenerate.",
   "version": "4.0.0-derived",
-  "lastModified": "2026-01-21",
+  "lastModified": "2026-01-28",
   "roles": {
     "customer": {
       "priority": 1,
@@ -28,6 +28,43 @@
     }
   },
   "resources": {
+    "_parent_derived": {
+      "description": "_parent_derived resource",
+      "rowLevelSecurity": {
+        "customer": "parent_entity_access",
+        "technician": "parent_entity_access",
+        "dispatcher": "parent_entity_access",
+        "manager": "parent_entity_access",
+        "admin": "all_records"
+      },
+      "permissions": {
+        "create": {
+          "minimumRole": "technician",
+          "minimumPriority": 2,
+          "description": "Entity-level override - create requires technician"
+        },
+        "read": {
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Entity-level override - read requires customer"
+        },
+        "update": {
+          "minimumRole": "technician",
+          "minimumPriority": 2,
+          "description": "Entity-level override - update requires technician"
+        },
+        "delete": {
+          "minimumRole": "dispatcher",
+          "minimumPriority": 3,
+          "description": "Entity-level override - delete requires dispatcher"
+        }
+      },
+      "navVisibility": {
+        "minimumRole": "customer",
+        "minimumPriority": 1,
+        "description": "Derived from read permission - nav visibility follows read access"
+      }
+    },
     "admin_panel": {
       "description": "Admin control center - system health, sessions, audit logs",
       "rowLevelSecurity": {
@@ -58,6 +95,11 @@
           "minimumPriority": 5,
           "description": "Synthetic resource - delete permission"
         }
+      },
+      "navVisibility": {
+        "minimumRole": "admin",
+        "minimumPriority": 5,
+        "description": "Derived from read permission - nav visibility follows read access"
       }
     },
     "audit_logs": {
@@ -90,6 +132,11 @@
           "minimumPriority": 5,
           "description": "Synthetic resource - delete permission"
         }
+      },
+      "navVisibility": {
+        "minimumRole": "admin",
+        "minimumPriority": 5,
+        "description": "Derived from read permission - nav visibility follows read access"
       }
     },
     "contracts": {
@@ -122,6 +169,11 @@
           "minimumPriority": 4,
           "description": "Entity-level override - delete requires manager"
         }
+      },
+      "navVisibility": {
+        "minimumRole": "dispatcher",
+        "minimumPriority": 3,
+        "description": "Explicit navVisibility - minimum role to see in nav menus"
       }
     },
     "customers": {
@@ -154,6 +206,11 @@
           "minimumPriority": 4,
           "description": "Entity-level override - delete requires manager"
         }
+      },
+      "navVisibility": {
+        "minimumRole": "customer",
+        "minimumPriority": 1,
+        "description": "Explicit navVisibility - minimum role to see in nav menus"
       }
     },
     "dashboard": {
@@ -186,38 +243,11 @@
           "minimumPriority": 5,
           "description": "Synthetic resource - delete permission"
         }
-      }
-    },
-    "file_attachments": {
-      "description": "file_attachments resource",
-      "rowLevelSecurity": {
-        "customer": "parent_entity_access",
-        "technician": "parent_entity_access",
-        "dispatcher": "parent_entity_access",
-        "manager": "parent_entity_access",
-        "admin": "all_records"
       },
-      "permissions": {
-        "create": {
-          "minimumRole": "technician",
-          "minimumPriority": 2,
-          "description": "Entity-level override - create requires technician"
-        },
-        "read": {
-          "minimumRole": "customer",
-          "minimumPriority": 1,
-          "description": "Entity-level override - read requires customer"
-        },
-        "update": {
-          "minimumRole": "technician",
-          "minimumPriority": 2,
-          "description": "Entity-level override - update requires technician"
-        },
-        "delete": {
-          "minimumRole": "dispatcher",
-          "minimumPriority": 3,
-          "description": "Entity-level override - delete requires dispatcher"
-        }
+      "navVisibility": {
+        "minimumRole": "customer",
+        "minimumPriority": 1,
+        "description": "Derived from read permission - nav visibility follows read access"
       }
     },
     "inventory": {
@@ -250,6 +280,11 @@
           "minimumPriority": 4,
           "description": "Entity-level override - delete requires manager"
         }
+      },
+      "navVisibility": {
+        "minimumRole": "technician",
+        "minimumPriority": 2,
+        "description": "Explicit navVisibility - minimum role to see in nav menus"
       }
     },
     "invoices": {
@@ -282,6 +317,11 @@
           "minimumPriority": 4,
           "description": "Entity-level override - delete requires manager"
         }
+      },
+      "navVisibility": {
+        "minimumRole": "dispatcher",
+        "minimumPriority": 3,
+        "description": "Explicit navVisibility - minimum role to see in nav menus"
       }
     },
     "notifications": {
@@ -315,6 +355,11 @@
           "minimumPriority": 1,
           "description": "Entity-level override - delete requires customer"
         }
+      },
+      "navVisibility": {
+        "minimumRole": "customer",
+        "minimumPriority": 1,
+        "description": "Derived from read permission - nav visibility follows read access"
       }
     },
     "preferences": {
@@ -346,12 +391,12 @@
           "minimumRole": "admin",
           "minimumPriority": 5,
           "description": "Entity-level override - delete requires admin"
-        },
-        "admin": {
-          "minimumRole": "admin",
-          "minimumPriority": 5,
-          "description": "Custom operation - admin requires admin"
         }
+      },
+      "navVisibility": {
+        "minimumRole": "customer",
+        "minimumPriority": 1,
+        "description": "Derived from read permission - nav visibility follows read access"
       }
     },
     "roles": {
@@ -384,6 +429,11 @@
           "minimumPriority": 5,
           "description": "Entity-level override - delete requires admin"
         }
+      },
+      "navVisibility": {
+        "minimumRole": "admin",
+        "minimumPriority": 5,
+        "description": "Explicit navVisibility - minimum role to see in nav menus"
       }
     },
     "saved_views": {
@@ -416,6 +466,11 @@
           "minimumPriority": 1,
           "description": "Entity-level override - delete requires customer"
         }
+      },
+      "navVisibility": {
+        "minimumRole": "customer",
+        "minimumPriority": 1,
+        "description": "Derived from read permission - nav visibility follows read access"
       }
     },
     "system_settings": {
@@ -448,6 +503,11 @@
           "minimumPriority": 5,
           "description": "Synthetic resource - delete permission"
         }
+      },
+      "navVisibility": {
+        "minimumRole": "admin",
+        "minimumPriority": 5,
+        "description": "Derived from read permission - nav visibility follows read access"
       }
     },
     "technicians": {
@@ -480,6 +540,11 @@
           "minimumPriority": 4,
           "description": "Entity-level override - delete requires manager"
         }
+      },
+      "navVisibility": {
+        "minimumRole": "technician",
+        "minimumPriority": 2,
+        "description": "Explicit navVisibility - minimum role to see in nav menus"
       }
     },
     "users": {
@@ -512,6 +577,11 @@
           "minimumPriority": 5,
           "description": "Entity-level override - delete requires admin"
         }
+      },
+      "navVisibility": {
+        "minimumRole": "admin",
+        "minimumPriority": 5,
+        "description": "Explicit navVisibility - minimum role to see in nav menus"
       }
     },
     "work_orders": {
@@ -544,6 +614,11 @@
           "minimumPriority": 4,
           "description": "Entity-level override - delete requires manager"
         }
+      },
+      "navVisibility": {
+        "minimumRole": "customer",
+        "minimumPriority": 1,
+        "description": "Explicit navVisibility - minimum role to see in nav menus"
       }
     }
   }

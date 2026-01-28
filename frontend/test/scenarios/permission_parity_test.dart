@@ -109,10 +109,10 @@ void main() {
         'audit_logs': ResourceType.auditLogs,
         'savedViews': ResourceType.savedViews,
         'saved_views': ResourceType.savedViews,
-        'fileAttachments': ResourceType.fileAttachments,
-        'file_attachments': ResourceType.fileAttachments,
         'adminPanel': ResourceType.adminPanel,
         'admin_panel': ResourceType.adminPanel,
+        'systemSettings': ResourceType.systemSettings,
+        'system_settings': ResourceType.systemSettings,
       };
 
       for (final entry in testCases.entries) {

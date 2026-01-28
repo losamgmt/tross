@@ -61,6 +61,12 @@ module.exports = {
   },
 
   /**
+   * Navigation visibility - null means not shown in nav menus
+   * Notifications accessed via bell icon tray, not nav
+   */
+  navVisibility: null,
+
+  /**
    * Entity-level permission overrides
    * Users can read/delete their own notifications
    * Create is system-only (backend creates notifications, not users)
