@@ -1,27 +1,31 @@
-/// Dashboard Content Widget
+/// Dashboard Content Widget - Chart-Driven
 ///
-/// The main dashboard view displaying statistics from real backend data.
-/// Uses DashboardProvider for real-time data and AppBreakpoints for responsive behavior.
+/// The main dashboard view displaying distribution charts from real backend data.
+/// Uses DashboardProvider for real-time data and dashboard-config.json for layout.
 ///
 /// ARCHITECTURE:
-/// - Consumes DashboardProvider for all stats (no hardcoded data)
-/// - Uses StatCard molecules for stat display
-/// - Responsive grid layout via AppBreakpoints
-/// - Loading/error states handled gracefully
+/// - dashboard-config.json specifies which entities to show and chart type (bar/pie)
+/// - EntityMetadataRegistry provides display names, icons, and value colors
+/// - DashboardProvider provides countGrouped() data per entity
+/// - Renders ComparisonBarChart or DistributionPieChart based on config
 ///
-/// STATS DISPLAYED:
-/// - Row 1: Welcome banner (userName from prop)
-/// - Row 2: Work Order Stats (total, pending, in_progress, completed)
-/// - Row 3: Financial Stats (revenue, outstanding, active contracts)
-/// - Row 4: Resource Stats (customers, technicians, low stock, active users)
+/// ZERO SPECIFICITY:
+/// - No entity names mentioned in code
+/// - No role branching
+/// - All behavior emergent from config + metadata
 library;
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../config/app_colors.dart';
-import '../../config/app_spacing.dart';
+import '../../models/dashboard_config.dart';
 import '../../providers/dashboard_provider.dart';
-import '../molecules/cards/stat_card.dart';
+import '../../services/entity_metadata.dart';
+import '../../utils/entity_icon_resolver.dart';
+import '../../utils/helpers/string_helper.dart';
+import '../atoms/indicators/app_badge.dart';
+import '../atoms/indicators/loading_indicator.dart';
+import 'charts/dashboard_charts.dart';
 
 /// Main dashboard content widget
 class DashboardContent extends StatelessWidget {
@@ -48,12 +52,13 @@ class DashboardContent extends StatelessWidget {
               children: [
                 _buildWelcomeBanner(context),
                 const SizedBox(height: 24),
-                _buildWorkOrderStats(context, dashboard),
-                const SizedBox(height: 24),
-                _buildFinancialStats(context, dashboard),
-                const SizedBox(height: 24),
-                _buildResourceStats(context, dashboard),
-                const SizedBox(height: 16),
+                // Config-driven entity charts - no hardcoded names!
+                ...dashboard.getVisibleEntities().map(
+                  (entityConfig) => Padding(
+                    padding: const EdgeInsets.only(bottom: 24),
+                    child: _buildEntityChart(context, entityConfig, dashboard),
+                  ),
+                ),
                 if (dashboard.error != null)
                   _buildErrorBanner(context, dashboard.error!),
                 if (dashboard.lastUpdated != null)
@@ -122,158 +127,177 @@ class DashboardContent extends StatelessWidget {
     );
   }
 
-  /// Work order stats row
-  Widget _buildWorkOrderStats(
+  /// Build a chart for an entity - FULLY GENERIC
+  Widget _buildEntityChart(
     BuildContext context,
+    DashboardEntityConfig entityConfig,
     DashboardProvider dashboard,
   ) {
-    final stats = dashboard.workOrderStats;
-
-    return _buildSection(
-      context,
-      title: 'Work Orders',
-      children: [
-        StatCard.dashboard(
-          label: 'Total',
-          value: _formatNumber(stats.total),
-          icon: Icons.assignment_outlined,
-          color: AppColors.brandPrimary,
-        ),
-        StatCard.dashboard(
-          label: 'Pending',
-          value: _formatNumber(stats.pending),
-          icon: Icons.hourglass_empty,
-          color: AppColors.warning,
-        ),
-        StatCard.dashboard(
-          label: 'In Progress',
-          value: _formatNumber(stats.inProgress),
-          icon: Icons.autorenew,
-          color: AppColors.info,
-        ),
-        StatCard.dashboard(
-          label: 'Completed',
-          value: _formatNumber(stats.completed),
-          icon: Icons.check_circle_outline,
-          color: AppColors.success,
-        ),
-      ],
-    );
-  }
-
-  /// Financial stats row
-  Widget _buildFinancialStats(
-    BuildContext context,
-    DashboardProvider dashboard,
-  ) {
-    final stats = dashboard.financialStats;
-
-    return _buildSection(
-      context,
-      title: 'Financial Overview',
-      children: [
-        StatCard.dashboard(
-          label: 'Revenue',
-          value: _formatCurrency(stats.revenue),
-          icon: Icons.attach_money,
-          color: AppColors.success,
-        ),
-        StatCard.dashboard(
-          label: 'Outstanding',
-          value: _formatCurrency(stats.outstanding),
-          icon: Icons.pending_actions,
-          color: AppColors.warning,
-        ),
-        StatCard.dashboard(
-          label: 'Active Contracts',
-          value: _formatNumber(stats.activeContracts),
-          icon: Icons.description_outlined,
-          color: AppColors.brandPrimary,
-        ),
-      ],
-    );
-  }
-
-  /// Resource stats row
-  Widget _buildResourceStats(
-    BuildContext context,
-    DashboardProvider dashboard,
-  ) {
-    final stats = dashboard.resourceStats;
-
-    return _buildSection(
-      context,
-      title: 'Resources',
-      children: [
-        StatCard.dashboard(
-          label: 'Customers',
-          value: _formatNumber(stats.customers),
-          icon: Icons.people_outline,
-          color: AppColors.brandPrimary,
-        ),
-        StatCard.dashboard(
-          label: 'Available Technicians',
-          value: _formatNumber(stats.availableTechnicians),
-          icon: Icons.engineering_outlined,
-          color: AppColors.success,
-        ),
-        StatCard.dashboard(
-          label: 'Low Stock Items',
-          value: _formatNumber(stats.lowStockItems),
-          icon: Icons.inventory_2_outlined,
-          color: stats.lowStockItems > 0
-              ? AppColors.warning
-              : AppColors.success,
-        ),
-        StatCard.dashboard(
-          label: 'Active Users',
-          value: _formatNumber(stats.activeUsers),
-          icon: Icons.person_outline,
-          color: AppColors.info,
-        ),
-      ],
-    );
-  }
-
-  /// Section with title and responsive grid
-  Widget _buildSection(
-    BuildContext context, {
-    required String title,
-    required List<Widget> children,
-  }) {
     final theme = Theme.of(context);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 12),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final crossAxisCount = AppBreakpoints.getDashboardColumns(
-              constraints.maxWidth,
-            );
+    // Get display info from metadata registry (static method)
+    final metadata = EntityMetadataRegistry.tryGet(entityConfig.entity);
+    final displayName =
+        metadata?.displayNamePlural ??
+        StringHelper.snakeToTitle(entityConfig.entity);
+    final icon = metadata?.icon != null
+        ? EntityIconResolver.fromString(metadata!.icon!)
+        : Icons.bar_chart_outlined;
 
-            return GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: crossAxisCount,
-                mainAxisSpacing: 16,
-                crossAxisSpacing: 16,
-                childAspectRatio: 1.5,
-              ),
-              itemCount: children.length,
-              itemBuilder: (context, index) => children[index],
-            );
-          },
+    // Check if this entity is still loading
+    final isEntityLoading = dashboard.isEntityLoading(entityConfig.entity);
+
+    // Get chart data from provider
+    final chartData = dashboard.getChartData(entityConfig.entity);
+    final totalCount = dashboard.getTotalCount(entityConfig.entity);
+
+    // Convert to chart items with metadata-driven colors
+    // EntityMetadataRegistry provides the color name, BadgeStyle converts to Color
+    final groupByField = entityConfig.groupBy;
+    final chartItems = chartData.map((item) {
+      final colorName = EntityMetadataRegistry.getValueColor(
+        entityConfig.entity,
+        groupByField,
+        item.value,
+      );
+      return _ChartItemData(
+        label: StringHelper.snakeToTitle(item.value),
+        value: item.count.toDouble(),
+        color: BadgeStyle.fromName(colorName).color,
+      );
+    }).toList();
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header with icon and title
+            Row(
+              children: [
+                Icon(icon, color: theme.colorScheme.primary, size: 24),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    displayName,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                // Total count badge (or loading indicator)
+                if (isEntityLoading)
+                  SizedBox(
+                    width: 80,
+                    height: 24,
+                    child: SkeletonLoader(width: 80, height: 24),
+                  )
+                else
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      'Total: $totalCount',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: theme.colorScheme.onPrimaryContainer,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            // Chart content: loading skeleton, empty state, or chart
+            if (isEntityLoading)
+              _buildChartSkeleton()
+            else if (chartItems.isEmpty)
+              _buildEmptyState(context, displayName)
+            else
+              _buildChart(entityConfig.chartType, chartItems),
+          ],
         ),
-      ],
+      ),
+    );
+  }
+
+  /// Build the appropriate chart type from config
+  Widget _buildChart(DashboardChartType chartType, List<_ChartItemData> items) {
+    switch (chartType) {
+      case DashboardChartType.pie:
+        return DistributionPieChart(
+          title: '', // Title already shown in header
+          items: items
+              .map(
+                (i) => PieChartItem(
+                  label: i.label,
+                  value: i.value,
+                  color: i.color,
+                ),
+              )
+              .toList(),
+        );
+      case DashboardChartType.bar:
+        return ComparisonBarChart(
+          title: '', // Title already shown in header
+          items: items
+              .map(
+                (i) => BarChartItem(
+                  label: i.label,
+                  value: i.value,
+                  color: i.color,
+                ),
+              )
+              .toList(),
+        );
+    }
+  }
+
+  /// Loading skeleton composed from generic SkeletonLoader atoms
+  Widget _buildChartSkeleton() {
+    return SizedBox(
+      height: 200,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          // Simulate bar chart loading with varying height skeletons
+          for (final height in [120.0, 80.0, 160.0, 100.0, 140.0])
+            SkeletonLoader(width: 40, height: height),
+        ],
+      ),
+    );
+  }
+
+  /// Empty state when no data
+  Widget _buildEmptyState(BuildContext context, String entityName) {
+    final theme = Theme.of(context);
+    return Container(
+      height: 200,
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.inbox_outlined,
+            size: 48,
+            color: theme.colorScheme.outline,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'No $entityName data available',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.outline,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -331,28 +355,6 @@ class DashboardContent extends StatelessWidget {
   // FORMATTERS
   // ═══════════════════════════════════════════════════════════════════════════
 
-  /// Format number with thousand separators
-  String _formatNumber(int value) {
-    if (value < 1000) return value.toString();
-    if (value < 1000000) {
-      final thousands = value / 1000;
-      return '${thousands.toStringAsFixed(thousands.truncate() == thousands ? 0 : 1)}k';
-    }
-    final millions = value / 1000000;
-    return '${millions.toStringAsFixed(millions.truncate() == millions ? 0 : 1)}M';
-  }
-
-  /// Format currency
-  String _formatCurrency(double value) {
-    if (value >= 1000000) {
-      return '\$${(value / 1000000).toStringAsFixed(1)}M';
-    }
-    if (value >= 1000) {
-      return '\$${(value / 1000).toStringAsFixed(1)}k';
-    }
-    return '\$${value.toStringAsFixed(2)}';
-  }
-
   /// Format date time
   String _formatDateTime(DateTime dt) {
     const months = [
@@ -374,4 +376,21 @@ class DashboardContent extends StatelessWidget {
     final period = dt.hour >= 12 ? 'PM' : 'AM';
     return '$month ${dt.day}, $hour:${dt.minute.toString().padLeft(2, '0')} $period';
   }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// PRIVATE DATA CLASSES
+// ═════════════════════════════════════════════════════════════════════════════
+
+/// Internal chart item data - unifies bar/pie chart data
+class _ChartItemData {
+  final String label;
+  final double value;
+  final Color color;
+
+  const _ChartItemData({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
 }

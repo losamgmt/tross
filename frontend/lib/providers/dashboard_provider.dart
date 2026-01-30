@@ -1,18 +1,21 @@
-/// DashboardProvider - Reactive State Management for Dashboard Stats
+/// DashboardProvider - Config-Driven Chart Dashboard
 ///
-/// SOLE RESPONSIBILITY: Provide reactive dashboard stats to UI
+/// SOLE RESPONSIBILITY: Load and provide reactive dashboard chart data
 ///
 /// This provider:
-/// - Loads all dashboard stats from StatsService
-/// - Provides reactive access to stats values
+/// - Reads dashboard-config.json for entity/chart definitions
+/// - Uses countGrouped() for distribution pie charts
+/// - Filters entities by user role (using UserRole.priority)
+/// - RLS on backend automatically filters data per user's access level
 /// - Handles loading/error states gracefully
 /// - Listens to AuthProvider to auto-load on login
-/// - Supports manual refresh
 ///
-/// STATS LOADED:
-/// - Work Orders: total, pending, in_progress, completed
-/// - Financial: revenue (paid invoices), outstanding (sent invoices), active contracts
-/// - Resources: customers, available technicians, low stock items, active users
+/// ARCHITECTURE:
+/// - dashboard-config.json specifies which entities to show
+/// - EntityMetadataRegistry provides display names, icons, and value colors
+/// - StatsService.countGrouped() fetches distribution data
+/// - This provider stores GroupedCount lists per entity
+/// - DashboardContent renders DistributionPieChart for each entity
 ///
 /// USAGE:
 /// ```dart
@@ -25,78 +28,38 @@
 /// // In widgets:
 /// Consumer<DashboardProvider>(
 ///   builder: (context, dashboard, _) {
-///     if (dashboard.isLoading) return LoadingSpinner();
-///     return Text('${dashboard.workOrderStats.total} Work Orders');
+///     final entities = dashboard.getVisibleEntities();
+///     return Column(
+///       children: entities.map((e) => DistributionPieChart(
+///         title: metadata.displayNamePlural,
+///         items: dashboard.getChartData(e.entity),
+///       )).toList(),
+///     );
 ///   }
 /// )
 /// ```
 library;
 
 import 'package:flutter/foundation.dart';
+import '../models/dashboard_config.dart';
+import '../services/dashboard_config_loader.dart';
 import '../services/stats_service.dart';
 import '../services/error_service.dart';
-import '../models/permission.dart';
 import 'auth_provider.dart';
 
-/// Work order statistics
-@immutable
-class WorkOrderStats {
-  final int total;
-  final int pending;
-  final int inProgress;
-  final int completed;
+// =============================================================================
+// PROVIDER
+// =============================================================================
 
-  const WorkOrderStats({
-    this.total = 0,
-    this.pending = 0,
-    this.inProgress = 0,
-    this.completed = 0,
-  });
-
-  static const empty = WorkOrderStats();
-}
-
-/// Financial statistics
-@immutable
-class FinancialStats {
-  final double revenue;
-  final double outstanding;
-  final int activeContracts;
-
-  const FinancialStats({
-    this.revenue = 0.0,
-    this.outstanding = 0.0,
-    this.activeContracts = 0,
-  });
-
-  static const empty = FinancialStats();
-}
-
-/// Resource overview statistics
-@immutable
-class ResourceStats {
-  final int customers;
-  final int availableTechnicians;
-  final int lowStockItems;
-  final int activeUsers;
-
-  const ResourceStats({
-    this.customers = 0,
-    this.availableTechnicians = 0,
-    this.lowStockItems = 0,
-    this.activeUsers = 0,
-  });
-
-  static const empty = ResourceStats();
-}
-
-/// Provider for reactive dashboard stats
+/// Provider for config-driven chart dashboard
 class DashboardProvider extends ChangeNotifier {
   StatsService? _statsService;
 
-  WorkOrderStats _workOrderStats = WorkOrderStats.empty;
-  FinancialStats _financialStats = FinancialStats.empty;
-  ResourceStats _resourceStats = ResourceStats.empty;
+  /// Map of entity name -> grouped count data for charts
+  final Map<String, List<GroupedCount>> _chartData = {};
+
+  /// Set of entities currently loading
+  final Set<String> _loadingEntities = {};
 
   bool _isLoading = false;
   String? _error;
@@ -115,15 +78,6 @@ class DashboardProvider extends ChangeNotifier {
   // PUBLIC GETTERS
   // ═══════════════════════════════════════════════════════════════════════════
 
-  /// Work order statistics
-  WorkOrderStats get workOrderStats => _workOrderStats;
-
-  /// Financial statistics
-  FinancialStats get financialStats => _financialStats;
-
-  /// Resource overview statistics
-  ResourceStats get resourceStats => _resourceStats;
-
   /// Whether stats are being loaded
   bool get isLoading => _isLoading;
 
@@ -135,6 +89,42 @@ class DashboardProvider extends ChangeNotifier {
 
   /// When stats were last refreshed
   DateTime? get lastUpdated => _lastUpdated;
+
+  /// Get the current user's role
+  /// Defaults to 'customer' if no auth provider connected
+  String get _userRole => _authProvider?.userRole ?? 'customer';
+
+  /// Check if a specific entity is currently loading
+  bool isEntityLoading(String entityName) =>
+      _loadingEntities.contains(entityName);
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CONFIG-DRIVEN API
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Get entities visible to the current user
+  ///
+  /// Filters by minRole from config using UserRole.priority
+  List<DashboardEntityConfig> getVisibleEntities() {
+    if (!DashboardConfigService.isInitialized) {
+      return [];
+    }
+    return DashboardConfigService.config.getEntitiesForRole(_userRole);
+  }
+
+  /// Get chart data for an entity
+  ///
+  /// Returns the grouped count data for rendering a distribution chart.
+  List<GroupedCount> getChartData(String entityName) {
+    return _chartData[entityName] ?? [];
+  }
+
+  /// Get total count for an entity (sum of all grouped values)
+  int getTotalCount(String entityName) {
+    final data = _chartData[entityName];
+    if (data == null || data.isEmpty) return 0;
+    return data.fold(0, (sum, item) => sum + item.count);
+  }
 
   // ═══════════════════════════════════════════════════════════════════════════
   // AUTH INTEGRATION
@@ -170,59 +160,79 @@ class DashboardProvider extends ChangeNotifier {
   }
 
   void _clearStats() {
-    _workOrderStats = WorkOrderStats.empty;
-    _financialStats = FinancialStats.empty;
-    _resourceStats = ResourceStats.empty;
+    _chartData.clear();
+    _loadingEntities.clear();
     _lastUpdated = null;
     _error = null;
     notifyListeners();
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // STATS LOADING
+  // STATS LOADING (Config-Driven)
   // ═══════════════════════════════════════════════════════════════════════════
 
-  // TODO(dashboard): Customize dashboard content per role:
-  // - Customer: Only work orders and customer info
-  // - Technician: Add inventory stats, available jobs
-  // - Dispatcher+: Full financial stats visibility
-  // - Admin: All resources including user management stats
-
-  /// Load all dashboard stats from backend
+  /// Load all dashboard chart data from backend based on config
   ///
-  /// Loads work order, financial, and resource stats in parallel.
-  /// Safe to call multiple times - handles concurrent calls gracefully.
+  /// Reads visible entities from config and loads grouped counts for each.
+  /// Data is loaded in parallel for performance.
+  /// RLS on backend automatically filters data per user's access.
   Future<void> loadStats() async {
     if (_isLoading) return;
+    if (_statsService == null) return;
 
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      // Load all stats in parallel for performance
-      await Future.wait([
-        _loadWorkOrderStats(),
-        _loadFinancialStats(),
-        _loadResourceStats(),
-      ]);
+      // Get entities visible to this user
+      final entities = getVisibleEntities();
+
+      // Load all entity chart data in parallel
+      final futures = entities.map((entity) => _loadEntityData(entity));
+      await Future.wait(futures);
 
       _lastUpdated = DateTime.now();
       _error = null;
 
       ErrorService.logDebug(
-        'Dashboard stats loaded',
-        context: {
-          'workOrders': _workOrderStats.total,
-          'revenue': _financialStats.revenue,
-          'customers': _resourceStats.customers,
-        },
+        'Dashboard chart data loaded',
+        context: {'entitiesLoaded': entities.length, 'userRole': _userRole},
       );
     } catch (e) {
-      _error = 'Failed to load dashboard stats';
-      ErrorService.logError('Dashboard stats load failed', error: e);
+      _error = 'Failed to load dashboard data';
+      ErrorService.logError('Dashboard load failed', error: e);
     } finally {
       _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Load chart data for a single entity
+  Future<void> _loadEntityData(DashboardEntityConfig entityConfig) async {
+    if (_statsService == null) return;
+
+    final entityName = entityConfig.entity;
+    _loadingEntities.add(entityName);
+    notifyListeners();
+
+    try {
+      final data = await _statsService!.countGrouped(
+        entityName,
+        entityConfig.groupBy,
+      );
+
+      _chartData[entityName] = data;
+    } catch (e) {
+      // Log warning but don't fail entire dashboard
+      ErrorService.logWarning(
+        'Failed to load chart data',
+        context: {'entity': entityName, 'error': e.toString()},
+      );
+      // Keep previous value or set to empty
+      _chartData[entityName] ??= [];
+    } finally {
+      _loadingEntities.remove(entityName);
       notifyListeners();
     }
   }
@@ -230,136 +240,6 @@ class DashboardProvider extends ChangeNotifier {
   /// Refresh stats (alias for loadStats with force refresh semantics)
   Future<void> refresh() async {
     await loadStats();
-  }
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // PRIVATE LOADERS
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  Future<void> _loadWorkOrderStats() async {
-    if (_statsService == null) return;
-
-    try {
-      final results = await Future.wait([
-        _statsService!.count('work_order'),
-        _statsService!.count('work_order', filters: {'status': 'pending'}),
-        _statsService!.count('work_order', filters: {'status': 'in_progress'}),
-        _statsService!.count('work_order', filters: {'status': 'completed'}),
-      ]);
-
-      _workOrderStats = WorkOrderStats(
-        total: results[0],
-        pending: results[1],
-        inProgress: results[2],
-        completed: results[3],
-      );
-    } catch (e) {
-      ErrorService.logWarning(
-        'Failed to load work order stats',
-        context: {'error': e.toString()},
-      );
-      // Keep previous values on error
-    }
-  }
-
-  /// Check if the current user can read a specific resource
-  bool _canRead(ResourceType resource) {
-    return _authProvider?.hasPermission(resource, CrudOperation.read) ?? false;
-  }
-
-  Future<void> _loadFinancialStats() async {
-    if (_statsService == null) return;
-
-    // Financial stats require dispatcher+ role for invoice/contract access
-    final canViewInvoice = _canRead(ResourceType.invoices);
-    final canViewContract = _canRead(ResourceType.contracts);
-
-    if (!canViewInvoice && !canViewContract) {
-      // No financial permissions - skip entirely
-      return;
-    }
-
-    try {
-      final futures = <Future<dynamic>>[
-        canViewInvoice
-            ? _statsService!.sum(
-                'invoice',
-                'total',
-                filters: {'status': 'paid'},
-              )
-            : Future.value(0.0),
-        canViewInvoice
-            ? _statsService!.sum(
-                'invoice',
-                'total',
-                filters: {'status': 'sent'},
-              )
-            : Future.value(0.0),
-        canViewContract
-            ? _statsService!.count('contract', filters: {'status': 'active'})
-            : Future.value(0),
-      ];
-
-      final results = await Future.wait(futures);
-
-      _financialStats = FinancialStats(
-        revenue: results[0] as double,
-        outstanding: results[1] as double,
-        activeContracts: results[2] as int,
-      );
-    } catch (e) {
-      ErrorService.logWarning(
-        'Failed to load financial stats',
-        context: {'error': e.toString()},
-      );
-      // Keep previous values on error
-    }
-  }
-
-  Future<void> _loadResourceStats() async {
-    if (_statsService == null) return;
-
-    // Check permissions for each resource
-    final canViewCustomer = _canRead(ResourceType.customers);
-    final canViewTechnician = _canRead(ResourceType.technicians);
-    final canViewInventory = _canRead(ResourceType.inventory);
-    final canViewUser = _canRead(ResourceType.users);
-
-    try {
-      final futures = <Future<int>>[
-        canViewCustomer ? _statsService!.count('customer') : Future.value(0),
-        canViewTechnician
-            ? _statsService!.count(
-                'technician',
-                filters: {'status': 'available'},
-              )
-            : Future.value(0),
-        canViewInventory
-            ? _statsService!.count(
-                'inventory',
-                filters: {'status': 'low_stock'},
-              )
-            : Future.value(0),
-        canViewUser
-            ? _statsService!.count('user', filters: {'status': 'active'})
-            : Future.value(0),
-      ];
-
-      final results = await Future.wait(futures);
-
-      _resourceStats = ResourceStats(
-        customers: results[0],
-        availableTechnicians: results[1],
-        lowStockItems: results[2],
-        activeUsers: results[3],
-      );
-    } catch (e) {
-      ErrorService.logWarning(
-        'Failed to load resource stats',
-        context: {'error': e.toString()},
-      );
-      // Keep previous values on error
-    }
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

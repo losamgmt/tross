@@ -1,12 +1,13 @@
 /// Home Screen - Main Dashboard
 ///
-/// Displays the main dashboard with real-time statistics from the backend.
+/// Displays the main dashboard with role-based entity charts.
 /// Uses DashboardProvider for data and DashboardContent for display.
 ///
-/// STATS DISPLAYED:
-/// - Work Orders: total, pending, in_progress, completed
-/// - Financial: revenue, outstanding, active contracts
-/// - Resources: customers, technicians, low stock, active users
+/// DASHBOARD FEATURES:
+/// - Config-driven entity charts (from dashboard-config.json)
+/// - Role-based visibility (minRole per entity)
+/// - Distribution pie charts grouped by status
+/// - Colors from entity-metadata.json (SSOT)
 library;
 
 import 'package:flutter/material.dart';

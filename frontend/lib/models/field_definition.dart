@@ -33,7 +33,8 @@ class FieldDefinition {
   final num? min;
   final num? max;
   final dynamic defaultValue;
-  final List<String>? enumValues; // For enum fields
+  final List<String>? enumValues; // For enum fields - just the value names
+  final Map<String, String?>? enumValueColors; // value -> BadgeStyle name
   final String? pattern; // Regex pattern
   final String? description;
 
@@ -49,6 +50,9 @@ class FieldDefinition {
   bool get isForeignKey =>
       type == FieldType.foreignKey || relatedEntity != null;
 
+  /// Get color name for an enum value (or null for default/neutral)
+  String? getValueColor(String value) => enumValueColors?[value];
+
   const FieldDefinition({
     required this.name,
     required this.type,
@@ -60,6 +64,7 @@ class FieldDefinition {
     this.max,
     this.defaultValue,
     this.enumValues,
+    this.enumValueColors,
     this.pattern,
     this.description,
     this.relatedEntity,
@@ -69,6 +74,28 @@ class FieldDefinition {
   });
 
   factory FieldDefinition.fromJson(String name, Map<String, dynamic> json) {
+    final valuesRaw = json['values'];
+    List<String>? enumValues;
+    Map<String, String?>? enumValueColors;
+
+    if (valuesRaw is List) {
+      // Legacy format: ["value1", "value2"]
+      enumValues = valuesRaw.cast<String>();
+    } else if (valuesRaw is Map) {
+      // New format: {"value1": {"color": "success"}, "value2": null}
+      enumValues = valuesRaw.keys.cast<String>().toList();
+      enumValueColors = {};
+      for (final entry in valuesRaw.entries) {
+        final key = entry.key as String;
+        final props = entry.value;
+        if (props is Map && props['color'] != null) {
+          enumValueColors[key] = props['color'] as String;
+        } else {
+          enumValueColors[key] = null; // Explicit null = use neutral
+        }
+      }
+    }
+
     return FieldDefinition(
       name: name,
       type: _parseFieldType(json['type'] as String? ?? 'string'),
@@ -79,7 +106,8 @@ class FieldDefinition {
       min: json['min'] as num?,
       max: json['max'] as num?,
       defaultValue: json['default'],
-      enumValues: (json['values'] as List<dynamic>?)?.cast<String>(),
+      enumValues: enumValues,
+      enumValueColors: enumValueColors,
       pattern: json['pattern'] as String?,
       description: json['description'] as String?,
       relatedEntity: json['relatedEntity'] as String?,

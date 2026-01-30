@@ -125,31 +125,37 @@ Every input has a "Keyboard Accessibility" test group covering:
 ### Directory Structure
 
 ```
-frontend/lib/
-├── config/              # Theme, colors, spacing, borders, typography
-├── core/                # Routing, navigation guards
-├── models/              # Data models (permission, database_health)
-├── providers/           # State management (AuthProvider, AppProvider)
-├── screens/             # Page-level widgets (home, login, admin/, settings/)
-├── services/            # API client, auth/, entity services, permissions
-├── utils/               # Validators, form helpers
-└── widgets/
-    ├── atoms/           # Buttons, inputs, typography, indicators
-    │   ├── buttons/     # AppButton
-    │   ├── display/     # Display atoms
-    │   ├── indicators/  # Loading, status indicators
-    │   ├── inputs/      # Text inputs, toggles
-    │   └── typography/  # Text styles
-    ├── molecules/       # Cards, menus, feedback, pagination
-    │   ├── cards/       # StatCard, ErrorCard, DashboardCard
-    │   ├── feedback/    # InfoBanner, notifications
-    │   ├── menus/       # DropdownMenu
-    │   └── pagination/  # Pagination controls
-    ├── organisms/       # Data tables, navigation, forms
-    │   ├── navigation/  # AppSidebar, AppFooter, NavMenuItem
-    │   ├── forms/       # FormField, generic forms
-    │   └── tables/      # DataTable components
-    └── forms/           # Form-related helpers
+frontend/
+├── assets/config/       # Runtime configuration (JSON)
+│   ├── entity-metadata.json    # Entity fields, types, validation (SSOT)
+│   ├── permissions.json        # Role-permission matrix
+│   ├── nav-config.json         # Navigation menu structure
+│   └── dashboard-config.json   # Dashboard entity chart configuration
+├── lib/
+│   ├── config/              # Theme, colors, spacing, borders, typography
+│   ├── core/                # Routing, navigation guards
+│   ├── models/              # Data models (permission, database_health)
+│   ├── providers/           # State management (AuthProvider, AppProvider)
+│   ├── screens/             # Page-level widgets (home, login, admin/, settings/)
+│   ├── services/            # API client, auth/, entity services, permissions
+│   ├── utils/               # Validators, form helpers
+│   └── widgets/
+│       ├── atoms/           # Buttons, inputs, typography, indicators
+│       │   ├── buttons/     # AppButton
+│       │   ├── display/     # Display atoms
+│       │   ├── indicators/  # Loading, status indicators
+│       │   ├── inputs/      # Text inputs, toggles
+│       │   └── typography/  # Text styles
+│       ├── molecules/       # Cards, menus, feedback, pagination
+│       │   ├── cards/       # StatCard, ErrorCard, DashboardCard
+│       │   ├── feedback/    # InfoBanner, notifications
+│       │   ├── menus/       # DropdownMenu
+│       │   └── pagination/  # Pagination controls
+│       ├── organisms/       # Data tables, navigation, forms
+│       │   ├── navigation/  # AppSidebar, AppFooter, NavMenuItem
+│       │   ├── forms/       # FormField, generic forms
+│       │   └── tables/      # DataTable components
+│       └── forms/           # Form-related helpers
 ```
 
 ### Data Flow Example

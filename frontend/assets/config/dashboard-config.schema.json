@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Dashboard Configuration",
+  "description": "Minimal dashboard config - specifies which entities to show and how to group them for distribution charts",
+  "type": "object",
+  "required": ["entities"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference"
+    },
+    "version": {
+      "type": "string",
+      "description": "Config version for migration support",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "_comments": {
+      "type": "object",
+      "description": "Documentation comments (ignored at runtime)",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "entities": {
+      "type": "array",
+      "description": "List of entities to display on dashboard",
+      "items": {
+        "type": "object",
+        "required": ["entity", "minRole", "groupBy", "order"],
+        "properties": {
+          "entity": {
+            "type": "string",
+            "description": "Entity name (e.g., 'work_order', 'invoice')"
+          },
+          "minRole": {
+            "type": "string",
+            "description": "Minimum role required to view this entity chart",
+            "enum": ["customer", "technician", "dispatcher", "manager", "admin"]
+          },
+          "groupBy": {
+            "type": "string",
+            "description": "Field to group by for distribution chart (e.g., 'status')"
+          },
+          "chartType": {
+            "type": "string",
+            "description": "Type of chart to render (default: 'distribution')",
+            "enum": ["distribution"],
+            "default": "distribution"
+          },
+          "order": {
+            "type": "integer",
+            "description": "Display order (lower numbers appear first)",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

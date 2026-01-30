@@ -74,6 +74,16 @@ class EntityIconResolver {
     'shopping_bag': Icons.shopping_bag,
     'shopping_bag_outlined': Icons.shopping_bag_outlined,
 
+    // Dashboard/Stats
+    'hourglass_empty': Icons.hourglass_empty,
+    'autorenew': Icons.autorenew,
+    'check_circle_outline': Icons.check_circle_outline,
+    'check_circle': Icons.check_circle,
+    'attach_money': Icons.attach_money,
+    'pending_actions': Icons.pending_actions,
+    'build': Icons.build,
+    'build_outlined': Icons.build_outlined,
+
     // Generic
     'folder': Icons.folder,
     'folder_outlined': Icons.folder_outlined,

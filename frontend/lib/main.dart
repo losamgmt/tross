@@ -21,6 +21,7 @@ import 'services/error_service.dart';
 import 'services/permission_service_dynamic.dart';
 import 'services/entity_metadata.dart';
 import 'services/nav_config_loader.dart';
+import 'services/dashboard_config_loader.dart';
 import 'services/api/api.dart';
 import 'services/generic_entity_service.dart';
 import 'services/preferences_service.dart';
@@ -39,6 +40,9 @@ void main() async {
 
   // Initialize navigation config (loads from nav-config.json)
   await NavConfigService.initialize();
+
+  // Initialize dashboard config (loads from dashboard-config.json)
+  await DashboardConfigService.initialize();
 
   // Initialize entity metadata registry (loads from entity-metadata.json)
   // This is the SSOT for all entity definitions, fields, and validation rules
