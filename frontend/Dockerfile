@@ -19,7 +19,8 @@ RUN flutter pub get
 COPY frontend/ ./
 
 # Build for web production
-RUN flutter build web --release --web-renderer canvaskit
+# --no-tree-shake-icons: Keep all Material Icons (we reference them by string name)
+RUN flutter build web --release --web-renderer canvaskit --no-tree-shake-icons
 
 # Stage 2: Nginx serving stage
 FROM nginx:alpine AS production

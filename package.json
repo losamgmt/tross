@@ -52,7 +52,7 @@
     "ports:check": "node scripts/check-dev-ports.js",
     "ports:kill": "node scripts/kill-dev-ports.js",
     "ports:kill:all": "node scripts/kill-dev-ports.js --all",
-    "build:all": "npm run build --workspace=backend && cd frontend && flutter build web",
+    "build:all": "npm run build --workspace=backend && cd frontend && flutter build web --no-tree-shake-icons",
     "ci:test": "npm run test:all",
     "db:setup": "docker-compose up -d db && npm run db:init --workspace=backend",
     "db:start": "docker-compose up -d db",

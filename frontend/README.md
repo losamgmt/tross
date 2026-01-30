@@ -229,8 +229,8 @@ flutter test test/providers/auth_provider_test.dart
 ### 4. Build for Production
 
 ```bash
-# Web
-flutter build web --release
+# Web (--no-tree-shake-icons required for config-driven icons)
+flutter build web --release --no-tree-shake-icons
 
 # Android APK
 flutter build apk --release
