@@ -8,14 +8,19 @@
 ///
 /// Sidebar navigation uses 'admin' strategy from nav-config.json.
 /// Security: Requires admin role (enforced by router guard)
+///
+/// TODO: Extract panel builders and evaluate config-driven admin panels
+/// similar to dashboard-config.json pattern (see Tier 2/3 in analysis).
 library;
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../config/config.dart';
 import '../core/routing/app_routes.dart';
+import '../models/database_health.dart';
 import '../services/api/api_client.dart';
 import '../services/auth/token_manager.dart';
+import '../widgets/atoms/indicators/app_badge.dart';
 import '../widgets/atoms/indicators/loading_indicator.dart';
 import '../widgets/molecules/cards/error_card.dart';
 import '../widgets/molecules/cards/titled_card.dart';
@@ -86,12 +91,20 @@ class _AdminScreenState extends State<AdminScreen> {
                               return const Text('No database info available');
                             }
                             final db = databases[0] as Map<String, dynamic>;
+                            final status = HealthStatus.values.firstWhere(
+                              (s) =>
+                                  s.name ==
+                                  (db['status'] as String?)?.toLowerCase(),
+                              orElse: () => HealthStatus.unknown,
+                            );
                             return KeyValueList(
                               items: [
                                 KeyValueItem(
                                   label: 'Status',
-                                  value: _HealthBadge(
-                                    status: db['status'] ?? 'unknown',
+                                  value: AppBadge(
+                                    label: status.label,
+                                    style: status.badgeStyle,
+                                    compact: true,
                                   ),
                                 ),
                                 KeyValueItem(
@@ -290,39 +303,6 @@ class _AdminScreenState extends State<AdminScreen> {
         }
       }
     }
-  }
-}
-
-/// Health status badge with color coding
-class _HealthBadge extends StatelessWidget {
-  final String status;
-
-  const _HealthBadge({required this.status});
-
-  @override
-  Widget build(BuildContext context) {
-    final color = switch (status.toLowerCase()) {
-      'healthy' => Colors.green,
-      'degraded' => Colors.orange,
-      'critical' => Colors.red,
-      _ => Colors.grey,
-    };
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        status.toUpperCase(),
-        style: TextStyle(
-          color: color,
-          fontWeight: FontWeight.w600,
-          fontSize: 12,
-        ),
-      ),
-    );
   }
 }
 
