@@ -5,9 +5,9 @@
     "silent": false,
     "autoJobCancelation": true
   },
-  "buildCommand": "if [ ! -d \"../flutter\" ]; then cd .. && git clone https://github.com/flutter/flutter.git -b stable && cd frontend; fi && ../flutter/bin/flutter --version && ../flutter/bin/flutter clean && ../flutter/bin/flutter build web --release --web-renderer canvaskit --dart-define=USE_PROD_BACKEND=true --no-tree-shake-icons",
+  "buildCommand": "chmod +x scripts/vercel-build.sh && ./scripts/vercel-build.sh",
   "outputDirectory": "build/web",
-  "installCommand": "if [ ! -d \"../flutter\" ]; then cd .. && git clone https://github.com/flutter/flutter.git -b stable && cd frontend; fi && ../flutter/bin/flutter pub get",
+  "installCommand": "chmod +x scripts/vercel-install.sh && ./scripts/vercel-install.sh",
   "framework": null,
   "devCommand": null,
   "cleanUrls": false,
