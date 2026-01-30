@@ -27,7 +27,40 @@ enum BadgeStyle {
   warning,
   error,
   info,
-  neutral,
+  neutral;
+
+  /// Parse a color name string to BadgeStyle
+  ///
+  /// Returns neutral if name is null or unrecognized.
+  /// Used by metadata-driven coloring.
+  static BadgeStyle fromName(String? name) => switch (name) {
+    'primary' => BadgeStyle.primary,
+    'secondary' => BadgeStyle.secondary,
+    'tertiary' => BadgeStyle.tertiary,
+    'success' => BadgeStyle.success,
+    'warning' => BadgeStyle.warning,
+    'error' => BadgeStyle.error,
+    'info' => BadgeStyle.info,
+    _ => BadgeStyle.neutral,
+  };
+}
+
+/// Extension to get visual color from semantic style
+///
+/// Use for charts, icons, or any context needing raw Color.
+/// The badge widget uses its own richer color scheme internally.
+extension BadgeStyleColor on BadgeStyle {
+  /// Get the primary color for this semantic style
+  Color get color => switch (this) {
+    BadgeStyle.primary => AppColors.brandPrimary,
+    BadgeStyle.secondary => AppColors.brandSecondary,
+    BadgeStyle.tertiary => AppColors.brandTertiary,
+    BadgeStyle.success => AppColors.success,
+    BadgeStyle.warning => AppColors.warning,
+    BadgeStyle.error => AppColors.error,
+    BadgeStyle.info => AppColors.info,
+    BadgeStyle.neutral => AppColors.grey500,
+  };
 }
 
 class AppBadge extends StatelessWidget {

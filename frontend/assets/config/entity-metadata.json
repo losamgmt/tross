@@ -152,13 +152,13 @@
       "status": {
         "type": "enum",
         "default": "draft",
-        "values": [
-          "draft",
-          "active",
-          "expired",
-          "cancelled",
-          "terminated"
-        ]
+        "values": {
+          "draft": { "color": "warning" },
+          "active": { "color": "success" },
+          "expired": null,
+          "cancelled": { "color": "error" },
+          "terminated": { "color": "error" }
+        }
       },
       "name": {
         "type": "string",
@@ -191,12 +191,12 @@
       },
       "billing_cycle": {
         "type": "enum",
-        "values": [
-          "monthly",
-          "quarterly",
-          "annually",
-          "one_time"
-        ]
+        "values": {
+          "monthly": { "color": "info" },
+          "quarterly": { "color": "info" },
+          "annually": { "color": "success" },
+          "one_time": null
+        }
       }
     }
   },
@@ -347,11 +347,11 @@
       "status": {
         "type": "enum",
         "default": "pending",
-        "values": [
-          "pending",
-          "active",
-          "suspended"
-        ]
+        "values": {
+          "pending": { "color": "warning" },
+          "active": { "color": "success" },
+          "suspended": { "color": "error" }
+        }
       },
       "first_name": {
         "type": "string",
@@ -753,12 +753,12 @@
       "status": {
         "type": "enum",
         "default": "in_stock",
-        "values": [
-          "in_stock",
-          "low_stock",
-          "out_of_stock",
-          "discontinued"
-        ]
+        "values": {
+          "in_stock": { "color": "success" },
+          "low_stock": { "color": "warning" },
+          "out_of_stock": { "color": "error" },
+          "discontinued": null
+        }
       },
       "sku": {
         "type": "string",
@@ -878,14 +878,14 @@
       "status": {
         "type": "enum",
         "default": "draft",
-        "values": [
-          "draft",
-          "sent",
-          "paid",
-          "overdue",
-          "cancelled",
-          "void"
-        ]
+        "values": {
+          "draft": { "color": "warning" },
+          "sent": { "color": "info" },
+          "paid": { "color": "success" },
+          "overdue": { "color": "error" },
+          "cancelled": { "color": "error" },
+          "void": null
+        }
       },
       "name": {
         "type": "string",
@@ -1006,14 +1006,14 @@
         "type": "enum",
         "required": true,
         "readonly": true,
-        "values": [
-          "info",
-          "success",
-          "warning",
-          "error",
-          "assignment",
-          "reminder"
-        ]
+        "values": {
+          "info": { "color": "info" },
+          "success": { "color": "success" },
+          "warning": { "color": "warning" },
+          "error": { "color": "error" },
+          "assignment": { "color": "primary" },
+          "reminder": { "color": "secondary" }
+        }
       },
       "resource_type": {
         "type": "string",
@@ -1114,20 +1114,20 @@
       "theme": {
         "type": "enum",
         "default": "system",
-        "values": [
-          "system",
-          "light",
-          "dark"
-        ]
+        "values": {
+          "system": null,
+          "light": { "color": "warning" },
+          "dark": { "color": "primary" }
+        }
       },
       "density": {
         "type": "enum",
         "default": "comfortable",
-        "values": [
-          "compact",
-          "standard",
-          "comfortable"
-        ]
+        "values": {
+          "compact": { "color": "info" },
+          "standard": null,
+          "comfortable": { "color": "success" }
+        }
       },
       "notifications_enabled": {
         "type": "boolean",
@@ -1317,10 +1317,10 @@
       "status": {
         "type": "enum",
         "default": "active",
-        "values": [
-          "active",
-          "disabled"
-        ]
+        "values": {
+          "active": { "color": "success" },
+          "disabled": { "color": "error" }
+        }
       },
       "description": {
         "type": "text",
@@ -1516,20 +1516,20 @@
       "status": {
         "type": "enum",
         "default": "pending",
-        "values": [
-          "pending",
-          "active",
-          "suspended"
-        ]
+        "values": {
+          "pending": { "color": "warning" },
+          "active": { "color": "success" },
+          "suspended": { "color": "error" }
+        }
       },
       "availability": {
         "type": "enum",
         "default": "available",
-        "values": [
-          "available",
-          "on_job",
-          "off_duty"
-        ]
+        "values": {
+          "available": { "color": "success" },
+          "on_job": { "color": "info" },
+          "off_duty": null
+        }
       },
       "first_name": {
         "type": "string",
@@ -1660,11 +1660,11 @@
       "status": {
         "type": "enum",
         "default": "pending",
-        "values": [
-          "pending",
-          "active",
-          "suspended"
-        ]
+        "values": {
+          "pending": { "color": "warning" },
+          "active": { "color": "success" },
+          "suspended": { "color": "error" }
+        }
       },
       "auth0_id": {
         "type": "string",
@@ -1851,13 +1851,13 @@
       "status": {
         "type": "enum",
         "default": "pending",
-        "values": [
-          "pending",
-          "assigned",
-          "in_progress",
-          "completed",
-          "cancelled"
-        ]
+        "values": {
+          "pending": { "color": "warning" },
+          "assigned": { "color": "info" },
+          "in_progress": { "color": "info" },
+          "completed": { "color": "success" },
+          "cancelled": { "color": "error" }
+        }
       },
       "name": {
         "type": "string",
@@ -1870,12 +1870,12 @@
       "priority": {
         "type": "enum",
         "default": "normal",
-        "values": [
-          "low",
-          "normal",
-          "high",
-          "urgent"
-        ]
+        "values": {
+          "low": null,
+          "normal": null,
+          "high": { "color": "warning" },
+          "urgent": { "color": "error" }
+        }
       },
       "customer_id": {
         "type": "foreignKey",

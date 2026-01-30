@@ -11,15 +11,30 @@ import 'package:tross_app/providers/auth_provider.dart';
 import 'package:tross_app/providers/dashboard_provider.dart';
 import 'package:tross_app/screens/home_screen.dart';
 import 'package:tross_app/services/api/api_client.dart';
+import 'package:tross_app/services/dashboard_config_loader.dart';
 import 'package:tross_app/services/generic_entity_service.dart';
 import '../mocks/mock_api_client.dart';
 import '../mocks/mock_services.dart';
+
+/// Test dashboard config for HomeScreen tests (matches dashboard-config.json format)
+final _testDashboardConfig = {
+  'version': '1.0.0',
+  'entities': [
+    {
+      'entity': 'work_order',
+      'minRole': 'customer',
+      'groupBy': 'status',
+      'order': 1,
+    },
+  ],
+};
 
 void main() {
   late MockApiClient mockApiClient;
   late MockAuthProvider mockAuthProvider;
 
   setUp(() {
+    DashboardConfigService.loadFromJson(_testDashboardConfig);
     mockApiClient = MockApiClient();
     mockAuthProvider = MockAuthProvider.authenticated();
 
@@ -43,6 +58,10 @@ void main() {
         'active_users': 8,
       },
     });
+  });
+
+  tearDown(() {
+    DashboardConfigService.reset();
   });
 
   Widget buildTestWidget() {

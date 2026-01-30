@@ -1,8 +1,7 @@
 /// DashboardProvider Unit Tests
 ///
-/// Tests the dashboard statistics provider.
-/// Since DashboardProvider calls StatsService (which makes HTTP calls),
-/// these tests verify state management, data models, and initialization.
+/// Tests the chart-based dashboard provider.
+/// Validates chart data loading, role-based entity filtering, and state management.
 library;
 
 import 'package:flutter/foundation.dart';
@@ -11,231 +10,285 @@ import 'package:tross_app/providers/auth_provider.dart';
 import 'package:tross_app/providers/dashboard_provider.dart';
 import 'package:tross_app/services/api/api_client.dart';
 import 'package:tross_app/services/auth/token_provider.dart';
+import 'package:tross_app/services/dashboard_config_loader.dart';
 import 'package:tross_app/services/stats_service.dart';
 
 void main() {
   group('DashboardProvider', () {
+    setUp(() {
+      // Initialize config service with test config
+      DashboardConfigService.loadFromJson({
+        'entities': [
+          {
+            'entity': 'work_order',
+            'minRole': 'customer',
+            'groupBy': 'status',
+            'order': 1,
+          },
+          {
+            'entity': 'invoice',
+            'minRole': 'manager',
+            'groupBy': 'status',
+            'order': 2,
+          },
+        ],
+      });
+    });
+
+    tearDown(() {
+      DashboardConfigService.reset();
+    });
+
+    test('initializes with correct defaults', () {
+      final provider = DashboardProvider();
+
+      expect(provider.isLoading, false);
+      expect(provider.lastUpdated, isNull);
+      // Without auth connected, default role is 'customer' which sees entities with minRole <= customer
+      expect(provider.getVisibleEntities().length, 1); // work_order only
+      expect(provider.getChartData('work_order'), isEmpty);
+      expect(provider.getTotalCount('work_order'), 0);
+
+      provider.dispose();
+    });
+
+    test('isChangeNotifier', () {
+      final provider = DashboardProvider();
+      expect(provider, isA<ChangeNotifier>());
+      provider.dispose();
+    });
+
+    test('connectToAuth stores provider reference', () {
+      final provider = DashboardProvider();
+      final authProvider = _TestableAuthProvider();
+
+      // Should not throw
+      provider.connectToAuth(authProvider);
+
+      provider.dispose();
+    });
+
+    test('dispose cleans up resources', () {
+      final provider = DashboardProvider();
+      final authProvider = _TestableAuthProvider();
+
+      provider.connectToAuth(authProvider);
+
+      // Should not throw
+      expect(() => provider.dispose(), returnsNormally);
+    });
+  });
+
+  group('DashboardProvider Chart Data', () {
     late DashboardProvider provider;
+    late _MockStatsService mockService;
 
     setUp(() {
+      DashboardConfigService.loadFromJson({
+        'entities': [
+          {
+            'entity': 'work_order',
+            'minRole': 'customer',
+            'groupBy': 'status',
+            'order': 1,
+          },
+          {
+            'entity': 'invoice',
+            'minRole': 'manager',
+            'groupBy': 'status',
+            'order': 2,
+          },
+        ],
+      });
       provider = DashboardProvider();
+      mockService = _MockStatsService();
+      provider.setStatsService(mockService);
     });
 
-    group('Initial State', () {
-      test('should start with empty work order stats', () {
-        expect(provider.workOrderStats.total, equals(0));
-        expect(provider.workOrderStats.pending, equals(0));
-        expect(provider.workOrderStats.inProgress, equals(0));
-        expect(provider.workOrderStats.completed, equals(0));
-      });
-
-      test('should start with empty financial stats', () {
-        expect(provider.financialStats.revenue, equals(0.0));
-        expect(provider.financialStats.outstanding, equals(0.0));
-        expect(provider.financialStats.activeContracts, equals(0));
-      });
-
-      test('should start with empty resource stats', () {
-        expect(provider.resourceStats.customers, equals(0));
-        expect(provider.resourceStats.availableTechnicians, equals(0));
-        expect(provider.resourceStats.lowStockItems, equals(0));
-        expect(provider.resourceStats.activeUsers, equals(0));
-      });
-
-      test('should not be loading initially', () {
-        expect(provider.isLoading, isFalse);
-      });
-
-      test('should not be loaded initially', () {
-        expect(provider.isLoaded, isFalse);
-      });
-
-      test('should have no error initially', () {
-        expect(provider.error, isNull);
-      });
-
-      test('should have no lastUpdated initially', () {
-        expect(provider.lastUpdated, isNull);
-      });
+    tearDown(() {
+      provider.dispose();
+      DashboardConfigService.reset();
     });
 
-    group('ChangeNotifier', () {
-      test('should be a ChangeNotifier', () {
-        expect(provider, isA<DashboardProvider>());
-      });
+    test('loadStats populates chart data', () async {
+      // Configure mock to return grouped data
+      mockService.setGroupedData('work_order', [
+        const GroupedCount(value: 'pending', count: 10),
+        const GroupedCount(value: 'completed', count: 25),
+      ]);
+
+      await provider.loadStats();
+
+      final data = provider.getChartData('work_order');
+      expect(data.length, 2);
+      expect(data.first.value, 'pending');
+      expect(data.first.count, 10);
     });
 
-    group('Dispose', () {
-      test('dispose should not throw', () {
-        expect(() => provider.dispose(), returnsNormally);
-      });
+    test('getTotalCount sums all grouped counts', () async {
+      mockService.setGroupedData('work_order', [
+        const GroupedCount(value: 'pending', count: 10),
+        const GroupedCount(value: 'scheduled', count: 15),
+        const GroupedCount(value: 'completed', count: 25),
+      ]);
+
+      await provider.loadStats();
+
+      expect(provider.getTotalCount('work_order'), 50);
+    });
+
+    test('getChartData returns empty list for unknown entity', () {
+      expect(provider.getChartData('unknown_entity'), isEmpty);
+    });
+
+    test('getTotalCount returns 0 for unknown entity', () {
+      expect(provider.getTotalCount('unknown_entity'), 0);
     });
   });
 
-  group('WorkOrderStats', () {
-    test('empty constant has all zeros', () {
-      expect(WorkOrderStats.empty.total, equals(0));
-      expect(WorkOrderStats.empty.pending, equals(0));
-      expect(WorkOrderStats.empty.inProgress, equals(0));
-      expect(WorkOrderStats.empty.completed, equals(0));
+  group('DashboardProvider Visible Entities', () {
+    late DashboardProvider provider;
+    late _TestableAuthProvider authProvider;
+
+    setUp(() {
+      DashboardConfigService.loadFromJson({
+        'entities': [
+          {
+            'entity': 'work_order',
+            'minRole': 'customer',
+            'groupBy': 'status',
+            'order': 1,
+          },
+          {
+            'entity': 'invoice',
+            'minRole': 'manager',
+            'groupBy': 'status',
+            'order': 2,
+          },
+          {
+            'entity': 'technician',
+            'minRole': 'admin',
+            'groupBy': 'status',
+            'order': 3,
+          },
+        ],
+      });
+      provider = DashboardProvider();
+      authProvider = _TestableAuthProvider();
     });
 
-    test('const constructor works correctly', () {
-      const stats = WorkOrderStats(
-        total: 100,
-        pending: 25,
-        inProgress: 30,
-        completed: 45,
-      );
-
-      expect(stats.total, equals(100));
-      expect(stats.pending, equals(25));
-      expect(stats.inProgress, equals(30));
-      expect(stats.completed, equals(45));
+    tearDown(() {
+      provider.dispose();
+      DashboardConfigService.reset();
     });
 
-    test('default values are zero', () {
-      const stats = WorkOrderStats();
+    test('getVisibleEntities filters by user role', () {
+      // Admin sees all
+      authProvider.setRole('admin');
+      provider.connectToAuth(authProvider);
 
-      expect(stats.total, equals(0));
-      expect(stats.pending, equals(0));
-      expect(stats.inProgress, equals(0));
-      expect(stats.completed, equals(0));
-    });
-  });
-
-  group('FinancialStats', () {
-    test('empty constant has all zeros', () {
-      expect(FinancialStats.empty.revenue, equals(0.0));
-      expect(FinancialStats.empty.outstanding, equals(0.0));
-      expect(FinancialStats.empty.activeContracts, equals(0));
+      final adminEntities = provider.getVisibleEntities();
+      expect(adminEntities.length, 3);
+      expect(adminEntities.map((e) => e.entity).toList(), [
+        'work_order',
+        'invoice',
+        'technician',
+      ]);
     });
 
-    test('const constructor works correctly', () {
-      const stats = FinancialStats(
-        revenue: 50000.50,
-        outstanding: 10000.00,
-        activeContracts: 15,
-      );
+    test('manager sees work_order and invoice', () {
+      authProvider.setRole('manager');
+      provider.connectToAuth(authProvider);
 
-      expect(stats.revenue, equals(50000.50));
-      expect(stats.outstanding, equals(10000.00));
-      expect(stats.activeContracts, equals(15));
+      final entities = provider.getVisibleEntities();
+      expect(entities.length, 2);
+      expect(entities.map((e) => e.entity).toList(), ['work_order', 'invoice']);
     });
 
-    test('default values are zero', () {
-      const stats = FinancialStats();
+    test('customer sees only work_order', () {
+      authProvider.setRole('customer');
+      provider.connectToAuth(authProvider);
 
-      expect(stats.revenue, equals(0.0));
-      expect(stats.outstanding, equals(0.0));
-      expect(stats.activeContracts, equals(0));
-    });
-  });
-
-  group('ResourceStats', () {
-    test('empty constant has all zeros', () {
-      expect(ResourceStats.empty.customers, equals(0));
-      expect(ResourceStats.empty.availableTechnicians, equals(0));
-      expect(ResourceStats.empty.lowStockItems, equals(0));
-      expect(ResourceStats.empty.activeUsers, equals(0));
+      final entities = provider.getVisibleEntities();
+      expect(entities.length, 1);
+      expect(entities.first.entity, 'work_order');
     });
 
-    test('const constructor works correctly', () {
-      const stats = ResourceStats(
-        customers: 200,
-        availableTechnicians: 10,
-        lowStockItems: 5,
-        activeUsers: 50,
-      );
+    test('entities are ordered by order field', () {
+      authProvider.setRole('admin');
+      provider.connectToAuth(authProvider);
 
-      expect(stats.customers, equals(200));
-      expect(stats.availableTechnicians, equals(10));
-      expect(stats.lowStockItems, equals(5));
-      expect(stats.activeUsers, equals(50));
-    });
-
-    test('default values are zero', () {
-      const stats = ResourceStats();
-
-      expect(stats.customers, equals(0));
-      expect(stats.availableTechnicians, equals(0));
-      expect(stats.lowStockItems, equals(0));
-      expect(stats.activeUsers, equals(0));
+      final entities = provider.getVisibleEntities();
+      expect(entities[0].order, 1);
+      expect(entities[1].order, 2);
+      expect(entities[2].order, 3);
     });
   });
 
   group('DashboardProvider Auth Integration', () {
     late DashboardProvider provider;
-    late _TestableAuthProvider mockAuth;
+    late _TestableAuthProvider authProvider;
 
     setUp(() {
+      DashboardConfigService.loadFromJson({
+        'entities': [
+          {
+            'entity': 'work_order',
+            'minRole': 'customer',
+            'groupBy': 'status',
+            'order': 1,
+          },
+        ],
+      });
       provider = DashboardProvider();
-      mockAuth = _TestableAuthProvider();
+      authProvider = _TestableAuthProvider();
     });
 
     tearDown(() {
       provider.dispose();
+      DashboardConfigService.reset();
     });
 
-    test('connectToAuth registers listener', () {
-      provider.connectToAuth(mockAuth);
+    test('connectToAuth subscribes to auth changes', () {
+      final initialListenerCount = authProvider.listenerCount;
+      provider.connectToAuth(authProvider);
 
-      // Should have registered as listener
-      expect(mockAuth.listenerCount, equals(1));
-    });
-
-    test('connectToAuth loads stats when already authenticated', () {
-      mockAuth.setAuthenticated(true);
-      provider.connectToAuth(mockAuth);
-
-      // Should attempt to load (but will fail gracefully without StatsService)
-      // We're testing that the code path is exercised
-      expect(provider.isLoaded, isFalse); // No stats service, so not loaded
+      expect(authProvider.listenerCount, greaterThan(initialListenerCount));
     });
 
     test('dispose removes auth listener', () {
-      // Use a separate provider instance to avoid double-dispose from tearDown
-      final disposeTestProvider = DashboardProvider();
-      final disposeTestAuth = _TestableAuthProvider();
+      // Use separate provider to avoid double-dispose from tearDown
+      final disposeProvider = DashboardProvider();
+      final disposeAuth = _TestableAuthProvider();
 
-      disposeTestProvider.connectToAuth(disposeTestAuth);
-      expect(disposeTestAuth.listenerCount, equals(1));
+      disposeProvider.connectToAuth(disposeAuth);
+      final listenerCountAfterSet = disposeAuth.listenerCount;
 
-      disposeTestProvider.dispose();
-      expect(disposeTestAuth.listenerCount, equals(0));
+      disposeProvider.dispose();
+
+      expect(disposeAuth.listenerCount, lessThan(listenerCountAfterSet));
     });
 
-    test('auth change from logged-out to logged-in triggers load', () async {
-      provider.connectToAuth(mockAuth);
+    test('chart data is cleared on logout', () async {
+      // Set up provider with mock stats service
+      final mockService = _MockStatsService();
+      mockService.setGroupedData('work_order', [
+        const GroupedCount(value: 'pending', count: 10),
+      ]);
+      provider.setStatsService(mockService);
+      provider.connectToAuth(authProvider);
 
-      // Simulate login
-      mockAuth.setAuthenticated(true);
+      // Simulate login and load stats
+      authProvider.setAuthenticated(true);
+      await provider.loadStats();
 
-      // Wait for async operations
-      await Future.delayed(Duration.zero);
-
-      // Provider should have attempted to load
-      expect(provider.error, isNull); // Graceful handling without StatsService
-    });
-
-    test('auth change from logged-in to logged-out clears stats', () async {
-      mockAuth.setAuthenticated(true);
-      provider.connectToAuth(mockAuth);
-
-      // Wait for initial loadStats to complete
-      await Future.delayed(const Duration(milliseconds: 10));
+      expect(provider.getChartData('work_order'), isNotEmpty);
 
       // Simulate logout
-      mockAuth.setAuthenticated(false);
+      authProvider.setAuthenticated(false);
 
-      await Future.delayed(const Duration(milliseconds: 10));
-
-      // Stats should be cleared
-      expect(provider.workOrderStats.total, equals(0));
-      expect(provider.financialStats.revenue, equals(0.0));
-      expect(provider.resourceStats.customers, equals(0));
-      // lastUpdated is set during loadStats, then cleared by _clearStats
-      // But since loadStats ran first, we verify stats are empty
+      // Chart data should be cleared
+      expect(provider.getChartData('work_order'), isEmpty);
     });
   });
 
@@ -243,11 +296,22 @@ void main() {
     late DashboardProvider provider;
 
     setUp(() {
+      DashboardConfigService.loadFromJson({
+        'entities': [
+          {
+            'entity': 'work_order',
+            'minRole': 'customer',
+            'groupBy': 'status',
+            'order': 1,
+          },
+        ],
+      });
       provider = DashboardProvider();
     });
 
     tearDown(() {
       provider.dispose();
+      DashboardConfigService.reset();
     });
 
     test('loadStats handles missing StatsService gracefully', () async {
@@ -259,16 +323,22 @@ void main() {
     });
 
     test('refresh is alias for loadStats', () async {
+      final mockService = _MockStatsService();
+      provider.setStatsService(mockService);
       await expectLater(provider.refresh(), completes);
       expect(provider.isLoading, isFalse);
     });
 
     test('concurrent loadStats calls are ignored', () async {
+      // Set up a slow stats service
+      final slowService = _SlowMockStatsService();
+      provider.setStatsService(slowService);
+
       // Start first load
       final future1 = provider.loadStats();
       expect(provider.isLoading, isTrue);
 
-      // Second call should return immediately
+      // Second call should return immediately (ignored since loading)
       final future2 = provider.loadStats();
 
       await Future.wait([future1, future2]);
@@ -283,6 +353,17 @@ void main() {
       // We can verify by loading - it will use the mock
       expect(() => provider.loadStats(), returnsNormally);
     });
+
+    test('lastUpdated is set after successful load', () async {
+      final mockService = _MockStatsService();
+      provider.setStatsService(mockService);
+
+      expect(provider.lastUpdated, isNull);
+
+      await provider.loadStats();
+
+      expect(provider.lastUpdated, isNotNull);
+    });
   });
 
   group('DashboardProvider Notifications', () {
@@ -290,13 +371,25 @@ void main() {
     int notificationCount = 0;
 
     setUp(() {
+      DashboardConfigService.loadFromJson({
+        'entities': [
+          {
+            'entity': 'work_order',
+            'minRole': 'customer',
+            'groupBy': 'status',
+            'order': 1,
+          },
+        ],
+      });
       provider = DashboardProvider();
+      provider.setStatsService(_MockStatsService());
       notificationCount = 0;
       provider.addListener(() => notificationCount++);
     });
 
     tearDown(() {
       provider.dispose();
+      DashboardConfigService.reset();
     });
 
     test('loadStats notifies listeners on start and completion', () async {
@@ -311,6 +404,7 @@ void main() {
 /// Testable AuthProvider that tracks listener registrations
 class _TestableAuthProvider extends ChangeNotifier implements AuthProvider {
   bool _isAuthenticated = false;
+  String _role = 'admin';
   int _listenerCount = 0;
 
   @override
@@ -321,6 +415,10 @@ class _TestableAuthProvider extends ChangeNotifier implements AuthProvider {
   void setAuthenticated(bool value) {
     _isAuthenticated = value;
     notifyListeners();
+  }
+
+  void setRole(String role) {
+    _role = role;
   }
 
   @override
@@ -349,7 +447,7 @@ class _TestableAuthProvider extends ChangeNotifier implements AuthProvider {
   @override
   String? get provider => null;
   @override
-  String get userRole => 'admin';
+  String get userRole => _role;
   @override
   String get userName => 'Test';
   @override
@@ -374,7 +472,13 @@ class _TestableAuthProvider extends ChangeNotifier implements AuthProvider {
 
 /// Mock StatsService for testing
 class _MockStatsService extends StatsService {
+  final Map<String, List<GroupedCount>> _groupedData = {};
+
   _MockStatsService() : super(_MockApiClient(), _MockTokenProvider());
+
+  void setGroupedData(String entity, List<GroupedCount> data) {
+    _groupedData[entity] = data;
+  }
 
   @override
   Future<int> count(String entity, {Map<String, dynamic>? filters}) async {
@@ -389,6 +493,46 @@ class _MockStatsService extends StatsService {
   }) async {
     return 0.0;
   }
+
+  @override
+  Future<List<GroupedCount>> countGrouped(
+    String entityName,
+    String groupByField, {
+    Map<String, dynamic>? filters,
+  }) async {
+    return _groupedData[entityName] ?? [];
+  }
+}
+
+/// Slow mock StatsService for testing concurrent calls
+class _SlowMockStatsService extends StatsService {
+  _SlowMockStatsService() : super(_MockApiClient(), _MockTokenProvider());
+
+  @override
+  Future<int> count(String entity, {Map<String, dynamic>? filters}) async {
+    await Future.delayed(const Duration(milliseconds: 50));
+    return 0;
+  }
+
+  @override
+  Future<double> sum(
+    String entity,
+    String field, {
+    Map<String, dynamic>? filters,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 50));
+    return 0.0;
+  }
+
+  @override
+  Future<List<GroupedCount>> countGrouped(
+    String entityName,
+    String groupByField, {
+    Map<String, dynamic>? filters,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 50));
+    return [];
+  }
 }
 
 /// Minimal mock ApiClient for StatsService
@@ -402,5 +546,3 @@ class _MockTokenProvider implements TokenProvider {
   @override
   dynamic noSuchMethod(Invocation invocation) => null;
 }
-
-dynamic noSuchMethod(Invocation invocation) => null;

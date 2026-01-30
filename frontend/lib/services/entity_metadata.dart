@@ -81,6 +81,9 @@ class EntityMetadataRegistry {
       ErrorService.logDebug(
         '[EntityMetadataRegistry] Loaded metadata for ${_metadata.length} entities',
       );
+      // coverage:ignore-start
+      // Fallback paths only execute when rootBundle.loadString fails
+      // (e.g., assets not bundled). Cannot be tested without mocking rootBundle.
     } catch (e) {
       ErrorService.logError(
         '[EntityMetadataRegistry] Failed to load entity metadata',
@@ -89,8 +92,13 @@ class EntityMetadataRegistry {
       // Load defaults for required entities
       _loadDefaults();
       _initialized = true;
+      // coverage:ignore-end
     }
   }
+
+  // coverage:ignore-start
+  // Default metadata generation - only used when JSON assets unavailable.
+  // Provides fallback for development/debugging when assets aren't bundled.
 
   /// Load default metadata when JSON not available
   void _loadDefaults() {
@@ -288,6 +296,7 @@ class EntityMetadataRegistry {
 
     return {...universalFields, ...entityFields};
   }
+  // coverage:ignore-end
 
   /// Get metadata for an entity
   ///
@@ -319,4 +328,23 @@ class EntityMetadataRegistry {
   /// Check if an entity exists
   static bool has(String entityName) =>
       _instance._metadata.containsKey(entityName);
+
+  /// Get the BadgeStyle color name for an enum field value
+  ///
+  /// Returns the color name (e.g., 'success', 'error') defined in metadata,
+  /// or null if the value has no color or entity/field not found.
+  ///
+  /// Usage:
+  /// ```dart
+  /// final colorName = EntityMetadataRegistry.getValueColor(
+  ///   'work_order', 'status', 'completed'
+  /// ); // Returns 'success'
+  /// ```
+  static String? getValueColor(String entity, String field, String value) {
+    final metadata = tryGet(entity);
+    if (metadata == null) return null;
+    final fieldDef = metadata.fields[field];
+    if (fieldDef == null) return null;
+    return fieldDef.getValueColor(value);
+  }
 }

@@ -1,0 +1,38 @@
+{
+  "$schema": "./dashboard-config.schema.json",
+  "version": "1.0.0",
+
+  "_comments": {
+    "design": "MINIMAL CONFIG - only specifies WHICH entities and HOW to group them",
+    "emergent": "Display names, icons, and value colors from EntityMetadataRegistry",
+    "minRole": "Uses UserRole.priority from permission.dart (customer=1, technician=2, dispatcher=3, manager=4, admin=5)",
+    "groupBy": "Field to group by for distribution chart (e.g., 'status')"
+  },
+
+  "entities": [
+    {
+      "entity": "work_order",
+      "minRole": "customer",
+      "groupBy": "status",
+      "order": 1
+    },
+    {
+      "entity": "invoice",
+      "minRole": "manager",
+      "groupBy": "status",
+      "order": 2
+    },
+    {
+      "entity": "contract",
+      "minRole": "manager",
+      "groupBy": "status",
+      "order": 3
+    },
+    {
+      "entity": "technician",
+      "minRole": "dispatcher",
+      "groupBy": "status",
+      "order": 4
+    }
+  ]
+}

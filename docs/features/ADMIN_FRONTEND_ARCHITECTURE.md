@@ -186,7 +186,7 @@ All form inputs follow these principles:
 | Component | Subdirectory | Purpose |
 |-----------|--------------|---------|
 | `ErrorDisplay` | `feedback/` | Full-page error (404, 403, 500) |
-| `DashboardContent` | `dashboards/` | Stats cards grid |
+| `DashboardContent` | `dashboards/` | Config-driven entity charts |
 | `EntityDetailCard` | `cards/` | Metadata-driven entity display |
 | `EntityFormModal` | `modals/` | CRUD form modal |
 | `EntityDataTable` | `tables/` | Metadata-driven data table |
@@ -205,7 +205,7 @@ All form inputs follow these principles:
 |----------|---------|
 | `AuthProvider` | Auth state, user, token, role |
 | `AppProvider` | Network/backend health state |
-| `DashboardProvider` | Dashboard statistics |
+| `DashboardProvider` | Dashboard chart data per entity |
 | `PreferencesProvider` | User preferences |
 
 #### Services (`services/`)

@@ -24,9 +24,10 @@ library;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../config/table_column.dart';
+import '../utils/helpers/string_helper.dart';
 import '../utils/table_cell_builders.dart';
-import '../widgets/atoms/indicators/app_badge.dart';
 import '../widgets/atoms/cells/foreign_key_lookup_cell.dart';
+import '../widgets/atoms/indicators/app_badge.dart';
 import 'entity_metadata.dart';
 import 'generic_entity_service.dart';
 
@@ -172,10 +173,6 @@ class MetadataTableColumnFactory {
       );
     }
 
-    if (fieldName == 'status') {
-      return _buildStatusBadge(value.toString());
-    }
-
     // Handle by field type
     return switch (fieldDef?.type) {
       FieldType.boolean => _buildBooleanCell(value as bool),
@@ -183,7 +180,13 @@ class MetadataTableColumnFactory {
       FieldType.phone => TableCellBuilders.textCell(value.toString()),
       FieldType.timestamp => _buildTimestampCell(value),
       FieldType.date => _buildDateCell(value),
-      FieldType.enumType => _buildEnumCell(value.toString()),
+      // Enum fields: use badge if colors defined, plain text otherwise
+      FieldType.enumType => _buildEnumCell(
+        metadata.name,
+        fieldName,
+        value.toString(),
+        fieldDef,
+      ),
       FieldType.integer => TableCellBuilders.textCell(value.toString()),
       FieldType.decimal => _buildDecimalCell(value),
       FieldType.jsonb => TableCellBuilders.textCell('[JSON]'),
@@ -214,44 +217,6 @@ class MetadataTableColumnFactory {
       fieldName: '$displayName status',
       trueAction: 'activate this $displayName',
       falseAction: 'deactivate this $displayName',
-    );
-  }
-
-  /// Build status badge with appropriate styling
-  static Widget _buildStatusBadge(String status) {
-    final style = switch (status.toLowerCase()) {
-      'active' ||
-      'available' ||
-      'completed' ||
-      'paid' ||
-      'in_stock' => BadgeStyle.success,
-      'pending' ||
-      'pending_activation' ||
-      'draft' ||
-      'scheduled' ||
-      'low_stock' => BadgeStyle.warning,
-      'suspended' ||
-      'cancelled' ||
-      'overdue' ||
-      'out_of_stock' ||
-      'discontinued' => BadgeStyle.error,
-      'in_progress' || 'on_job' || 'sent' => BadgeStyle.info,
-      _ => BadgeStyle.neutral,
-    };
-
-    final label = status
-        .split('_')
-        .map(
-          (word) => word.isEmpty
-              ? ''
-              : '${word[0].toUpperCase()}${word.substring(1)}',
-        )
-        .join(' ');
-
-    return TableCellBuilders.statusBadgeCell(
-      label: label,
-      style: style,
-      compact: true,
     );
   }
 
@@ -302,17 +267,37 @@ class MetadataTableColumnFactory {
     return TableCellBuilders.textCell(formatted);
   }
 
-  /// Build enum cell (status-like display)
-  static Widget _buildEnumCell(String value) {
-    final label = value
-        .split('_')
-        .map(
-          (word) => word.isEmpty
-              ? ''
-              : '${word[0].toUpperCase()}${word.substring(1)}',
-        )
-        .join(' ');
-    return TableCellBuilders.textCell(label);
+  /// Build enum cell - badge if colors defined, plain text otherwise
+  ///
+  /// Uses metadata-driven colors from entity-metadata.json.
+  /// Falls back to plain text for enums without semantic colors (e.g., state codes).
+  static Widget _buildEnumCell(
+    String entity,
+    String field,
+    String value,
+    FieldDefinition? fieldDef,
+  ) {
+    // Check if this enum has colors defined
+    final hasColors =
+        fieldDef?.enumValueColors != null &&
+        fieldDef!.enumValueColors!.isNotEmpty;
+
+    if (hasColors) {
+      // Use badge with metadata-driven color
+      final colorName = EntityMetadataRegistry.getValueColor(
+        entity,
+        field,
+        value,
+      );
+      return TableCellBuilders.statusBadgeCell(
+        label: StringHelper.snakeToTitle(value),
+        style: BadgeStyle.fromName(colorName),
+        compact: true,
+      );
+    }
+
+    // Plain text for enums without colors (state codes, etc.)
+    return TableCellBuilders.textCell(StringHelper.snakeToTitle(value));
   }
 
   /// Build decimal cell with formatting
