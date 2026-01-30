@@ -61,10 +61,16 @@ class EntityIconResolver {
     'description_outlined': Icons.description_outlined,
     'assignment': Icons.assignment,
     'assignment_outlined': Icons.assignment_outlined,
+    'receipt': Icons.receipt,
+    'receipt_outlined': Icons.receipt_outlined,
     'receipt_long': Icons.receipt_long,
     'receipt_long_outlined': Icons.receipt_long_outlined,
     'article': Icons.article,
     'article_outlined': Icons.article_outlined,
+    'attach_file': Icons.attach_file,
+    'attach_file_outlined': Icons.attach_file_outlined,
+    'history': Icons.history,
+    'history_outlined': Icons.history_outlined,
 
     // Inventory
     'inventory': Icons.inventory,
@@ -83,6 +89,14 @@ class EntityIconResolver {
     'pending_actions': Icons.pending_actions,
     'build': Icons.build,
     'build_outlined': Icons.build_outlined,
+    'notifications': Icons.notifications,
+    'notifications_outlined': Icons.notifications_outlined,
+
+    // Labels/Tags
+    'badge': Icons.badge,
+    'badge_outlined': Icons.badge_outlined,
+    'bookmark': Icons.bookmark,
+    'bookmark_outlined': Icons.bookmark_outlined,
 
     // Generic
     'folder': Icons.folder,
