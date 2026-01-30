@@ -1,4 +1,9 @@
 // Token Manager - Handles secure token storage and management
+//
+// TODO: Implement proactive token refresh before expiration.
+// Current behavior: tokens expire and user gets logged out abruptly.
+// Need: Background refresh ~5min before expiry, or on app resume.
+// See also: http_api_client.dart _refreshTokenWithMutex for reactive refresh.
 import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../error_service.dart';

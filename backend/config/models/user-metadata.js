@@ -217,7 +217,6 @@ module.exports = {
    * Used by buildDbErrorConfig() to generate handleDbError config
    *
    * settableOnCreate: Whether this FK can be set via POST (default: true)
-   * Some FKs are managed via separate workflows (e.g., profile linking)
    */
   foreignKeys: {
     role_id: {
@@ -228,12 +227,12 @@ module.exports = {
     customer_profile_id: {
       table: 'customers',
       displayName: 'Customer Profile',
-      settableOnCreate: false, // Set via profile linking, not user creation
+      settableOnCreate: true, // Can link profile on create or edit
     },
     technician_profile_id: {
       table: 'technicians',
       displayName: 'Technician Profile',
-      settableOnCreate: false, // Set via profile linking, not user creation
+      settableOnCreate: true, // Can link profile on create or edit
     },
   },
 
@@ -410,18 +409,16 @@ module.exports = {
     last_name: FIELD.LAST_NAME,
     role_id: { type: 'foreignKey', relatedEntity: 'role' },
 
-    // Multi-profile FKs (readonly - managed via profile creation flows)
+    // Multi-profile FKs - can be linked on create or edit
     customer_profile_id: {
       type: 'foreignKey',
       relatedEntity: 'customer',
-      readonly: true,
-      description: 'FK to customers table - set when user becomes a customer',
+      description: 'FK to customers table - links user to customer profile',
     },
     technician_profile_id: {
       type: 'foreignKey',
       relatedEntity: 'technician',
-      readonly: true,
-      description: 'FK to technicians table - set when user becomes a technician',
+      description: 'FK to technicians table - links user to technician profile',
     },
   },
 };

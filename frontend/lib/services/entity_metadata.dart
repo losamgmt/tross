@@ -142,11 +142,14 @@ class EntityMetadataRegistry {
       (m) => '_${m.group(1)!.toLowerCase()}',
     );
 
+    final identityField = _getDefaultIdentityField(name);
+
     return EntityMetadata(
       name: name,
       tableName: '${tableName}s',
       primaryKey: 'id',
-      identityField: _getDefaultIdentityField(name),
+      identityField: identityField,
+      displayField: _getDefaultDisplayField(name) ?? identityField,
       rlsResource: rlsResource,
       requiredFields: _getDefaultRequiredFields(name),
       immutableFields: const [],
@@ -171,6 +174,18 @@ class EntityMetadataRegistry {
       'invoice' => 'invoice_number',
       'inventory' => 'name',
       _ => 'id',
+    };
+  }
+
+  /// Get default display field for an entity (when referenced by FK)
+  ///
+  /// Returns null to use identityField as fallback.
+  /// Only specify when displayField differs from identityField.
+  String? _getDefaultDisplayField(String name) {
+    return switch (name) {
+      // Role: identity is 'priority' (unique), display is 'name' (human-readable)
+      // This case is now handled by JSON, but kept as fallback
+      _ => null, // Use identityField by default
     };
   }
 

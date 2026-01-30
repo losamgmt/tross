@@ -623,6 +623,11 @@ class MetadataFieldConfigFactory {
   /// Loads related entities and displays them by their display field (e.g., name, email)
   /// while storing the ID value.
   ///
+  /// Display field priority:
+  /// 1. fieldDef.displayField (per-field override in source entity)
+  /// 2. relatedEntity.displayField (entity-level default from target entity)
+  /// 3. 'name' (hardcoded fallback)
+  ///
   /// Returns null if entityService is not provided (FK fields require async loading).
   static FieldConfig<Map<String, dynamic>, dynamic>?
   _createForeignKeyFieldConfig({
@@ -634,7 +639,22 @@ class MetadataFieldConfigFactory {
     required GenericEntityService? entityService,
   }) {
     final relatedEntity = fieldDef.relatedEntity;
-    final displayField = fieldDef.displayField ?? 'name';
+
+    // Determine display field with proper fallback chain
+    String displayField;
+    if (fieldDef.displayField != null) {
+      // Priority 1: Per-field override
+      displayField = fieldDef.displayField!;
+    } else if (relatedEntity != null &&
+        meta.EntityMetadataRegistry.has(relatedEntity)) {
+      // Priority 2: Related entity's displayField
+      displayField = meta.EntityMetadataRegistry.get(
+        relatedEntity,
+      ).displayField;
+    } else {
+      // Priority 3: Hardcoded fallback
+      displayField = 'name';
+    }
 
     if (relatedEntity == null) {
       // Fallback to number input if no relationship defined

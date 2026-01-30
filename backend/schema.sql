@@ -770,6 +770,18 @@ ALTER TABLE users
 ADD COLUMN IF NOT EXISTS technician_profile_id INTEGER REFERENCES technicians(id) ON DELETE SET NULL;
 
 -- ============================================================================
+-- ONE-TO-ONE RELATIONSHIP CONSTRAINTS
+-- ============================================================================
+-- Enforce that each profile can only be linked to ONE user (true 1:1)
+-- Uses partial unique index to allow multiple NULLs (standard PostgreSQL pattern)
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_customer_profile_unique 
+  ON users(customer_profile_id) WHERE customer_profile_id IS NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_technician_profile_unique 
+  ON users(technician_profile_id) WHERE technician_profile_id IS NOT NULL;
+
+-- ============================================================================
 -- PERFORMANCE INDEXES
 -- ============================================================================
 

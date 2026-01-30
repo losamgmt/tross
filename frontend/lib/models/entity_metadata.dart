@@ -87,7 +87,13 @@ class EntityMetadata {
   final String primaryKey;
 
   /// Human-readable identity field (e.g., 'email' for customers, 'title' for work orders)
+  /// This is the unique business key used for lookups and references.
   final String identityField;
+
+  /// Display field shown when this entity is referenced by others (e.g., in FK dropdowns).
+  /// Defaults to identityField if not specified.
+  /// Example: role has identityField='priority' (unique key) but displayField='name' (shown in UI).
+  final String displayField;
 
   /// Resource type for RLS (row-level security) - determines which RECORDS user can access.
   /// This is distinct from nav visibility (which uses permissions.json resource.read).
@@ -139,6 +145,7 @@ class EntityMetadata {
     required this.tableName,
     required this.primaryKey,
     required this.identityField,
+    required this.displayField,
     required this.rlsResource,
     this.icon,
     required this.requiredFields,
@@ -188,11 +195,14 @@ class EntityMetadata {
       );
     }
 
+    final identityField = json['identityField'] as String? ?? 'id';
+
     return EntityMetadata(
       name: name,
       tableName: json['tableName'] as String? ?? '${name}s',
       primaryKey: json['primaryKey'] as String? ?? 'id',
-      identityField: json['identityField'] as String? ?? 'id',
+      identityField: identityField,
+      displayField: json['displayField'] as String? ?? identityField,
       rlsResource: rlsResource,
       icon: json['icon'] as String?,
       requiredFields:

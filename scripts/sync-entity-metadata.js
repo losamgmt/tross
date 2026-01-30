@@ -79,8 +79,8 @@ function transformField(fieldName, fieldDef, foreignKeys, relationships, enums, 
   // Helper to get display field for a related entity
   const getDisplayFieldForEntity = (entityName) => {
     const relatedMeta = allModels?.[entityName];
-    // Prefer identityField (e.g., 'email' for user, 'name' for role)
-    return relatedMeta?.identityField || 'name';
+    // Prefer displayField (what to show in dropdowns), fallback to identityField, then 'name'
+    return relatedMeta?.displayField || relatedMeta?.identityField || 'name';
   };
   
   // Handle foreignKey type - can come from:
@@ -215,6 +215,12 @@ function transformModel(entityName, backendMeta, allModels) {
     // Material icon for navigation menus and entity displays
     icon: backendMeta.icon,
   };
+  
+  // displayField - what to show when this entity is referenced (e.g., in FK dropdowns)
+  // Distinct from identityField (unique key) - e.g., role: identityField=priority, displayField=name
+  if (backendMeta.displayField) {
+    result.displayField = backendMeta.displayField;
+  }
   
   // Display names
   const displayName = entityName
