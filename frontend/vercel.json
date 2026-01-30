@@ -1,4 +1,5 @@
 {
+  "$comment": "Rebuild 2026-01-30: Added missing icons to EntityIconResolver + no-tree-shake-icons",
   "github": {
     "enabled": true,
     "autoAlias": true,
