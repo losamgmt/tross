@@ -4,7 +4,7 @@
 
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> **Quick Start:** [docs/getting-started/QUICK_START.md](docs/getting-started/QUICK_START.md) | **Development:** [docs/getting-started/DEVELOPMENT.md](docs/getting-started/DEVELOPMENT.md) | **Architecture:** [docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md)
+> **Quick Start:** [docs/getting-started/QUICK_START.md](docs/getting-started/QUICK_START.md) | **Development:** [docs/getting-started/DEVELOPMENT.md](docs/getting-started/DEVELOPMENT.md) | **Architecture:** [docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md) | **📋 Project Status (SSOT):** [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)
 
 ---
 

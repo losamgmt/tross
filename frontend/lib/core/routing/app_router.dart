@@ -591,9 +591,13 @@ class _ResultBadge extends StatelessWidget {
   }
 }
 
-/// Admin Files Screen - File attachments viewer placeholder
+/// Admin Files Screen - Tabbed interface for file attachments & R2 storage
 ///
-/// TODO: Implement file attachments browser with upload/download capabilities
+/// Four tabs for comprehensive file management:
+/// - Files: Entity CRUD operations (daily use)
+/// - Storage: R2 statistics and usage monitoring (weekly review)
+/// - Maintenance: Orphan detection, cleanup utilities (admin tasks)
+/// - Settings: R2 configuration (setup/rare changes)
 class _AdminFilesScreen extends StatelessWidget {
   const _AdminFilesScreen();
 
@@ -603,13 +607,57 @@ class _AdminFilesScreen extends StatelessWidget {
       currentRoute: '/admin/system/files',
       pageTitle: 'File Attachments',
       sidebarStrategy: 'admin',
-      body: const UnderConstructionDisplay(
-        title: 'File Attachments',
-        message:
-            'The file attachments browser is under development. '
-            'This feature will allow you to view, search, and manage '
-            'all file attachments across the system.',
-        icon: Icons.folder_outlined,
+      body: TabbedContainer(
+        tabs: [
+          TabConfig(
+            label: 'Files',
+            icon: Icons.description_outlined,
+            tabKey: const Key('files-tab'),
+            content: const UnderConstructionDisplay(
+              title: 'File Browser',
+              message:
+                  'Browse, search, and manage file attachments. '
+                  'View file metadata, download files, and manage associations.',
+              icon: Icons.folder_open_outlined,
+            ),
+          ),
+          TabConfig(
+            label: 'Storage',
+            icon: Icons.cloud_outlined,
+            tabKey: const Key('storage-tab'),
+            content: const UnderConstructionDisplay(
+              title: 'R2 Storage Statistics',
+              message:
+                  'Monitor Cloudflare R2 storage usage, bandwidth, and costs. '
+                  'View storage trends and capacity planning metrics.',
+              icon: Icons.analytics_outlined,
+            ),
+          ),
+          TabConfig(
+            label: 'Maintenance',
+            icon: Icons.build_outlined,
+            tabKey: const Key('maintenance-tab'),
+            content: const UnderConstructionDisplay(
+              title: 'File Maintenance',
+              message:
+                  'Detect orphaned files, run cleanup utilities, and verify '
+                  'file integrity. Schedule automated maintenance tasks.',
+              icon: Icons.cleaning_services_outlined,
+            ),
+          ),
+          TabConfig(
+            label: 'Settings',
+            icon: Icons.settings_outlined,
+            tabKey: const Key('settings-tab'),
+            content: const UnderConstructionDisplay(
+              title: 'R2 Configuration',
+              message:
+                  'Configure Cloudflare R2 connection settings, access keys, '
+                  'bucket policies, and lifecycle rules.',
+              icon: Icons.tune_outlined,
+            ),
+          ),
+        ],
       ),
     );
   }

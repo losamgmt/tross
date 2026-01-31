@@ -11,6 +11,7 @@ library;
 
 // Adaptive/Responsive layouts
 export 'adaptive_shell.dart';
+export 'centered_layout.dart';
 export 'master_detail_layout.dart';
 
 // Page templates

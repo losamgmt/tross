@@ -22,6 +22,7 @@ class ApiEndpoints {
 
   static const String devStatus = '/dev/status';
   static const String healthCheck = '/health';
+  static const String healthDatabases = '/health/databases';
 
   // ============================================================================
   // USER MANAGEMENT ENDPOINTS

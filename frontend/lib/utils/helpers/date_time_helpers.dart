@@ -27,6 +27,26 @@ class DateTimeHelpers {
   ///
   /// The optional [referenceTime] parameter allows testing with fixed dates.
   ///
+  /// Parses a timestamp string and formats as relative time.
+  ///
+  /// Returns 'Unknown' if parsing fails or timestamp is null.
+  /// Handles ISO 8601 strings from API responses.
+  ///
+  /// Example:
+  /// ```dart
+  /// print(DateTimeHelpers.tryFormatRelativeTime('2026-01-30T10:00:00Z')); // "2h ago"
+  /// print(DateTimeHelpers.tryFormatRelativeTime(null)); // "Unknown"
+  /// ```
+  static String tryFormatRelativeTime(dynamic timestamp) {
+    if (timestamp == null) return 'Unknown';
+    try {
+      final dt = DateTime.parse(timestamp.toString());
+      return formatRelativeTime(dt);
+    } catch (_) {
+      return 'Unknown';
+    }
+  }
+
   /// Example:
   /// ```dart
   /// final timestamp = DateTime.now().subtract(Duration(minutes: 30));

@@ -83,6 +83,10 @@ class AppDataTable<T> extends StatefulWidget {
   // Customization
   final bool showCustomizationMenu;
 
+  /// When true, columns size to their content using IntrinsicColumnWidth.
+  /// When false (default), columns use fixed widths that are resizable.
+  final bool autoSizeColumns;
+
   /// Entity name for saved views (enables save/load view feature)
   final String? entityName;
 
@@ -104,6 +108,7 @@ class AppDataTable<T> extends StatefulWidget {
     this.emptyMessage,
     this.emptyAction,
     this.showCustomizationMenu = true,
+    this.autoSizeColumns = false,
     this.entityName,
   });
 
@@ -466,6 +471,14 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
     final horizontalScrollController = ScrollController();
     final verticalScrollController = ScrollController();
 
+    // When autoSizeColumns is true, table fills container width (no horizontal scroll)
+    // When false, horizontal scroll allows wider tables to overflow
+    final tableWidget = _buildUnifiedTable(
+      theme,
+      data,
+      includeActions: hasActions,
+    );
+
     // Add bottom padding to prevent scrollbar from overlaying table content
     return Padding(
       padding: EdgeInsets.only(bottom: StyleConstants.scrollbarThickness + 4),
@@ -478,23 +491,24 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
         child: SingleChildScrollView(
           controller: verticalScrollController,
           scrollDirection: Axis.vertical,
-          child: Scrollbar(
-            controller: horizontalScrollController,
-            thumbVisibility: true,
-            trackVisibility: true,
-            thickness: StyleConstants.scrollbarThickness,
-            radius: Radius.circular(StyleConstants.scrollbarRadius),
-            notificationPredicate: (notification) => notification.depth == 0,
-            child: SingleChildScrollView(
-              controller: horizontalScrollController,
-              scrollDirection: Axis.horizontal,
-              child: _buildUnifiedTable(
-                theme,
-                data,
-                includeActions: hasActions,
-              ),
-            ),
-          ),
+          child: widget.autoSizeColumns
+              // Auto-size: table stretches to fill container, no horizontal scroll
+              ? tableWidget
+              // Fixed widths: horizontal scroll for overflow
+              : Scrollbar(
+                  controller: horizontalScrollController,
+                  thumbVisibility: true,
+                  trackVisibility: true,
+                  thickness: StyleConstants.scrollbarThickness,
+                  radius: Radius.circular(StyleConstants.scrollbarRadius),
+                  notificationPredicate: (notification) =>
+                      notification.depth == 0,
+                  child: SingleChildScrollView(
+                    controller: horizontalScrollController,
+                    scrollDirection: Axis.horizontal,
+                    child: tableWidget,
+                  ),
+                ),
         ),
       ),
     );
@@ -525,7 +539,7 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
     }
 
     // Column widths: Use tracked widths (resizable) or defaults
-    // Actions column gets fixed width; data columns are resizable
+    // Actions column gets fixed width; data columns are resizable or auto-sized
     final columnWidths = <int, TableColumnWidth>{};
     for (var i = 0; i < columnsToRender.length; i++) {
       final col = columnsToRender[i];
@@ -533,6 +547,10 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
         columnWidths[i] = const FixedColumnWidth(
           TableConfig.actionsColumnWidth,
         );
+      } else if (widget.autoSizeColumns) {
+        // Auto-size: columns size to content but stretch to fill container
+        // flex: 1.0 distributes remaining space proportionally among columns
+        columnWidths[i] = const IntrinsicColumnWidth(flex: 1.0);
       } else {
         final column = col as TableColumn<T>;
         // Use user-resized width if set, otherwise default
