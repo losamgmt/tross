@@ -15,6 +15,7 @@ class ApiEndpoints {
 
   static const String authMe = '/auth/me';
   static const String authLogout = '/auth/logout';
+  static const String authRefresh = '/auth/refresh';
 
   // ============================================================================
   // DEVELOPMENT/STATUS ENDPOINTS

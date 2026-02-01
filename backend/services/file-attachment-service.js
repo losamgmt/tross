@@ -17,24 +17,33 @@
 const { query: db } = require('../db/connection');
 const { logger } = require('../config/logger');
 const AppError = require('../utils/app-error');
+const allMetadata = require('../config/models');
 
 class FileAttachmentService {
   /**
    * Check if an entity exists in the database
    *
-   * @param {string} entityType - Table name (e.g., 'customers', 'work_orders')
+   * @param {string} entityKey - Entity key (e.g., 'customer', 'work_order')
    * @param {number} entityId - Entity ID
    * @returns {Promise<boolean>} True if entity exists
    */
-  static async entityExists(entityType, entityId) {
+  static async entityExists(entityKey, entityId) {
     try {
+      // Look up tableName from metadata using entityKey (SSOT)
+      const metadata = allMetadata[entityKey];
+      if (!metadata) {
+        logger.warn(`Unknown entity key: ${entityKey}`);
+        return false;
+      }
+      const tableName = metadata.tableName;
+
       // Check table exists in public schema
       const tableCheck = await db(
         `SELECT EXISTS(
           SELECT 1 FROM information_schema.tables 
           WHERE table_name = $1 AND table_schema = 'public'
         ) as table_exists`,
-        [entityType],
+        [tableName],
       );
 
       if (!tableCheck.rows[0]?.table_exists) {
@@ -43,7 +52,7 @@ class FileAttachmentService {
 
       // Check entity exists
       const entityCheck = await db(
-        `SELECT id FROM "${entityType}" WHERE id = $1 LIMIT 1`,
+        `SELECT id FROM "${tableName}" WHERE id = $1 LIMIT 1`,
         [entityId],
       );
 
@@ -60,7 +69,7 @@ class FileAttachmentService {
 
       if (isConnectionError) {
         logger.error('Database connection error checking entity existence', {
-          entityType,
+          entityKey,
           entityId,
           error: error.message,
           code: error.code,
@@ -71,7 +80,7 @@ class FileAttachmentService {
 
       // For other errors (table doesn't exist, etc.), log and return false
       logger.warn('Error checking entity existence (non-fatal)', {
-        entityType,
+        entityKey,
         entityId,
         error: error.message,
       });

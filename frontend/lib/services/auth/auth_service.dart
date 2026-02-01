@@ -5,6 +5,7 @@ import '../../config/constants.dart';
 import 'auth0_platform_service.dart';
 import 'auth_token_service.dart';
 import 'auth_profile_service.dart';
+import 'token_refresh_manager.dart';
 import '../api/api_client.dart';
 import '../error_service.dart';
 
@@ -16,9 +17,13 @@ class AuthService {
   final Auth0PlatformService _auth0Service = Auth0PlatformService();
   late final AuthTokenService _tokenService;
   late final AuthProfileService _profileService;
+  late final TokenRefreshManager _refreshManager;
 
   /// API client for HTTP requests - injected via constructor
   final ApiClient _apiClient;
+
+  /// Callback for when auth state changes (for provider notification)
+  void Function()? onAuthStateChanged;
 
   /// Constructor - requires ApiClient injection
   AuthService(this._apiClient) {
@@ -27,6 +32,22 @@ class AuthService {
     _profileService = AuthProfileService(_apiClient);
     // Wire up auto token refresh callback
     _apiClient.onTokenRefreshNeeded = _handleTokenRefresh;
+    // Create proactive token refresh manager
+    _refreshManager = TokenRefreshManager(
+      tokenService: _tokenService,
+      onTokenRefreshed: _handleProactiveTokenRefresh,
+      onRefreshFailed: _handleRefreshFailed,
+    );
+  }
+
+  /// Initialize the refresh manager (call after WidgetsBinding is ready)
+  void initializeRefreshManager() {
+    _refreshManager.initialize();
+  }
+
+  /// Dispose the refresh manager (call on app shutdown)
+  void disposeRefreshManager() {
+    _refreshManager.dispose();
   }
 
   // Getters
@@ -87,6 +108,8 @@ class AuthService {
             await _clearAuthState();
           } else {
             ErrorService.logInfo('Stored token validated successfully');
+            // Schedule proactive refresh for valid token
+            await _refreshManager.scheduleRefresh();
           }
         }
       } else {
@@ -96,6 +119,25 @@ class AuthService {
       ErrorService.logError('Failed to initialize auth state', error: e);
       await _clearAuthState();
     }
+  }
+
+  /// Handle proactive token refresh callback from TokenRefreshManager
+  void _handleProactiveTokenRefresh(
+    String newToken,
+    String? newRefreshToken,
+    int? expiresAt,
+  ) {
+    ErrorService.logInfo('Proactive token refresh - updating auth state');
+    _token = newToken;
+    // Notify provider of state change
+    onAuthStateChanged?.call();
+  }
+
+  /// Handle refresh failure callback from TokenRefreshManager
+  void _handleRefreshFailed() {
+    ErrorService.logWarning('Proactive token refresh failed - clearing auth');
+    _clearAuthState();
+    onAuthStateChanged?.call();
   }
 
   /// Handle automatic token refresh when 401 occurs
@@ -195,19 +237,26 @@ class AuthService {
       // Use backend app token for API calls, NOT Auth0 access token
       _token = credentials.appToken ?? credentials.accessToken;
 
+      // Parse token expiry for proactive refresh
+      final expiresAt = _tokenService.getTokenExpiry(_token!);
+
       // Get user profile from backend
       final profile = await _profileService.getUserProfile(_token!);
       if (profile != null) {
         _user = profile;
         _provider = AppConstants.authProviderAuth0;
 
-        // Store authentication data
+        // Store authentication data with expiry
         await _tokenService.storeAuthData(
           token: _token!,
           user: _user!,
           refreshToken: credentials.refreshToken,
           provider: AppConstants.authProviderAuth0,
+          expiresAt: expiresAt,
         );
+
+        // Schedule proactive token refresh
+        await _refreshManager.scheduleRefresh();
 
         ErrorService.logInfo('Auth0 login completed successfully');
         return true;
@@ -280,13 +329,20 @@ class AuthService {
           _user = profile;
           _provider = AppConstants.authProviderDevelopment;
 
-          // Store for development
+          // Parse token expiry for proactive refresh
+          final expiresAt = _tokenService.getTokenExpiry(_token!);
+
+          // Store for development with expiry
           ErrorService.logInfo('Storing auth data');
           await _tokenService.storeAuthData(
             token: _token!,
             user: _user!,
             provider: AppConstants.authProviderDevelopment,
+            expiresAt: expiresAt,
           );
+
+          // Schedule proactive token refresh
+          await _refreshManager.scheduleRefresh();
 
           ErrorService.logInfo(
             'Test login successful',
@@ -315,13 +371,18 @@ class AuthService {
       if (result != null) {
         _token = result['token'];
         _user = result['user'];
+        final expiresAt = result['expiresAt'] as int?;
 
-        // Update stored data
+        // Update stored data with new expiry
         await _tokenService.storeAuthData(
           token: _token!,
           user: _user!,
           refreshToken: result['refreshToken'],
+          expiresAt: expiresAt,
         );
+
+        // Schedule next proactive refresh
+        await _refreshManager.scheduleRefresh();
 
         ErrorService.logInfo('Token refreshed successfully');
         return true;
@@ -513,6 +574,8 @@ class AuthService {
     _token = null;
     _user = null;
     _provider = null;
+    // Cancel any pending proactive refresh
+    _refreshManager.cancelRefresh();
     await _tokenService.clearAuthData();
     ErrorService.logInfo('Auth state cleared');
   }

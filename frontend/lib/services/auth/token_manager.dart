@@ -1,9 +1,8 @@
 // Token Manager - Handles secure token storage and management
 //
-// TODO: Implement proactive token refresh before expiration.
-// Current behavior: tokens expire and user gets logged out abruptly.
-// Need: Background refresh ~5min before expiry, or on app resume.
-// See also: http_api_client.dart _refreshTokenWithMutex for reactive refresh.
+// Proactive Token Refresh: Stores token expiry time and provides methods
+// for TokenRefreshManager to schedule background refresh before expiration.
+// See also: token_refresh_manager.dart for proactive refresh logic.
 import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../error_service.dart';
@@ -24,13 +23,16 @@ class TokenManager {
   static const String _userKey = 'auth_user';
   static const String _refreshTokenKey = 'refresh_token';
   static const String _providerKey = 'auth_provider';
+  static const String _expiresAtKey = 'token_expires_at';
 
   /// Store authentication data securely
+  /// [expiresAt] - Unix timestamp (seconds) when the access token expires
   static Future<void> storeAuthData({
     required String token,
     required Map<String, dynamic> user,
     String? refreshToken,
     String? provider,
+    int? expiresAt,
   }) async {
     try {
       await _secureStorage.write(key: _tokenKey, value: token);
@@ -44,9 +46,16 @@ class TokenManager {
         await _secureStorage.write(key: _providerKey, value: provider);
       }
 
+      if (expiresAt != null) {
+        await _secureStorage.write(
+          key: _expiresAtKey,
+          value: expiresAt.toString(),
+        );
+      }
+
       ErrorService.logDebug(
         'Auth data stored securely',
-        context: {'provider': provider},
+        context: {'provider': provider, 'expiresAt': expiresAt},
       );
     } catch (e) {
       ErrorService.logError('Failed to store auth data', error: e);
@@ -85,6 +94,7 @@ class TokenManager {
       await _secureStorage.delete(key: _userKey);
       await _secureStorage.delete(key: _refreshTokenKey);
       await _secureStorage.delete(key: _providerKey);
+      await _secureStorage.delete(key: _expiresAtKey);
 
       ErrorService.logInfo('Auth data cleared');
     } catch (e) {
@@ -110,5 +120,37 @@ class TokenManager {
       ErrorService.logError('Failed to get stored refresh token', error: e);
       return null;
     }
+  }
+
+  /// Get stored token expiry time as DateTime
+  /// Returns null if no expiry is stored or if parsing fails
+  static Future<DateTime?> getTokenExpiry() async {
+    try {
+      final expiresAtStr = await _secureStorage.read(key: _expiresAtKey);
+      if (expiresAtStr == null) return null;
+
+      final expiresAtSeconds = int.tryParse(expiresAtStr);
+      if (expiresAtSeconds == null) return null;
+
+      return DateTime.fromMillisecondsSinceEpoch(expiresAtSeconds * 1000);
+    } catch (e) {
+      ErrorService.logError('Failed to get token expiry', error: e);
+      return null;
+    }
+  }
+
+  /// Check if token is expired or will expire within the given duration
+  /// Returns true if token should be refreshed
+  static Future<bool> shouldRefreshToken({
+    Duration buffer = const Duration(minutes: 5),
+  }) async {
+    final expiry = await getTokenExpiry();
+    if (expiry == null) {
+      // No expiry stored - can't determine, assume needs refresh
+      return true;
+    }
+
+    final refreshThreshold = expiry.subtract(buffer);
+    return DateTime.now().isAfter(refreshThreshold);
   }
 }

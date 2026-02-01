@@ -134,12 +134,12 @@ Added semantic types to switch statement:
 - `SHARED_FIELD_DEFS` now uses `...FIELD.*` spread
 
 #### 5. Created Unit Tests
-- `backend/__tests__/unit/config/geo-standards.test.js` - 38 tests
-- `backend/__tests__/unit/config/field-type-standards.test.js` - 38 tests
+- `backend/__tests__/unit/config/geo-standards.test.js`
+- `backend/__tests__/unit/config/field-type-standards.test.js`
 
 ### Verification
 ```bash
-npm run test:unit  # 1942 tests passing
+npm run test:unit
 ```
 
 ---
@@ -797,12 +797,12 @@ Each phase has its own rollback path:
 | Date | Phase | Changes |
 |------|-------|---------|  
 | 2026-01-23 | 0 | Created geo-standards.js, field-type-standards.js, tests |
-| 2026-01-23 | 1 | Added validation layer support for all semantic types (116 tests) |
+| 2026-01-23 | 1 | Added validation layer support for all semantic types |
 | 2026-01-23 | 2 | Flattened preferences JSONB to 6 individual columns, uses generic router |
 | 2026-01-23 | 3 | Flattened customer addresses to 12 flat columns (billing_*, service_*) |
 | 2026-01-23 | 4 | Added work_order location with 6 flat columns (location_*) |
 | 2026-01-23 | 5 | Refactored all 13 entities to use FIELD.* constants, foreignKey types |
-| 2026-01-23 | - | Backend complete! 2019 unit tests passing |
+| 2026-01-23 | - | Backend complete! All unit tests passing |
 | 2026-01-27 | 6 | Frontend address UI: row layouts via fieldGroups.rows, GenericForm/DetailPanel row rendering |
 
 ---

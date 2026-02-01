@@ -20,7 +20,10 @@ const {
 const { FIELD } = require('../field-type-standards');
 
 module.exports = {
-  // Table name in database (matches route: /api/notifications)
+  // Entity key (singular, for API params and lookups)
+  entityKey: 'notification',
+
+  // Table name in database (plural, also used for API URLs)
   tableName: 'notifications',
 
   // Primary key

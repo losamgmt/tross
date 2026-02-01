@@ -13,8 +13,8 @@
  *
  * Naming Convention:
  * - Filename: {entity-name}-metadata.js (hyphen-separated)
- * - Export key: {entity_name} (underscore-separated, derived from filename)
- * - Example: work-order-metadata.js → exports as 'work_order'
+ * - Registry key: metadata.entityKey (EXPLICIT in metadata file, not derived)
+ * - Example: work-order-metadata.js → metadata.entityKey = 'work_order'
  *
  * @module config/models
  */
@@ -24,7 +24,8 @@ const path = require('path');
 
 /**
  * Auto-discover and load all metadata files in this directory
- * @returns {Object} Map of entityName → metadata
+ * Uses EXPLICIT entityKey from metadata (no derivation from filename)
+ * @returns {Object} Map of entityKey → metadata
  */
 function loadAllMetadata() {
   const metadataDir = __dirname;
@@ -38,13 +39,17 @@ function loadAllMetadata() {
     // Load the metadata module
     const metadata = require(path.join(metadataDir, file));
 
-    // Derive entity name from filename:
-    // 'work-order-metadata.js' → 'work-order' → 'work_order'
-    const entityName = file
-      .replace('-metadata.js', '') // Remove suffix
-      .replace(/-/g, '_'); // Convert hyphens to underscores
+    // Use EXPLICIT entityKey from metadata (SSOT, no derivation)
+    const entityKey = metadata.entityKey;
+    
+    if (!entityKey) {
+      throw new Error(
+        `Metadata file '${file}' missing required 'entityKey' property. ` +
+        `Each metadata file must explicitly define its entityKey.`
+      );
+    }
 
-    allMetadata[entityName] = metadata;
+    allMetadata[entityKey] = metadata;
   }
 
   return allMetadata;

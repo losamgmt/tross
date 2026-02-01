@@ -12,6 +12,7 @@ import 'package:http/http.dart' as http;
 import '../../config/api_endpoints.dart';
 import '../../config/app_config.dart';
 import '../../utils/helpers/string_helper.dart';
+import '../entity_metadata.dart';
 import '../error_service.dart';
 import '../auth/token_manager.dart';
 import 'api_client.dart';
@@ -285,6 +286,34 @@ class HttpApiClient implements ApiClient {
     }
   }
 
+  @override
+  Future<Map<String, dynamic>> postUnauthenticated(
+    String endpoint, {
+    Map<String, dynamic>? body,
+  }) async {
+    try {
+      final uri = Uri.parse('${AppConfig.baseUrl}$endpoint');
+      final headers = {'Content-Type': 'application/json'};
+
+      final response = await http
+          .post(
+            uri,
+            headers: headers,
+            body: body != null ? json.encode(body) : null,
+          )
+          .timeout(AppConfig.httpTimeout);
+
+      return _parseResponse(response);
+    } catch (e) {
+      ErrorService.logError(
+        'Unauthenticated POST failed',
+        error: e,
+        context: {'endpoint': endpoint},
+      );
+      rethrow;
+    }
+  }
+
   /// Helper: Get stored auth token from secure storage
   Future<String?> _getStoredToken() async {
     try {
@@ -372,24 +401,19 @@ class HttpApiClient implements ApiClient {
     throw Exception(response['error'] ?? 'Failed to fetch $entityName list');
   }
 
-  /// Build API endpoint from entity name
+  /// Build API endpoint from entity name using metadata
+  ///
+  /// Uses EntityMetadataRegistry for tableName lookup (single source of truth).
+  /// Falls back to pluralization if metadata unavailable or entity unknown.
   String _entityEndpoint(String entityName) {
-    const endpointMap = <String, String>{
-      'user': '/users',
-      'role': '/roles',
-      'customer': '/customers',
-      'technician': '/technicians',
-      'work_order': '/work_orders',
-      'invoice': '/invoices',
-      'contract': '/contracts',
-      'inventory': '/inventory',
-      'preferences': '/preferences',
-    };
-
-    if (endpointMap.containsKey(entityName)) {
-      return endpointMap[entityName]!;
+    // Try metadata first (preferred - single source of truth)
+    final metadata = EntityMetadataRegistry.tryGet(entityName);
+    if (metadata != null) {
+      return '/${metadata.tableName}';
     }
 
+    // Fallback: pluralize entity name for API endpoint
+    // Only used when metadata isn't loaded (shouldn't happen in production)
     final plural = entityName.endsWith('y')
         ? '${entityName.substring(0, entityName.length - 1)}ies'
         : entityName.endsWith('s')

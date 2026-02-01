@@ -19,6 +19,7 @@ import '../../utils/helpers/date_time_helpers.dart';
 import '../atoms/indicators/app_badge.dart';
 import '../molecules/cards/error_card.dart';
 import '../molecules/cards/titled_card.dart';
+import '../molecules/containers/scrollable_content.dart';
 import '../molecules/display/key_value_list.dart';
 import 'providers/async_data_provider.dart';
 import 'tables/data_table.dart';
@@ -42,7 +43,7 @@ class _AdminHomeContentState extends State<AdminHomeContent> {
     final spacing = context.spacing;
     final apiClient = context.read<ApiClient>();
 
-    return SingleChildScrollView(
+    return ScrollableContent(
       padding: EdgeInsets.all(spacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -19,7 +19,10 @@ const { NAME_TYPES } = require('../entity-types');
 const { FIELD } = require('../field-type-standards');
 
 module.exports = {
-  // Table name in database
+  // Entity key (singular, for API params and lookups)
+  entityKey: 'role',
+
+  // Table name in database (plural, also used for API URLs)
   tableName: 'roles',
 
   // Primary key

@@ -22,7 +22,7 @@ import '../../screens/entity_detail_screen.dart';
 import '../../widgets/organisms/feedback/error_display.dart';
 import '../../widgets/organisms/feedback/under_construction_display.dart';
 import '../../widgets/organisms/dashboards/db_health_dashboard.dart';
-import '../../widgets/organisms/layout/tabbed_container.dart';
+import '../../widgets/organisms/layout/tabbed_content.dart';
 import '../../widgets/templates/templates.dart';
 import '../../services/entity_metadata.dart';
 import '../../services/auth/token_manager.dart';
@@ -169,7 +169,7 @@ class AppRouter {
               ),
             ),
 
-            // System Logs - Composes TabbedPage with audit log tables
+            // System Logs - Composes TabbedContent with audit log tables
             GoRoute(
               path: 'system/logs',
               name: 'adminLogs',
@@ -444,9 +444,9 @@ class _AdminHealthScreen extends StatelessWidget {
   }
 }
 
-/// Admin Logs Screen - Composes TabbedPage with audit data
+/// Admin Logs Screen - Composes TabbedContent with audit data
 ///
-/// ZERO SPECIFICITY: Uses generic TabbedPage template.
+/// ZERO SPECIFICITY: Uses generic TabbedContent organism.
 /// Tab content uses generic table + async provider.
 class _AdminLogsScreen extends StatelessWidget {
   final String activeTab;
@@ -459,16 +459,17 @@ class _AdminLogsScreen extends StatelessWidget {
       currentRoute: '/admin/system/logs',
       pageTitle: 'System Logs',
       sidebarStrategy: 'admin',
-      body: TabbedPage(
+      body: TabbedContent(
+        syncWithUrl: true,
         currentTabId: activeTab,
         baseRoute: '/admin/system/logs',
         tabs: const [
-          TabDefinition(
+          TabConfig(
             id: 'data',
             label: 'Data Changes',
             icon: Icons.storage_outlined,
           ),
-          TabDefinition(
+          TabConfig(
             id: 'auth',
             label: 'Auth Events',
             icon: Icons.security_outlined,
@@ -607,57 +608,64 @@ class _AdminFilesScreen extends StatelessWidget {
       currentRoute: '/admin/system/files',
       pageTitle: 'File Attachments',
       sidebarStrategy: 'admin',
-      body: TabbedContainer(
-        tabs: [
+      body: TabbedContent(
+        tabs: const [
           TabConfig(
+            id: 'files',
             label: 'Files',
             icon: Icons.description_outlined,
-            tabKey: const Key('files-tab'),
-            content: const UnderConstructionDisplay(
-              title: 'File Browser',
-              message:
-                  'Browse, search, and manage file attachments. '
-                  'View file metadata, download files, and manage associations.',
-              icon: Icons.folder_open_outlined,
-            ),
+            tabKey: Key('files-tab'),
           ),
           TabConfig(
+            id: 'storage',
             label: 'Storage',
             icon: Icons.cloud_outlined,
-            tabKey: const Key('storage-tab'),
-            content: const UnderConstructionDisplay(
-              title: 'R2 Storage Statistics',
-              message:
-                  'Monitor Cloudflare R2 storage usage, bandwidth, and costs. '
-                  'View storage trends and capacity planning metrics.',
-              icon: Icons.analytics_outlined,
-            ),
+            tabKey: Key('storage-tab'),
           ),
           TabConfig(
+            id: 'maintenance',
             label: 'Maintenance',
             icon: Icons.build_outlined,
-            tabKey: const Key('maintenance-tab'),
-            content: const UnderConstructionDisplay(
-              title: 'File Maintenance',
-              message:
-                  'Detect orphaned files, run cleanup utilities, and verify '
-                  'file integrity. Schedule automated maintenance tasks.',
-              icon: Icons.cleaning_services_outlined,
-            ),
+            tabKey: Key('maintenance-tab'),
           ),
           TabConfig(
+            id: 'settings',
             label: 'Settings',
             icon: Icons.settings_outlined,
-            tabKey: const Key('settings-tab'),
-            content: const UnderConstructionDisplay(
-              title: 'R2 Configuration',
-              message:
-                  'Configure Cloudflare R2 connection settings, access keys, '
-                  'bucket policies, and lifecycle rules.',
-              icon: Icons.tune_outlined,
-            ),
+            tabKey: Key('settings-tab'),
           ),
         ],
+        contentBuilder: (tabId) => switch (tabId) {
+          'files' => const UnderConstructionDisplay(
+            title: 'File Browser',
+            message:
+                'Browse, search, and manage file attachments. '
+                'View file metadata, download files, and manage associations.',
+            icon: Icons.folder_open_outlined,
+          ),
+          'storage' => const UnderConstructionDisplay(
+            title: 'R2 Storage Statistics',
+            message:
+                'Monitor Cloudflare R2 storage usage, bandwidth, and costs. '
+                'View storage trends and capacity planning metrics.',
+            icon: Icons.analytics_outlined,
+          ),
+          'maintenance' => const UnderConstructionDisplay(
+            title: 'File Maintenance',
+            message:
+                'Detect orphaned files, run cleanup utilities, and verify '
+                'file integrity. Schedule automated maintenance tasks.',
+            icon: Icons.cleaning_services_outlined,
+          ),
+          'settings' => const UnderConstructionDisplay(
+            title: 'R2 Configuration',
+            message:
+                'Configure Cloudflare R2 connection settings, access keys, '
+                'bucket policies, and lifecycle rules.',
+            icon: Icons.tune_outlined,
+          ),
+          _ => const SizedBox.shrink(),
+        },
       ),
     );
   }
@@ -680,19 +688,16 @@ class _AdminEntityScreen extends StatelessWidget {
       currentRoute: '/admin/$entityName',
       pageTitle: '$displayName Settings',
       sidebarStrategy: 'admin',
-      body: TabbedContainer(
-        tabs: [
-          TabConfig(
-            label: 'Permissions',
-            icon: Icons.lock,
-            content: _PermissionsTab(entityName: entityName),
-          ),
-          TabConfig(
-            label: 'Validation',
-            icon: Icons.rule,
-            content: _ValidationTab(entityName: entityName),
-          ),
+      body: TabbedContent(
+        tabs: const [
+          TabConfig(id: 'permissions', label: 'Permissions', icon: Icons.lock),
+          TabConfig(id: 'validation', label: 'Validation', icon: Icons.rule),
         ],
+        contentBuilder: (tabId) => switch (tabId) {
+          'permissions' => _PermissionsTab(entityName: entityName),
+          'validation' => _ValidationTab(entityName: entityName),
+          _ => const SizedBox.shrink(),
+        },
       ),
     );
   }

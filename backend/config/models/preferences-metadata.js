@@ -8,7 +8,12 @@
 const { FIELD_ACCESS_LEVELS: FAL } = require('../constants');
 
 module.exports = {
+  // Entity key (singular, for API params and lookups)
+  entityKey: 'preferences',
+
+  // Table name in database (plural, also used for API URLs)
   tableName: 'preferences',
+
   primaryKey: 'id',
   icon: 'settings',
   identityField: 'id',

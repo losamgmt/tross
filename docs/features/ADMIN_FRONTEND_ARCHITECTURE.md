@@ -21,7 +21,7 @@
 ## 1. Executive Summary
 
 ### What We're Building
-A metadata-driven admin frontend with **zero specificity** - generic templates and widgets composed by routes with configuration. No `AdminDashboardScreen`, `AdminLogsScreen`, etc. - just `DashboardPage`, `TabbedPage` templates parameterized at the route level.
+A metadata-driven admin frontend with **zero specificity** - generic templates and widgets composed by routes with configuration. No `AdminDashboardScreen`, `AdminLogsScreen`, etc. - just `TabbedContent`, `AdaptiveShell` templates parameterized at the route level.
 
 ### Core Design Principles
 - **100% Metadata-Driven**: UI generated from JSON config, no per-entity code
@@ -93,12 +93,12 @@ All test suites should pass before making changes. Run `npm run test:all` to ver
 │  - ONLY place specificity lives                         │
 ├─────────────────────────────────────────────────────────┤
 │  TEMPLATES (widgets/templates/)                         │
-│  - DashboardPage, TabbedPage, AdaptiveShell             │
+│  - AdaptiveShell, CenteredLayout                        │
 │  - Fully parameterized, zero business logic             │
 ├─────────────────────────────────────────────────────────┤
 │  ORGANISMS (widgets/organisms/)                         │
 │  - Compose molecules, manage local state                │
-│  - AsyncDataProvider, DataTable, ErrorDisplay           │
+│  - TabbedContent, DataTable, ErrorDisplay               │
 ├─────────────────────────────────────────────────────────┤
 │  MOLECULES (widgets/molecules/)                         │
 │  - Compose atoms into reusable units                    │
@@ -114,13 +114,22 @@ All test suites should pass before making changes. Run `npm run test:all` to ver
 ```dart
 // Routes compose templates with config - NO specific screen classes
 GoRoute(
-  path: '/admin/logs',
-  builder: (_) => TabbedPage(
-    tabs: [
-      TabConfig(label: 'Data', body: AuditLogTable(type: 'data')),
-      TabConfig(label: 'Auth', body: AuditLogTable(type: 'auth')),
-    ],
-  ),
+  path: '/admin/logs/:tab',
+  builder: (context, state) {
+    final tab = state.pathParameters['tab'] ?? 'data';
+    return AdaptiveShell(
+      body: TabbedContent(
+        syncWithUrl: true,
+        currentTabId: tab,
+        baseRoute: '/admin/system/logs',
+        tabs: [
+          TabConfig(id: 'data', label: 'Data Changes'),
+          TabConfig(id: 'auth', label: 'Auth Events'),
+        ],
+        contentBuilder: (tabId) => AuditLogTable(type: tabId),
+      ),
+    );
+  },
 )
 ```
 
@@ -198,7 +207,7 @@ All form inputs follow these principles:
 | Component | Purpose |
 |-----------|---------|
 | `AdaptiveShell` | Responsive sidebar/drawer layout with defense-in-depth guard |
-| `MasterDetailLayout` | Two-pane responsive layout |
+| `CenteredLayout` | Centered content layout for unauthenticated pages |
 
 #### Providers (`providers/`)
 | Provider | Purpose |
@@ -225,14 +234,18 @@ All form inputs follow these principles:
 ### Need to Build ❌
 | Component | Type | Location | Purpose |
 |-----------|------|----------|---------|
-| `DataMatrix` | Molecule | `molecules/display/` | Row×column grid, readonly/editable |
-| `KeyValueList` | Molecule | `molecules/display/` | Vertical label:value pairs |
-| `TabbedPage` | Template | `templates/` | Tab bar + content, URL-driven |
-| `DashboardPage` | Template | `templates/` | Responsive card grid for admin |
 | `MetadataProvider` | Interface | `services/metadata/` | Abstract data source |
 | `JsonMetadataProvider` | Impl | `services/metadata/` | Loads from JSON assets |
 | `EditableFormProvider` | Provider | `providers/` | Dirty state tracking for batch save |
 | `SaveDiscardBar` | Molecule | `molecules/forms/` | Appears when form is dirty |
+
+### Already Built (Completed) ✅
+| Component | Type | Location | Purpose |
+|-----------|------|----------|----------|
+| `DataMatrix` | Molecule | `molecules/display/` | Row×column grid |
+| `KeyValueList` | Molecule | `molecules/display/` | Vertical label:value pairs |
+| `TabbedContent` | Organism | `organisms/layout/` | Unified tab bar with local or URL-synced state |
+| `ScrollableContent` | Molecule | `molecules/containers/` | Standardized scroll wrapper |
 
 ---
 
@@ -338,9 +351,9 @@ if (AppRoutes.requiresAdmin(route)) {  // Uses startsWith('/admin')
 ```
 /admin                    → AdminScreen (dashboard)
 /admin/system/health      → System health dashboard
-/admin/system/logs        → TabbedPage (Data Changes | Auth Events)
-/admin/system/files       → File attachments browser (placeholder)
-/admin/:entity            → Entity metadata/settings viewer
+/admin/system/logs/:tab   → TabbedContent (Data Changes | Auth Events)
+/admin/system/files       → TabbedContent (file attachments - placeholder)
+/admin/:entity            → TabbedContent (entity metadata viewer)
 ```
 
 ---
@@ -368,23 +381,23 @@ if (AppRoutes.requiresAdmin(route)) {  // Uses startsWith('/admin')
 | Audit Logs | Scoped | Fresh fetch each visit, large dataset |
 | Entity Lists | Scoped | Respects filters/pagination |
 
-### Tab State: URL + Provider Hybrid
+### Tab State: TabbedContent Dual Mode
 ```dart
-// URL captures NAVIGATION state (tab selection)
-GoRoute(
-  path: '/admin/logs',
-  builder: (context, state) {
-    final activeTab = state.uri.queryParameters['tab'] ?? 'data';
-    return TabbedPage(
-      activeTab: activeTab,
-      onTabChanged: (tab) => context.go('/admin/logs?tab=$tab'),
-      tabs: [...],
-    );
-  },
+// URL-synced mode (bookmarkable, shareable)
+TabbedContent(
+  syncWithUrl: true,
+  currentTabId: tabFromUrl,
+  baseRoute: '/admin/system/logs',
+  tabs: [...],
+  contentBuilder: (tabId) => ...,
 )
 
-// Provider captures DATA state (fetched data)
-final auditLogsProvider = ...;  // Cached, survives tab switches
+// Local state mode (modals, nested contexts)
+TabbedContent(
+  syncWithUrl: false,  // default
+  tabs: [...],
+  contentBuilder: (tabId) => ...,
+)
 ```
 
 ### Dirty State Pattern (for Phase 5)

@@ -18,7 +18,10 @@ const { NAME_TYPES } = require('../entity-types');
 const { createAddressFields, createAddressFieldAccess } = require('../field-type-standards');
 
 module.exports = {
-  // Table name in database
+  // Entity key (singular, for API params and lookups)
+  entityKey: 'work_order',
+
+  // Table name in database (plural, also used for API URLs)
   tableName: 'work_orders',
 
   // Primary key

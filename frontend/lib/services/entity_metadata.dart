@@ -145,7 +145,7 @@ class EntityMetadataRegistry {
     final identityField = _getDefaultIdentityField(name);
 
     return EntityMetadata(
-      name: name,
+      entityKey: name,
       tableName: '${tableName}s',
       primaryKey: 'id',
       identityField: identityField,

@@ -21,6 +21,7 @@ import '../../providers/preferences_provider.dart';
 import '../../services/entity_metadata.dart';
 import '../../services/metadata_field_config_factory.dart';
 import '../molecules/cards/titled_card.dart';
+import '../molecules/containers/scrollable_content.dart';
 import 'cards/entity_detail_card.dart';
 import 'forms/generic_form.dart';
 
@@ -44,7 +45,7 @@ class SettingsContent extends StatelessWidget {
       'preferences',
     );
 
-    return SingleChildScrollView(
+    return ScrollableContent(
       child: Center(
         child: Container(
           constraints: const BoxConstraints(maxWidth: 800),

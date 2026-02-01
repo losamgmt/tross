@@ -298,6 +298,65 @@ req.validated = {
 
 ---
 
+### 12. Entity Naming Convention (SSOT)
+**Decision:** All entity naming is EXPLICIT in metadata. Zero derivation. Zero pattern matching.
+
+**Metadata Properties (Required):**
+```javascript
+module.exports = {
+  entityKey: 'work_order',           // Internal key, FK columns, code refs
+  tableName: 'work_orders',          // Database table AND API URL path
+  rlsResource: 'work_orders',        // Permission checks (usually = tableName)
+  displayName: 'Work Order',         // UI singular label
+  displayNamePlural: 'Work Orders',  // UI plural label
+  // ... other fields
+};
+```
+
+**Usage Pattern:**
+
+| Context | Use This Property | Example Value |
+|---------|-------------------|---------------|
+| Code variables, FK columns | `entityKey` | `work_order` |
+| SQL queries, API URLs | `tableName` | `work_orders` |
+| Permission checks | `rlsResource` | `work_orders` |
+| UI "Create X" | `displayName` | `Work Order` |
+| UI nav items | `displayNamePlural` | `Work Orders` |
+
+**URL Pattern (RESTful):**
+```
+GET    /api/work_orders          ← List entities
+POST   /api/work_orders          ← Create entity
+GET    /api/work_orders/123      ← Get entity
+PATCH  /api/work_orders/123      ← Update entity
+DELETE /api/work_orders/123      ← Delete entity
+POST   /api/work_orders/123/files   ← Upload file (sub-resource)
+GET    /api/work_orders/123/files   ← List files (sub-resource)
+```
+
+**Why:**
+- Adding entity = ONE metadata file, zero hardcoded maps to update
+- Zero derivation = zero bugs from naming assumptions
+- Zero backward compatibility = zero cruft, zero ambiguity
+- Frontend syncs from backend via `sync-entity-metadata.js`
+
+**Forbidden:**
+- ❌ Deriving `entityKey` from filename
+- ❌ Hardcoded singular→plural maps
+- ❌ Pattern matching or pluralization logic
+- ❌ Accepting multiple URL formats (e.g., both `work_order` and `work_orders`)
+- ❌ `normalizeEntityName()` or `_entityEndpoint()` functions
+
+**Validation (Fail Fast):**
+```javascript
+const REQUIRED = ['entityKey', 'tableName', 'rlsResource', 'displayName', 'displayNamePlural'];
+for (const prop of REQUIRED) {
+  if (!metadata[prop]) throw new Error(`Missing required: ${prop}`);
+}
+```
+
+---
+
 ## Locked Patterns
 
 **Status:** 🔒 **LOCKED** - Do not modify without review
@@ -312,11 +371,12 @@ These patterns are frozen and battle-tested:
 6. ✅ Atomic Design System
 7. ✅ Schema-driven UI
 8. ✅ Testing pyramid
-9. ✅ Generic file storage (entity_type + entity_id pattern)
+9. ✅ Generic file storage (sub-resource pattern: `/api/:tableName/:id/files`)
 10. ✅ SSOT pattern (one source per piece of information)
 11. ✅ Metadata-driven entity behavior
 12. ✅ Unified request context (`req.validated`, `req.entityMetadata`)
 13. ✅ One task per unit, one unit per task
+14. ✅ Entity Naming Convention (explicit `entityKey`, `tableName`, `rlsResource` in metadata)
 
 **To modify a locked pattern:**
 1. Open GitHub issue with rationale
@@ -329,12 +389,42 @@ These patterns are frozen and battle-tested:
 ## Evolution Guidelines
 
 ### Adding New Entities
-1. Follow Entity Contract v2.0
-2. Add TIER 1 fields (mandatory)
-3. Add TIER 2 `status` if lifecycle needed
-4. Create migration (see `backend/migrations/README.md`)
-5. Update `schema.sql`
-6. Add tests (model + API)
+
+**Single File Change:** Create ONE metadata file with explicit properties. Everything flows from there.
+
+1. **Create metadata file:** `backend/config/models/{entity-name}-metadata.js`
+   ```javascript
+   module.exports = {
+     // REQUIRED: Explicit Naming (no derivation!)
+     entityKey: 'service_request',           // snake_case, singular
+     tableName: 'service_requests',          // snake_case, matches DB table
+     rlsResource: 'service_requests',        // Permission resource (usually = tableName)
+     displayName: 'Service Request',         // UI singular
+     displayNamePlural: 'Service Requests',  // UI plural
+     
+     // REQUIRED: Entity Contract v2.0
+     primaryKey: 'id',
+     identityField: 'request_number',        // Unique business identifier
+     
+     // TIER 1 fields (mandatory for all entities)
+     // id, is_active, created_at, updated_at
+     
+     // TIER 2 status (if entity has lifecycle)
+     // status field with allowed values
+     
+     // Field definitions, access control, etc.
+   };
+   ```
+
+2. **Create database migration:** `backend/migrations/YYYYMMDDHHMMSS_create_service_requests.js`
+
+3. **Update schema.sql:** Add table definition
+
+4. **Run sync:** `npm run sync:metadata` → Updates `frontend/assets/config/entity-metadata.json`
+
+5. **Add tests:** Model + API tests
+
+**That's it.** No hardcoded maps to update. No route files to create. Routes auto-mount at `/api/{tableName}`.
 
 ### Adding New Features
 1. Write tests first (TDD)
@@ -363,6 +453,11 @@ These patterns are frozen and battle-tested:
 ❌ **Optional parameters with fallbacks** - Require explicit input, fail on missing  
 ❌ **Multiple data sources** - One canonical source, derive everything else  
 ❌ **Conditional code paths** - One path, one shape, always  
+❌ **Deriving entity names** - All naming explicit in metadata, never from filename  
+❌ **Hardcoded entity maps** - No `_entityEndpoint()` or `ENTITY_URL_MAP`; use metadata  
+❌ **Pattern matching for pluralization** - No `entityName + 's'`; use explicit `tableName`  
+❌ **Backward compatibility shims** - One convention, zero ambiguity, zero cruft  
+❌ **Multiple URL formats** - Accept only `tableName` format, reject variations  
 
 ---
 

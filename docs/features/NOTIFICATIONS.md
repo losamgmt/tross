@@ -260,7 +260,7 @@ class _NotificationTraySectionState extends State<_NotificationTraySection> {
 - [x] Use pure props pattern (no dedicated provider)
 - [x] Use `GenericEntityService.getAll('notification')` for data fetching
 - [x] Integrate into `AdaptiveShell` via `_NotificationTraySection`
-- [x] Widget tests (19 tests)
+- [x] Widget tests
 - [x] Auth guard (hide tray when not authenticated)
 
 ### Phase 4: Backend Triggers (Future)

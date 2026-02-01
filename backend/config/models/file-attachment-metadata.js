@@ -26,7 +26,10 @@ const {
 const { FIELD } = require('../field-type-standards');
 
 module.exports = {
-  // Table name in database
+  // Entity key (singular, for API params and lookups)
+  entityKey: 'file_attachment',
+
+  // Table name in database (plural, also used for API URLs)
   tableName: 'file_attachments',
 
   // Primary key

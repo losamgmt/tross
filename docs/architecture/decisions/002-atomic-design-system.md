@@ -289,10 +289,10 @@ import '../atoms/icons/error_icon.dart';
 
 **Test Coverage:**
 
-- ✅ Each atom tested individually (~20 test files)
-- ✅ Molecules tested with mocked atoms (~15 test files)
-- ✅ Organisms tested with integration tests (~8 test files)
-- ✅ Screens tested with full widget tree (~5 test files)
+- ✅ Each atom tested individually
+- ✅ Molecules tested with mocked atoms
+- ✅ Organisms tested with integration tests
+- ✅ Screens tested with full widget tree
 
 **Design Consistency:**
 

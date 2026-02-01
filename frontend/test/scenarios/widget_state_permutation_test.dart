@@ -22,7 +22,6 @@ import 'package:tross_app/widgets/organisms/cards/entity_detail_card.dart';
 import 'package:tross_app/widgets/organisms/guards/permission_gate.dart';
 import 'package:tross_app/widgets/organisms/login/login_form.dart';
 import 'package:tross_app/widgets/organisms/login/production_login_card.dart';
-import 'package:tross_app/widgets/templates/master_detail_layout.dart';
 
 import '../factory/factory.dart';
 import '../helpers/helpers.dart';
@@ -294,81 +293,6 @@ void main() {
       );
 
       expect(find.byType(ProductionLoginCard), findsOneWidget);
-    });
-  });
-
-  // ===========================================================================
-  // MASTER DETAIL LAYOUT - State Permutations
-  // ===========================================================================
-
-  group('MasterDetailLayout State Permutations', () {
-    testWidgets('renders with no selection', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: SizedBox(
-            width: 1200,
-            height: 800,
-            child: MasterDetailLayout<String>(
-              masterTitle: 'Items',
-              items: const ['Item 1', 'Item 2'],
-              selectedItem: null,
-              masterItemBuilder: (item, isSelected) =>
-                  ListTile(title: Text(item), selected: isSelected),
-              detailBuilder: (item) => Text('Detail: $item'),
-              emptyDetailMessage: 'Select an item',
-              onItemSelected: (_) {},
-            ),
-          ),
-        ),
-      );
-
-      expect(find.byType(MasterDetailLayout<String>), findsOneWidget);
-    });
-
-    testWidgets('renders with selection', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: SizedBox(
-            width: 1200,
-            height: 800,
-            child: MasterDetailLayout<String>(
-              masterTitle: 'Items',
-              items: const ['Item 1', 'Item 2'],
-              selectedItem: 'Item 1',
-              masterItemBuilder: (item, isSelected) =>
-                  ListTile(title: Text(item), selected: isSelected),
-              detailBuilder: (item) => Text('Detail: $item'),
-              emptyDetailMessage: 'Select an item',
-              onItemSelected: (_) {},
-            ),
-          ),
-        ),
-      );
-
-      expect(find.byType(MasterDetailLayout<String>), findsOneWidget);
-    });
-
-    testWidgets('renders with empty list', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: SizedBox(
-            width: 1200,
-            height: 800,
-            child: MasterDetailLayout<String>(
-              masterTitle: 'Items',
-              items: const [],
-              selectedItem: null,
-              masterItemBuilder: (item, isSelected) =>
-                  ListTile(title: Text(item), selected: isSelected),
-              detailBuilder: (item) => Text('Detail: $item'),
-              emptyMasterMessage: 'No items found',
-              onItemSelected: (_) {},
-            ),
-          ),
-        ),
-      );
-
-      expect(find.byType(MasterDetailLayout<String>), findsOneWidget);
     });
   });
 }

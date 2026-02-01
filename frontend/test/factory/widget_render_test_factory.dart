@@ -9,7 +9,7 @@
 ///
 /// WIDGET CATEGORIES:
 ///   - Search/Filter widgets (DebouncedSearchFilter)
-///   - Layout widgets (PageHeader, PageScaffold, CardGrid, ActionGrid, SettingsSection)
+///   - Layout widgets (PageHeader, PageScaffold, TabbedContent, SettingsSection)
 ///   - Display widgets (PaginationDisplay)
 ///
 /// SCENARIOS (per widget):

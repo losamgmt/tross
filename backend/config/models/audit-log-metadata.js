@@ -13,7 +13,10 @@
  */
 
 module.exports = {
-  // Table name in database
+  // Entity key (singular, for API params and lookups)
+  entityKey: 'audit_log',
+
+  // Table name in database (plural, also used for API URLs)
   tableName: 'audit_logs',
 
   // Primary key

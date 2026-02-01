@@ -25,6 +25,7 @@ import '../../utils/entity_icon_resolver.dart';
 import '../../utils/helpers/string_helper.dart';
 import '../atoms/indicators/app_badge.dart';
 import '../atoms/indicators/loading_indicator.dart';
+import '../molecules/containers/scrollable_content.dart';
 import 'charts/dashboard_charts.dart';
 
 /// Main dashboard content widget
@@ -44,7 +45,7 @@ class DashboardContent extends StatelessWidget {
 
         return RefreshIndicator(
           onRefresh: dashboard.refresh,
-          child: SingleChildScrollView(
+          child: ScrollableContent(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(16),
             child: Column(

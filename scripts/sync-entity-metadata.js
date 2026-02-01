@@ -208,6 +208,9 @@ function transformPreferenceSchema(schema) {
  */
 function transformModel(entityName, backendMeta, allModels) {
   const result = {
+    // Entity key (singular, for API params and lookups)
+    entityKey: backendMeta.entityKey,
+    // Table name in database (plural, also used for API URLs)
     tableName: backendMeta.tableName,
     primaryKey: backendMeta.primaryKey || 'id',
     identityField: backendMeta.identityField,

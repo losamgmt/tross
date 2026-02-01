@@ -349,6 +349,12 @@ function validateEntity(entityName, meta, allMetadata) {
   const errors = new ValidationErrors(entityName);
 
   // Required top-level properties
+  if (!meta.entityKey) {
+    errors.add('entityKey', 'Required property missing - must be explicit in metadata');
+  } else if (meta.entityKey !== entityName) {
+    errors.add('entityKey', `entityKey '${meta.entityKey}' does not match registry key '${entityName}'`);
+  }
+
   if (!meta.tableName) {
     errors.add('tableName', 'Required property missing');
   }

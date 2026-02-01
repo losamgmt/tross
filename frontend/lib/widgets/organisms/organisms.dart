@@ -23,9 +23,7 @@ export 'forms/form_field.dart';
 export 'forms/generic_form.dart';
 
 // Layout
-export 'layout/action_grid.dart';
-export 'layout/card_grid.dart';
-export 'layout/tabbed_container.dart';
+export 'layout/tabbed_content.dart';
 
 // Login
 export 'login/dev_login_card.dart';

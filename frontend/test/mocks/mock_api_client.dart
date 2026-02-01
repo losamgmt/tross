@@ -342,6 +342,19 @@ class MockApiClient implements ApiClient {
     return _getResponse<Map<String, dynamic>>(endpoint) ?? {};
   }
 
+  @override
+  Future<Map<String, dynamic>> postUnauthenticated(
+    String endpoint, {
+    Map<String, dynamic>? body,
+  }) async {
+    _recordCall('POST_UNAUTH $endpoint');
+    return _getResponse<Map<String, dynamic>>(endpoint) ??
+        {
+          'success': true,
+          'data': {'accessToken': 'mock-token', 'refreshToken': 'mock-refresh'},
+        };
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // ApiClient IMPLEMENTATION - Entity CRUD
   // ═══════════════════════════════════════════════════════════════════════════

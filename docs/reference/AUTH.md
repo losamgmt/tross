@@ -223,9 +223,29 @@ See `config/permissions.json` for complete matrix.
 ```
 
 ### Token Lifecycle
-- **Access Token:** 1 hour lifetime
+- **Access Token:** 15 minutes lifetime
 - **Refresh Token:** 7 days lifetime
 - **Refresh endpoint:** `/api/auth/refresh`
+- **Proactive refresh:** Frontend refreshes 5 minutes before expiry
+
+### Proactive Token Refresh
+
+The frontend proactively refreshes tokens before expiration to prevent abrupt logouts:
+
+**Components:**
+- `TokenRefreshManager` - Schedules refresh 5 minutes before expiry
+- `WidgetsBindingObserver` - Checks token on app resume from background
+- `TokenManager` - Stores token expiry timestamp
+
+**Flow:**
+1. On login/refresh, `AuthTokenService` parses JWT `exp` claim
+2. Expiry stored in secure storage via `TokenManager`
+3. `TokenRefreshManager` schedules Timer for 5 minutes before expiry
+4. On app resume, checks if token needs refresh
+5. On refresh success, reschedules next refresh
+6. On refresh failure, triggers logout
+
+**Fallback:** If proactive refresh fails, the reactive 401 interceptor in `ApiClient` attempts refresh.
 
 ### Token Refresh
 ```bash

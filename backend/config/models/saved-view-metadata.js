@@ -19,7 +19,10 @@ const {
 const { FIELD } = require('../field-type-standards');
 
 module.exports = {
-  // Table name in database (matches route: /api/saved_views)
+  // Entity key (singular, for API params and lookups)
+  entityKey: 'saved_view',
+
+  // Table name in database (plural, also used for API URLs)
   tableName: 'saved_views',
 
   // Primary key

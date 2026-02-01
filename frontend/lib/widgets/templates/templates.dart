@@ -12,11 +12,6 @@ library;
 // Adaptive/Responsive layouts
 export 'adaptive_shell.dart';
 export 'centered_layout.dart';
-export 'master_detail_layout.dart';
-
-// Page templates
-export 'tabbed_page.dart';
-export 'dashboard_page.dart';
 
 // Re-export navigation types for convenience
 export '../organisms/navigation/nav_menu_item.dart';

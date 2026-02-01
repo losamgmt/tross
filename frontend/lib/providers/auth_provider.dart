@@ -53,11 +53,12 @@ import '../models/permission.dart';
 /// - Role-based access control
 /// - Profile updates with backend sync
 /// - Persistent session (local storage)
+/// - Proactive token refresh (before expiry)
 ///
 /// **KISS Principle:**
 /// - Simple state properties (no complex streams/subscriptions)
 /// - Explicit notifyListeners() calls (predictable updates)
-/// - No dispose() needed (no resources to clean up)
+/// - Proper dispose() for lifecycle management
 /// - Direct delegation to services (thin provider layer)
 class AuthProvider extends ChangeNotifier {
   late final AuthService _authService;
@@ -65,6 +66,22 @@ class AuthProvider extends ChangeNotifier {
   /// Constructor - requires ApiClient injection
   AuthProvider(ApiClient apiClient) {
     _authService = AuthService(apiClient);
+    // Wire up auth state change callback for proactive refresh
+    _authService.onAuthStateChanged = _onAuthStateChanged;
+  }
+
+  /// Handle auth state changes from TokenRefreshManager
+  void _onAuthStateChanged() {
+    _user = _authService.user;
+    _isAuthenticated = _authService.isAuthenticated;
+    notifyListeners();
+  }
+
+  /// Dispose resources (call when provider is destroyed)
+  @override
+  void dispose() {
+    _authService.disposeRefreshManager();
+    super.dispose();
   }
 
   // State properties
@@ -151,6 +168,9 @@ class AuthProvider extends ChangeNotifier {
     _clearError();
 
     try {
+      // Initialize the proactive token refresh manager
+      _authService.initializeRefreshManager();
+
       // Initialize the AuthService (restores stored auth state from local storage only)
       await _authService.initialize();
 

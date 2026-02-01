@@ -85,6 +85,19 @@ abstract class ApiClient {
   Future<Map<String, dynamic>> delete(String endpoint, {String? token});
 
   // ==========================================================================
+  // UNAUTHENTICATED OPERATIONS
+  // ==========================================================================
+
+  /// POST request without authentication (for refresh token endpoint)
+  ///
+  /// Used for token refresh where the current access token is expired.
+  /// The refresh token is sent in the request body, not as a bearer token.
+  Future<Map<String, dynamic>> postUnauthenticated(
+    String endpoint, {
+    Map<String, dynamic>? body,
+  });
+
+  // ==========================================================================
   // ENTITY CRUD OPERATIONS
   // ==========================================================================
 

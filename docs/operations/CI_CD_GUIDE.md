@@ -64,7 +64,7 @@ Guide to TrossApp's continuous integration and deployment pipeline.
 | ❌ Simulate Railway in CI | Complex DB setup, env var juggling, tests a mock not reality |
 | ✅ Test real deployment | Simple, tests what users actually experience |
 
-### What E2E Tests Verify (15 tests)
+### What E2E Tests Verify
 
 - **Health:** Server running, DB connected, memory healthy
 - **Security:** Auth required, invalid tokens rejected, headers present

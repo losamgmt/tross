@@ -11,22 +11,27 @@
 /// - EntityDetailCard organism for display
 /// - GenericForm organism for editing
 /// - PermissionService for RBAC
+/// - FileService for entity attachments
 ///
 /// ZERO per-entity code. Purely metadata-driven.
 library;
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../config/config.dart';
 import '../core/routing/app_routes.dart';
 import '../providers/auth_provider.dart';
 import '../models/permission.dart';
+import '../models/file_attachment.dart';
 import '../services/generic_entity_service.dart';
 import '../services/entity_metadata.dart';
 import '../services/metadata_field_config_factory.dart';
 import '../services/permission_service_dynamic.dart';
 import '../services/error_service.dart';
+import '../services/file_service.dart';
 import '../widgets/templates/templates.dart';
 import '../widgets/organisms/organisms.dart';
 import '../widgets/molecules/molecules.dart';
@@ -57,6 +62,12 @@ class _EntityDetailScreenState extends State<EntityDetailScreen> {
   bool _isEditing = false;
   String? _error;
 
+  // File attachments state
+  List<FileAttachment>? _files;
+  bool _filesLoading = false;
+  bool _filesUploading = false;
+  String? _filesError;
+
   @override
   void initState() {
     super.initState();
@@ -79,6 +90,8 @@ class _EntityDetailScreenState extends State<EntityDetailScreen> {
         _entity = entity;
         _isLoading = false;
       });
+      // Load files after entity loads successfully
+      _loadFiles();
     } catch (e) {
       ErrorService.logError(
         'Failed to load ${widget.entityName} #${widget.entityId}',
@@ -88,6 +101,177 @@ class _EntityDetailScreenState extends State<EntityDetailScreen> {
         _error = 'Failed to load ${widget.entityName}';
         _isLoading = false;
       });
+    }
+  }
+
+  // ===========================================================================
+  // FILE ATTACHMENT METHODS
+  // ===========================================================================
+
+  Future<void> _loadFiles() async {
+    setState(() {
+      _filesLoading = true;
+      _filesError = null;
+    });
+
+    try {
+      final fileService = context.read<FileService>();
+      final files = await fileService.listFiles(
+        entityType: widget.entityName,
+        entityId: widget.entityId,
+      );
+      if (mounted) {
+        setState(() {
+          _files = files;
+          _filesLoading = false;
+        });
+      }
+    } catch (e) {
+      ErrorService.logError(
+        'Failed to load files for ${widget.entityName} #${widget.entityId}',
+        error: e,
+      );
+      if (mounted) {
+        setState(() {
+          _filesError = 'Failed to load attachments';
+          _filesLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _handleFileUpload() async {
+    // Capture services before async gap
+    final fileService = context.read<FileService>();
+    final messenger = ScaffoldMessenger.of(context);
+
+    // Pick file using file_picker
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.any,
+      withData: true,
+    );
+
+    if (result == null || result.files.isEmpty) return;
+
+    final file = result.files.first;
+    if (file.bytes == null) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Could not read file data'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _filesUploading = true);
+
+    try {
+      await fileService.uploadFile(
+        entityType: widget.entityName,
+        entityId: widget.entityId,
+        filename: file.name,
+        bytes: file.bytes!,
+      );
+
+      if (!mounted) return;
+
+      messenger.showSnackBar(
+        SnackBar(content: Text('${file.name} uploaded successfully')),
+      );
+
+      // Reload files list
+      await _loadFiles();
+    } catch (e) {
+      ErrorService.logError('Failed to upload file', error: e);
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Upload failed: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _filesUploading = false);
+      }
+    }
+  }
+
+  Future<void> _handleFileDownload(FileAttachment file) async {
+    try {
+      final fileService = context.read<FileService>();
+      final downloadInfo = await fileService.getDownloadUrl(fileId: file.id);
+
+      // Open URL in browser/system handler
+      final uri = Uri.parse(downloadInfo.downloadUrl);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        throw Exception('Could not open download URL');
+      }
+    } catch (e) {
+      ErrorService.logError('Failed to download file', error: e);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Download failed: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleFileDelete(FileAttachment file) async {
+    // Capture services before async gap
+    final fileService = context.read<FileService>();
+    final messenger = ScaffoldMessenger.of(context);
+
+    // Confirm deletion
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete File'),
+        content: Text(
+          'Are you sure you want to delete "${file.originalFilename}"?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await fileService.deleteFile(fileId: file.id);
+
+      if (!mounted) return;
+
+      messenger.showSnackBar(
+        SnackBar(content: Text('${file.originalFilename} deleted')),
+      );
+
+      // Reload files list
+      await _loadFiles();
+    } catch (e) {
+      ErrorService.logError('Failed to delete file', error: e);
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Delete failed: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -267,6 +451,22 @@ class _EntityDetailScreenState extends State<EntityDetailScreen> {
             icon: EntityIconResolver.getIcon(widget.entityName),
             // Exclude system fields from detail view
             excludeFields: const ['created_at', 'updated_at'],
+          ),
+
+          SizedBox(height: spacing.lg),
+
+          // File attachments section
+          EntityFileAttachments(
+            files: _files,
+            loading: _filesLoading,
+            error: _filesError,
+            uploading: _filesUploading,
+            readOnly: !canUpdate,
+            title: 'Attachments',
+            onUpload: _handleFileUpload,
+            onDownload: _handleFileDownload,
+            onDelete: _handleFileDelete,
+            onRetry: _loadFiles,
           ),
         ],
       ),

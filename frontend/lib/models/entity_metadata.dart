@@ -77,10 +77,14 @@ enum FormLayout {
 
 /// Entity metadata - complete definition of an entity
 class EntityMetadata {
-  /// Entity name (e.g., 'customer', 'work_order')
-  final String name;
+  /// Entity key (singular, for API params and lookups: e.g., 'work_order')
+  /// This is the canonical identifier for the entity across all layers.
+  final String entityKey;
 
-  /// Database table name
+  /// Entity name - alias for entityKey for backwards compatibility
+  String get name => entityKey;
+
+  /// Database table name (plural, also used for API URLs: e.g., 'work_orders')
   final String tableName;
 
   /// Primary key field (usually 'id')
@@ -141,7 +145,7 @@ class EntityMetadata {
   final Map<String, FieldGroup> fieldGroups;
 
   const EntityMetadata({
-    required this.name,
+    required this.entityKey,
     required this.tableName,
     required this.primaryKey,
     required this.identityField,
@@ -198,7 +202,7 @@ class EntityMetadata {
     final identityField = json['identityField'] as String? ?? 'id';
 
     return EntityMetadata(
-      name: name,
+      entityKey: json['entityKey'] as String? ?? name,
       tableName: json['tableName'] as String? ?? '${name}s',
       primaryKey: json['primaryKey'] as String? ?? 'id',
       identityField: identityField,

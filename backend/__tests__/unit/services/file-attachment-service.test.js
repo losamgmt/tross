@@ -21,6 +21,13 @@ jest.mock('../../../config/logger', () => ({
   },
 }));
 
+// Mock entity metadata for entityExists() tests
+jest.mock('../../../config/models', () => ({
+  customer: { entityKey: 'customer', tableName: 'customers' },
+  work_order: { entityKey: 'work_order', tableName: 'work_orders' },
+  // unknown_entity deliberately not in mock to test "entity not found" path
+}));
+
 const { query: mockQuery } = require('../../../db/connection');
 const { logger } = require('../../../config/logger');
 
@@ -40,10 +47,25 @@ describe('FileAttachmentService', () => {
         rows: [{ id: 1 }],
       });
 
-      const result = await FileAttachmentService.entityExists('customers', 1);
+      // Use entityKey, not tableName
+      const result = await FileAttachmentService.entityExists('customer', 1);
 
       expect(result).toBe(true);
       expect(mockQuery).toHaveBeenCalledTimes(2);
+      // Verify it queried the correct table (tableName from metadata)
+      expect(mockQuery).toHaveBeenNthCalledWith(
+        1,
+        expect.stringContaining('table_name = $1'),
+        ['customers'],
+      );
+    });
+
+    test('should return false when entity key not in metadata', async () => {
+      const result = await FileAttachmentService.entityExists('nonexistent_entity', 1);
+
+      expect(result).toBe(false);
+      expect(mockQuery).not.toHaveBeenCalled();
+      expect(logger.warn).toHaveBeenCalledWith('Unknown entity key: nonexistent_entity');
     });
 
     test('should return false when table does not exist', async () => {
@@ -51,7 +73,7 @@ describe('FileAttachmentService', () => {
         rows: [{ table_exists: false }],
       });
 
-      const result = await FileAttachmentService.entityExists('nonexistent_table', 1);
+      const result = await FileAttachmentService.entityExists('customer', 1);
 
       expect(result).toBe(false);
       expect(mockQuery).toHaveBeenCalledTimes(1);
@@ -65,7 +87,7 @@ describe('FileAttachmentService', () => {
         rows: [],
       });
 
-      const result = await FileAttachmentService.entityExists('customers', 999999);
+      const result = await FileAttachmentService.entityExists('customer', 999999);
 
       expect(result).toBe(false);
     });
@@ -75,13 +97,13 @@ describe('FileAttachmentService', () => {
       mockQuery.mockRejectedValueOnce(Object.assign(new Error('DB connection failed'), { code: 'ECONNREFUSED' }));
 
       await expect(
-        FileAttachmentService.entityExists('customers', 1),
+        FileAttachmentService.entityExists('customer', 1),
       ).rejects.toThrow('Database unavailable');
 
       expect(logger.error).toHaveBeenCalledWith(
         'Database connection error checking entity existence',
         expect.objectContaining({
-          entityType: 'customers',
+          entityKey: 'customer',
           entityId: 1,
         }),
       );
@@ -91,13 +113,13 @@ describe('FileAttachmentService', () => {
       // Non-connection errors (like table not found) should return false
       mockQuery.mockRejectedValueOnce(new Error('relation does not exist'));
 
-      const result = await FileAttachmentService.entityExists('unknown_table', 1);
+      const result = await FileAttachmentService.entityExists('customer', 1);
 
       expect(result).toBe(false);
       expect(logger.warn).toHaveBeenCalledWith(
         'Error checking entity existence (non-fatal)',
         expect.objectContaining({
-          entityType: 'unknown_table',
+          entityKey: 'customer',
           entityId: 1,
         }),
       );
@@ -108,7 +130,7 @@ describe('FileAttachmentService', () => {
     test('should return file when found and active', async () => {
       const mockFile = {
         id: 1,
-        entity_type: 'work_orders',
+        entity_type: 'work_order',
         entity_id: 5,
         original_filename: 'test.pdf',
         is_active: true,
