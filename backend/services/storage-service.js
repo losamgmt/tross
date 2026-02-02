@@ -22,6 +22,7 @@ const {
   GetObjectCommand,
   DeleteObjectCommand,
   HeadObjectCommand,
+  HeadBucketCommand,
 } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const { v4: uuidv4 } = require('uuid');
@@ -73,7 +74,104 @@ class StorageService {
    * @returns {boolean}
    */
   isConfigured() {
-    return getClient() !== null && getBucket();
+    return getClient() !== null && !!getBucket();
+  }
+
+  /**
+   * Get storage configuration info (no network call)
+   * @returns {{configured: boolean, provider: string, bucket: string|null}}
+   */
+  getConfigurationInfo() {
+    const configured = this.isConfigured();
+    return {
+      configured,
+      provider: process.env.STORAGE_PROVIDER || 'none',
+      bucket: configured ? getBucket() : null,
+    };
+  }
+
+  /**
+   * Deep health check - actually pings the R2 bucket
+   * Uses HeadBucket to verify connectivity with minimal overhead
+   *
+   * @param {number} timeoutMs - Timeout in milliseconds (default: 5000)
+   * @returns {Promise<{configured: boolean, reachable: boolean, bucket: string|null, responseTime: number, status: string, message?: string}>}
+   */
+  async healthCheck(timeoutMs = 5000) {
+    const start = Date.now();
+
+    // Check configuration first
+    if (!this.isConfigured()) {
+      return {
+        configured: false,
+        reachable: false,
+        bucket: null,
+        responseTime: 0,
+        status: 'unconfigured',
+        message: 'Storage not configured (missing environment variables)',
+      };
+    }
+
+    const bucket = getBucket();
+    const client = getClient();
+
+    // Declare timeoutId outside try block for cleanup in catch
+    let timeoutId;
+
+    try {
+      // Create an AbortController for timeout
+      const abortController = new AbortController();
+      timeoutId = setTimeout(() => abortController.abort(), timeoutMs);
+
+      const command = new HeadBucketCommand({ Bucket: bucket });
+      await client.send(command, { abortSignal: abortController.signal });
+
+      clearTimeout(timeoutId);
+      const responseTime = Date.now() - start;
+
+      logger.debug('Storage health check passed', { bucket, responseTime });
+
+      return {
+        configured: true,
+        reachable: true,
+        bucket,
+        responseTime,
+        status: 'healthy',
+      };
+    } catch (error) {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      const responseTime = Date.now() - start;
+
+      // Determine error type for appropriate messaging
+      let message = 'Storage connectivity failed';
+      let status = 'critical';
+
+      if (error.name === 'AbortError' || error.message?.includes('aborted')) {
+        message = `Storage check timed out after ${timeoutMs}ms`;
+        status = 'timeout';
+      } else if (error.name === 'AccessDenied' || error.$metadata?.httpStatusCode === 403) {
+        message = 'Storage access denied (check credentials)';
+      } else if (error.$metadata?.httpStatusCode === 404) {
+        message = `Bucket "${bucket}" not found`;
+      }
+
+      logger.warn('Storage health check failed', {
+        bucket,
+        error: error.message,
+        responseTime,
+      });
+
+      return {
+        configured: true,
+        reachable: false,
+        bucket,
+        responseTime,
+        status,
+        message,
+      };
+    }
   }
 
   /**

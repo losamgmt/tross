@@ -102,7 +102,7 @@ void main() {
           );
 
           expect(
-            () => service.listFiles(entityType: 'work_order', entityId: 1),
+            () => service.listFiles(entityKey: 'work_order', entityId: 1),
             throwsA(
               isA<Exception>().having(
                 (e) => e.toString(),

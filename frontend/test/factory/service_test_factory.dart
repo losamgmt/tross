@@ -41,6 +41,7 @@ import 'package:tross_app/services/api/api_client.dart';
 import '../mocks/mock_api_client.dart';
 import '../mocks/mock_token_provider.dart';
 import '../helpers/helpers.dart';
+import 'entity_registry.dart';
 
 // =============================================================================
 // ENDPOINT CONTRACTS - Define expected behavior per endpoint type
@@ -212,8 +213,9 @@ abstract final class ServiceTestFactory {
       late MockTokenProvider mockTokenProvider;
       late T service;
 
-      setUpAll(() {
+      setUpAll(() async {
         initializeTestBinding();
+        await EntityTestRegistry.ensureInitialized();
       });
 
       setUp(() {

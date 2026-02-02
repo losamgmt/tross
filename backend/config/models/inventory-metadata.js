@@ -96,6 +96,12 @@ module.exports = {
   navVisibility: 'technician',
 
   /**
+   * File attachments - whether this entity supports file uploads
+   * Inventory: product images, spec sheets, manuals
+   */
+  supportsFileAttachments: true,
+
+  /**
    * Entity-level permission overrides
    * Matches permissions.json - technician+ read/update, dispatcher+ create, manager+ delete
    */

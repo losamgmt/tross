@@ -43,7 +43,7 @@
 - **Frontend:** Flutter (web + mobile)
 - **Backend:** Node.js + Express + PostgreSQL
 - **Auth:** Auth0 OAuth2/OIDC
-- **Storage:** S3-compatible (Supabase Storage)
+- **Storage:** Cloudflare R2 (S3-compatible)
 - **Testing:** Jest + Flutter Test + Playwright
 - **Infrastructure:** Docker Compose
 
@@ -52,8 +52,8 @@
 Client (Flutter)
   ↓ HTTP/JSON
 API (Express) → Auth Middleware → RBAC → RLS
-  ↓ SQL                              ↓ S3
-Database (PostgreSQL)        Object Storage
+  ↓ SQL                              ↓ R2
+Database (PostgreSQL)        Object Storage (Cloudflare)
 ```
 
 ---
@@ -463,8 +463,11 @@ These patterns are frozen and battle-tested:
 
 ## Further Reading
 
-- [Database Architecture](architecture/DATABASE_ARCHITECTURE.md) - Schema design details
-- [Entity Lifecycle](architecture/ENTITY_LIFECYCLE.md) - Status field patterns
-- [Validation Architecture](architecture/VALIDATION_ARCHITECTURE.md) - Multi-tier validation
-- [Testing Guide](TESTING.md) - Test philosophy and patterns
-- [Security Guide](SECURITY.md) - Security implementation details
+- [Architecture Decision Records](decisions/) - All ADRs including:
+  - [Entity Naming Convention](decisions/006-entity-naming-convention.md) - Explicit metadata-driven naming
+  - [File Attachments Architecture](decisions/007-file-attachments-architecture.md) - Sub-resource pattern, download URLs
+- [Database Architecture](DATABASE_ARCHITECTURE.md) - Schema design details
+- [Entity Lifecycle](ENTITY_LIFECYCLE.md) - Status field patterns
+- [Validation Architecture](VALIDATION_ARCHITECTURE.md) - Multi-tier validation
+- [Testing Guide](../reference/TESTING.md) - Test philosophy and patterns
+- [Security Guide](../reference/SECURITY.md) - Security implementation details

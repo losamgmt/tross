@@ -98,6 +98,11 @@ module.exports = {
   navVisibility: 'technician',
 
   /**
+   * File attachments - whether this entity supports file uploads
+   */
+  supportsFileAttachments: false,
+
+  /**
    * Route configuration - explicit opt-in for generic router
    */
   routeConfig: {

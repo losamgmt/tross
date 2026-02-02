@@ -133,26 +133,31 @@ test.describe('E2E - Production Routing @smoke', () => {
 
 // ============================================================================
 // FILE STORAGE - Is auth enforced on file endpoints?
+// Uses new sub-resource URL pattern: /api/:tableName/:id/files
 // ============================================================================
 test.describe('E2E - File Storage Security @smoke @security', () => {
 
   test('File list requires authentication', async ({ request }) => {
-    const response = await request.get(`${BACKEND_URL}/api/files/work_order/1`);
+    // New pattern: /api/work_orders/1/files
+    const response = await request.get(`${BACKEND_URL}/api/work_orders/1/files`);
     expect(response.status()).toBe(401);
   });
 
   test('File download requires authentication', async ({ request }) => {
-    const response = await request.get(`${BACKEND_URL}/api/files/1/download`);
+    // New pattern: /api/work_orders/1/files/:fileId
+    const response = await request.get(`${BACKEND_URL}/api/work_orders/1/files/1`);
     expect(response.status()).toBe(401);
   });
 
   test('File delete requires authentication', async ({ request }) => {
-    const response = await request.delete(`${BACKEND_URL}/api/files/1`);
+    // New pattern: /api/work_orders/1/files/:fileId
+    const response = await request.delete(`${BACKEND_URL}/api/work_orders/1/files/1`);
     expect(response.status()).toBe(401);
   });
 
   test('File upload requires authentication', async ({ request }) => {
-    const response = await request.post(`${BACKEND_URL}/api/files/work_order/1`, {
+    // New pattern: /api/work_orders/1/files
+    const response = await request.post(`${BACKEND_URL}/api/work_orders/1/files`, {
       headers: {
         'Content-Type': 'image/jpeg',
         'X-Filename': 'test.jpg',

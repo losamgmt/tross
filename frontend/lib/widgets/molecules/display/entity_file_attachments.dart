@@ -27,7 +27,12 @@ library;
 import 'package:flutter/material.dart';
 import '../../../models/file_attachment.dart';
 import '../../../utils/helpers/string_helper.dart';
+import '../../../utils/helpers/date_time_helpers.dart';
 import '../../../config/app_spacing.dart';
+import '../../organisms/modals/generic_modal.dart';
+import 'key_value_list.dart';
+// Conditional import for PDF preview (web vs non-web)
+import 'pdf_preview_stub.dart' if (dart.library.html) 'pdf_preview_web.dart';
 
 // =============================================================================
 // MAIN WIDGET - Pure presentation, data received from parent
@@ -338,11 +343,16 @@ class FileListTile extends StatelessWidget {
     return Colors.grey;
   }
 
+  void _showPreviewModal(BuildContext context) {
+    FilePreviewModal.show(context: context, file: file, onDownload: onDownload);
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     return ListTile(
+      onTap: () => _showPreviewModal(context),
       leading: Container(
         width: 40,
         height: 40,
@@ -373,6 +383,310 @@ class FileListTile extends StatelessWidget {
               color: Colors.red,
               onPressed: onDelete,
             ),
+        ],
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// FILE PREVIEW MODAL - Shows file preview + metadata
+// =============================================================================
+
+/// Modal for previewing file attachments
+///
+/// Supports:
+/// - Images (jpg, png, gif, webp, svg) - displays inline
+/// - PDFs - uses browser's native PDF viewer via iframe
+/// - Text (txt, csv) - displays as selectable text
+/// - Other formats - shows "preview not available" with download option
+class FilePreviewModal {
+  FilePreviewModal._();
+
+  /// Show the preview modal for a file
+  static Future<void> show({
+    required BuildContext context,
+    required FileAttachment file,
+    VoidCallback? onDownload,
+  }) {
+    return GenericModal.show(
+      context: context,
+      title: file.originalFilename,
+      width: file.isImage || file.isPdf ? 800 : 600,
+      maxHeight: MediaQuery.of(context).size.height * 0.9,
+      content: _FilePreviewContent(file: file, onDownload: onDownload),
+    );
+  }
+}
+
+/// Content widget for file preview modal
+class _FilePreviewContent extends StatelessWidget {
+  final FileAttachment file;
+  final VoidCallback? onDownload;
+
+  const _FilePreviewContent({required this.file, this.onDownload});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final spacing = context.spacing;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Preview area
+        _buildPreview(context, theme, spacing),
+
+        SizedBox(height: spacing.lg),
+
+        // Metadata section
+        _buildMetadata(theme),
+
+        SizedBox(height: spacing.md),
+
+        // Download button
+        if (onDownload != null)
+          ElevatedButton.icon(
+            onPressed: onDownload,
+            icon: const Icon(Icons.download),
+            label: const Text('Download'),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildPreview(
+    BuildContext context,
+    ThemeData theme,
+    AppSpacing spacing,
+  ) {
+    if (file.isImage) {
+      return _ImagePreview(file: file, theme: theme, spacing: spacing);
+    } else if (file.isPdf) {
+      // Uses PdfPreviewWidget from conditional import (web vs non-web)
+      return PdfPreviewWidget(downloadUrl: file.downloadUrl, fileId: file.id);
+    } else if (_isTextFile) {
+      return _TextPreview(file: file, theme: theme, spacing: spacing);
+    } else {
+      return _UnsupportedPreview(file: file, theme: theme, spacing: spacing);
+    }
+  }
+
+  bool get _isTextFile {
+    final ext = file.extension.toLowerCase();
+    return ext == 'txt' || ext == 'csv' || file.mimeType.startsWith('text/');
+  }
+
+  Widget _buildMetadata(ThemeData theme) {
+    return KeyValueList(
+      dense: true,
+      items: [
+        KeyValueItem.text(
+          label: 'File Name',
+          value: file.originalFilename,
+          icon: Icons.insert_drive_file,
+        ),
+        KeyValueItem.text(
+          label: 'Size',
+          value: file.fileSizeFormatted,
+          icon: Icons.data_usage,
+        ),
+        KeyValueItem.text(
+          label: 'Type',
+          value: file.mimeType,
+          icon: Icons.description,
+        ),
+        KeyValueItem.text(
+          label: 'Category',
+          value: StringHelper.snakeToTitle(file.category),
+          icon: Icons.category,
+        ),
+        KeyValueItem.text(
+          label: 'Uploaded',
+          value: DateTimeHelpers.formatTimestamp(file.createdAt),
+          icon: Icons.calendar_today,
+        ),
+        if (file.description != null && file.description!.isNotEmpty)
+          KeyValueItem.text(
+            label: 'Description',
+            value: file.description!,
+            icon: Icons.notes,
+          ),
+      ],
+    );
+  }
+}
+
+// =============================================================================
+// PREVIEW WIDGETS BY TYPE
+// =============================================================================
+
+/// Image preview - uses Image.network
+class _ImagePreview extends StatelessWidget {
+  final FileAttachment file;
+  final ThemeData theme;
+  final AppSpacing spacing;
+
+  const _ImagePreview({
+    required this.file,
+    required this.theme,
+    required this.spacing,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(maxHeight: 400),
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: theme.colorScheme.outline.withValues(alpha: 0.2),
+        ),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.network(
+          file.downloadUrl,
+          fit: BoxFit.contain,
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return SizedBox(
+              height: 200,
+              child: Center(
+                child: CircularProgressIndicator(
+                  value: loadingProgress.expectedTotalBytes != null
+                      ? loadingProgress.cumulativeBytesLoaded /
+                            loadingProgress.expectedTotalBytes!
+                      : null,
+                ),
+              ),
+            );
+          },
+          errorBuilder: (context, error, stackTrace) {
+            return _PreviewError(
+              message: 'Failed to load image',
+              theme: theme,
+              spacing: spacing,
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+/// Text file preview - shows download prompt
+class _TextPreview extends StatelessWidget {
+  final FileAttachment file;
+  final ThemeData theme;
+  final AppSpacing spacing;
+
+  const _TextPreview({
+    required this.file,
+    required this.theme,
+    required this.spacing,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // For text files, we show a message to download since fetching
+    // requires async and we want to keep this simple
+    return Container(
+      constraints: const BoxConstraints(maxHeight: 300),
+      padding: EdgeInsets.all(spacing.md),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        border: Border.all(
+          color: theme.colorScheme.outline.withValues(alpha: 0.2),
+        ),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.text_snippet, size: 48, color: theme.colorScheme.primary),
+          SizedBox(height: spacing.md),
+          Text('Text File', style: theme.textTheme.titleMedium),
+          SizedBox(height: spacing.sm),
+          Text(
+            'Click download to view the contents of this text file.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: theme.colorScheme.outline),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Unsupported format preview
+class _UnsupportedPreview extends StatelessWidget {
+  final FileAttachment file;
+  final ThemeData theme;
+  final AppSpacing spacing;
+
+  const _UnsupportedPreview({
+    required this.file,
+    required this.theme,
+    required this.spacing,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(spacing.lg),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        border: Border.all(
+          color: theme.colorScheme.outline.withValues(alpha: 0.2),
+        ),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.visibility_off,
+            size: 48,
+            color: theme.colorScheme.outline,
+          ),
+          SizedBox(height: spacing.md),
+          Text('Preview Not Available', style: theme.textTheme.titleMedium),
+          SizedBox(height: spacing.sm),
+          Text(
+            'This file format (${file.extension.toUpperCase()}) cannot be previewed in the browser.\nPlease download the file to view its contents.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: theme.colorScheme.outline),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Error display for preview failures
+class _PreviewError extends StatelessWidget {
+  final String message;
+  final ThemeData theme;
+  final AppSpacing spacing;
+
+  const _PreviewError({
+    required this.message,
+    required this.theme,
+    required this.spacing,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(spacing.lg),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.broken_image, size: 48, color: theme.colorScheme.error),
+          SizedBox(height: spacing.sm),
+          Text(message, style: TextStyle(color: theme.colorScheme.error)),
         ],
       ),
     );

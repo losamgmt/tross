@@ -81,15 +81,8 @@ module.exports = {
     ],
   },
 
-  files: {
-    basePath: '/api/files',
-    auth: { required: true, minRole: 'viewer' },
-    endpoints: [
-      { method: 'POST', path: '/:entityType/:entityId', behavior: 'create', paramTypes: { entityType: 'string', entityId: 'id' }, description: 'Upload file to entity' },
-      { method: 'GET', path: '/:id/download', behavior: 'download', paramTypes: { id: 'id' }, description: 'Download file' },
-      { method: 'DELETE', path: '/:id', behavior: 'delete', paramTypes: { id: 'id' }, description: 'Delete file' },
-    ],
-  },
+  // NOTE: files routes removed - file attachments now use sub-resource pattern
+  // /api/:tableName/:id/files (tested in files-api.test.js)
 
   preferences: {
     basePath: '/api/preferences',

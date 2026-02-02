@@ -109,11 +109,11 @@ class FileAttachmentService {
    * @param {number} entityId - Entity ID
    * @param {Object} [options={}] - Query options
    * @param {string} [options.category] - Filter by category
-   * @returns {Promise<Array>} Array of file records
+   * @returns {Promise<Array>} Array of file records (includes storage_key for URL generation)
    */
   static async listFilesForEntity(entityType, entityId, options = {}) {
     let query = `
-      SELECT id, entity_type, entity_id, original_filename, mime_type, 
+      SELECT id, entity_type, entity_id, original_filename, storage_key, mime_type, 
              file_size, category, description, uploaded_by, created_at
       FROM file_attachments
       WHERE entity_type = $1 AND entity_id = $2 AND is_active = true
@@ -214,11 +214,19 @@ class FileAttachmentService {
   /**
    * Format a file record for API response
    * Excludes internal fields like storage_key
+   * Includes required download URL fields
    *
    * @param {Object} row - Database row
+   * @param {Object} downloadInfo - Download URL information (required)
+   * @param {string} downloadInfo.url - Signed download URL
+   * @param {Date} downloadInfo.expiresAt - Absolute expiry datetime
    * @returns {Object} Formatted response object
    */
-  static formatForResponse(row) {
+  static formatForResponse(row, downloadInfo) {
+    if (!downloadInfo || !downloadInfo.url || !downloadInfo.expiresAt) {
+      throw new Error('downloadInfo with url and expiresAt is required');
+    }
+
     return {
       id: row.id,
       entity_type: row.entity_type,
@@ -230,6 +238,8 @@ class FileAttachmentService {
       description: row.description,
       uploaded_by: row.uploaded_by,
       created_at: row.created_at,
+      download_url: downloadInfo.url,
+      download_url_expires_at: downloadInfo.expiresAt.toISOString(),
     };
   }
 }

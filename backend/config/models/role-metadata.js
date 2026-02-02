@@ -89,6 +89,11 @@ module.exports = {
   navVisibility: 'admin',
 
   /**
+   * File attachments - whether this entity supports file uploads
+   */
+  supportsFileAttachments: false,
+
+  /**
    * Entity-level permission overrides
    * Roles are admin-only for CUD, but readable by all
    */

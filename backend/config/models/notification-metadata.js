@@ -70,6 +70,11 @@ module.exports = {
   navVisibility: null,
 
   /**
+   * File attachments - whether this entity supports file uploads
+   */
+  supportsFileAttachments: false,
+
+  /**
    * Entity-level permission overrides
    * Users can read/delete their own notifications
    * Create is system-only (backend creates notifications, not users)

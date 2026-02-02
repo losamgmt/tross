@@ -117,7 +117,7 @@ class _EntityDetailScreenState extends State<EntityDetailScreen> {
     try {
       final fileService = context.read<FileService>();
       final files = await fileService.listFiles(
-        entityType: widget.entityName,
+        entityKey: widget.entityName,
         entityId: widget.entityId,
       );
       if (mounted) {
@@ -169,7 +169,7 @@ class _EntityDetailScreenState extends State<EntityDetailScreen> {
 
     try {
       await fileService.uploadFile(
-        entityType: widget.entityName,
+        entityKey: widget.entityName,
         entityId: widget.entityId,
         filename: file.name,
         bytes: file.bytes!,
@@ -201,15 +201,30 @@ class _EntityDetailScreenState extends State<EntityDetailScreen> {
 
   Future<void> _handleFileDownload(FileAttachment file) async {
     try {
-      final fileService = context.read<FileService>();
-      final downloadInfo = await fileService.getDownloadUrl(fileId: file.id);
-
-      // Open URL in browser/system handler
-      final uri = Uri.parse(downloadInfo.downloadUrl);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      // Check if download URL has expired
+      if (file.isDownloadUrlExpired) {
+        // Refresh the file to get a fresh download URL
+        final fileService = context.read<FileService>();
+        final refreshedFile = await fileService.getFile(
+          entityKey: widget.entityName,
+          entityId: widget.entityId,
+          fileId: file.id,
+        );
+        // Use the refreshed URL
+        final uri = Uri.parse(refreshedFile.downloadUrl);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } else {
+          throw Exception('Could not open download URL');
+        }
       } else {
-        throw Exception('Could not open download URL');
+        // URL is still fresh, use it directly
+        final uri = Uri.parse(file.downloadUrl);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } else {
+          throw Exception('Could not open download URL');
+        }
       }
     } catch (e) {
       ErrorService.logError('Failed to download file', error: e);
@@ -253,7 +268,11 @@ class _EntityDetailScreenState extends State<EntityDetailScreen> {
     if (confirmed != true) return;
 
     try {
-      await fileService.deleteFile(fileId: file.id);
+      await fileService.deleteFile(
+        entityKey: widget.entityName,
+        entityId: widget.entityId,
+        fileId: file.id,
+      );
 
       if (!mounted) return;
 

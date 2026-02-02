@@ -139,6 +139,28 @@ const REDIS = Object.freeze({
   }),
 });
 
+// File Attachments Configuration Constants
+const FILE_ATTACHMENTS = Object.freeze({
+  // Signed URL expiration in seconds (1 hour)
+  DOWNLOAD_URL_EXPIRY_SECONDS: 3600,
+  // Maximum file size in bytes (10MB)
+  MAX_FILE_SIZE: 10 * 1024 * 1024,
+  // Allowed MIME types for uploads
+  ALLOWED_MIME_TYPES: Object.freeze([
+    'image/jpeg',
+    'image/png',
+    'image/gif',
+    'image/webp',
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'text/plain',
+    'text/csv',
+  ]),
+});
+
 // ============================================================================
 // ENTITY FIELD CONSTANTS (for GenericEntityService CRUD operations)
 // ============================================================================
@@ -523,6 +545,7 @@ module.exports = Object.freeze({
   SECURITY,
   DATABASE,
   REDIS,
+  FILE_ATTACHMENTS,
   NAME_TYPES,
   RLS_RESOURCE_TYPES,
   // NAME_TYPE_MAP is derived from metadata at runtime

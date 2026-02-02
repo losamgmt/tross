@@ -329,11 +329,26 @@ DELETE /api/work_orders/:id
 
 ### File Attachments
 
-Generic file storage for any entity (work orders, customers, invoices, etc.).
+Files are attached to entities using a **sub-resource pattern**. The URL path uses `tableName` (plural, snake_case) from entity metadata.
+
+**URL Pattern:**
+```
+/api/:tableName/:id/files
+```
+
+**Permission Mapping:**
+| File Operation | Required Permission |
+|----------------|---------------------|
+| List files | `read` on parent entity |
+| Get file | `read` on parent entity |
+| Upload file | `update` on parent entity |
+| Delete file | `update` on parent entity |
+
+---
 
 **List Files for Entity**
 ```http
-GET /api/files/:entityType/:entityId
+GET /api/work_orders/123/files
 ```
 
 **Query Parameters:**
@@ -353,15 +368,46 @@ GET /api/files/:entityType/:entityId
       "category": "before_photo",
       "description": "Kitchen sink before repair",
       "uploaded_by": 7,
+      "download_url": "https://bucket.r2.cloudflarestorage.com/files/...",
+      "download_url_expires_at": "2026-02-01T11:30:00Z",
       "created_at": "2025-12-15T10:30:00Z"
     }
   ]
 }
 ```
 
+---
+
+**Get Single File**
+```http
+GET /api/work_orders/123/files/42
+```
+
+**Response:**
+```json
+{
+  "data": {
+    "id": 42,
+    "entity_type": "work_order",
+    "entity_id": 123,
+    "original_filename": "before_photo.jpg",
+    "mime_type": "image/jpeg",
+    "file_size": 245760,
+    "category": "before_photo",
+    "download_url": "https://bucket.r2.cloudflarestorage.com/files/...",
+    "download_url_expires_at": "2026-02-01T11:30:00Z",
+    "created_at": "2025-12-15T10:30:00Z"
+  }
+}
+```
+
+> **Note:** `download_url` and `download_url_expires_at` are **always** present in file responses. No separate download endpoint needed—use the signed URL directly.
+
+---
+
 **Upload File**
 ```http
-POST /api/files/:entityType/:entityId
+POST /api/work_orders/123/files
 Content-Type: image/jpeg
 X-Filename: photo.jpg
 X-Category: before_photo
@@ -382,32 +428,21 @@ X-Description: Before work started
     "mime_type": "image/jpeg",
     "file_size": 245760,
     "category": "before_photo",
+    "download_url": "https://bucket.r2.cloudflarestorage.com/files/...",
+    "download_url_expires_at": "2026-02-01T11:30:00Z",
     "created_at": "2025-12-15T10:30:00Z"
   }
 }
 ```
 
-**Get Download URL** (Signed URL, 1 hour expiry)
+---
+
+**Delete File** (Soft delete—sets `is_active=false`)
 ```http
-GET /api/files/:id/download
+DELETE /api/work_orders/123/files/42
 ```
 
-**Response:**
-```json
-{
-  "data": {
-    "download_url": "https://storage.example.com/files/...",
-    "filename": "photo.jpg",
-    "mime_type": "image/jpeg",
-    "expires_in": 3600
-  }
-}
-```
-
-**Deactivate File** (Sets is_active=false)
-```http
-DELETE /api/files/:id
-```
+---
 
 **Supported File Types:**
 - Images: JPEG, PNG, GIF, WebP
@@ -416,7 +451,7 @@ DELETE /api/files/:id
 
 **File Categories:**
 - `before_photo` - Work order before photos
-- `after_photo` - Work order after photos
+- `after_photo` - Work order after photos  
 - `document` - General documents
 - `signature` - Customer signatures
 - `attachment` - Generic attachments (default)

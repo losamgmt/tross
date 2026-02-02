@@ -79,6 +79,12 @@ module.exports = {
   navVisibility: null,
 
   /**
+   * File attachments - whether this entity supports file uploads
+   * Note: file_attachment is the attachment entity itself, not a target for attachments
+   */
+  supportsFileAttachments: false,
+
+  /**
    * Entity-level permission overrides
    * Matches permissions.json - technician+ create/update, dispatcher+ delete
    */

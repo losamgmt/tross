@@ -104,6 +104,12 @@ module.exports = {
   navVisibility: 'dispatcher',
 
   /**
+   * File attachments - whether this entity supports file uploads
+   * Invoices: invoice PDFs, receipts, payment confirmations
+   */
+  supportsFileAttachments: true,
+
+  /**
    * Route configuration - explicit opt-in for generic router
    */
   routeConfig: {

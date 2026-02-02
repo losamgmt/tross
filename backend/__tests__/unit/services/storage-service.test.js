@@ -56,6 +56,7 @@ jest.mock('@aws-sdk/client-s3', () => ({
   GetObjectCommand: jest.fn((params) => ({ ...params, _type: 'GetObject' })),
   DeleteObjectCommand: jest.fn((params) => ({ ...params, _type: 'DeleteObject' })),
   HeadObjectCommand: jest.fn((params) => ({ ...params, _type: 'HeadObject' })),
+  HeadBucketCommand: jest.fn((params) => ({ ...params, _type: 'HeadBucket' })),
 }));
 
 // Mock presigner - use the shared mockGetSignedUrl function
@@ -442,6 +443,151 @@ describe('StorageService', () => {
       const result = await service.getMetadata('test/file.pdf');
 
       expect(result.metadata).toBeUndefined();
+    });
+  });
+
+  // ===========================================================================
+  // getConfigurationInfo() Tests
+  // ===========================================================================
+
+  describe('getConfigurationInfo()', () => {
+    test('returns configured info when all env vars present', () => {
+      const result = service.getConfigurationInfo();
+
+      expect(result).toEqual({
+        configured: true,
+        provider: 'r2',
+        bucket: 'test-bucket',
+      });
+    });
+
+    test('returns unconfigured when storage not set up', () => {
+      // Reset with missing env vars
+      delete process.env.STORAGE_ENDPOINT;
+      delete process.env.STORAGE_ACCESS_KEY;
+      delete process.env.STORAGE_SECRET_KEY;
+      
+      jest.resetModules();
+      const { StorageService: UnconfiguredStorageService } = require('../../../services/storage-service');
+      const unconfiguredService = new UnconfiguredStorageService();
+
+      const result = unconfiguredService.getConfigurationInfo();
+
+      expect(result).toEqual({
+        configured: false,
+        provider: 'r2',
+        bucket: null,
+      });
+    });
+
+    test('returns provider as none when STORAGE_PROVIDER not set', () => {
+      delete process.env.STORAGE_PROVIDER;
+      
+      jest.resetModules();
+      const { StorageService: NoProviderService } = require('../../../services/storage-service');
+      const noProviderService = new NoProviderService();
+
+      const result = noProviderService.getConfigurationInfo();
+
+      expect(result.provider).toBe('none');
+    });
+  });
+
+  // ===========================================================================
+  // healthCheck() Tests
+  // ===========================================================================
+
+  describe('healthCheck()', () => {
+    test('returns healthy when bucket is reachable', async () => {
+      mockSend.mockResolvedValueOnce({}); // HeadBucket success
+
+      const result = await service.healthCheck();
+
+      expect(result).toMatchObject({
+        configured: true,
+        reachable: true,
+        bucket: 'test-bucket',
+        status: 'healthy',
+      });
+      expect(result.responseTime).toBeGreaterThanOrEqual(0);
+    });
+
+    test('sends HeadBucketCommand with correct bucket', async () => {
+      const { HeadBucketCommand } = require('@aws-sdk/client-s3');
+      mockSend.mockResolvedValueOnce({});
+
+      await service.healthCheck();
+
+      expect(HeadBucketCommand).toHaveBeenCalledWith({
+        Bucket: 'test-bucket',
+      });
+    });
+
+    test('returns unconfigured when storage not set up', async () => {
+      delete process.env.STORAGE_ENDPOINT;
+      delete process.env.STORAGE_ACCESS_KEY;
+      delete process.env.STORAGE_SECRET_KEY;
+      
+      jest.resetModules();
+      const { StorageService: UnconfiguredStorageService } = require('../../../services/storage-service');
+      const unconfiguredService = new UnconfiguredStorageService();
+
+      const result = await unconfiguredService.healthCheck();
+
+      expect(result).toEqual({
+        configured: false,
+        reachable: false,
+        bucket: null,
+        responseTime: 0,
+        status: 'unconfigured',
+        message: 'Storage not configured (missing environment variables)',
+      });
+    });
+
+    test('returns critical when bucket is unreachable', async () => {
+      const networkError = new Error('Network error');
+      mockSend.mockRejectedValueOnce(networkError);
+
+      const result = await service.healthCheck();
+
+      expect(result).toMatchObject({
+        configured: true,
+        reachable: false,
+        bucket: 'test-bucket',
+        status: 'critical',
+        message: 'Storage connectivity failed',
+      });
+    });
+
+    test('returns appropriate message for access denied', async () => {
+      const accessDeniedError = new Error('Access Denied');
+      accessDeniedError.name = 'AccessDenied';
+      mockSend.mockRejectedValueOnce(accessDeniedError);
+
+      const result = await service.healthCheck();
+
+      expect(result.status).toBe('critical');
+      expect(result.message).toBe('Storage access denied (check credentials)');
+    });
+
+    test('returns appropriate message for bucket not found', async () => {
+      const notFoundError = new Error('Bucket not found');
+      notFoundError.$metadata = { httpStatusCode: 404 };
+      mockSend.mockRejectedValueOnce(notFoundError);
+
+      const result = await service.healthCheck();
+
+      expect(result.status).toBe('critical');
+      expect(result.message).toContain('not found');
+    });
+
+    test('measures response time accurately', async () => {
+      // Simulate a slow response
+      mockSend.mockImplementationOnce(() => new Promise(resolve => setTimeout(resolve, 50)));
+
+      const result = await service.healthCheck();
+
+      expect(result.responseTime).toBeGreaterThanOrEqual(50);
     });
   });
 });

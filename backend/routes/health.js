@@ -31,6 +31,7 @@ const { TIMEOUTS } = require('../config/timeouts');
 const auth0Config = require('../config/auth0');
 const ResponseFormatter = require('../utils/response-formatter');
 const { asyncHandler } = require('../middleware/utils');
+const { storageService } = require('../services/storage-service');
 // ServiceUnavailableError available if needed: const { ServiceUnavailableError } = require('../utils/errors');
 
 // ============================================================================
@@ -228,6 +229,43 @@ function getMemoryMetrics() {
 }
 
 /**
+ * Get storage configuration status (no network call)
+ * Used in readiness probe to verify storage is configured
+ * @returns {Object} Storage configuration status
+ */
+function getStorageConfiguration() {
+  const config = storageService.getConfigurationInfo();
+  return {
+    configured: config.configured,
+    provider: config.provider,
+    status: config.configured ? HEALTH.STATUS.HEALTHY : HEALTH.STATUS.DEGRADED,
+  };
+}
+
+/**
+ * Deep storage health check (makes network call to R2)
+ * Used in /health/storage admin endpoint
+ * @returns {Promise<Object>} Storage health status with connectivity info
+ */
+async function checkStorage() {
+  const result = await storageService.healthCheck(TIMEOUTS.SERVICES.HEALTH_CHECK_MS);
+
+  // Map storage status to HEALTH.STATUS constants
+  let status;
+  if (result.status === 'healthy') {
+    status = HEALTH.STATUS.HEALTHY;
+  } else if (result.status === 'unconfigured') {
+    status = HEALTH.STATUS.DEGRADED;
+  } else {
+    status = HEALTH.STATUS.CRITICAL;
+  }
+
+  return {
+    ...result,
+    status,
+  };
+}
+/**
  * Determine overall system status from component statuses
  * @param  {...string} statuses - Component status values
  * @returns {string} Overall status (healthy, degraded, or critical)
@@ -316,6 +354,7 @@ router.get('/', asyncHandler(async (req, res) => {
  *       Checks if service is ready to accept traffic:
  *       - Database must be connected
  *       - Auth0 must be reachable (if configured)
+ *       - Storage configuration status (no network call)
  *
  *       Use for Kubernetes readiness probes.
  *     responses:
@@ -331,6 +370,7 @@ router.get('/ready', asyncHandler(async (req, res) => {
     checkAuth0(),
   ]);
 
+  const storage = getStorageConfiguration();
   const overallStatus = determineOverallStatus(database.status, auth0.status);
   const ready = database.connected && (auth0.status !== HEALTH.STATUS.CRITICAL || !auth0.configured);
 
@@ -349,6 +389,11 @@ router.get('/ready', asyncHandler(async (req, res) => {
         reachable: auth0.reachable,
         status: auth0.status,
         responseTime: auth0.responseTime,
+      },
+      storage: {
+        configured: storage.configured,
+        provider: storage.provider,
+        status: storage.status,
       },
     },
   };
@@ -405,6 +450,59 @@ router.get('/databases', authenticateToken, requireMinimumRole('admin'), asyncHa
   ResponseFormatter.get(res, { databases });
 }));
 
+/**
+ * @openapi
+ * /api/health/storage:
+ *   get:
+ *     tags: [Health]
+ *     summary: Deep storage health check (admin only)
+ *     description: |
+ *       Performs a deep health check on the R2/S3 storage backend.
+ *       Actually pings the storage bucket to verify connectivity.
+ *       Requires admin authentication.
+ *
+ *       Includes: bucket name, reachability, response time, provider info
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Storage is healthy and reachable
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Admin access required
+ *       503:
+ *         description: Storage is not reachable or not configured
+ */
+router.get('/storage', authenticateToken, requireMinimumRole('admin'), asyncHandler(async (req, res) => {
+  const storage = await checkStorage();
+
+  const response = {
+    storage: {
+      configured: storage.configured,
+      reachable: storage.reachable,
+      bucket: storage.bucket,
+      provider: process.env.STORAGE_PROVIDER || 'none',
+      status: storage.status,
+      responseTime: storage.responseTime,
+      message: storage.message,
+      lastChecked: new Date().toISOString(),
+    },
+  };
+
+  // Return 503 if storage not reachable (but only if configured)
+  if (storage.configured && !storage.reachable) {
+    return ResponseFormatter.serviceUnavailable(res, 'Storage not reachable', response);
+  }
+
+  // Return 503 if not configured (informational, not an error per se)
+  if (!storage.configured) {
+    return ResponseFormatter.serviceUnavailable(res, 'Storage not configured', response);
+  }
+
+  ResponseFormatter.get(res, response);
+}));
+
 // Export router and helper functions
 module.exports = router;
 
@@ -413,3 +511,5 @@ module.exports.clearCache = clearCache;
 module.exports.checkDatabase = checkDatabase;
 module.exports.checkAuth0 = checkAuth0;
 module.exports.getMemoryMetrics = getMemoryMetrics;
+module.exports.getStorageConfiguration = getStorageConfiguration;
+module.exports.checkStorage = checkStorage;

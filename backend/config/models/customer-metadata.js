@@ -86,6 +86,11 @@ module.exports = {
   navVisibility: 'customer',
 
   /**
+   * File attachments - whether this entity supports file uploads
+   */
+  supportsFileAttachments: false,
+
+  /**
    * Entity-level permission overrides
    * Matches permissions.json - dispatcher+ create, customer+ read/update, manager+ delete
    */

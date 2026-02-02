@@ -6,11 +6,20 @@ Guide to monitoring TrossApp's health and responding to issues.
 
 ## Health Endpoints
 
-### Backend Health Check
+TrossApp follows Kubernetes-style health probes with three levels of checks:
+
+| Endpoint | Purpose | Auth | External Calls |
+|----------|---------|------|----------------|
+| `/api/health` | Liveness probe | None | None |
+| `/api/health/ready` | Readiness probe | None | Database only |
+| `/api/health/storage` | Deep storage check | Admin | R2 bucket |
+
+### Liveness Probe
 
 **Endpoint:** `GET /api/health`
 
-**Response (Healthy):**
+Quick check that the process is running. Never calls external services.
+
 ```json
 {
   "status": "healthy",
@@ -20,14 +29,52 @@ Guide to monitoring TrossApp's health and responding to issues.
 }
 ```
 
-**Response (Unhealthy):**
+### Readiness Probe
+
+**Endpoint:** `GET /api/health/ready`
+
+Checks if the service is ready to accept traffic. Includes database connectivity and storage configuration (no network call to R2).
+
 ```json
 {
-  "status": "unhealthy",
+  "status": "ready",
   "timestamp": "2025-11-21T10:30:00.000Z",
-  "error": "Database connection failed"
+  "checks": {
+    "database": { "status": "healthy", "responseTime": 12 },
+    "storage": { "status": "healthy", "provider": "r2", "bucket": "tross-files" }
+  }
 }
 ```
+
+**Storage Status Values:**
+- `healthy` - Storage is configured
+- `degraded` - Storage not configured (uploads disabled but app works)
+
+### Deep Storage Check (Admin Only)
+
+**Endpoint:** `GET /api/health/storage`
+
+Actually pings the R2 bucket using `HeadBucket`. Requires admin authentication.
+
+```json
+{
+  "status": "healthy",
+  "timestamp": "2025-11-21T10:30:00.000Z",
+  "storage": {
+    "configured": true,
+    "reachable": true,
+    "bucket": "tross-files",
+    "responseTime": 145,
+    "status": "healthy"
+  }
+}
+```
+
+**Status Values:**
+- `healthy` - Bucket reachable
+- `critical` - Bucket unreachable (connectivity or permission issue)
+- `timeout` - Check exceeded timeout (default 5s)
+- `unconfigured` - Storage env vars not set
 
 **Endpoints:**
 - Railway (Production): `https://tross-api-production.up.railway.app/api/health`
