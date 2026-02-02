@@ -824,6 +824,269 @@ void main() {
           ),
         );
       });
+
+      test('throws on 500 server error with JSON error message', () async {
+        mockApiClient.mockAuthenticatedRequest((
+          method,
+          endpoint, {
+          token,
+          body,
+        }) {
+          return http.Response(
+            jsonEncode({'error': 'Database connection failed'}),
+            500,
+          );
+        });
+
+        expect(
+          () => service.deleteFile(
+            entityKey: 'work_order',
+            entityId: 123,
+            fileId: 42,
+          ),
+          throwsA(
+            isA<Exception>().having(
+              (e) => e.toString(),
+              'message',
+              contains('Database connection failed'),
+            ),
+          ),
+        );
+      });
+
+      test('throws on 500 server error with plain text body', () async {
+        mockApiClient.mockAuthenticatedRequest((
+          method,
+          endpoint, {
+          token,
+          body,
+        }) {
+          return http.Response('Internal Server Error', 500);
+        });
+
+        expect(
+          () => service.deleteFile(
+            entityKey: 'work_order',
+            entityId: 123,
+            fileId: 42,
+          ),
+          throwsA(
+            isA<Exception>().having(
+              (e) => e.toString(),
+              'message',
+              contains('Server error (500)'),
+            ),
+          ),
+        );
+      });
+    });
+
+    // =========================================================================
+    // Additional Error Path Tests
+    // =========================================================================
+    group('Error Handling', () {
+      group('getFile error paths', () {
+        test('throws on 401 unauthorized', () async {
+          mockApiClient.mockAuthenticatedRequest((
+            method,
+            endpoint, {
+            token,
+            body,
+          }) {
+            return http.Response('Unauthorized', 401);
+          });
+
+          expect(
+            () => service.getFile(
+              entityKey: 'work_order',
+              entityId: 123,
+              fileId: 42,
+            ),
+            throwsA(
+              isA<Exception>().having(
+                (e) => e.toString(),
+                'message',
+                contains('Authentication required'),
+              ),
+            ),
+          );
+        });
+
+        test('throws on 403 forbidden', () async {
+          mockApiClient.mockAuthenticatedRequest((
+            method,
+            endpoint, {
+            token,
+            body,
+          }) {
+            return http.Response('Forbidden', 403);
+          });
+
+          expect(
+            () => service.getFile(
+              entityKey: 'work_order',
+              entityId: 123,
+              fileId: 42,
+            ),
+            throwsA(
+              isA<Exception>().having(
+                (e) => e.toString(),
+                'message',
+                contains('Permission denied'),
+              ),
+            ),
+          );
+        });
+
+        test('throws on 500 with JSON message field', () async {
+          mockApiClient.mockAuthenticatedRequest((
+            method,
+            endpoint, {
+            token,
+            body,
+          }) {
+            return http.Response(
+              jsonEncode({'message': 'Storage unavailable'}),
+              500,
+            );
+          });
+
+          expect(
+            () => service.getFile(
+              entityKey: 'work_order',
+              entityId: 123,
+              fileId: 42,
+            ),
+            throwsA(
+              isA<Exception>().having(
+                (e) => e.toString(),
+                'message',
+                contains('Storage unavailable'),
+              ),
+            ),
+          );
+        });
+      });
+
+      group('listFiles error paths', () {
+        test('throws on 500 server error', () async {
+          mockApiClient.mockAuthenticatedRequest((
+            method,
+            endpoint, {
+            token,
+            body,
+          }) {
+            return http.Response(jsonEncode({'error': 'Query timeout'}), 500);
+          });
+
+          expect(
+            () => service.listFiles(entityKey: 'work_order', entityId: 123),
+            throwsA(
+              isA<Exception>().having(
+                (e) => e.toString(),
+                'message',
+                contains('Query timeout'),
+              ),
+            ),
+          );
+        });
+
+        test('throws with fallback message on malformed response', () async {
+          mockApiClient.mockAuthenticatedRequest((
+            method,
+            endpoint, {
+            token,
+            body,
+          }) {
+            return http.Response('{invalid json', 500);
+          });
+
+          expect(
+            () => service.listFiles(entityKey: 'work_order', entityId: 123),
+            throwsA(
+              isA<Exception>().having(
+                (e) => e.toString(),
+                'message',
+                contains('Server error (500)'),
+              ),
+            ),
+          );
+        });
+      });
+
+      group('_parseError fallback cases', () {
+        test('uses error field from JSON response', () async {
+          mockApiClient.mockAuthenticatedRequest((
+            method,
+            endpoint, {
+            token,
+            body,
+          }) {
+            return http.Response(
+              jsonEncode({'error': 'Custom error message'}),
+              422,
+            );
+          });
+
+          expect(
+            () => service.listFiles(entityKey: 'work_order', entityId: 123),
+            throwsA(
+              isA<Exception>().having(
+                (e) => e.toString(),
+                'message',
+                contains('Custom error message'),
+              ),
+            ),
+          );
+        });
+
+        test('uses message field when error is absent', () async {
+          mockApiClient.mockAuthenticatedRequest((
+            method,
+            endpoint, {
+            token,
+            body,
+          }) {
+            return http.Response(
+              jsonEncode({'message': 'Validation failed'}),
+              400,
+            );
+          });
+
+          expect(
+            () => service.listFiles(entityKey: 'work_order', entityId: 123),
+            throwsA(
+              isA<Exception>().having(
+                (e) => e.toString(),
+                'message',
+                contains('Validation failed'),
+              ),
+            ),
+          );
+        });
+
+        test('falls back to Unknown error when no error or message', () async {
+          mockApiClient.mockAuthenticatedRequest((
+            method,
+            endpoint, {
+            token,
+            body,
+          }) {
+            return http.Response(jsonEncode({'success': false}), 418);
+          });
+
+          expect(
+            () => service.listFiles(entityKey: 'work_order', entityId: 123),
+            throwsA(
+              isA<Exception>().having(
+                (e) => e.toString(),
+                'message',
+                contains('Unknown error'),
+              ),
+            ),
+          );
+        });
+      });
     });
   });
 }

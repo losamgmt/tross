@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/services/auth_test_service.dart';
+import '../helpers/auth_test_service.dart';
 
 /// Unit Tests for AuthTestService - Model Validation Only
 ///

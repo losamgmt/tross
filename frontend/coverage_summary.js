@@ -2,9 +2,22 @@ const fs = require('fs');
 const lcov = fs.readFileSync('coverage/lcov.info', 'utf8');
 let total = 0;
 let covered = 0;
+let currentFile = '';
+
+// Web-only files that require browser to test (legitimate exclusions)
+const webOnlyFiles = [
+  'export_service_web.dart',
+  'browser_origin_web.dart',
+  'browser_utils_web.dart',
+];
+
+const isWebOnlyFile = (path) => webOnlyFiles.some(f => path.includes(f));
 
 for (const line of lcov.split('\n')) {
-  if (line.startsWith('DA:')) {
+  if (line.startsWith('SF:')) {
+    currentFile = line.substring(3);
+  }
+  if (line.startsWith('DA:') && !isWebOnlyFile(currentFile)) {
     total++;
     // Line is covered if count > 0 (not ending in ,0)
     if (!line.endsWith(',0')) {

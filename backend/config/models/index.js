@@ -41,11 +41,11 @@ function loadAllMetadata() {
 
     // Use EXPLICIT entityKey from metadata (SSOT, no derivation)
     const entityKey = metadata.entityKey;
-    
+
     if (!entityKey) {
       throw new Error(
         `Metadata file '${file}' missing required 'entityKey' property. ` +
-        `Each metadata file must explicitly define its entityKey.`
+        'Each metadata file must explicitly define its entityKey.',
       );
     }
 

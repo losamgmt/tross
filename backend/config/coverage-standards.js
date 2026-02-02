@@ -59,9 +59,8 @@ const collectCoverageFrom = [
   '!services/auth/DevAuthStrategy.js',
   '!services/auth/AuthStrategy.js',
   '!services/auth/index.js',
-  // Routes that require external services
+  // Routes that require external services (Auth0 callback, dev-only)
   '!routes/auth0.js',
-  '!routes/files.js',
   '!routes/dev-auth.js',
   // Middleware that's hard to unit test
   '!middleware/rate-limit.js',

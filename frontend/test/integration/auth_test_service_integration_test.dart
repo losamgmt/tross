@@ -6,7 +6,7 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tross_app/config/app_config.dart';
-import 'package:tross_app/services/auth_test_service.dart';
+import '../helpers/auth_test_service.dart';
 
 void main() {
   group('AuthTestService Integration Tests', () {

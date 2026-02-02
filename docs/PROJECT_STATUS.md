@@ -28,9 +28,6 @@
 - [ ] Maintenance tab - Orphan detection and cleanup
 - [ ] Settings tab - R2 configuration display
 
-**Production Deployment**
-- [ ] Deploy R2 credentials to Railway
-
 ---
 
 ## Architecture Quick Reference

@@ -24,6 +24,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+### Changed - Coverage Cleanup & 80% Threshold (2026-02-01)
+
+#### Dead Code Removal
+- **Removed** `lib/utils/form_validators.dart` - was only imported by tests, never used in production
+- **Removed** `test/utils/form_validators_test.dart` - tests for dead code
+
+#### Test Infrastructure Relocation
+- **Moved** `lib/services/auth_test_service.dart` → `test/helpers/auth_test_service.dart`
+  - This was a dev utility for manual auth testing, not production code
+  - Relocating removes ~112 lines from production coverage scope
+
+#### Coverage Improvements
+- Added `PermissionConfig` model tests (34 total tests):
+  - `getNavVisibilityPriority` with explicit navVisibility and fallback to read permission
+  - `getRowLevelSecurity` for role-based data access policies
+  - Edge cases for null/empty roles and missing resources
+- Frontend coverage: **80.01%** (5165 tests, 8539/10672 lines)
+- Backend coverage: **80.14%** (3384 tests)
+
+---
+
 ### Added - File Attachments Complete (2026-02-01)
 
 #### Phase 5: Entity Naming Convention Unification ✅
