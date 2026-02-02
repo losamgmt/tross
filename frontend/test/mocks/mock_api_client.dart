@@ -159,6 +159,37 @@ class MockApiClient implements ApiClient {
     _failureMessage = 'Mock API Error';
     _currentToken = null;
     _onTokenRefreshNeeded = null;
+    _authenticatedRequestHandler = null;
+  }
+
+  /// Callback for authenticatedRequest - allows full control over response
+  http.Response Function(
+    String method,
+    String endpoint, {
+    String? token,
+    Map<String, dynamic>? body,
+  })?
+  _authenticatedRequestHandler;
+
+  /// Set a callback to handle all authenticatedRequest calls
+  ///
+  /// Use this for fine-grained control over request/response testing:
+  /// ```dart
+  /// mockApiClient.mockAuthenticatedRequest((method, endpoint, {token, body}) {
+  ///   expect(endpoint, '/work_orders/123/files');
+  ///   return http.Response(jsonEncode({'success': true, 'data': []}), 200);
+  /// });
+  /// ```
+  void mockAuthenticatedRequest(
+    http.Response Function(
+      String method,
+      String endpoint, {
+      String? token,
+      Map<String, dynamic>? body,
+    })
+    handler,
+  ) {
+    _authenticatedRequestHandler = handler;
   }
 
   /// Verify endpoint was called
@@ -255,6 +286,17 @@ class MockApiClient implements ApiClient {
     bool isRetry = false,
   }) async {
     _recordCall('$method $endpoint');
+
+    // Use callback handler if set (highest priority)
+    if (_authenticatedRequestHandler != null) {
+      return _authenticatedRequestHandler!(
+        method,
+        endpoint,
+        token: token,
+        body: body,
+      );
+    }
+
     if (_shouldFail) {
       _shouldFail = false;
       throw Exception(_failureMessage);

@@ -217,6 +217,8 @@ function transformModel(entityName, backendMeta, allModels) {
     rlsResource: backendMeta.rlsResource,
     // Material icon for navigation menus and entity displays
     icon: backendMeta.icon,
+    // Whether this entity supports file attachments (metadata-driven UI)
+    supportsFileAttachments: backendMeta.supportsFileAttachments,
   };
   
   // displayField - what to show when this entity is referenced (e.g., in FK dropdowns)

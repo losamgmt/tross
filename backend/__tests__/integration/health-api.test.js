@@ -282,4 +282,102 @@ describe('Health Endpoints - Integration Tests', () => {
       });
     });
   });
+
+  describe('GET /api/health/ready - Storage Configuration', () => {
+    test('should include storage configuration in readiness check', async () => {
+      // Act
+      const response = await request(app).get('/api/health/ready');
+
+      // Assert
+      expect([200, 503]).toContain(response.status);
+      const healthData = response.body.data || response.body;
+      expect(healthData.checks).toHaveProperty('storage');
+      expect(healthData.checks.storage).toHaveProperty('configured');
+      expect(healthData.checks.storage).toHaveProperty('provider');
+      expect(healthData.checks.storage).toHaveProperty('status');
+    });
+
+    test('should report storage provider type', async () => {
+      // Act
+      const response = await request(app).get('/api/health/ready');
+
+      // Assert
+      const healthData = response.body.data || response.body;
+      // Provider should be 'r2', 'none', or another configured value
+      expect(['r2', 's3', 'none']).toContain(healthData.checks.storage.provider);
+    });
+  });
+
+  describe('GET /api/health/storage - Deep Storage Check', () => {
+    let adminToken;
+
+    beforeAll(async () => {
+      const { createTestUser } = require('../helpers/test-db');
+      const admin = await createTestUser('admin');
+      adminToken = admin.token;
+    });
+
+    test('should require authentication', async () => {
+      // Act
+      const response = await request(app).get('/api/health/storage');
+
+      // Assert
+      expect(response.status).toBe(401);
+    });
+
+    test('should require admin role', async () => {
+      // Arrange
+      const { createTestUser } = require('../helpers/test-db');
+      const user = await createTestUser('user');
+
+      // Act
+      const response = await request(app)
+        .get('/api/health/storage')
+        .set('Authorization', `Bearer ${user.token}`);
+
+      // Assert
+      expect(response.status).toBe(403);
+    });
+
+    test('should return storage health details for admin', async () => {
+      // Act
+      const response = await request(app)
+        .get('/api/health/storage')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      // Assert - Could be 200 (healthy) or 503 (not configured/unreachable)
+      expect([200, 503]).toContain(response.status);
+      
+      const storageData = response.body.data?.storage || response.body.storage;
+      expect(storageData).toHaveProperty('configured');
+      expect(storageData).toHaveProperty('provider');
+      expect(storageData).toHaveProperty('status');
+      expect(storageData).toHaveProperty('lastChecked');
+    });
+
+    test('should include response time when storage is checked', async () => {
+      // Act
+      const response = await request(app)
+        .get('/api/health/storage')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      // Assert
+      const storageData = response.body.data?.storage || response.body.storage;
+      expect(storageData).toHaveProperty('responseTime');
+      expect(typeof storageData.responseTime).toBe('number');
+    });
+
+    test('should not expose sensitive information', async () => {
+      // Act
+      const response = await request(app)
+        .get('/api/health/storage')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      // Assert - Should not contain credentials
+      const body = JSON.stringify(response.body);
+      expect(body).not.toMatch(/secret/i);
+      expect(body).not.toMatch(/access.?key/i);
+      expect(body).not.toMatch(/password/i);
+    });
+  });
 });

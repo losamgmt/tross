@@ -151,6 +151,8 @@ class EntityMetadataRegistry {
       identityField: identityField,
       displayField: _getDefaultDisplayField(name) ?? identityField,
       rlsResource: rlsResource,
+      supportsFileAttachments:
+          false, // Fallback entities don't support attachments
       requiredFields: _getDefaultRequiredFields(name),
       immutableFields: const [],
       searchableFields: _getDefaultSearchableFields(name),

@@ -1,8 +1,10 @@
 /// File Attachment Service - Generic file upload/download for any entity
 ///
-/// SOLE RESPONSIBILITY: Upload, list, download, delete file attachments
+/// SOLE RESPONSIBILITY: Upload, list, get, delete file attachments
 ///
-/// GENERIC PATTERN: Same as audit_log_service - entity_type + entity_id
+/// URL PATTERN: /api/:tableName/:id/files[/:fileId]
+/// - Uses tableName (plural) from entity metadata for URLs
+/// - Uses entityKey (singular) for storage (entity_type column)
 ///
 /// USAGE:
 /// ```dart
@@ -11,7 +13,7 @@
 ///
 /// // Upload a file to a work order
 /// final attachment = await fileService.uploadFile(
-///   entityType: 'work_order',
+///   entityKey: 'work_order',  // singular
 ///   entityId: 123,
 ///   bytes: fileBytes,
 ///   filename: 'photo.jpg',
@@ -20,15 +22,23 @@
 ///
 /// // List files for an entity
 /// final files = await fileService.listFiles(
-///   entityType: 'work_order',
+///   entityKey: 'work_order',
 ///   entityId: 123,
 /// );
 ///
-/// // Get download URL
-/// final info = await fileService.getDownloadUrl(fileId: 42);
+/// // Get single file (with fresh download URL)
+/// final file = await fileService.getFile(
+///   entityKey: 'work_order',
+///   entityId: 123,
+///   fileId: 42,
+/// );
 ///
 /// // Delete a file
-/// await fileService.deleteFile(fileId: 42);
+/// await fileService.deleteFile(
+///   entityKey: 'work_order',
+///   entityId: 123,
+///   fileId: 42,
+/// );
 /// ```
 ///
 /// TESTING:
@@ -46,6 +56,7 @@ import '../models/file_attachment.dart';
 import '../utils/helpers/mime_helper.dart';
 import 'api/api_client.dart';
 import 'auth/token_provider.dart';
+import 'entity_metadata.dart';
 import 'error_service.dart';
 
 // =============================================================================
@@ -67,7 +78,20 @@ class FileService {
   FileService(this._apiClient, [TokenProvider? tokenProvider])
     : _tokenProvider = tokenProvider ?? DefaultTokenProvider();
 
-  static const String _basePath = '/files';
+  /// Get the tableName (plural) from entityKey (singular) via metadata registry
+  String _getTableName(String entityKey) {
+    final metadata = EntityMetadataRegistry.tryGet(entityKey);
+    if (metadata == null) {
+      throw Exception('Unknown entity: $entityKey');
+    }
+    return metadata.tableName;
+  }
+
+  /// Build the base path for file operations: /api/:tableName/:id/files
+  String _buildFilesPath(String entityKey, int entityId) {
+    final tableName = _getTableName(entityKey);
+    return '/$tableName/$entityId/files';
+  }
 
   // ===========================================================================
   // UPLOAD
@@ -75,12 +99,12 @@ class FileService {
 
   /// Upload a file to an entity
   ///
-  /// Returns the created FileAttachment metadata.
+  /// Returns the created FileAttachment metadata (includes download URL).
   /// Uses raw binary upload with headers for metadata.
   ///
   /// NOTE: Uses raw http instead of ApiClient for binary body upload.
   Future<FileAttachment> uploadFile({
-    required String entityType,
+    required String entityKey,
     required int entityId,
     required Uint8List bytes,
     required String filename,
@@ -93,9 +117,8 @@ class FileService {
     }
 
     final mimeType = MimeHelper.getMimeType(filename);
-    final url = Uri.parse(
-      '${AppConfig.baseUrl}$_basePath/$entityType/$entityId',
-    );
+    final filesPath = _buildFilesPath(entityKey, entityId);
+    final url = Uri.parse('${AppConfig.baseUrl}$filesPath');
 
     // NOTE: Cannot use ApiClient for binary upload - uses raw http
     final response = await http.post(
@@ -110,12 +133,12 @@ class FileService {
       body: bytes,
     );
 
-    return _handleUploadResponse(response, entityType, entityId);
+    return _handleUploadResponse(response, entityKey, entityId);
   }
 
   FileAttachment _handleUploadResponse(
     http.Response response,
-    String entityType,
+    String entityKey,
     int entityId,
   ) {
     switch (response.statusCode) {
@@ -132,7 +155,7 @@ class FileService {
         final errorMsg = _parseError(response);
         ErrorService.logError(
           '[FileService] Upload failed',
-          context: {'entityType': entityType, 'entityId': entityId},
+          context: {'entityKey': entityKey, 'entityId': entityId},
         );
         throw Exception(errorMsg);
     }
@@ -145,8 +168,9 @@ class FileService {
   /// List files attached to an entity
   ///
   /// Optionally filter by category.
+  /// Each file includes a download URL (valid for 1 hour).
   Future<List<FileAttachment>> listFiles({
-    required String entityType,
+    required String entityKey,
     required int entityId,
     String? category,
   }) async {
@@ -155,7 +179,7 @@ class FileService {
       throw Exception('Not authenticated');
     }
 
-    var endpoint = '$_basePath/$entityType/$entityId';
+    var endpoint = _buildFilesPath(entityKey, entityId);
     if (category != null) {
       endpoint += '?category=${Uri.encodeComponent(category)}';
     }
@@ -166,12 +190,12 @@ class FileService {
       token: token,
     );
 
-    return _handleListResponse(response, entityType, entityId);
+    return _handleListResponse(response, entityKey, entityId);
   }
 
   List<FileAttachment> _handleListResponse(
     http.Response response,
-    String entityType,
+    String entityKey,
     int entityId,
   ) {
     switch (response.statusCode) {
@@ -191,39 +215,46 @@ class FileService {
         final errorMsg = _parseError(response);
         ErrorService.logError(
           '[FileService] List failed',
-          context: {'entityType': entityType, 'entityId': entityId},
+          context: {'entityKey': entityKey, 'entityId': entityId},
         );
         throw Exception(errorMsg);
     }
   }
 
   // ===========================================================================
-  // DOWNLOAD
+  // GET SINGLE FILE
   // ===========================================================================
 
-  /// Get a signed download URL for a file
+  /// Get a single file with fresh download URL
   ///
-  /// URL is valid for 1 hour.
-  Future<FileDownloadInfo> getDownloadUrl({required int fileId}) async {
+  /// Use this when a file's download URL may have expired.
+  /// Returns the file with a new 1-hour download URL.
+  Future<FileAttachment> getFile({
+    required String entityKey,
+    required int entityId,
+    required int fileId,
+  }) async {
     final token = await _tokenProvider.getToken();
     if (token == null) {
       throw Exception('Not authenticated');
     }
 
+    final endpoint = '${_buildFilesPath(entityKey, entityId)}/$fileId';
+
     final response = await _apiClient.authenticatedRequest(
       'GET',
-      '$_basePath/$fileId/download',
+      endpoint,
       token: token,
     );
 
-    return _handleDownloadResponse(response, fileId);
+    return _handleGetFileResponse(response, fileId);
   }
 
-  FileDownloadInfo _handleDownloadResponse(http.Response response, int fileId) {
+  FileAttachment _handleGetFileResponse(http.Response response, int fileId) {
     switch (response.statusCode) {
       case 200:
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        return FileDownloadInfo.fromJson(json['data'] as Map<String, dynamic>);
+        return FileAttachment.fromJson(json['data'] as Map<String, dynamic>);
       case 401:
         throw Exception('Authentication required');
       case 403:
@@ -233,7 +264,7 @@ class FileService {
       default:
         final errorMsg = _parseError(response);
         ErrorService.logError(
-          '[FileService] Download URL failed',
+          '[FileService] Get file failed',
           context: {'fileId': fileId},
         );
         throw Exception(errorMsg);
@@ -245,15 +276,21 @@ class FileService {
   // ===========================================================================
 
   /// Delete a file (soft delete)
-  Future<void> deleteFile({required int fileId}) async {
+  Future<void> deleteFile({
+    required String entityKey,
+    required int entityId,
+    required int fileId,
+  }) async {
     final token = await _tokenProvider.getToken();
     if (token == null) {
       throw Exception('Not authenticated');
     }
 
+    final endpoint = '${_buildFilesPath(entityKey, entityId)}/$fileId';
+
     final response = await _apiClient.authenticatedRequest(
       'DELETE',
-      '$_basePath/$fileId',
+      endpoint,
       token: token,
     );
 

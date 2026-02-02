@@ -172,19 +172,19 @@ describe('FileAttachmentService', () => {
       ];
       mockQuery.mockResolvedValueOnce({ rows: mockFiles });
 
-      const result = await FileAttachmentService.listFilesForEntity('work_orders', 5);
+      const result = await FileAttachmentService.listFilesForEntity('work_order', 5);
 
       expect(result).toEqual(mockFiles);
       expect(mockQuery).toHaveBeenCalledWith(
         expect.stringContaining('entity_type = $1 AND entity_id = $2'),
-        ['work_orders', 5],
+        ['work_order', 5],
       );
     });
 
     test('should return empty array when no files exist', async () => {
       mockQuery.mockResolvedValueOnce({ rows: [] });
 
-      const result = await FileAttachmentService.listFilesForEntity('work_orders', 5);
+      const result = await FileAttachmentService.listFilesForEntity('work_order', 5);
 
       expect(result).toEqual([]);
     });
@@ -192,31 +192,31 @@ describe('FileAttachmentService', () => {
     test('should filter by category when provided', async () => {
       mockQuery.mockResolvedValueOnce({ rows: [] });
 
-      await FileAttachmentService.listFilesForEntity('work_orders', 5, {
+      await FileAttachmentService.listFilesForEntity('work_order', 5, {
         category: 'photo',
       });
 
       expect(mockQuery).toHaveBeenCalledWith(
         expect.stringContaining('category = $3'),
-        ['work_orders', 5, 'photo'],
+        ['work_order', 5, 'photo'],
       );
     });
 
     test('should not filter by category when not provided', async () => {
       mockQuery.mockResolvedValueOnce({ rows: [] });
 
-      await FileAttachmentService.listFilesForEntity('work_orders', 5);
+      await FileAttachmentService.listFilesForEntity('work_order', 5);
 
       expect(mockQuery).toHaveBeenCalledWith(
         expect.not.stringContaining('category = $3'),
-        ['work_orders', 5],
+        ['work_order', 5],
       );
     });
 
     test('should order by created_at DESC', async () => {
       mockQuery.mockResolvedValueOnce({ rows: [] });
 
-      await FileAttachmentService.listFilesForEntity('work_orders', 5);
+      await FileAttachmentService.listFilesForEntity('work_order', 5);
 
       expect(mockQuery).toHaveBeenCalledWith(
         expect.stringContaining('ORDER BY created_at DESC'),
@@ -229,10 +229,10 @@ describe('FileAttachmentService', () => {
     test('should create attachment and return it', async () => {
       const mockAttachment = {
         id: 1,
-        entity_type: 'work_orders',
+        entity_type: 'work_order',
         entity_id: 5,
         original_filename: 'test.pdf',
-        storage_key: 'work_orders/5/abc123/test.pdf',
+        storage_key: 'work_order/5/abc123/test.pdf',
         mime_type: 'application/pdf',
         file_size: 1024,
         category: 'attachment',
@@ -243,10 +243,10 @@ describe('FileAttachmentService', () => {
       mockQuery.mockResolvedValueOnce({ rows: [mockAttachment] });
 
       const result = await FileAttachmentService.createAttachment({
-        entityType: 'work_orders',
+        entityType: 'work_order',
         entityId: 5,
         originalFilename: 'test.pdf',
-        storageKey: 'work_orders/5/abc123/test.pdf',
+        storageKey: 'work_order/5/abc123/test.pdf',
         mimeType: 'application/pdf',
         fileSize: 1024,
         uploadedBy: 10,
@@ -257,7 +257,7 @@ describe('FileAttachmentService', () => {
         'File attachment created',
         expect.objectContaining({
           id: 1,
-          entityType: 'work_orders',
+          entityType: 'work_order',
           entityId: 5,
         }),
       );
@@ -267,7 +267,7 @@ describe('FileAttachmentService', () => {
       mockQuery.mockResolvedValueOnce({ rows: [{ id: 1 }] });
 
       await FileAttachmentService.createAttachment({
-        entityType: 'work_orders',
+        entityType: 'work_order',
         entityId: 5,
         originalFilename: 'test.pdf',
         storageKey: 'key',
@@ -285,7 +285,7 @@ describe('FileAttachmentService', () => {
       mockQuery.mockResolvedValueOnce({ rows: [{ id: 1 }] });
 
       await FileAttachmentService.createAttachment({
-        entityType: 'work_orders',
+        entityType: 'work_order',
         entityId: 5,
         originalFilename: 'photo.jpg',
         storageKey: 'key',
@@ -331,10 +331,15 @@ describe('FileAttachmentService', () => {
   });
 
   describe('formatForResponse()', () => {
+    const mockDownloadInfo = {
+      url: 'https://r2.example.com/signed-url',
+      expiresAt: new Date('2024-01-15T12:00:00Z'),
+    };
+
     test('should exclude storage_key from response', async () => {
       const row = {
         id: 1,
-        entity_type: 'work_orders',
+        entity_type: 'work_order',
         entity_id: 5,
         original_filename: 'test.pdf',
         storage_key: 'sensitive/internal/path/test.pdf',
@@ -348,17 +353,17 @@ describe('FileAttachmentService', () => {
         updated_at: new Date('2024-01-15'),
       };
 
-      const result = FileAttachmentService.formatForResponse(row);
+      const result = FileAttachmentService.formatForResponse(row, mockDownloadInfo);
 
       expect(result).not.toHaveProperty('storage_key');
       expect(result).not.toHaveProperty('is_active');
       expect(result).not.toHaveProperty('updated_at');
     });
 
-    test('should include all public fields', async () => {
+    test('should include all public fields and download URL', async () => {
       const row = {
         id: 1,
-        entity_type: 'work_orders',
+        entity_type: 'work_order',
         entity_id: 5,
         original_filename: 'test.pdf',
         storage_key: 'internal/path',
@@ -370,11 +375,11 @@ describe('FileAttachmentService', () => {
         created_at: new Date('2024-01-15'),
       };
 
-      const result = FileAttachmentService.formatForResponse(row);
+      const result = FileAttachmentService.formatForResponse(row, mockDownloadInfo);
 
       expect(result).toEqual({
         id: 1,
-        entity_type: 'work_orders',
+        entity_type: 'work_order',
         entity_id: 5,
         original_filename: 'test.pdf',
         mime_type: 'application/pdf',
@@ -383,13 +388,15 @@ describe('FileAttachmentService', () => {
         description: 'A test file',
         uploaded_by: 10,
         created_at: new Date('2024-01-15'),
+        download_url: 'https://r2.example.com/signed-url',
+        download_url_expires_at: '2024-01-15T12:00:00.000Z',
       });
     });
 
     test('should handle null description', async () => {
       const row = {
         id: 1,
-        entity_type: 'customers',
+        entity_type: 'customer',
         entity_id: 3,
         original_filename: 'logo.png',
         storage_key: 'path',
@@ -401,10 +408,26 @@ describe('FileAttachmentService', () => {
         created_at: new Date(),
       };
 
-      const result = FileAttachmentService.formatForResponse(row);
+      const result = FileAttachmentService.formatForResponse(row, mockDownloadInfo);
 
       expect(result.description).toBeNull();
       expect(result.uploaded_by).toBeNull();
+      expect(result.download_url).toBe('https://r2.example.com/signed-url');
+      expect(result.download_url_expires_at).toBe('2024-01-15T12:00:00.000Z');
+    });
+
+    test('should throw if downloadInfo is missing', () => {
+      const row = { id: 1, entity_type: 'work_order', entity_id: 5 };
+
+      expect(() => FileAttachmentService.formatForResponse(row)).toThrow(
+        'downloadInfo with url and expiresAt is required',
+      );
+      expect(() => FileAttachmentService.formatForResponse(row, {})).toThrow(
+        'downloadInfo with url and expiresAt is required',
+      );
+      expect(() => FileAttachmentService.formatForResponse(row, { url: 'x' })).toThrow(
+        'downloadInfo with url and expiresAt is required',
+      );
     });
   });
 });

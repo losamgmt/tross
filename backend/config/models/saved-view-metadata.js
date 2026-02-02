@@ -69,6 +69,11 @@ module.exports = {
    */
   navVisibility: null,
 
+  /**
+   * File attachments - whether this entity supports file uploads
+   */
+  supportsFileAttachments: false,
+
   /**   * Entity-level permission overrides
    * Matches permissions.json - all users can manage their own saved views
    */

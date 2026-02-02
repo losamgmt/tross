@@ -108,6 +108,10 @@ class EntityMetadata {
   /// Used for navigation menus and entity displays.
   final String? icon;
 
+  /// Whether this entity supports file attachments.
+  /// When true, the entity detail screen shows file upload/list UI.
+  final bool supportsFileAttachments;
+
   /// Fields required for create operations
   final List<String> requiredFields;
 
@@ -152,6 +156,7 @@ class EntityMetadata {
     required this.displayField,
     required this.rlsResource,
     this.icon,
+    required this.supportsFileAttachments,
     required this.requiredFields,
     required this.immutableFields,
     required this.searchableFields,
@@ -209,6 +214,8 @@ class EntityMetadata {
       displayField: json['displayField'] as String? ?? identityField,
       rlsResource: rlsResource,
       icon: json['icon'] as String?,
+      supportsFileAttachments:
+          json['supportsFileAttachments'] as bool? ?? false,
       requiredFields:
           (json['requiredFields'] as List<dynamic>?)?.cast<String>() ?? [],
       immutableFields:

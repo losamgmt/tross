@@ -30,6 +30,7 @@ import 'package:tross_app/services/generic_entity_service.dart';
 import 'package:tross_app/services/preferences_service.dart';
 
 import '../factory/service_test_factory.dart';
+import '../factory/entity_registry.dart';
 import '../mocks/mock_api_client.dart';
 import '../mocks/mock_token_provider.dart';
 import '../helpers/helpers.dart';
@@ -227,7 +228,7 @@ void main() {
   });
 
   // ===========================================================================
-  // FILE SERVICE - listFiles, getDownloadUrl, deleteFile
+  // FILE SERVICE - listFiles, getFile, deleteFile
   // Uses ApiClient + TokenProvider pattern
   // ===========================================================================
   ServiceTestFactory.generateErrorPathTests<FileService>(
@@ -237,29 +238,36 @@ void main() {
       // listFiles - throws on 403
       EndpointTest(
         contract: EndpointContract.fetch(
-          '/files/work_order/123',
+          '/work_orders/123/files',
           description: 'listFiles for work_order/123',
           successResponse: {'success': true, 'data': []},
         ),
         invoke: (service) =>
-            service.listFiles(entityType: 'work_order', entityId: 123),
+            service.listFiles(entityKey: 'work_order', entityId: 123),
       ),
-      // getDownloadUrl - throws on 403/404
+      // getFile - throws on 403/404
       EndpointTest(
         contract: EndpointContract.fetch(
-          '/files/42/download',
-          description: 'getDownloadUrl for file 42',
+          '/work_orders/123/files/42',
+          description: 'getFile for work_order/123/file 42',
           successResponse: {
             'success': true,
             'data': {
-              'download_url': 'https://example.com/download',
-              'expires_in': 3600,
-              'filename': 'test.pdf',
+              'id': 42,
+              'entity_type': 'work_order',
+              'entity_id': 123,
+              'original_filename': 'test.pdf',
               'mime_type': 'application/pdf',
+              'file_size': 1024,
+              'category': 'attachment',
+              'created_at': '2024-01-01T00:00:00Z',
+              'download_url': 'https://example.com/download',
+              'download_url_expires_at': '2024-01-01T01:00:00Z',
             },
           },
         ),
-        invoke: (service) => service.getDownloadUrl(fileId: 42),
+        invoke: (service) =>
+            service.getFile(entityKey: 'work_order', entityId: 123, fileId: 42),
       ),
       // deleteFile - returns void, test separately for proper handling
     ],
@@ -271,8 +279,9 @@ void main() {
     late MockTokenProvider mockTokenProvider;
     late FileService service;
 
-    setUpAll(() {
+    setUpAll(() async {
       initializeTestBinding();
+      await EntityTestRegistry.ensureInitialized();
     });
 
     setUp(() {
@@ -290,27 +299,54 @@ void main() {
       final unauthService = FileService(mockApiClient, unauthProvider);
 
       expect(
-        () => unauthService.deleteFile(fileId: 42),
+        () => unauthService.deleteFile(
+          entityKey: 'work_order',
+          entityId: 123,
+          fileId: 42,
+        ),
         throwsA(isA<Exception>()),
       );
     });
 
     test('throws on 403', () async {
-      mockApiClient.mockStatusCode('/files/42', 403, {'error': 'Forbidden'});
+      mockApiClient.mockStatusCode('/work_orders/123/files/42', 403, {
+        'error': 'Forbidden',
+      });
 
-      expect(() => service.deleteFile(fileId: 42), throwsA(isA<Exception>()));
+      expect(
+        () => service.deleteFile(
+          entityKey: 'work_order',
+          entityId: 123,
+          fileId: 42,
+        ),
+        throwsA(isA<Exception>()),
+      );
     });
 
     test('throws on 404', () async {
-      mockApiClient.mockStatusCode('/files/42', 404, {'error': 'Not Found'});
+      mockApiClient.mockStatusCode('/work_orders/123/files/42', 404, {
+        'error': 'Not Found',
+      });
 
-      expect(() => service.deleteFile(fileId: 42), throwsA(isA<Exception>()));
+      expect(
+        () => service.deleteFile(
+          entityKey: 'work_order',
+          entityId: 123,
+          fileId: 42,
+        ),
+        throwsA(isA<Exception>()),
+      );
     });
 
     test('succeeds on 200', () async {
-      mockApiClient.mockResponse('/files/42', {'success': true});
+      mockApiClient.mockResponse('/work_orders/123/files/42', {
+        'success': true,
+      });
 
-      await expectLater(service.deleteFile(fileId: 42), completes);
+      await expectLater(
+        service.deleteFile(entityKey: 'work_order', entityId: 123, fileId: 42),
+        completes,
+      );
     });
   });
 

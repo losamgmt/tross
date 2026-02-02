@@ -1,23 +1,32 @@
 /// FileService Unit Tests
 ///
-/// Tests the file attachment service models and API integration.
+/// Tests the file attachment service models, URL construction, and API integration.
 ///
 /// STRATEGY:
-/// - Test data models (FileAttachment, FileDownloadInfo) via fromJson
-/// - Test computed properties (fileSizeFormatted, isImage, isPdf, extension)
-/// - Test service DI construction
-/// - Test authentication requirements
+/// - Test data models (FileAttachment) via fromJson
+/// - Test computed properties (fileSizeFormatted, isImage, isPdf, extension, isDownloadUrlExpired)
+/// - Test URL construction via metadata registry
+/// - Test HTTP request/response handling for all CRUD operations
+/// - Test error handling for various status codes
 library;
 
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
 import 'package:tross_app/models/file_attachment.dart';
 import 'package:tross_app/services/file_service.dart';
 import '../mocks/mock_api_client.dart';
 import '../mocks/mock_token_provider.dart';
+import '../factory/entity_registry.dart';
 
 void main() {
+  // Initialize metadata registry for all tests
+  setUpAll(() async {
+    await EntityTestRegistry.ensureInitialized();
+  });
+
   group('FileAttachment', () {
     // =========================================================================
     // fromJson() Tests
@@ -35,6 +44,8 @@ void main() {
           'description': 'Before work started',
           'uploaded_by': 7,
           'created_at': '2024-01-15T10:30:00Z',
+          'download_url': 'https://r2.example.com/signed-url',
+          'download_url_expires_at': '2024-01-15T11:30:00Z',
         };
 
         final attachment = FileAttachment.fromJson(json);
@@ -49,6 +60,11 @@ void main() {
         expect(attachment.description, 'Before work started');
         expect(attachment.uploadedBy, 7);
         expect(attachment.createdAt, DateTime.utc(2024, 1, 15, 10, 30));
+        expect(attachment.downloadUrl, 'https://r2.example.com/signed-url');
+        expect(
+          attachment.downloadUrlExpiresAt,
+          DateTime.utc(2024, 1, 15, 11, 30),
+        );
       });
 
       test('handles null description', () {
@@ -63,6 +79,8 @@ void main() {
           'description': null,
           'uploaded_by': null,
           'created_at': '2024-02-01T12:00:00Z',
+          'download_url': 'https://r2.example.com/url',
+          'download_url_expires_at': '2024-02-01T13:00:00Z',
         };
 
         final attachment = FileAttachment.fromJson(json);
@@ -81,6 +99,8 @@ void main() {
           'file_size': 100,
           'category': null,
           'created_at': '2024-01-01T00:00:00Z',
+          'download_url': 'https://r2.example.com/url',
+          'download_url_expires_at': '2024-01-01T01:00:00Z',
         };
 
         final attachment = FileAttachment.fromJson(json);
@@ -103,6 +123,8 @@ void main() {
           fileSize: size,
           category: 'test',
           createdAt: DateTime.now(),
+          downloadUrl: 'https://example.com/url',
+          downloadUrlExpiresAt: DateTime.now().add(const Duration(hours: 1)),
         );
       }
 
@@ -138,6 +160,8 @@ void main() {
           fileSize: 100,
           category: 'test',
           createdAt: DateTime.now(),
+          downloadUrl: 'https://example.com/url',
+          downloadUrlExpiresAt: DateTime.now().add(const Duration(hours: 1)),
         );
       }
 
@@ -168,6 +192,8 @@ void main() {
           fileSize: 100,
           category: 'test',
           createdAt: DateTime.now(),
+          downloadUrl: 'https://example.com/url',
+          downloadUrlExpiresAt: DateTime.now().add(const Duration(hours: 1)),
         );
       }
 
@@ -195,6 +221,8 @@ void main() {
           fileSize: 100,
           category: 'test',
           createdAt: DateTime.now(),
+          downloadUrl: 'https://example.com/url',
+          downloadUrlExpiresAt: DateTime.now().add(const Duration(hours: 1)),
         );
       }
 
@@ -212,70 +240,110 @@ void main() {
         expect(createWithFilename('noextension').extension, '');
       });
     });
-  });
 
-  // ===========================================================================
-  // FileDownloadInfo Tests
-  // ===========================================================================
-  group('FileDownloadInfo', () {
-    group('fromJson()', () {
-      test('parses all fields correctly', () {
-        final json = {
-          'download_url': 'https://example.com/file?token=xyz',
-          'filename': 'report.pdf',
-          'mime_type': 'application/pdf',
-          'expires_in': 3600,
-        };
+    // =========================================================================
+    // isDownloadUrlExpired Tests
+    // =========================================================================
+    group('isDownloadUrlExpired', () {
+      test('returns false when URL is fresh', () {
+        final attachment = FileAttachment(
+          id: 1,
+          entityType: 'test',
+          entityId: 1,
+          originalFilename: 'test.txt',
+          mimeType: 'text/plain',
+          fileSize: 100,
+          category: 'test',
+          createdAt: DateTime.now(),
+          downloadUrl: 'https://example.com/url',
+          downloadUrlExpiresAt: DateTime.now().add(const Duration(hours: 1)),
+        );
 
-        final info = FileDownloadInfo.fromJson(json);
+        expect(attachment.isDownloadUrlExpired, isFalse);
+      });
 
-        expect(info.downloadUrl, 'https://example.com/file?token=xyz');
-        expect(info.filename, 'report.pdf');
-        expect(info.mimeType, 'application/pdf');
-        expect(info.expiresIn, 3600);
+      test('returns true when URL is expired', () {
+        final attachment = FileAttachment(
+          id: 1,
+          entityType: 'test',
+          entityId: 1,
+          originalFilename: 'test.txt',
+          mimeType: 'text/plain',
+          fileSize: 100,
+          category: 'test',
+          createdAt: DateTime.now(),
+          downloadUrl: 'https://example.com/url',
+          downloadUrlExpiresAt: DateTime.now().subtract(
+            const Duration(hours: 1),
+          ),
+        );
+
+        expect(attachment.isDownloadUrlExpired, isTrue);
+      });
+
+      test('returns true when URL expires within 5 minutes', () {
+        final attachment = FileAttachment(
+          id: 1,
+          entityType: 'test',
+          entityId: 1,
+          originalFilename: 'test.txt',
+          mimeType: 'text/plain',
+          fileSize: 100,
+          category: 'test',
+          createdAt: DateTime.now(),
+          downloadUrl: 'https://example.com/url',
+          downloadUrlExpiresAt: DateTime.now().add(const Duration(minutes: 3)),
+        );
+
+        expect(attachment.isDownloadUrlExpired, isTrue);
+      });
+
+      test('returns false when URL expires in more than 5 minutes', () {
+        final attachment = FileAttachment(
+          id: 1,
+          entityType: 'test',
+          entityId: 1,
+          originalFilename: 'test.txt',
+          mimeType: 'text/plain',
+          fileSize: 100,
+          category: 'test',
+          createdAt: DateTime.now(),
+          downloadUrl: 'https://example.com/url',
+          downloadUrlExpiresAt: DateTime.now().add(const Duration(minutes: 10)),
+        );
+
+        expect(attachment.isDownloadUrlExpired, isFalse);
       });
     });
   });
 
   // ===========================================================================
-  // FileService DI & Authentication Tests
+  // FileService Tests
   // ===========================================================================
   group('FileService', () {
     late MockApiClient mockApiClient;
     late MockTokenProvider mockTokenProvider;
+    late FileService service;
 
     setUp(() {
       mockApiClient = MockApiClient();
       mockTokenProvider = MockTokenProvider('test-token');
+      service = FileService(mockApiClient, mockTokenProvider);
     });
 
-    group('Dependency Injection', () {
-      test('constructs with ApiClient and TokenProvider', () {
-        final service = FileService(mockApiClient, mockTokenProvider);
-        expect(service, isNotNull);
-      });
-
-      test('defaults to DefaultTokenProvider when not provided', () {
-        // This will use DefaultTokenProvider internally
-        // Just verify it constructs without error
-        final service = FileService(mockApiClient);
-        expect(service, isNotNull);
-      });
-    });
-
-    group('Authentication Requirements', () {
+    // =========================================================================
+    // Authentication Tests
+    // =========================================================================
+    group('Authentication', () {
       test('listFiles throws when not authenticated', () async {
-        // Arrange - no token
-        final unauthenticatedProvider = MockTokenProvider.unauthenticated();
         final unauthenticatedService = FileService(
           mockApiClient,
-          unauthenticatedProvider,
+          MockTokenProvider.unauthenticated(),
         );
 
-        // Act & Assert
         expect(
           () => unauthenticatedService.listFiles(
-            entityType: 'work_order',
+            entityKey: 'work_order',
             entityId: 123,
           ),
           throwsA(
@@ -288,17 +356,18 @@ void main() {
         );
       });
 
-      test('getDownloadUrl throws when not authenticated', () async {
-        // Arrange - no token
-        final unauthenticatedProvider = MockTokenProvider.unauthenticated();
+      test('getFile throws when not authenticated', () async {
         final unauthenticatedService = FileService(
           mockApiClient,
-          unauthenticatedProvider,
+          MockTokenProvider.unauthenticated(),
         );
 
-        // Act & Assert
         expect(
-          () => unauthenticatedService.getDownloadUrl(fileId: 42),
+          () => unauthenticatedService.getFile(
+            entityKey: 'work_order',
+            entityId: 123,
+            fileId: 42,
+          ),
           throwsA(
             isA<Exception>().having(
               (e) => e.toString(),
@@ -310,16 +379,17 @@ void main() {
       });
 
       test('deleteFile throws when not authenticated', () async {
-        // Arrange - no token
-        final unauthenticatedProvider = MockTokenProvider.unauthenticated();
         final unauthenticatedService = FileService(
           mockApiClient,
-          unauthenticatedProvider,
+          MockTokenProvider.unauthenticated(),
         );
 
-        // Act & Assert
         expect(
-          () => unauthenticatedService.deleteFile(fileId: 42),
+          () => unauthenticatedService.deleteFile(
+            entityKey: 'work_order',
+            entityId: 123,
+            fileId: 42,
+          ),
           throwsA(
             isA<Exception>().having(
               (e) => e.toString(),
@@ -331,17 +401,14 @@ void main() {
       });
 
       test('uploadFile throws when not authenticated', () async {
-        // Arrange - no token
-        final unauthenticatedProvider = MockTokenProvider.unauthenticated();
         final unauthenticatedService = FileService(
           mockApiClient,
-          unauthenticatedProvider,
+          MockTokenProvider.unauthenticated(),
         );
 
-        // Act & Assert
         expect(
           () => unauthenticatedService.uploadFile(
-            entityType: 'work_order',
+            entityKey: 'work_order',
             entityId: 123,
             bytes: Uint8List.fromList([1, 2, 3]),
             filename: 'test.txt',
@@ -357,43 +424,402 @@ void main() {
       });
     });
 
-    group('Token State Changes', () {
-      test('succeeds after token is set', () async {
-        // Arrange - start unauthenticated
-        final tokenProvider = MockTokenProvider.unauthenticated();
-        final service = FileService(mockApiClient, tokenProvider);
-
-        // Verify fails without token
+    // =========================================================================
+    // Entity Key to Table Name Mapping (via Metadata Registry)
+    // =========================================================================
+    group('Entity Key Resolution', () {
+      test('throws for unknown entity key', () async {
         expect(
-          () => service.listFiles(entityType: 'work_order', entityId: 1),
-          throwsException,
-        );
-
-        // Set token
-        tokenProvider.setToken('new-token');
-
-        // Now the token check will pass (though the request may still fail
-        // due to mock setup - the point is authentication passes)
-        // We just verify setToken works correctly
-        expect(await tokenProvider.hasToken(), isTrue);
-      });
-
-      test('fails after token is cleared', () async {
-        // Arrange - start authenticated
-        final tokenProvider = MockTokenProvider('valid-token');
-        final service = FileService(mockApiClient, tokenProvider);
-
-        // Clear token
-        tokenProvider.clearToken();
-
-        // Act & Assert - should fail authentication
-        expect(
-          () => service.listFiles(entityType: 'work_order', entityId: 1),
+          () =>
+              service.listFiles(entityKey: 'nonexistent_entity', entityId: 123),
           throwsA(
             isA<Exception>().having(
               (e) => e.toString(),
               'message',
-              contains('Not authenticated'),
+              contains('Unknown entity'),
+            ),
+          ),
+        );
+      });
+
+      test('resolves work_order to work_orders table', () async {
+        // Set up mock to capture the endpoint called
+        String? capturedEndpoint;
+        mockApiClient.mockAuthenticatedRequest((
+          method,
+          endpoint, {
+          token,
+          body,
+        }) {
+          capturedEndpoint = endpoint;
+          return http.Response(
+            jsonEncode({'success': true, 'data': <Map<String, dynamic>>[]}),
+            200,
+          );
+        });
+
+        await service.listFiles(entityKey: 'work_order', entityId: 123);
+
+        expect(capturedEndpoint, '/work_orders/123/files');
+      });
+
+      test('resolves contract to contracts table', () async {
+        String? capturedEndpoint;
+        mockApiClient.mockAuthenticatedRequest((
+          method,
+          endpoint, {
+          token,
+          body,
+        }) {
+          capturedEndpoint = endpoint;
+          return http.Response(
+            jsonEncode({'success': true, 'data': <Map<String, dynamic>>[]}),
+            200,
+          );
+        });
+
+        await service.listFiles(entityKey: 'contract', entityId: 456);
+
+        expect(capturedEndpoint, '/contracts/456/files');
+      });
+
+      test('resolves inventory to inventory table (uncountable)', () async {
+        String? capturedEndpoint;
+        mockApiClient.mockAuthenticatedRequest((
+          method,
+          endpoint, {
+          token,
+          body,
+        }) {
+          capturedEndpoint = endpoint;
+          return http.Response(
+            jsonEncode({'success': true, 'data': <Map<String, dynamic>>[]}),
+            200,
+          );
+        });
+
+        await service.listFiles(entityKey: 'inventory', entityId: 789);
+
+        expect(capturedEndpoint, '/inventory/789/files');
+      });
+
+      test('resolves invoice to invoices table', () async {
+        String? capturedEndpoint;
+        mockApiClient.mockAuthenticatedRequest((
+          method,
+          endpoint, {
+          token,
+          body,
+        }) {
+          capturedEndpoint = endpoint;
+          return http.Response(
+            jsonEncode({'success': true, 'data': <Map<String, dynamic>>[]}),
+            200,
+          );
+        });
+
+        await service.listFiles(entityKey: 'invoice', entityId: 101);
+
+        expect(capturedEndpoint, '/invoices/101/files');
+      });
+    });
+
+    // =========================================================================
+    // listFiles Tests
+    // =========================================================================
+    group('listFiles', () {
+      test('returns empty list when no files', () async {
+        mockApiClient.mockAuthenticatedRequest((
+          method,
+          endpoint, {
+          token,
+          body,
+        }) {
+          return http.Response(
+            jsonEncode({'success': true, 'data': <Map<String, dynamic>>[]}),
+            200,
+          );
+        });
+
+        final files = await service.listFiles(
+          entityKey: 'work_order',
+          entityId: 123,
+        );
+
+        expect(files, isEmpty);
+      });
+
+      test('parses file list correctly', () async {
+        mockApiClient.mockAuthenticatedRequest((
+          method,
+          endpoint, {
+          token,
+          body,
+        }) {
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'data': [
+                {
+                  'id': 1,
+                  'entity_type': 'work_order',
+                  'entity_id': 123,
+                  'original_filename': 'photo.jpg',
+                  'mime_type': 'image/jpeg',
+                  'file_size': 5000,
+                  'category': 'before_photo',
+                  'description': null,
+                  'uploaded_by': 7,
+                  'created_at': '2024-01-15T10:00:00Z',
+                  'download_url': 'https://r2.example.com/signed1',
+                  'download_url_expires_at': '2024-01-15T11:00:00Z',
+                },
+                {
+                  'id': 2,
+                  'entity_type': 'work_order',
+                  'entity_id': 123,
+                  'original_filename': 'receipt.pdf',
+                  'mime_type': 'application/pdf',
+                  'file_size': 12000,
+                  'category': 'receipt',
+                  'description': 'Parts receipt',
+                  'uploaded_by': 7,
+                  'created_at': '2024-01-15T11:00:00Z',
+                  'download_url': 'https://r2.example.com/signed2',
+                  'download_url_expires_at': '2024-01-15T12:00:00Z',
+                },
+              ],
+            }),
+            200,
+          );
+        });
+
+        final files = await service.listFiles(
+          entityKey: 'work_order',
+          entityId: 123,
+        );
+
+        expect(files.length, 2);
+        expect(files[0].originalFilename, 'photo.jpg');
+        expect(files[0].isImage, isTrue);
+        expect(files[1].originalFilename, 'receipt.pdf');
+        expect(files[1].isPdf, isTrue);
+      });
+
+      test('includes category filter in query when provided', () async {
+        String? capturedEndpoint;
+        mockApiClient.mockAuthenticatedRequest((
+          method,
+          endpoint, {
+          token,
+          body,
+        }) {
+          capturedEndpoint = endpoint;
+          return http.Response(
+            jsonEncode({'success': true, 'data': <Map<String, dynamic>>[]}),
+            200,
+          );
+        });
+
+        await service.listFiles(
+          entityKey: 'work_order',
+          entityId: 123,
+          category: 'before_photo',
+        );
+
+        expect(capturedEndpoint, contains('category=before_photo'));
+      });
+
+      test('throws on 401 unauthorized', () async {
+        mockApiClient.mockAuthenticatedRequest((
+          method,
+          endpoint, {
+          token,
+          body,
+        }) {
+          return http.Response('Unauthorized', 401);
+        });
+
+        expect(
+          () => service.listFiles(entityKey: 'work_order', entityId: 123),
+          throwsA(
+            isA<Exception>().having(
+              (e) => e.toString(),
+              'message',
+              contains('Authentication required'),
+            ),
+          ),
+        );
+      });
+
+      test('throws on 403 forbidden', () async {
+        mockApiClient.mockAuthenticatedRequest((
+          method,
+          endpoint, {
+          token,
+          body,
+        }) {
+          return http.Response('Forbidden', 403);
+        });
+
+        expect(
+          () => service.listFiles(entityKey: 'work_order', entityId: 123),
+          throwsA(
+            isA<Exception>().having(
+              (e) => e.toString(),
+              'message',
+              contains('Permission denied'),
+            ),
+          ),
+        );
+      });
+    });
+
+    // =========================================================================
+    // getFile Tests
+    // =========================================================================
+    group('getFile', () {
+      test('returns file with fresh download URL', () async {
+        mockApiClient.mockAuthenticatedRequest((
+          method,
+          endpoint, {
+          token,
+          body,
+        }) {
+          expect(endpoint, '/work_orders/123/files/42');
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'data': {
+                'id': 42,
+                'entity_type': 'work_order',
+                'entity_id': 123,
+                'original_filename': 'document.pdf',
+                'mime_type': 'application/pdf',
+                'file_size': 50000,
+                'category': 'report',
+                'description': 'Final report',
+                'uploaded_by': 5,
+                'created_at': '2024-01-15T10:00:00Z',
+                'download_url': 'https://r2.example.com/fresh-signed-url',
+                'download_url_expires_at': '2024-01-15T11:00:00Z',
+              },
+            }),
+            200,
+          );
+        });
+
+        final file = await service.getFile(
+          entityKey: 'work_order',
+          entityId: 123,
+          fileId: 42,
+        );
+
+        expect(file.id, 42);
+        expect(file.downloadUrl, 'https://r2.example.com/fresh-signed-url');
+      });
+
+      test('throws on 404 not found', () async {
+        mockApiClient.mockAuthenticatedRequest((
+          method,
+          endpoint, {
+          token,
+          body,
+        }) {
+          return http.Response(jsonEncode({'error': 'File not found'}), 404);
+        });
+
+        expect(
+          () => service.getFile(
+            entityKey: 'work_order',
+            entityId: 123,
+            fileId: 999,
+          ),
+          throwsA(
+            isA<Exception>().having(
+              (e) => e.toString(),
+              'message',
+              contains('File not found'),
+            ),
+          ),
+        );
+      });
+    });
+
+    // =========================================================================
+    // deleteFile Tests
+    // =========================================================================
+    group('deleteFile', () {
+      test('completes successfully on 200', () async {
+        mockApiClient.mockAuthenticatedRequest((
+          method,
+          endpoint, {
+          token,
+          body,
+        }) {
+          expect(method, 'DELETE');
+          expect(endpoint, '/work_orders/123/files/42');
+          return http.Response(
+            jsonEncode({'success': true, 'message': 'File deleted'}),
+            200,
+          );
+        });
+
+        // Should complete without throwing
+        await service.deleteFile(
+          entityKey: 'work_order',
+          entityId: 123,
+          fileId: 42,
+        );
+      });
+
+      test('throws on 404 not found', () async {
+        mockApiClient.mockAuthenticatedRequest((
+          method,
+          endpoint, {
+          token,
+          body,
+        }) {
+          return http.Response(jsonEncode({'error': 'File not found'}), 404);
+        });
+
+        expect(
+          () => service.deleteFile(
+            entityKey: 'work_order',
+            entityId: 123,
+            fileId: 999,
+          ),
+          throwsA(
+            isA<Exception>().having(
+              (e) => e.toString(),
+              'message',
+              contains('File not found'),
+            ),
+          ),
+        );
+      });
+
+      test('throws on 403 forbidden', () async {
+        mockApiClient.mockAuthenticatedRequest((
+          method,
+          endpoint, {
+          token,
+          body,
+        }) {
+          return http.Response('Forbidden', 403);
+        });
+
+        expect(
+          () => service.deleteFile(
+            entityKey: 'work_order',
+            entityId: 123,
+            fileId: 42,
+          ),
+          throwsA(
+            isA<Exception>().having(
+              (e) => e.toString(),
+              'message',
+              contains('Permission denied'),
             ),
           ),
         );

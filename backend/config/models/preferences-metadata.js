@@ -37,6 +37,11 @@ module.exports = {
    */
   navVisibility: null,
 
+  /**
+   * File attachments - whether this entity supports file uploads
+   */
+  supportsFileAttachments: false,
+
   entityPermissions: {
     create: 'customer',
     read: 'customer',

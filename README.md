@@ -298,6 +298,8 @@ See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed instructions.
 
 ## 📋 Project Status & Roadmap
 
+> **Detailed Status:** See [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) for full implementation details.
+
 ### ✅ Phase 1: Core Platform (COMPLETE)
 
 - [x] **Backend API**: RESTful endpoints with OpenAPI/Swagger documentation
@@ -308,22 +310,28 @@ See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed instructions.
 - [x] **Frontend**: Flutter web app with schema-driven UI and atomic design
 - [x] **Testing**: Comprehensive unit, integration, and production E2E test suites
 - [x] **CI/CD**: GitHub Actions with E2E against live Railway deployment
-- [x] **Documentation**: Professional structure with guides and ADRs
-- [x] **Development Tools**: Automation scripts, health checks, error handling
 
-### 🚀 Phase 2: Work Order Features (NEXT)
+### ✅ Phase 2: Work Order Features (COMPLETE)
 
-- [ ] Work order CRUD operations
-- [ ] Skills-based matching algorithm
-- [ ] Work order assignment and status tracking
+- [x] Work order CRUD operations
+- [x] Skills-based matching algorithm
+- [x] Work order assignment and status tracking
+- [x] Entity lifecycle management
+
+### ✅ Phase 3: File Attachments (MOSTLY COMPLETE)
+
+- [x] File upload/download with Cloudflare R2 storage
+- [x] Entity file attachments (attach files to any entity)
+- [x] File preview (images, PDFs) with modal display
+- [x] RESTful sub-resource pattern (`/api/:entity/:id/files`)
+- [ ] Admin Files interface (storage stats, orphan cleanup)
+
+### 🚀 Phase 4: Advanced Features (NEXT)
+
 - [ ] Real-time notifications
-
-### Phase 3: Advanced Features
-
 - [ ] Mobile app deployment
 - [ ] Advanced analytics dashboard
 - [ ] Integration APIs
-- [ ] Performance optimization
 
 ## 📞 Support
 

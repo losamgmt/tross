@@ -89,11 +89,31 @@ app.use(
   }),
 );
 
-// Raw body parser for file uploads (must be before JSON parser for /api/files routes)
-app.use('/api/files', express.raw({
-  type: ['image/*', 'application/pdf', 'text/*'],
+// Raw body parser for file uploads on sub-resource paths
+// e.g., /api/work_orders/:id/files, /api/contracts/:id/files
+// Must be before express.json() to capture raw binary for these paths
+// MUST ACCEPT ALL MIME TYPES that FILE_ATTACHMENTS.ALLOWED_MIME_TYPES allows
+const fileUploadRawParser = express.raw({
+  type: [
+    // Images
+    'image/*',
+    // Documents - PDF and Office formats
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    // Text formats
+    'text/*',
+    // Fallback for unknown types picked by browser
+    'application/octet-stream',
+  ],
   limit: '10mb',
-}));
+});
+
+// Apply raw parser to all entity file upload paths
+// Regex matches: /api/{tableName}/{id}/files
+app.use(/^\/api\/[a-z_]+\/\d+\/files$/, fileUploadRawParser);
 
 app.use(express.json({ limit: SECURITY.REQUEST_LIMITS.JSON_BODY_SIZE }));
 app.use(
@@ -150,12 +170,12 @@ const rolesExtensions = require('./routes/roles-extensions');
 const statsRoutes = require('./routes/stats');
 const exportRoutes = require('./routes/export');
 const auditRoutes = require('./routes/audit');
-const filesRoutes = require('./routes/files');
 const adminRoutes = require('./routes/admin');
 
 // Metadata-driven entity route loading (replaces hardcoded entity router imports)
-const { loadEntityRoutes } = require('./config/route-loader');
+const { loadEntityRoutes, loadFileSubRoutes } = require('./config/route-loader');
 const entityRoutes = loadEntityRoutes();
+const fileSubRoutes = loadFileSubRoutes();
 
 // =============================================================================
 // AUTHENTICATION ROUTES
@@ -163,6 +183,15 @@ const entityRoutes = loadEntityRoutes();
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/auth0', authLimiter, auth0Routes); // Auth0 OAuth endpoints
 app.use('/api/dev', devAuthRoutes); // Development auth (no rate limit - dev only)
+
+// =============================================================================
+// FILE ATTACHMENT SUB-ROUTES (Metadata-Driven)
+// Mounted BEFORE entity routes (more specific paths take precedence)
+// e.g., /api/work_orders/:id/files for entities with supportsFileAttachments: true
+// =============================================================================
+for (const { path, router } of fileSubRoutes) {
+  app.use(path, apiLimiter, router);
+}
 
 // =============================================================================
 // ENTITY CRUD ROUTES (Metadata-Driven)
@@ -174,11 +203,6 @@ for (const { path, router } of entityRoutes) {
 
 // Entity-specific extensions (not generic - kept explicit)
 app.use('/api/roles', apiLimiter, rolesExtensions); // Extension: /:id/users
-
-// =============================================================================
-// CUSTOM ENTITY ROUTES (specialized logic, not generic CRUD)
-// =============================================================================
-app.use('/api/files', apiLimiter, filesRoutes); // Polymorphic attachments + streaming
 
 // =============================================================================
 // INFRASTRUCTURE & UTILITY ROUTES (not entity-driven)

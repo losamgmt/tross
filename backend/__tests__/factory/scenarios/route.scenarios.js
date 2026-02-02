@@ -386,9 +386,9 @@ function buildPath(basePath, endpointPath) {
     .replace(/:userId\b/g, '1')
     .replace(/:resourceId\b/g, '1')
     .replace(/:key\b/g, 'test-key')
-    .replace(/:entityType\b/g, 'customers')
-    .replace(/:resourceType\b/g, 'customers')
-    .replace(/:entity\b/g, 'customers');
+    .replace(/:entityType\b/g, 'customer')
+    .replace(/:resourceType\b/g, 'customer')
+    .replace(/:entity\b/g, 'customer');
 
   return `${basePath}${resolvedPath}`;
 }

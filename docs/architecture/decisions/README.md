@@ -19,6 +19,8 @@ Each ADR follows this structure:
 3. [Auth0 for Authentication](003-auth0-authentication.md) - ✅ Accepted
 4. [Routing & Navigation Strategy](004-routing-navigation-strategy.md) - ✅ Accepted
 5. [Testing Strategy & Coverage Approach](005-testing-strategy.md) - ✅ Accepted
+6. [Entity Naming Convention](006-entity-naming-convention.md) - ✅ Accepted
+7. [File Attachments Architecture](007-file-attachments-architecture.md) - ✅ Accepted
 
 ---
 

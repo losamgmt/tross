@@ -11,16 +11,17 @@
  *
  * WHAT THIS HANDLES:
  * - Entity CRUD routes (users, customers, work_orders, etc.)
+ * - File sub-routes for entities with supportsFileAttachments: true
  *
  * WHAT THIS DOES NOT HANDLE (kept explicit in server.js):
  * - Infrastructure routes (auth, health, dev, schema)
  * - Utility routes (stats, export, audit, admin)
  * - Entity extensions (roles-extensions) - these are entity-specific customizations
- * - Custom entity routes (preferences, files) - these have specialized logic
  */
 
 const allMetadata = require('./models');
 const entityRouters = require('../routes/entities');
+const { createFileSubRouter } = require('../routes/file-sub-router');
 
 // Derive uncountable entity names from metadata at load time (no hardcoding!)
 const UNCOUNTABLE_ENTITIES = Object.entries(allMetadata)
@@ -104,8 +105,52 @@ function getRouteSummary(routes) {
   return routes.map((r) => `  ${r.path} (${r.entityName})`).join('\n');
 }
 
+/**
+ * Load file sub-routers for entities with supportsFileAttachments: true
+ *
+ * Returns an array of route configurations for entities that support file attachments.
+ * Each entity gets a sub-router mounted at /api/:tableName/:id/files
+ *
+ * @returns {Array<{path: string, router: Router, entityName: string}>}
+ */
+function loadFileSubRoutes() {
+  const routes = [];
+
+  for (const [entityName, metadata] of Object.entries(allMetadata)) {
+    // Only create file sub-routes for entities that support file attachments
+    if (!metadata.supportsFileAttachments) {
+      continue;
+    }
+
+    // Create a file sub-router for this entity
+    const fileRouter = createFileSubRouter(metadata);
+
+    // Mount path: /api/:tableName/:id/files
+    const mountPath = `/api/${metadata.tableName}/:id/files`;
+
+    routes.push({
+      path: mountPath,
+      router: fileRouter,
+      entityName, // Include for logging/debugging
+    });
+  }
+
+  return routes;
+}
+
+/**
+ * Get a summary of file sub-routes for logging
+ * @param {Array} routes - Output from loadFileSubRoutes()
+ * @returns {string} Formatted summary
+ */
+function getFileRouteSummary(routes) {
+  return routes.map((r) => `  ${r.path} (${r.entityName})`).join('\n');
+}
+
 module.exports = {
   loadEntityRoutes,
+  loadFileSubRoutes,
   toRouterName,
   getRouteSummary,
+  getFileRouteSummary,
 };

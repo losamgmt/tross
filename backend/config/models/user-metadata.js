@@ -82,6 +82,11 @@ module.exports = {
   navVisibility: 'admin',
 
   /**
+   * File attachments - whether this entity supports file uploads
+   */
+  supportsFileAttachments: false,
+
+  /**
    * Entity-level permission overrides
    * When entity-level access differs from field-level minimums
    * (e.g., only admin can call PATCH /users/:id even if some fields are self-editable)

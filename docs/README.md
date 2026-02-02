@@ -67,6 +67,7 @@ TrossApp documentation hub.
 | [Rollback](operations/ROLLBACK.md) | Emergency procedures |
 | [Secrets Management](operations/SECRETS.md) | GitHub secrets configuration |
 | [Branch Protection](operations/BRANCH_PROTECTION_SETUP.md) | GitHub branch rules |
+| [R2 CORS Config](operations/r2-cors-config.md) | Cloudflare R2 bucket configuration |
 
 ---
 

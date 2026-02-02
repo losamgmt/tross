@@ -63,6 +63,11 @@ module.exports = {
   navVisibility: null,
 
   /**
+   * File attachments - whether this entity supports file uploads
+   */
+  supportsFileAttachments: false,
+
+  /**
    * Entity-level permission overrides
    * Only admin can read audit logs. No create/update/delete via API.
    * This is the SSOT for "admin only" access control.

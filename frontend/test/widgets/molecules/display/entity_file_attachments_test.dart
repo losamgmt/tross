@@ -33,6 +33,8 @@ void main() {
       fileSize: fileSize,
       category: category,
       createdAt: DateTime(2024, 1, 15),
+      downloadUrl: 'https://example.com/files/$id',
+      downloadUrlExpiresAt: DateTime.now().add(const Duration(hours: 1)),
     );
   }
 
@@ -344,6 +346,169 @@ void main() {
 
         await tester.tap(find.byIcon(Icons.delete_outline));
         expect(deleteCalled, isTrue);
+      });
+
+      testWidgets('opens preview modal when tapped', (tester) async {
+        await tester.pumpTestWidget(
+          FileListTile(file: createTestFile(filename: 'preview-test.pdf')),
+        );
+
+        // Tap the list tile (not action buttons)
+        await tester.tap(find.byType(ListTile));
+        await tester.pumpAndSettle();
+
+        // Verify modal opens with file name as title
+        expect(find.text('preview-test.pdf'), findsAtLeastNWidgets(1));
+        // Verify modal contains metadata section
+        expect(find.text('File Name'), findsOneWidget);
+        expect(find.text('Size'), findsOneWidget);
+        expect(find.text('Type'), findsOneWidget);
+      });
+    });
+
+    group('FilePreviewModal', () {
+      testWidgets('shows image preview for image files', (tester) async {
+        final imageFile = createTestFile(
+          filename: 'photo.jpg',
+          mimeType: 'image/jpeg',
+        );
+
+        await tester.pumpTestWidget(FileListTile(file: imageFile));
+
+        await tester.tap(find.byType(ListTile));
+        await tester.pumpAndSettle();
+
+        // Image widget should be mounted
+        expect(find.byType(Image), findsOneWidget);
+      });
+
+      testWidgets('shows unsupported message for office files', (tester) async {
+        final docFile = createTestFile(
+          filename: 'document.docx',
+          mimeType:
+              'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        );
+
+        await tester.pumpTestWidget(FileListTile(file: docFile));
+
+        await tester.tap(find.byType(ListTile));
+        await tester.pumpAndSettle();
+
+        // Should show unsupported preview message
+        expect(find.text('Preview Not Available'), findsOneWidget);
+        expect(find.textContaining('cannot be previewed'), findsOneWidget);
+      });
+
+      testWidgets('shows text file download prompt', (tester) async {
+        final textFile = createTestFile(
+          filename: 'notes.txt',
+          mimeType: 'text/plain',
+        );
+
+        await tester.pumpTestWidget(FileListTile(file: textFile));
+
+        await tester.tap(find.byType(ListTile));
+        await tester.pumpAndSettle();
+
+        // Should show text file message
+        expect(find.text('Text File'), findsOneWidget);
+        expect(find.textContaining('download to view'), findsOneWidget);
+      });
+
+      testWidgets('displays file metadata in modal', (tester) async {
+        final testFile = createTestFile(
+          filename: 'test-metadata.pdf',
+          fileSize: 5 * 1024 * 1024, // 5 MB
+          category: 'invoice',
+          mimeType: 'application/pdf',
+        );
+
+        await tester.pumpTestWidget(FileListTile(file: testFile));
+
+        await tester.tap(find.byType(ListTile));
+        await tester.pumpAndSettle();
+
+        // Verify metadata labels
+        expect(find.text('File Name'), findsOneWidget);
+        expect(find.text('test-metadata.pdf'), findsAtLeastNWidgets(1));
+        expect(find.text('Size'), findsOneWidget);
+        expect(find.text('5.0 MB'), findsOneWidget);
+        expect(find.text('Category'), findsOneWidget);
+        expect(find.text('Invoice'), findsOneWidget);
+      });
+
+      testWidgets('shows download button when callback provided', (
+        tester,
+      ) async {
+        await tester.pumpTestWidget(
+          FileListTile(file: createTestFile(), onDownload: () {}),
+        );
+
+        await tester.tap(find.byType(ListTile));
+        await tester.pumpAndSettle();
+
+        // Download button with icon should appear in modal
+        // Use find.text since ElevatedButton.icon has nested Text widget
+        expect(find.text('Download'), findsOneWidget);
+      });
+
+      testWidgets('download button calls callback', (tester) async {
+        bool downloadCalled = false;
+
+        await tester.pumpTestWidget(
+          FileListTile(
+            file: createTestFile(),
+            onDownload: () => downloadCalled = true,
+          ),
+        );
+
+        await tester.tap(find.byType(ListTile));
+        await tester.pumpAndSettle();
+
+        // Find the Download text and tap its ancestor button
+        final downloadText = find.text('Download');
+        expect(downloadText, findsOneWidget);
+
+        // Tap the Download text (which is inside the button)
+        await tester.tap(downloadText);
+        await tester.pump();
+        expect(downloadCalled, isTrue);
+      });
+
+      testWidgets('PDF preview shows stub on non-web', (tester) async {
+        final pdfFile = createTestFile(
+          filename: 'document.pdf',
+          mimeType: 'application/pdf',
+        );
+
+        await tester.pumpTestWidget(FileListTile(file: pdfFile));
+
+        await tester.tap(find.byType(ListTile));
+        await tester.pumpAndSettle();
+
+        // In VM tests, shows the stub (non-web platform)
+        expect(find.text('PDF Preview'), findsOneWidget);
+        expect(
+          find.textContaining('only available in the browser'),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('modal closes on backdrop tap', (tester) async {
+        await tester.pumpTestWidget(FileListTile(file: createTestFile()));
+
+        await tester.tap(find.byType(ListTile));
+        await tester.pumpAndSettle();
+
+        // Modal should be showing
+        expect(find.text('File Name'), findsOneWidget);
+
+        // Tap outside the dialog to close
+        await tester.tapAt(const Offset(10, 10));
+        await tester.pumpAndSettle();
+
+        // Modal should be closed
+        expect(find.text('File Name'), findsNothing);
       });
     });
   });

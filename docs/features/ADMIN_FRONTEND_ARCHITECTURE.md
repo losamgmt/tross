@@ -54,11 +54,11 @@ All test suites should pass before making changes. Run `npm run test:all` to ver
 ```
 /api/auth/me, /refresh, /logout
 /api/{entity}/              - CRUD for customers, work_orders, invoices, etc.
+/api/{entity}/{id}/files/   - File attachments (sub-resource pattern)
 /api/preferences/           - User preferences (GET, PUT, POST /reset)
 /api/stats/{entity}         - Aggregations
 /api/export/{entity}        - CSV exports  
 /api/audit/                 - Audit log queries
-/api/files/                 - File attachments
 /api/health/                - Health checks
 /api/schema/                - Schema introspection
 /api/dev/                   - Dev-only endpoints

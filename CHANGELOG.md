@@ -16,11 +16,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [ ] Dispatcher+: Full financial stats visibility
 - [ ] Admin: All resources including user management stats
 
-#### File Attachment Admin Page
+#### File Attachment Admin Page (Phase 6B)
 - [ ] Implement file attachment management page in admin section
 - [ ] List all attachments with filters (entity type, date range, file type)
 - [ ] Bulk delete orphaned attachments
 - [ ] Storage usage statistics
+
+---
+
+### Added - File Attachments Complete (2026-02-01)
+
+#### Phase 5: Entity Naming Convention Unification ✅
+- **Phase 5A**: Added explicit `entityKey` to all 13 entity metadata files
+- **Phase 5B**: Backend file routes restructured to sub-resource pattern
+  - Routes: `/api/:tableName/:id/files` (proper RESTful sub-resources)
+  - `file-sub-router.js` with `mergeParams: true`
+  - `download_url` + `download_url_expires_at` always present in responses
+- **Phase 5C**: Frontend unified to use metadata registry
+  - Removed hardcoded `_entityKeyToTableName` map from `FileService`
+  - Now uses `EntityMetadataRegistry.tryGet(entityKey).tableName`
+
+#### Phase 6: File Attachments Feature ✅ (Except Admin UI)
+- **6A Entity Integration**: `EntityFileAttachments` wired into `EntityDetailScreen`
+  - Upload, download, delete handlers with loading states
+  - File preview modal (images, PDFs, text)
+  - Conditional imports for web-only PDF iframe
+- **6C Documentation**: R2 Railway configuration documented in `docs/operations/r2-cors-config.md`
+  - Required environment variables
+  - CORS configuration
+  - Getting R2 credentials
+
+#### Test Infrastructure Improvements
+- Completely rewrote `FileService` tests (shallow → meaningful)
+  - Entity key resolution tests (work_order → work_orders)
+  - HTTP request/response flow tests
+  - Error handling tests (401, 403, 404)
+- Enhanced `MockApiClient` with `mockAuthenticatedRequest()` callback
+- Fixed `ServiceTestFactory.generateErrorPathTests()` to initialize metadata registry
+- All tests pass: 5,183 frontend + 3,334 backend
 
 ---
 

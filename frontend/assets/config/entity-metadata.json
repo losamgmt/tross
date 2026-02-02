@@ -12,6 +12,7 @@
     "identityField": "id",
     "rlsResource": "audit_logs",
     "icon": "history",
+    "supportsFileAttachments": false,
     "displayName": "Audit log",
     "displayNamePlural": "Audit logs",
     "filterableFields": [
@@ -80,6 +81,7 @@
     "identityField": "contract_number",
     "rlsResource": "contracts",
     "icon": "description",
+    "supportsFileAttachments": true,
     "displayField": "contract_number",
     "displayName": "Contract",
     "displayNamePlural": "Contracts",
@@ -210,6 +212,7 @@
     "identityField": "email",
     "rlsResource": "customers",
     "icon": "people",
+    "supportsFileAttachments": false,
     "displayName": "Customer",
     "displayNamePlural": "Customers",
     "requiredFields": [
@@ -580,6 +583,7 @@
     "identityField": "original_filename",
     "rlsResource": "_parent_derived",
     "icon": "attach_file",
+    "supportsFileAttachments": false,
     "displayName": "File attachment",
     "displayNamePlural": "File attachments",
     "requiredFields": [
@@ -692,6 +696,7 @@
     "identityField": "sku",
     "rlsResource": "inventory",
     "icon": "inventory_2",
+    "supportsFileAttachments": true,
     "displayField": "name",
     "displayName": "Inventory",
     "displayNamePlural": "Inventory",
@@ -805,6 +810,7 @@
     "identityField": "invoice_number",
     "rlsResource": "invoices",
     "icon": "receipt",
+    "supportsFileAttachments": true,
     "displayField": "invoice_number",
     "displayName": "Invoice",
     "displayNamePlural": "Invoices",
@@ -945,6 +951,7 @@
     "identityField": "title",
     "rlsResource": "notifications",
     "icon": "notifications",
+    "supportsFileAttachments": false,
     "displayName": "Notification",
     "displayNamePlural": "Notifications",
     "requiredFields": [
@@ -1059,6 +1066,7 @@
     "identityField": "id",
     "rlsResource": "preferences",
     "icon": "settings",
+    "supportsFileAttachments": false,
     "displayName": "Preferences",
     "displayNamePlural": "Preferences",
     "requiredFields": [
@@ -1243,6 +1251,7 @@
     "identityField": "priority",
     "rlsResource": "roles",
     "icon": "badge",
+    "supportsFileAttachments": false,
     "displayField": "name",
     "displayName": "Role",
     "displayNamePlural": "Roles",
@@ -1353,6 +1362,7 @@
     "identityField": "view_name",
     "rlsResource": "saved_views",
     "icon": "bookmark",
+    "supportsFileAttachments": false,
     "displayName": "Saved view",
     "displayNamePlural": "Saved views",
     "requiredFields": [
@@ -1442,6 +1452,7 @@
     "identityField": "email",
     "rlsResource": "technicians",
     "icon": "engineering",
+    "supportsFileAttachments": false,
     "displayName": "Technician",
     "displayNamePlural": "Technicians",
     "requiredFields": [
@@ -1581,6 +1592,7 @@
     "identityField": "email",
     "rlsResource": "users",
     "icon": "person",
+    "supportsFileAttachments": false,
     "displayName": "User",
     "displayNamePlural": "Users",
     "requiredFields": [
@@ -1719,6 +1731,7 @@
     "identityField": "work_order_number",
     "rlsResource": "work_orders",
     "icon": "build",
+    "supportsFileAttachments": true,
     "displayField": "work_order_number",
     "displayName": "Work order",
     "displayNamePlural": "Work orders",

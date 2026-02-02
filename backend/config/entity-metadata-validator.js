@@ -305,6 +305,34 @@ function validateDisplayProperties(meta, errors) {
 }
 
 /**
+ * Validate supportsFileAttachments property
+ * REQUIRED: Every entity must explicitly declare whether it supports file attachments.
+ * This ensures intentional decisions and powers metadata-driven file attachment UI.
+ *
+ * Valid values:
+ * - true: Entity supports file attachments (shows file UI on detail page)
+ * - false: Entity does not support file attachments
+ */
+function validateSupportsFileAttachments(meta, errors) {
+  if (!('supportsFileAttachments' in meta)) {
+    errors.add(
+      'supportsFileAttachments',
+      'REQUIRED: Every entity must declare supportsFileAttachments (true or false). ' +
+      'This powers the metadata-driven file attachment system.',
+    );
+    return;
+  }
+
+  const value = meta.supportsFileAttachments;
+  if (typeof value !== 'boolean') {
+    errors.add(
+      'supportsFileAttachments',
+      `Must be a boolean (true or false), got '${typeof value}'`,
+    );
+  }
+}
+
+/**
  * Validate navVisibility property
  * REQUIRED: Every entity must explicitly declare its navigation visibility.
  * This ensures intentional decisions about which entities appear in nav menus.
@@ -366,6 +394,7 @@ function validateEntity(entityName, meta, allMetadata) {
   // Run all validators
   validateDisplayProperties(meta, errors);
   validateNavVisibility(meta, errors);
+  validateSupportsFileAttachments(meta, errors);
   validateFieldTypes(meta, errors);
   validateFieldAccess(meta, errors);
   validateEntityPermissions(meta, errors);
