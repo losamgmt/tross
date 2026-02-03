@@ -1,16 +1,8 @@
-# =============================================================================
-# TrossApp CI Pipeline
-# =============================================================================
-# Staged testing: unit → integration → e2e (with frontend in parallel)
-# Mobile builds only on release tags (v*).
-# =============================================================================
-
 name: CI
 
 on:
   push:
     branches: [main, develop]
-    tags: ['v*']
   pull_request:
     branches: [main]
 
@@ -18,66 +10,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  NODE_VERSION: '22'
-  FLUTTER_VERSION: '3.38.7'
-
 jobs:
-  # ============================================================================
-  # STAGE 1: Backend Unit Tests + Frontend (parallel)
-  # ============================================================================
-  backend-unit:
-    name: Backend Unit
+  test:
+    name: Test
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Lint
-        run: npm run lint --workspace=backend
-
-      - name: Unit tests
-        run: npm run test:unit --workspace=backend
-        env:
-          NODE_ENV: test
-          JWT_SECRET: test-secret-key-for-ci
-
-  frontend:
-    name: Frontend
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          cache: true
-
-      - name: Install dependencies
-        run: cd frontend && flutter pub get
-
-      - name: Analyze
-        run: cd frontend && flutter analyze
-
-      - name: Tests
-        run: cd frontend && flutter test
-
-  # ============================================================================
-  # STAGE 2: Backend Integration Tests (needs unit tests to pass)
-  # ============================================================================
-  backend-integration:
-    name: Backend Integration
-    runs-on: ubuntu-latest
-    needs: [backend-unit]
 
     services:
       postgres:
@@ -100,13 +36,31 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: '22'
           cache: 'npm'
 
-      - name: Install dependencies
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.32.2'
+          cache: true
+
+      - name: Install backend dependencies
         run: npm ci
 
-      - name: Integration tests
+      - name: Install frontend dependencies
+        run: cd frontend && flutter pub get
+
+      - name: Backend lint
+        run: npm run lint --workspace=backend
+
+      - name: Backend unit tests
+        run: npm run test:unit --workspace=backend
+        env:
+          NODE_ENV: test
+          JWT_SECRET: test-secret-key-for-ci
+
+      - name: Backend integration tests
         run: npm run test:integration --workspace=backend
         env:
           TEST_DB_HOST: localhost
@@ -118,89 +72,8 @@ jobs:
           JWT_SECRET: test-secret-key-for-ci
           AUTH_MODE: development
 
-  # ============================================================================
-  # BUILD: Web (main branch only, after all tests pass)
-  # ============================================================================
-  build-web:
-    name: Build Web
-    runs-on: ubuntu-latest
-    needs: [backend-integration, frontend]
-    if: github.ref == 'refs/heads/main'
+      - name: Frontend analyze
+        run: cd frontend && flutter analyze
 
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          cache: true
-
-      - name: Install dependencies
-        run: cd frontend && flutter pub get
-
-      - name: Build web
-        run: cd frontend && flutter build web --no-tree-shake-icons
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: web-build
-          path: frontend/build/web
-          retention-days: 7
-
-  # ============================================================================
-  # MOBILE: Android + iOS (release tags only, after all tests pass)
-  # ============================================================================
-  build-mobile:
-    name: Build Mobile
-    runs-on: macos-latest
-    needs: [backend-integration, frontend]
-    if: startsWith(github.ref, 'refs/tags/v')
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '17'
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          cache: true
-
-      - name: Install dependencies
-        run: cd frontend && flutter pub get
-
-      # Android
-      - name: Build Android APK
-        run: cd frontend && flutter build apk --release
-
-      - name: Upload Android APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-release-${{ github.ref_name }}
-          path: frontend/build/app/outputs/flutter-apk/app-release.apk
-          retention-days: 90
-
-      # iOS (unsigned - for TestFlight you'd add signing here)
-      - name: Build iOS
-        run: cd frontend && flutter build ios --release --no-codesign
-
-      - name: Create IPA
-        run: |
-          cd frontend/build/ios/iphoneos
-          mkdir -p Payload
-          cp -r Runner.app Payload/
-          zip -r ../../../ios-${{ github.ref_name }}.ipa Payload
-
-      - name: Upload iOS IPA
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-release-${{ github.ref_name }}
-          path: frontend/build/ios-${{ github.ref_name }}.ipa
-          retention-days: 90
+      - name: Frontend tests
+        run: cd frontend && flutter test
