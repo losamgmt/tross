@@ -44,6 +44,7 @@ library;
 
 import 'package:flutter/material.dart';
 import '../../../config/app_spacing.dart';
+import '../interactions/touch_target.dart';
 
 class SearchInput extends StatefulWidget {
   /// Current search value
@@ -150,11 +151,11 @@ class _SearchInputState extends State<SearchInput> {
           color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
         ),
         suffixIcon: (widget.showClearButton && hasText && widget.enabled)
-            ? IconButton(
-                icon: Icon(Icons.clear, size: iconSize),
-                onPressed: _handleClear,
+            ? TouchTarget.icon(
+                icon: Icons.clear,
+                size: iconSize,
+                onTap: _handleClear,
                 tooltip: 'Clear',
-                splashRadius: iconSize,
               )
             : null,
         contentPadding: EdgeInsets.symmetric(

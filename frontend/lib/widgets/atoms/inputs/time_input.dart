@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../config/app_spacing.dart';
+import '../interactions/touch_target.dart';
 
 /// Generic time input atom for ANY time field on ANY model
 ///
@@ -135,9 +136,10 @@ class _TimeInputState extends State<TimeInput> {
     return KeyboardListener(
       focusNode: _focusNode,
       onKeyEvent: _handleKeyEvent,
-      child: InkWell(
+      child: TouchTarget(
         onTap: widget.enabled ? () => _selectTime(context) : null,
-        canRequestFocus: false, // Focus is handled by KeyboardListener
+        enabled: widget.enabled,
+        semanticLabel: 'Select time',
         child: InputDecorator(
           isFocused: _isFocused,
           decoration: InputDecoration(
@@ -149,9 +151,9 @@ class _TimeInputState extends State<TimeInput> {
                 : const Icon(Icons.access_time),
             suffixIcon:
                 widget.value != null && widget.showClearButton && widget.enabled
-                ? IconButton(
-                    icon: const Icon(Icons.clear),
-                    onPressed: _clearTime,
+                ? TouchTarget.icon(
+                    icon: Icons.clear,
+                    onTap: _clearTime,
                     tooltip: 'Clear',
                   )
                 : (widget.suffixIcon != null ? Icon(widget.suffixIcon) : null),

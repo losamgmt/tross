@@ -23,6 +23,7 @@ library;
 
 import 'package:flutter/material.dart';
 import '../../../config/app_spacing.dart';
+import '../../atoms/atoms.dart';
 
 /// Configuration for a footer link
 class FooterLink {
@@ -260,9 +261,9 @@ class AppFooter extends StatelessWidget {
   }
 
   Widget _buildLink(FooterLink link, ThemeData theme, AppSpacing spacing) {
-    return InkWell(
+    return TouchTarget(
       onTap: link.onTap ?? () => onLinkTap?.call(link),
-      borderRadius: BorderRadius.circular(4),
+      semanticLabel: link.label,
       child: Padding(
         padding: EdgeInsets.symmetric(
           horizontal: spacing.xs,
@@ -292,16 +293,12 @@ class AppFooter extends StatelessWidget {
   }
 
   Widget _buildSocialLink(FooterLink link, ThemeData theme) {
-    return IconButton(
-      onPressed: link.onTap ?? () => onLinkTap?.call(link),
-      icon: Icon(
-        link.icon ?? Icons.link,
-        size: 20,
-        color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-      ),
+    return TouchTarget.icon(
+      icon: link.icon ?? Icons.link,
+      onTap: link.onTap ?? () => onLinkTap?.call(link),
       tooltip: link.label,
-      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-      padding: EdgeInsets.zero,
+      size: 20,
+      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
     );
   }
 }

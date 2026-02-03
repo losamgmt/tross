@@ -6,6 +6,7 @@ library;
 import 'package:flutter/material.dart';
 import '../../../config/app_spacing.dart';
 import '../../../config/app_colors.dart';
+import '../../../config/constants.dart';
 
 class LoginHeader extends StatelessWidget {
   final String title;
@@ -16,7 +17,7 @@ class LoginHeader extends StatelessWidget {
     super.key,
     required this.title,
     required this.subtitle,
-    this.icon = Icons.build_circle,
+    this.icon = AppConstants.appIcon,
   });
 
   @override

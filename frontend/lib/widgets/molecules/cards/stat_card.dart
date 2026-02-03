@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../config/app_spacing.dart';
 import '../../../config/app_colors.dart';
+import '../../atoms/atoms.dart';
 
 /// StatCard - Molecule for displaying a statistic with label and count
 ///
@@ -246,11 +247,7 @@ class StatCard extends StatelessWidget {
     );
 
     if (onTap != null) {
-      return InkWell(
-        onTap: onTap,
-        borderRadius: spacing.radiusMD,
-        child: content,
-      );
+      return TouchTarget(onTap: onTap, semanticLabel: label, child: content);
     }
 
     return content;

@@ -51,6 +51,7 @@ import '../../../config/app_colors.dart';
 import '../../../config/app_sizes.dart';
 import '../../../config/app_spacing.dart';
 import '../../../config/app_typography.dart';
+import '../interactions/touch_target.dart';
 
 class CheckboxInput extends StatelessWidget {
   /// Current checked value (null = indeterminate if tristate)
@@ -100,9 +101,10 @@ class CheckboxInput extends StatelessWidget {
         : theme.textTheme.bodyMedium;
     final descStyle = theme.textTheme.bodySmall;
 
-    return InkWell(
+    return TouchTarget(
       onTap: enabled ? () => _handleTap() : null,
-      borderRadius: spacing.radiusSM,
+      enabled: enabled,
+      semanticLabel: label,
       child: Padding(
         padding: EdgeInsets.symmetric(vertical: spacing.xxs),
         child: Row(

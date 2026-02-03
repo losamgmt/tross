@@ -8,48 +8,88 @@ Guide to TrossApp's continuous integration and deployment pipeline.
 
 **What runs automatically:**
 - ✅ Backend tests (unit + integration)
-- ✅ Linting & format checks
-- ✅ Build verification
-- ✅ E2E smoke tests
+- ✅ Frontend tests (Flutter analyze + test)
+- ✅ Security audit (npm audit + dependency review)
+- ✅ Web build verification
+- ✅ Mobile builds (Android APK + iOS IPA)
+- ✅ E2E smoke tests (against Railway production)
 
 **When it runs:**
 - Every push to `main` or `develop`
-- Every pull request to `main` or `develop`
+- Every pull request to `main`
+- Mobile builds: Only on `main` branch pushes
 - Triggered by GitHub Actions
+
+**Automation:**
+- 🤖 **Dependabot**: Weekly dependency updates (npm, Flutter, Docker, Actions)
+- 👥 **CODEOWNERS**: Auto-assigns reviewers for PRs
 
 ---
 
 ## CI Pipeline Stages
 
-### 1. Test Backend
+### 1. Backend Unit Tests 🧪
 
 **What runs:**
 - Unit tests (fast, isolated, mocked dependencies)
-- Integration tests (real database, API endpoints)
-- PostgreSQL service container spins up automatically
+- ESLint code quality checks
 
-**Environment:**
-- Node.js 20
-- PostgreSQL 15
-- Test database with migrations
+**Environment:** Node.js 22, no database
 
 **Required to pass:** ✅ All tests must pass
 
-### 2. Lint & Format Check (~10 seconds)
+### 2. Backend Integration Tests 🔗
 
 **What runs:**
-- ESLint code quality checks
-- Format verification (Prettier)
+- Integration tests (real database, API endpoints)
+- PostgreSQL 15 service container
 
-**Required to pass:** ✅ No linting errors
+**Environment:** Node.js 22, PostgreSQL 15, R2 credentials
 
-### 3. Build Check (~15 seconds)
+**Required to pass:** ✅ All tests must pass
+
+### 3. Security Audit 🔒
 
 **What runs:**
-- Backend build verification
-- Dependency resolution check
+- `npm audit --audit-level=high`
+- Dependency review (PRs only) - blocks high-severity vulnerabilities
 
-**Required to pass:** ✅ Build must complete successfully
+**Required to pass:** ⚠️ Warnings allowed, high-severity blocks PRs
+
+### 4. Frontend Tests 🎨
+
+**What runs:**
+- `flutter analyze` (static analysis)
+- `flutter test` (all widget + unit tests)
+
+**Environment:** Flutter 3.38.7
+
+**Required to pass:** ✅ All tests must pass
+
+### 5. Web Build 🌐
+
+**What runs:**
+- `flutter build web --no-tree-shake-icons`
+- Uploads artifact (main branch only)
+
+**Required to pass:** ✅ Build must succeed
+
+### 6. Mobile Builds 📱 (main branch only)
+
+**Android 🤖:**
+- Builds debug + release APKs
+- Uploads as artifacts (30-day retention)
+
+**iOS 🍎:**
+- Builds unsigned IPA (macOS runner)
+- Creates Payload zip for testing
+- Uploads as artifact (30-day retention)
+
+### 7. E2E Smoke Tests 🎭
+
+**What runs:**
+- Playwright tests against Railway production
+- Health checks, security headers, routing
 
 ---
 
@@ -79,14 +119,22 @@ Tests requiring authentication are in **integration tests** where test auth is e
 
 ```
 Push to main
-    ├─► Backend Unit ───────────┐
-    │                            ├─► E2E ─► Deploy Notify
-    ├─► Backend Integration ─────┘   against Railway
+    ├─► Backend Unit ─────────────────┐
+    │                                  │
+    ├─► Backend Integration ───────────┼─► E2E Smoke ─┐
+    │                                  │              │
+    ├─► Security Audit ────────────────┤              │
+    │                                  │              │
+    ├─► Frontend Tests ─┬─► Web Build ─┤              ├─► Summary
+    │                   │              │              │
+    │                   ├─► Android ───┼──────────────┤
+    │                   │              │              │
+    │                   └─► iOS ───────┘──────────────┘
     │
-    ├─► Frontend Tests
-    │
-    └─► Railway auto-deploys (parallel with CI)
+    └─► Railway/Vercel auto-deploy (parallel)
 ```
+
+**Concurrency:** In-progress runs are cancelled when a new push occurs (saves resources).
 
 E2E waits for Railway to be healthy, then runs against the production URL.
 
@@ -252,7 +300,7 @@ API Docs: https://tross-api-production.up.railway.app/api-docs
 ### Common CI Failures
 
 **"npm ci failed"**
-- Cause: package-lock.json out of sync
+- Cause: package-lock.json out of sync with Node 22
 - Fix: Run `npm install` locally, commit lock file
 
 **"Tests failed"**
@@ -283,14 +331,14 @@ API Docs: https://tross-api-production.up.railway.app/api-docs
 
 ### GitHub Actions
 
-**Free tier:**
-- 2000 minutes/month for private repos
-- Unlimited for public repos
+**Free tier (PUBLIC REPO):**
+- ✅ Unlimited minutes on all runners (ubuntu, macos, windows)
+- ✅ No cost for iOS builds (macos-latest)
 
 **Current usage:**
-- ~2 minutes per PR (backend + lint + build)
-- ~100 PRs/month = ~200 minutes
-- Well within free tier ✅
+- ~3 minutes per PR (backend + frontend + security)
+- ~8 minutes per main push (includes mobile builds)
+- **Cost: $0** (public repo) ✅
 
 ### Vercel
 

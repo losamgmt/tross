@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../config/app_spacing.dart';
-import '../../atoms/indicators/status_chip.dart';
+import '../../atoms/atoms.dart';
 
 /// ConfigCard - Molecule for displaying configuration or settings items
 ///
@@ -182,13 +182,9 @@ class ConfigCard extends StatelessWidget {
       ),
     );
 
-    // Wrap in InkWell if tappable
+    // Wrap in TouchTarget if tappable
     if (onTap != null && enabled) {
-      content = InkWell(
-        onTap: onTap,
-        borderRadius: spacing.radiusMD,
-        child: content,
-      );
+      content = TouchTarget(onTap: onTap, semanticLabel: title, child: content);
     }
 
     return Card(

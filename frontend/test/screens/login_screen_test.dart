@@ -179,8 +179,8 @@ void main() {
         // Check for dropdown helper text instead of placeholder (has default value)
         expect(find.text(AppConstants.devLoginRoleHint), findsWidgets);
 
-        // Check for app logo icon
-        expect(find.byIcon(Icons.build_circle), findsWidgets);
+        // Check for app logo icon (uses centralized AppConstants.appIcon)
+        expect(find.byIcon(AppConstants.appIcon), findsWidgets);
       });
     });
   });

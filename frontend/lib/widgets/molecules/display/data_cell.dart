@@ -6,6 +6,7 @@ library;
 
 import 'package:flutter/material.dart';
 import '../../../config/app_spacing.dart';
+import '../../atoms/atoms.dart';
 
 class DataCell extends StatelessWidget {
   final Widget child;
@@ -66,7 +67,11 @@ class DataCell extends StatelessWidget {
     );
 
     if (onTap != null) {
-      content = InkWell(onTap: onTap, child: content);
+      content = TouchTarget(
+        onTap: onTap,
+        semanticLabel: 'Data cell',
+        child: content,
+      );
     }
 
     return content;

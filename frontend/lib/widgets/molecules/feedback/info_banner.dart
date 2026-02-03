@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../config/app_spacing.dart';
+import '../../atoms/atoms.dart';
 
 /// InfoBanner - Generic molecule for alert/info/warning banners
 ///
@@ -97,11 +98,10 @@ class InfoBanner extends StatelessWidget {
           // Dismiss button (optional)
           if (onDismiss != null) ...[
             SizedBox(width: spacing.sm),
-            IconButton(
-              icon: Icon(Icons.close, size: 18),
-              onPressed: onDismiss,
-              padding: EdgeInsets.zero,
-              constraints: BoxConstraints(),
+            TouchTarget.icon(
+              icon: Icons.close,
+              size: 18,
+              onTap: onDismiss,
               color: colors.foreground.withValues(alpha: 0.7),
               tooltip: 'Dismiss',
             ),

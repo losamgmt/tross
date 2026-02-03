@@ -266,8 +266,8 @@ void main() {
 
         await tester.pumpAndSettle();
 
-        final iconButton = tester.widget<IconButton>(find.byType(IconButton));
-        expect(iconButton.tooltip, 'Expand sidebar');
+        final tooltip = tester.widget<Tooltip>(find.byType(Tooltip));
+        expect(tooltip.message, 'Expand sidebar');
       });
 
       testWidgets('has correct tooltip for collapse', (tester) async {
@@ -275,8 +275,8 @@ void main() {
           const AppSidebar(items: [], collapsed: false),
         );
 
-        final iconButton = tester.widget<IconButton>(find.byType(IconButton));
-        expect(iconButton.tooltip, 'Collapse sidebar');
+        final tooltip = tester.widget<Tooltip>(find.byType(Tooltip));
+        expect(tooltip.message, 'Collapse sidebar');
       });
     });
 

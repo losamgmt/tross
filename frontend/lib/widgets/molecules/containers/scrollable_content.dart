@@ -1,18 +1,21 @@
-/// ScrollableContent - Molecular Wrapper for SingleChildScrollView
+/// ScrollableContent - Platform-aware scrollable container molecule
 ///
-/// Pure single-atom molecule that provides semantic scrollable container.
-/// ZERO logic - pure composition following SRP-literal atomic design.
+/// Enhanced wrapper that provides:
+/// - Platform-appropriate scroll physics (iOS bounce, Android clamp)
+/// - Automatic keyboard dismiss on scroll (mobile)
+/// - Tap-outside to dismiss keyboard (mobile)
+/// - Semantic API over Flutter primitives
 ///
-/// Wraps Flutter's SingleChildScrollView with semantic parameters.
+/// Wraps Flutter's SingleChildScrollView with platform-aware defaults.
 library;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import '../../../config/platform_utilities.dart';
 
-/// Semantic scrollable container wrapper
+/// Semantic scrollable container wrapper with platform awareness
 ///
-/// Single-atom molecule: Wraps SingleChildScrollView with semantic API.
-/// Zero logic, pure composition.
+/// Molecule: Wraps SingleChildScrollView with semantic API and platform defaults.
 class ScrollableContent extends StatelessWidget {
   /// Child widget that will be scrollable
   final Widget child;
@@ -29,7 +32,7 @@ class ScrollableContent extends StatelessWidget {
   /// Whether content should be in reverse order
   final bool primary;
 
-  /// Physics for scrolling behavior
+  /// Physics for scrolling behavior (defaults to platform-appropriate)
   final ScrollPhysics? physics;
 
   /// Controller for programmatic scrolling
@@ -44,8 +47,11 @@ class ScrollableContent extends StatelessWidget {
   /// Key for restoring scroll position
   final String? restorationId;
 
-  /// Keyboard dismiss behavior
-  final ScrollViewKeyboardDismissBehavior keyboardDismissBehavior;
+  /// Keyboard dismiss behavior (defaults to platform-appropriate)
+  final ScrollViewKeyboardDismissBehavior? keyboardDismissBehavior;
+
+  /// Whether to dismiss keyboard on tap outside (mobile only)
+  final bool dismissKeyboardOnTapOutside;
 
   const ScrollableContent({
     super.key,
@@ -59,7 +65,8 @@ class ScrollableContent extends StatelessWidget {
     this.dragStartBehavior = DragStartBehavior.start,
     this.clipBehavior = Clip.hardEdge,
     this.restorationId,
-    this.keyboardDismissBehavior = ScrollViewKeyboardDismissBehavior.manual,
+    this.keyboardDismissBehavior,
+    this.dismissKeyboardOnTapOutside = true,
   });
 
   /// Vertical scrolling variant (default)
@@ -74,7 +81,8 @@ class ScrollableContent extends StatelessWidget {
     this.dragStartBehavior = DragStartBehavior.start,
     this.clipBehavior = Clip.hardEdge,
     this.restorationId,
-    this.keyboardDismissBehavior = ScrollViewKeyboardDismissBehavior.manual,
+    this.keyboardDismissBehavior,
+    this.dismissKeyboardOnTapOutside = true,
   }) : scrollDirection = Axis.vertical;
 
   /// Horizontal scrolling variant
@@ -89,24 +97,40 @@ class ScrollableContent extends StatelessWidget {
     this.dragStartBehavior = DragStartBehavior.start,
     this.clipBehavior = Clip.hardEdge,
     this.restorationId,
-    this.keyboardDismissBehavior = ScrollViewKeyboardDismissBehavior.manual,
+    this.keyboardDismissBehavior,
+    this.dismissKeyboardOnTapOutside = true,
   }) : scrollDirection = Axis.horizontal;
 
   @override
   Widget build(BuildContext context) {
-    // Pure wrapper - zero logic, just semantic API → Flutter primitive
-    return SingleChildScrollView(
+    // Platform-aware defaults
+    final effectivePhysics = physics ?? PlatformUtilities.scrollPhysics;
+    final effectiveKeyboardBehavior =
+        keyboardDismissBehavior ?? PlatformUtilities.keyboardDismissBehavior;
+
+    Widget scrollView = SingleChildScrollView(
       scrollDirection: scrollDirection,
       reverse: reverse,
       padding: padding,
       primary: primary,
-      physics: physics,
+      physics: effectivePhysics,
       controller: controller,
       dragStartBehavior: dragStartBehavior,
       clipBehavior: clipBehavior,
       restorationId: restorationId,
-      keyboardDismissBehavior: keyboardDismissBehavior,
+      keyboardDismissBehavior: effectiveKeyboardBehavior,
       child: child,
     );
+
+    // Wrap with tap-to-dismiss on touch devices
+    if (dismissKeyboardOnTapOutside && PlatformUtilities.isTouchDevice) {
+      scrollView = GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        behavior: HitTestBehavior.translucent,
+        child: scrollView,
+      );
+    }
+
+    return scrollView;
   }
 }

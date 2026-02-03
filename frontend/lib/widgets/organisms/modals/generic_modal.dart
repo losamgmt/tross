@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:tross_app/config/app_spacing.dart';
 import 'package:tross_app/config/constants.dart';
+import 'package:tross_app/config/platform_utilities.dart';
+import '../../atoms/atoms.dart';
 
 /// GenericModal - Organism for modal dialogs via PURE COMPOSITION
 ///
 /// **SOLE RESPONSIBILITY:** Compose widgets into modal layout structure
 /// **PURE:** No service dependencies - uses standard Navigator.pop()
+/// **ADAPTIVE:** Full-screen on compact screens, dialog on expanded
 ///
 /// Usage:
 /// ```dart
@@ -28,6 +31,10 @@ class GenericModal extends StatefulWidget {
   final EdgeInsets? padding;
   final bool dismissible;
 
+  /// Whether to use full-screen on compact screens (phones)
+  /// Default: true - modals become full-screen on narrow screens
+  final bool adaptiveFullScreen;
+
   const GenericModal({
     super.key,
     this.title,
@@ -39,6 +46,7 @@ class GenericModal extends StatefulWidget {
     this.maxHeight,
     this.padding,
     this.dismissible = true,
+    this.adaptiveFullScreen = true,
   });
 
   /// Helper method to show the modal
@@ -53,7 +61,30 @@ class GenericModal extends StatefulWidget {
     double? maxHeight,
     EdgeInsets? padding,
     bool dismissible = true,
+    bool adaptiveFullScreen = true,
   }) {
+    final size = MediaQuery.of(context).size;
+    final useFullScreen =
+        adaptiveFullScreen &&
+        PlatformUtilities.shouldUseFullScreenModal(size.width);
+
+    if (useFullScreen) {
+      // Full-screen modal for compact screens
+      return Navigator.of(context).push<T>(
+        MaterialPageRoute(
+          fullscreenDialog: true,
+          builder: (context) => _FullScreenModal(
+            title: title,
+            content: content,
+            actions: actions,
+            showCloseButton: showCloseButton,
+            onClose: onClose,
+            padding: padding,
+          ),
+        ),
+      );
+    }
+
     return showDialog<T>(
       context: context,
       barrierDismissible: dismissible,
@@ -67,6 +98,7 @@ class GenericModal extends StatefulWidget {
         maxHeight: maxHeight,
         padding: padding,
         dismissible: dismissible,
+        adaptiveFullScreen: false, // Already decided to use dialog
       ),
     );
   }
@@ -120,9 +152,9 @@ class _GenericModalState extends State<GenericModal> {
                         ),
                       ),
                     if (widget.showCloseButton)
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed:
+                      TouchTarget.icon(
+                        icon: Icons.close,
+                        onTap:
                             widget.onClose ?? () => Navigator.of(context).pop(),
                         tooltip: 'Close',
                       ),
@@ -163,6 +195,75 @@ class _GenericModalState extends State<GenericModal> {
                       widget.actions![i],
                       if (i < widget.actions!.length - 1)
                         const SizedBox(width: 8),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Full-screen modal for compact screens (phones)
+///
+/// Provides a better UX on small screens by using the full viewport
+/// with proper AppBar and SafeArea handling.
+class _FullScreenModal extends StatelessWidget {
+  final String? title;
+  final Widget content;
+  final List<Widget>? actions;
+  final bool showCloseButton;
+  final VoidCallback? onClose;
+  final EdgeInsets? padding;
+
+  const _FullScreenModal({
+    this.title,
+    required this.content,
+    this.actions,
+    this.showCloseButton = true,
+    this.onClose,
+    this.padding,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final spacing = context.spacing;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: title != null ? Text(title!) : null,
+        leading: showCloseButton
+            ? IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: onClose ?? () => Navigator.of(context).pop(),
+              )
+            : null,
+        automaticallyImplyLeading: false,
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Scrollable content
+            Expanded(
+              child: AdaptiveScroll(
+                padding: padding ?? EdgeInsets.all(spacing.md),
+                child: content,
+              ),
+            ),
+            // Actions at bottom (if any)
+            if (actions != null && actions!.isNotEmpty) ...[
+              const Divider(height: 1),
+              Padding(
+                padding: EdgeInsets.all(spacing.md),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    for (int i = 0; i < actions!.length; i++) ...[
+                      actions![i],
+                      if (i < actions!.length - 1) const SizedBox(width: 8),
                     ],
                   ],
                 ),

@@ -8,7 +8,7 @@ library;
 
 import 'package:flutter/material.dart';
 import '../../../config/app_spacing.dart';
-import '../../atoms/indicators/app_badge.dart';
+import '../../atoms/atoms.dart';
 
 /// A visual indicator showing the current runtime environment
 ///
@@ -63,8 +63,6 @@ class DevModeIndicator extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    final spacing = context.spacing;
-
     // Choose badge style and icon based on environment
     final badgeStyle = isDevelopment ? BadgeStyle.warning : BadgeStyle.success;
     final icon = isDevelopment ? Icons.code : Icons.verified_user;
@@ -80,7 +78,11 @@ class DevModeIndicator extends StatelessWidget {
       return badge;
     }
 
-    return InkWell(onTap: onTap, borderRadius: spacing.radiusSM, child: badge);
+    return TouchTarget(
+      onTap: onTap,
+      semanticLabel: '$environmentName environment indicator',
+      child: badge,
+    );
   }
 }
 

@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import '../../../config/app_spacing.dart';
 import '../../../config/app_colors.dart';
 import '../../../utils/helpers/string_helper.dart';
+import '../../atoms/atoms.dart';
 
 class UserInfoHeader extends StatelessWidget {
   final String userName;
@@ -70,7 +71,11 @@ class UserInfoHeader extends StatelessWidget {
     );
 
     if (onTap != null) {
-      return InkWell(onTap: onTap, child: content);
+      return TouchTarget(
+        onTap: onTap,
+        semanticLabel: 'User info for $userName',
+        child: content,
+      );
     }
 
     return content;

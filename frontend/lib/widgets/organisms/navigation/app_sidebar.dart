@@ -25,6 +25,7 @@ library;
 
 import 'package:flutter/material.dart';
 import '../../../config/app_spacing.dart';
+import '../../atoms/atoms.dart';
 import 'nav_menu_item.dart';
 
 /// Collapsible sidebar navigation
@@ -182,11 +183,9 @@ class _AppSidebarState extends State<AppSidebar>
       padding: EdgeInsets.symmetric(horizontal: spacing.sm),
       child: Align(
         alignment: widget.collapsed ? Alignment.center : Alignment.centerRight,
-        child: IconButton(
-          onPressed: widget.onToggleCollapse,
-          icon: Icon(
-            widget.collapsed ? Icons.chevron_right : Icons.chevron_left,
-          ),
+        child: TouchTarget.icon(
+          icon: widget.collapsed ? Icons.chevron_right : Icons.chevron_left,
+          onTap: widget.onToggleCollapse,
           tooltip: widget.collapsed ? 'Expand sidebar' : 'Collapse sidebar',
         ),
       ),
@@ -258,9 +257,9 @@ class _AppSidebarState extends State<AppSidebar>
             ? theme.colorScheme.primary.withValues(alpha: 0.1)
             : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
-        child: InkWell(
+        child: TouchTarget(
           onTap: () => _handleItemTap(item),
-          borderRadius: BorderRadius.circular(8),
+          semanticLabel: item.label,
           child: Container(
             padding: EdgeInsets.symmetric(
               horizontal: spacing.md,

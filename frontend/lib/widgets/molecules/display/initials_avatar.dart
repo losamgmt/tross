@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import '../../../config/app_spacing.dart';
 import '../../../config/app_colors.dart';
 import '../../../utils/helpers/string_helper.dart';
+import '../../atoms/atoms.dart';
 
 class InitialsAvatar extends StatelessWidget {
   final String name;
@@ -66,9 +67,9 @@ class InitialsAvatar extends StatelessWidget {
     );
 
     if (onTap != null) {
-      return InkWell(
+      return TouchTarget(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(avatarSize / 2),
+        semanticLabel: 'User avatar for $name',
         child: avatar,
       );
     }

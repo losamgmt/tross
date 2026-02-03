@@ -36,6 +36,8 @@ import '../../core/routing/route_guard.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/generic_entity_service.dart';
 import '../../services/nav_menu_builder.dart';
+import '../atoms/atoms.dart';
+import '../molecules/navigation/mobile_nav_bar.dart';
 import '../organisms/navigation/nav_menu_item.dart';
 import '../organisms/navigation/notification_tray.dart';
 
@@ -63,6 +65,13 @@ class AdaptiveShell extends StatelessWidget {
   /// If null, strategy is determined from currentRoute
   final String? sidebarStrategy;
 
+  /// Whether to show bottom navigation bar on compact screens
+  /// Default: true for mobile-first UX
+  final bool showBottomNav;
+
+  /// Custom mobile nav items (defaults to first 5 sidebar items with icons)
+  final List<NavMenuItem>? mobileNavItems;
+
   const AdaptiveShell({
     super.key,
     required this.body,
@@ -72,6 +81,8 @@ class AdaptiveShell extends StatelessWidget {
     this.userMenuItems,
     this.showAppBar = true,
     this.sidebarStrategy,
+    this.showBottomNav = true,
+    this.mobileNavItems,
   });
 
   @override
@@ -155,6 +166,19 @@ class AdaptiveShell extends StatelessWidget {
                     showHeader: false, // Header is global now
                   ),
                 ),
+          bottomNavigationBar: !isWideScreen && showBottomNav
+              ? MobileNavBar.fromItems(
+                  allItems: mobileNavItems ?? sidebarItems,
+                  currentRoute: currentRoute,
+                  onItemTap: (item) {
+                    if (item.route != null) {
+                      context.go(item.route!);
+                    } else if (item.onTap != null) {
+                      item.onTap!(context);
+                    }
+                  },
+                )
+              : null,
           body: isWideScreen
               ? Row(
                   children: [
@@ -194,9 +218,9 @@ class AdaptiveShell extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           // Clickable logo - always routes to /home
-          InkWell(
+          TouchTarget(
             onTap: () => context.go(AppRoutes.home),
-            borderRadius: BorderRadius.circular(4),
+            semanticLabel: 'Go to home',
             child: Padding(
               padding: const EdgeInsets.all(4),
               child: Row(
@@ -384,7 +408,7 @@ class _SidebarContentState extends State<_SidebarContent> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Section header - clickable to expand/collapse
-        InkWell(
+        TouchTarget(
           onTap: () {
             setState(() {
               if (isExpanded) {
@@ -394,6 +418,8 @@ class _SidebarContentState extends State<_SidebarContent> {
               }
             });
           },
+          semanticLabel:
+              '${item.label} section, ${isExpanded ? 'collapse' : 'expand'}',
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(

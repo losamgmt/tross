@@ -35,8 +35,44 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^6.0.0
   mockito: ^5.6.3
+  flutter_launcher_icons: ^0.14.3
+  flutter_native_splash: ^2.4.4
 
 # Removed dependency_overrides to allow Flutter to resolve the best compatible versions
+
+# ============================================================================
+# FLUTTER LAUNCHER ICONS CONFIGURATION
+# Run: dart run flutter_launcher_icons
+# ============================================================================
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icons/tross-icon-512.png"
+  # Android adaptive icon (Android 8+)
+  adaptive_icon_background: "#CD7F32"  # Bronze brand color
+  adaptive_icon_foreground: "assets/icons/tross-icon-512.png"
+  # Remove alpha channel for iOS (required)
+  remove_alpha_ios: true
+  # Web icons (already have these, but keeps them in sync)
+  web:
+    generate: true
+    image_path: "assets/icons/tross-icon-512.png"
+    background_color: "#CD7F32"
+    theme_color: "#CD7F32"
+
+# ============================================================================
+# FLUTTER NATIVE SPLASH CONFIGURATION
+# Run: dart run flutter_native_splash:create
+# ============================================================================
+flutter_native_splash:
+  color: "#CD7F32"  # Bronze brand color
+  image: "assets/icons/tross-icon-512.png"
+  android: true
+  ios: true
+  android_12:
+    color: "#CD7F32"
+    icon_background_color: "#CD7F32"
+    image: "assets/icons/tross-icon-512.png"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

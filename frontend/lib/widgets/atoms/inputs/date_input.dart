@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../config/app_spacing.dart';
 import '../../../utils/helpers/helpers.dart';
+import '../interactions/touch_target.dart';
 
 /// Generic date input atom for ANY date field on ANY model
 ///
@@ -126,9 +127,10 @@ class _DateInputState extends State<DateInput> {
     return KeyboardListener(
       focusNode: _focusNode,
       onKeyEvent: _handleKeyEvent,
-      child: InkWell(
+      child: TouchTarget(
         onTap: widget.enabled ? () => _selectDate(context) : null,
-        canRequestFocus: false, // Focus is handled by KeyboardListener
+        enabled: widget.enabled,
+        semanticLabel: 'Select date',
         child: InputDecorator(
           isFocused: _isFocused,
           decoration: InputDecoration(
@@ -140,9 +142,9 @@ class _DateInputState extends State<DateInput> {
                 : const Icon(Icons.calendar_today),
             suffixIcon:
                 widget.value != null && widget.showClearButton && widget.enabled
-                ? IconButton(
-                    icon: const Icon(Icons.clear),
-                    onPressed: _clearDate,
+                ? TouchTarget.icon(
+                    icon: Icons.clear,
+                    onTap: _clearDate,
                     tooltip: 'Clear date',
                   )
                 : (widget.suffixIcon != null ? Icon(widget.suffixIcon) : null),

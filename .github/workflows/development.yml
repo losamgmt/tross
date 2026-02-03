@@ -1,24 +1,34 @@
-# Development & Staging Workflow
-# Lightweight checks for development branches
-# Fast feedback loop - lint and analyze only (no database tests)
+# =============================================================================
+# TrossApp Development Workflow
+# =============================================================================
+# Lightweight, fast feedback for development branches
+# Runs on: All branches EXCEPT main (ci-cd.yml handles main)
+# Purpose: Quick validation before pushing to main
+# =============================================================================
 
-name: Development Checks
+name: Development
 
 on:
   push:
-    branches-ignore: [ main ]
+    branches-ignore: [main]
   pull_request:
-    branches: [ develop ]
+    branches: [develop]
+
+# Cancel in-progress runs for the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
-  NODE_VERSION: '20'
-  # Flutter 3.38.x includes Dart 3.10.x which satisfies SDK >=3.9.2 <4.0.0
+  NODE_VERSION: '22'
   FLUTTER_VERSION: '3.38.7'
 
 jobs:
-  # Quick validation for development
+  # ============================================================================
+  # QUICK CHECKS: Lint & Analyze (no tests, fast feedback)
+  # ============================================================================
   quick-checks:
-    name: Quick Validation
+    name: ⚡ Quick Checks
     runs-on: ubuntu-latest
 
     steps:
@@ -31,13 +41,11 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
-      - name: Install dependencies
+      - name: Install npm dependencies
         run: npm ci
 
       - name: Lint backend
-        run: |
-          cd backend
-          npm run lint || echo "⚠️ Linting issues found - please fix"
+        run: npm run lint --workspace=backend
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -45,13 +53,19 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
 
-      - name: Flutter analyze
-        run: |
-          cd frontend
-          flutter pub get
-          flutter analyze || echo "⚠️ Flutter analysis issues found"
+      - name: Install Flutter dependencies
+        run: cd frontend && flutter pub get
 
-      - name: Build check
+      - name: Analyze Flutter code
+        run: cd frontend && flutter analyze
+
+      - name: Summary
         run: |
-          echo "✅ Development checks complete"
-          echo "Ready for testing and review"
+          echo "╔════════════════════════════════════════╗"
+          echo "║     ⚡ Quick Checks Complete! ⚡       ║"
+          echo "╠════════════════════════════════════════╣"
+          echo "║ ✅ Backend lint passed                 ║"
+          echo "║ ✅ Frontend analyze passed             ║"
+          echo "║                                        ║"
+          echo "║ Ready to merge to main for full CI!   ║"
+          echo "╚════════════════════════════════════════╝"

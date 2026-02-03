@@ -161,8 +161,10 @@ void main() {
           InfoBanner(message: 'With tooltip', onDismiss: () {}),
         );
 
-        final iconButton = tester.widget<IconButton>(find.byType(IconButton));
-        expect(iconButton.tooltip, 'Dismiss');
+        // TouchTarget.icon is used for dismiss button
+        // Verify dismiss icon exists and TouchTarget has tooltip via Tooltip widget
+        expect(find.byIcon(Icons.close), findsOneWidget);
+        expect(find.byType(Tooltip), findsOneWidget);
       });
     });
 

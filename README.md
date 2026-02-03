@@ -69,9 +69,11 @@ TrossApp/
 
 ### Prerequisites
 
-- **Node.js**: v18+
-- **Flutter**: v3.x+
+- **Node.js**: v22+
+- **Flutter**: v3.38+
 - **Git**: Latest version
+- **Android Studio**: For Android builds (optional)
+- **Xcode**: For iOS builds (macOS only, optional)
 
 ### 1️⃣ Clone & Install
 
@@ -309,7 +311,7 @@ See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed instructions.
 - [x] **Security**: Triple-tier validation (database, API, UI), rate limiting, timeouts
 - [x] **Frontend**: Flutter web app with schema-driven UI and atomic design
 - [x] **Testing**: Comprehensive unit, integration, and production E2E test suites
-- [x] **CI/CD**: GitHub Actions with E2E against live Railway deployment
+- [x] **CI/CD**: GitHub Actions with security scanning, mobile builds (Android/iOS), and E2E against live Railway deployment
 
 ### ✅ Phase 2: Work Order Features (COMPLETE)
 
@@ -326,10 +328,18 @@ See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed instructions.
 - [x] RESTful sub-resource pattern (`/api/:entity/:id/files`)
 - [ ] Admin Files interface (storage stats, orphan cleanup)
 
+### ✅ Phase 3.5: Mobile Platform Readiness (COMPLETE)
+
+- [x] Mobile-first responsive UX (touch targets, adaptive navigation)
+- [x] Android APK builds (debug + release, CI artifacts)
+- [x] iOS builds (unsigned IPA via macOS runner)
+- [x] Auth0 deep links configured (Android + iOS)
+- [x] App icons and splash screens generated
+
 ### 🚀 Phase 4: Advanced Features (NEXT)
 
 - [ ] Real-time notifications
-- [ ] Mobile app deployment
+- [ ] App Store / Play Store deployment
 - [ ] Advanced analytics dashboard
 - [ ] Integration APIs
 

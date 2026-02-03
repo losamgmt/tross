@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../config/app_spacing.dart';
 import '../../../utils/helpers/helpers.dart';
+import '../interactions/touch_target.dart';
 
 enum ValueEmphasis { primary, secondary, tertiary }
 
@@ -80,9 +81,10 @@ class DataValue extends StatelessWidget {
     // Copyable value - show with copy icon on hover
     final spacing = context.spacing;
 
-    return InkWell(
+    return TouchTarget(
       onTap: () => _copyToClipboard(context),
-      borderRadius: spacing.radiusXS,
+      tooltip: 'Copy to clipboard',
+      semanticLabel: 'Copy $text',
       child: Padding(
         padding: EdgeInsets.symmetric(
           horizontal: spacing.xxs,

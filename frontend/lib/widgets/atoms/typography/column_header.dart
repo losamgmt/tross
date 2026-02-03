@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import '../../../config/app_colors.dart';
 import '../../../config/app_spacing.dart';
 import '../../../config/app_typography.dart';
+import '../interactions/touch_target.dart';
 
 enum SortDirection { none, ascending, descending }
 
@@ -91,9 +92,9 @@ class ColumnHeader extends StatelessWidget {
       );
     }
 
-    return InkWell(
+    return TouchTarget(
       onTap: onSort,
-      borderRadius: spacing.radiusSM,
+      semanticLabel: 'Sort by $label',
       child: Container(
         width: width,
         padding: EdgeInsets.symmetric(

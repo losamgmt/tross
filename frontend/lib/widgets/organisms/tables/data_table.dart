@@ -10,6 +10,7 @@
 /// - Sortable columns
 /// - Pagination support
 /// - Loading/error/empty states
+/// - Pinned columns for mobile (auto-pins first column on compact screens)
 /// - Fully generic and type-safe
 ///
 /// Usage:
@@ -35,6 +36,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../config/app_spacing.dart';
+import '../../../config/platform_utilities.dart';
 import '../../../config/table_column.dart';
 import '../../../config/table_config.dart';
 import '../../../config/constants.dart';
@@ -42,6 +44,8 @@ import '../../../services/saved_view_service.dart';
 import '../../../utils/helpers/pagination_helper.dart';
 import '../../../models/saved_view.dart';
 import '../../../services/error_service.dart';
+import '../../atoms/interactions/resize_handle.dart';
+import '../../atoms/interactions/touch_target.dart';
 import '../../atoms/typography/column_header.dart';
 import '../../molecules/feedback/empty_state.dart';
 import '../../molecules/menus/table_customization_menu.dart';
@@ -90,6 +94,13 @@ class AppDataTable<T> extends StatefulWidget {
   /// Entity name for saved views (enables save/load view feature)
   final String? entityName;
 
+  /// Number of columns to pin to the left when horizontally scrolling
+  /// Set to null (default) for automatic behavior:
+  /// - On compact screens: pins first data column (+ actions if present)
+  /// - On wider screens: no pinning
+  /// Set to 0 to disable pinning entirely
+  final int? pinnedColumns;
+
   const AppDataTable({
     super.key,
     required this.columns,
@@ -110,6 +121,7 @@ class AppDataTable<T> extends StatefulWidget {
     this.showCustomizationMenu = true,
     this.autoSizeColumns = false,
     this.entityName,
+    this.pinnedColumns,
   });
 
   @override
@@ -463,11 +475,27 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
   ///
   /// Uses IntrinsicColumnWidth so columns size to their content naturally.
   /// Horizontal and vertical scroll enabled when content exceeds viewport.
+  /// Supports pinned columns for mobile viewing.
   Widget _buildNativeTable() {
     final theme = Theme.of(context);
     final hasActions = widget.actionsBuilder != null;
     final data = _sortedAndPaginatedData;
 
+    // Determine effective pinned columns count
+    final effectivePinnedColumns = _getEffectivePinnedColumns(context);
+
+    // If pinning is active and we have enough columns, use split table layout
+    if (effectivePinnedColumns > 0 &&
+        _visibleColumns.length > effectivePinnedColumns) {
+      return _buildPinnedColumnsTable(
+        theme,
+        data,
+        hasActions,
+        effectivePinnedColumns,
+      );
+    }
+
+    // Standard single table (no pinning)
     final horizontalScrollController = ScrollController();
     final verticalScrollController = ScrollController();
 
@@ -511,6 +539,270 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
                 ),
         ),
       ),
+    );
+  }
+
+  /// Get effective pinned columns count based on screen size and prop
+  int _getEffectivePinnedColumns(BuildContext context) {
+    // Explicit 0 disables pinning
+    if (widget.pinnedColumns == 0) return 0;
+
+    // Explicit value provided
+    if (widget.pinnedColumns != null) return widget.pinnedColumns!;
+
+    // Auto behavior: pin 1 column on compact screens, none on wider
+    final isCompact = PlatformUtilities.breakpointAdaptive<bool>(
+      context: context,
+      compact: true,
+      medium: false,
+      expanded: false,
+    );
+
+    return isCompact ? 1 : 0;
+  }
+
+  /// Build table with pinned columns (split into frozen left + scrollable right)
+  Widget _buildPinnedColumnsTable(
+    ThemeData theme,
+    List<T> data,
+    bool hasActions,
+    int pinnedCount,
+  ) {
+    final spacing = context.spacing;
+
+    // Synchronize vertical scroll between pinned and scrollable sections
+    final pinnedVerticalController = ScrollController();
+    final scrollableVerticalController = ScrollController();
+    final horizontalScrollController = ScrollController();
+
+    bool isSyncing = false;
+
+    void syncScroll(ScrollController source, ScrollController target) {
+      if (isSyncing) return;
+      isSyncing = true;
+      target.jumpTo(source.offset);
+      isSyncing = false;
+    }
+
+    pinnedVerticalController.addListener(() {
+      syncScroll(pinnedVerticalController, scrollableVerticalController);
+    });
+    scrollableVerticalController.addListener(() {
+      syncScroll(scrollableVerticalController, pinnedVerticalController);
+    });
+
+    // Split columns into pinned and scrollable
+    final allCols = hasActions
+        ? ['__actions__', ..._visibleColumns]
+        : _visibleColumns.cast<dynamic>();
+
+    final pinnedCols = allCols
+        .take(pinnedCount + (hasActions ? 1 : 0))
+        .toList();
+    final scrollableCols = allCols
+        .skip(pinnedCount + (hasActions ? 1 : 0))
+        .toList();
+
+    // Build pinned section
+    final pinnedTable = _buildTableSection(
+      theme: theme,
+      data: data,
+      columns: pinnedCols,
+      spacing: spacing,
+      isPinned: true,
+    );
+
+    // Build scrollable section
+    final scrollableTable = _buildTableSection(
+      theme: theme,
+      data: data,
+      columns: scrollableCols,
+      spacing: spacing,
+      isPinned: false,
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Calculate pinned section width (capped at 40% of available width)
+        final maxPinnedWidth = constraints.maxWidth * 0.4;
+
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: StyleConstants.scrollbarThickness + 4,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Pinned section (frozen)
+              Container(
+                constraints: BoxConstraints(maxWidth: maxPinnedWidth),
+                decoration: BoxDecoration(
+                  border: Border(
+                    right: BorderSide(
+                      color: theme.colorScheme.outline.withValues(alpha: 0.3),
+                      width: 2,
+                    ),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.colorScheme.shadow.withValues(alpha: 0.1),
+                      blurRadius: 4,
+                      offset: const Offset(2, 0),
+                    ),
+                  ],
+                ),
+                child: SingleChildScrollView(
+                  controller: pinnedVerticalController,
+                  physics: PlatformUtilities.scrollPhysics,
+                  child: pinnedTable,
+                ),
+              ),
+
+              // Scrollable section
+              Expanded(
+                child: Scrollbar(
+                  controller: horizontalScrollController,
+                  thumbVisibility: true,
+                  thickness: StyleConstants.scrollbarThickness,
+                  radius: Radius.circular(StyleConstants.scrollbarRadius),
+                  child: SingleChildScrollView(
+                    controller: horizontalScrollController,
+                    scrollDirection: Axis.horizontal,
+                    physics: PlatformUtilities.scrollPhysics,
+                    child: SingleChildScrollView(
+                      controller: scrollableVerticalController,
+                      physics: PlatformUtilities.scrollPhysics,
+                      child: scrollableTable,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// Build a table section (for pinned columns layout)
+  Widget _buildTableSection({
+    required ThemeData theme,
+    required List<T> data,
+    required List<dynamic> columns,
+    required AppSpacing spacing,
+    required bool isPinned,
+  }) {
+    final borderColor = theme.colorScheme.outline.withValues(alpha: 0.1);
+    final headerBorderColor = theme.colorScheme.outline.withValues(alpha: 0.2);
+    final headerColor = theme.colorScheme.surfaceContainerHighest.withValues(
+      alpha: 0.5,
+    );
+
+    // Column widths
+    final columnWidths = <int, TableColumnWidth>{};
+    for (var i = 0; i < columns.length; i++) {
+      final col = columns[i];
+      if (col == '__actions__') {
+        columnWidths[i] = const FixedColumnWidth(
+          TableConfig.actionsColumnWidth,
+        );
+      } else if (widget.autoSizeColumns) {
+        columnWidths[i] = const IntrinsicColumnWidth(flex: 1.0);
+      } else {
+        final column = col as TableColumn<T>;
+        final width =
+            _columnWidths[column.id] ?? TableConfig.defaultColumnWidth;
+        columnWidths[i] = FixedColumnWidth(width);
+      }
+    }
+
+    // Build header row
+    final headerRow = TableRow(
+      decoration: BoxDecoration(
+        color: headerColor,
+        border: Border(bottom: BorderSide(color: headerBorderColor, width: 2)),
+      ),
+      children: columns.map((col) {
+        if (col == '__actions__') {
+          return _buildHeaderCell(
+            child: Text(
+              'Actions',
+              style: theme.textTheme.labelLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            spacing: spacing,
+          );
+        } else {
+          final column = col as TableColumn<T>;
+          final isCurrentSort = _sortColumnId == column.id;
+          return _buildHeaderCell(
+            child: ColumnHeader(
+              label: column.label,
+              sortable: column.sortable,
+              sortDirection: isCurrentSort
+                  ? _sortDirection
+                  : SortDirection.none,
+              onSort: column.sortable ? () => _handleSort(column.id) : null,
+              textAlign: column.alignment,
+            ),
+            spacing: spacing,
+            onTap: column.sortable ? () => _handleSort(column.id) : null,
+            columnId: isPinned
+                ? null
+                : column.id, // Only scrollable columns are resizable
+          );
+        }
+      }).toList(),
+    );
+
+    // Build data rows
+    final dataRows = data.asMap().entries.map((entry) {
+      final index = entry.key;
+      final item = entry.value;
+      final isEvenRow = index % 2 == 0;
+
+      return TableRow(
+        decoration: BoxDecoration(
+          color: isEvenRow
+              ? theme.colorScheme.surfaceContainerHighest.withValues(
+                  alpha: 0.05,
+                )
+              : null,
+          border: Border(bottom: BorderSide(color: borderColor, width: 1)),
+        ),
+        children: columns.map((col) {
+          if (col == '__actions__') {
+            return _buildDataCell(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: widget.actionsBuilder?.call(item) ?? [],
+              ),
+              spacing: spacing,
+            );
+          } else {
+            final column = col as TableColumn<T>;
+            return _buildDataCell(
+              child: column.cellBuilder(item),
+              spacing: spacing,
+              onTap: widget.onRowTap != null
+                  ? () => widget.onRowTap!(item)
+                  : null,
+            );
+          }
+        }).toList(),
+      );
+    }).toList();
+
+    return Table(
+      columnWidths: columnWidths,
+      defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+      border: TableBorder(
+        verticalInside: BorderSide(color: borderColor, width: 1),
+      ),
+      children: [headerRow, ...dataRows],
     );
   }
 
@@ -672,7 +964,11 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
     Widget content = Padding(padding: EdgeInsets.all(spacing.md), child: child);
 
     if (onTap != null) {
-      content = InkWell(onTap: onTap, child: content);
+      content = TouchTarget(
+        onTap: onTap,
+        semanticLabel: 'Sort column',
+        child: content,
+      );
     }
 
     // Add resize handle for resizable columns
@@ -681,39 +977,21 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Expanded(child: content),
-          // Resize handle - positioned at edge of column
-          GestureDetector(
-            behavior: HitTestBehavior.opaque, // Ensure full area is draggable
-            onHorizontalDragStart: (_) {
-              // Optional: could add visual feedback here
-            },
-            onHorizontalDragUpdate: (details) {
+          // Platform-aware resize handle
+          ResizeHandle.horizontal(
+            indicatorLength: 24,
+            indicatorColor: theme.colorScheme.outline.withValues(alpha: 0.4),
+            onDragUpdate: (delta) {
               setState(() {
                 final currentWidth =
                     _columnWidths[columnId] ?? TableConfig.defaultColumnWidth;
-                final newWidth = (currentWidth + details.delta.dx).clamp(
+                final newWidth = (currentWidth + delta).clamp(
                   TableConfig.cellMinWidth,
                   TableConfig.cellMaxWidth,
                 );
                 _columnWidths[columnId] = newWidth;
               });
             },
-            child: MouseRegion(
-              cursor: SystemMouseCursors.resizeColumn,
-              child: Container(
-                width: TableConfig.resizeHandleWidth,
-                color: Colors.transparent, // Invisible but draggable
-                alignment: Alignment.center,
-                child: Container(
-                  width: TableConfig.resizeIndicatorWidth,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.outline.withValues(alpha: 0.4),
-                    borderRadius: BorderRadius.circular(1),
-                  ),
-                ),
-              ),
-            ),
           ),
         ],
       );
@@ -754,9 +1032,10 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
     );
 
     if (onTap != null) {
-      content = Material(
-        type: MaterialType.transparency,
-        child: InkWell(onTap: onTap, child: content),
+      content = TouchTarget(
+        onTap: onTap,
+        semanticLabel: 'Select row',
+        child: content,
       );
     }
 
