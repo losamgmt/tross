@@ -93,14 +93,21 @@ function createFileSubRouter(metadata) {
 
   /**
    * POST /:id/files - Upload a file attached to an entity
+   *
+   * Middleware order rationale:
+   * 1. requireParentPermission - Auth check first
+   * 2. validateFileHeaders - Cheap validation, reject bad MIME types early
+   * 3. validateFileBody - Cheap validation, reject empty uploads early
+   * 4. requireStorage - Only check storage AFTER we know the upload is valid
+   * 5. requireParentExists - DB check for parent entity
    */
   router.post(
     '/',
     requireParentPermission('update'),
-    requireStorage,
-    requireParentExists(FileAttachmentService.entityExists),
     validateFileHeaders,
     validateFileBody,
+    requireStorage,
+    requireParentExists(FileAttachmentService.entityExists),
     asyncHandler(async (req, res) => {
       const parentId = req.parentId;
       const { mimeType, originalFilename, category, description } = req.fileUpload;

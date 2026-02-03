@@ -74,8 +74,8 @@ describe('Files API Endpoints - Integration Tests', () => {
         .set('X-Filename', 'malicious.exe')
         .send(Buffer.from('not a real exe'));
 
-      // 400 for MIME type rejection, or 404 if entity check happens first
-      expect([HTTP_STATUS.BAD_REQUEST, HTTP_STATUS.NOT_FOUND]).toContain(response.status);
+      expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
+      expect(response.body.message).toMatch(/mime type|file type/i);
     });
 
     test('should return 400 for empty file body', async () => {
@@ -86,8 +86,8 @@ describe('Files API Endpoints - Integration Tests', () => {
         .set('X-Filename', 'empty.txt')
         .send(Buffer.alloc(0));
 
-      // 400 for empty body, or 404 if entity check happens first
-      expect([HTTP_STATUS.BAD_REQUEST, HTTP_STATUS.NOT_FOUND]).toContain(response.status);
+      expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
+      expect(response.body.message).toMatch(/empty|no file|body/i);
     });
 
     test('should return 404 for non-existent entity', async () => {
@@ -136,9 +136,9 @@ describe('Files API Endpoints - Integration Tests', () => {
         .get('/api/work_orders/1/files')
         .set('Authorization', `Bearer ${adminToken}`);
 
-      // Could be 503 if storage not configured
+      // Storage check happens before listing - expect 503 if not configured
       if (response.status === HTTP_STATUS.SERVICE_UNAVAILABLE) {
-        expect(response.body.message).toContain('storage');
+        expect(response.body.message).toMatch(/storage|not configured/i);
       } else {
         expect(response.status).toBe(HTTP_STATUS.OK);
         expect(response.body.success).toBe(true);
