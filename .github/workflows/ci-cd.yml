@@ -1,0 +1,387 @@
+# =============================================================================
+# TrossApp CI/CD Pipeline
+# =============================================================================
+# A professional, comprehensive CI/CD setup following best practices:
+#   - KISS principle: Essential checks, build, and deploy
+#   - Consistent tooling versions across all jobs
+#   - Security scanning (npm audit, dependency review)
+#   - Proper job dependencies and concurrency controls
+#   - Mobile builds (Android APK, iOS IPA) on main branch
+#   - Artifacts for all builds with appropriate retention
+# =============================================================================
+
+name: CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+# Cancel in-progress runs for the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+  FLUTTER_VERSION: '3.38.7'  # Includes Dart 3.10.x (satisfies >=3.9.2 <4.0.0)
+
+jobs:
+  # ============================================================================
+  # BACKEND: Unit Tests (no database required)
+  # ============================================================================
+  backend-unit:
+    name: 🧪 Backend Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm run test:unit --workspace=backend
+        env:
+          NODE_ENV: test
+          JWT_SECRET: test-secret-key-for-ci
+
+      - name: Lint check
+        run: npm run lint --workspace=backend
+
+  # ============================================================================
+  # BACKEND: Integration Tests (requires PostgreSQL)
+  # ============================================================================
+  backend-integration:
+    name: 🔗 Backend Integration Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: trossapp_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test123
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5433:5432  # Maps to TEST config in constants.js
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run integration tests
+        run: npm run test:integration --workspace=backend
+        env:
+          TEST_DB_HOST: localhost
+          TEST_DB_PORT: 5433
+          TEST_DB_NAME: trossapp_test
+          TEST_DB_USER: postgres
+          TEST_DB_PASSWORD: test123
+          NODE_ENV: test
+          JWT_SECRET: test-secret-key-for-ci
+          AUTH_MODE: development
+          USE_TEST_AUTH: 'true'
+          STORAGE_PROVIDER: r2
+          STORAGE_ENDPOINT: ${{ secrets.STORAGE_ENDPOINT }}
+          STORAGE_BUCKET: ${{ secrets.STORAGE_BUCKET }}
+          STORAGE_ACCESS_KEY: ${{ secrets.STORAGE_ACCESS_KEY }}
+          STORAGE_SECRET_KEY: ${{ secrets.STORAGE_SECRET_KEY }}
+          STORAGE_REGION: auto
+
+  # ============================================================================
+  # SECURITY: Dependency Audit
+  # ============================================================================
+  security:
+    name: 🔒 Security Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Audit npm dependencies
+        run: npm audit --audit-level=high || echo "::warning::Security vulnerabilities found - please review"
+        continue-on-error: true
+
+      - name: Dependency review (PRs only)
+        if: github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC
+
+  # ============================================================================
+  # FRONTEND: Flutter Tests
+  # ============================================================================
+  frontend:
+    name: 🎨 Frontend Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Install dependencies
+        run: cd frontend && flutter pub get
+
+      - name: Analyze code
+        run: cd frontend && flutter analyze
+
+      - name: Run tests
+        id: flutter_test
+        run: |
+          cd frontend
+          flutter test 2>&1 | tee test_output.txt
+          TEST_EXIT_CODE=${PIPESTATUS[0]}
+          
+          if [ $TEST_EXIT_CODE -ne 0 ]; then
+            echo ""
+            echo "========================================"
+            echo "❌ TEST FAILURES FOUND"
+            echo "========================================"
+            grep -E "❌|FAILED|Exception" test_output.txt || true
+            echo "========================================"
+          fi
+          
+          exit $TEST_EXIT_CODE
+
+  # ============================================================================
+  # FRONTEND: Web Build (Vercel verification)
+  # ============================================================================
+  build-web:
+    name: 🌐 Build Web
+    runs-on: ubuntu-latest
+    needs: [frontend]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Install dependencies
+        run: cd frontend && flutter pub get
+
+      - name: Build web
+        run: cd frontend && flutter build web --no-tree-shake-icons
+
+      - name: Upload web build
+        uses: actions/upload-artifact@v4
+        if: github.ref == 'refs/heads/main'
+        with:
+          name: web-build
+          path: frontend/build/web
+          retention-days: 7
+
+  # ============================================================================
+  # MOBILE: Android APK Build
+  # ============================================================================
+  build-android:
+    name: 🤖 Build Android
+    runs-on: ubuntu-latest
+    needs: [frontend]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Install dependencies
+        run: cd frontend && flutter pub get
+
+      - name: Build Debug APK
+        run: cd frontend && flutter build apk --debug
+
+      - name: Build Release APK
+        run: cd frontend && flutter build apk --release
+
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-debug-apk
+          path: frontend/build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 30
+
+      - name: Upload Release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release-apk
+          path: frontend/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30
+
+  # ============================================================================
+  # MOBILE: iOS Build (unsigned)
+  # ============================================================================
+  build-ios:
+    name: 🍎 Build iOS
+    runs-on: macos-latest  # Free for public repos!
+    needs: [frontend]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Install dependencies
+        run: cd frontend && flutter pub get
+
+      - name: Build iOS (unsigned)
+        run: cd frontend && flutter build ios --release --no-codesign
+
+      - name: Create unsigned IPA
+        run: |
+          cd frontend/build/ios/iphoneos
+          mkdir -p Payload
+          cp -r Runner.app Payload/
+          zip -r ../../../ios-release-unsigned.ipa Payload
+
+      - name: Upload iOS Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-unsigned-ipa
+          path: frontend/build/ios-release-unsigned.ipa
+          retention-days: 30
+
+  # ============================================================================
+  # E2E: Playwright Smoke Tests (Production)
+  # ============================================================================
+  e2e:
+    name: 🎭 E2E Smoke Tests
+    runs-on: ubuntu-latest
+    needs: [backend-unit, backend-integration]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Wait for Railway deployment
+        run: |
+          echo "⏳ Waiting for Railway deployment..."
+          sleep 30
+          
+          for i in {1..30}; do
+            if curl -sf "${{ secrets.RAILWAY_BACKEND_URL }}/api/health" | grep -qE "ok|healthy"; then
+              echo "✅ Railway backend ready!"
+              exit 0
+            fi
+            echo "Waiting... ($i/30)"
+            sleep 10
+          done
+          
+          echo "❌ Railway not responding"
+          exit 1
+        env:
+          RAILWAY_BACKEND_URL: ${{ secrets.RAILWAY_BACKEND_URL }}
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+        env:
+          BACKEND_URL: ${{ secrets.RAILWAY_BACKEND_URL }}
+          CI: true
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  # ============================================================================
+  # SUMMARY: Deployment Status
+  # ============================================================================
+  deploy-summary:
+    name: 📋 Deployment Summary
+    runs-on: ubuntu-latest
+    needs: [backend-unit, backend-integration, security, frontend, build-web, build-android, build-ios, e2e]
+    if: always() && github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Check job results
+        run: |
+          echo "╔══════════════════════════════════════════════════════════════╗"
+          echo "║                    TrossApp CI/CD Summary                    ║"
+          echo "╠══════════════════════════════════════════════════════════════╣"
+          echo "║ Backend Unit Tests:      ${{ needs.backend-unit.result == 'success' && '✅ Passed' || '❌ Failed' }}"
+          echo "║ Backend Integration:     ${{ needs.backend-integration.result == 'success' && '✅ Passed' || '❌ Failed' }}"
+          echo "║ Security Audit:          ${{ needs.security.result == 'success' && '✅ Passed' || '⚠️ Review' }}"
+          echo "║ Frontend Tests:          ${{ needs.frontend.result == 'success' && '✅ Passed' || '❌ Failed' }}"
+          echo "║ Web Build:               ${{ needs.build-web.result == 'success' && '✅ Built' || '❌ Failed' }}"
+          echo "║ Android Build:           ${{ needs.build-android.result == 'success' && '✅ Built' || '⏭️ Skipped' }}"
+          echo "║ iOS Build:               ${{ needs.build-ios.result == 'success' && '✅ Built' || '⏭️ Skipped' }}"
+          echo "║ E2E Tests:               ${{ needs.e2e.result == 'success' && '✅ Passed' || '❌ Failed' }}"
+          echo "╠══════════════════════════════════════════════════════════════╣"
+          echo "║ 🚀 Railway:  Backend auto-deploys via railway.json           ║"
+          echo "║ 🌐 Vercel:   Frontend auto-deploys via vercel.json           ║"
+          echo "║ 📦 Artifacts available in Actions → Run → Artifacts          ║"
+          echo "╚══════════════════════════════════════════════════════════════╝"
