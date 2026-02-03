@@ -205,7 +205,7 @@ jobs:
         run: cd frontend && flutter build web --no-tree-shake-icons
 
       - name: Upload web build
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: github.ref == 'refs/heads/main'
         with:
           name: web-build
@@ -247,14 +247,14 @@ jobs:
         run: cd frontend && flutter build apk --release
 
       - name: Upload Debug APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: android-debug-apk
           path: frontend/build/app/outputs/flutter-apk/app-debug.apk
           retention-days: 30
 
       - name: Upload Release APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: android-release-apk
           path: frontend/build/app/outputs/flutter-apk/app-release.apk
@@ -293,7 +293,7 @@ jobs:
           zip -r ../../../ios-release-unsigned.ipa Payload
 
       - name: Upload iOS Build
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ios-unsigned-ipa
           path: frontend/build/ios-release-unsigned.ipa
@@ -350,7 +350,7 @@ jobs:
           CI: true
 
       - name: Upload Playwright report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: failure()
         with:
           name: playwright-report
