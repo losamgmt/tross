@@ -89,6 +89,6 @@
     "prettier": "^3.6.2"
   },
   "dependencies": {
-    "auth0": "^5.0.0"
+    "auth0": "^5.3.0"
   }
 }
