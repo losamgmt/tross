@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../config/app_spacing.dart';
+import '../../atoms/atoms.dart';
 
 /// RefreshableSection - Generic molecule for sections with refresh capability
 ///
@@ -69,9 +70,9 @@ class RefreshableSection extends StatelessWidget {
                     height: spacing.lg,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : IconButton(
-                    icon: Icon(refreshIcon),
-                    onPressed: onRefresh,
+                : TouchTarget.icon(
+                    icon: refreshIcon,
+                    onTap: onRefresh,
                     tooltip: 'Refresh',
                   ),
           ],

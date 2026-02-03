@@ -51,6 +51,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../config/app_colors.dart';
 import '../../../config/app_spacing.dart';
+import '../../atoms/atoms.dart';
 
 /// Configuration for a single tab
 class TabConfig {
@@ -428,8 +429,9 @@ class _TabbedContentState extends State<TabbedContent>
     TabConfig tab,
     bool isSelected,
   ) {
-    final tabWidget = InkWell(
+    final tabWidget = TouchTarget(
       onTap: tab.enabled ? () => _navigateToTab(context, tab.id) : null,
+      semanticLabel: '${tab.label} tab',
       child: Container(
         padding: EdgeInsets.symmetric(
           horizontal: spacing.md,
@@ -491,8 +493,9 @@ class _TabbedContentState extends State<TabbedContent>
   ) {
     final indicatorColor = widget.indicatorColor ?? AppColors.brandPrimary;
 
-    final tabWidget = InkWell(
+    final tabWidget = TouchTarget(
       onTap: tab.enabled ? () => _handleVerticalTabTap(context, tab) : null,
+      semanticLabel: '${tab.label} tab',
       child: Container(
         key: tab.tabKey,
         width: double.infinity,

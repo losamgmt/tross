@@ -25,6 +25,7 @@ library;
 
 import 'package:flutter/material.dart';
 import '../../../config/app_spacing.dart';
+import '../../atoms/atoms.dart';
 
 class PaginationDisplay extends StatelessWidget {
   /// Display text showing range (e.g., "1-10 of 100")
@@ -72,16 +73,18 @@ class PaginationDisplay extends StatelessWidget {
         // Navigation buttons
         Row(
           children: [
-            IconButton(
-              onPressed: canGoPrevious ? onPrevious : null,
-              icon: const Icon(Icons.chevron_left),
+            TouchTarget.icon(
+              icon: Icons.chevron_left,
+              onTap: canGoPrevious ? onPrevious : null,
               tooltip: 'Previous page',
+              enabled: canGoPrevious,
             ),
             SizedBox(width: spacing.xs),
-            IconButton(
-              onPressed: canGoNext ? onNext : null,
-              icon: const Icon(Icons.chevron_right),
+            TouchTarget.icon(
+              icon: Icons.chevron_right,
+              onTap: canGoNext ? onNext : null,
               tooltip: 'Next page',
+              enabled: canGoNext,
             ),
           ],
         ),

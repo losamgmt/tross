@@ -48,6 +48,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../config/app_spacing.dart';
+import '../interactions/touch_target.dart';
 
 class FilterDropdown<T> extends StatefulWidget {
   /// Currently selected value (null = "All" or nothing selected)
@@ -236,7 +237,7 @@ class _FilterDropdownState<T> extends State<FilterDropdown<T>> {
                 ? theme.colorScheme.surface
                 : theme.colorScheme.onSurface.withValues(alpha: 0.05),
           ),
-          child: InkWell(
+          child: TouchTarget(
             onTap: widget.enabled
                 ? () {
                     if (_menuController.isOpen) {
@@ -247,7 +248,8 @@ class _FilterDropdownState<T> extends State<FilterDropdown<T>> {
                     }
                   }
                 : null,
-            borderRadius: spacing.radiusSM,
+            enabled: widget.enabled,
+            semanticLabel: widget.label ?? 'Filter dropdown',
             child: Padding(
               padding: EdgeInsets.symmetric(
                 horizontal: horizontalPadding,

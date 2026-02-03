@@ -16,6 +16,7 @@ import 'package:flutter/services.dart';
 import '../../../config/app_borders.dart';
 import '../../../config/app_colors.dart';
 import '../../../config/app_spacing.dart';
+import '../interactions/touch_target.dart';
 
 class BooleanToggle extends StatefulWidget {
   /// Current boolean value
@@ -172,35 +173,32 @@ class _BooleanToggleState extends State<BooleanToggle> {
         child: KeyboardListener(
           focusNode: _focusNode,
           onKeyEvent: _handleKeyEvent,
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: widget.onToggle,
-              borderRadius: spacing.radiusSM,
-              canRequestFocus: false, // Focus is handled by KeyboardListener
-              child: Container(
-                width: size,
-                height: size,
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: _isFocused
-                        ? theme.colorScheme.primary
-                        : widget.onToggle == null
-                        ? theme.disabledColor.withValues(
-                            alpha: AppColors.opacityHint,
-                          )
-                        : color.withValues(alpha: AppColors.opacityHint),
-                    width: _isFocused
-                        ? AppBorders.widthThick
-                        : AppBorders.widthMedium,
-                  ),
-                  borderRadius: spacing.radiusSM,
+          child: TouchTarget(
+            onTap: widget.onToggle,
+            enabled: widget.onToggle != null,
+            hapticFeedback: true,
+            child: Container(
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: _isFocused
+                      ? theme.colorScheme.primary
+                      : widget.onToggle == null
+                      ? theme.disabledColor.withValues(
+                          alpha: AppColors.opacityHint,
+                        )
+                      : color.withValues(alpha: AppColors.opacityHint),
+                  width: _isFocused
+                      ? AppBorders.widthThick
+                      : AppBorders.widthMedium,
                 ),
-                child: Icon(
-                  icon,
-                  size: iconSize,
-                  color: widget.onToggle == null ? theme.disabledColor : color,
-                ),
+                borderRadius: spacing.radiusSM,
+              ),
+              child: Icon(
+                icon,
+                size: iconSize,
+                color: widget.onToggle == null ? theme.disabledColor : color,
               ),
             ),
           ),

@@ -1,6 +1,6 @@
 # TrossApp Project Status
 
-**Last Updated:** February 1, 2026
+**Last Updated:** February 3, 2026
 
 ---
 
@@ -19,8 +19,17 @@
 - Proactive token refresh
 - File attachments on entities (upload, preview, download, delete)
 - File preview modal (images, PDFs, text)
+- **Mobile-first responsive UX** (touch targets, nav bars, adaptive layouts)
+- **Android APK builds** (debug + release)
+- **iOS builds** (unsigned IPA via CI)
 
 ### In Progress 🔄
+
+**Mobile App Deployment**
+- [x] Android build working locally + CI
+- [x] iOS build working in CI (macOS runner)
+- [ ] Apple Developer Account for App Store
+- [ ] Play Store listing
 
 **Admin Files Interface (Phase 6B)**
 - [ ] Files tab - Paginated table with filters and search

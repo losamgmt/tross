@@ -43,6 +43,7 @@ library;
 
 import 'package:flutter/material.dart';
 import '../../../config/app_spacing.dart';
+import '../interactions/touch_target.dart';
 import '../../../utils/helpers/helpers.dart';
 
 // Re-export TextFieldType for backwards compatibility
@@ -181,11 +182,10 @@ class _TextInputState extends State<TextInput> {
   Widget? _buildSuffixIcon() {
     // Password toggle icon
     if (widget.obscureText) {
-      return IconButton(
-        icon: Icon(_obscureText ? Icons.visibility_off : Icons.visibility),
-        onPressed: () {
-          setState(() => _obscureText = !_obscureText);
-        },
+      return TouchTarget.icon(
+        icon: _obscureText ? Icons.visibility_off : Icons.visibility,
+        onTap: () => setState(() => _obscureText = !_obscureText),
+        tooltip: _obscureText ? 'Show password' : 'Hide password',
       );
     }
 

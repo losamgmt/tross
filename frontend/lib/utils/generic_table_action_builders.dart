@@ -16,7 +16,7 @@ import '../services/metadata_field_config_factory.dart';
 import '../services/navigation_coordinator.dart';
 import '../services/error_service.dart';
 import '../services/export_service.dart';
-import '../widgets/atoms/buttons/app_button.dart';
+import '../widgets/atoms/atoms.dart';
 import '../widgets/organisms/modals/generic_modal.dart';
 import '../widgets/organisms/forms/generic_form.dart';
 import '../widgets/molecules/forms/field_config.dart' hide FieldType;
@@ -125,10 +125,10 @@ class GenericTableActionBuilders {
 
     // Refresh action
     actions.add(
-      IconButton(
-        icon: const Icon(Icons.refresh),
+      TouchTarget.icon(
+        icon: Icons.refresh,
         tooltip: 'Refresh ${metadata.displayNamePlural.toLowerCase()}',
-        onPressed: onRefresh,
+        onTap: onRefresh,
       ),
     );
 
@@ -139,10 +139,10 @@ class GenericTableActionBuilders {
       CrudOperation.create,
     )) {
       actions.add(
-        IconButton(
-          icon: const Icon(Icons.add),
+        TouchTarget.icon(
+          icon: Icons.add,
           tooltip: 'Create new ${metadata.displayName.toLowerCase()}',
-          onPressed: () => _showEntityForm(
+          onTap: () => _showEntityForm(
             context,
             entityName: entityName,
             onSuccess: onRefresh,
@@ -443,18 +443,24 @@ class _ExportButtonState extends State<_ExportButton> {
   Widget build(BuildContext context) {
     final metadata = EntityMetadataRegistry.get(widget.entityName);
 
-    return IconButton(
-      icon: _isExporting
-          ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : const Icon(Icons.download),
-      tooltip: _isExporting
-          ? 'Exporting...'
-          : 'Export ${metadata.displayNamePlural.toLowerCase()} to CSV',
-      onPressed: _isExporting ? null : _handleExport,
+    if (_isExporting) {
+      return const SizedBox(
+        width: 48,
+        height: 48,
+        child: Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      );
+    }
+
+    return TouchTarget.icon(
+      icon: Icons.download,
+      tooltip: 'Export ${metadata.displayNamePlural.toLowerCase()} to CSV',
+      onTap: _handleExport,
     );
   }
 }

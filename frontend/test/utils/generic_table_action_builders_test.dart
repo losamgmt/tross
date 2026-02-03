@@ -18,6 +18,7 @@ import 'package:tross_app/services/generic_entity_service.dart';
 import 'package:tross_app/services/export_service.dart';
 import 'package:tross_app/utils/generic_table_action_builders.dart';
 import 'package:tross_app/widgets/atoms/buttons/app_button.dart';
+import 'package:tross_app/widgets/atoms/interactions/touch_target.dart';
 
 import '../factory/factory.dart';
 import '../mocks/mock_api_client.dart';
@@ -246,8 +247,8 @@ void main() {
             ),
           );
 
-          // Admin sees at least refresh button
-          expect(find.byType(IconButton), findsAtLeast(1));
+          // Admin sees at least refresh button (TouchTarget.icon)
+          expect(find.byType(TouchTarget), findsAtLeast(1));
         });
       }
 
@@ -271,8 +272,8 @@ void main() {
           ),
         );
 
-        // Tap refresh button (first IconButton)
-        await tester.tap(find.byType(IconButton).first);
+        // Tap refresh button (first TouchTarget - the refresh icon)
+        await tester.tap(find.byIcon(Icons.refresh));
         await tester.pump();
 
         expect(refreshCalled, isTrue);
@@ -340,8 +341,8 @@ void main() {
         ),
       );
 
-      // Verify the toolbar actions render
-      expect(find.byType(IconButton), findsAtLeast(1));
+      // Verify the toolbar actions render (TouchTarget.icon is used)
+      expect(find.byType(TouchTarget), findsAtLeast(1));
     });
 
     testWidgets('invoice entity shows correct actions', (tester) async {

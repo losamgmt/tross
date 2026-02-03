@@ -23,6 +23,7 @@ library;
 import 'package:flutter/material.dart';
 import '../../../models/audit_log_entry.dart';
 import '../../../config/app_spacing.dart';
+import '../../atoms/atoms.dart';
 
 // =============================================================================
 // MAIN WIDGET - Pure presentation, data received from parent
@@ -116,11 +117,12 @@ class _ActivityLogHeader extends StatelessWidget {
           ),
         ),
         const Spacer(),
-        IconButton(
-          icon: const Icon(Icons.refresh, size: 20),
-          onPressed: loading ? null : onRefresh,
+        TouchTarget.icon(
+          icon: Icons.refresh,
+          size: 20,
+          onTap: loading ? null : onRefresh,
           tooltip: 'Refresh',
-          visualDensity: VisualDensity.compact,
+          enabled: !loading,
         ),
       ],
     );

@@ -470,10 +470,16 @@ class _ViewsList extends StatelessWidget {
             style: theme.textTheme.bodySmall,
           ),
           trailing: onDelete != null
-              ? IconButton(
-                  icon: const Icon(Icons.delete_outline),
-                  onPressed: () => onDelete!(view),
-                  tooltip: 'Delete view',
+              ? SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: IconButton(
+                    icon: const Icon(Icons.delete_outline),
+                    onPressed: () => onDelete!(view),
+                    tooltip: 'Delete view',
+                    iconSize: 20,
+                    padding: EdgeInsets.zero,
+                  ),
                 )
               : null,
           onTap: () => onLoad(view.settings),

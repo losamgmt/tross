@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../config/app_spacing.dart';
+import '../interactions/touch_target.dart';
 
 /// Lookup input atom for large datasets using Autocomplete
 ///
@@ -370,9 +371,9 @@ class _LookupInputState<T extends Object> extends State<LookupInput<T>> {
     }
 
     if (widget.allowClear && controller.text.isNotEmpty && widget.enabled) {
-      return IconButton(
-        icon: const Icon(Icons.clear),
-        onPressed: _onClear,
+      return TouchTarget.icon(
+        icon: Icons.clear,
+        onTap: _onClear,
         tooltip: 'Clear',
       );
     }

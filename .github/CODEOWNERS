@@ -1,0 +1,28 @@
+# =============================================================================
+# TrossApp Code Owners
+# These users will be automatically requested for review on PRs
+# =============================================================================
+
+# Default owner for everything
+*                       @zarik
+
+# Backend ownership
+/backend/               @zarik
+
+# Frontend ownership  
+/frontend/              @zarik
+
+# Infrastructure & CI/CD
+/.github/               @zarik
+/docker-compose*.yml    @zarik
+/railway.json           @zarik
+
+# Documentation
+/docs/                  @zarik
+*.md                    @zarik
+
+# Security-sensitive files (require explicit approval)
+/backend/config/        @zarik
+/backend/middleware/    @zarik
+/config/permissions.json @zarik
+SECURITY.md             @zarik

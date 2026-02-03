@@ -49,6 +49,7 @@ import '../../../config/app_colors.dart';
 import '../../../config/app_sizes.dart';
 import '../../../config/app_spacing.dart';
 import '../../../config/app_typography.dart';
+import '../interactions/touch_target.dart';
 
 class RadioInput<T> extends StatelessWidget {
   /// This radio button's value
@@ -97,9 +98,10 @@ class RadioInput<T> extends StatelessWidget {
         ? sizes.buttonHeightSmall
         : sizes.buttonHeightMedium;
 
-    return InkWell(
+    return TouchTarget(
       onTap: onChanged != null ? () => onChanged(value) : null,
-      borderRadius: spacing.radiusSM,
+      enabled: onChanged != null,
+      semanticLabel: label,
       child: Padding(
         padding: EdgeInsets.symmetric(vertical: spacing.xxs),
         child: Row(

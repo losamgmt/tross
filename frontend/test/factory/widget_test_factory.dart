@@ -271,15 +271,7 @@ abstract final class WidgetTestFactory {
             // different field types. The goal is to verify SOME interaction
             // triggers onChanged - not that every field type is tested.
 
-            // Strategy 1: Try interacting with a BooleanToggle (custom boolean widget)
-            final booleanToggles = find.byType(BooleanToggle);
-            if (booleanToggles.evaluate().isNotEmpty) {
-              await tester.tap(booleanToggles.first);
-              await tester.pump();
-              if (formChanged) return; // Success!
-            }
-
-            // Strategy 2: Try entering text into TextFormField
+            // Strategy 1: Try entering text into TextFormField first (usually visible)
             // (Avoids DropdownMenu's filter TextField which doesn't trigger onChanged)
             final textFormFields = find.byType(TextFormField);
             if (textFormFields.evaluate().isNotEmpty) {
@@ -288,9 +280,22 @@ abstract final class WidgetTestFactory {
               if (formChanged) return; // Success!
             }
 
+            // Strategy 2: Try interacting with a BooleanToggle (may need scroll)
+            final booleanToggles = find.byType(BooleanToggle);
+            if (booleanToggles.evaluate().isNotEmpty) {
+              // Ensure widget is scrolled into view before tapping
+              await tester.ensureVisible(booleanToggles.first);
+              await tester.pumpAndSettle();
+              await tester.tap(booleanToggles.first);
+              await tester.pump();
+              if (formChanged) return; // Success!
+            }
+
             // Strategy 3: Try interacting with an IconButton (number +/- buttons)
             final iconButtons = find.byType(IconButton);
             if (iconButtons.evaluate().isNotEmpty) {
+              await tester.ensureVisible(iconButtons.first);
+              await tester.pumpAndSettle();
               await tester.tap(iconButtons.first);
               await tester.pump();
               if (formChanged) return; // Success!

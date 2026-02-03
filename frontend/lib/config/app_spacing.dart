@@ -77,20 +77,29 @@ class AppSpacing {
       Theme.of(context).textTheme.titleMedium?.fontSize ?? 20.0;
   double get iconSizeXL =>
       Theme.of(context).textTheme.titleLarge?.fontSize ?? 24.0;
+
+  // Touch targets (Material Design)
+  double get touchTargetMin => 48.0;
+  double get pointerTargetMin => 24.0;
 }
 
 /// Static spacing constants for const contexts
-/// Use these only when you MUST use const (build performance)
 class AppSpacingConst {
-  // Base 6dp spacing scale - REDUCED FOR HIGHER DENSITY
-  static const double xxs = 3.0; // Reduced from 4.0
-  static const double xs = 4.5; // Reduced from 6.0
-  static const double sm = 6.0; // Reduced from 8.0
-  static const double md = 9.0; // Reduced from 12.0
-  static const double lg = 12.0; // Reduced from 16.0
-  static const double xl = 18.0; // Reduced from 24.0
-  static const double xxl = 24.0; // Reduced from 32.0
-  static const double xxxl = 36.0; // Reduced from 48.0
+  AppSpacingConst._();
+
+  // Base 6dp spacing scale
+  static const double xxs = 3.0;
+  static const double xs = 4.5;
+  static const double sm = 6.0;
+  static const double md = 9.0;
+  static const double lg = 12.0;
+  static const double xl = 18.0;
+  static const double xxl = 24.0;
+  static const double xxxl = 36.0;
+
+  // Touch targets
+  static const double touchTargetMin = 48.0;
+  static const double pointerTargetMin = 24.0;
 
   // Common padding patterns
   static const EdgeInsets paddingSM = EdgeInsets.all(sm);

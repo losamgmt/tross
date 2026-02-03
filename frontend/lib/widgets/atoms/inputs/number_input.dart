@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../config/app_spacing.dart';
+import '../interactions/touch_target.dart';
 
 /// Generic number input atom for ANY numeric field on ANY model
 ///
@@ -193,32 +194,38 @@ class _NumberInputState extends State<NumberInput> {
               SizedBox(
                 width: 32,
                 height: 24,
-                child: IconButton(
-                  padding: EdgeInsets.zero,
-                  iconSize: spacing.iconSizeMD,
-                  icon: const Icon(Icons.arrow_drop_up),
-                  onPressed:
+                child: TouchTarget.icon(
+                  icon: Icons.arrow_drop_up,
+                  size: spacing.iconSizeMD,
+                  onTap:
                       (widget.max != null &&
                           widget.value != null &&
                           widget.value! >= widget.max!)
                       ? null
                       : _handleIncrement,
+                  enabled:
+                      !(widget.max != null &&
+                          widget.value != null &&
+                          widget.value! >= widget.max!),
                 ),
               ),
               // Decrement button
               SizedBox(
                 width: 32,
                 height: 24,
-                child: IconButton(
-                  padding: EdgeInsets.zero,
-                  iconSize: spacing.iconSizeMD,
-                  icon: const Icon(Icons.arrow_drop_down),
-                  onPressed:
+                child: TouchTarget.icon(
+                  icon: Icons.arrow_drop_down,
+                  size: spacing.iconSizeMD,
+                  onTap:
                       (widget.min != null &&
                           widget.value != null &&
                           widget.value! <= widget.min!)
                       ? null
                       : _handleDecrement,
+                  enabled:
+                      !(widget.min != null &&
+                          widget.value != null &&
+                          widget.value! <= widget.min!),
                 ),
               ),
             ],

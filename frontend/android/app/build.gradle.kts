@@ -28,6 +28,11 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // Auth0 configuration - required by auth0_flutter package
+        // These are injected into AndroidManifest.xml as placeholders
+        manifestPlaceholders["auth0Domain"] = "dev-mglpuahc3cwf66wq.us.auth0.com"
+        manifestPlaceholders["auth0Scheme"] = "com.tross.auth0"
     }
 
     buildTypes {

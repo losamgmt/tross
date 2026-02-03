@@ -33,6 +33,7 @@ import '../../organisms/modals/generic_modal.dart';
 import 'key_value_list.dart';
 // Conditional import for PDF preview (web vs non-web)
 import 'pdf_preview_stub.dart' if (dart.library.html) 'pdf_preview_web.dart';
+import '../../atoms/atoms.dart';
 
 // =============================================================================
 // MAIN WIDGET - Pure presentation, data received from parent
@@ -175,10 +176,10 @@ class _FileAttachmentsHeader extends StatelessWidget {
                   height: 20,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : IconButton(
-                  icon: const Icon(Icons.add),
+              : TouchTarget.icon(
+                  icon: Icons.add,
                   tooltip: 'Upload file',
-                  onPressed: onUpload,
+                  onTap: onUpload,
                 ),
       ],
     );
@@ -371,17 +372,17 @@ class FileListTile extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (onDownload != null)
-            IconButton(
-              icon: const Icon(Icons.download),
+            TouchTarget.icon(
+              icon: Icons.download,
               tooltip: 'Download',
-              onPressed: onDownload,
+              onTap: onDownload,
             ),
           if (onDelete != null)
-            IconButton(
-              icon: const Icon(Icons.delete_outline),
+            TouchTarget.icon(
+              icon: Icons.delete_outline,
               tooltip: 'Delete',
               color: Colors.red,
-              onPressed: onDelete,
+              onTap: onDelete,
             ),
         ],
       ),

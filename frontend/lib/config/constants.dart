@@ -21,6 +21,10 @@ class AppConstants {
       '© 2025 Tross - Professional Maintenance Solutions';
   static const String supportEmail = 'support@tross.com';
 
+  /// App icon - wrench in circle (matches web/icons/tross-icon.svg)
+  static const IconData appIcon = Icons.build_circle;
+  static const IconData appIconOutlined = Icons.build_circle_outlined;
+
   // Development Mode
   static const String devModeTitle = 'Development Mode';
   static const String devModeDescription =

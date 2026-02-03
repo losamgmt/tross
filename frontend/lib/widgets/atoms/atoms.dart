@@ -10,6 +10,9 @@ export 'buttons/app_button.dart';
 // Cells
 export 'cells/foreign_key_lookup_cell.dart';
 
+// Containers (platform-aware scrolling)
+export 'containers/containers.dart';
+
 // Display
 export 'display/field_display.dart';
 
@@ -31,6 +34,9 @@ export 'inputs/select_input.dart';
 export 'inputs/text_area_input.dart';
 export 'inputs/text_input.dart';
 export 'inputs/time_input.dart';
+
+// Interactions (platform-aware touch/input)
+export 'interactions/interactions.dart';
 
 // Notifications
 export 'notifications/app_snackbar.dart';
