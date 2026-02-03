@@ -6,7 +6,7 @@
 # Note: Railway uses Nixpacks, Vercel uses serverless - they don't need this
 
 # Stage 1: Build stage
-FROM node:18-alpine AS builder
+FROM node:25-alpine AS builder
 
 WORKDIR /app
 
@@ -18,7 +18,7 @@ COPY backend/package*.json ./backend/
 RUN npm ci --only=production --workspace=backend
 
 # Stage 2: Production stage
-FROM node:18-alpine AS production
+FROM node:25-alpine AS production
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && \
