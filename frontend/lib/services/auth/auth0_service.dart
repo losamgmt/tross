@@ -15,9 +15,11 @@ class Auth0Service {
   /// Perform Auth0 login and return credentials
   Future<Credentials?> login() async {
     try {
+      // useHTTPS: false - use custom scheme (com.tross.auth0://) for mobile
+      // useHTTPS: true would require Android App Links / iOS Universal Links setup
       final credentials = await _auth0
           .webAuthentication(scheme: AppConfig.auth0Scheme)
-          .login(useHTTPS: true);
+          .login();
 
       ErrorService.logInfo(
         'Auth0 login successful',
