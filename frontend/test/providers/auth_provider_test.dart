@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/providers/auth_provider.dart';
-import 'package:tross_app/models/permission.dart';
+import 'package:tross/providers/auth_provider.dart';
+import 'package:tross/models/permission.dart';
 import '../helpers/backend_availability.dart';
 import '../mocks/mock_api_client.dart';
 

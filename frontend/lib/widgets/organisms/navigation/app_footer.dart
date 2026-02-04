@@ -11,7 +11,7 @@
 /// Usage:
 /// ```dart
 /// AppFooter(
-///   copyrightText: '© 2025 TrossApp',
+///   copyrightText: '© 2025 Tross',
 ///   version: 'v1.0.0',
 ///   links: [
 ///     FooterLink(label: 'Privacy', url: '/privacy'),
@@ -52,7 +52,7 @@ class FooterLinkGroup {
 
 /// Generic application footer
 class AppFooter extends StatelessWidget {
-  /// Copyright text (e.g., "© 2025 TrossApp")
+  /// Copyright text (e.g., "© 2025 Tross")
   final String? copyrightText;
 
   /// Application version

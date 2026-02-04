@@ -5,7 +5,7 @@
 ///
 /// Usage:
 /// ```dart
-/// import 'package:tross_app/test/helpers/test_data_builders.dart';
+/// import 'package:tross/test/helpers/test_data_builders.dart';
 ///
 /// void main() {
 ///   test('admin user access', () {

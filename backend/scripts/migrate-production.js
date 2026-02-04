@@ -66,7 +66,7 @@ async function runMigration() {
 
   log('', 'reset');
   log('═══════════════════════════════════════════════', 'blue');
-  log('   🚀 TrossApp Production Database Migration', 'blue');
+  log('   🚀 Tross Production Database Migration', 'blue');
   log('═══════════════════════════════════════════════', 'blue');
   log('', 'reset');
   log(`📡 Connecting to: ${config.host}:${config.port}/${config.database}`, 'cyan');

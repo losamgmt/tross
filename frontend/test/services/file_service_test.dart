@@ -15,8 +15,8 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:tross_app/models/file_attachment.dart';
-import 'package:tross_app/services/file_service.dart';
+import 'package:tross/models/file_attachment.dart';
+import 'package:tross/services/file_service.dart';
 import '../mocks/mock_api_client.dart';
 import '../mocks/mock_token_provider.dart';
 import '../factory/entity_registry.dart';

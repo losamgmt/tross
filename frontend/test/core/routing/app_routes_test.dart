@@ -1,6 +1,6 @@
 // App Routes Unit Tests - Route constant validation
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/core/routing/app_routes.dart';
+import 'package:tross/core/routing/app_routes.dart';
 
 void main() {
   group('AppRoutes - Route Constants', () {

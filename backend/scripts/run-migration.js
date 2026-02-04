@@ -82,7 +82,7 @@ async function runMigration(config, envName) {
 
 async function main() {
   console.log('╔════════════════════════════════════════════════════════════╗');
-  console.log('║              TrossApp Migration Runner                    ║');
+  console.log('║              Tross Migration Runner                    ║');
   console.log('╚════════════════════════════════════════════════════════════╝');
 
   try {

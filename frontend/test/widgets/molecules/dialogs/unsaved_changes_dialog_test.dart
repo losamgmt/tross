@@ -10,7 +10,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/widgets/molecules/dialogs/unsaved_changes_dialog.dart';
+import 'package:tross/widgets/molecules/dialogs/unsaved_changes_dialog.dart';
 
 void main() {
   group('UnsavedChangesDialog Molecule', () {

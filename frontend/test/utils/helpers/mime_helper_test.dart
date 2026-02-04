@@ -5,7 +5,7 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/utils/helpers/mime_helper.dart';
+import 'package:tross/utils/helpers/mime_helper.dart';
 
 void main() {
   group('MimeHelper', () {

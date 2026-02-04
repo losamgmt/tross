@@ -46,7 +46,7 @@ import '../services/error_service.dart';
 ///
 /// **Network vs Backend Distinction:**
 /// - `hasNetworkConnection` - Is device connected to WiFi/cellular?
-/// - `isBackendHealthy` - Is TrossApp backend responding?
+/// - `isBackendHealthy` - Is Tross backend responding?
 /// - Device can be online while backend is offline (and vice versa)
 ///
 /// **KISS Principle:**

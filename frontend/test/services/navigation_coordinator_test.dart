@@ -9,7 +9,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:tross_app/services/navigation_coordinator.dart';
+import 'package:tross/services/navigation_coordinator.dart';
 
 void main() {
   group('NavigationCoordinator', () {

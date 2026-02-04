@@ -13,7 +13,7 @@ Execute these steps in GitHub web interface to protect the `main` branch.
 ## Steps
 
 1. **Navigate to Settings**
-   - Go to https://github.com/losamgmt/tross-app
+   - Go to https://github.com/losamgmt/tross
    - Click "Settings" tab
    - Click "Branches" in left sidebar
 

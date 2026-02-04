@@ -23,7 +23,7 @@ describe('Input Sanitization Security', () => {
     validToken = jwt.sign(
       {
         sub: 'dev|admin001',
-        email: 'admin@trossapp.dev',
+        email: 'admin@tross.dev',
         role: 'admin',
         provider: 'development',
       },

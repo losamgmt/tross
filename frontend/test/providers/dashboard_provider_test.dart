@@ -6,12 +6,12 @@ library;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/providers/auth_provider.dart';
-import 'package:tross_app/providers/dashboard_provider.dart';
-import 'package:tross_app/services/api/api_client.dart';
-import 'package:tross_app/services/auth/token_provider.dart';
-import 'package:tross_app/services/dashboard_config_loader.dart';
-import 'package:tross_app/services/stats_service.dart';
+import 'package:tross/providers/auth_provider.dart';
+import 'package:tross/providers/dashboard_provider.dart';
+import 'package:tross/services/api/api_client.dart';
+import 'package:tross/services/auth/token_provider.dart';
+import 'package:tross/services/dashboard_config_loader.dart';
+import 'package:tross/services/stats_service.dart';
 
 void main() {
   group('DashboardProvider', () {

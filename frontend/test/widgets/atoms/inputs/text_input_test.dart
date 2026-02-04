@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/widgets/atoms/inputs/text_input.dart';
+import 'package:tross/widgets/atoms/inputs/text_input.dart';
 
 void main() {
   group('TextInput', () {

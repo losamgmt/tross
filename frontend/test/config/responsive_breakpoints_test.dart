@@ -12,7 +12,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/config/responsive_breakpoints.dart';
+import 'package:tross/config/responsive_breakpoints.dart';
 
 void main() {
   group('ResponsiveBreakpoints', () {

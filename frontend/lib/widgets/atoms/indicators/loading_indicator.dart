@@ -3,7 +3,7 @@
 /// Consistent loading UI across the application
 /// Supports different sizes and optional message
 ///
-/// Material 3 Design with TrossApp branding
+/// Material 3 Design with Tross branding
 library;
 
 import 'package:flutter/material.dart';

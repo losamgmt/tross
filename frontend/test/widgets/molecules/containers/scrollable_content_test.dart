@@ -7,7 +7,7 @@ library;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/widgets/molecules/containers/scrollable_content.dart';
+import 'package:tross/widgets/molecules/containers/scrollable_content.dart';
 
 void main() {
   group('ScrollableContent Molecule', () {

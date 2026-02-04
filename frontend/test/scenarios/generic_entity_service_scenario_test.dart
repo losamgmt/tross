@@ -15,7 +15,7 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/services/generic_entity_service.dart';
+import 'package:tross/services/generic_entity_service.dart';
 
 import '../factory/factory.dart';
 import '../mocks/mock_api_client.dart';

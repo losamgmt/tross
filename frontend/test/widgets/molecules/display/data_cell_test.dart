@@ -6,7 +6,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/widgets/molecules/display/data_cell.dart' as molecule;
+import 'package:tross/widgets/molecules/display/data_cell.dart' as molecule;
 
 void main() {
   group('DataCell Molecule', () {

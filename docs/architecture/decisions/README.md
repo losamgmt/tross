@@ -1,6 +1,6 @@
 # Architecture Decision Records (ADRs)
 
-This directory contains records of architectural decisions made for TrossApp.
+This directory contains records of architectural decisions made for Tross.
 
 ## Format
 

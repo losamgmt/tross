@@ -8,7 +8,7 @@
 
 ## Context
 
-TrossApp requires a robust routing system that supports:
+Tross requires a robust routing system that supports:
 
 - Role-based access control (admin/manager/user routes)
 - Authentication state management (public vs protected routes)

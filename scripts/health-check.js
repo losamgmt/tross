@@ -10,7 +10,7 @@
 const { execSync } = require('child_process');
 const ports = require('../config/ports');
 
-console.log(`🩺 TrossApp Health Check`);
+console.log(`🩺 Tross Health Check`);
 console.log(`========================\n`);
 
 // Check backend health endpoint

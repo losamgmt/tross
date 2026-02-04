@@ -36,7 +36,7 @@ library;
 import 'dart:io';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:http/http.dart' as http;
-import 'package:tross_app/config/app_config.dart';
+import 'package:tross/config/app_config.dart';
 
 /// Backend availability checker for intelligent test execution
 class BackendAvailability {

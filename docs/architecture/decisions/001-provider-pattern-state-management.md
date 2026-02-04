@@ -15,7 +15,7 @@ Flutter offers multiple state management solutions:
 - **GetX** - All-in-one solution with DI, routing, state
 - **MobX** - Reactive programming with observables
 
-For TrossApp's frontend, we needed a state management solution that:
+For Tross's frontend, we needed a state management solution that:
 
 1. Is simple and maintainable (KISS principle)
 2. Has excellent Flutter integration

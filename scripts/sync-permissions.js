@@ -49,7 +49,7 @@ function syncPermissions() {
     const derived = deriver.derivePermissions(true);
 
     // Update metadata
-    derived.title = 'TrossApp Permission Configuration';
+    derived.title = 'Tross Permission Configuration';
     derived.description = 
       'Single source of truth for role-based access control (RBAC). ' +
       'AUTO-GENERATED from entity metadata - run sync-permissions.js to regenerate.';

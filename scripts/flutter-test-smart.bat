@@ -5,7 +5,7 @@ REM Run from: frontend\ directory
 setlocal enabledelayedexpansion
 
 echo ========================================
-echo   TrossApp Frontend Test Suite
+echo   Tross Frontend Test Suite
 echo   10 second timeout per test
 echo ========================================
 echo.

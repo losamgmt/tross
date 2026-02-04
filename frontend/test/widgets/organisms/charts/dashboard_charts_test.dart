@@ -6,8 +6,8 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:tross_app/widgets/organisms/charts/dashboard_charts.dart';
-import 'package:tross_app/widgets/molecules/cards/stat_card.dart';
+import 'package:tross/widgets/organisms/charts/dashboard_charts.dart';
+import 'package:tross/widgets/molecules/cards/stat_card.dart';
 
 void main() {
   group('StatCard', () {

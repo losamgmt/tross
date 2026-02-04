@@ -1,5 +1,5 @@
 # =============================================================================
-# TrossApp CI/CD Pipeline
+# Tross CI/CD Pipeline
 # =============================================================================
 # A professional, comprehensive CI/CD setup following best practices:
 #   - KISS principle: Essential checks, build, and deploy
@@ -68,7 +68,7 @@ jobs:
       postgres:
         image: postgres:15-alpine
         env:
-          POSTGRES_DB: trossapp_test
+          POSTGRES_DB: tross_test
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: test123
         options: >-
@@ -97,7 +97,7 @@ jobs:
         env:
           TEST_DB_HOST: localhost
           TEST_DB_PORT: 5433
-          TEST_DB_NAME: trossapp_test
+          TEST_DB_NAME: tross_test
           TEST_DB_USER: postgres
           TEST_DB_PASSWORD: test123
           NODE_ENV: test
@@ -371,7 +371,7 @@ jobs:
       - name: Check job results
         run: |
           echo "╔══════════════════════════════════════════════════════════════╗"
-          echo "║                    TrossApp CI/CD Summary                    ║"
+          echo "║                    Tross CI/CD Summary                    ║"
           echo "╠══════════════════════════════════════════════════════════════╣"
           echo "║ Backend Unit Tests:      ${{ needs.backend-unit.result == 'success' && '✅ Passed' || '❌ Failed' }}"
           echo "║ Backend Integration:     ${{ needs.backend-integration.result == 'success' && '✅ Passed' || '❌ Failed' }}"

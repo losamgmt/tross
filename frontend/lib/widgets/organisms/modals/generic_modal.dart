@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:tross_app/config/app_spacing.dart';
-import 'package:tross_app/config/constants.dart';
-import 'package:tross_app/config/platform_utilities.dart';
+import 'package:tross/config/app_spacing.dart';
+import 'package:tross/config/constants.dart';
+import 'package:tross/config/platform_utilities.dart';
 import '../../atoms/atoms.dart';
 
 /// GenericModal - Organism for modal dialogs via PURE COMPOSITION

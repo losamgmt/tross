@@ -14,7 +14,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/widgets/molecules/display/data_matrix.dart';
+import 'package:tross/widgets/molecules/display/data_matrix.dart';
 
 import '../../../helpers/behavioral_test_helpers.dart';
 import '../../../helpers/test_helpers.dart';

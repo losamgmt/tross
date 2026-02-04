@@ -7,7 +7,7 @@
 
 ## Context
 
-TrossApp needed file attachment capabilities for entities (work orders, invoices, customers, etc.). Key decisions were required around:
+Tross needed file attachment capabilities for entities (work orders, invoices, customers, etc.). Key decisions were required around:
 
 1. **URL structure** - How to expose file operations in the API
 2. **Download URLs** - How to handle signed URLs for file access

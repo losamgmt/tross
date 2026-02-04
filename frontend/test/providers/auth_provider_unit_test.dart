@@ -11,8 +11,8 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/providers/auth_provider.dart';
-import 'package:tross_app/models/permission.dart';
+import 'package:tross/providers/auth_provider.dart';
+import 'package:tross/models/permission.dart';
 import '../mocks/mock_api_client.dart';
 
 void main() {

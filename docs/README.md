@@ -1,6 +1,6 @@
 # Documentation
 
-TrossApp documentation hub.
+Tross documentation hub.
 
 ---
 

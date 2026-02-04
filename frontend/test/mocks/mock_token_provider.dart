@@ -25,7 +25,7 @@
 /// ```
 library;
 
-import 'package:tross_app/services/auth/token_provider.dart';
+import 'package:tross/services/auth/token_provider.dart';
 
 /// Mock implementation of TokenProvider for testing
 ///

@@ -7,7 +7,7 @@
 
 ## Context
 
-TrossApp requires secure authentication with:
+Tross requires secure authentication with:
 
 - **Multiple platforms:** Web (Flutter Web), iOS, Android
 - **OAuth 2.0 / OIDC:** Industry-standard auth
@@ -108,8 +108,8 @@ router.post('/dev-auth/login', (req, res) => {
 
 Allows testing without Auth0:
 
-- Admin user: `admin@trossapp.com` / `admin123`
-- Client user: `client@trossapp.com` / `client123`
+- Admin user: `admin@tross.com` / `admin123`
+- Client user: `client@tross.com` / `client123`
 
 ---
 
@@ -251,13 +251,13 @@ module.exports = {
 ```dart
 // frontend/lib/config/auth0_config.dart
 class Auth0Config {
-  static const String domain = 'trossapp.us.auth0.com';
+  static const String domain = 'tross.us.auth0.com';
   static const String clientId = 'YOUR_CLIENT_ID';
-  static const String audience = 'https://api.trossapp.com';
+  static const String audience = 'https://api.tross.com';
 
   static const String redirectUri = kIsWeb
       ? 'http://localhost:5000/auth/callback'
-      : 'com.trossapp://callback';
+      : 'com.tross://callback';
 }
 ```
 

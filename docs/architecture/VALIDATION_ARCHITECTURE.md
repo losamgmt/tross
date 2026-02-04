@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document explains **why** TrossApp validates data the way it does, and the architectural decisions behind our multi-layer validation strategy.
+This document explains **why** Tross validates data the way it does, and the architectural decisions behind our multi-layer validation strategy.
 
 For implementation details, see the code itself:
 - `backend/config/models/*-metadata.js` - field definitions

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/utils/helpers/pagination_helper.dart';
+import 'package:tross/utils/helpers/pagination_helper.dart';
 
 void main() {
   group('PaginationHelper', () {

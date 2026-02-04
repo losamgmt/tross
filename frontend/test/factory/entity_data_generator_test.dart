@@ -7,7 +7,7 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/models/field_definition.dart';
+import 'package:tross/models/field_definition.dart';
 import '../factory/factory.dart';
 
 void main() {

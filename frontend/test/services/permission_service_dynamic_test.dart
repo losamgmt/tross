@@ -10,8 +10,8 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/models/permission.dart';
-import 'package:tross_app/services/permission_service_dynamic.dart';
+import 'package:tross/models/permission.dart';
+import 'package:tross/services/permission_service_dynamic.dart';
 
 void main() {
   // Initialize permission service before all tests

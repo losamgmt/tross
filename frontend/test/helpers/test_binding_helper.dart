@@ -5,7 +5,7 @@
 ///
 /// Usage:
 /// ```dart
-/// import 'package:tross_app/test/helpers/test_binding_helper.dart';
+/// import 'package:tross/test/helpers/test_binding_helper.dart';
 ///
 /// void main() {
 ///   // Option 1: Call manually in main()

@@ -1,5 +1,5 @@
 // Test Users Configuration for Development
-// Five users representing each role in the TrossApp hierarchy
+// Five users representing each role in the Tross hierarchy
 //
 // ARCHITECTURE: File-based dev users with DB-consistent structure
 // - Same schema as real database users (role_id, not role string)
@@ -73,35 +73,35 @@ function createTestUser({
 const TEST_USERS = {
   admin: createTestUser({
     auth0_id: 'dev|admin001',
-    email: 'admin@trossapp.dev',
+    email: 'admin@tross.dev',
     first_name: 'Sarah',
     last_name: 'Administrator',
     role_id: 1,
   }),
   manager: createTestUser({
     auth0_id: 'dev|manager001',
-    email: 'manager@trossapp.dev',
+    email: 'manager@tross.dev',
     first_name: 'Mike',
     last_name: 'Manager',
     role_id: 2,
   }),
   dispatcher: createTestUser({
     auth0_id: 'dev|dispatcher001',
-    email: 'dispatcher@trossapp.dev',
+    email: 'dispatcher@tross.dev',
     first_name: 'Diana',
     last_name: 'Dispatcher',
     role_id: 3,
   }),
   technician: createTestUser({
     auth0_id: 'dev|tech001',
-    email: 'technician@trossapp.dev',
+    email: 'technician@tross.dev',
     first_name: 'Tom',
     last_name: 'Technician',
     role_id: 4,
   }),
   customer: createTestUser({
     auth0_id: 'dev|customer001',
-    email: 'customer@trossapp.dev',
+    email: 'customer@tross.dev',
     first_name: 'Carol',
     last_name: 'Customer',
     role_id: 5,

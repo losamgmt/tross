@@ -11,9 +11,9 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
-import 'package:tross_app/providers/auth_provider.dart';
-import 'package:tross_app/services/api/api_client.dart';
-import 'package:tross_app/services/generic_entity_service.dart';
+import 'package:tross/providers/auth_provider.dart';
+import 'package:tross/services/api/api_client.dart';
+import 'package:tross/services/generic_entity_service.dart';
 import '../mocks/mock_api_client.dart';
 import '../mocks/mock_services.dart';
 

@@ -1,4 +1,4 @@
-# TrossApp Test Database - Docker Compose
+# Tross Test Database - Docker Compose
 # Provides isolated PostgreSQL instance for integration testing
 
 services:
@@ -6,10 +6,10 @@ services:
   # Uses SAME credentials as dev DB (postgres/tross123) for simplicity
   postgres-test:
     image: postgres:15-alpine
-    container_name: trossapp-postgres-test
+    container_name: tross-postgres-test
     restart: unless-stopped
     environment:
-      POSTGRES_DB: trossapp_test
+      POSTGRES_DB: tross_test
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: tross123
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
@@ -19,14 +19,14 @@ services:
     tmpfs:
       - /var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d trossapp_test"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d tross_test"]
       interval: 5s
       timeout: 3s
       retries: 5
     networks:
-      - trossapp-test-network
+      - tross-test-network
 
 networks:
-  trossapp-test-network:
+  tross-test-network:
     driver: bridge
-    name: trossapp-test-network
+    name: tross-test-network

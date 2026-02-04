@@ -56,7 +56,7 @@ const createToken = (role, overrides = {}) => {
   return jwt.sign(
     {
       sub: roleToAuth0Id[role] || `dev|${role}001`,
-      email: `${role}@trossapp.dev`,
+      email: `${role}@tross.dev`,
       role,
       provider: 'development',
       ...overrides,

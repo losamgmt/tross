@@ -203,7 +203,7 @@ async function suggestIndexes() {
  * Main execution
  */
 async function main() {
-  console.log('🔍 TrossApp Database Optimization Analysis');
+  console.log('🔍 Tross Database Optimization Analysis');
   console.log('==========================================');
 
   try {

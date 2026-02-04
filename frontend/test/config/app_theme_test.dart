@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/config/app_theme.dart';
-import 'package:tross_app/config/app_colors.dart';
-import 'package:tross_app/config/app_typography.dart';
-import 'package:tross_app/config/app_borders.dart';
-import 'package:tross_app/config/app_shadows.dart';
+import 'package:tross/config/app_theme.dart';
+import 'package:tross/config/app_colors.dart';
+import 'package:tross/config/app_typography.dart';
+import 'package:tross/config/app_borders.dart';
+import 'package:tross/config/app_shadows.dart';
 
 void main() {
   group('AppTheme - Light Theme', () {

@@ -1,4 +1,4 @@
-# TrossApp Project Status
+# Tross Project Status
 
 **Last Updated:** February 3, 2026
 

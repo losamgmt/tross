@@ -298,7 +298,7 @@ import '../atoms/icons/error_icon.dart';
 
 - ✅ All components use `AppTheme`, `AppColors`, `AppSpacing`
 - ✅ Material 3 design system enforced
-- ✅ TrossApp branding consistent across all levels
+- ✅ Tross branding consistent across all levels
 
 ---
 

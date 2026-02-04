@@ -29,7 +29,7 @@ SUITES=(
 )
 
 echo -e "${BLUE}════════════════════════════════════════${NC}"
-echo -e "${BLUE}  TrossApp Frontend Test Suite${NC}"
+echo -e "${BLUE}  Tross Frontend Test Suite${NC}"
 echo -e "${BLUE}════════════════════════════════════════${NC}"
 echo ""
 

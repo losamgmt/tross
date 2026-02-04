@@ -5,8 +5,8 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/config/app_config.dart';
-import 'package:tross_app/services/error_service.dart';
+import 'package:tross/config/app_config.dart';
+import 'package:tross/services/error_service.dart';
 
 void main() {
   group('E2E Security Tests - All Three Layers', () {

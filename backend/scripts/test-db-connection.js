@@ -10,7 +10,7 @@ const { Pool } = require('pg');
 const pool = new Pool({
   user: process.env.DB_USER || 'postgres',
   host: process.env.DB_HOST || 'localhost',
-  database: process.env.DB_NAME || 'trossapp_dev',
+  database: process.env.DB_NAME || 'tross_dev',
   password: process.env.DB_PASSWORD || 'tross123',
   port: process.env.DB_PORT || 5432,
 });
@@ -21,7 +21,7 @@ async function testConnection() {
   console.log('📋 Environment Variables:');
   console.log(`   DB_HOST: ${process.env.DB_HOST || 'localhost'}`);
   console.log(`   DB_PORT: ${process.env.DB_PORT || '5432'}`);
-  console.log(`   DB_NAME: ${process.env.DB_NAME || 'trossapp_dev'}`);
+  console.log(`   DB_NAME: ${process.env.DB_NAME || 'tross_dev'}`);
   console.log(`   DB_USER: ${process.env.DB_USER || 'postgres'}`);
   console.log('');
 

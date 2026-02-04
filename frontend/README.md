@@ -1,4 +1,4 @@
-# TrossApp Frontend
+# Tross Frontend
 
 **Flutter web/mobile application for work order management**
 
@@ -8,9 +8,9 @@
 
 ## 🎯 Overview
 
-Cross-platform frontend for TrossApp built with Flutter, featuring:
+Cross-platform frontend for Tross built with Flutter, featuring:
 
-- **Material 3 Design System** with custom TrossApp branding
+- **Material 3 Design System** with custom Tross branding
 - **Atomic Design Pattern** (atoms → molecules → organisms → screens)
 - **Accessibility-First Form Inputs** with full keyboard navigation
 - **Provider State Management** with defensive error handling

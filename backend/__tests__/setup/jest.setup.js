@@ -61,12 +61,12 @@ global.console = {
 
 // Global setup before all tests
 beforeAll(async () => {
-  testLogger.log("🧪 Starting TrossApp test suite...");
+  testLogger.log("🧪 Starting Tross test suite...");
 });
 
 // Global cleanup after all tests
 afterAll(async () => {
-  testLogger.log("✅ TrossApp test suite completed");
+  testLogger.log("✅ Tross test suite completed");
   cleanupTestEnv();
 
   // Close database connection pool to prevent hanging

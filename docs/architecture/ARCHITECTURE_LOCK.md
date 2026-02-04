@@ -1,4 +1,4 @@
-# Architecture Lock - TrossApp
+# Architecture Lock - Tross
 
 **Status:** 🔒 **LOCKED** - Core patterns frozen
 

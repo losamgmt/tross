@@ -7,11 +7,11 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
-import 'package:tross_app/config/app_config.dart';
-import 'package:tross_app/providers/app_provider.dart';
-import 'package:tross_app/providers/auth_provider.dart';
-import 'package:tross_app/screens/login_screen.dart';
-import 'package:tross_app/widgets/molecules/indicators/dev_mode_indicator.dart';
+import 'package:tross/config/app_config.dart';
+import 'package:tross/providers/app_provider.dart';
+import 'package:tross/providers/auth_provider.dart';
+import 'package:tross/screens/login_screen.dart';
+import 'package:tross/widgets/molecules/indicators/dev_mode_indicator.dart';
 
 import '../mocks/mock_api_client.dart';
 

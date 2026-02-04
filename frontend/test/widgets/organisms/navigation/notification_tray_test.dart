@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/widgets/organisms/navigation/notification_tray.dart';
+import 'package:tross/widgets/organisms/navigation/notification_tray.dart';
 
 void main() {
   /// Build test widget with pure data injection - just pass data as props

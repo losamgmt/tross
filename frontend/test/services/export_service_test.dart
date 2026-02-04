@@ -13,7 +13,7 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/services/export_service.dart';
+import 'package:tross/services/export_service.dart';
 import '../mocks/mock_api_client.dart';
 import '../mocks/mock_token_provider.dart';
 

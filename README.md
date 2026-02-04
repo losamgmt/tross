@@ -11,7 +11,7 @@
 ## 🚀 Production
 
 **Live Application:**
-- **Frontend:** https://trossapp.vercel.app
+- **Frontend:** https://tross.vercel.app
 - **Backend API:** https://tross-api-production.up.railway.app
 - **API Docs:** https://tross-api-production.up.railway.app/api-docs
 - **Health Check:** https://tross-api-production.up.railway.app/api/health
@@ -48,7 +48,7 @@ The Tross App is a modern, full-stack application for efficient work order manag
 - **Infrastructure:** Docker Compose + npm workspaces
 
 ```
-TrossApp/
+Tross/
 ├── frontend/          # Flutter application
 │   ├── lib/
 │   │   └── main.dart  # Main application entry
@@ -79,7 +79,7 @@ TrossApp/
 
 ```bash
 git clone <repository-url>
-cd TrossApp
+cd Tross
 npm install
 cd frontend && flutter pub get
 ```
@@ -138,7 +138,7 @@ npm run dev:frontend   # Frontend
 **Framework**: Flutter
 
 - **Language**: Dart
-- **UI**: Material 3 with custom TrossApp branding
+- **UI**: Material 3 with custom Tross branding
 - **HTTP**: http package for API communication
 - **Architecture**: StatefulWidget with clean state management
 

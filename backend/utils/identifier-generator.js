@@ -6,7 +6,7 @@
  * - invoice: INV-YYYY-NNNN
  * - contract: CTR-YYYY-NNNN
  *
- * Uses raw pg pool (NOT Knex) - consistent with TrossApp patterns.
+ * Uses raw pg pool (NOT Knex) - consistent with Tross patterns.
  * Configuration is derived from entity metadata (single source of truth).
  *
  * @module utils/identifier-generator

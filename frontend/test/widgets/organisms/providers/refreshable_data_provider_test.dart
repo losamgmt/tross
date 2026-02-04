@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/widgets/organisms/providers/refreshable_data_provider.dart';
+import 'package:tross/widgets/organisms/providers/refreshable_data_provider.dart';
 import '../../../helpers/test_helpers.dart';
 
 void main() {

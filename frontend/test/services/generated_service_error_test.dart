@@ -22,12 +22,12 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/services/stats_service.dart';
-import 'package:tross_app/services/audit_log_service.dart';
-import 'package:tross_app/services/file_service.dart';
-import 'package:tross_app/services/export_service.dart';
-import 'package:tross_app/services/generic_entity_service.dart';
-import 'package:tross_app/services/preferences_service.dart';
+import 'package:tross/services/stats_service.dart';
+import 'package:tross/services/audit_log_service.dart';
+import 'package:tross/services/file_service.dart';
+import 'package:tross/services/export_service.dart';
+import 'package:tross/services/generic_entity_service.dart';
+import 'package:tross/services/preferences_service.dart';
 
 import '../factory/service_test_factory.dart';
 import '../factory/entity_registry.dart';

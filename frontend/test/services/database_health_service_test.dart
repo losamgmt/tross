@@ -11,8 +11,8 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:tross_app/services/database_health_service.dart';
-import 'package:tross_app/models/database_health.dart';
+import 'package:tross/services/database_health_service.dart';
+import 'package:tross/models/database_health.dart';
 
 void main() {
   group('DatabaseHealthService', () {

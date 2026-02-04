@@ -1,6 +1,6 @@
 # Quick Start
 
-Get TrossApp running locally in under 5 minutes.
+Get Tross running locally in under 5 minutes.
 
 ---
 
@@ -17,8 +17,8 @@ Get TrossApp running locally in under 5 minutes.
 
 ### 1. Clone Repository
 ```bash
-git clone https://github.com/losamgmt/tross-app.git
-cd tross-app
+git clone https://github.com/losamgmt/tross.git
+cd tross
 ```
 
 ### 2. Install Dependencies
@@ -36,8 +36,8 @@ cd frontend && flutter pub get && cd ..
 docker-compose up -d db
 
 # Option 2: Local PostgreSQL
-createdb trossapp_dev
-createdb trossapp_test
+createdb tross_dev
+createdb tross_test
 ```
 
 ### 4. Environment Configuration
@@ -154,7 +154,7 @@ PORT=<ALTERNATE_PORT> npm run dev
 psql -l
 
 # Check DATABASE_URL in .env
-# Format: postgresql://user:password@localhost:5432/trossapp_dev
+# Format: postgresql://user:password@localhost:5432/tross_dev
 ```
 
 ### Flutter Web Not Starting
@@ -200,7 +200,7 @@ npm test -- customers  # Run customer tests only
 
 ### Project Structure
 ```
-tross-app/
+tross/
 ├── backend/           # Node.js API
 │   ├── server.js      # Entry point
 │   ├── routes/        # API endpoints

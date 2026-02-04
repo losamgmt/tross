@@ -8,10 +8,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
-import 'package:tross_app/screens/login_screen.dart';
-import 'package:tross_app/providers/auth_provider.dart';
-import 'package:tross_app/providers/app_provider.dart';
-import 'package:tross_app/config/constants.dart';
+import 'package:tross/screens/login_screen.dart';
+import 'package:tross/providers/auth_provider.dart';
+import 'package:tross/providers/app_provider.dart';
+import 'package:tross/config/constants.dart';
 import 'helpers/helpers.dart';
 import 'mocks/mock_api_client.dart';
 

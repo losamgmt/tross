@@ -228,7 +228,7 @@ void _printFailure(TestResult test, {bool verbose = false}) {
     print('   ${Colors.dim}Stack trace:${Colors.reset}');
     final stackLines = test.stackTrace!.split('\n').take(15);
     for (final line in stackLines) {
-      if (line.contains('package:tross_app') || line.contains('test/')) {
+      if (line.contains('package:tross') || line.contains('test/')) {
         print('   ${Colors.cyan}$line${Colors.reset}');
       }
     }

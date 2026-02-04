@@ -74,7 +74,7 @@ describe("Authentication Middleware - Security", () => {
       const token = jwt.sign(
         {
           sub: "dev|tech001",
-          email: "technician@trossapp.dev",
+          email: "technician@tross.dev",
           role: "technician",
           provider: "development",
         },
@@ -95,7 +95,7 @@ describe("Authentication Middleware - Security", () => {
       const token = jwt.sign(
         {
           sub: "dev|tech001",
-          email: "technician@trossapp.dev",
+          email: "technician@tross.dev",
           role: "technician",
           provider: "development",
         },
@@ -280,7 +280,7 @@ describe("Authentication Middleware - Security", () => {
       const token = jwt.sign(
         {
           sub: "dev|admin001",
-          email: "admin@trossapp.dev",
+          email: "admin@tross.dev",
           role: "admin",
           provider: "development",
         },
@@ -300,7 +300,7 @@ describe("Authentication Middleware - Security", () => {
       const token = jwt.sign(
         {
           sub: "dev|tech001",
-          email: "technician@trossapp.dev",
+          email: "technician@tross.dev",
           role: "technician",
           provider: "development",
         },
@@ -325,7 +325,7 @@ describe("Authentication Middleware - Security", () => {
       const token = jwt.sign(
         {
           sub: "dev|admin001",
-          email: "admin@trossapp.dev",
+          email: "admin@tross.dev",
           role: "admin",
           provider: "development",
         },
@@ -346,7 +346,7 @@ describe("Authentication Middleware - Security", () => {
       const token = jwt.sign(
         {
           sub: "dev|customer001",
-          email: "customer@trossapp.dev",
+          email: "customer@tross.dev",
           role: "customer",
           provider: "development",
         },
@@ -373,7 +373,7 @@ describe("Authentication Middleware - Security", () => {
       const token = jwt.sign(
         {
           sub: "dev|norole001",
-          email: "norole@trossapp.dev",
+          email: "norole@tross.dev",
           provider: "development",
           // no role field
         },
@@ -447,7 +447,7 @@ describe("Authentication Middleware - Security", () => {
       return jwt.sign(
         {
           sub: `dev|${role}001`,
-          email: `${role}@trossapp.dev`,
+          email: `${role}@tross.dev`,
           role: role,
           provider: "development",
         },

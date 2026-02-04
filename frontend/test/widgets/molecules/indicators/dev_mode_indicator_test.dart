@@ -8,8 +8,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/widgets/molecules/indicators/dev_mode_indicator.dart';
-import 'package:tross_app/widgets/atoms/indicators/app_badge.dart';
+import 'package:tross/widgets/molecules/indicators/dev_mode_indicator.dart';
+import 'package:tross/widgets/atoms/indicators/app_badge.dart';
 
 void main() {
   group('DevModeIndicator', () {

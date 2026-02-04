@@ -69,9 +69,9 @@ function buildTestContext(app, db) {
     const secret = process.env.JWT_SECRET || 'dev-secret-key';
     const token = jwt.sign(
       {
-        iss: process.env.API_URL || 'https://api.trossapp.dev',
+        iss: process.env.API_URL || 'https://api.tross.dev',
         sub: user.auth0_id || `auth0|${user.id}`,
-        aud: process.env.API_URL || 'https://api.trossapp.dev',
+        aud: process.env.API_URL || 'https://api.tross.dev',
         email: user.email,
         role: user.role || 'customer',
         provider: 'auth0',

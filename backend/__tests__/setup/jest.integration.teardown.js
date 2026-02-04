@@ -18,7 +18,7 @@ module.exports = async () => {
       testLogger.log("✅ Test database connections closed");
     }
     
-    testLogger.log("✅ TrossApp integration test suite completed");
+    testLogger.log("✅ Tross integration test suite completed");
   } catch (error) {
     testLogger.error("❌ Global teardown error:", error.message);
     // Don't throw - allow Jest to exit gracefully

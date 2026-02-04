@@ -1,7 +1,7 @@
 /**
- * Swagger/OpenAPI Configuration for TrossApp Backend API
+ * Swagger/OpenAPI Configuration for Tross Backend API
  *
- * This is the foundation API documentation for TrossApp MVP.
+ * This is the foundation API documentation for Tross MVP.
  * As business logic grows, this will be expanded with new endpoints.
  *
  * DERIVED FROM METADATA:
@@ -99,10 +99,10 @@ const options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'TrossApp API',
+      title: 'Tross API',
       version: '1.0.0',
       description: `
-        TrossApp Backend REST API - Skills-based work order management system.
+        Tross Backend REST API - Skills-based work order management system.
         
         This documentation covers foundational authentication, user management, 
         and role-based access control endpoints.
@@ -140,7 +140,7 @@ const options = {
         \`\`\`
       `,
       contact: {
-        name: process.env.APP_NAME ? `${process.env.APP_NAME} Team` : 'TrossApp Team',
+        name: process.env.APP_NAME ? `${process.env.APP_NAME} Team` : 'Tross Team',
         email: process.env.CONTACT_EMAIL || 'dev@example.com',
       },
       license: {

@@ -9,10 +9,10 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/widgets/molecules/menus/table_customization_menu.dart';
-import 'package:tross_app/config/table_column.dart';
-import 'package:tross_app/config/table_config.dart';
-import 'package:tross_app/models/saved_view.dart';
+import 'package:tross/widgets/molecules/menus/table_customization_menu.dart';
+import 'package:tross/config/table_column.dart';
+import 'package:tross/config/table_config.dart';
+import 'package:tross/models/saved_view.dart';
 
 import '../../../helpers/test_helpers.dart';
 

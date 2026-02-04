@@ -6,10 +6,10 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/widgets/organisms/tables/data_table.dart';
-import 'package:tross_app/config/table_column.dart';
-import 'package:tross_app/widgets/molecules/feedback/empty_state.dart';
-import 'package:tross_app/widgets/atoms/indicators/loading_indicator.dart';
+import 'package:tross/widgets/organisms/tables/data_table.dart';
+import 'package:tross/config/table_column.dart';
+import 'package:tross/widgets/molecules/feedback/empty_state.dart';
+import 'package:tross/widgets/atoms/indicators/loading_indicator.dart';
 
 // Test data models
 class TestUser {

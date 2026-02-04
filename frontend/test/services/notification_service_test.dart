@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/services/notification_service.dart';
+import 'package:tross/services/notification_service.dart';
 
 void main() {
   group('NotificationService', () {

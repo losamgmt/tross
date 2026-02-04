@@ -22,7 +22,7 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:tross_app/config/app_spacing.dart';
+import 'package:tross/config/app_spacing.dart';
 
 /// Visual section container for grouping form fields
 class FormSection extends StatelessWidget {

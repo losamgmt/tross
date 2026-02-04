@@ -6,9 +6,9 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
-import 'package:tross_app/widgets/templates/templates.dart';
-import 'package:tross_app/providers/auth_provider.dart';
-import 'package:tross_app/core/routing/app_routes.dart';
+import 'package:tross/widgets/templates/templates.dart';
+import 'package:tross/providers/auth_provider.dart';
+import 'package:tross/core/routing/app_routes.dart';
 import '../mocks/mock_services.dart';
 
 /// Wraps a widget with required providers for testing

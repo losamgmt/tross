@@ -10,7 +10,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/utils/crud_handlers.dart';
+import 'package:tross/utils/crud_handlers.dart';
 
 void main() {
   /// Helper to find the confirm button in the dialog (not the trigger button)

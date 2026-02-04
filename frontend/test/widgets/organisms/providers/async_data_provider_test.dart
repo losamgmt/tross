@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/widgets/organisms/providers/async_data_provider.dart';
+import 'package:tross/widgets/organisms/providers/async_data_provider.dart';
 import '../../../helpers/test_helpers.dart';
-import 'package:tross_app/widgets/atoms/indicators/loading_indicator.dart';
-import 'package:tross_app/widgets/molecules/cards/error_card.dart';
+import 'package:tross/widgets/atoms/indicators/loading_indicator.dart';
+import 'package:tross/widgets/molecules/cards/error_card.dart';
 
 void main() {
   group('AsyncDataProvider Organism Tests', () {

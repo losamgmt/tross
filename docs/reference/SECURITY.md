@@ -280,7 +280,7 @@ app.use('/api', limiter);
 ```bash
 # .env (NOT committed to git)
 JWT_SECRET=your-very-long-random-secret-at-least-64-characters
-DATABASE_URL=postgresql://user:password@localhost:5432/trossapp
+DATABASE_URL=postgresql://user:password@localhost:5432/tross
 AUTH0_DOMAIN=your-tenant.auth0.com
 AUTH0_CLIENT_ID=your-client-id
 AUTH0_CLIENT_SECRET=your-client-secret

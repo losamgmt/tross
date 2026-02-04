@@ -1,4 +1,4 @@
-package com.tross.tross_app
+package com.tross.app
 
 import io.flutter.embedding.android.FlutterActivity
 

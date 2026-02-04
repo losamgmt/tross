@@ -11,8 +11,8 @@ library;
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/services/nav_config_loader.dart';
-import 'package:tross_app/services/permission_config_loader.dart';
+import 'package:tross/services/nav_config_loader.dart';
+import 'package:tross/services/permission_config_loader.dart';
 
 // Helper to create properly typed JSON from string
 Map<String, dynamic> _json(String s) => jsonDecode(s) as Map<String, dynamic>;

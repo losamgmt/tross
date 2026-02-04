@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:tross_app/widgets/atoms/inputs/text_input.dart'
+import 'package:tross/widgets/atoms/inputs/text_input.dart'
     show TextFieldType;
 
 /// Field type enumeration

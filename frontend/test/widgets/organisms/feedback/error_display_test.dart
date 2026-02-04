@@ -6,9 +6,9 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/widgets/organisms/feedback/error_display.dart';
-import 'package:tross_app/config/constants.dart';
-import 'package:tross_app/core/routing/app_routes.dart';
+import 'package:tross/widgets/organisms/feedback/error_display.dart';
+import 'package:tross/config/constants.dart';
+import 'package:tross/core/routing/app_routes.dart';
 import '../../../helpers/helpers.dart';
 
 void main() {

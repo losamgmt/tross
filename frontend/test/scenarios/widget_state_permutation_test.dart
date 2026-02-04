@@ -17,11 +17,11 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/models/permission.dart';
-import 'package:tross_app/widgets/organisms/cards/entity_detail_card.dart';
-import 'package:tross_app/widgets/organisms/guards/permission_gate.dart';
-import 'package:tross_app/widgets/organisms/login/login_form.dart';
-import 'package:tross_app/widgets/organisms/login/production_login_card.dart';
+import 'package:tross/models/permission.dart';
+import 'package:tross/widgets/organisms/cards/entity_detail_card.dart';
+import 'package:tross/widgets/organisms/guards/permission_gate.dart';
+import 'package:tross/widgets/organisms/login/login_form.dart';
+import 'package:tross/widgets/organisms/login/production_login_card.dart';
 
 import '../factory/factory.dart';
 import '../helpers/helpers.dart';

@@ -5,7 +5,7 @@
 ///
 /// Usage:
 /// ```dart
-/// import 'package:tross_app/test/helpers/silent_error_service.dart';
+/// import 'package:tross/test/helpers/silent_error_service.dart';
 ///
 /// void main() {
 ///   late SilentErrorService errorService;

@@ -1,5 +1,5 @@
 /**
- * TrossApp Port Configuration
+ * Tross Port Configuration
  * Single source of truth for all port numbers
  * Last updated: October 20, 2025
  */

@@ -26,7 +26,7 @@ library;
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
-import 'package:tross_app/services/api/api_client.dart';
+import 'package:tross/services/api/api_client.dart';
 
 /// Mock API client that implements the ApiClient interface for testing
 class MockApiClient implements ApiClient {

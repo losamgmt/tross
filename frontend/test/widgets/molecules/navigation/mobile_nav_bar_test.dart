@@ -10,8 +10,8 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/widgets/molecules/navigation/mobile_nav_bar.dart';
-import 'package:tross_app/widgets/organisms/navigation/nav_menu_item.dart';
+import 'package:tross/widgets/molecules/navigation/mobile_nav_bar.dart';
+import 'package:tross/widgets/organisms/navigation/nav_menu_item.dart';
 
 void main() {
   group('MobileNavBar', () {

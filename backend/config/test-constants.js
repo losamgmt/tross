@@ -100,27 +100,27 @@ const TEST_EMAIL_PREFIXES = Object.freeze({
 // ============================================================================
 // RFC 7519 token claim templates
 const TEST_TOKEN_CLAIMS = Object.freeze({
-  ISSUER: 'test-trossapp',
-  AUDIENCE: 'trossapp-api',
+  ISSUER: 'test-tross',
+  AUDIENCE: 'tross-api',
 
   // Common token structures for different test scenarios
   ADMIN_CLAIMS: Object.freeze({
-    iss: 'test-trossapp',
-    aud: 'trossapp-api',
+    iss: 'test-tross',
+    aud: 'tross-api',
     provider: 'development',
     role: 'admin',
   }),
 
   CLIENT_CLAIMS: Object.freeze({
-    iss: 'test-trossapp',
-    aud: 'trossapp-api',
+    iss: 'test-tross',
+    aud: 'tross-api',
     provider: 'development',
     role: 'customer',
   }),
 
   MANAGER_CLAIMS: Object.freeze({
-    iss: 'test-trossapp',
-    aud: 'trossapp-api',
+    iss: 'test-tross',
+    aud: 'tross-api',
     provider: 'development',
     role: 'manager',
   }),

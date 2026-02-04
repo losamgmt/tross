@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document explains the philosophy and architectural decisions behind TrossApp's schema-driven UI approach.
+This document explains the philosophy and architectural decisions behind Tross's schema-driven UI approach.
 
 ## Core Principle
 

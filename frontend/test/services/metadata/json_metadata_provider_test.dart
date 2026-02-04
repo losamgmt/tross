@@ -8,7 +8,7 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/services/metadata/metadata.dart';
+import 'package:tross/services/metadata/metadata.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

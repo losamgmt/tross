@@ -9,7 +9,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/widgets/atoms/indicators/loading_indicator.dart';
+import 'package:tross/widgets/atoms/indicators/loading_indicator.dart';
 
 import '../../../helpers/test_harness.dart';
 

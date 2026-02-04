@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/config/platform_utilities.dart';
+import 'package:tross/config/platform_utilities.dart';
 
 void main() {
   group('PlatformUtilities', () {

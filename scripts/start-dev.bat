@@ -1,8 +1,8 @@
 @echo off
-REM TrossApp Development Startup Script with Port Management
+REM Tross Development Startup Script with Port Management
 echo.
 echo ========================================
-echo  TrossApp Development Environment
+echo  Tross Development Environment
 echo ========================================
 echo.
 
@@ -36,12 +36,12 @@ echo.
 
 REM Start backend
 echo � Starting backend server (port %BACKEND_PORT%)...
-start "TrossApp Backend" cmd /k "cd /d "%~dp0.." && npm run dev --workspace=backend"
+start "Tross Backend" cmd /k "cd /d "%~dp0.." && npm run dev --workspace=backend"
 timeout /t 3 /nobreak >nul
 
 REM Start frontend
 echo 🎨 Starting Flutter frontend (port %FRONTEND_PORT%)...
-start "TrossApp Frontend" cmd /k "cd /d "%~dp0.." && npm run dev:frontend:win"
+start "Tross Frontend" cmd /k "cd /d "%~dp0.." && npm run dev:frontend:win"
 
 echo.
 echo ✅ Development environment starting!

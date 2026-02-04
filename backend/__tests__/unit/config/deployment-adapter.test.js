@@ -72,7 +72,7 @@ describe('Deployment Adapter', () => {
     });
 
     test('should detect Fly.io platform', () => {
-      process.env.FLY_APP_NAME = 'trossapp';
+      process.env.FLY_APP_NAME = 'tross';
       expect(detectPlatform()).toBe('fly');
     });
 
@@ -88,20 +88,20 @@ describe('Deployment Adapter', () => {
     test('should prioritize Railway over other platforms', () => {
       process.env.RAILWAY_ENVIRONMENT = 'production';
       process.env.RENDER = 'true';
-      process.env.FLY_APP_NAME = 'trossapp';
+      process.env.FLY_APP_NAME = 'tross';
       process.env.DYNO = 'web.1';
       expect(detectPlatform()).toBe('railway');
     });
 
     test('should prioritize Render over Fly/Heroku', () => {
       process.env.RENDER = 'true';
-      process.env.FLY_APP_NAME = 'trossapp';
+      process.env.FLY_APP_NAME = 'tross';
       process.env.DYNO = 'web.1';
       expect(detectPlatform()).toBe('render');
     });
 
     test('should prioritize Fly over Heroku', () => {
-      process.env.FLY_APP_NAME = 'trossapp';
+      process.env.FLY_APP_NAME = 'tross';
       process.env.DYNO = 'web.1';
       expect(detectPlatform()).toBe('fly');
     });
@@ -191,7 +191,7 @@ describe('Deployment Adapter', () => {
       // Test structure and types, not specific values (which are configuration decisions)
       expect(config).toHaveProperty('host', 'localhost');
       expect(config).toHaveProperty('port', 5432);
-      expect(config).toHaveProperty('database', 'trossapp_dev');
+      expect(config).toHaveProperty('database', 'tross_dev');
       expect(config).toHaveProperty('user', 'postgres');
       expect(config).toHaveProperty('password', 'postgres');
       // Pool values should match OPTIONAL_ENV_VARS (source of truth)
@@ -343,10 +343,10 @@ describe('Deployment Adapter', () => {
 
     test('should allow Vercel preview deployments', async () => {
       process.env.NODE_ENV = 'production';
-      process.env.ALLOWED_ORIGINS = 'https://trossapp.vercel.app';
+      process.env.ALLOWED_ORIGINS = 'https://tross.vercel.app';
       const originFn = getAllowedOrigins();
 
-      const result = await testOrigin(originFn, 'https://tross-app-frontend-abc123-zarika-ambers-projects.vercel.app');
+      const result = await testOrigin(originFn, 'https://tross-frontend-abc123-zarika-ambers-projects.vercel.app');
       expect(result.allowed).toBe(true);
     });
 
@@ -355,7 +355,7 @@ describe('Deployment Adapter', () => {
       process.env.ALLOWED_ORIGINS = 'https://other.example.com';
       const originFn = getAllowedOrigins();
 
-      const result = await testOrigin(originFn, 'https://trossapp.vercel.app');
+      const result = await testOrigin(originFn, 'https://tross.vercel.app');
       expect(result.allowed).toBe(true);
     });
 
@@ -398,7 +398,7 @@ describe('Deployment Adapter', () => {
     });
 
     test('should return metadata for Fly.io platform', () => {
-      process.env.FLY_APP_NAME = 'trossapp';
+      process.env.FLY_APP_NAME = 'tross';
       process.env.FLY_REGION = 'sjc';
 
       const metadata = getPlatformMetadata();

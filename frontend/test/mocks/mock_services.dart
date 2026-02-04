@@ -4,9 +4,9 @@ library;
 
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:tross_app/models/permission.dart';
-import 'package:tross_app/providers/auth_provider.dart';
-import 'package:tross_app/services/generic_entity_service.dart';
+import 'package:tross/models/permission.dart';
+import 'package:tross/providers/auth_provider.dart';
+import 'package:tross/services/generic_entity_service.dart';
 import 'mock_api_client.dart';
 
 /// Mock GenericEntityService for widget testing

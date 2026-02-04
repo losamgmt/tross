@@ -63,7 +63,7 @@ Response:
   "data": {
     "token": "eyJhbGciOiJIUzI1NiIs...",
     "user": {
-      "email": "admin@trossapp.dev",
+      "email": "admin@tross.dev",
       "role": "admin"
     },
     "provider": "development",
@@ -331,22 +331,22 @@ npm run dev
 ```
 Allowed Callback URLs:
 http://localhost:8080/callback
-https://trossapp.vercel.app/callback
+https://tross.vercel.app/callback
 https://*-zarika-ambers-projects.vercel.app/callback
 
 Allowed Logout URLs:
 http://localhost:8080
-https://trossapp.vercel.app
+https://tross.vercel.app
 https://*-zarika-ambers-projects.vercel.app
 
 Allowed Web Origins:
 http://localhost:8080
-https://trossapp.vercel.app
+https://tross.vercel.app
 https://*-zarika-ambers-projects.vercel.app
 
 Allowed Origins (CORS):
 http://localhost:8080
-https://trossapp.vercel.app
+https://tross.vercel.app
 https://*-zarika-ambers-projects.vercel.app
 ```
 

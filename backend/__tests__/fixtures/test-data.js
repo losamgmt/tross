@@ -9,7 +9,7 @@ const { USER_ROLES, AUTH, HTTP_STATUS } = require("../../config/constants");
 const TEST_USERS = {
   admin: {
     auth0_id: "auth0|test-admin-123",
-    email: "admin@trossapp.com",
+    email: "admin@tross.com",
     first_name: "Admin",
     last_name: "User",
     role: USER_ROLES.ADMIN,
@@ -17,7 +17,7 @@ const TEST_USERS = {
 
   manager: {
     auth0_id: "auth0|test-manager-456",
-    email: "manager@trossapp.com",
+    email: "manager@tross.com",
     first_name: "Manager",
     last_name: "User",
     role: USER_ROLES.MANAGER,
@@ -25,7 +25,7 @@ const TEST_USERS = {
 
   technician: {
     auth0_id: "auth0|test-tech-789",
-    email: "tech@trossapp.com",
+    email: "tech@tross.com",
     first_name: "Tech",
     last_name: "User",
     role: USER_ROLES.TECHNICIAN,
@@ -33,7 +33,7 @@ const TEST_USERS = {
 
   dispatcher: {
     auth0_id: "auth0|test-dispatch-101",
-    email: "dispatch@trossapp.com",
+    email: "dispatch@tross.com",
     first_name: "Dispatch",
     last_name: "User",
     role: USER_ROLES.DISPATCHER,
@@ -41,7 +41,7 @@ const TEST_USERS = {
 
   customer: {
     auth0_id: "auth0|test-customer-112",
-    email: "customer@trossapp.com",
+    email: "customer@tross.com",
     first_name: "Customer",
     last_name: "User",
     role: USER_ROLES.CUSTOMER,
@@ -57,8 +57,8 @@ const JWT_PAYLOADS = {
     family_name: TEST_USERS.admin.last_name,
     role: TEST_USERS.admin.role,
     provider: AUTH.PROVIDERS.DEVELOPMENT_JWT,
-    iss: "https://dev.trossapp.com",
-    aud: "https://api.trossapp.dev",
+    iss: "https://dev.tross.com",
+    aud: "https://api.tross.dev",
     iat: Math.floor(Date.now() / 1000),
     exp: Math.floor(Date.now() / 1000) + 3600,
   },
@@ -70,8 +70,8 @@ const JWT_PAYLOADS = {
     family_name: TEST_USERS.technician.last_name,
     role: TEST_USERS.technician.role,
     provider: AUTH.PROVIDERS.DEVELOPMENT_JWT,
-    iss: "https://dev.trossapp.com",
-    aud: "https://api.trossapp.dev",
+    iss: "https://dev.tross.com",
+    aud: "https://api.tross.dev",
     iat: Math.floor(Date.now() / 1000),
     exp: Math.floor(Date.now() / 1000) + 3600,
   },
@@ -105,7 +105,7 @@ const API_RESPONSES = {
 
   health: {
     status: "healthy",
-    service: "TrossApp Backend",
+    service: "Tross Backend",
     timestamp: expect.any(String),
     version: "1.0.0",
     database: { connected: true, type: "PostgreSQL" },
@@ -127,7 +127,7 @@ const AUTH0_MOCKS = {
     email: "test@auth0.com",
     given_name: "Test",
     family_name: "User",
-    "https://trossapp.com/role": USER_ROLES.TECHNICIAN,
+    "https://tross.com/role": USER_ROLES.TECHNICIAN,
   },
 
   invalidToken: "invalid.jwt.token",

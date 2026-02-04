@@ -2,7 +2,7 @@
 
 ## 🔒 Reporting Security Vulnerabilities
 
-If you discover a security vulnerability in TrossApp, please report it responsibly:
+If you discover a security vulnerability in Tross, please report it responsibly:
 
 1. **DO NOT** create a public GitHub issue
 2. Email security concerns to: [your-email@example.com] *(Update this with your contact)*
@@ -94,7 +94,7 @@ This repository's git history has been verified clean of secrets. All sensitive 
 
 1. **Use dev mode** - `AUTH_MODE=development` for local testing
 2. **Test credentials** - Use only test data, never production credentials
-3. **Local database** - Separate test database (`trossapp_test`)
+3. **Local database** - Separate test database (`tross_test`)
 4. **Environment isolation** - Development vs. Production clearly separated
 
 ### Pull Requests
@@ -171,4 +171,4 @@ git push origin --force --all
 ## 📞 Contact
 
 For security concerns: [your-email@example.com]  
-For general issues: [GitHub Issues](https://github.com/losamgmt/tross-app/issues)
+For general issues: [GitHub Issues](https://github.com/losamgmt/tross/issues)

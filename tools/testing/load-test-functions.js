@@ -128,7 +128,7 @@ async function getTestWorkOrderId(context, events, done) {
  * Legacy log function for backward compatibility
  */
 function logHeaders(requestParams, context, ee, next) {
-  console.log("Testing TrossApp API endpoints...");
+  console.log("Testing Tross API endpoints...");
   return next();
 }
 

@@ -1,5 +1,5 @@
 {
-  "name": "TrossApp Development Environment",
+  "name": "Tross Development Environment",
   "image": "mcr.microsoft.com/devcontainers/javascript-node:20",
   
   "features": {

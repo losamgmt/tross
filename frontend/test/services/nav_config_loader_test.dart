@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/services/nav_config_loader.dart';
+import 'package:tross/services/nav_config_loader.dart';
 
 void main() {
   setUp(() {

@@ -11,8 +11,8 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/widgets/organisms/navigation/app_sidebar.dart';
-import 'package:tross_app/widgets/organisms/navigation/nav_menu_item.dart';
+import 'package:tross/widgets/organisms/navigation/app_sidebar.dart';
+import 'package:tross/widgets/organisms/navigation/nav_menu_item.dart';
 
 import '../../../helpers/test_helpers.dart';
 

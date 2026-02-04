@@ -3,7 +3,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/widgets/molecules/containers/page_scaffold.dart';
+import 'package:tross/widgets/molecules/containers/page_scaffold.dart';
 
 void main() {
   group('PageScaffold', () {

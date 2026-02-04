@@ -9,15 +9,15 @@ Daily development workflow and best practices.
 ### For Collaborators (Fork-Based Workflow)
 
 **Initial Setup (Once):**
-1. **Fork the repo:** Click "Fork" on `losamgmt/tross-app`
+1. **Fork the repo:** Click "Fork" on `losamgmt/tross`
 2. **Clone your fork:**
    ```bash
-   git clone https://github.com/YOUR-USERNAME/tross-app.git
-   cd tross-app
+   git clone https://github.com/YOUR-USERNAME/tross.git
+   cd tross
    ```
 3. **Add upstream remote:**
    ```bash
-   git remote add upstream https://github.com/losamgmt/tross-app.git
+   git remote add upstream https://github.com/losamgmt/tross.git
    git remote -v  # Verify: origin (your fork), upstream (main repo)
    ```
 
@@ -60,8 +60,8 @@ Daily development workflow and best practices.
 **Submitting PR:**
 1. Go to **your fork** on GitHub
 2. Click "Compare & pull request"
-3. Set base: `losamgmt/tross-app:main`
-4. Set compare: `YOUR-USERNAME/tross-app:feature/your-feature-name`
+3. Set base: `losamgmt/tross:main`
+4. Set compare: `YOUR-USERNAME/tross:feature/your-feature-name`
 5. Fill out PR template (What, Why, Testing)
 6. Submit PR
 
@@ -472,7 +472,7 @@ cd backend
 node -e "require('./config/app-config'); console.log('✓ Config valid')"
 
 # Verify database connection
-psql -d trossapp_dev -c "SELECT 1"
+psql -d tross_dev -c "SELECT 1"
 
 # Check port availability
 npx kill-port 3001

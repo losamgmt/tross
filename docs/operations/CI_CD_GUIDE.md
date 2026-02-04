@@ -1,6 +1,6 @@
 # CI/CD Documentation
 
-Guide to TrossApp's continuous integration and deployment pipeline.
+Guide to Tross's continuous integration and deployment pipeline.
 
 ---
 
@@ -176,7 +176,7 @@ BACKEND_URL=https://tross-api-production.up.railway.app npm run test:e2e
    ```bash
    git push origin feature/my-feature
    ```
-6. **Create PR** from fork to `losamgmt/tross-app:main`
+6. **Create PR** from fork to `losamgmt/tross:main`
 
 ### What Happens Automatically:
 
@@ -234,8 +234,8 @@ PR merged → Vercel builds → Production deploy
 
 **Preview URLs:**
 ```
-Production: https://trossapp.vercel.app
-Preview: https://trossapp-pr-123.vercel.app
+Production: https://tross.vercel.app
+Preview: https://tross-pr-123.vercel.app
 ```
 
 ### Backend (Railway)
@@ -251,7 +251,7 @@ Push to main → Railway builds → Health check → Live
 
 **Platform-Agnostic Configuration:**
 
-TrossApp's backend uses `deployment-adapter.js` for zero-config deployment across platforms:
+Tross's backend uses `deployment-adapter.js` for zero-config deployment across platforms:
 
 - **Railway** - Auto-detects via `RAILWAY_ENVIRONMENT`, uses `DATABASE_URL`
 - **Render** - Auto-detects via `RENDER`, uses `DATABASE_URL`
@@ -269,7 +269,7 @@ JWT_SECRET=...
 AUTH0_DOMAIN=...
 AUTH0_AUDIENCE=...
 AUTH0_ISSUER=...
-FRONTEND_URL=https://trossapp.vercel.app
+FRONTEND_URL=https://tross.vercel.app
 ```
 
 Railway automatically provides `DATABASE_URL` when you provision a PostgreSQL database. The deployment adapter handles the rest.

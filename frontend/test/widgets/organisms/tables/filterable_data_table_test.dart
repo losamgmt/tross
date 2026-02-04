@@ -10,11 +10,11 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/widgets/organisms/tables/filterable_data_table.dart';
-import 'package:tross_app/widgets/organisms/tables/data_table.dart';
-import 'package:tross_app/widgets/molecules/forms/filter_bar.dart';
-import 'package:tross_app/widgets/atoms/inputs/search_input.dart';
-import 'package:tross_app/config/table_column.dart';
+import 'package:tross/widgets/organisms/tables/filterable_data_table.dart';
+import 'package:tross/widgets/organisms/tables/data_table.dart';
+import 'package:tross/widgets/molecules/forms/filter_bar.dart';
+import 'package:tross/widgets/atoms/inputs/search_input.dart';
+import 'package:tross/config/table_column.dart';
 
 void main() {
   // Test data

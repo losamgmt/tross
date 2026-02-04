@@ -12,8 +12,8 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/models/form_mode.dart';
-import 'package:tross_app/widgets/organisms/modals/entity_form_modal.dart';
+import 'package:tross/models/form_mode.dart';
+import 'package:tross/widgets/organisms/modals/entity_form_modal.dart';
 
 import '../factory/factory.dart';
 import '../helpers/helpers.dart';

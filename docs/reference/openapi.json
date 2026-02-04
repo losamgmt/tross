@@ -1,12 +1,12 @@
 {
   "openapi": "3.0.0",
   "info": {
-    "title": "TrossApp API",
+    "title": "Tross API",
     "version": "1.0.0",
-    "description": "\n        TrossApp Backend REST API - Skills-based work order management system.\n        \n        This documentation covers foundational authentication, user management, \n        and role-based access control endpoints.\n        \n        ## Authentication\n        \n        Most endpoints require a Bearer token in the Authorization header:\n        ```\n        Authorization: Bearer <your-jwt-token>\n        ```\n        \n        ## Dual Authentication Strategy\n        \n        - **Development Mode:** JWT-based authentication with test users\n        - **Production Mode:** Auth0 OAuth2/OIDC integration\n        \n        ## Response Format\n        \n        All successful responses follow this format:\n        ```json\n        {\n          \"success\": true,\n          \"data\": {...},\n          \"timestamp\": \"2025-11-12T12:00:00.000Z\"\n        }\n        ```\n        \n        Error responses:\n        ```json\n        {\n          \"success\": false,\n          \"error\": \"Error message describing what went wrong\",\n          \"timestamp\": \"2025-11-12T12:00:00.000Z\"\n        }\n        ```\n      ",
+    "description": "\n        Tross Backend REST API - Skills-based work order management system.\n        \n        This documentation covers foundational authentication, user management, \n        and role-based access control endpoints.\n        \n        ## Authentication\n        \n        Most endpoints require a Bearer token in the Authorization header:\n        ```\n        Authorization: Bearer <your-jwt-token>\n        ```\n        \n        ## Dual Authentication Strategy\n        \n        - **Development Mode:** JWT-based authentication with test users\n        - **Production Mode:** Auth0 OAuth2/OIDC integration\n        \n        ## Response Format\n        \n        All successful responses follow this format:\n        ```json\n        {\n          \"success\": true,\n          \"data\": {...},\n          \"timestamp\": \"2025-11-12T12:00:00.000Z\"\n        }\n        ```\n        \n        Error responses:\n        ```json\n        {\n          \"success\": false,\n          \"error\": \"Error message describing what went wrong\",\n          \"timestamp\": \"2025-11-12T12:00:00.000Z\"\n        }\n        ```\n      ",
     "contact": {
-      "name": "TrossApp Team",
-      "email": "dev@trossapp.com"
+      "name": "Tross Team",
+      "email": "dev@tross.com"
     },
     "license": {
       "name": "MIT",
@@ -19,7 +19,7 @@
       "description": "Development server"
     },
     {
-      "url": "https://api.trossapp.com",
+      "url": "https://api.tross.com",
       "description": "Production server (future)"
     }
   ],

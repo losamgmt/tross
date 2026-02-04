@@ -289,9 +289,9 @@ class Auth0Strategy extends AuthStrategy {
     return jwt.sign(
       {
         // REGISTERED CLAIMS (RFC 7519 Standard)
-        iss: process.env.API_URL || 'https://api.trossapp.dev', // Issuer
+        iss: process.env.API_URL || 'https://api.tross.dev', // Issuer
         sub: auth0Id, // Subject (validated Auth0 user ID)
-        aud: process.env.API_URL || 'https://api.trossapp.dev', // Audience
+        aud: process.env.API_URL || 'https://api.tross.dev', // Audience
 
         // PRIVATE CLAIMS (Application-specific)
         email: localUser.email,

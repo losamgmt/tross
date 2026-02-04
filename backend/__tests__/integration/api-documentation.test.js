@@ -20,7 +20,7 @@ describe('API Documentation Verification', () => {
 
     test('should have API metadata', () => {
       expect(swaggerSpec.info).toBeDefined();
-      expect(swaggerSpec.info.title).toBe('TrossApp API');
+      expect(swaggerSpec.info.title).toBe('Tross API');
       expect(swaggerSpec.info.version).toBeDefined();
       expect(swaggerSpec.info.description).toBeDefined();
     });

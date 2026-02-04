@@ -6,8 +6,8 @@ library;
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:tross_app/config/api_endpoints.dart';
-import 'package:tross_app/config/app_config.dart';
+import 'package:tross/config/api_endpoints.dart';
+import 'package:tross/config/app_config.dart';
 
 /// Result of an authentication endpoint test
 class AuthTestResult {
