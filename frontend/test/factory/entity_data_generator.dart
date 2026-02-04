@@ -7,7 +7,7 @@
 library;
 
 import 'dart:math';
-import 'package:tross_app/services/entity_metadata.dart';
+import 'package:tross/services/entity_metadata.dart';
 import 'entity_registry.dart';
 
 // ============================================================================

@@ -13,8 +13,8 @@ class TokenManager {
   // On mobile: Uses Keychain (iOS) / Custom ciphers (Android)
   static const _secureStorage = FlutterSecureStorage(
     webOptions: WebOptions(
-      dbName: 'TrossAppSecureStorage',
-      publicKey: 'TrossAppAuth',
+      dbName: 'TrossSecureStorage',
+      publicKey: 'TrossAuth',
     ),
   );
 

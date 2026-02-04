@@ -132,15 +132,15 @@ void main() async {
     // BrowserUtils.disableContextMenu();
   }
 
-  runApp(const TrossApp());
+  runApp(const Tross());
 }
 
 /// Main application widget
 ///
 /// Sets up providers and delegates routing to go_router.
 /// Auth state changes trigger router refresh via [AuthProvider] as a Listenable.
-class TrossApp extends StatelessWidget {
-  const TrossApp({super.key});
+class Tross extends StatelessWidget {
+  const Tross({super.key});
 
   @override
   Widget build(BuildContext context) {

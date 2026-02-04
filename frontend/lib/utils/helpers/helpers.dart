@@ -10,7 +10,7 @@
 ///
 /// Usage:
 /// ```dart
-/// import 'package:tross_app/utils/helpers/helpers.dart';
+/// import 'package:tross/utils/helpers/helpers.dart';
 ///
 /// // Use centralized helpers instead of inline logic
 /// final formatted = DateTimeHelpers.formatDate(date);

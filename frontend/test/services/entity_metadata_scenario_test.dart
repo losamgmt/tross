@@ -11,7 +11,7 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/services/entity_metadata.dart';
+import 'package:tross/services/entity_metadata.dart';
 
 import '../factory/factory.dart';
 

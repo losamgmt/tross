@@ -1,6 +1,6 @@
 # Testing Guide
 
-Philosophy, patterns, and best practices for testing TrossApp.
+Philosophy, patterns, and best practices for testing Tross.
 
 ---
 

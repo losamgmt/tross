@@ -2,7 +2,7 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/utils/helpers/date_time_helpers.dart';
+import 'package:tross/utils/helpers/date_time_helpers.dart';
 
 void main() {
   group('DateTimeHelpers.formatRelativeTime', () {

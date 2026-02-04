@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/config/environment.dart';
+import 'package:tross/config/environment.dart';
 
 void main() {
   group('Environment Configuration', () {

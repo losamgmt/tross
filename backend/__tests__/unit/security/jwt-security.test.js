@@ -66,7 +66,7 @@ describe('JWT Security', () => {
       const expiredToken = jwt.sign(
         {
           sub: 'dev|admin001',
-          email: 'admin@trossapp.dev',
+          email: 'admin@tross.dev',
           role: 'admin',
           provider: 'development',
         },
@@ -86,7 +86,7 @@ describe('JWT Security', () => {
       const validToken = jwt.sign(
         {
           sub: 'dev|admin001',
-          email: 'admin@trossapp.dev',
+          email: 'admin@tross.dev',
           role: 'admin',
           provider: 'development',
         },
@@ -107,7 +107,7 @@ describe('JWT Security', () => {
       const wrongSecretToken = jwt.sign(
         {
           sub: 'dev|admin001',
-          email: 'admin@trossapp.dev',
+          email: 'admin@tross.dev',
           role: 'admin',
           provider: 'development',
         },
@@ -128,7 +128,7 @@ describe('JWT Security', () => {
       const validToken = jwt.sign(
         {
           sub: 'dev|admin001',
-          email: 'admin@trossapp.dev',
+          email: 'admin@tross.dev',
           role: 'technician', // Original role
           provider: 'development',
         },
@@ -182,7 +182,7 @@ describe('JWT Security', () => {
     test('should reject token without "sub" claim', async () => {
       const tokenWithoutSub = jwt.sign(
         {
-          email: 'admin@trossapp.dev',
+          email: 'admin@tross.dev',
           role: 'admin',
           provider: 'development',
         },
@@ -202,7 +202,7 @@ describe('JWT Security', () => {
       const tokenWithoutProvider = jwt.sign(
         {
           sub: 'dev|admin001',
-          email: 'admin@trossapp.dev',
+          email: 'admin@tross.dev',
           role: 'admin',
           // No provider!
         },
@@ -222,7 +222,7 @@ describe('JWT Security', () => {
       const tokenWithInvalidProvider = jwt.sign(
         {
           sub: 'dev|admin001',
-          email: 'admin@trossapp.dev',
+          email: 'admin@tross.dev',
           role: 'admin',
           provider: 'unknown_provider',
         },
@@ -242,7 +242,7 @@ describe('JWT Security', () => {
       const validToken = jwt.sign(
         {
           sub: 'dev|admin001',
-          email: 'admin@trossapp.dev',
+          email: 'admin@tross.dev',
           role: 'admin',
           provider: 'development',
         },

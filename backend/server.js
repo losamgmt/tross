@@ -1,4 +1,4 @@
-// Clean TrossApp Backend Server
+// Clean Tross Backend Server
 const express = require('express');
 const cors = require('cors');
 const swaggerUi = require('swagger-ui-express');
@@ -130,7 +130,7 @@ app.use(
   swaggerUi.serve,
   swaggerUi.setup(swaggerSpec, {
     customCss: '.swagger-ui .topbar { display: none }',
-    customSiteTitle: 'TrossApp API Documentation',
+    customSiteTitle: 'Tross API Documentation',
   }),
 );
 
@@ -368,7 +368,7 @@ if (process.env.NODE_ENV !== 'test') {
     }
 
     const server = app.listen(PORT, async () => {
-      logger.info(`🚀 TrossApp Backend running on port ${PORT}`);
+      logger.info(`🚀 Tross Backend running on port ${PORT}`);
       logger.info(`📍 Health check: http://localhost:${PORT}/api/health`);
       logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
 

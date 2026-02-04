@@ -17,7 +17,7 @@
 
 ## Overview
 
-TrossApp requires a notification system to alert users of important events:
+Tross requires a notification system to alert users of important events:
 
 - **Work order assignments** - Technicians notified when assigned new work
 - **Status changes** - Customers notified when their work order status changes

@@ -1,7 +1,7 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "TrossApp Backend API - Node.js REST API server",
+  "description": "Tross Backend API - Node.js REST API server",
   "main": "index.js",
   "scripts": {
     "test": "jest --forceExit",

@@ -1,6 +1,6 @@
 # Entity Relationship Diagram (ERD)
 
-Database schema relationships for TrossApp.
+Database schema relationships for Tross.
 
 ## Visual ERD
 

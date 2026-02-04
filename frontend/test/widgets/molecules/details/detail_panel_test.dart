@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/widgets/molecules/details/details.dart';
-import 'package:tross_app/widgets/molecules/forms/forms.dart';
+import 'package:tross/widgets/molecules/details/details.dart';
+import 'package:tross/widgets/molecules/forms/forms.dart';
 
 // Test model
 class TestModel {

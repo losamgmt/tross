@@ -12,7 +12,7 @@
 const MOCK_USERS = {
   admin: {
     id: 1,
-    email: "admin@trossapp.com",
+    email: "admin@tross.com",
     auth0_id: "auth0|admin123",
     first_name: "Admin",
     last_name: "User",
@@ -36,7 +36,7 @@ const MOCK_USERS = {
 
   technician: {
     id: 3,
-    email: "tech@trossapp.com",
+    email: "tech@tross.com",
     auth0_id: "auth0|tech123",
     first_name: "Jane",
     last_name: "Smith",
@@ -48,7 +48,7 @@ const MOCK_USERS = {
 
   dispatcher: {
     id: 4,
-    email: "dispatch@trossapp.com",
+    email: "dispatch@tross.com",
     auth0_id: "auth0|dispatch123",
     first_name: "Bob",
     last_name: "Johnson",

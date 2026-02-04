@@ -1,4 +1,4 @@
-# TrossApp Development Scripts
+# Tross Development Scripts
 
 Essential scripts for development workflow.
 

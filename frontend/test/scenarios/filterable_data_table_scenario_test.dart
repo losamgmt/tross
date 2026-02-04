@@ -13,9 +13,9 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/widgets/organisms/tables/filterable_data_table.dart';
-import 'package:tross_app/widgets/organisms/tables/data_table.dart';
-import 'package:tross_app/services/metadata_table_column_factory.dart';
+import 'package:tross/widgets/organisms/tables/filterable_data_table.dart';
+import 'package:tross/widgets/organisms/tables/data_table.dart';
+import 'package:tross/services/metadata_table_column_factory.dart';
 
 import '../factory/factory.dart';
 import '../helpers/helpers.dart';

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:tross_app/models/entity_metadata.dart'
+import 'package:tross/models/entity_metadata.dart'
     show FieldGroup, FormLayout;
-import 'package:tross_app/widgets/molecules/forms/field_config.dart';
-import 'package:tross_app/widgets/molecules/details/detail_field.dart';
-import 'package:tross_app/widgets/molecules/containers/form_section.dart';
+import 'package:tross/widgets/molecules/forms/field_config.dart';
+import 'package:tross/widgets/molecules/details/detail_field.dart';
+import 'package:tross/widgets/molecules/containers/form_section.dart';
 
 /// Generic detail panel widget that displays all fields of a model
 ///

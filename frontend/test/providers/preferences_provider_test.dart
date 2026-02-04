@@ -6,9 +6,9 @@ library;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/config/preference_keys.dart';
-import 'package:tross_app/providers/auth_provider.dart';
-import 'package:tross_app/providers/preferences_provider.dart';
+import 'package:tross/config/preference_keys.dart';
+import 'package:tross/providers/auth_provider.dart';
+import 'package:tross/providers/preferences_provider.dart';
 
 void main() {
   group('PreferencesProvider (Metadata-Driven)', () {

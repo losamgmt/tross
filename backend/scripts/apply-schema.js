@@ -107,7 +107,7 @@ async function applySchema(config, envName) {
 
 async function main() {
   log('╔════════════════════════════════════════════════════════════╗', 'cyan');
-  log('║          TrossApp Schema Application Tool                 ║', 'cyan');
+  log('║          Tross Schema Application Tool                 ║', 'cyan');
   log('║  Ensures consistency across dev and test databases        ║', 'cyan');
   log('╚════════════════════════════════════════════════════════════╝', 'cyan');
 

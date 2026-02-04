@@ -1,6 +1,6 @@
 # Troubleshooting Guide
 
-Common issues and solutions for TrossApp development and deployment.
+Common issues and solutions for Tross development and deployment.
 
 ## Quick Diagnostics
 

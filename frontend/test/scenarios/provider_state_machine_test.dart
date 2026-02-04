@@ -12,7 +12,7 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:tross_app/providers/editable_form_notifier.dart';
+import 'package:tross/providers/editable_form_notifier.dart';
 
 void main() {
   group('Strategy 4: Provider State Machine Tests', () {

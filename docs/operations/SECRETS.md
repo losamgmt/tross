@@ -12,7 +12,7 @@ DOCKER_PASSWORD=your-dockerhub-token
 PROD_DB_HOST=your-production-db-host
 PROD_DB_USER=your-production-db-user  
 PROD_DB_PASSWORD=your-production-db-password
-PROD_DB_NAME=trossapp_prod
+PROD_DB_NAME=tross_prod
 
 ## Application Secrets
 

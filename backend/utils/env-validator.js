@@ -11,7 +11,7 @@ const { logger } = require('../config/logger');
 
 // Required environment variables with validation rules
 const REQUIRED_ENV_VARS = {
-  // Database (CRITICAL) - TrossApp uses individual params, not DATABASE_URL
+  // Database (CRITICAL) - Tross uses individual params, not DATABASE_URL
   DB_HOST: {
     required: true,
     default: '127.0.0.1',
@@ -26,7 +26,7 @@ const REQUIRED_ENV_VARS = {
   },
   DB_NAME: {
     required: true,
-    default: 'trossapp_dev',
+    default: 'tross_dev',
     validator: (val) => val.length > 0,
     error: 'DB_NAME must be set',
   },

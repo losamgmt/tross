@@ -3,8 +3,8 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/utils/table_cell_builders.dart';
-import 'package:tross_app/widgets/atoms/atoms.dart';
+import 'package:tross/utils/table_cell_builders.dart';
+import 'package:tross/widgets/atoms/atoms.dart';
 
 void main() {
   group('TableCellBuilders', () {

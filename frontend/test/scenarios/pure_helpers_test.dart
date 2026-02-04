@@ -8,13 +8,13 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/utils/helpers/string_helper.dart';
-import 'package:tross_app/utils/helpers/date_time_helpers.dart';
-import 'package:tross_app/utils/helpers/number_helpers.dart';
-import 'package:tross_app/utils/helpers/pagination_helper.dart';
-import 'package:tross_app/utils/helpers/mime_helper.dart';
-import 'package:tross_app/utils/helpers/color_helpers.dart';
-import 'package:tross_app/utils/helpers/input_type_helpers.dart';
+import 'package:tross/utils/helpers/string_helper.dart';
+import 'package:tross/utils/helpers/date_time_helpers.dart';
+import 'package:tross/utils/helpers/number_helpers.dart';
+import 'package:tross/utils/helpers/pagination_helper.dart';
+import 'package:tross/utils/helpers/mime_helper.dart';
+import 'package:tross/utils/helpers/color_helpers.dart';
+import 'package:tross/utils/helpers/input_type_helpers.dart';
 
 void main() {
   // ===========================================================================

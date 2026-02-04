@@ -2,8 +2,8 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/services/table_filter_service.dart';
-import 'package:tross_app/services/entity_metadata.dart';
+import 'package:tross/services/table_filter_service.dart';
+import 'package:tross/services/entity_metadata.dart';
 
 import '../helpers/helpers.dart';
 

@@ -12,7 +12,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/widgets/atoms/inputs/checkbox_input.dart';
+import 'package:tross/widgets/atoms/inputs/checkbox_input.dart';
 
 void main() {
   group('CheckboxInput Atom', () {

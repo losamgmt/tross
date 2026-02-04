@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:tross_app/widgets/organisms/modals/generic_modal.dart';
-import 'package:tross_app/config/app_spacing.dart';
+import 'package:tross/widgets/organisms/modals/generic_modal.dart';
+import 'package:tross/config/app_spacing.dart';
 
 /// ConfirmationModal - Organism for confirmation dialogs via PURE COMPOSITION
 ///

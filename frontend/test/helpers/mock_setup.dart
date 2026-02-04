@@ -22,7 +22,7 @@ library;
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:mockito/mockito.dart';
-import 'package:tross_app/config/app_config.dart';
+import 'package:tross/config/app_config.dart';
 import '../mocks/http_client_mock.mocks.dart';
 
 export '../mocks/http_client_mock.mocks.dart';

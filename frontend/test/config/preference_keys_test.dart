@@ -6,7 +6,7 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/config/preference_keys.dart';
+import 'package:tross/config/preference_keys.dart';
 
 void main() {
   group('ThemePreference', () {

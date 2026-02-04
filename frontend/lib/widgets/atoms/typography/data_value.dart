@@ -5,7 +5,7 @@
 ///
 /// **PURE ATOM:** No service dependencies. Uses SnackBar for copy feedback.
 ///
-/// Material 3 Design with TrossApp branding
+/// Material 3 Design with Tross branding
 library;
 
 import 'package:flutter/material.dart';

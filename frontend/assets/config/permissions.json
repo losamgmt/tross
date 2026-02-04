@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://trossapp.com/schemas/permissions.json",
-  "title": "TrossApp Permission Configuration",
+  "$id": "https://tross.com/schemas/permissions.json",
+  "title": "Tross Permission Configuration",
   "description": "Single source of truth for role-based access control (RBAC). AUTO-GENERATED from entity metadata - run sync-permissions.js to regenerate.",
   "version": "4.0.0-derived",
   "lastModified": "2026-01-28",

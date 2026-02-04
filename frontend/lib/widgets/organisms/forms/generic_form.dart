@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:tross_app/models/entity_metadata.dart'
+import 'package:tross/models/entity_metadata.dart'
     show FieldGroup, FormLayout;
-import 'package:tross_app/widgets/molecules/forms/field_config.dart';
-import 'package:tross_app/widgets/molecules/containers/form_section.dart';
-import 'package:tross_app/widgets/organisms/forms/form_field.dart';
-import 'package:tross_app/config/app_spacing.dart';
-import 'package:tross_app/services/error_service.dart';
+import 'package:tross/widgets/molecules/forms/field_config.dart';
+import 'package:tross/widgets/molecules/containers/form_section.dart';
+import 'package:tross/widgets/organisms/forms/form_field.dart';
+import 'package:tross/config/app_spacing.dart';
+import 'package:tross/services/error_service.dart';
 
 /// Generic form organism that manages multiple fields based on config
 ///

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/config/app_typography.dart';
+import 'package:tross/config/app_typography.dart';
 
 void main() {
   group('AppTypography - Font Families', () {

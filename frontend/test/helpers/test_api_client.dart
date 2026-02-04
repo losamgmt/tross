@@ -15,7 +15,7 @@ library;
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:tross_app/config/app_config.dart';
+import 'package:tross/config/app_config.dart';
 
 /// Injectable ApiClient for testing
 class TestApiClient {

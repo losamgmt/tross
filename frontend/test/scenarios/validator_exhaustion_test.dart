@@ -7,7 +7,7 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/utils/validators.dart';
+import 'package:tross/utils/validators.dart';
 
 void main() {
   group('Strategy 5: Validator Data Type Exhaustion', () {

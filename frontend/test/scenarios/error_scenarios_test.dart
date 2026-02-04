@@ -36,13 +36,13 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/services/error_service.dart';
-import 'package:tross_app/services/stats_service.dart';
-import 'package:tross_app/services/audit_log_service.dart';
-import 'package:tross_app/services/file_service.dart';
-import 'package:tross_app/services/export_service.dart';
-import 'package:tross_app/services/saved_view_service.dart';
-import 'package:tross_app/services/generic_entity_service.dart';
+import 'package:tross/services/error_service.dart';
+import 'package:tross/services/stats_service.dart';
+import 'package:tross/services/audit_log_service.dart';
+import 'package:tross/services/file_service.dart';
+import 'package:tross/services/export_service.dart';
+import 'package:tross/services/saved_view_service.dart';
+import 'package:tross/services/generic_entity_service.dart';
 import '../mocks/mock_api_client.dart';
 import '../mocks/mock_token_provider.dart';
 

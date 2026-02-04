@@ -6,8 +6,8 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/widgets/molecules/cards/error_card.dart';
-import 'package:tross_app/widgets/molecules/buttons/button_group.dart';
+import 'package:tross/widgets/molecules/cards/error_card.dart';
+import 'package:tross/widgets/molecules/buttons/button_group.dart';
 
 import '../../../helpers/helpers.dart';
 

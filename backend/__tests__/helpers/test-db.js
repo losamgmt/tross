@@ -247,9 +247,9 @@ async function createTestUser(userData = {}) {
   const token = jwt.sign(
     {
       // REGISTERED CLAIMS (RFC 7519 Standard) - REQUIRED by auth middleware
-      iss: process.env.API_URL || "https://api.trossapp.dev", // Issuer
+      iss: process.env.API_URL || "https://api.tross.dev", // Issuer
       sub: user.auth0_id, // Subject (user ID) - REQUIRED
-      aud: process.env.API_URL || "https://api.trossapp.dev", // Audience
+      aud: process.env.API_URL || "https://api.tross.dev", // Audience
 
       // PRIVATE CLAIMS (Application-specific)
       email: user.email,

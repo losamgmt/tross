@@ -1,7 +1,7 @@
 {
-  "name": "trossapp",
+  "name": "tross",
   "version": "1.0.0",
-  "description": "TrossApp - Skills-based work order management system monorepo",
+  "description": "Tross - Skills-based work order management system monorepo",
   "directories": {
     "doc": "docs"
   },
@@ -71,7 +71,7 @@
     "docs:api:generate": "npm run docs:api:export && echo 'API docs exported! Import docs/api/openapi.json into Postman'"
   },
   "keywords": [],
-  "author": "TrossApp Team",
+  "author": "Tross Team",
   "license": "MIT",
   "type": "commonjs",
   "private": "true",

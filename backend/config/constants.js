@@ -91,7 +91,7 @@ const DATABASE = Object.freeze({
   DEV: Object.freeze({
     HOST: 'localhost',
     PORT: 5432,
-    NAME: 'trossapp_dev',
+    NAME: 'tross_dev',
     USER: 'postgres',
     PASSWORD: 'tross123', // Dev only, never use in production
     POOL: Object.freeze({
@@ -104,7 +104,7 @@ const DATABASE = Object.freeze({
   TEST: Object.freeze({
     HOST: 'localhost',
     PORT: 5433,
-    NAME: 'trossapp_test',
+    NAME: 'tross_test',
     USER: 'postgres', // SAME as dev for simplicity
     PASSWORD: 'tross123', // SAME as dev for simplicity
     POOL: Object.freeze({

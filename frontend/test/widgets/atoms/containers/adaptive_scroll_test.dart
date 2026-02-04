@@ -9,7 +9,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/widgets/atoms/containers/adaptive_scroll.dart';
+import 'package:tross/widgets/atoms/containers/adaptive_scroll.dart';
 
 void main() {
   group('AdaptiveScroll', () {

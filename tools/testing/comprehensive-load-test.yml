@@ -44,7 +44,7 @@ config:
   
   # Variables for test data
   variables:
-    adminEmail: "admin@trossapp.com"
+    adminEmail: "admin@tross.com"
     
   plugins:
     expect: {}

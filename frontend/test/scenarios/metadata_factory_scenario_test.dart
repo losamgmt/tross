@@ -11,8 +11,8 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:tross_app/models/field_definition.dart';
-import 'package:tross_app/models/entity_metadata.dart';
+import 'package:tross/models/field_definition.dart';
+import 'package:tross/models/entity_metadata.dart';
 
 void main() {
   group('Strategy 3: Metadata Factory Scenario Tests', () {

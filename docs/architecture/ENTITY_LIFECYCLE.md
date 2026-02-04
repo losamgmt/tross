@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document defines the architectural pattern for lifecycle states in TrossApp entities. It addresses the design question: when should an entity use `is_active` alone versus adding a `status` field?
+This document defines the architectural pattern for lifecycle states in Tross entities. It addresses the design question: when should an entity use `is_active` alone versus adding a `status` field?
 
 ## Core Principle
 

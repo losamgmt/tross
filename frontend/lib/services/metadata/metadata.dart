@@ -4,7 +4,7 @@
 ///
 /// USAGE:
 /// ```dart
-/// import 'package:tross_app/services/metadata/metadata.dart';
+/// import 'package:tross/services/metadata/metadata.dart';
 ///
 /// final provider = JsonMetadataProvider();
 /// final matrix = await provider.getPermissionMatrix('users');

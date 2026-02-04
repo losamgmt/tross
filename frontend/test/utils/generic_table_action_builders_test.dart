@@ -13,12 +13,12 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
-import 'package:tross_app/services/entity_metadata.dart';
-import 'package:tross_app/services/generic_entity_service.dart';
-import 'package:tross_app/services/export_service.dart';
-import 'package:tross_app/utils/generic_table_action_builders.dart';
-import 'package:tross_app/widgets/atoms/buttons/app_button.dart';
-import 'package:tross_app/widgets/atoms/interactions/touch_target.dart';
+import 'package:tross/services/entity_metadata.dart';
+import 'package:tross/services/generic_entity_service.dart';
+import 'package:tross/services/export_service.dart';
+import 'package:tross/utils/generic_table_action_builders.dart';
+import 'package:tross/widgets/atoms/buttons/app_button.dart';
+import 'package:tross/widgets/atoms/interactions/touch_target.dart';
 
 import '../factory/factory.dart';
 import '../mocks/mock_api_client.dart';

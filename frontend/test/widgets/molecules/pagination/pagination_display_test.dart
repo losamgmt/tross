@@ -3,7 +3,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/widgets/molecules/pagination/pagination_display.dart';
+import 'package:tross/widgets/molecules/pagination/pagination_display.dart';
 
 void main() {
   group('PaginationDisplay', () {

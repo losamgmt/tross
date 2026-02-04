@@ -520,7 +520,7 @@ class AuthProvider extends ChangeNotifier {
   // PERMISSION METHODS (Triple-Tier Security - Frontend Layer)
   // ============================================================================
   //
-  // These methods provide the frontend layer of TrossApp's triple-tier security:
+  // These methods provide the frontend layer of Tross's triple-tier security:
   // 1. Frontend (these methods) - UI gating, immediate feedback
   // 2. Backend API - Token validation, authorization checks
   // 3. Database - Row-level security, data access control

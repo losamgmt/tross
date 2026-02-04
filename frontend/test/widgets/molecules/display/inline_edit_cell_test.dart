@@ -12,7 +12,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/widgets/molecules/display/inline_edit_cell.dart';
+import 'package:tross/widgets/molecules/display/inline_edit_cell.dart';
 
 void main() {
   group('InlineEditCell', () {

@@ -1,6 +1,6 @@
 # Environment Variables Reference
 
-Complete reference for all environment variables used in TrossApp.
+Complete reference for all environment variables used in Tross.
 
 ## Quick Start
 
@@ -21,7 +21,7 @@ cp backend/.env.example backend/.env
 | `DATABASE_URL` | Full PostgreSQL connection URL | `postgresql://user:pass@host:5432/db?sslmode=require` | Yes (production) |
 | `DB_HOST` | Database host (fallback) | `localhost` | No |
 | `DB_PORT` | Database port (fallback) | `5432` | No |
-| `DB_NAME` | Database name (fallback) | `trossapp` | No |
+| `DB_NAME` | Database name (fallback) | `tross` | No |
 | `DB_USER` | Database user (fallback) | `postgres` | No |
 | `DB_PASSWORD` | Database password (fallback) | `secret` | No |
 | `DB_POOL_MIN` | Minimum pool connections | See `deployment-adapter.js` | No |
@@ -117,7 +117,7 @@ NODE_ENV=development
 JWT_SECRET=dev-secret-key
 DB_HOST=localhost
 DB_PORT=5432
-DB_NAME=trossapp_dev
+DB_NAME=tross_dev
 DB_USER=postgres
 DB_PASSWORD=postgres
 ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8080
@@ -144,7 +144,7 @@ PORT=3001
 # Database (local PostgreSQL)
 DB_HOST=localhost
 DB_PORT=5432
-DB_NAME=trossapp_dev
+DB_NAME=tross_dev
 DB_USER=postgres
 DB_PASSWORD=postgres
 
@@ -159,7 +159,7 @@ ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8080
 
 ```env
 NODE_ENV=development
-DATABASE_URL=postgresql://postgres:postgres@db:5432/trossapp
+DATABASE_URL=postgresql://postgres:postgres@db:5432/tross
 JWT_SECRET=dev-secret-key
 ```
 

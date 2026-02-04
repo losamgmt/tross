@@ -4,7 +4,7 @@
 /// Reduces boilerplate in provider tests and ensures consistency.
 library;
 
-import 'package:tross_app/models/permission.dart';
+import 'package:tross/models/permission.dart';
 
 /// Mock user data fixtures for various roles
 class MockUserData {

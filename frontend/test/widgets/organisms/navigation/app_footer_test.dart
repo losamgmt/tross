@@ -10,7 +10,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/widgets/organisms/navigation/app_footer.dart';
+import 'package:tross/widgets/organisms/navigation/app_footer.dart';
 
 import '../../../helpers/test_helpers.dart';
 
@@ -71,10 +71,10 @@ void main() {
     group('copyright display', () {
       testWidgets('displays copyright text when provided', (tester) async {
         await tester.pumpTestWidget(
-          const AppFooter(copyrightText: '© 2025 TrossApp'),
+          const AppFooter(copyrightText: '© 2025 Tross'),
         );
 
-        expect(find.text('© 2025 TrossApp'), findsOneWidget);
+        expect(find.text('© 2025 Tross'), findsOneWidget);
       });
 
       testWidgets('no copyright shown when null', (tester) async {
@@ -93,10 +93,10 @@ void main() {
 
       testWidgets('shows copyright and version together', (tester) async {
         await tester.pumpTestWidget(
-          const AppFooter(copyrightText: '© 2025 TrossApp', version: 'v1.2.3'),
+          const AppFooter(copyrightText: '© 2025 Tross', version: 'v1.2.3'),
         );
 
-        expect(find.text('© 2025 TrossApp'), findsOneWidget);
+        expect(find.text('© 2025 Tross'), findsOneWidget);
         expect(find.text('v1.2.3'), findsOneWidget);
       });
     });
@@ -218,7 +218,7 @@ void main() {
 
         await tester.pumpTestWidget(
           AppFooter(
-            copyrightText: '© 2025 TrossApp',
+            copyrightText: '© 2025 Tross',
             version: 'v1.0.0',
             links: const [
               FooterLink(id: 'privacy', label: 'Privacy'),
@@ -230,7 +230,7 @@ void main() {
           ),
         );
 
-        expect(find.text('© 2025 TrossApp'), findsOneWidget);
+        expect(find.text('© 2025 Tross'), findsOneWidget);
         expect(find.text('v1.0.0'), findsOneWidget);
         expect(find.text('Privacy'), findsOneWidget);
         expect(find.text('Terms'), findsOneWidget);

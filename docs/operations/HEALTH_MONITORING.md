@@ -1,12 +1,12 @@
 # Health Check & Monitoring Guide
 
-Guide to monitoring TrossApp's health and responding to issues.
+Guide to monitoring Tross's health and responding to issues.
 
 ---
 
 ## Health Endpoints
 
-TrossApp follows Kubernetes-style health probes with three levels of checks:
+Tross follows Kubernetes-style health probes with three levels of checks:
 
 | Endpoint | Purpose | Auth | External Calls |
 |----------|---------|------|----------------|
@@ -106,7 +106,7 @@ Railway automatically checks `/api/health` every 30 seconds (configured in `rail
 curl https://tross-api-production.up.railway.app/api/health
 
 # Frontend
-curl https://trossapp.vercel.app
+curl https://tross.vercel.app
 
 # Check response time
 curl -w "@curl-format.txt" -o /dev/null -s https://tross-api-production.up.railway.app/api/health
@@ -142,7 +142,7 @@ time_total:  %{time_total}\n
    - URL: `https://tross-api-production.up.railway.app/api/health`
    - Interval: 5 minutes
 3. Add alert contacts (email, SMS, Slack)
-4. Repeat for frontend: `https://trossapp.vercel.app`
+4. Repeat for frontend: `https://tross.vercel.app`
 
 **Recommended Settings:**
 - Monitor interval: 5 minutes
@@ -227,7 +227,7 @@ fi
 
 ```bash
 # Add to crontab: crontab -e
-*/5 * * * * /path/to/scripts/health-check.sh || echo "Backend down!" | mail -s "TrossApp Alert" your@email.com
+*/5 * * * * /path/to/scripts/health-check.sh || echo "Backend down!" | mail -s "Tross Alert" your@email.com
 ```
 
 ---
@@ -335,7 +335,7 @@ railway logs -f
 1. Click "Add New Monitor"
 2. Configure:
    - **Monitor Type:** HTTP(s)
-   - **Friendly Name:** TrossApp API Health
+   - **Friendly Name:** Tross API Health
    - **URL:** `https://tross-api-production.up.railway.app/api/health`
    - **Monitoring Interval:** 5 minutes
 3. Click "Create Monitor"
@@ -345,8 +345,8 @@ railway logs -f
 1. Click "Add New Monitor" again
 2. Configure:
    - **Monitor Type:** HTTP(s)
-   - **Friendly Name:** TrossApp Frontend
-   - **URL:** `https://trossapp.vercel.app`
+   - **Friendly Name:** Tross Frontend
+   - **URL:** `https://tross.vercel.app`
    - **Monitoring Interval:** 5 minutes
 3. Click "Create Monitor"
 

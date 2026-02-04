@@ -2,7 +2,7 @@
 # Manual cURL Tests for Backend Lock
 # Run this while backend is running on localhost:3001
 
-echo "🧪 TrossApp Backend - Manual cURL Tests"
+echo "🧪 Tross Backend - Manual cURL Tests"
 echo "========================================"
 echo ""
 

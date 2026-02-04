@@ -14,10 +14,10 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/widgets/organisms/dashboards/db_health_dashboard.dart';
-import 'package:tross_app/models/database_health.dart';
-import 'package:tross_app/widgets/atoms/indicators/app_badge.dart';
-import 'package:tross_app/services/database_health_service.dart';
+import 'package:tross/widgets/organisms/dashboards/db_health_dashboard.dart';
+import 'package:tross/models/database_health.dart';
+import 'package:tross/widgets/atoms/indicators/app_badge.dart';
+import 'package:tross/services/database_health_service.dart';
 
 /// Fixed test timestamp - avoids DateTime.now() non-determinism
 const _testTimestamp = '2025-01-15T10:30:00.000Z';

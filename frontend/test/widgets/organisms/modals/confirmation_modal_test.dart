@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/widgets/organisms/modals/confirmation_modal.dart';
-import 'package:tross_app/widgets/organisms/modals/generic_modal.dart';
+import 'package:tross/widgets/organisms/modals/confirmation_modal.dart';
+import 'package:tross/widgets/organisms/modals/generic_modal.dart';
 
 /// ConfirmationModal Composition Tests
 ///

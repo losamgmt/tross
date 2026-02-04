@@ -2,7 +2,7 @@
 
 ## Overview
 
-TrossApp uses a **centralized platform detection and adaptive behavior system** through `PlatformUtilities`. This ensures consistent cross-platform behavior without scattered platform checks throughout the codebase.
+Tross uses a **centralized platform detection and adaptive behavior system** through `PlatformUtilities`. This ensures consistent cross-platform behavior without scattered platform checks throughout the codebase.
 
 ## Architecture
 

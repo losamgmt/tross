@@ -1,5 +1,5 @@
 -- ============================================================================
--- TROSSAPP DATABASE SCHEMA
+-- TROSS DATABASE SCHEMA
 -- ============================================================================
 -- IDEMPOTENT: Safe to run multiple times
 -- VERSION: 3.0
@@ -473,7 +473,7 @@ $$ LANGUAGE plpgsql;
 -- WORK ORDER SYSTEM TABLES (Added: 2025-11-13)
 -- ============================================================================
 -- Run migration 008 to create these tables:
---   cat migrations/008_add_work_order_schema.sql | docker exec -i trossapp-postgres psql -U postgres -d trossapp_dev
+--   cat migrations/008_add_work_order_schema.sql | docker exec -i tross-postgres psql -U postgres -d tross_dev
 --
 -- Tables added:
 --   - customers (polymorphic profile for role_id=5)

@@ -1,7 +1,7 @@
 // Route Guard Unit Tests - Security-first navigation control testing
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/core/routing/route_guard.dart';
-import 'package:tross_app/core/routing/app_routes.dart';
+import 'package:tross/core/routing/route_guard.dart';
+import 'package:tross/core/routing/app_routes.dart';
 
 void main() {
   group('RouteGuardResult', () {

@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.tross" "\0"
-            VALUE "FileDescription", "tross_app" "\0"
+            VALUE "FileDescription", "tross" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "tross_app" "\0"
+            VALUE "InternalName", "tross" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2025 com.tross. All rights reserved." "\0"
-            VALUE "OriginalFilename", "tross_app.exe" "\0"
-            VALUE "ProductName", "tross_app" "\0"
+            VALUE "OriginalFilename", "tross.exe" "\0"
+            VALUE "ProductName", "Tross" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

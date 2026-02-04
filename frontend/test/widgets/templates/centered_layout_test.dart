@@ -6,7 +6,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/widgets/templates/centered_layout.dart';
+import 'package:tross/widgets/templates/centered_layout.dart';
 
 void main() {
   group('CenteredLayout Template', () {

@@ -87,7 +87,7 @@ function getDatabaseConfig() {
   const config = {
     host: process.env.DB_HOST || 'localhost',
     port: parseInt(process.env.DB_PORT || '5432'),
-    database: process.env.DB_NAME || 'trossapp_dev',
+    database: process.env.DB_NAME || 'tross_dev',
     user: process.env.DB_USER || 'postgres',
     password: process.env.DB_PASSWORD || 'postgres',
     min: parseInt(process.env.DB_POOL_MIN || OPTIONAL_ENV_VARS.DB_POOL_MIN),
@@ -169,7 +169,7 @@ function getAllowedOrigins() {
     }
 
     // Allow main Vercel domain
-    if (origin === 'https://trossapp.vercel.app') {
+    if (origin === 'https://tross.vercel.app') {
       return callback(null, true);
     }
 

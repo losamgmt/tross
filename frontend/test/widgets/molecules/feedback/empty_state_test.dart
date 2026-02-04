@@ -6,7 +6,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/widgets/molecules/feedback/empty_state.dart';
+import 'package:tross/widgets/molecules/feedback/empty_state.dart';
 
 void main() {
   group('EmptyState Molecule Tests', () {

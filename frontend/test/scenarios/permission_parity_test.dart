@@ -11,7 +11,7 @@ import 'dart:convert';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/models/permission.dart';
+import 'package:tross/models/permission.dart';
 
 import '../factory/factory.dart';
 

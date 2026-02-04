@@ -1,5 +1,5 @@
 -- ============================================================================
--- TROSSAPP SEED DATA
+-- TROSS SEED DATA
 -- ============================================================================
 -- IDEMPOTENT: Safe to run multiple times (uses ON CONFLICT)
 -- PURPOSE: Core data required for application to function

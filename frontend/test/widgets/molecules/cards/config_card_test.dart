@@ -13,8 +13,8 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/widgets/molecules/cards/config_card.dart';
-import 'package:tross_app/widgets/atoms/indicators/status_chip.dart';
+import 'package:tross/widgets/molecules/cards/config_card.dart';
+import 'package:tross/widgets/atoms/indicators/status_chip.dart';
 
 void main() {
   group('ConfigCard', () {

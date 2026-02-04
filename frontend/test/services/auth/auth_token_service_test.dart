@@ -12,7 +12,7 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/services/auth/auth_token_service.dart';
+import 'package:tross/services/auth/auth_token_service.dart';
 
 import '../../helpers/helpers.dart';
 import '../../mocks/mock_api_client.dart';

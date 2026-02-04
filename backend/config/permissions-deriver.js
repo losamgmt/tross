@@ -347,8 +347,8 @@ function derivePermissions(forceReload = false) {
   // Build complete config
   cachedPermissions = {
     $schema: 'http://json-schema.org/draft-07/schema#',
-    $id: 'https://trossapp.com/schemas/permissions.json',
-    title: 'TrossApp Permission Configuration (DERIVED)',
+    $id: 'https://tross.com/schemas/permissions.json',
+    title: 'Tross Permission Configuration (DERIVED)',
     description: 'Auto-derived from entity metadata - DO NOT EDIT MANUALLY',
     version: '4.0.0-derived',
     lastModified: new Date().toISOString().split('T')[0],

@@ -14,7 +14,7 @@ Add this configuration to your R2 bucket in Cloudflare Dashboard:
     "AllowedOrigins": [
       "http://localhost:8080",
       "http://localhost:3000",
-      "https://trossapp.vercel.app",
+      "https://tross.vercel.app",
       "https://*.vercel.app"
     ],
     "AllowedMethods": ["GET", "HEAD"],
@@ -37,7 +37,7 @@ The browser enforces CORS. Without the `Access-Control-Allow-Origin` header from
 | Environment | Origins |
 |-------------|---------|
 | Local dev | `http://localhost:8080`, `http://localhost:3000` |
-| Production | `https://trossapp.vercel.app` |
+| Production | `https://tross.vercel.app` |
 | Vercel previews | `https://*.vercel.app` |
 
 ## Troubleshooting
@@ -65,7 +65,7 @@ Set these in Railway dashboard for the backend service:
 |----------|-------------|---------|
 | `STORAGE_PROVIDER` | Storage provider type | `r2` |
 | `STORAGE_ENDPOINT` | R2 S3-compatible endpoint | `https://<account-id>.r2.cloudflarestorage.com` |
-| `STORAGE_BUCKET` | R2 bucket name | `trossapp-files` |
+| `STORAGE_BUCKET` | R2 bucket name | `tross-files` |
 | `STORAGE_ACCESS_KEY` | R2 API Token Access Key ID | `<your-access-key>` |
 | `STORAGE_SECRET_KEY` | R2 API Token Secret | `<your-secret-key>` |
 | `STORAGE_REGION` | R2 region (always 'auto') | `auto` |

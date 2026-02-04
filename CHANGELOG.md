@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to TrossApp will be documented in this file.
+All notable changes to Tross will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -360,13 +360,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Infrastructure
 - **Production Deployment Complete**:
-  - Frontend: https://trossapp.vercel.app (Vercel)
+  - Frontend: https://tross.vercel.app (Vercel)
   - Backend: https://tross-api-production.up.railway.app (Railway)
   - Database: PostgreSQL on Railway (internal networking)
   - Auth0: Production OAuth2 authentication configured
 
 #### Configuration
-- CORS: localhost + production URLs whitelisted (trossapp.vercel.app)
+- CORS: localhost + production URLs whitelisted (tross.vercel.app)
 - Auth0: Callback/logout URLs configured for web + mobile
 - Vercel: Flutter build with `USE_PROD_BACKEND=true` flag
 - Railway: 13 environment variables configured
@@ -448,7 +448,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🎉 Backend Production Ready - LOCKED
 
-This release marks the **complete production-ready backend** for TrossApp. All core features, security hardening, validation, testing infrastructure, and performance optimizations are complete. The backend is now **LOCKED** and ready for production deployment.
+This release marks the **complete production-ready backend** for Tross. All core features, security hardening, validation, testing infrastructure, and performance optimizations are complete. The backend is now **LOCKED** and ready for production deployment.
 
 ---
 

@@ -24,8 +24,8 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:tross_app/widgets/organisms/search/debounced_search_filter.dart';
-import 'package:tross_app/widgets/molecules/cards/page_header.dart';
+import 'package:tross/widgets/organisms/search/debounced_search_filter.dart';
+import 'package:tross/widgets/molecules/cards/page_header.dart';
 
 import '../helpers/helpers.dart';
 

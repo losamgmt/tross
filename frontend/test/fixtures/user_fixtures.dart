@@ -9,7 +9,7 @@ class UserFixtures {
   static const Map<String, dynamic> admin = {
     'id': 1,
     'name': 'Admin User',
-    'email': 'admin@trossapp.com',
+    'email': 'admin@tross.com',
     'auth0_id': 'auth0|admin123',
     'role_name': 'admin',
     'is_active': true,
@@ -21,7 +21,7 @@ class UserFixtures {
   static const Map<String, dynamic> manager = {
     'id': 2,
     'name': 'Manager User',
-    'email': 'manager@trossapp.com',
+    'email': 'manager@tross.com',
     'auth0_id': 'auth0|manager123',
     'role_name': 'manager',
     'is_active': true,
@@ -33,7 +33,7 @@ class UserFixtures {
   static const Map<String, dynamic> user = {
     'id': 3,
     'name': 'Regular User',
-    'email': 'user@trossapp.com',
+    'email': 'user@tross.com',
     'auth0_id': 'auth0|user123',
     'role_name': 'user',
     'is_active': true,
@@ -45,7 +45,7 @@ class UserFixtures {
   static const Map<String, dynamic> viewer = {
     'id': 4,
     'name': 'Viewer User',
-    'email': 'viewer@trossapp.com',
+    'email': 'viewer@tross.com',
     'auth0_id': 'auth0|viewer123',
     'role_name': 'viewer',
     'is_active': true,
@@ -57,7 +57,7 @@ class UserFixtures {
   static const Map<String, dynamic> inactive = {
     'id': 5,
     'name': 'Inactive User',
-    'email': 'inactive@trossapp.com',
+    'email': 'inactive@tross.com',
     'auth0_id': 'auth0|inactive123',
     'role_name': 'user',
     'is_active': false,

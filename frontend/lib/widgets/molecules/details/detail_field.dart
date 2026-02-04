@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:tross_app/config/app_spacing.dart';
-import 'package:tross_app/widgets/atoms/display/field_display.dart';
-import 'package:tross_app/widgets/molecules/forms/field_config.dart';
+import 'package:tross/config/app_spacing.dart';
+import 'package:tross/widgets/atoms/display/field_display.dart';
+import 'package:tross/widgets/molecules/forms/field_config.dart';
 
 /// Generic detail field display widget
 ///

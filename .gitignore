@@ -155,7 +155,7 @@ desktop.ini
 # Windows artifacts (redirect/pipe artifacts)
 nul
 curl
-trossapp@*
+tross@*
 
 # Temporary/junk files
 _ul

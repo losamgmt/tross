@@ -14,11 +14,11 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
-import 'package:tross_app/models/dashboard_config.dart';
-import 'package:tross_app/providers/dashboard_provider.dart';
-import 'package:tross_app/services/dashboard_config_loader.dart';
-import 'package:tross_app/services/stats_service.dart';
-import 'package:tross_app/widgets/organisms/dashboard_content.dart';
+import 'package:tross/models/dashboard_config.dart';
+import 'package:tross/providers/dashboard_provider.dart';
+import 'package:tross/services/dashboard_config_loader.dart';
+import 'package:tross/services/stats_service.dart';
+import 'package:tross/widgets/organisms/dashboard_content.dart';
 
 /// Test dashboard config matching the new minimal format
 final _testDashboardConfig = {

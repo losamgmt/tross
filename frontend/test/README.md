@@ -1,6 +1,6 @@
 # Frontend Test Infrastructure
 
-This directory contains the comprehensive test infrastructure for the TrossApp frontend, designed to mirror the backend's testing approach with centralized, reusable, and modular testing utilities.
+This directory contains the comprehensive test infrastructure for the Tross frontend, designed to mirror the backend's testing approach with centralized, reusable, and modular testing utilities.
 
 ## 🎯 Philosophy
 

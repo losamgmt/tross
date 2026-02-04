@@ -34,14 +34,14 @@ Production deployment guide using Docker and environment configuration.
 
 ### Platform-Agnostic Database Configuration
 
-**TrossApp uses `backend/config/deployment-adapter.js` for platform-agnostic deployment.**
+**Tross uses `backend/config/deployment-adapter.js` for platform-agnostic deployment.**
 
 The adapter automatically detects your deployment platform and configures the database connection appropriately. It supports two configuration formats:
 
 #### Option 1: DATABASE_URL (Recommended for Railway, Heroku, Render)
 
 ```bash
-DATABASE_URL=postgresql://user:password@db-host:5432/trossapp_prod
+DATABASE_URL=postgresql://user:password@db-host:5432/tross_prod
 ```
 
 Most cloud platforms (Railway, Heroku, Render) provide a single `DATABASE_URL` environment variable. The adapter automatically uses this if present.
@@ -53,7 +53,7 @@ Most cloud platforms (Railway, Heroku, Render) provide a single `DATABASE_URL` e
 ```bash
 DB_HOST=your-db-host.region.rds.amazonaws.com
 DB_PORT=5432
-DB_NAME=trossapp_prod
+DB_NAME=tross_prod
 DB_USER=your_db_user
 DB_PASSWORD=your_db_password
 # Pool values default to constants.js values if not set
@@ -78,12 +78,12 @@ NODE_ENV=production
 
 # Database - Choose ONE format:
 # Format 1: Single URL (Railway, Heroku, Render)
-DATABASE_URL=postgresql://user:password@db-host:5432/trossapp_prod
+DATABASE_URL=postgresql://user:password@db-host:5432/tross_prod
 
 # Format 2: Individual vars (AWS, Google Cloud, or if DATABASE_URL not available)
 # DB_HOST=your-db-host
 # DB_PORT=5432
-# DB_NAME=trossapp_prod
+# DB_NAME=tross_prod
 # DB_USER=your_db_user
 # DB_PASSWORD=your_db_password
 
@@ -138,7 +138,7 @@ openssl rand -base64 48
 
 ## Railway Deployment (Current Platform)
 
-TrossApp is deployed on Railway. The platform auto-detects the Node.js backend and deploys from Git.
+Tross is deployed on Railway. The platform auto-detects the Node.js backend and deploys from Git.
 
 ### Railway Configuration
 
@@ -204,8 +204,8 @@ services:
 **Initial deployment:**
 ```bash
 # 1. Clone repository
-git clone https://github.com/yourusername/trossapp.git
-cd trossapp
+git clone https://github.com/yourusername/tross.git
+cd tross
 
 # 2. Set environment variables
 cp .env.example .env.production
@@ -271,11 +271,11 @@ jobs:
       
       - name: Build and push Docker images
         run: |
-          docker build -t trossapp/backend:latest ./backend
-          docker build -t trossapp/frontend:latest ./frontend
+          docker build -t tross/backend:latest ./backend
+          docker build -t tross/frontend:latest ./frontend
           echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-          docker push trossapp/backend:latest
-          docker push trossapp/frontend:latest
+          docker push tross/backend:latest
+          docker push tross/frontend:latest
       
       - name: Deploy to production
         uses: appleboy/ssh-action@master
@@ -284,7 +284,7 @@ jobs:
           username: ${{ secrets.PROD_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd /opt/trossapp
+            cd /opt/tross
             docker-compose -f docker-compose.prod.yml pull
             docker-compose -f docker-compose.prod.yml up -d
 ```
@@ -450,13 +450,13 @@ server {
 **Quick rollback:**
 ```bash
 # Tag current version
-docker tag trossapp/backend:latest trossapp/backend:v1.2.3
+docker tag tross/backend:latest tross/backend:v1.2.3
 
 # Pull previous version
-docker pull trossapp/backend:v1.2.2
+docker pull tross/backend:v1.2.2
 
 # Tag as latest
-docker tag trossapp/backend:v1.2.2 trossapp/backend:latest
+docker tag tross/backend:v1.2.2 tross/backend:latest
 
 # Restart
 docker-compose -f docker-compose.prod.yml up -d
@@ -496,7 +496,7 @@ docker-compose -f docker-compose.prod.yml run --rm backend npm run migrate:rollb
 
 DATE=$(date +%Y%m%d_%H%M%S)
 BACKUP_DIR="/backups"
-DB_NAME="trossapp_prod"
+DB_NAME="tross_prod"
 
 # Create backup
 pg_dump $DATABASE_URL > $BACKUP_DIR/backup_$DATE.sql
@@ -512,7 +512,7 @@ echo "Backup completed: backup_$DATE.sql.gz"
 
 **Schedule with cron:**
 ```bash
-0 2 * * * /opt/trossapp/scripts/backup-db.sh
+0 2 * * * /opt/tross/scripts/backup-db.sh
 ```
 
 ### Restore from Backup

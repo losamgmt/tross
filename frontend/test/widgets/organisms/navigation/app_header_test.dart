@@ -11,9 +11,9 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/widgets/organisms/navigation/app_header.dart';
-import 'package:tross_app/widgets/molecules/display/initials_avatar.dart';
-import 'package:tross_app/widgets/atoms/buttons/app_button.dart';
+import 'package:tross/widgets/organisms/navigation/app_header.dart';
+import 'package:tross/widgets/molecules/display/initials_avatar.dart';
+import 'package:tross/widgets/atoms/buttons/app_button.dart';
 
 import '../../../helpers/helpers.dart';
 

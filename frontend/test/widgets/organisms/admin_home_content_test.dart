@@ -10,8 +10,8 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
-import 'package:tross_app/services/api/api_client.dart';
-import 'package:tross_app/widgets/organisms/admin_home_content.dart';
+import 'package:tross/services/api/api_client.dart';
+import 'package:tross/widgets/organisms/admin_home_content.dart';
 import '../../mocks/mock_api_client.dart';
 
 void main() {

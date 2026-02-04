@@ -13,9 +13,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:mockito/mockito.dart';
 
-import 'package:tross_app/services/metadata_field_config_factory.dart';
-import 'package:tross_app/services/metadata_table_column_factory.dart';
-import 'package:tross_app/services/generic_entity_service.dart';
+import 'package:tross/services/metadata_field_config_factory.dart';
+import 'package:tross/services/metadata_table_column_factory.dart';
+import 'package:tross/services/generic_entity_service.dart';
 import '../factory/factory.dart';
 
 class MockGenericEntityService extends Mock implements GenericEntityService {}

@@ -8,7 +8,7 @@
 
 ## Context
 
-TrossApp needs a testing strategy that:
+Tross needs a testing strategy that:
 
 - Ensures code quality and reliability
 - Catches bugs before production

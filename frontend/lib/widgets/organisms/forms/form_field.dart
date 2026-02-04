@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:tross_app/widgets/atoms/atoms.dart';
-import 'package:tross_app/widgets/molecules/forms/field_config.dart';
-import 'package:tross_app/config/app_spacing.dart';
+import 'package:tross/widgets/atoms/atoms.dart';
+import 'package:tross/widgets/molecules/forms/field_config.dart';
+import 'package:tross/config/app_spacing.dart';
 
 /// Generic form field organism that composes label + input atom
 ///

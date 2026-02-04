@@ -10,9 +10,9 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/models/form_mode.dart';
-import 'package:tross_app/services/entity_metadata.dart';
-import 'package:tross_app/widgets/organisms/modals/entity_form_modal.dart';
+import 'package:tross/models/form_mode.dart';
+import 'package:tross/services/entity_metadata.dart';
+import 'package:tross/widgets/organisms/modals/entity_form_modal.dart';
 import '../../../helpers/helpers.dart';
 
 void main() {

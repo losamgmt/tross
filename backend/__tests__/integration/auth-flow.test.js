@@ -19,7 +19,7 @@ jest.mock("../../services/user-data", () => ({
   findOrCreateUser: jest.fn().mockResolvedValue({
     id: 1,
     auth0_id: "auth0|test123",
-    email: "test@trossapp.com",
+    email: "test@tross.com",
     first_name: "Test",
     last_name: "User",
     role: "technician",
@@ -50,7 +50,7 @@ describe("Authentication Flow Integration", () => {
             ? {
                 // Mock payload
                 sub: "auth0|test123",
-                email: "test@trossapp.com",
+                email: "test@tross.com",
                 role: "technician",
                 provider: "development",
               }
@@ -192,7 +192,7 @@ describe("Authentication Flow Integration", () => {
       // Mock admin token verification
       jwt.verify.mockImplementationOnce(() => ({
         sub: "auth0|admin123",
-        email: "admin@trossapp.com",
+        email: "admin@tross.com",
         role: USER_ROLES.ADMIN,
         provider: "development",
       }));
@@ -214,7 +214,7 @@ describe("Authentication Flow Integration", () => {
       // Mock technician token verification
       jwt.verify.mockImplementationOnce(() => ({
         sub: "auth0|tech123",
-        email: "tech@trossapp.com",
+        email: "tech@tross.com",
         role: USER_ROLES.TECHNICIAN,
         provider: "development",
       }));
@@ -277,7 +277,7 @@ describe("Authentication Flow Integration", () => {
         // Mock token verification for each role
         jwt.verify.mockImplementationOnce(() => ({
           sub: `auth0|${role}123`,
-          email: `${role}@trossapp.com`,
+          email: `${role}@tross.com`,
           role: USER_ROLES[role.toUpperCase()],
           provider: "development",
         }));

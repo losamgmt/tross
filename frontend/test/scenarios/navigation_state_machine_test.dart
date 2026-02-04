@@ -10,8 +10,8 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/widgets/organisms/navigation/nav_menu_item.dart';
-import 'package:tross_app/services/nav_menu_builder.dart';
+import 'package:tross/widgets/organisms/navigation/nav_menu_item.dart';
+import 'package:tross/services/nav_menu_builder.dart';
 
 void main() {
   group('Strategy 8: Navigation State Machine Tests', () {

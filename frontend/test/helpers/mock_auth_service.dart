@@ -5,7 +5,7 @@
 ///
 /// Usage:
 /// ```dart
-/// import 'package:tross_app/test/helpers/mock_auth_service.dart';
+/// import 'package:tross/test/helpers/mock_auth_service.dart';
 ///
 /// void main() {
 ///   late MockAuthService mockAuth;

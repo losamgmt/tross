@@ -4,7 +4,7 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/models/form_mode.dart';
+import 'package:tross/models/form_mode.dart';
 
 void main() {
   group('FormMode', () {

@@ -3,8 +3,8 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/providers/app_provider.dart';
-import 'package:tross_app/services/service_health_manager.dart';
+import 'package:tross/providers/app_provider.dart';
+import 'package:tross/services/service_health_manager.dart';
 
 void main() {
   group('AppProvider - Network Connectivity Enhancement', () {

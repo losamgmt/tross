@@ -5,7 +5,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/utils/entity_icon_resolver.dart';
+import 'package:tross/utils/entity_icon_resolver.dart';
 
 void main() {
   group('EntityIconResolver', () {

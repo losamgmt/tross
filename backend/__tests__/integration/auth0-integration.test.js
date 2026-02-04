@@ -107,7 +107,7 @@ describe('Auth0Strategy Integration Tests', () => {
       email: 'test@example.com',
       given_name: 'Test',
       family_name: 'User',
-      'https://trossapp.com/role': 'technician',
+      'https://tross.com/role': 'technician',
     };
 
     const mockLocalUser = {

@@ -29,7 +29,7 @@ const railwayDbConfig = {
   connectionTimeoutMillis: TIMEOUTS.DATABASE.CONNECTION_TIMEOUT_MS,
   statement_timeout: TIMEOUTS.DATABASE.STATEMENT_TIMEOUT_MS,
   query_timeout: TIMEOUTS.DATABASE.QUERY_TIMEOUT_MS,
-  application_name: 'trossapp_dev_railway_test',
+  application_name: 'tross_dev_railway_test',
 };
 
 // Test database configuration (port 5433, separate from default on 5432)
@@ -48,11 +48,11 @@ const testDbConfig = {
   connectionTimeoutMillis: TIMEOUTS.DATABASE.TEST.CONNECTION_TIMEOUT_MS,
   statement_timeout: TIMEOUTS.DATABASE.TEST.STATEMENT_TIMEOUT_MS,
   query_timeout: TIMEOUTS.DATABASE.TEST.QUERY_TIMEOUT_MS,
-  application_name: 'trossapp_test',
+  application_name: 'tross_test',
 };
 
 // Default database configuration (standard PostgreSQL port 5432)
-// Used for both development (trossapp_dev) and production (trossapp_prod)
+// Used for both development (tross_dev) and production (tross_prod)
 // Supports both DATABASE_URL (Railway/Heroku) and individual env vars (AWS/local)
 // Uses deployment-adapter for platform-agnostic configuration
 const adapterConfig = getDatabaseConfig();
@@ -69,7 +69,7 @@ const defaultDbConfig =
       connectionTimeoutMillis: TIMEOUTS.DATABASE.CONNECTION_TIMEOUT_MS,
       statement_timeout: TIMEOUTS.DATABASE.STATEMENT_TIMEOUT_MS,
       query_timeout: TIMEOUTS.DATABASE.QUERY_TIMEOUT_MS,
-      application_name: 'trossapp_backend',
+      application_name: 'tross_backend',
     }
     : {
       // Individual vars format - merge with pool and timeout config
@@ -80,7 +80,7 @@ const defaultDbConfig =
       connectionTimeoutMillis: TIMEOUTS.DATABASE.CONNECTION_TIMEOUT_MS,
       statement_timeout: TIMEOUTS.DATABASE.STATEMENT_TIMEOUT_MS,
       query_timeout: TIMEOUTS.DATABASE.QUERY_TIMEOUT_MS,
-      application_name: 'trossapp_backend',
+      application_name: 'tross_backend',
     };
 
 // Create connection pool with appropriate configuration

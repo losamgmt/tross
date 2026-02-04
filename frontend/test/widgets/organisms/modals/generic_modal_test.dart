@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/widgets/organisms/modals/generic_modal.dart';
+import 'package:tross/widgets/organisms/modals/generic_modal.dart';
 
 /// Tests for GenericModal - COMPOSITION TESTING ONLY
 ///

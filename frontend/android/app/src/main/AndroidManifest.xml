@@ -32,7 +32,7 @@
                 <data
                     android:scheme="com.tross.auth0"
                     android:host="dev-mglpuahc3cwf66wq.us.auth0.com"
-                    android:pathPrefix="/android/com.tross.tross_app/callback" />
+                    android:pathPrefix="/android/com.tross.app/callback" />
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.

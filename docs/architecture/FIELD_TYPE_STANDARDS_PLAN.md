@@ -2,7 +2,7 @@
 
 > **Created**: January 23, 2026  
 > **Status**: Backend Complete (Phases 0-5) ✅  
-> **Purpose**: Reference for standardized field types across TrossApp
+> **Purpose**: Reference for standardized field types across Tross
 
 ---
 
@@ -25,7 +25,7 @@
 ## Executive Summary
 
 ### Goal
-Establish a **Single Source of Truth (SSOT)** for field types across all layers of TrossApp, enabling:
+Establish a **Single Source of Truth (SSOT)** for field types across all layers of Tross, enabling:
 - Zero-hardcoding field additions
 - Consistent validation frontend/backend
 - Type-safe field handling

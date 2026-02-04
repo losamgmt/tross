@@ -20,7 +20,7 @@ module.exports = async () => {
   const path = require("path");
   const testLogger = require("../../config/test-logger");
 
-  testLogger.log("🧪 Starting TrossApp integration test suite...");
+  testLogger.log("🧪 Starting Tross integration test suite...");
   testLogger.log("📦 Setting up test database schema...");
 
   try {

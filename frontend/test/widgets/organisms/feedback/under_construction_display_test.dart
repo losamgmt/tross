@@ -9,7 +9,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/widgets/organisms/feedback/under_construction_display.dart';
+import 'package:tross/widgets/organisms/feedback/under_construction_display.dart';
 
 import '../../../helpers/test_helpers.dart';
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document defines the architectural principles for database schema design in TrossApp. It establishes the Entity Contract pattern and explains the rationale behind key decisions.
+This document defines the architectural principles for database schema design in Tross. It establishes the Entity Contract pattern and explains the rationale behind key decisions.
 
 ## Core Principle
 

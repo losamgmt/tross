@@ -1,6 +1,6 @@
 # Rollback Procedures
 
-Emergency procedures for reverting TrossApp deployments to previous stable versions.
+Emergency procedures for reverting Tross deployments to previous stable versions.
 
 ---
 
@@ -44,7 +44,7 @@ Emergency procedures for reverting TrossApp deployments to previous stable versi
 
 **Steps:**
 1. Go to https://railway.app
-2. Select TrossApp project
+2. Select Tross project
 3. Click on backend service
 4. Go to "Deployments" tab
 5. Find last stable deployment (green checkmark)
@@ -94,7 +94,7 @@ git push -f origin main
 
 **Steps:**
 1. Go to https://vercel.com/dashboard
-2. Select TrossApp project
+2. Select Tross project
 3. Click "Deployments" tab
 4. Find last stable deployment (green Production badge)
 5. Click three dots (...) → "Promote to Production"
@@ -290,7 +290,7 @@ Next Steps: [Plan for fix and redeployment]
 
 2. **Check your DNS:**
    ```bash
-   nslookup trossapp.vercel.app
+   nslookup tross.vercel.app
    dig tross-api-production.up.railway.app
    ```
 

@@ -8,7 +8,7 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/models/database_health.dart';
+import 'package:tross/models/database_health.dart';
 
 void main() {
   group('DatabaseHealth Model', () {

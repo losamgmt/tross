@@ -14,7 +14,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross_app/widgets/atoms/inputs/filter_dropdown.dart';
+import 'package:tross/widgets/atoms/inputs/filter_dropdown.dart';
 
 void main() {
   group('FilterDropdown Atom', () {
