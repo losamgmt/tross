@@ -202,7 +202,7 @@ jobs:
         run: cd frontend && flutter pub get
 
       - name: Build web
-        run: cd frontend && flutter build web --no-tree-shake-icons
+        run: cd frontend && flutter build web --no-tree-shake-icons --dart-define=USE_PROD_BACKEND=true
 
       - name: Upload web build
         uses: actions/upload-artifact@v4
@@ -241,10 +241,10 @@ jobs:
         run: cd frontend && flutter pub get
 
       - name: Build Debug APK
-        run: cd frontend && flutter build apk --debug
+        run: cd frontend && flutter build apk --debug --dart-define=USE_PROD_BACKEND=true
 
       - name: Build Release APK
-        run: cd frontend && flutter build apk --release
+        run: cd frontend && flutter build apk --release --dart-define=USE_PROD_BACKEND=true
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
@@ -283,7 +283,7 @@ jobs:
         run: cd frontend && flutter pub get
 
       - name: Build iOS (unsigned)
-        run: cd frontend && flutter build ios --release --no-codesign
+        run: cd frontend && flutter build ios --release --no-codesign --dart-define=USE_PROD_BACKEND=true
 
       - name: Create unsigned IPA
         run: |
