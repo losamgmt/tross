@@ -240,18 +240,8 @@ jobs:
       - name: Install dependencies
         run: cd frontend && flutter pub get
 
-      - name: Build Debug APK
-        run: cd frontend && flutter build apk --debug --dart-define=USE_PROD_BACKEND=true
-
       - name: Build Release APK
         run: cd frontend && flutter build apk --release --dart-define=USE_PROD_BACKEND=true
-
-      - name: Upload Debug APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-debug-apk
-          path: frontend/build/app/outputs/flutter-apk/app-debug.apk
-          retention-days: 30
 
       - name: Upload Release APK
         uses: actions/upload-artifact@v4
