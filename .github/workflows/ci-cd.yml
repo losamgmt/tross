@@ -290,7 +290,8 @@ jobs:
           cd frontend/build/ios/iphoneos
           mkdir -p Payload
           cp -r Runner.app Payload/
-          zip -r ../../../ios-release-unsigned.ipa Payload
+          zip -r "$GITHUB_WORKSPACE/frontend/build/ios-release-unsigned.ipa" Payload
+          ls -la "$GITHUB_WORKSPACE/frontend/build/"
 
       - name: Upload iOS Build
         uses: actions/upload-artifact@v4
