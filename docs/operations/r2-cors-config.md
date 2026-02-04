@@ -14,7 +14,7 @@ Add this configuration to your R2 bucket in Cloudflare Dashboard:
     "AllowedOrigins": [
       "http://localhost:8080",
       "http://localhost:3000",
-      "https://tross.vercel.app",
+      "https://trossapp.vercel.app",
       "https://*.vercel.app"
     ],
     "AllowedMethods": ["GET", "HEAD"],
@@ -37,7 +37,7 @@ The browser enforces CORS. Without the `Access-Control-Allow-Origin` header from
 | Environment | Origins |
 |-------------|---------|
 | Local dev | `http://localhost:8080`, `http://localhost:3000` |
-| Production | `https://tross.vercel.app` |
+| Production | `https://trossapp.vercel.app` |
 | Vercel previews | `https://*.vercel.app` |
 
 ## Troubleshooting

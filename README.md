@@ -1,4 +1,4 @@
-# The Tross App
+# Tross
 
 **Professional work order management system with skills-based matching**
 
@@ -11,7 +11,7 @@
 ## 🚀 Production
 
 **Live Application:**
-- **Frontend:** https://tross.vercel.app
+- **Frontend:** https://trossapp.vercel.app
 - **Backend API:** https://tross-api-production.up.railway.app
 - **API Docs:** https://tross-api-production.up.railway.app/api-docs
 - **Health Check:** https://tross-api-production.up.railway.app/api/health
@@ -28,7 +28,7 @@
 
 ## 🎯 Overview
 
-The Tross App is a modern, full-stack application for efficient work order management with intelligent skills-based matching. Built with Flutter for cross-platform frontend and Node.js/Express for a robust REST API backend.
+Tross is a modern, full-stack application for efficient work order management with intelligent skills-based matching. Built with Flutter for cross-platform frontend and Node.js/Express for a robust REST API backend.
 
 ### ✨ Architecture Principles
 

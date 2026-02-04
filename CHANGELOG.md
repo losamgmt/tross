@@ -360,13 +360,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Infrastructure
 - **Production Deployment Complete**:
-  - Frontend: https://tross.vercel.app (Vercel)
+  - Frontend: https://trossapp.vercel.app (Vercel)
   - Backend: https://tross-api-production.up.railway.app (Railway)
   - Database: PostgreSQL on Railway (internal networking)
   - Auth0: Production OAuth2 authentication configured
 
 #### Configuration
-- CORS: localhost + production URLs whitelisted (tross.vercel.app)
+- CORS: localhost + production URLs whitelisted (trossapp.vercel.app)
 - Auth0: Callback/logout URLs configured for web + mobile
 - Vercel: Flutter build with `USE_PROD_BACKEND=true` flag
 - Railway: 13 environment variables configured
