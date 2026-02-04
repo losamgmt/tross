@@ -234,7 +234,7 @@ PR merged → Vercel builds → Production deploy
 
 **Preview URLs:**
 ```
-Production: https://tross.vercel.app
+Production: https://trossapp.vercel.app
 Preview: https://tross-pr-123.vercel.app
 ```
 
@@ -269,7 +269,7 @@ JWT_SECRET=...
 AUTH0_DOMAIN=...
 AUTH0_AUDIENCE=...
 AUTH0_ISSUER=...
-FRONTEND_URL=https://tross.vercel.app
+FRONTEND_URL=https://trossapp.vercel.app
 ```
 
 Railway automatically provides `DATABASE_URL` when you provision a PostgreSQL database. The deployment adapter handles the rest.

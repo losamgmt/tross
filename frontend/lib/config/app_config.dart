@@ -76,7 +76,7 @@ class AppConfig {
 
   static const String _devFrontendUrl = 'http://localhost:8080';
   static const String _prodFrontendUrl =
-      'https://tross.vercel.app'; // Update when deployed
+      'https://trossapp.vercel.app'; // Vercel production domain
 
   /// Get the current browser origin (e.g., https://preview-abc.vercel.app)
   /// Falls back to _prodFrontendUrl if not in browser context

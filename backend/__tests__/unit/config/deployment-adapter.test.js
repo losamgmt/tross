@@ -343,7 +343,7 @@ describe('Deployment Adapter', () => {
 
     test('should allow Vercel preview deployments', async () => {
       process.env.NODE_ENV = 'production';
-      process.env.ALLOWED_ORIGINS = 'https://tross.vercel.app';
+      process.env.ALLOWED_ORIGINS = 'https://trossapp.vercel.app';
       const originFn = getAllowedOrigins();
 
       const result = await testOrigin(originFn, 'https://tross-frontend-abc123-zarika-ambers-projects.vercel.app');
@@ -355,7 +355,7 @@ describe('Deployment Adapter', () => {
       process.env.ALLOWED_ORIGINS = 'https://other.example.com';
       const originFn = getAllowedOrigins();
 
-      const result = await testOrigin(originFn, 'https://tross.vercel.app');
+      const result = await testOrigin(originFn, 'https://trossapp.vercel.app');
       expect(result.allowed).toBe(true);
     });
 

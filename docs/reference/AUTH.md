@@ -331,22 +331,22 @@ npm run dev
 ```
 Allowed Callback URLs:
 http://localhost:8080/callback
-https://tross.vercel.app/callback
+https://trossapp.vercel.app/callback
 https://*-zarika-ambers-projects.vercel.app/callback
 
 Allowed Logout URLs:
 http://localhost:8080
-https://tross.vercel.app
+https://trossapp.vercel.app
 https://*-zarika-ambers-projects.vercel.app
 
 Allowed Web Origins:
 http://localhost:8080
-https://tross.vercel.app
+https://trossapp.vercel.app
 https://*-zarika-ambers-projects.vercel.app
 
 Allowed Origins (CORS):
 http://localhost:8080
-https://tross.vercel.app
+https://trossapp.vercel.app
 https://*-zarika-ambers-projects.vercel.app
 ```
 

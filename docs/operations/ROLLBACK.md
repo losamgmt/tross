@@ -290,7 +290,7 @@ Next Steps: [Plan for fix and redeployment]
 
 2. **Check your DNS:**
    ```bash
-   nslookup tross.vercel.app
+   nslookup trossapp.vercel.app
    dig tross-api-production.up.railway.app
    ```
 

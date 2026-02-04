@@ -106,7 +106,7 @@ Railway automatically checks `/api/health` every 30 seconds (configured in `rail
 curl https://tross-api-production.up.railway.app/api/health
 
 # Frontend
-curl https://tross.vercel.app
+curl https://trossapp.vercel.app
 
 # Check response time
 curl -w "@curl-format.txt" -o /dev/null -s https://tross-api-production.up.railway.app/api/health
@@ -142,7 +142,7 @@ time_total:  %{time_total}\n
    - URL: `https://tross-api-production.up.railway.app/api/health`
    - Interval: 5 minutes
 3. Add alert contacts (email, SMS, Slack)
-4. Repeat for frontend: `https://tross.vercel.app`
+4. Repeat for frontend: `https://trossapp.vercel.app`
 
 **Recommended Settings:**
 - Monitor interval: 5 minutes
@@ -346,7 +346,7 @@ railway logs -f
 2. Configure:
    - **Monitor Type:** HTTP(s)
    - **Friendly Name:** Tross Frontend
-   - **URL:** `https://tross.vercel.app`
+   - **URL:** `https://trossapp.vercel.app`
    - **Monitoring Interval:** 5 minutes
 3. Click "Create Monitor"
 

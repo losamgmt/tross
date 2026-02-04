@@ -169,7 +169,7 @@ function getAllowedOrigins() {
     }
 
     // Allow main Vercel domain
-    if (origin === 'https://tross.vercel.app') {
+    if (origin === 'https://trossapp.vercel.app') {
       return callback(null, true);
     }
 
