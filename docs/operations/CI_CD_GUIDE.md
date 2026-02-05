@@ -337,7 +337,7 @@ API Docs: https://tross-api-production.up.railway.app/api-docs
 
 **Current usage:**
 - ~3 minutes per PR (backend + frontend + security)
-- ~8 minutes per main push (includes mobile builds)
+- ~4-5 minutes per main push (includes mobile builds with Gradle caching)
 - **Cost: $0** (public repo) ✅
 
 ### Vercel

@@ -1,6 +1,6 @@
 # Tross Project Status
 
-**Last Updated:** February 3, 2026
+**Last Updated:** February 4, 2026
 
 ---
 
@@ -22,12 +22,14 @@
 - **Mobile-first responsive UX** (touch targets, nav bars, adaptive layouts)
 - **Android APK builds** (debug + release)
 - **iOS builds** (unsigned IPA via CI)
+- **Mobile Auth0 login** (iOS + Android with token exchange)
 
 ### In Progress 🔄
 
 **Mobile App Deployment**
 - [x] Android build working locally + CI
 - [x] iOS build working in CI (macOS runner)
+- [x] Auth0 mobile login working (physical device + emulator)
 - [ ] Apple Developer Account for App Store
 - [ ] Play Store listing
 

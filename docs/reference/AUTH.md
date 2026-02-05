@@ -115,6 +115,34 @@ Return token to frontend
 4. Generate internal JWT with our roles
 5. Return internal JWT to client
 
+### Mobile Auth Flow (iOS/Android)
+
+Mobile uses the Auth0 Flutter SDK with a token exchange step:
+
+```
+User → Auth0 SDK (native browser) → Google/social login
+  ↓
+Auth0 returns id_token + access_token to app
+  ↓
+App calls POST /api/auth0/validate with id_token
+  ↓
+Backend verifies Auth0 token, creates/finds user
+  ↓
+Backend returns app_token (HS256 JWT)
+  ↓
+App uses app_token for all API calls
+```
+
+**Key difference from web:**
+- Web uses PKCE with authorization code flow
+- Mobile uses Auth0 SDK which handles PKCE internally
+- Both exchange Auth0 tokens for backend app_token via `/api/auth0/validate`
+
+**Configuration:**
+- Android: `android/app/build.gradle` with `manifestPlaceholders`
+- iOS: `ios/Runner/Info.plist` with `CFBundleURLSchemes`
+- Both use scheme: `com.tross.auth0`
+
 **Code:**
 ```javascript
 // backend/services/auth/Auth0Strategy.js

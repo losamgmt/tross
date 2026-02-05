@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - Mobile Auth0 Login (2026-02-04)
+
+#### Mobile Authentication Flow
+- **Root Cause**: Mobile was sending Auth0 tokens directly to backend, but backend only accepts its own JWTs signed with `JWT_SECRET`
+- **Solution**: Added token exchange step - mobile now calls `/api/auth0/validate` to swap Auth0 ID token for backend-issued app token
+- **Parity**: Mobile flow now mirrors web PKCE flow (both exchange Auth0 tokens for backend JWTs)
+
+#### CI/CD Optimizations
+- **Shallow Clone**: Added `fetch-depth: 1` to all 8 jobs (faster checkout)
+- **Gradle Caching**: 2-layer cache for Android builds (~50% faster)
+- **Parallel Builds**: Android/iOS now build independently (no web dependency)
+- **Build Time**: Reduced from ~10+ minutes to ~4-5 minutes
+
 ### Added - Mobile Platform Readiness & CI/CD Enhancement (2026-02-03)
 
 #### Mobile UX Enhancements (7 Phases Complete)
