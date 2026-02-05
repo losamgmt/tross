@@ -1,4 +1,7 @@
 // Auth Service - Clean orchestration of authentication flows
+import 'package:auth0_flutter/auth0_flutter.dart'
+    show WebAuthenticationException;
+
 import '../../config/app_config.dart';
 import '../../config/api_endpoints.dart';
 import '../../config/constants.dart';
@@ -193,6 +196,7 @@ class AuthService {
   /// Auth0 Production Login - Works on all platforms (web, iOS, Android)
   Future<bool> loginWithAuth0() async {
     try {
+      ErrorService.logInfo('Starting Auth0 login flow');
       final credentials = await _auth0Service.login();
 
       // Web redirects away, so credentials will be null
@@ -208,9 +212,27 @@ class AuthService {
         return true;
       }
 
+      ErrorService.logWarning('Auth0 login returned null/invalid credentials');
       return false;
-    } catch (e) {
-      ErrorService.logError('Auth0 login failed', error: e);
+    } on WebAuthenticationException catch (e) {
+      // User cancelled is not really an error - don't log as error
+      if (e.isUserCancelledException) {
+        ErrorService.logInfo('Auth0 login cancelled by user');
+      } else {
+        ErrorService.logError(
+          'Auth0 login WebAuthenticationException',
+          error: e,
+          context: {'code': e.code, 'message': e.message},
+        );
+      }
+      return false;
+    } catch (e, stackTrace) {
+      ErrorService.logError(
+        'Auth0 login failed with unexpected error',
+        error: e,
+        stackTrace: stackTrace,
+        context: {'errorType': e.runtimeType.toString()},
+      );
       return false;
     }
   }

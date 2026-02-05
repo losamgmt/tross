@@ -15,8 +15,15 @@ class Auth0Service {
   /// Perform Auth0 login and return credentials
   Future<Credentials?> login() async {
     try {
-      // useHTTPS: false - use custom scheme (com.tross.auth0://) for mobile
-      // useHTTPS: true would require Android App Links / iOS Universal Links setup
+      ErrorService.logInfo(
+        'Auth0 login starting',
+        context: {
+          'domain': AppConfig.auth0Domain,
+          'clientId': AppConfig.auth0ClientId,
+          'scheme': AppConfig.auth0Scheme,
+        },
+      );
+
       final credentials = await _auth0
           .webAuthentication(scheme: AppConfig.auth0Scheme)
           .login();
@@ -30,11 +37,32 @@ class Auth0Service {
       );
 
       return credentials;
-    } catch (e) {
+    } on WebAuthenticationException catch (e) {
+      // Specific Auth0 exception - has detailed error info
       ErrorService.logError(
-        'Auth0 login failed',
+        'Auth0 WebAuthenticationException',
         error: e,
-        context: {'domain': AppConfig.auth0Domain},
+        context: {
+          'code': e.code,
+          'message': e.message,
+          'details': e.details.toString(),
+          'isUserCancelled': e.isUserCancelledException,
+          'domain': AppConfig.auth0Domain,
+          'scheme': AppConfig.auth0Scheme,
+        },
+      );
+      // Re-throw so caller knows it failed
+      rethrow;
+    } catch (e, stackTrace) {
+      ErrorService.logError(
+        'Auth0 login failed (unknown error)',
+        error: e,
+        stackTrace: stackTrace,
+        context: {
+          'errorType': e.runtimeType.toString(),
+          'domain': AppConfig.auth0Domain,
+          'scheme': AppConfig.auth0Scheme,
+        },
       );
       return null;
     }
