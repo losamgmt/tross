@@ -2,13 +2,16 @@
 // Platform-agnostic Auth0 service - automatically uses correct implementation
 // Supports: Web (browser), iOS, Android, Windows, macOS, Linux
 // This is a thin wrapper around Auth0's SDK - we rely on Auth0 for testing their SDK.
+import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:io' show Platform;
+import 'package:http/http.dart' as http;
 import 'auth0_service.dart'; // Mobile implementation (iOS/Android)
 // Conditional import: use real web service on web, stub on VM/test platforms
 import 'auth0_web_service_stub.dart'
     if (dart.library.html) 'auth0_web_service.dart';
 import '../error_service.dart';
+import '../../config/app_config.dart';
 
 /// Credentials returned from Auth0 (platform-agnostic)
 class Auth0Credentials {
@@ -74,11 +77,27 @@ class Auth0PlatformService {
         final credentials = await _mobileService!.login();
 
         if (credentials != null && credentials.accessToken.isNotEmpty) {
-          return Auth0Credentials(
-            accessToken: credentials.accessToken,
-            idToken: credentials.idToken,
-            refreshToken: credentials.refreshToken,
+          // Exchange Auth0 ID token with backend for app token
+          // This mirrors the web flow's _validateTokenAndGetProfile
+          final backendTokens = await _exchangeAuth0TokenForAppToken(
+            credentials.accessToken,
+            credentials.idToken,
           );
+
+          if (backendTokens != null) {
+            return Auth0Credentials(
+              accessToken: credentials.accessToken,
+              appToken: backendTokens['app_token'] as String?,
+              idToken: credentials.idToken,
+              refreshToken: backendTokens['refresh_token'] as String?,
+              userInfo: backendTokens['user'] as Map<String, dynamic>?,
+            );
+          } else {
+            ErrorService.logError(
+              'Mobile Auth0: Backend token exchange failed',
+            );
+            return null;
+          }
         }
         return null;
       } else {
@@ -189,6 +208,64 @@ class Auth0PlatformService {
     } catch (e) {
       ErrorService.logError('Logout failed', error: e);
       return false;
+    }
+  }
+
+  /// Exchange Auth0 token with backend to get app token (mobile only)
+  ///
+  /// This mirrors the web flow's _validateTokenAndGetProfile:
+  /// 1. Send Auth0 ID token to backend /auth0/validate
+  /// 2. Backend verifies token with Auth0
+  /// 3. Backend creates/finds user in database
+  /// 4. Backend returns app_token (JWT signed with backend secret)
+  static Future<Map<String, dynamic>?> _exchangeAuth0TokenForAppToken(
+    String accessToken,
+    String? idToken,
+  ) async {
+    if (idToken == null || idToken.isEmpty) {
+      ErrorService.logError('Mobile Auth0: No ID token to exchange');
+      return null;
+    }
+
+    try {
+      ErrorService.logInfo(
+        'Mobile Auth0: Exchanging ID token with backend',
+        context: {'baseUrl': AppConfig.baseUrl},
+      );
+
+      final response = await http.post(
+        Uri.parse('${AppConfig.baseUrl}/auth0/validate'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+        body: json.encode({'id_token': idToken}),
+      );
+
+      if (response.statusCode == 200) {
+        final responseBody = json.decode(response.body);
+        // Unwrap standard response envelope: { success, data, timestamp }
+        final data = responseBody['data'] ?? responseBody;
+
+        ErrorService.logInfo(
+          'Mobile Auth0: Backend token exchange successful',
+          context: {
+            'hasAppToken': data['app_token'] != null,
+            'hasRefreshToken': data['refresh_token'] != null,
+          },
+        );
+
+        return data;
+      } else {
+        ErrorService.logError(
+          'Mobile Auth0: Backend validation failed',
+          context: {'status': response.statusCode, 'body': response.body},
+        );
+        return null;
+      }
+    } catch (e) {
+      ErrorService.logError('Mobile Auth0: Token exchange error', error: e);
+      return null;
     }
   }
 }
