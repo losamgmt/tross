@@ -217,4 +217,14 @@ module.exports = {
 
   // Factory for custom rate limiters (allows extending with new limiters)
   createRateLimiter,
+
+  // Exported for testing - verify defaults are professional standards
+  _config: {
+    RATE_LIMIT_WINDOW_MS,
+    RATE_LIMIT_MAX_REQUESTS,
+    AUTH_RATE_LIMIT_WINDOW_MS,
+    AUTH_RATE_LIMIT_MAX_REQUESTS,
+    REFRESH_RATE_LIMIT_WINDOW_MS,
+    REFRESH_RATE_LIMIT_MAX_REQUESTS,
+  },
 };

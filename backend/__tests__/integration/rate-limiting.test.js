@@ -93,12 +93,10 @@ describe("Rate Limiting (P1-6)", () => {
       expect(apiLimiterSection).toContain("max: RATE_LIMIT_MAX_REQUESTS");
 
       // Verify env var defaults are professional standards (1000 req/15min)
-      expect(rateLimitFile).toContain(
-        'process.env.RATE_LIMIT_WINDOW_MS || "900000"',
-      );
-      expect(rateLimitFile).toContain(
-        'process.env.RATE_LIMIT_MAX_REQUESTS || "1000"',
-      );
+      // Test actual VALUES, not source code syntax (platform-agnostic)
+      const rateLimitModule = require('../../middleware/rate-limit');
+      expect(rateLimitModule._config.RATE_LIMIT_WINDOW_MS).toBe(900000);
+      expect(rateLimitModule._config.RATE_LIMIT_MAX_REQUESTS).toBe(1000);
 
       // Factory pattern: Should return bypass in test/dev, real limiter in production
       expect(rateLimitFile).toContain(
