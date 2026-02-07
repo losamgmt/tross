@@ -35,6 +35,7 @@ import '../../core/routing/app_routes.dart';
 import '../../core/routing/route_guard.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/generic_entity_service.dart';
+import '../../services/nav_config_loader.dart';
 import '../../services/nav_menu_builder.dart';
 import '../atoms/atoms.dart';
 import '../molecules/menus/adaptive_nav_menu.dart';
@@ -145,6 +146,11 @@ class AdaptiveShell extends StatelessWidget {
           constraints.maxWidth,
         );
 
+        // Get mobile navigation style from config (bottomNav or drawer, not both)
+        final mobileNavStyle = NavMenuBuilder.getMobileNavigationStyle();
+        final useBottomNav = mobileNavStyle == MobileNavStyle.bottomNav;
+        final useDrawer = mobileNavStyle == MobileNavStyle.drawer;
+
         // HEADER-OUTER PATTERN: Full-width header, then sidebar + content below
         return Scaffold(
           appBar: showAppBar
@@ -153,9 +159,12 @@ class AdaptiveShell extends StatelessWidget {
                   authProvider,
                   userItems,
                   isWideScreen,
+                  // Hide hamburger when using bottom nav on mobile
+                  showHamburger: !isWideScreen && useDrawer,
                 )
               : null,
-          drawer: isWideScreen
+          // Drawer only shown when mobileNavStyle is 'drawer'
+          drawer: isWideScreen || !useDrawer
               ? null
               : Drawer(
                   width: AppBreakpoints.sidebarWidth,
@@ -167,7 +176,8 @@ class AdaptiveShell extends StatelessWidget {
                     showHeader: false, // Header is global now
                   ),
                 ),
-          bottomNavigationBar: !isWideScreen && showBottomNav
+          // Bottom nav only shown when mobileNavStyle is 'bottomNav'
+          bottomNavigationBar: !isWideScreen && showBottomNav && useBottomNav
               ? MobileNavBar.fromItems(
                   allItems: mobileNavItems ?? sidebarItems,
                   currentRoute: currentRoute,
@@ -206,8 +216,9 @@ class AdaptiveShell extends StatelessWidget {
     BuildContext context,
     AuthProvider authProvider,
     List<NavMenuItem> userItems,
-    bool isWideScreen,
-  ) {
+    bool isWideScreen, {
+    bool showHamburger = true,
+  }) {
     return AppBar(
       backgroundColor: AppColors.brandPrimary,
       foregroundColor: AppColors.white,
@@ -262,7 +273,8 @@ class AdaptiveShell extends StatelessWidget {
         ],
       ),
       centerTitle: false,
-      automaticallyImplyLeading: !isWideScreen, // Hamburger on narrow screens
+      // Only show hamburger on narrow screens when using drawer mode
+      automaticallyImplyLeading: !isWideScreen && showHamburger,
       actions: [
         // Notification bell with dropdown
         const _NotificationTraySection(),

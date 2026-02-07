@@ -1,12 +1,15 @@
 {
   "$schema": "./nav-config.schema.json",
-  "version": "1.5.0",
+  "version": "1.6.0",
+
+  "mobileNavigationStyle": "bottomNav",
 
   "_comments": {
     "permissionResource": "Maps to permissions.json resource for nav visibility. Distinct from entity-metadata.json rlsResource which controls row-level data access.",
     "syntheticResources": "dashboard, admin_panel, preferences are synthetic (non-entity) resources defined in permissions.json for nav visibility checks.",
     "sidebarStrategies": "Define which groups/entities appear in sidebar based on route context. Routes declare their strategy via routeStrategies.",
-    "menuBehaviors": "Defines display behavior for each menu type. displayMode: 'dropdown' = always anchored to trigger, 'adaptive' = responsive based on screen size (popup on desktop, bottom sheet on mobile)."
+    "menuBehaviors": "Defines display behavior for each menu type. displayMode: 'dropdown' = always anchored to trigger, 'adaptive' = responsive based on screen size (popup on desktop, bottom sheet on mobile).",
+    "mobileNavigationStyle": "Mobile navigation pattern: 'bottomNav' = bottom navigation bar (modern Material, no hamburger), 'drawer' = hamburger menu with side drawer (no bottom nav). One or the other, not both."
   },
 
   "menuBehaviors": {
