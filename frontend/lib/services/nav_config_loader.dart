@@ -279,6 +279,20 @@ enum ConfigDisplayMode {
   dropdown,
 }
 
+/// Mobile navigation style - controls which nav pattern is used on mobile
+///
+/// Only one pattern is shown at a time (not both).
+/// This is config-driven for deployment flexibility.
+enum MobileNavStyle {
+  /// Bottom navigation bar (modern Material 3, no hamburger/drawer)
+  /// Best for: 3-5 primary destinations, thumb-friendly
+  bottomNav,
+
+  /// Hamburger menu with side drawer (no bottom bar)
+  /// Best for: many menu items, hierarchical navigation
+  drawer,
+}
+
 /// Menu behavior configuration from nav-config.json
 ///
 /// Defines how a specific menu type (userMenu, sidebar, mobileNav) should
@@ -311,6 +325,9 @@ class NavConfig {
   final Map<String, String> routeStrategies;
   final Map<String, MenuBehavior> menuBehaviors;
 
+  /// Mobile navigation style: bottomNav or drawer (one, not both)
+  final MobileNavStyle mobileNavigationStyle;
+
   const NavConfig({
     required this.version,
     required this.publicRoutes,
@@ -320,6 +337,7 @@ class NavConfig {
     this.sidebarStrategies = const {},
     this.routeStrategies = const {},
     this.menuBehaviors = const {},
+    this.mobileNavigationStyle = MobileNavStyle.bottomNav,
   });
 
   factory NavConfig.fromJson(Map<String, dynamic> json) {
@@ -394,6 +412,14 @@ class NavConfig {
       }
     }
 
+    // Parse mobile navigation style
+    final mobileNavStyleString =
+        json['mobileNavigationStyle'] as String? ?? 'bottomNav';
+    final mobileNavigationStyle = switch (mobileNavStyleString) {
+      'drawer' => MobileNavStyle.drawer,
+      _ => MobileNavStyle.bottomNav,
+    };
+
     return NavConfig(
       version: json['version'] as String? ?? '1.0.0',
       publicRoutes: publicRoutes,
@@ -403,6 +429,7 @@ class NavConfig {
       sidebarStrategies: sidebarStrategies,
       routeStrategies: routeStrategies,
       menuBehaviors: menuBehaviors,
+      mobileNavigationStyle: mobileNavigationStyle,
     );
   }
 

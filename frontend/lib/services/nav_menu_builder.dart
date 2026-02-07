@@ -53,6 +53,20 @@ class NavMenuBuilder {
     };
   }
 
+  /// Get the mobile navigation style from config
+  ///
+  /// Returns MobileNavStyle.bottomNav or MobileNavStyle.drawer.
+  /// Only ONE navigation pattern is shown on mobile (not both).
+  ///
+  /// - bottomNav: Bottom navigation bar (modern Material 3, no hamburger)
+  /// - drawer: Hamburger menu with side drawer (no bottom bar)
+  static MobileNavStyle getMobileNavigationStyle() {
+    if (!NavConfigService.isInitialized) {
+      return MobileNavStyle.bottomNav; // Default: modern bottom nav
+    }
+    return NavConfigService.config.mobileNavigationStyle;
+  }
+
   /// Build sidebar navigation items (main app navigation)
   ///
   /// Includes Dashboard + all entity links organized by group.

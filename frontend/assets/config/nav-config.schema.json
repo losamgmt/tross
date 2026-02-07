@@ -138,6 +138,17 @@
           }
         }
       }
+    },
+    "mobileNavigationStyle": {
+      "type": "string",
+      "enum": ["bottomNav", "drawer"],
+      "default": "bottomNav",
+      "description": "Mobile navigation pattern: bottomNav (bottom bar, no hamburger) or drawer (hamburger menu, no bottom bar). One or the other, not both."
+    },
+    "_comments": {
+      "type": "object",
+      "description": "Documentation comments (ignored at runtime)",
+      "additionalProperties": { "type": "string" }
     }
   }
 }
