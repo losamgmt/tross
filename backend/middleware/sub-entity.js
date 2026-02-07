@@ -15,7 +15,7 @@
  * - requireServiceConfigured(checkFn, serviceName) - Ensure external service is available
  */
 
-const AppError = require("../utils/app-error");
+const AppError = require('../utils/app-error');
 
 /**
  * Middleware Factory: Attach parent entity metadata to request
@@ -46,9 +46,9 @@ function requireParentPermission(operation) {
     if (!rlsResource) {
       return next(
         new AppError(
-          "Parent entity metadata not available",
+          'Parent entity metadata not available',
           500,
-          "INTERNAL_ERROR",
+          'INTERNAL_ERROR',
         ),
       );
     }
@@ -60,9 +60,9 @@ function requireParentPermission(operation) {
       const actionVerb = getActionVerb(operation);
       return next(
         new AppError(
-          `You don't have permission to ${actionVerb} this ${entityKey || "resource"}`,
+          `You don't have permission to ${actionVerb} this ${entityKey || 'resource'}`,
           403,
-          "FORBIDDEN",
+          'FORBIDDEN',
         ),
       );
     }
@@ -78,10 +78,10 @@ function requireParentPermission(operation) {
  */
 function getActionVerb(operation) {
   const verbs = {
-    read: "view",
-    create: "add to",
-    update: "modify",
-    delete: "delete from",
+    read: 'view',
+    create: 'add to',
+    update: 'modify',
+    delete: 'delete from',
   };
   return verbs[operation] || operation;
 }
@@ -101,7 +101,7 @@ function requireServiceConfigured(checkFn, serviceName) {
         new AppError(
           `${serviceName} is not configured`,
           503,
-          "SERVICE_UNAVAILABLE",
+          'SERVICE_UNAVAILABLE',
         ),
       );
     }
@@ -129,7 +129,7 @@ function requireParentExists(existsFn) {
           new AppError(
             `${entityKey} with id ${parentId} not found`,
             404,
-            "NOT_FOUND",
+            'NOT_FOUND',
           ),
         );
       }

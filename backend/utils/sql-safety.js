@@ -8,7 +8,7 @@
  * @module utils/sql-safety
  */
 
-const AppError = require("./app-error");
+const AppError = require('./app-error');
 
 /**
  * Valid SQL identifier pattern
@@ -38,12 +38,12 @@ const MAX_IDENTIFIER_LENGTH = 63;
  * sanitizeIdentifier('work_orders');     // 'work_orders'
  * sanitizeIdentifier('users; DROP--');   // throws Error
  */
-function sanitizeIdentifier(identifier, context = "identifier") {
-  if (typeof identifier !== "string") {
+function sanitizeIdentifier(identifier, context = 'identifier') {
+  if (typeof identifier !== 'string') {
     throw new AppError(
       `Invalid ${context}: must be a string, got ${typeof identifier}`,
       400,
-      "BAD_REQUEST",
+      'BAD_REQUEST',
     );
   }
 
@@ -51,7 +51,7 @@ function sanitizeIdentifier(identifier, context = "identifier") {
     throw new AppError(
       `Invalid ${context}: cannot be empty`,
       400,
-      "BAD_REQUEST",
+      'BAD_REQUEST',
     );
   }
 
@@ -59,16 +59,16 @@ function sanitizeIdentifier(identifier, context = "identifier") {
     throw new AppError(
       `Invalid ${context}: exceeds maximum length of ${MAX_IDENTIFIER_LENGTH}`,
       400,
-      "BAD_REQUEST",
+      'BAD_REQUEST',
     );
   }
 
   if (!VALID_IDENTIFIER_PATTERN.test(identifier)) {
     throw new AppError(
       `Invalid ${context}: "${identifier}" contains invalid characters. ` +
-        "Only letters, numbers, and underscores are allowed.",
+        'Only letters, numbers, and underscores are allowed.',
       400,
-      "BAD_REQUEST",
+      'BAD_REQUEST',
     );
   }
 
@@ -87,22 +87,22 @@ function sanitizeIdentifier(identifier, context = "identifier") {
 function validateFieldAgainstWhitelist(
   fieldName,
   allowedFields,
-  context = "field",
+  context = 'field',
 ) {
   if (!Array.isArray(allowedFields)) {
     throw new AppError(
       `${context} whitelist must be an array`,
       400,
-      "BAD_REQUEST",
+      'BAD_REQUEST',
     );
   }
 
   if (!allowedFields.includes(fieldName)) {
     throw new AppError(
       `Invalid ${context}: "${fieldName}" is not allowed. ` +
-        `Allowed values: ${allowedFields.join(", ")}`,
+        `Allowed values: ${allowedFields.join(', ')}`,
       400,
-      "BAD_REQUEST",
+      'BAD_REQUEST',
     );
   }
 

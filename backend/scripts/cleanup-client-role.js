@@ -6,8 +6,8 @@
  * 2. Deletes the old 'client' role record
  */
 
-const { Client } = require("pg");
-const { DATABASE } = require("../config/constants");
+const { Client } = require('pg');
+const { DATABASE } = require('../config/constants');
 
 // Database configurations
 const configs = {
@@ -50,7 +50,7 @@ async function cleanupClientRole(config, envName) {
 
     // Check if anyone has the 'client' role
     const usersCheck = await client.query(
-      "SELECT COUNT(*) FROM users WHERE role_id = $1",
+      'SELECT COUNT(*) FROM users WHERE role_id = $1',
       [clientRoleId],
     );
     const userCount = parseInt(usersCheck.rows[0].count);
@@ -74,7 +74,7 @@ async function cleanupClientRole(config, envName) {
 
     // Update any users from 'client' to 'customer'
     if (userCount > 0) {
-      await client.query("UPDATE users SET role_id = $1 WHERE role_id = $2", [
+      await client.query('UPDATE users SET role_id = $1 WHERE role_id = $2', [
         customerRoleId,
         clientRoleId,
       ]);
@@ -89,7 +89,7 @@ async function cleanupClientRole(config, envName) {
 
     // Verify remaining roles
     const roles = await client.query(
-      "SELECT name, priority FROM roles ORDER BY priority DESC",
+      'SELECT name, priority FROM roles ORDER BY priority DESC',
     );
     console.log(`\n📊 Roles in ${envName}:`);
     roles.rows.forEach((r) => {
@@ -105,25 +105,25 @@ async function cleanupClientRole(config, envName) {
 }
 
 async function main() {
-  console.log("╔════════════════════════════════════════════════════════════╗");
+  console.log('╔════════════════════════════════════════════════════════════╗');
   console.log('║       Cleanup Old "client" Role → "customer"              ║');
-  console.log("╚════════════════════════════════════════════════════════════╝");
+  console.log('╚════════════════════════════════════════════════════════════╝');
 
   try {
-    await cleanupClientRole(configs.development, "DEVELOPMENT");
-    await cleanupClientRole(configs.test, "TEST");
+    await cleanupClientRole(configs.development, 'DEVELOPMENT');
+    await cleanupClientRole(configs.test, 'TEST');
 
     console.log(
-      "╔════════════════════════════════════════════════════════════╗",
+      '╔════════════════════════════════════════════════════════════╗',
     );
     console.log(
-      "║               ✅ Cleanup Completed ✅                      ║",
+      '║               ✅ Cleanup Completed ✅                      ║',
     );
     console.log(
-      "╚════════════════════════════════════════════════════════════╝",
+      '╚════════════════════════════════════════════════════════════╝',
     );
   } catch (error) {
-    console.error("\n❌ Cleanup failed:", error.message);
+    console.error('\n❌ Cleanup failed:', error.message);
     process.exit(1);
   }
 }

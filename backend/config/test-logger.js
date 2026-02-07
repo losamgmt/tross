@@ -12,7 +12,7 @@
  *   testLogger.error('Test failed:', error);
  */
 
-const isTest = process.env.NODE_ENV === "test";
+const isTest = process.env.NODE_ENV === 'test';
 
 // Captured logs for test assertions
 const logs = [];
@@ -25,7 +25,7 @@ const testLogger = {
    */
   log: (...args) => {
     if (isTest) {
-      logs.push(args.join(" "));
+      logs.push(args.join(' '));
     } else {
       console.log(...args);
     }
@@ -37,7 +37,7 @@ const testLogger = {
    */
   error: (...args) => {
     if (isTest) {
-      errors.push(args.join(" "));
+      errors.push(args.join(' '));
     } else {
       console.error(...args);
     }

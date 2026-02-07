@@ -23,16 +23,16 @@
  * - FileAttachmentService handles all database operations
  */
 
-const express = require("express");
-const { authenticateToken } = require("../middleware/auth");
-const { validateIdParam } = require("../validators");
-const { storageService } = require("../services/storage-service");
-const FileAttachmentService = require("../services/file-attachment-service");
-const ResponseFormatter = require("../utils/response-formatter");
-const { logger } = require("../config/logger");
-const { asyncHandler } = require("../middleware/utils");
-const AppError = require("../utils/app-error");
-const { FILE_ATTACHMENTS } = require("../config/constants");
+const express = require('express');
+const { authenticateToken } = require('../middleware/auth');
+const { validateIdParam } = require('../validators');
+const { storageService } = require('../services/storage-service');
+const FileAttachmentService = require('../services/file-attachment-service');
+const ResponseFormatter = require('../utils/response-formatter');
+const { logger } = require('../config/logger');
+const { asyncHandler } = require('../middleware/utils');
+const AppError = require('../utils/app-error');
+const { FILE_ATTACHMENTS } = require('../config/constants');
 
 // Generic sub-entity middleware
 const {
@@ -40,13 +40,13 @@ const {
   requireParentPermission,
   requireServiceConfigured,
   requireParentExists,
-} = require("../middleware/sub-entity");
+} = require('../middleware/sub-entity');
 
 // File-specific middleware
 const {
   validateFileHeaders,
   validateFileBody,
-} = require("../middleware/file-upload");
+} = require('../middleware/file-upload');
 
 /**
  * Storage configuration check function
@@ -88,12 +88,12 @@ function createFileSubRouter(metadata) {
   router.use(authenticateToken);
 
   // Validate the parent entity :id param for all file routes
-  router.use(validateIdParam({ paramName: "id" }));
+  router.use(validateIdParam({ paramName: 'id' }));
 
   // Storage check middleware (used by routes that need R2)
   const requireStorage = requireServiceConfigured(
     isStorageConfigured,
-    "File storage",
+    'File storage',
   );
 
   // =============================================================================
@@ -111,8 +111,8 @@ function createFileSubRouter(metadata) {
    * 5. requireParentExists - DB check for parent entity
    */
   router.post(
-    "/",
-    requireParentPermission("update"),
+    '/',
+    requireParentPermission('update'),
     validateFileHeaders,
     validateFileBody,
     requireStorage,
@@ -137,7 +137,7 @@ function createFileSubRouter(metadata) {
           entityType: entityKey,
           entityId: String(parentId),
           category,
-          uploadedBy: String(req.user?.id || "unknown"),
+          uploadedBy: String(req.user?.id || 'unknown'),
         },
       });
 
@@ -168,8 +168,8 @@ function createFileSubRouter(metadata) {
    * GET /:id/files - List all files attached to an entity
    */
   router.get(
-    "/",
-    requireParentPermission("read"),
+    '/',
+    requireParentPermission('read'),
     requireStorage,
     asyncHandler(async (req, res) => {
       const parentId = parseInt(req.params.id, 10);
@@ -201,9 +201,9 @@ function createFileSubRouter(metadata) {
    * GET /:id/files/:fileId - Get a single file with download URL
    */
   router.get(
-    "/:fileId",
-    validateIdParam({ paramName: "fileId" }),
-    requireParentPermission("read"),
+    '/:fileId',
+    validateIdParam({ paramName: 'fileId' }),
+    requireParentPermission('read'),
     requireStorage,
     asyncHandler(async (req, res) => {
       const parentId = parseInt(req.params.id, 10);
@@ -216,7 +216,7 @@ function createFileSubRouter(metadata) {
         file.entity_type !== entityKey ||
         file.entity_id !== parentId
       ) {
-        throw new AppError("File not found", 404, "NOT_FOUND");
+        throw new AppError('File not found', 404, 'NOT_FOUND');
       }
 
       // Generate download URL
@@ -233,9 +233,9 @@ function createFileSubRouter(metadata) {
    * DELETE /:id/files/:fileId - Soft delete a file
    */
   router.delete(
-    "/:fileId",
-    validateIdParam({ paramName: "fileId" }),
-    requireParentPermission("update"),
+    '/:fileId',
+    validateIdParam({ paramName: 'fileId' }),
+    requireParentPermission('update'),
     asyncHandler(async (req, res) => {
       const parentId = parseInt(req.params.id, 10);
       const fileId = parseInt(req.params.fileId, 10);
@@ -247,13 +247,13 @@ function createFileSubRouter(metadata) {
         file.entity_type !== entityKey ||
         file.entity_id !== parentId
       ) {
-        throw new AppError("File not found", 404, "NOT_FOUND");
+        throw new AppError('File not found', 404, 'NOT_FOUND');
       }
 
       // Soft delete
       await FileAttachmentService.softDelete(fileId);
 
-      logger.info("File deleted by user", {
+      logger.info('File deleted by user', {
         fileId,
         entityType: entityKey,
         entityId: parentId,

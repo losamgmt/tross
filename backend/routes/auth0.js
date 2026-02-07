@@ -4,26 +4,26 @@
  * ALWAYS uses Auth0Strategy - independent of AUTH_MODE.
  * This allows Auth0 login to work alongside dev auth.
  */
-const express = require("express");
+const express = require('express');
 // crypto and User model removed - not used in this file
-const ResponseFormatter = require("../utils/response-formatter");
-const Auth0Strategy = require("../services/auth/Auth0Strategy");
-const tokenService = require("../services/token-service");
-const auditService = require("../services/audit-service");
+const ResponseFormatter = require('../utils/response-formatter');
+const Auth0Strategy = require('../services/auth/Auth0Strategy');
+const tokenService = require('../services/token-service');
+const auditService = require('../services/audit-service');
 const {
   AuditActions,
   ResourceTypes,
   AuditResults,
-} = require("../services/audit-constants");
-const { logger } = require("../config/logger");
-const { refreshLimiter } = require("../middleware/rate-limit");
-const { getClientIp, getUserAgent } = require("../utils/request-helpers");
-const { asyncHandler } = require("../middleware/utils");
+} = require('../services/audit-constants');
+const { logger } = require('../config/logger');
+const { refreshLimiter } = require('../middleware/rate-limit');
+const { getClientIp, getUserAgent } = require('../utils/request-helpers');
+const { asyncHandler } = require('../middleware/utils');
 const {
   validateAuthCallback,
   validateAuth0Token,
   validateAuth0Refresh,
-} = require("../validators");
+} = require('../validators');
 
 const router = express.Router();
 
@@ -82,19 +82,19 @@ const auth0Strategy = new Auth0Strategy();
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post("/callback", validateAuthCallback, async (req, res) => {
+router.post('/callback', validateAuthCallback, async (req, res) => {
   try {
     const { code, redirect_uri } = req.body;
 
-    logger.info("🔐 Auth0 callback: Exchanging authorization code for tokens");
+    logger.info('🔐 Auth0 callback: Exchanging authorization code for tokens');
 
     // Use Auth0 strategy directly - always works regardless of AUTH_MODE
     const authResult = await auth0Strategy.authenticate({
       code,
-      redirect_uri: redirect_uri || "http://localhost:8080/callback",
+      redirect_uri: redirect_uri || 'http://localhost:8080/callback',
     });
 
-    logger.info("🔐 Auth0 authentication successful", {
+    logger.info('🔐 Auth0 authentication successful', {
       userId: authResult.user.id,
       email: authResult.user.email,
       role: authResult.user.role,
@@ -107,7 +107,7 @@ router.post("/callback", validateAuthCallback, async (req, res) => {
       authResult.user,
       ipAddress,
       userAgent,
-      "auth0",
+      'auth0',
       authResult.auth0Id, // Pass auth0Id explicitly (user object has it filtered out)
     );
 
@@ -125,10 +125,10 @@ router.post("/callback", validateAuthCallback, async (req, res) => {
       access_token: tokens.accessToken,
       refresh_token: tokens.refreshToken,
       user: authResult.user,
-      provider: "auth0",
+      provider: 'auth0',
     });
   } catch (error) {
-    logger.error("🔐 Auth0 callback failed", {
+    logger.error('🔐 Auth0 callback failed', {
       error: error.message,
       stack: error.stack,
     });
@@ -140,7 +140,7 @@ router.post("/callback", validateAuthCallback, async (req, res) => {
       userId: null,
       action: AuditActions.LOGIN_FAILED,
       resourceType: ResourceTypes.AUTH,
-      newValues: { email: req.body.email || "unknown", reason: error.message },
+      newValues: { email: req.body.email || 'unknown', reason: error.message },
       ipAddress,
       userAgent,
       result: AuditResults.FAILURE,
@@ -203,7 +203,7 @@ router.post("/callback", validateAuthCallback, async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post("/validate", validateAuth0Token, async (req, res) => {
+router.post('/validate', validateAuth0Token, async (req, res) => {
   try {
     // Extract ID token from request body (frontend sends it there)
     const { id_token } = req.body;
@@ -211,7 +211,7 @@ router.post("/validate", validateAuth0Token, async (req, res) => {
     // Use Auth0 strategy to validate ID token and generate app token
     const result = await auth0Strategy.validateIdToken(id_token);
 
-    logger.info("🔐 Auth0: User authenticated", {
+    logger.info('🔐 Auth0: User authenticated', {
       userId: result.user.id,
       email: result.user.email,
     });
@@ -224,7 +224,7 @@ router.post("/validate", validateAuth0Token, async (req, res) => {
       result.user,
       ipAddress,
       userAgent,
-      "auth0",
+      'auth0',
       result.auth0Id, // Pass auth0Id explicitly (user object has it filtered out)
     );
 
@@ -233,7 +233,7 @@ router.post("/validate", validateAuth0Token, async (req, res) => {
       userId: result.user.id,
       action: AuditActions.LOGIN,
       resourceType: ResourceTypes.AUTH,
-      newValues: { provider: "auth0", method: "validate" },
+      newValues: { provider: 'auth0', method: 'validate' },
       ipAddress,
       userAgent,
       result: AuditResults.SUCCESS,
@@ -244,10 +244,10 @@ router.post("/validate", validateAuth0Token, async (req, res) => {
       app_token: tokens.accessToken,
       refresh_token: tokens.refreshToken,
       user: result.user,
-      provider: "auth0",
+      provider: 'auth0',
     });
   } catch (error) {
-    logger.error("🔐 Auth0 token validation failed", {
+    logger.error('🔐 Auth0 token validation failed', {
       error: error.message,
     });
 
@@ -296,7 +296,7 @@ router.post("/validate", validateAuth0Token, async (req, res) => {
  *               $ref: '#/components/schemas/Error'
  */
 router.post(
-  "/refresh",
+  '/refresh',
   refreshLimiter,
   validateAuth0Refresh,
   asyncHandler(async (req, res) => {
@@ -341,14 +341,14 @@ router.post(
  *               $ref: '#/components/schemas/Error'
  */
 router.get(
-  "/logout",
+  '/logout',
   asyncHandler(async (req, res) => {
     const result = await auth0Strategy.logout();
 
     ResponseFormatter.success(
       res,
       { logout_url: result.logoutUrl },
-      { message: "Redirect to logout_url to complete Auth0 logout" },
+      { message: 'Redirect to logout_url to complete Auth0 logout' },
     );
   }),
 );

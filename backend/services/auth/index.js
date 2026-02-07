@@ -14,7 +14,7 @@
  *   - 'production' or 'auth0' → Auth0Strategy (OAuth2/OIDC)
  */
 
-const { AuthStrategyFactory, AUTH_MODES } = require("./AuthStrategyFactory");
+const { AuthStrategyFactory, AUTH_MODES } = require('./AuthStrategyFactory');
 
 /**
  * Unified Authentication Service

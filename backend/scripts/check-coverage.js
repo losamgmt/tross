@@ -11,23 +11,23 @@
  *   node scripts/check-coverage.js
  */
 
-const fs = require("fs");
-const path = require("path");
+const fs = require('fs');
+const path = require('path');
 
 // Import threshold from SSOT
-const { COVERAGE_THRESHOLD } = require("../config/coverage-standards");
+const { COVERAGE_THRESHOLD } = require('../config/coverage-standards');
 
-const COVERAGE_FILE = path.join(__dirname, "../coverage/coverage-summary.json");
+const COVERAGE_FILE = path.join(__dirname, '../coverage/coverage-summary.json');
 
 function checkCoverage() {
-  console.log("\n📊 Coverage Threshold Check");
+  console.log('\n📊 Coverage Threshold Check');
   console.log(
     `Required: ${COVERAGE_THRESHOLD}% for all metrics (from coverage-standards.js)\n`,
   );
 
   // Check if coverage file exists
   if (!fs.existsSync(COVERAGE_FILE)) {
-    console.error("❌ Coverage file not found:", COVERAGE_FILE);
+    console.error('❌ Coverage file not found:', COVERAGE_FILE);
     console.error(
       '   Run "npm run test:coverage" first to generate coverage data.',
     );
@@ -37,9 +37,9 @@ function checkCoverage() {
   // Read coverage summary
   let coverageData;
   try {
-    coverageData = JSON.parse(fs.readFileSync(COVERAGE_FILE, "utf8"));
+    coverageData = JSON.parse(fs.readFileSync(COVERAGE_FILE, 'utf8'));
   } catch (error) {
-    console.error("❌ Failed to parse coverage file:", error.message);
+    console.error('❌ Failed to parse coverage file:', error.message);
     process.exit(1);
   }
 
@@ -51,7 +51,7 @@ function checkCoverage() {
   }
 
   // Check each metric
-  const metrics = ["lines", "statements", "functions", "branches"];
+  const metrics = ['lines', 'statements', 'functions', 'branches'];
   const results = [];
   let allPassed = true;
 
@@ -66,8 +66,8 @@ function checkCoverage() {
     const passed = percentage >= COVERAGE_THRESHOLD;
     allPassed = allPassed && passed;
 
-    const icon = passed ? "✅" : "❌";
-    const status = passed ? "PASS" : "FAIL";
+    const icon = passed ? '✅' : '❌';
+    const status = passed ? 'PASS' : 'FAIL';
 
     results.push({
       metric: metric.padEnd(12),
@@ -80,8 +80,8 @@ function checkCoverage() {
   });
 
   // Display results
-  console.log("Metric       Coverage    Status    Covered/Total");
-  console.log("─".repeat(55));
+  console.log('Metric       Coverage    Status    Covered/Total');
+  console.log('─'.repeat(55));
 
   results.forEach((r) => {
     console.log(
@@ -89,11 +89,11 @@ function checkCoverage() {
     );
   });
 
-  console.log("─".repeat(55));
+  console.log('─'.repeat(55));
 
   // Final verdict
   if (allPassed) {
-    console.log("\n✅ All coverage thresholds met!\n");
+    console.log('\n✅ All coverage thresholds met!\n');
     process.exit(0);
   } else {
     console.log(

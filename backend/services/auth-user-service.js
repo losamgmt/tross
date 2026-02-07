@@ -12,10 +12,10 @@
  *   const user = await AuthUserService.findOrCreateFromAuth0(auth0Data);
  */
 
-const GenericEntityService = require("./generic-entity-service");
-const db = require("../db/connection");
-const { logger } = require("../config/logger");
-const AppError = require("../utils/app-error");
+const GenericEntityService = require('./generic-entity-service');
+const db = require('../db/connection');
+const { logger } = require('../config/logger');
+const AppError = require('../utils/app-error');
 
 class AuthUserService {
   /**
@@ -50,7 +50,7 @@ class AuthUserService {
     const {
       mapAuth0ToUser,
       validateAuth0Data,
-    } = require("../utils/auth0-mapper");
+    } = require('../utils/auth0-mapper');
 
     // Validate Auth0 data
     validateAuth0Data(auth0Data);
@@ -58,13 +58,13 @@ class AuthUserService {
     try {
       // Step 1: Try to find by Auth0 ID
       let user = await GenericEntityService.findByField(
-        "user",
-        "auth0_id",
+        'user',
+        'auth0_id',
         auth0Data.sub,
       );
 
       if (user) {
-        logger.debug("User found by auth0_id", {
+        logger.debug('User found by auth0_id', {
           auth0Id: auth0Data.sub,
           userId: user.id,
         });
@@ -74,28 +74,28 @@ class AuthUserService {
       // Step 2: Try account linking by email
       if (auth0Data.email) {
         const existingUser = await GenericEntityService.findByField(
-          "user",
-          "email",
+          'user',
+          'email',
           auth0Data.email,
         );
 
         if (existingUser && existingUser.is_active) {
           // Link accounts: update auth0_id on existing user
-          logger.info("Linking Auth0 account to existing user", {
+          logger.info('Linking Auth0 account to existing user', {
             auth0Id: auth0Data.sub,
             email: auth0Data.email,
             userId: existingUser.id,
           });
 
           await db.query(
-            "UPDATE users SET auth0_id = $1, updated_at = CURRENT_TIMESTAMP WHERE email = $2",
+            'UPDATE users SET auth0_id = $1, updated_at = CURRENT_TIMESTAMP WHERE email = $2',
             [auth0Data.sub, auth0Data.email],
           );
 
           // Re-fetch to get updated user with JOINs
           user = await GenericEntityService.findByField(
-            "user",
-            "auth0_id",
+            'user',
+            'auth0_id',
             auth0Data.sub,
           );
           return user;
@@ -107,26 +107,26 @@ class AuthUserService {
 
       // Look up the role ID from role name
       const role = await GenericEntityService.findByField(
-        "role",
-        "name",
+        'role',
+        'name',
         mappedData.roleName,
       );
       if (!role) {
         throw new AppError(
           `Default role '${mappedData.roleName}' not found`,
           500,
-          "INTERNAL_ERROR",
+          'INTERNAL_ERROR',
         );
       }
 
-      logger.info("Creating new user from Auth0", {
+      logger.info('Creating new user from Auth0', {
         auth0Id: auth0Data.sub,
         email: auth0Data.email,
         roleName: mappedData.roleName,
       });
 
       // Create user with role_id via GenericEntityService
-      await GenericEntityService.create("user", {
+      await GenericEntityService.create('user', {
         auth0_id: mappedData.auth0_id,
         email: mappedData.email,
         first_name: mappedData.first_name,
@@ -136,14 +136,14 @@ class AuthUserService {
 
       // Re-fetch to get full user with JOINed role name
       user = await GenericEntityService.findByField(
-        "user",
-        "auth0_id",
+        'user',
+        'auth0_id',
         auth0Data.sub,
       );
 
       return user;
     } catch (error) {
-      logger.error("Error in findOrCreateFromAuth0", {
+      logger.error('Error in findOrCreateFromAuth0', {
         error: error.message,
         auth0Id: auth0Data?.sub,
         email: auth0Data?.email,

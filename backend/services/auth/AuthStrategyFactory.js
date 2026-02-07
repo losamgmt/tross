@@ -4,17 +4,17 @@
  * Clean factory pattern implementation for selecting authentication strategy.
  * Supports hot-swapping between dev and production auth based on AUTH_MODE env var.
  */
-const { logger } = require("../../config/logger");
-const DevAuthStrategy = require("./DevAuthStrategy");
-const Auth0Strategy = require("./Auth0Strategy");
+const { logger } = require('../../config/logger');
+const DevAuthStrategy = require('./DevAuthStrategy');
+const Auth0Strategy = require('./Auth0Strategy');
 
 /**
  * Authentication modes
  */
 const AUTH_MODES = {
-  DEVELOPMENT: "development",
-  AUTH0: "auth0",
-  PRODUCTION: "production",
+  DEVELOPMENT: 'development',
+  AUTH0: 'auth0',
+  PRODUCTION: 'production',
 };
 
 /**
@@ -69,7 +69,7 @@ class AuthStrategyFactory {
       case AUTH_MODES.DEVELOPMENT:
         if (shouldLog) {
           logger.info(
-            "🔧 Using Development Authentication Strategy (JWT with test users)",
+            '🔧 Using Development Authentication Strategy (JWT with test users)',
           );
         }
         return new DevAuthStrategy();
@@ -78,7 +78,7 @@ class AuthStrategyFactory {
       case AUTH_MODES.PRODUCTION:
         if (shouldLog) {
           logger.info(
-            "🔐 Using Auth0 Production Authentication Strategy (OAuth2/OIDC)",
+            '🔐 Using Auth0 Production Authentication Strategy (OAuth2/OIDC)',
           );
         }
         return new Auth0Strategy();
@@ -104,14 +104,14 @@ class AuthStrategyFactory {
     const normalized = authMode.toLowerCase().trim();
 
     switch (normalized) {
-      case "development":
-      case "dev":
-      case "local":
+      case 'development':
+      case 'dev':
+      case 'local':
         return AUTH_MODES.DEVELOPMENT;
 
-      case "production":
-      case "prod":
-      case "auth0":
+      case 'production':
+      case 'prod':
+      case 'auth0':
         return AUTH_MODES.AUTH0;
 
       default:

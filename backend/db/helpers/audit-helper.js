@@ -24,21 +24,21 @@
  *   - If omitted, no audit (internal operations, migrations, etc.)
  */
 
-const auditService = require("../../services/audit-service");
-const { logger } = require("../../config/logger");
-const allMetadata = require("../../config/models");
+const auditService = require('../../services/audit-service');
+const { logger } = require('../../config/logger');
+const allMetadata = require('../../config/models');
 const {
   AuditResults,
   EntityToResourceType,
   EntityActionMap,
-} = require("../../services/audit-constants");
+} = require('../../services/audit-constants');
 
 /**
  * Valid operations for audit logging
  * Maps to keys in EntityActionMap
  * DESIGN DECISION: Only CREATE, UPDATE, DELETE - deactivation is an UPDATE with is_active=false
  */
-const VALID_OPERATIONS = ["create", "update", "delete"];
+const VALID_OPERATIONS = ['create', 'update', 'delete'];
 
 /**
  * Log an entity operation to the audit trail
@@ -76,14 +76,14 @@ async function logEntityAudit(
 ) {
   // Validate operation
   if (!operation || !VALID_OPERATIONS.includes(operation)) {
-    logger.warn("Invalid audit operation", { operation, entityName });
+    logger.warn('Invalid audit operation', { operation, entityName });
     return;
   }
 
   // Validate entity has resource type mapping
   const resourceType = EntityToResourceType[entityName];
   if (!resourceType) {
-    logger.warn("Invalid entity name for audit", { operation, entityName });
+    logger.warn('Invalid entity name for audit', { operation, entityName });
     return;
   }
 
@@ -91,7 +91,7 @@ async function logEntityAudit(
   const entityActions = EntityActionMap[entityName];
   const action = entityActions?.[operation];
   if (!action) {
-    logger.warn("No audit action defined for operation", {
+    logger.warn('No audit action defined for operation', {
       operation,
       entityName,
     });
@@ -99,7 +99,7 @@ async function logEntityAudit(
   }
 
   if (!auditContext) {
-    logger.warn("No audit context provided", { operation, entityName });
+    logger.warn('No audit context provided', { operation, entityName });
     return;
   }
 
@@ -109,7 +109,7 @@ async function logEntityAudit(
   // - For deletes: result is oldValues, no newValues
   const effectiveOldValues = oldValues || auditContext.oldValues || null;
   const effectiveNewValues =
-    operation === "delete" ? null : auditContext.newValues || result || null;
+    operation === 'delete' ? null : auditContext.newValues || result || null;
 
   try {
     await auditService.log({
@@ -117,7 +117,7 @@ async function logEntityAudit(
       action,
       resourceType,
       resourceId: result?.id || null,
-      oldValues: operation === "create" ? null : effectiveOldValues,
+      oldValues: operation === 'create' ? null : effectiveOldValues,
       newValues: effectiveNewValues,
       ipAddress: auditContext.ipAddress || null,
       userAgent: auditContext.userAgent || null,
@@ -125,7 +125,7 @@ async function logEntityAudit(
     });
   } catch (error) {
     // Non-blocking - log and continue
-    logger.error("Failed to write audit log", {
+    logger.error('Failed to write audit log', {
       error: error.message,
       operation,
       entityName,
@@ -170,10 +170,10 @@ function getClientIp(req) {
   }
 
   // Check proxy headers first
-  const forwarded = req.headers?.["x-forwarded-for"];
+  const forwarded = req.headers?.['x-forwarded-for'];
   if (forwarded) {
     // X-Forwarded-For can be comma-separated list; take first
-    return forwarded.split(",")[0].trim();
+    return forwarded.split(',')[0].trim();
   }
 
   // Fall back to direct connection
@@ -187,7 +187,7 @@ function getUserAgent(req) {
   if (!req) {
     return null;
   }
-  return req.headers?.["user-agent"] || null;
+  return req.headers?.['user-agent'] || null;
 }
 
 /**

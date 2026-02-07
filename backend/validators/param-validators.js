@@ -6,8 +6,8 @@
  *
  * All validators attach validated values to req.validated = {}
  */
-const { toSafeInteger } = require("./type-coercion");
-const ResponseFormatter = require("../utils/response-formatter");
+const { toSafeInteger } = require('./type-coercion');
+const ResponseFormatter = require('../utils/response-formatter');
 
 /**
  * Validate numeric ID parameter
@@ -23,7 +23,7 @@ const ResponseFormatter = require("../utils/response-formatter");
  * @returns {Function} Express middleware
  */
 function validateIdParam(options = {}) {
-  const { paramName = "id", min = 1, max = Number.MAX_SAFE_INTEGER } = options;
+  const { paramName = 'id', min = 1, max = Number.MAX_SAFE_INTEGER } = options;
 
   return (req, res, next) => {
     try {
@@ -82,7 +82,7 @@ function validateIdParams(paramNames) {
       next();
     } catch (error) {
       return ResponseFormatter.badRequest(res, error.message, [
-        { field: "params", message: error.message },
+        { field: 'params', message: error.message },
       ]);
     }
   };

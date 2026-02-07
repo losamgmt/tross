@@ -17,15 +17,15 @@
  *
  * All endpoints require authentication and appropriate permissions.
  */
-const express = require("express");
-const { authenticateToken, requirePermission } = require("../middleware/auth");
-const { attachEntity } = require("../middleware/generic-entity");
-const { validateIdParam, validatePagination } = require("../validators");
-const auditService = require("../services/audit-service");
-const ResponseFormatter = require("../utils/response-formatter");
-const AppError = require("../utils/app-error");
-const allMetadata = require("../config/models");
-const { asyncHandler } = require("../middleware/utils");
+const express = require('express');
+const { authenticateToken, requirePermission } = require('../middleware/auth');
+const { attachEntity } = require('../middleware/generic-entity');
+const { validateIdParam, validatePagination } = require('../validators');
+const auditService = require('../services/audit-service');
+const ResponseFormatter = require('../utils/response-formatter');
+const AppError = require('../utils/app-error');
+const allMetadata = require('../config/models');
+const { asyncHandler } = require('../middleware/utils');
 
 const router = express.Router();
 
@@ -65,9 +65,9 @@ function formatAuditLogDates(logs) {
  * @query {string} filter - Filter type: 'data' or 'auth' (optional)
  */
 router.get(
-  "/all",
-  attachEntity("audit_log"),
-  requirePermission("read"),
+  '/all',
+  attachEntity('audit_log'),
+  requirePermission('read'),
   validatePagination({ defaultLimit: 100, maxLimit: 500 }),
   asyncHandler(async (req, res) => {
     const { limit, offset } = req.validated.pagination;
@@ -103,24 +103,24 @@ router.get(
  * @query {number} limit - Max records to return (default 50, max 100)
  */
 router.get(
-  "/user/:userId",
-  attachEntity("user"),
-  requirePermission("read"),
-  validateIdParam({ paramName: "userId" }),
+  '/user/:userId',
+  attachEntity('user'),
+  requirePermission('read'),
+  validateIdParam({ paramName: 'userId' }),
   validatePagination(),
   asyncHandler(async (req, res) => {
     const { userId } = req.params;
     const limit = Math.min(parseInt(req.query.limit) || 50, 100);
     const requestingUserId = req.dbUser?.id;
     const isAdmin =
-      req.dbUser?.role === "admin" || req.dbUser?.role === "manager";
+      req.dbUser?.role === 'admin' || req.dbUser?.role === 'manager';
 
     // Non-admins can only view their own audit trail
     if (!isAdmin && parseInt(userId) !== requestingUserId) {
       throw new AppError(
-        "You can only view your own activity history",
+        'You can only view your own activity history',
         403,
-        "FORBIDDEN",
+        'FORBIDDEN',
       );
     }
 
@@ -150,8 +150,8 @@ router.get(
  * @query {number} limit - Max records to return (default 50, max 100)
  */
 router.get(
-  "/:resourceType/:resourceId",
-  validateIdParam({ paramName: "resourceId" }),
+  '/:resourceType/:resourceId',
+  validateIdParam({ paramName: 'resourceId' }),
   validatePagination(),
   asyncHandler(async (req, res) => {
     const { resourceType, resourceId } = req.params;
@@ -163,18 +163,18 @@ router.get(
     const rlsResource =
       metadata && metadata.rlsResource
         ? metadata.rlsResource
-        : resourceType.endsWith("s")
+        : resourceType.endsWith('s')
           ? resourceType
           : `${resourceType}s`;
 
     // Check read permission for this resource type
     // This ensures users can only see audit logs for resources they can access
-    const hasPermission = req.permissions?.hasPermission(rlsResource, "read");
+    const hasPermission = req.permissions?.hasPermission(rlsResource, 'read');
     if (!hasPermission) {
       throw new AppError(
         `You don't have permission to view ${resourceType} audit logs`,
         403,
-        "FORBIDDEN",
+        'FORBIDDEN',
       );
     }
 
