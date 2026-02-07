@@ -94,10 +94,10 @@ describe("Rate Limiting (P1-6)", () => {
 
       // Verify env var defaults are professional standards (1000 req/15min)
       expect(rateLimitFile).toContain(
-        "process.env.RATE_LIMIT_WINDOW_MS || '900000'",
+        'process.env.RATE_LIMIT_WINDOW_MS || "900000"',
       );
       expect(rateLimitFile).toContain(
-        "process.env.RATE_LIMIT_MAX_REQUESTS || '1000'",
+        'process.env.RATE_LIMIT_MAX_REQUESTS || "1000"',
       );
 
       // Factory pattern: Should return bypass in test/dev, real limiter in production
