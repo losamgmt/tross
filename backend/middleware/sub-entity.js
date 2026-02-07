@@ -15,7 +15,7 @@
  * - requireServiceConfigured(checkFn, serviceName) - Ensure external service is available
  */
 
-const AppError = require('../utils/app-error');
+const AppError = require("../utils/app-error");
 
 /**
  * Middleware Factory: Attach parent entity metadata to request
@@ -44,18 +44,25 @@ function requireParentPermission(operation) {
     const { rlsResource, entityKey } = metadata || {};
 
     if (!rlsResource) {
-      return next(new AppError('Parent entity metadata not available', 500, 'INTERNAL_ERROR'));
+      return next(
+        new AppError(
+          "Parent entity metadata not available",
+          500,
+          "INTERNAL_ERROR",
+        ),
+      );
     }
 
-    const hasPermission = req.permissions?.hasPermission(rlsResource, operation) ?? false;
+    const hasPermission =
+      req.permissions?.hasPermission(rlsResource, operation) ?? false;
 
     if (!hasPermission) {
       const actionVerb = getActionVerb(operation);
       return next(
         new AppError(
-          `You don't have permission to ${actionVerb} this ${entityKey || 'resource'}`,
+          `You don't have permission to ${actionVerb} this ${entityKey || "resource"}`,
           403,
-          'FORBIDDEN',
+          "FORBIDDEN",
         ),
       );
     }
@@ -71,10 +78,10 @@ function requireParentPermission(operation) {
  */
 function getActionVerb(operation) {
   const verbs = {
-    read: 'view',
-    create: 'add to',
-    update: 'modify',
-    delete: 'delete from',
+    read: "view",
+    create: "add to",
+    update: "modify",
+    delete: "delete from",
   };
   return verbs[operation] || operation;
 }
@@ -91,7 +98,11 @@ function requireServiceConfigured(checkFn, serviceName) {
   return (req, res, next) => {
     if (!checkFn()) {
       return next(
-        new AppError(`${serviceName} is not configured`, 503, 'SERVICE_UNAVAILABLE'),
+        new AppError(
+          `${serviceName} is not configured`,
+          503,
+          "SERVICE_UNAVAILABLE",
+        ),
       );
     }
     next();
@@ -115,7 +126,11 @@ function requireParentExists(existsFn) {
       const exists = await existsFn(entityKey, parentId);
       if (!exists) {
         return next(
-          new AppError(`${entityKey} with id ${parentId} not found`, 404, 'NOT_FOUND'),
+          new AppError(
+            `${entityKey} with id ${parentId} not found`,
+            404,
+            "NOT_FOUND",
+          ),
         );
       }
 

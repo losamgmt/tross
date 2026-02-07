@@ -23,9 +23,9 @@ class AppError extends Error {
    * @param {number} statusCode - HTTP status code (default: 500)
    * @param {string} code - Machine-readable error code (default: 'INTERNAL_ERROR')
    */
-  constructor(message, statusCode = 500, code = 'INTERNAL_ERROR') {
+  constructor(message, statusCode = 500, code = "INTERNAL_ERROR") {
     super(message);
-    this.name = 'AppError';
+    this.name = "AppError";
     this.statusCode = statusCode;
     this.code = code;
 

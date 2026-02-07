@@ -30,9 +30,15 @@
  *   const { error, value } = schema.validate(req.body);
  */
 
-const Joi = require('joi');
-const { loadValidationRules, buildFieldSchema } = require('./validation-loader');
-const { hasFieldPermission, normalizeRoleName } = require('./field-access-controller');
+const Joi = require("joi");
+const {
+  loadValidationRules,
+  buildFieldSchema,
+} = require("./validation-loader");
+const {
+  hasFieldPermission,
+  normalizeRoleName,
+} = require("./field-access-controller");
 
 // Cache for built schemas (entityName:operation:role -> Joi schema)
 // Role is included in cache key for role-aware schemas
@@ -47,17 +53,17 @@ const schemaCache = new Map();
  */
 const SYSTEM_MANAGED_FIELDS = new Set([
   // System-managed (no user input)
-  'auth0_id',
-  'paid_at',
-  'created_at',
-  'updated_at',
+  "auth0_id",
+  "paid_at",
+  "created_at",
+  "updated_at",
 
   // Free text (no specific validation)
-  'billing_address',
-  'service_address',
-  'terms',
-  'notes',
-  'description', // Generic description - entity-specific ones use entityFields
+  "billing_address",
+  "service_address",
+  "terms",
+  "notes",
+  "description", // Generic description - entity-specific ones use entityFields
 ]);
 
 /**
@@ -66,16 +72,16 @@ const SYSTEM_MANAGED_FIELDS = new Set([
  */
 function getStatusRuleKey(entityName) {
   const statusMap = {
-    user: 'user_status',
-    role: 'role_status',
-    customer: 'customer_status',
-    technician: 'technician_status',
-    work_order: 'work_order_status',
-    invoice: 'invoice_status',
-    contract: 'contract_status',
-    inventory: 'inventory_status',
+    user: "user_status",
+    role: "role_status",
+    customer: "customer_status",
+    technician: "technician_status",
+    work_order: "work_order_status",
+    invoice: "invoice_status",
+    contract: "contract_status",
+    inventory: "inventory_status",
   };
-  return statusMap[entityName] || 'status';
+  return statusMap[entityName] || "status";
 }
 
 /**
@@ -100,14 +106,20 @@ function buildSingleFieldSchema(fieldName, entityName, isRequired, rules) {
   // These are derived from the entity's metadata.fields definitions
   const entityFieldDef = rules.entityFields?.[entityName]?.[fieldName];
   if (entityFieldDef) {
-    return buildFieldSchema({ ...entityFieldDef, required: isRequired }, fieldName);
+    return buildFieldSchema(
+      { ...entityFieldDef, required: isRequired },
+      fieldName,
+    );
   }
 
   // PRIORITY 2: Shared/global field definitions (email, phone, names)
   // These are common patterns used across multiple entities
   const sharedFieldDef = rules.fields[fieldName];
   if (sharedFieldDef) {
-    return buildFieldSchema({ ...sharedFieldDef, required: isRequired }, fieldName);
+    return buildFieldSchema(
+      { ...sharedFieldDef, required: isRequired },
+      fieldName,
+    );
   }
 
   // No rule found - use permissive schema
@@ -129,7 +141,7 @@ function deriveCreatableFields(metadata, userRole) {
   const fieldAccess = metadata.fieldAccess || {};
   return Object.keys(fieldAccess).filter((field) => {
     const access = fieldAccess[field];
-    if (!access || !access.create || access.create === 'none') {
+    if (!access || !access.create || access.create === "none") {
       return false;
     }
     // If userRole provided, check if user's role meets the minimum requirement
@@ -159,7 +171,7 @@ function deriveUpdateableFields(metadata, userRole) {
       return false;
     }
     const access = fieldAccess[field];
-    if (!access || !access.update || access.update === 'none') {
+    if (!access || !access.update || access.update === "none") {
       return false;
     }
     // If userRole provided, check if user's role meets the minimum requirement
@@ -206,9 +218,11 @@ function buildEntitySchema(entityName, operation, metadata, userRole) {
   const rules = loadValidationRules();
   const schemaFields = {};
 
-  if (operation === 'create') {
+  if (operation === "create") {
     // Derive creatable fields - role-aware if userRole provided
-    const createableFields = metadata.createableFields || deriveCreatableFields(metadata, normalizedRole);
+    const createableFields =
+      metadata.createableFields ||
+      deriveCreatableFields(metadata, normalizedRole);
     const createableSet = new Set(createableFields);
 
     // Required fields must be present and valid
@@ -219,7 +233,12 @@ function buildEntitySchema(entityName, operation, metadata, userRole) {
     });
 
     for (const field of requiredFields) {
-      const fieldSchema = buildSingleFieldSchema(field, entityName, true, rules);
+      const fieldSchema = buildSingleFieldSchema(
+        field,
+        entityName,
+        true,
+        rules,
+      );
       if (fieldSchema) {
         schemaFields[field] = fieldSchema;
       }
@@ -232,16 +251,28 @@ function buildEntitySchema(entityName, operation, metadata, userRole) {
         continue;
       }
 
-      const fieldSchema = buildSingleFieldSchema(field, entityName, false, rules);
+      const fieldSchema = buildSingleFieldSchema(
+        field,
+        entityName,
+        false,
+        rules,
+      );
       if (fieldSchema) {
         schemaFields[field] = fieldSchema;
       }
     }
-  } else if (operation === 'update') {
+  } else if (operation === "update") {
     // Derive updateable fields - role-aware if userRole provided
-    const updateableFields = metadata.updateableFields || deriveUpdateableFields(metadata, normalizedRole);
+    const updateableFields =
+      metadata.updateableFields ||
+      deriveUpdateableFields(metadata, normalizedRole);
     for (const field of updateableFields) {
-      const fieldSchema = buildSingleFieldSchema(field, entityName, false, rules);
+      const fieldSchema = buildSingleFieldSchema(
+        field,
+        entityName,
+        false,
+        rules,
+      );
       if (fieldSchema) {
         schemaFields[field] = fieldSchema;
       }
@@ -283,5 +314,6 @@ module.exports = {
   deriveCreatableFields,
   deriveUpdateableFields,
   // Exported for testing
-  _SYSTEM_MANAGED_FIELDS: SYSTEM_MANAGED_FIELDS, _getStatusRuleKey: getStatusRuleKey,
+  _SYSTEM_MANAGED_FIELDS: SYSTEM_MANAGED_FIELDS,
+  _getStatusRuleKey: getStatusRuleKey,
 };

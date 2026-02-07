@@ -20,21 +20,37 @@
  *   Old models can delegate to this service during transition.
  */
 
-const allMetadata = require('../config/models');
-const { logger } = require('../config/logger');
-const db = require('../db/connection');
-const { toSafeInteger } = require('../validators/type-coercion');
-const PaginationService = require('./pagination-service');
-const QueryBuilderService = require('./query-builder-service');
-const { buildUpdateClause } = require('../db/helpers/update-helper');
-const { cascadeDeleteDependents } = require('../db/helpers/cascade-helper');
-const { buildRLSFilter, buildRLSFilterForFindById } = require('../db/helpers/rls-filter-helper');
-const { filterOutput, filterOutputArray } = require('../db/helpers/output-filter-helper');
-const { logEntityAudit, isAuditEnabled } = require('../db/helpers/audit-helper');
-const { ENTITY_FIELDS, NAME_TYPES, NAME_TYPE_MAP } = require('../config/constants');
-const { sanitizeData } = require('../utils/data-hygiene');
-const { generateIdentifier, IDENTIFIER_FIELDS } = require('../utils/identifier-generator');
-const AppError = require('../utils/app-error');
+const allMetadata = require("../config/models");
+const { logger } = require("../config/logger");
+const db = require("../db/connection");
+const { toSafeInteger } = require("../validators/type-coercion");
+const PaginationService = require("./pagination-service");
+const QueryBuilderService = require("./query-builder-service");
+const { buildUpdateClause } = require("../db/helpers/update-helper");
+const { cascadeDeleteDependents } = require("../db/helpers/cascade-helper");
+const {
+  buildRLSFilter,
+  buildRLSFilterForFindById,
+} = require("../db/helpers/rls-filter-helper");
+const {
+  filterOutput,
+  filterOutputArray,
+} = require("../db/helpers/output-filter-helper");
+const {
+  logEntityAudit,
+  isAuditEnabled,
+} = require("../db/helpers/audit-helper");
+const {
+  ENTITY_FIELDS,
+  NAME_TYPES,
+  NAME_TYPE_MAP,
+} = require("../config/constants");
+const { sanitizeData } = require("../utils/data-hygiene");
+const {
+  generateIdentifier,
+  IDENTIFIER_FIELDS,
+} = require("../utils/identifier-generator");
+const AppError = require("../utils/app-error");
 
 /**
  * Table name to entity name mapping for related entity lookups
@@ -60,11 +76,11 @@ function getRelatedIdentityField(tableName) {
   const entityName = TABLE_TO_ENTITY[tableName];
   if (!entityName || !allMetadata[entityName]) {
     // Fallback to 'name' for unknown entities (backward compatibility)
-    return 'name';
+    return "name";
   }
   const metadata = allMetadata[entityName];
   // Prefer displayField for JOINs, fall back to identityField, then 'name'
-  return metadata.displayField || metadata.identityField || 'name';
+  return metadata.displayField || metadata.identityField || "name";
 }
 
 /**
@@ -78,13 +94,17 @@ function getRelatedIdentityField(tableName) {
  * @param {Object} relationships - Relationship definitions from metadata
  * @returns {{ selectParts: string[], joinParts: string[] }} Parts for query building
  */
-function buildDefaultIncludesClauses(tableName, defaultIncludes, relationships) {
+function buildDefaultIncludesClauses(
+  tableName,
+  defaultIncludes,
+  relationships,
+) {
   const joinParts = [];
   const selectParts = [];
 
   for (const relName of defaultIncludes) {
     const rel = relationships[relName];
-    if (rel && rel.type === 'belongsTo') {
+    if (rel && rel.type === "belongsTo") {
       const relAlias = relName.charAt(0); // 'r' for role, 'c' for customer
       const identityField = getRelatedIdentityField(rel.table);
 
@@ -95,7 +115,9 @@ function buildDefaultIncludesClauses(tableName, defaultIncludes, relationships) 
         // - Other fields → prefixed (e.g., 'priority' → 'role_priority')
         for (const field of rel.fields) {
           // Skip 'id' to avoid confusion with main entity id
-          if (field === 'id') { continue; }
+          if (field === "id") {
+            continue;
+          }
 
           if (field === identityField) {
             // Identity field: alias as relationship name (e.g., r.name as role)
@@ -110,7 +132,9 @@ function buildDefaultIncludesClauses(tableName, defaultIncludes, relationships) 
         selectParts.push(`${relAlias}.${identityField} as ${relName}`);
       }
 
-      joinParts.push(`LEFT JOIN ${rel.table} ${relAlias} ON ${tableName}.${rel.foreignKey} = ${relAlias}.id`);
+      joinParts.push(
+        `LEFT JOIN ${rel.table} ${relAlias} ON ${tableName}.${rel.foreignKey} = ${relAlias}.id`,
+      );
     }
   }
 
@@ -148,8 +172,12 @@ class GenericEntityService {
    */
   static _getMetadata(entityName) {
     // Validate entityName is provided
-    if (!entityName || typeof entityName !== 'string') {
-      throw new AppError('Entity name is required and must be a string', 400, 'BAD_REQUEST');
+    if (!entityName || typeof entityName !== "string") {
+      throw new AppError(
+        "Entity name is required and must be a string",
+        400,
+        "BAD_REQUEST",
+      );
     }
 
     // Trim whitespace but preserve case (metadata uses snake_case: work_order, not workorder)
@@ -159,15 +187,15 @@ class GenericEntityService {
     const metadata = allMetadata[normalizedName];
 
     if (!metadata) {
-      logger.warn('Unknown entity requested', {
+      logger.warn("Unknown entity requested", {
         entityName: normalizedName,
         validEntities: VALID_ENTITIES,
       });
 
       throw new AppError(
-        `Unknown entity: ${normalizedName}. Valid entities: ${VALID_ENTITIES.join(', ')}`,
+        `Unknown entity: ${normalizedName}. Valid entities: ${VALID_ENTITIES.join(", ")}`,
         400,
-        'BAD_REQUEST',
+        "BAD_REQUEST",
       );
     }
 
@@ -198,8 +226,12 @@ class GenericEntityService {
       const fieldDef = metadata.fields[field];
 
       // Serialize JSON/JSONB fields
-      if (fieldDef && (fieldDef.type === 'json' || fieldDef.type === 'jsonb')) {
-        if (value !== null && value !== undefined && typeof value === 'object') {
+      if (fieldDef && (fieldDef.type === "json" || fieldDef.type === "jsonb")) {
+        if (
+          value !== null &&
+          value !== undefined &&
+          typeof value === "object"
+        ) {
           serialized[field] = JSON.stringify(value);
         } else {
           serialized[field] = value; // Already a string or null
@@ -249,11 +281,16 @@ class GenericEntityService {
     // Validate and coerce ID to integer (throws on invalid)
     // toSafeInteger enforces min=1 by default, so 0 and negatives throw
     // silent: true - IDs from controllers are strings (URL params), coercion is expected
-    const safeId = toSafeInteger(id, 'id', { silent: true });
+    const safeId = toSafeInteger(id, "id", { silent: true });
 
     // Delegate to findByField using the primary key
     // Note: primaryKey (e.g., 'id') must be in filterableFields for this to work
-    return this.findByField(entityName, metadata.primaryKey, safeId, rlsContext);
+    return this.findByField(
+      entityName,
+      metadata.primaryKey,
+      safeId,
+      rlsContext,
+    );
   }
 
   /**
@@ -302,21 +339,25 @@ class GenericEntityService {
       searchableFields = [],
       filterableFields = [],
       sortableFields = [],
-      defaultSort = { field: 'id', order: 'ASC' },
+      defaultSort = { field: "id", order: "ASC" },
       defaultIncludes = [],
       relationships = {},
     } = metadata;
 
     // Build SELECT and JOIN clauses for default includes
     let selectClause = `${tableName}.*`;
-    let joinClause = '';
+    let joinClause = "";
 
     if (defaultIncludes.length > 0) {
-      const { selectParts, joinParts } = buildDefaultIncludesClauses(tableName, defaultIncludes, relationships);
+      const { selectParts, joinParts } = buildDefaultIncludesClauses(
+        tableName,
+        defaultIncludes,
+        relationships,
+      );
 
       if (selectParts.length > 0) {
-        selectClause = `${tableName}.*, ${selectParts.join(', ')}`;
-        joinClause = joinParts.join(' ');
+        selectClause = `${tableName}.*, ${selectParts.join(", ")}`;
+        joinClause = joinParts.join(" ");
       }
     }
 
@@ -347,10 +388,7 @@ class GenericEntityService {
     const whereClauses = [search?.clause, filters?.clause].filter(Boolean);
 
     // Combine parameters
-    const params = [
-      ...(search?.params || []),
-      ...(filters?.params || []),
-    ];
+    const params = [...(search?.params || []), ...(filters?.params || [])];
 
     // Apply RLS filter if context provided
     let rlsApplied = false;
@@ -364,17 +402,16 @@ class GenericEntityService {
 
       rlsApplied = rlsFilter.applied;
 
-      logger.debug('GenericEntityService.findAll with RLS', {
+      logger.debug("GenericEntityService.findAll with RLS", {
         entity: entityName,
         policy: rlsContext.policy,
         rlsApplied: rlsFilter.applied,
-        rlsClause: rlsFilter.clause || '(none)',
+        rlsClause: rlsFilter.clause || "(none)",
       });
     }
 
-    const whereClause = whereClauses.length > 0
-      ? `WHERE ${whereClauses.join(' AND ')}`
-      : '';
+    const whereClause =
+      whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
 
     // Build sort clause (validated against sortableFields, with table prefix)
     const sortClause = QueryBuilderService.buildSortClause(
@@ -385,7 +422,7 @@ class GenericEntityService {
       tableName,
     );
 
-    logger.debug('GenericEntityService.findAll', {
+    logger.debug("GenericEntityService.findAll", {
       entity: entityName,
       table: tableName,
       page,
@@ -458,7 +495,13 @@ class GenericEntityService {
     // Get metadata (throws if invalid entityName)
     const metadata = this._getMetadata(entityName);
 
-    const { tableName, primaryKey, filterableFields = [], defaultIncludes = [], relationships = {} } = metadata;
+    const {
+      tableName,
+      primaryKey,
+      filterableFields = [],
+      defaultIncludes = [],
+      relationships = {},
+    } = metadata;
 
     // Validate field is filterable (security: prevent arbitrary column access)
     // SYSTEMIC: Primary key is ALWAYS allowed (for findById to work)
@@ -466,22 +509,26 @@ class GenericEntityService {
     if (!isPrimaryKey && !filterableFields.includes(field)) {
       throw new AppError(
         `Field '${field}' is not filterable for ${entityName}. ` +
-        `Allowed: ${filterableFields.join(', ')}`,
+          `Allowed: ${filterableFields.join(", ")}`,
         400,
-        'BAD_REQUEST',
+        "BAD_REQUEST",
       );
     }
 
     // Build SELECT and JOIN clauses for default includes
     let selectClause = `${tableName}.*`;
-    let joinClause = '';
+    let joinClause = "";
 
     if (defaultIncludes.length > 0) {
-      const { selectParts, joinParts } = buildDefaultIncludesClauses(tableName, defaultIncludes, relationships);
+      const { selectParts, joinParts } = buildDefaultIncludesClauses(
+        tableName,
+        defaultIncludes,
+        relationships,
+      );
 
       if (selectParts.length > 0) {
-        selectClause = `${tableName}.*, ${selectParts.join(', ')}`;
-        joinClause = joinParts.join(' ');
+        selectClause = `${tableName}.*, ${selectParts.join(", ")}`;
+        joinClause = joinParts.join(" ");
       }
     }
 
@@ -491,14 +538,18 @@ class GenericEntityService {
 
     // Apply RLS filter if context provided
     if (rlsContext) {
-      const rlsFilter = buildRLSFilterForFindById(rlsContext, metadata, params.length);
+      const rlsFilter = buildRLSFilterForFindById(
+        rlsContext,
+        metadata,
+        params.length,
+      );
 
       if (rlsFilter.clause) {
         whereClauses.push(rlsFilter.clause);
         params.push(...rlsFilter.params);
       }
 
-      logger.debug('GenericEntityService.findByField with RLS', {
+      logger.debug("GenericEntityService.findByField with RLS", {
         entity: entityName,
         field,
         policy: rlsContext.policy,
@@ -507,9 +558,9 @@ class GenericEntityService {
     }
 
     // Build parameterized query with optional JOINs
-    const query = `SELECT ${selectClause} FROM ${tableName} ${joinClause} WHERE ${whereClauses.join(' AND ')} LIMIT 1`;
+    const query = `SELECT ${selectClause} FROM ${tableName} ${joinClause} WHERE ${whereClauses.join(" AND ")} LIMIT 1`;
 
-    logger.debug('GenericEntityService.findByField', {
+    logger.debug("GenericEntityService.findByField", {
       entity: entityName,
       table: tableName,
       field,
@@ -579,7 +630,7 @@ class GenericEntityService {
         params.push(...rlsFilter.params);
       }
 
-      logger.debug('GenericEntityService.count with RLS', {
+      logger.debug("GenericEntityService.count with RLS", {
         entity: entityName,
         policy: rlsContext.policy,
         rlsApplied: rlsFilter.applied,
@@ -587,14 +638,13 @@ class GenericEntityService {
     }
 
     // Build WHERE clause
-    const whereClause = whereClauses.length > 0
-      ? `WHERE ${whereClauses.join(' AND ')}`
-      : '';
+    const whereClause =
+      whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
 
     // Build count query
     const query = `SELECT COUNT(*) as total FROM ${tableName} ${whereClause}`;
 
-    logger.debug('GenericEntityService.count', {
+    logger.debug("GenericEntityService.count", {
       entity: entityName,
       table: tableName,
       filters: Object.keys(filters),
@@ -643,8 +693,12 @@ class GenericEntityService {
     const { tableName, requiredFields = [] } = metadata;
 
     // Validate data is an object
-    if (!data || typeof data !== 'object' || Array.isArray(data)) {
-      throw new AppError(`Data is required and must be an object for ${entityName}`, 400, 'BAD_REQUEST');
+    if (!data || typeof data !== "object" || Array.isArray(data)) {
+      throw new AppError(
+        `Data is required and must be an object for ${entityName}`,
+        400,
+        "BAD_REQUEST",
+      );
     }
 
     // =========================================================================
@@ -663,7 +717,7 @@ class GenericEntityService {
       const identifierField = IDENTIFIER_FIELDS[entityName];
       if (identifierField && !cleanData[identifierField]) {
         cleanData[identifierField] = await generateIdentifier(entityName);
-        logger.debug('Auto-generated identifier for COMPUTED entity', {
+        logger.debug("Auto-generated identifier for COMPUTED entity", {
           entity: entityName,
           field: identifierField,
           value: cleanData[identifierField],
@@ -673,14 +727,17 @@ class GenericEntityService {
 
     // Validate required fields are present (after sanitization and auto-generation)
     const missingFields = requiredFields.filter(
-      (field) => cleanData[field] === undefined || cleanData[field] === null || cleanData[field] === '',
+      (field) =>
+        cleanData[field] === undefined ||
+        cleanData[field] === null ||
+        cleanData[field] === "",
     );
 
     if (missingFields.length > 0) {
       throw new AppError(
-        `Missing required fields for ${entityName}: ${missingFields.join(', ')}`,
+        `Missing required fields for ${entityName}: ${missingFields.join(", ")}`,
         400,
-        'BAD_REQUEST',
+        "BAD_REQUEST",
       );
     }
 
@@ -688,9 +745,10 @@ class GenericEntityService {
     // Uses centralized constant from config/constants.js
     // EXCEPTION: sharedPrimaryKey entities (e.g., preferences) allow 'id' to be provided
     const filteredData = {};
-    const allowedSystemFields = metadata.sharedPrimaryKey ? ['id'] : [];
+    const allowedSystemFields = metadata.sharedPrimaryKey ? ["id"] : [];
     for (const [field, value] of Object.entries(cleanData)) {
-      const isSystemManaged = ENTITY_FIELDS.SYSTEM_MANAGED_ON_CREATE.includes(field);
+      const isSystemManaged =
+        ENTITY_FIELDS.SYSTEM_MANAGED_ON_CREATE.includes(field);
       const isAllowedSystemField = allowedSystemFields.includes(field);
       if ((!isSystemManaged || isAllowedSystemField) && value !== undefined) {
         filteredData[field] = value;
@@ -700,15 +758,19 @@ class GenericEntityService {
     // Check we have at least one field to insert
     const fields = Object.keys(filteredData);
     if (fields.length === 0) {
-      throw new AppError(`No valid fields provided for ${entityName}`, 400, 'BAD_REQUEST');
+      throw new AppError(
+        `No valid fields provided for ${entityName}`,
+        400,
+        "BAD_REQUEST",
+      );
     }
 
     // Serialize JSON/JSONB fields for database insertion
     const serializedData = this._serializeForDb(filteredData, metadata);
 
     // Build parameterized INSERT query
-    const columns = fields.join(', ');
-    const placeholders = fields.map((_, i) => `$${i + 1}`).join(', ');
+    const columns = fields.join(", ");
+    const placeholders = fields.map((_, i) => `$${i + 1}`).join(", ");
     const values = fields.map((field) => serializedData[field]);
 
     const query = `
@@ -717,7 +779,7 @@ class GenericEntityService {
       RETURNING *
     `;
 
-    logger.debug('GenericEntityService.create', {
+    logger.debug("GenericEntityService.create", {
       entity: entityName,
       table: tableName,
       fields,
@@ -736,7 +798,12 @@ class GenericEntityService {
 
     // Log audit event (blocking to ensure audit is written before response)
     if (options.auditContext && isAuditEnabled(entityName)) {
-      await logEntityAudit('create', entityName, filteredResult, options.auditContext);
+      await logEntityAudit(
+        "create",
+        entityName,
+        filteredResult,
+        options.auditContext,
+      );
     }
 
     return filteredResult;
@@ -772,15 +839,25 @@ class GenericEntityService {
     // Get metadata (throws if invalid entityName)
     const metadata = this._getMetadata(entityName);
 
-    const { tableName, primaryKey, immutableFields = [], identityField, systemProtected } = metadata;
+    const {
+      tableName,
+      primaryKey,
+      immutableFields = [],
+      identityField,
+      systemProtected,
+    } = metadata;
 
     // Validate and coerce ID (throws on invalid)
     // silent: true - IDs from controllers are strings, coercion is expected
-    const safeId = toSafeInteger(id, 'id', { silent: true });
+    const safeId = toSafeInteger(id, "id", { silent: true });
 
     // Validate data is an object
-    if (!data || typeof data !== 'object' || Array.isArray(data)) {
-      throw new AppError(`Data is required and must be an object for ${entityName}`, 400, 'BAD_REQUEST');
+    if (!data || typeof data !== "object" || Array.isArray(data)) {
+      throw new AppError(
+        `Data is required and must be an object for ${entityName}`,
+        400,
+        "BAD_REQUEST",
+      );
     }
 
     // =========================================================================
@@ -796,13 +873,15 @@ class GenericEntityService {
     // =========================================================================
     const knownFields = metadata.fieldAccess
       ? Object.keys(metadata.fieldAccess)
-      : (metadata.fields ? Object.keys(metadata.fields) : []);
+      : metadata.fields
+        ? Object.keys(metadata.fields)
+        : [];
     const filteredData = {};
     for (const [field, value] of Object.entries(cleanData)) {
       if (knownFields.length === 0 || knownFields.includes(field)) {
         filteredData[field] = value;
       } else {
-        logger.debug('GenericEntityService.update: Unknown field ignored', {
+        logger.debug("GenericEntityService.update: Unknown field ignored", {
           entity: entityName,
           field,
         });
@@ -815,7 +894,7 @@ class GenericEntityService {
     if (systemProtected) {
       // Check if attempting to modify system-protected immutable fields
       const attemptedImmutable = (systemProtected.immutableFields || []).filter(
-        field => filteredData[field] !== undefined,
+        (field) => filteredData[field] !== undefined,
       );
 
       if (attemptedImmutable.length > 0) {
@@ -824,14 +903,15 @@ class GenericEntityService {
 
         if (record) {
           // Use protectedByField if specified, otherwise fall back to identityField
-          const protectionField = systemProtected.protectedByField || identityField;
+          const protectionField =
+            systemProtected.protectedByField || identityField;
           const identityValue = record[protectionField];
 
           if (systemProtected.values.includes(identityValue)) {
             throw new AppError(
-              `Cannot modify ${attemptedImmutable.join(', ')} on system ${entityName}: ${identityValue}`,
+              `Cannot modify ${attemptedImmutable.join(", ")} on system ${entityName}: ${identityValue}`,
               403,
-              'FORBIDDEN',
+              "FORBIDDEN",
             );
           }
         }
@@ -843,14 +923,22 @@ class GenericEntityService {
     // Extract JSONB field names from metadata for proper serialization
     const jsonbFields = metadata.fields
       ? Object.entries(metadata.fields)
-        .filter(([_, def]) => def.type === 'json' || def.type === 'jsonb')
-        .map(([name]) => name)
+          .filter(([_, def]) => def.type === "json" || def.type === "jsonb")
+          .map(([name]) => name)
       : [];
 
-    const { updates, values, hasUpdates } = buildUpdateClause(filteredData, immutableFields, { jsonbFields });
+    const { updates, values, hasUpdates } = buildUpdateClause(
+      filteredData,
+      immutableFields,
+      { jsonbFields },
+    );
 
     if (!hasUpdates) {
-      throw new AppError(`No valid updateable fields provided for ${entityName}`, 400, 'BAD_REQUEST');
+      throw new AppError(
+        `No valid updateable fields provided for ${entityName}`,
+        400,
+        "BAD_REQUEST",
+      );
     }
 
     // =========================================================================
@@ -870,12 +958,12 @@ class GenericEntityService {
     // Build parameterized UPDATE query
     const query = `
       UPDATE ${tableName}
-      SET ${updates.join(', ')}
+      SET ${updates.join(", ")}
       WHERE ${primaryKey} = $${values.length}
       RETURNING ${primaryKey}
     `;
 
-    logger.debug('GenericEntityService.update', {
+    logger.debug("GenericEntityService.update", {
       entity: entityName,
       table: tableName,
       id: safeId,
@@ -901,7 +989,13 @@ class GenericEntityService {
 
     // Log audit event (blocking to ensure audit is written before response)
     if (options.auditContext && isAuditEnabled(entityName)) {
-      await logEntityAudit('update', entityName, updatedRecord, options.auditContext, oldValues);
+      await logEntityAudit(
+        "update",
+        entityName,
+        updatedRecord,
+        options.auditContext,
+        oldValues,
+      );
     }
 
     return updatedRecord;
@@ -943,7 +1037,7 @@ class GenericEntityService {
 
     // Validate and coerce ID (throws on invalid)
     // silent: true - IDs from controllers are strings, coercion is expected
-    const safeId = toSafeInteger(id, 'id', { silent: true });
+    const safeId = toSafeInteger(id, "id", { silent: true });
 
     // =========================================================================
     // SYSTEM PROTECTION CHECK (before any DB operation)
@@ -954,14 +1048,15 @@ class GenericEntityService {
 
       if (record) {
         // Use protectedByField if specified, otherwise fall back to identityField
-        const protectionField = systemProtected.protectedByField || identityField;
+        const protectionField =
+          systemProtected.protectedByField || identityField;
         const identityValue = record[protectionField];
 
         if (systemProtected.values.includes(identityValue)) {
           throw new AppError(
             `Cannot delete system ${entityName}: ${identityValue}`,
             403,
-            'FORBIDDEN',
+            "FORBIDDEN",
           );
         }
       }
@@ -971,14 +1066,14 @@ class GenericEntityService {
     const client = await db.getClient();
 
     try {
-      await client.query('BEGIN');
+      await client.query("BEGIN");
 
       // Check if record exists first
       const checkQuery = `SELECT * FROM ${tableName} WHERE ${primaryKey} = $1`;
       const checkResult = await client.query(checkQuery, [safeId]);
 
       if (checkResult.rows.length === 0) {
-        await client.query('ROLLBACK');
+        await client.query("ROLLBACK");
         return null;
       }
 
@@ -986,13 +1081,17 @@ class GenericEntityService {
       const recordBeforeDelete = checkResult.rows[0];
 
       // Cascade delete dependents (metadata-driven)
-      const cascadeResult = await cascadeDeleteDependents(client, metadata, safeId);
+      const cascadeResult = await cascadeDeleteDependents(
+        client,
+        metadata,
+        safeId,
+      );
 
       // Delete the entity itself
       const deleteQuery = `DELETE FROM ${tableName} WHERE ${primaryKey} = $1 RETURNING *`;
       const deleteResult = await client.query(deleteQuery, [safeId]);
 
-      await client.query('COMMIT');
+      await client.query("COMMIT");
 
       logger.info(`${entityName} deleted`, {
         id: safeId,
@@ -1005,13 +1104,18 @@ class GenericEntityService {
 
       // Log audit event (blocking to ensure audit is written before response)
       if (options.auditContext && isAuditEnabled(entityName)) {
-        await logEntityAudit('delete', entityName, filteredResult, options.auditContext, filteredOldValues);
+        await logEntityAudit(
+          "delete",
+          entityName,
+          filteredResult,
+          options.auditContext,
+          filteredOldValues,
+        );
       }
 
       return filteredResult;
-
     } catch (error) {
-      await client.query('ROLLBACK');
+      await client.query("ROLLBACK");
 
       logger.error(`Error deleting ${entityName}`, {
         error: error.message,
@@ -1019,7 +1123,6 @@ class GenericEntityService {
       });
 
       throw error;
-
     } finally {
       client.release();
     }
@@ -1079,36 +1182,60 @@ class GenericEntityService {
 
     // Validate operations array
     if (!Array.isArray(operations) || operations.length === 0) {
-      throw new AppError('Operations must be a non-empty array', 400, 'BAD_REQUEST');
+      throw new AppError(
+        "Operations must be a non-empty array",
+        400,
+        "BAD_REQUEST",
+      );
     }
 
     // Validate each operation structure before starting transaction
-    const validOperations = ['create', 'update', 'delete'];
+    const validOperations = ["create", "update", "delete"];
     for (let i = 0; i < operations.length; i++) {
       const op = operations[i];
 
-      if (!op || typeof op !== 'object') {
-        throw new AppError(`Operation at index ${i} must be an object`, 400, 'BAD_REQUEST');
+      if (!op || typeof op !== "object") {
+        throw new AppError(
+          `Operation at index ${i} must be an object`,
+          400,
+          "BAD_REQUEST",
+        );
       }
 
       if (!validOperations.includes(op.operation)) {
         throw new AppError(
-          `Invalid operation '${op.operation}' at index ${i}. Valid: ${validOperations.join(', ')}`,
+          `Invalid operation '${op.operation}' at index ${i}. Valid: ${validOperations.join(", ")}`,
           400,
-          'BAD_REQUEST',
+          "BAD_REQUEST",
         );
       }
 
-      if ((op.operation === 'update' || op.operation === 'delete') && !op.id) {
-        throw new AppError(`Operation '${op.operation}' at index ${i} requires an id`, 400, 'BAD_REQUEST');
+      if ((op.operation === "update" || op.operation === "delete") && !op.id) {
+        throw new AppError(
+          `Operation '${op.operation}' at index ${i} requires an id`,
+          400,
+          "BAD_REQUEST",
+        );
       }
 
-      if ((op.operation === 'create' || op.operation === 'update') && !op.data) {
-        throw new AppError(`Operation '${op.operation}' at index ${i} requires data`, 400, 'BAD_REQUEST');
+      if (
+        (op.operation === "create" || op.operation === "update") &&
+        !op.data
+      ) {
+        throw new AppError(
+          `Operation '${op.operation}' at index ${i} requires data`,
+          400,
+          "BAD_REQUEST",
+        );
       }
     }
 
-    const { tableName, primaryKey, requiredFields = [], immutableFields = [] } = metadata;
+    const {
+      tableName,
+      primaryKey,
+      requiredFields = [],
+      immutableFields = [],
+    } = metadata;
     const { continueOnError = false, auditContext } = options;
 
     const results = [];
@@ -1119,7 +1246,7 @@ class GenericEntityService {
     const client = await db.pool.connect();
 
     try {
-      await client.query('BEGIN');
+      await client.query("BEGIN");
 
       for (let i = 0; i < operations.length; i++) {
         const op = operations[i];
@@ -1128,36 +1255,54 @@ class GenericEntityService {
           let result;
 
           switch (op.operation) {
-            case 'create': {
+            case "create": {
               // Validate required fields
               const missingFields = requiredFields.filter(
-                (field) => op.data[field] === undefined || op.data[field] === null || op.data[field] === '',
+                (field) =>
+                  op.data[field] === undefined ||
+                  op.data[field] === null ||
+                  op.data[field] === "",
               );
 
               if (missingFields.length > 0) {
-                throw new AppError(`Missing required fields: ${missingFields.join(', ')}`, 400, 'BAD_REQUEST');
+                throw new AppError(
+                  `Missing required fields: ${missingFields.join(", ")}`,
+                  400,
+                  "BAD_REQUEST",
+                );
               }
 
               // Filter using EXCLUSION pattern - allow all fields EXCEPT system-managed ones
               // Uses centralized constant from config/constants.js
               // EXCEPTION: sharedPrimaryKey entities (e.g., preferences) allow 'id' to be provided
               const filteredData = {};
-              const allowedSystemFields = metadata.sharedPrimaryKey ? ['id'] : [];
+              const allowedSystemFields = metadata.sharedPrimaryKey
+                ? ["id"]
+                : [];
               for (const [field, value] of Object.entries(op.data)) {
-                const isSystemManaged = ENTITY_FIELDS.SYSTEM_MANAGED_ON_CREATE.includes(field);
-                const isAllowedSystemField = allowedSystemFields.includes(field);
-                if ((!isSystemManaged || isAllowedSystemField) && value !== undefined) {
+                const isSystemManaged =
+                  ENTITY_FIELDS.SYSTEM_MANAGED_ON_CREATE.includes(field);
+                const isAllowedSystemField =
+                  allowedSystemFields.includes(field);
+                if (
+                  (!isSystemManaged || isAllowedSystemField) &&
+                  value !== undefined
+                ) {
                   filteredData[field] = value;
                 }
               }
 
               const fields = Object.keys(filteredData);
               if (fields.length === 0) {
-                throw new AppError('No valid fields provided', 400, 'BAD_REQUEST');
+                throw new AppError(
+                  "No valid fields provided",
+                  400,
+                  "BAD_REQUEST",
+                );
               }
 
-              const columns = fields.join(', ');
-              const placeholders = fields.map((_, j) => `$${j + 1}`).join(', ');
+              const columns = fields.join(", ");
+              const placeholders = fields.map((_, j) => `$${j + 1}`).join(", ");
               const values = fields.map((field) => filteredData[field]);
 
               const query = `INSERT INTO ${tableName} (${columns}) VALUES (${placeholders}) RETURNING *`;
@@ -1167,27 +1312,39 @@ class GenericEntityService {
 
               // Audit (blocking to ensure audit is written before transaction completes)
               if (auditContext && isAuditEnabled(entityName)) {
-                await logEntityAudit('create', entityName, result, auditContext);
+                await logEntityAudit(
+                  "create",
+                  entityName,
+                  result,
+                  auditContext,
+                );
               }
               break;
             }
 
-            case 'update': {
-              const safeId = toSafeInteger(op.id, 'id', { silent: true });
+            case "update": {
+              const safeId = toSafeInteger(op.id, "id", { silent: true });
 
               // Fetch current record for audit oldValues
               const fetchQuery = `SELECT * FROM ${tableName} WHERE ${primaryKey} = $1`;
               const fetchResult = await client.query(fetchQuery, [safeId]);
 
               if (fetchResult.rows.length === 0) {
-                throw new AppError(`Record not found: ${safeId}`, 404, 'NOT_FOUND');
+                throw new AppError(
+                  `Record not found: ${safeId}`,
+                  404,
+                  "NOT_FOUND",
+                );
               }
 
               const oldRecord = fetchResult.rows[0];
 
               // Filter using EXCLUSION pattern - allow all fields EXCEPT immutables
               // Uses centralized constant from config/constants.js
-              const allExcluded = [...ENTITY_FIELDS.UNIVERSAL_IMMUTABLES, ...immutableFields];
+              const allExcluded = [
+                ...ENTITY_FIELDS.UNIVERSAL_IMMUTABLES,
+                ...immutableFields,
+              ];
               const updateData = {};
               for (const [field, value] of Object.entries(op.data)) {
                 if (!allExcluded.includes(field) && value !== undefined) {
@@ -1197,12 +1354,21 @@ class GenericEntityService {
 
               const fields = Object.keys(updateData);
               if (fields.length === 0) {
-                throw new AppError('No valid fields provided', 400, 'BAD_REQUEST');
+                throw new AppError(
+                  "No valid fields provided",
+                  400,
+                  "BAD_REQUEST",
+                );
               }
 
               // Build UPDATE clause
-              const setClause = fields.map((field, j) => `${field} = $${j + 2}`).join(', ');
-              const values = [safeId, ...fields.map((field) => updateData[field])];
+              const setClause = fields
+                .map((field, j) => `${field} = $${j + 2}`)
+                .join(", ");
+              const values = [
+                safeId,
+                ...fields.map((field) => updateData[field]),
+              ];
 
               const query = `UPDATE ${tableName} SET ${setClause} WHERE ${primaryKey} = $1 RETURNING *`;
               const dbResult = await client.query(query, values);
@@ -1212,20 +1378,30 @@ class GenericEntityService {
               // Audit with oldValues (blocking to ensure audit is written before transaction completes)
               if (auditContext && isAuditEnabled(entityName)) {
                 const filteredOld = filterOutput(oldRecord, metadata);
-                await logEntityAudit('update', entityName, result, auditContext, filteredOld);
+                await logEntityAudit(
+                  "update",
+                  entityName,
+                  result,
+                  auditContext,
+                  filteredOld,
+                );
               }
               break;
             }
 
-            case 'delete': {
-              const safeId = toSafeInteger(op.id, 'id', { silent: true });
+            case "delete": {
+              const safeId = toSafeInteger(op.id, "id", { silent: true });
 
               // Fetch record before delete for audit
               const fetchQuery = `SELECT * FROM ${tableName} WHERE ${primaryKey} = $1`;
               const fetchResult = await client.query(fetchQuery, [safeId]);
 
               if (fetchResult.rows.length === 0) {
-                throw new AppError(`Record not found: ${safeId}`, 404, 'NOT_FOUND');
+                throw new AppError(
+                  `Record not found: ${safeId}`,
+                  404,
+                  "NOT_FOUND",
+                );
               }
 
               const oldRecord = fetchResult.rows[0];
@@ -1242,7 +1418,13 @@ class GenericEntityService {
               // Audit with oldValues (blocking to ensure audit is written before transaction completes)
               if (auditContext && isAuditEnabled(entityName)) {
                 const filteredOld = filterOutput(oldRecord, metadata);
-                await logEntityAudit('delete', entityName, result, auditContext, filteredOld);
+                await logEntityAudit(
+                  "delete",
+                  entityName,
+                  result,
+                  auditContext,
+                  filteredOld,
+                );
               }
               break;
             }
@@ -1254,7 +1436,6 @@ class GenericEntityService {
             success: true,
             result,
           });
-
         } catch (opError) {
           stats.failed++;
 
@@ -1270,7 +1451,7 @@ class GenericEntityService {
 
           if (!continueOnError) {
             // Rollback and return immediately
-            await client.query('ROLLBACK');
+            await client.query("ROLLBACK");
 
             logger.warn(`Batch ${entityName} failed at operation ${i}`, {
               operation: op.operation,
@@ -1291,7 +1472,7 @@ class GenericEntityService {
 
       // If continueOnError and we have errors, still commit successful operations
       // This is intentional - caller requested partial success
-      await client.query('COMMIT');
+      await client.query("COMMIT");
 
       const success = errors.length === 0;
 
@@ -1310,9 +1491,8 @@ class GenericEntityService {
           ? `Batch completed: ${stats.created} created, ${stats.updated} updated, ${stats.deleted} deleted`
           : `Batch completed with ${errors.length} error(s): ${stats.created} created, ${stats.updated} updated, ${stats.deleted} deleted`,
       };
-
     } catch (error) {
-      await client.query('ROLLBACK');
+      await client.query("ROLLBACK");
 
       logger.error(`Batch ${entityName} transaction failed`, {
         error: error.message,
@@ -1320,7 +1500,6 @@ class GenericEntityService {
       });
 
       throw error;
-
     } finally {
       client.release();
     }

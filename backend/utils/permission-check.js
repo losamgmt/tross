@@ -21,7 +21,7 @@ const {
   getRolePriority,
   hasPermission,
   hasMinimumRole: loaderHasMinimumRole,
-} = require('../config/permissions-loader');
+} = require("../config/permissions-loader");
 
 /**
  * Get user's priority from user object
@@ -36,7 +36,7 @@ function getUserPriority(user) {
   }
 
   // Prefer explicit role_priority (O(1) - no lookup needed)
-  if (typeof user.role_priority === 'number') {
+  if (typeof user.role_priority === "number") {
     return user.role_priority;
   }
 

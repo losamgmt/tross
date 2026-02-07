@@ -11,12 +11,14 @@
 ## 🚀 Production
 
 **Live Application:**
+
 - **Frontend:** https://trossapp.vercel.app
 - **Backend API:** https://tross-api-production.up.railway.app
 - **API Docs:** https://tross-api-production.up.railway.app/api-docs
 - **Health Check:** https://tross-api-production.up.railway.app/api/health
 
 **Infrastructure:**
+
 - Frontend hosting: Vercel (auto-deploy from `main` branch)
 - Backend hosting: Railway (auto-deploy from `main` branch)
 - Database: PostgreSQL on Railway
@@ -41,6 +43,7 @@ Tross is a modern, full-stack application for efficient work order management wi
 ## 🏗️ Architecture
 
 **Stack:**
+
 - **Backend:** Node.js + Express + PostgreSQL
 - **Frontend:** Flutter (web + mobile)
 - **Auth:** Auth0 OAuth2/OIDC with dev mode fallback
@@ -109,22 +112,26 @@ npm run dev:frontend   # Frontend
 ## 📚 Documentation
 
 **Getting Started:**
+
 - [Quick Start](docs/getting-started/QUICK_START.md) - Get running in 5 minutes
 - [Development](docs/getting-started/DEVELOPMENT.md) - Daily workflow, code organization
 
 **Architecture & Design:**
+
 - [Architecture](docs/architecture/ARCHITECTURE.md) - Core patterns and decisions
 - [Security](docs/reference/SECURITY.md) - Defense-in-depth (Auth0 + RBAC + RLS)
 - [Authentication](docs/reference/AUTH.md) - Dual auth strategy
 - [API](docs/reference/API.md) - RESTful conventions
 
 **Quality & Operations:**
+
 - [Testing](docs/reference/TESTING.md) - Philosophy, pyramid, patterns
 - [CI/CD](docs/operations/CI_CD_GUIDE.md) - Pipeline and automation
 - [Health Monitoring](docs/operations/HEALTH_MONITORING.md) - Observability
 - [Rollback](docs/operations/ROLLBACK.md) - Emergency procedures
 
 **Deep Dives:**
+
 - [Database Architecture](docs/architecture/DATABASE_ARCHITECTURE.md)
 - [Validation Architecture](docs/architecture/VALIDATION_ARCHITECTURE.md)
 - [Architecture Decisions](docs/architecture/decisions/)
@@ -186,6 +193,7 @@ npm run dev:frontend   # Frontend
 ### Environment Variables Security
 
 All sensitive data is configured via environment variables:
+
 - **Database credentials** (DB_PASSWORD, DATABASE_URL)
 - **Auth0 secrets** (AUTH0_CLIENT_SECRET)
 - **JWT signing keys** (JWT_SECRET)
@@ -352,4 +360,5 @@ See [CONTRIBUTORS.md](CONTRIBUTORS.md) for team information and contribution gui
 ---
 
 _Built with Flutter & Node.js_
+
 # Testing admin bypass

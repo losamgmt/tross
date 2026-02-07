@@ -10,11 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed - Mobile Auth0 Login (2026-02-04)
 
 #### Mobile Authentication Flow
+
 - **Root Cause**: Mobile was sending Auth0 tokens directly to backend, but backend only accepts its own JWTs signed with `JWT_SECRET`
 - **Solution**: Added token exchange step - mobile now calls `/api/auth0/validate` to swap Auth0 ID token for backend-issued app token
 - **Parity**: Mobile flow now mirrors web PKCE flow (both exchange Auth0 tokens for backend JWTs)
 
 #### CI/CD Optimizations
+
 - **Shallow Clone**: Added `fetch-depth: 1` to all 8 jobs (faster checkout)
 - **Gradle Caching**: 2-layer cache for Android builds (~50% faster)
 - **Parallel Builds**: Android/iOS now build independently (no web dependency)
@@ -23,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added - Mobile Platform Readiness & CI/CD Enhancement (2026-02-03)
 
 #### Mobile UX Enhancements (7 Phases Complete)
+
 - **Phase 1**: Touch target sizing (48px minimum) with platform utilities
 - **Phase 2**: Mobile navigation (`MobileNavBar`, `TouchableMenuItem`, `HamburgerMenu`)
 - **Phase 3**: Mobile-responsive table layout with `ScrollableRow`
@@ -32,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Phase 7**: Mobile form inputs with touch-optimized styling
 
 #### Mobile Platform Configuration
+
 - **Android**: Auth0 manifest placeholders in `build.gradle.kts`
 - **iOS**: Folder created, deep links configured
 - **App Icons**: Generated via `flutter_launcher_icons` (Android + iOS + Web)
@@ -39,6 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Centralized Icon**: `AppConstants.appIcon` for consistent branding
 
 #### CI/CD Overhaul
+
 - **New Jobs**: Security audit, web build, Android APK, iOS IPA
 - **Concurrency Controls**: Cancel in-progress runs on new push
 - **Dependabot**: Weekly updates for npm, Flutter, Docker, Actions
@@ -48,6 +53,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Beautiful Summary**: ASCII status table in deploy-summary job
 
 #### Test Quality Improvements
+
 - **Keyboard Accessibility Tests**: Rewrote `DateInput` and `TimeInput` keyboard tests
   - Proper behavioral tests (Space/Enter key opens picker)
   - Tab navigation focus verification
@@ -57,6 +63,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Test Count**: 8,625 total tests passing (5,226 frontend + 2,123 backend unit + 1,261 backend integration + 15 E2E)
 
 #### Documentation Updates
+
 - Updated `CI_CD_GUIDE.md` with new pipeline structure
 - Updated `PROJECT_STATUS.md` with mobile readiness status
 - Updated `README.md` with Node 22, mobile phases
@@ -67,6 +74,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### TODO - Pending Features
 
 #### Dashboard Role Customization
+
 - [ ] Present different dashboard stats/widgets per user role
 - [ ] Customer role: Show only work orders and customer info
 - [ ] Technician role: Add inventory stats, available jobs
@@ -74,6 +82,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [ ] Admin: All resources including user management stats
 
 #### File Attachment Admin Page (Phase 6B)
+
 - [ ] Implement file attachment management page in admin section
 - [ ] List all attachments with filters (entity type, date range, file type)
 - [ ] Bulk delete orphaned attachments
@@ -84,15 +93,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed - Coverage Cleanup & 80% Threshold (2026-02-01)
 
 #### Dead Code Removal
+
 - **Removed** `lib/utils/form_validators.dart` - was only imported by tests, never used in production
 - **Removed** `test/utils/form_validators_test.dart` - tests for dead code
 
 #### Test Infrastructure Relocation
+
 - **Moved** `lib/services/auth_test_service.dart` → `test/helpers/auth_test_service.dart`
   - This was a dev utility for manual auth testing, not production code
   - Relocating removes ~112 lines from production coverage scope
 
 #### Coverage Improvements
+
 - Added `PermissionConfig` model tests (34 total tests):
   - `getNavVisibilityPriority` with explicit navVisibility and fallback to read permission
   - `getRowLevelSecurity` for role-based data access policies
@@ -105,6 +117,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added - File Attachments Complete (2026-02-01)
 
 #### Phase 5: Entity Naming Convention Unification ✅
+
 - **Phase 5A**: Added explicit `entityKey` to all 13 entity metadata files
 - **Phase 5B**: Backend file routes restructured to sub-resource pattern
   - Routes: `/api/:tableName/:id/files` (proper RESTful sub-resources)
@@ -115,6 +128,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Now uses `EntityMetadataRegistry.tryGet(entityKey).tableName`
 
 #### Phase 6: File Attachments Feature ✅ (Except Admin UI)
+
 - **6A Entity Integration**: `EntityFileAttachments` wired into `EntityDetailScreen`
   - Upload, download, delete handlers with loading states
   - File preview modal (images, PDFs, text)
@@ -125,6 +139,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Getting R2 credentials
 
 #### Test Infrastructure Improvements
+
 - Completely rewrote `FileService` tests (shallow → meaningful)
   - Entity key resolution tests (work_order → work_orders)
   - HTTP request/response flow tests
@@ -138,11 +153,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed - Navigation Visibility Regression (2026-01-27)
 
 #### Root Cause
+
 - `user-metadata.js` and `role-metadata.js` were missing `navVisibility` property
 - Permissions deriver was falling back to read permission (customer) instead of admin
 - Admin section and user/role entities appeared for all users
 
 #### Changes Made
+
 - Added `navVisibility` to ALL 13 entity metadata files
 - Made `navVisibility` REQUIRED in `entity-metadata-validator.js`
 - Added permission-aware stat loading to `DashboardProvider`:
@@ -155,29 +172,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added - Test Coverage 80%+ Milestone (2026-01-25)
 
 #### Backend Coverage Above 80% Threshold
+
 - **Branches**: 80.21% (was 78.5%)
 - **Statements**: 90.49%
 - **Functions**: 91.49%
 - **Lines**: 90.61%
 
 #### New Backend Tests
+
 - **sql-safety.test.js**: 24 tests for `sanitizeIdentifier` and `validateFieldAgainstWhitelist`
 - **update-helper.test.js**: 21 tests for `buildUpdateClause` and `ImmutableFieldError`
 - **entity-metadata-service.test.js**: 24 comprehensive tests
 - **Enhanced services**: stats-service, system-settings-service, sessions-service, export-service
 
 #### New Factory Error Scenarios
+
 - `stringTooLongRejected` - maxLength validation
 - `invalidDateRejected` - date format validation
 - `negativeIdRejected` - negative ID rejection
 - `booleanFieldHandling` - boolean coercion
 
 #### Frontend Tests: 5,000+ Milestone
+
 - **New helper tests**: string_helper (31), pagination_helper (29), input_type_helpers (6)
 - **Frontend line coverage**: 80.65%
 - **Total frontend tests**: 5,045 (was 4,979)
 
 #### Total Project Tests: 8,390
+
 - Backend: 3,345 tests
 - Frontend: 5,045 tests
 
@@ -186,12 +208,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added - Unified AppError System (2026-01-16)
 
 #### Error Handling Architecture Overhaul
+
 - **AppError Class**: New unified error class (`utils/app-error.js`) with explicit `statusCode` and `code` properties
   - Eliminates fragile pattern-matching on error messages
   - Status codes defined at SOURCE, not derived from message text
   - Supports: 400 BAD_REQUEST, 401 UNAUTHORIZED, 403 FORBIDDEN, 404 NOT_FOUND, 409 CONFLICT, 500 INTERNAL_ERROR, 503 SERVICE_UNAVAILABLE
 
 #### Files Updated (20+ files)
+
 - **Routes**: auth.js, audit.js, dev-auth.js, entities.js, files.js, schema.js
 - **Services**: audit-service.js, auth-user-service.js, export-service.js, file-attachment-service.js, preferences-service.js, sessions-service.js, stats-service.js, storage-service.js, system-settings-service.js, token-service.js
 - **Auth Strategies**: AuthStrategy.js, DevAuthStrategy.js
@@ -199,11 +223,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **DB Helpers**: default-value-helper.js, delete-helper.js
 
 #### Bug Fixes
+
 - **token-service.js**: Malformed JWT now returns 400 (bad input) not 401 (auth failure)
 - **integration tests**: Fixed regex word boundary for SQL keyword detection (avoid "Updates" matching "UPDATE")
 - **E2E tests**: Fixed health check assertions to access `health.data.*` wrapper
 
 #### Test Results
+
 - **Unit Tests**: 1,860 passed
 - **Integration Tests**: 1,161 passed
 - **Flutter Tests**: 4,704 passed
@@ -222,11 +248,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added - Metadata-Driven Frontend Test Infrastructure (2026-01-04)
 
 #### Test Factory System
+
 - **EntityTestRegistry**: Singleton providing entity metadata for all 11 entities
 - **EntityDataGenerator**: Generates type-aware test data from metadata
 - **allKnownEntities**: Shared constant for zero per-entity test loops
 
 #### Scenario Test Suites (531 new tests)
+
 - **Parity Tests** (31): Drift detection between frontend metadata and backend config
   - Entity existence, field definitions, enum values, permission coverage
 - **Widget Scenario Tests** (287): Cross-entity widget rendering
@@ -236,10 +264,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Missing fields, type mismatches, boundary values, invalid enums, special characters
 
 #### Bug Fixes Discovered
+
 - **MetadataFieldConfigFactory**: Fixed type casting bug where non-String values crashed `as String?` casts
   - Added `_safeToString()` and `_safeToNullableString()` helper methods
 
 #### Coverage Milestone
+
 - **Frontend Tests**: 2,643 passing
 - **Frontend Coverage**: 70.1% (6,705/9,569 lines)
 - **Total Project Tests**: ~5,800 (backend + frontend + E2E)
@@ -249,6 +279,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added - E2E & CI/CD Enhancements (2026-01-03)
 
 #### E2E Testing Overhaul
+
 - **Production-Appropriate Tests**: Rewrote E2E suite to test only what production supports
   - 15 tests verifying health, security, routing, and file storage auth
   - Removed all tests requiring dev tokens (don't work in production - correct!)
@@ -261,6 +292,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - E2E tests: Production is up and secure (15 tests)
 
 #### CI/CD Pipeline Improvements
+
 - **E2E Against Real Deployment**: Tests run against live Railway, not CI simulation
   - Eliminates complex DB setup, env var juggling, migration scripts in CI
   - Tests what users actually experience
@@ -279,6 +311,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ```
 
 #### Documentation Updates
+
 - Updated `docs/TESTING.md` with new E2E philosophy and test categories
 - Updated `docs/CI_CD_GUIDE.md` with pipeline flow and secrets documentation
 - Updated `README.md` with accurate test counts
@@ -288,6 +321,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added - Strangler-Fig Phase 3D: GenericEntityService (2025-12-05)
 
 #### New Backend Infrastructure
+
 - **GenericEntityService**: Metadata-driven CRUD service replacing legacy model methods
   - `findById()`, `findAll()`, `create()`, `update()`, `delete()` - core CRUD
   - `findByField()` - replaces special-case methods (findByEmail, findByAuth0Id, etc.)
@@ -319,6 +353,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `010_add_system_role_protection.sql` - Trigger-based protection for system roles
 
 #### Legacy Model Cleanup
+
 - Removed 9 special-case methods from legacy models (strangler-fig pattern):
   - User: findByEmail, findByAuth0Id, createFromAuth0
   - Customer: findByEmail
@@ -326,12 +361,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Role: getByName, getUserCount, findByPriority, getAllWithUserCounts
 
 #### Frontend Fixes
+
 - Fixed Auth0 login flow: profile validation now allows null auth0_id (backend strips for security)
 - Fixed role display: GenericEntityService.findByField now JOINs role table automatically
 - Standardized role name: 'customer' (was inconsistently 'client' in some places)
 - Updated all test files to use 'customer' role name (51 assertions updated)
 
 #### Test Coverage
+
 - **3,952 tests passing**:
   - Backend Unit: 1,679 ✅
   - Backend Integration: 702 ✅
@@ -339,6 +376,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - E2E Playwright: 10 ✅
 
 #### Strangler-Fig Status
+
 - **Phase 3D Complete**: GenericEntityService fully functional
 - **Next Phase**: Route swap (change routes to use GenericEntityService instead of legacy models)
 - All manual smoke tests passing: Auth0 login, dev login, full CRUD on users/roles
@@ -346,6 +384,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed - Rate Limiting & Test Synchronization (2025-11-21)
 
 #### Rate Limiting
+
 - **Centralized Configuration**: Rate limiting now uses environment variables
   - `RATE_LIMIT_WINDOW_MS` (default: 900000 = 15 minutes)
   - `RATE_LIMIT_MAX_REQUESTS` (default: 1000 = professional standard)
@@ -356,9 +395,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `backend/middleware/rate-limit.js` - Uses env vars with intelligent defaults
   - `backend/config/deployment-adapter.js` - Default aligned to 1000
   - `backend/.env.local` - Complete local dev template with rate limit config
-  - `backend/.env.example` - Added RATE_LIMIT_* documentation
+  - `backend/.env.example` - Added RATE*LIMIT*\* documentation
 
 #### Testing
+
 - **Frontend Test Fixes**: Synchronized Flutter tests with backend enum changes
   - Fixed `client` → `customer` role name (17 test assertions updated)
   - Fixed `projects` → `contracts` resource type (3 test assertions updated)
@@ -372,6 +412,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Deployed - Production Launch (2025-11-21)
 
 #### Infrastructure
+
 - **Production Deployment Complete**:
   - Frontend: https://trossapp.vercel.app (Vercel)
   - Backend: https://tross-api-production.up.railway.app (Railway)
@@ -379,6 +420,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Auth0: Production OAuth2 authentication configured
 
 #### Configuration
+
 - CORS: localhost + production URLs whitelisted (trossapp.vercel.app)
 - Auth0: Callback/logout URLs configured for web + mobile
 - Vercel: Flutter build with `USE_PROD_BACKEND=true` flag
@@ -386,6 +428,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - End-to-end authentication flow validated in production
 
 #### Quality Metrics
+
 - 3,477+ tests passing (backend + frontend + E2E)
 - Zero secrets in git history (security verified)
 - Platform-agnostic deployment (can switch hosts without code changes)
@@ -393,6 +436,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added - Platform-Agnostic Database Connection (2025-11-21)
 
 #### Infrastructure
+
 - **Deployment Adapter Integration**: `backend/config/deployment-adapter.js` now fully integrated with `backend/db/connection.js`
   - Supports both `DATABASE_URL` (Railway, Heroku, Render, Fly.io) and individual env vars (AWS, GCP, local)
   - Automatic platform detection via environment variables
@@ -400,6 +444,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Handles both connection string and object configuration formats seamlessly
 
 #### Tests
+
 - **51 new unit tests** for `deployment-adapter.js` covering:
   - Platform detection (Railway, Render, Fly.io, Heroku, local)
   - Database config (DATABASE_URL vs individual vars)
@@ -412,6 +457,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Test database isolation (port 5433)
 
 #### Cleanup - Docker & CI/CD Optimization
+
 - **Removed** `docker-compose.prod.yml` (unused - Railway uses Nixpacks, Vercel uses serverless)
 - **Updated** `backend/Dockerfile` with platform-agnostic comments
 - **Streamlined** `.github/workflows/ci-cd.yml`:
@@ -431,6 +477,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Kept `db:test:*` scripts (actively used for test database)
 
 #### Documentation
+
 - **Added** `SECURITY.md` - Comprehensive security policy with vulnerability reporting, best practices
 - **Added** `docs/FORK_WORKFLOW_GUIDE.md` - Step-by-step fork workflow for collaborators (AI-empowered, non-technical friendly)
 - **Added** `docs/GITHUB_BRANCH_PROTECTION.md` - Complete GitHub branch protection setup guide
@@ -447,6 +494,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Updated** `frontend/Dockerfile` - Added platform-agnostic deployment comments
 
 #### Quality
+
 - **All 1736 tests passing** (1135 unit + 601 integration, including deployment-adapter tests)
 - **All integration tests passing** (including 10 new db-connection tests)
 - Zero regressions—existing functionality preserved
@@ -468,6 +516,7 @@ This release marks the **complete production-ready backend** for Tross. All core
 ### Phase 3A: Search, Filter & Sort Infrastructure
 
 #### Added
+
 - **Metadata-Driven Query System**: Centralized field definitions in model metadata files
   - `backend/config/models/user-metadata.js` - User model searchable/filterable/sortable fields
   - `backend/config/models/role-metadata.js` - Role model field definitions
@@ -485,6 +534,7 @@ This release marks the **complete production-ready backend** for Tross. All core
   - Query params: `search`, `filters[field]`, `filters[field][operator]`, `sortBy`, `sortOrder`, `page`, `limit`
 
 #### Tests
+
 - Enhanced test coverage for search, filter, sort, and pagination across User and Role models
 - All existing tests passing
 
@@ -493,6 +543,7 @@ This release marks the **complete production-ready backend** for Tross. All core
 ### Phase 3B: Database Performance - Indexes
 
 #### Added
+
 - **26 High-Performance Indexes** across 4 core tables:
   - **users table (9 indexes)**:
     - Primary key: `users_pkey`
@@ -519,6 +570,7 @@ This release marks the **complete production-ready backend** for Tross. All core
     - Composite: `idx_audit_logs_user_action_created` (user_id + action + created_at DESC)
 
 #### Performance Impact
+
 - User search queries: **10-100x faster** on large datasets
 - Token validation: **O(1) lookup** via hash index
 - Audit log queries: **Efficient time-range filtering**
@@ -528,6 +580,7 @@ This release marks the **complete production-ready backend** for Tross. All core
 ### Phase 3E: Security Hardening
 
 #### Added
+
 - **Rate Limiting** (Express Rate Limit):
   - `authLimiter`: 10 requests/15min on `/api/auth/*` and `/api/auth0/*`
   - `refreshLimiter`: 5 requests/15min on refresh token endpoints
@@ -549,6 +602,7 @@ This release marks the **complete production-ready backend** for Tross. All core
   - Auth0 JWKS validation
 
 #### Modified Files
+
 - `backend/config/constants.js` - Updated REQUEST_LIMITS
 - `backend/server.js` - Applied rate limiters, enhanced CORS, added urlencoded middleware
 - `backend/routes/auth.js` - Applied refreshLimiter
@@ -559,6 +613,7 @@ This release marks the **complete production-ready backend** for Tross. All core
 ### Phase 3F: Validation Audit - 100% Coverage
 
 #### Added
+
 - **4 New Validators** (`backend/validators/auth-validators.js`):
   - `validateAuthCallback` - Auth0 callback parameters (code, state)
   - `validateAuth0Token` - Auth0 token exchange (code, redirect_uri)
@@ -574,6 +629,7 @@ This release marks the **complete production-ready backend** for Tross. All core
   - ✅ Permission middleware validation
 
 #### Security Improvements
+
 - Prevents malformed auth requests
 - Validates token formats before processing
 - Rejects invalid refresh attempts
@@ -584,6 +640,7 @@ This release marks the **complete production-ready backend** for Tross. All core
 ### Phase 3D: Dependency Cleanup & Security
 
 #### Removed
+
 - **3 Unused Packages**:
   - `morgan` - HTTP logger (replaced by Winston)
   - `express-validator` - Validation (replaced by Joi)
@@ -591,15 +648,18 @@ This release marks the **complete production-ready backend** for Tross. All core
 - **68 Transitive Dependencies** removed
 
 #### Security
+
 - **Before**: 2 moderate severity vulnerabilities (validator bypass in express-validator)
 - **After**: **0 vulnerabilities** ✅
 - Fixed via: `npm audit fix` (updated validator package)
 
 #### Kept for Future Use
+
 - `redis` - Session store / caching (reserved for Phase 4+)
 - `connect-redis` - Redis session middleware (reserved for Phase 4+)
 
 #### Modified Files
+
 - `backend/package.json` - Removed 3 dependencies (now 19 total)
 
 ---
@@ -607,6 +667,7 @@ This release marks the **complete production-ready backend** for Tross. All core
 ### Bug Fixes
 
 #### Fixed SQL Ambiguity in User.findAll()
+
 - **Issue**: `column reference "is_active" is ambiguous` error when querying users
 - **Cause**: Both `users` and `roles` tables have `is_active` columns, JOIN query lacked table alias
 - **Fix**: Changed filter to explicitly use `u.is_active = $1` with users table alias
@@ -618,6 +679,7 @@ This release marks the **complete production-ready backend** for Tross. All core
 ### Configuration Changes
 
 #### Permissions Update
+
 - **Changed**: `roles.permissions.read.minimumRole` from `"manager"` to `"client"`
 - **Changed**: `roles.permissions.read.minimumPriority` from `4` to `1`
 - **Reason**: Everyone needs to see roles for UI dropdowns and role awareness
@@ -629,6 +691,7 @@ This release marks the **complete production-ready backend** for Tross. All core
 ### Testing Infrastructure
 
 #### Manual Testing
+
 - **Added**: `backend/scripts/manual-curl-tests.sh` - Automated cURL test suite
 - **Coverage**: 10 comprehensive tests
   1. Health check (public endpoint)
@@ -644,6 +707,7 @@ This release marks the **complete production-ready backend** for Tross. All core
 - **All tests passing** ✅
 
 #### Unit & Integration Tests
+
 - Comprehensive test coverage across models, services, routes, middleware, validators
 - **Status**: **All passing** ✅
 - Fast test execution
@@ -653,6 +717,7 @@ This release marks the **complete production-ready backend** for Tross. All core
 ### Documentation
 
 #### Updated
+
 - `README.md` - Added Phase 3A-F feature descriptions
 - `docs/PROJECT_STATUS.md` - Updated status to Backend Locked
 - `CHANGELOG.md` - Created comprehensive changelog (this file)
@@ -715,4 +780,3 @@ This release marks the **complete production-ready backend** for Tross. All core
 
 - **1.0.0-backend-lock** (2025-11-05) - Backend production ready, locked for release
 - Previous versions tracked in git history
-

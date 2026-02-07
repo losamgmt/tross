@@ -40,40 +40,40 @@ function sanitizeValue(value, fieldDef) {
   const { type } = fieldDef;
 
   switch (type) {
-    case 'string':
+    case "string":
       // Trim all strings
-      if (typeof value === 'string') {
+      if (typeof value === "string") {
         return value.trim();
       }
       return value;
 
-    case 'enum':
+    case "enum":
       // Enums: lowercase + trim (for consistency in DB)
-      if (typeof value === 'string') {
+      if (typeof value === "string") {
         return value.toLowerCase().trim();
       }
       return value;
 
-    case 'email':
+    case "email":
       // Email: lowercase + trim (email addresses are case-insensitive)
-      if (typeof value === 'string') {
+      if (typeof value === "string") {
         return value.toLowerCase().trim();
       }
       return value;
 
-    case 'phone':
+    case "phone":
       // Phone: trim only (preserve formatting for now)
-      if (typeof value === 'string') {
+      if (typeof value === "string") {
         return value.trim();
       }
       return value;
 
-    case 'integer':
-    case 'decimal':
-    case 'boolean':
-    case 'timestamp':
-    case 'json':
-    case 'jsonb':
+    case "integer":
+    case "decimal":
+    case "boolean":
+    case "timestamp":
+    case "json":
+    case "jsonb":
       // These types pass through unchanged
       return value;
 
@@ -116,7 +116,7 @@ function sanitizeValue(value, fieldDef) {
  */
 function sanitizeData(data, metadata) {
   // No data = return as-is
-  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
     return data;
   }
 
@@ -145,13 +145,13 @@ function sanitizeData(data, metadata) {
  * @returns {Object} Data with all strings trimmed
  */
 function trimAllStrings(data) {
-  if (!data || typeof data !== 'object') {
+  if (!data || typeof data !== "object") {
     return data;
   }
 
   const result = {};
   for (const [key, value] of Object.entries(data)) {
-    if (typeof value === 'string') {
+    if (typeof value === "string") {
       result[key] = value.trim();
     } else {
       result[key] = value;
@@ -175,7 +175,7 @@ function isEmpty(value) {
   if (value === null || value === undefined) {
     return true;
   }
-  if (typeof value === 'string' && value.trim() === '') {
+  if (typeof value === "string" && value.trim() === "") {
     return true;
   }
   return false;

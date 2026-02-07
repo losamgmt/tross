@@ -19,13 +19,13 @@ Deeper analysis showed hardcoded mappings scattered throughout the codebase, pat
 
 Each entity metadata file declares these properties explicitly:
 
-| Property | Format | Example | Purpose |
-|----------|--------|---------|---------|
-| `entityKey` | snake_case, singular | `work_order` | Internal key, FK columns, code references |
-| `tableName` | snake_case, plural | `work_orders` | Database table name AND API URL path |
-| `rlsResource` | snake_case | `work_orders` | Permission checks (usually = tableName) |
-| `displayName` | Title Case, singular | `Work Order` | UI labels |
-| `displayNamePlural` | Title Case, plural | `Work Orders` | UI nav, list headers |
+| Property            | Format               | Example       | Purpose                                   |
+| ------------------- | -------------------- | ------------- | ----------------------------------------- |
+| `entityKey`         | snake_case, singular | `work_order`  | Internal key, FK columns, code references |
+| `tableName`         | snake_case, plural   | `work_orders` | Database table name AND API URL path      |
+| `rlsResource`       | snake_case           | `work_orders` | Permission checks (usually = tableName)   |
+| `displayName`       | Title Case, singular | `Work Order`  | UI labels                                 |
+| `displayNamePlural` | Title Case, plural   | `Work Orders` | UI nav, list headers                      |
 
 ### Rules
 
@@ -39,11 +39,11 @@ Each entity metadata file declares these properties explicitly:
 ```javascript
 // backend/config/models/work-order-metadata.js
 module.exports = {
-  entityKey: 'work_order',        // ← Explicit, singular
-  tableName: 'work_orders',       // ← Explicit, plural
-  rlsResource: 'work_orders',     // ← Usually matches tableName
-  displayName: 'Work Order',
-  displayNamePlural: 'Work Orders',
+  entityKey: "work_order", // ← Explicit, singular
+  tableName: "work_orders", // ← Explicit, plural
+  rlsResource: "work_orders", // ← Usually matches tableName
+  displayName: "Work Order",
+  displayNamePlural: "Work Orders",
   // ... other metadata
 };
 ```
@@ -67,16 +67,19 @@ final tableName = metadata?.tableName;
 ## Consequences
 
 ### Positive
+
 - **No ambiguity** - Every property has a single, explicit value
 - **No bugs from derivation** - Can't get singular/plural wrong if it's explicit
 - **Easy to validate** - Startup checks ensure all required properties exist
 - **Self-documenting** - Metadata files are the single source of truth
 
 ### Negative
+
 - **More verbose metadata** - Each entity file has more properties
 - **Migration effort** - All 13 entity files needed updates
 
 ### Neutral
+
 - **Sync script updated** - Frontend metadata now includes `entityKey`
 - **Hardcoded maps deleted** - `_entityEndpoint()`, `ENTITY_URL_MAP`, etc. removed
 

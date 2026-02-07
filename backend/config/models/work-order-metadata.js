@@ -13,22 +13,25 @@
 const {
   FIELD_ACCESS_LEVELS: _FAL,
   UNIVERSAL_FIELD_ACCESS,
-} = require('../constants');
-const { NAME_TYPES } = require('../entity-types');
-const { createAddressFields, createAddressFieldAccess } = require('../field-type-standards');
+} = require("../constants");
+const { NAME_TYPES } = require("../entity-types");
+const {
+  createAddressFields,
+  createAddressFieldAccess,
+} = require("../field-type-standards");
 
 module.exports = {
   // Entity key (singular, for API params and lookups)
-  entityKey: 'work_order',
+  entityKey: "work_order",
 
   // Table name in database (plural, also used for API URLs)
-  tableName: 'work_orders',
+  tableName: "work_orders",
 
   // Primary key
-  primaryKey: 'id',
+  primaryKey: "id",
 
   // Material icon for navigation menus and entity displays
-  icon: 'build',
+  icon: "build",
 
   // ============================================================================
   // ENTITY CATEGORY (determines name handling pattern)
@@ -44,7 +47,7 @@ module.exports = {
    * Display field for UI rendering
    * COMPUTED entities use the identifier field (work_order_number)
    */
-  displayField: 'work_order_number',
+  displayField: "work_order_number",
 
   // ============================================================================
   // IDENTITY CONFIGURATION (Entity Contract v2.0)
@@ -54,13 +57,13 @@ module.exports = {
    * The unique identifier field (auto-generated: WO-YYYY-NNNN)
    * Used for: Unique references, search results, logging
    */
-  identityField: 'work_order_number',
+  identityField: "work_order_number",
 
   /**
    * Prefix for auto-generated identifiers (COMPUTED entities only)
    * Format: WO-YYYY-NNNN
    */
-  identifierPrefix: 'WO',
+  identifierPrefix: "WO",
 
   /**
    * Whether the identity field has a UNIQUE constraint in the database
@@ -71,25 +74,25 @@ module.exports = {
    * RLS resource name for permission checks
    * Maps to permissions.json resource names
    */
-  rlsResource: 'work_orders',
+  rlsResource: "work_orders",
 
   /**
    * Row-Level Security policy per role
    * Customers see own work orders, technicians see assigned, dispatcher+ see all
    */
   rlsPolicy: {
-    customer: 'own_work_orders_only',
-    technician: 'assigned_work_orders_only',
-    dispatcher: 'all_records',
-    manager: 'all_records',
-    admin: 'all_records',
+    customer: "own_work_orders_only",
+    technician: "assigned_work_orders_only",
+    dispatcher: "all_records",
+    manager: "all_records",
+    admin: "all_records",
   },
 
   /**
    * Navigation visibility - minimum role to see this entity in nav menus
    * Work orders are visible to all authenticated users
    */
-  navVisibility: 'customer',
+  navVisibility: "customer",
 
   /**
    * File attachments - whether this entity supports file uploads
@@ -102,10 +105,10 @@ module.exports = {
    * Matches permissions.json - customer+ create/read/update, manager+ delete
    */
   entityPermissions: {
-    create: 'customer',
-    read: 'customer',
-    update: 'customer',
-    delete: 'manager',
+    create: "customer",
+    read: "customer",
+    update: "customer",
+    delete: "manager",
   },
 
   /**
@@ -117,32 +120,39 @@ module.exports = {
 
   fieldGroups: {
     identity: {
-      label: 'Work Order Details',
-      fields: ['work_order_number', 'name', 'summary'],
+      label: "Work Order Details",
+      fields: ["work_order_number", "name", "summary"],
       order: 1,
     },
     assignment: {
-      label: 'Assignment',
-      fields: ['customer_id', 'assigned_technician_id', 'priority', 'status'],
-      rows: [['priority', 'status']],
+      label: "Assignment",
+      fields: ["customer_id", "assigned_technician_id", "priority", "status"],
+      rows: [["priority", "status"]],
       order: 2,
     },
     scheduling: {
-      label: 'Scheduling',
-      fields: ['scheduled_start', 'scheduled_end', 'completed_at'],
-      rows: [['scheduled_start', 'scheduled_end']],
+      label: "Scheduling",
+      fields: ["scheduled_start", "scheduled_end", "completed_at"],
+      rows: [["scheduled_start", "scheduled_end"]],
       order: 3,
     },
     location_address: {
-      label: 'Work Location',
-      fields: ['location_line1', 'location_line2', 'location_city', 'location_state', 'location_postal_code', 'location_country'],
-      rows: [['location_city', 'location_state', 'location_postal_code']],
+      label: "Work Location",
+      fields: [
+        "location_line1",
+        "location_line2",
+        "location_city",
+        "location_state",
+        "location_postal_code",
+        "location_country",
+      ],
+      rows: [["location_city", "location_state", "location_postal_code"]],
       order: 4,
     },
   },
 
   fieldAliases: {
-    name: 'Title',
+    name: "Title",
   },
 
   // ============================================================================
@@ -154,8 +164,8 @@ module.exports = {
    * Template: "{customer.fullName}: {summary}: {work_order_number}"
    */
   computedName: {
-    template: '{customer.fullName}: {summary}: {work_order_number}',
-    sources: ['customer_id', 'summary', 'work_order_number'],
+    template: "{customer.fullName}: {summary}: {work_order_number}",
+    sources: ["customer_id", "summary", "work_order_number"],
     readOnly: false, // Users can override the computed name
   },
 
@@ -167,18 +177,26 @@ module.exports = {
    * Fields required when creating a new entity
    * work_order_number is auto-generated, name is computed
    */
-  requiredFields: ['customer_id'],
+  requiredFields: ["customer_id"],
 
   /**
    * Fields that cannot be modified after creation
    */
-  immutableFields: ['work_order_number'],
+  immutableFields: ["work_order_number"],
 
   /**
    * Default columns to display in table views (ordered)
    * Used by admin panel and frontend table widgets
    */
-  displayColumns: ['work_order_number', 'name', 'customer_id', 'status', 'priority', 'assigned_technician_id', 'scheduled_start'],
+  displayColumns: [
+    "work_order_number",
+    "name",
+    "customer_id",
+    "status",
+    "priority",
+    "assigned_technician_id",
+    "scheduled_start",
+  ],
 
   // ============================================================================
   // FIELD-LEVEL ACCESS CONTROL (for field-access-controller.js)
@@ -190,76 +208,78 @@ module.exports = {
 
     // Identity field - auto-generated, immutable
     work_order_number: {
-      create: 'none', // Auto-generated
-      read: 'customer',
-      update: 'none', // Immutable
-      delete: 'none',
+      create: "none", // Auto-generated
+      read: "customer",
+      update: "none", // Immutable
+      delete: "none",
     },
 
     // Computed name field (aliased as "Title" in UI)
     name: {
-      create: 'customer', // Customers can provide initial title
-      read: 'customer',
-      update: 'dispatcher', // Dispatchers+ can edit
-      delete: 'none',
+      create: "customer", // Customers can provide initial title
+      read: "customer",
+      update: "dispatcher", // Dispatchers+ can edit
+      delete: "none",
     },
 
     // Summary - brief description for computed name
     summary: {
-      create: 'customer',
-      read: 'customer',
-      update: 'dispatcher',
-      delete: 'none',
+      create: "customer",
+      read: "customer",
+      update: "dispatcher",
+      delete: "none",
     },
 
     // FK to customers - set on create, dispatcher+ can view
     customer_id: {
-      create: 'customer',
-      read: 'technician', // Technicians need to see customer
-      update: 'none', // Cannot reassign to different customer
-      delete: 'none',
+      create: "customer",
+      read: "technician", // Technicians need to see customer
+      update: "none", // Cannot reassign to different customer
+      delete: "none",
     },
 
     // FK to technicians - dispatcher+ assigns
     assigned_technician_id: {
-      create: 'dispatcher',
-      read: 'customer',
-      update: 'dispatcher',
-      delete: 'none',
+      create: "dispatcher",
+      read: "customer",
+      update: "dispatcher",
+      delete: "none",
     },
 
     // Priority - customer sets, dispatcher+ can override
     priority: {
-      create: 'customer',
-      read: 'customer',
-      update: 'dispatcher',
-      delete: 'none',
+      create: "customer",
+      read: "customer",
+      update: "dispatcher",
+      delete: "none",
     },
 
     // Scheduling - dispatcher+ manages, all can read
     scheduled_start: {
-      create: 'dispatcher',
-      read: 'customer',
-      update: 'dispatcher',
-      delete: 'none',
+      create: "dispatcher",
+      read: "customer",
+      update: "dispatcher",
+      delete: "none",
     },
     scheduled_end: {
-      create: 'dispatcher',
-      read: 'customer',
-      update: 'dispatcher',
-      delete: 'none',
+      create: "dispatcher",
+      read: "customer",
+      update: "dispatcher",
+      delete: "none",
     },
 
     // Completion timestamp - system/technician sets
     completed_at: {
-      create: 'none',
-      read: 'customer',
-      update: 'technician',
-      delete: 'none',
+      create: "none",
+      read: "customer",
+      update: "technician",
+      delete: "none",
     },
 
     // Location address fields - customer creates, dispatcher+ edits
-    ...createAddressFieldAccess('location', 'customer', { updateRole: 'dispatcher' }),
+    ...createAddressFieldAccess("location", "customer", {
+      updateRole: "dispatcher",
+    }),
   },
 
   // ============================================================================
@@ -268,20 +288,20 @@ module.exports = {
 
   foreignKeys: {
     customer_id: {
-      table: 'customers',
-      displayName: 'Customer',
+      table: "customers",
+      displayName: "Customer",
       // FK dropdown display config
-      relatedEntity: 'customer',
-      displayFields: ['first_name', 'last_name', 'email'],
-      displayTemplate: '{first_name} {last_name} - {email}',
+      relatedEntity: "customer",
+      displayFields: ["first_name", "last_name", "email"],
+      displayTemplate: "{first_name} {last_name} - {email}",
     },
     assigned_technician_id: {
-      table: 'technicians',
-      displayName: 'Technician',
+      table: "technicians",
+      displayName: "Technician",
       // FK dropdown display config
-      relatedEntity: 'technician',
-      displayFields: ['first_name', 'last_name', 'email'],
-      displayTemplate: '{first_name} {last_name} - {email}',
+      relatedEntity: "technician",
+      displayFields: ["first_name", "last_name", "email"],
+      displayTemplate: "{first_name} {last_name} - {email}",
     },
   },
 
@@ -289,32 +309,46 @@ module.exports = {
   // RELATIONSHIPS (for JOIN queries)
   // ============================================================================
 
-  defaultIncludes: ['customer'],
+  defaultIncludes: ["customer"],
 
   relationships: {
     // Work order belongs to a customer (required)
     customer: {
-      type: 'belongsTo',
-      foreignKey: 'customer_id',
-      table: 'customers',
-      fields: ['id', 'email', 'first_name', 'last_name', 'organization_name', 'phone'],
-      description: 'Customer who requested this work order',
+      type: "belongsTo",
+      foreignKey: "customer_id",
+      table: "customers",
+      fields: [
+        "id",
+        "email",
+        "first_name",
+        "last_name",
+        "organization_name",
+        "phone",
+      ],
+      description: "Customer who requested this work order",
     },
     // Work order may be assigned to a technician (optional)
     assignedTechnician: {
-      type: 'belongsTo',
-      foreignKey: 'assigned_technician_id',
-      table: 'technicians',
-      fields: ['id', 'email', 'first_name', 'last_name', 'license_number', 'status'],
-      description: 'Technician assigned to this work order',
+      type: "belongsTo",
+      foreignKey: "assigned_technician_id",
+      table: "technicians",
+      fields: [
+        "id",
+        "email",
+        "first_name",
+        "last_name",
+        "license_number",
+        "status",
+      ],
+      description: "Technician assigned to this work order",
     },
     // Work order may have invoices
     invoices: {
-      type: 'hasMany',
-      foreignKey: 'work_order_id',
-      table: 'invoices',
-      fields: ['id', 'invoice_number', 'name', 'status', 'total'],
-      description: 'Invoices generated from this work order',
+      type: "hasMany",
+      foreignKey: "work_order_id",
+      table: "invoices",
+      fields: ["id", "invoice_number", "name", "status", "total"],
+      description: "Invoices generated from this work order",
     },
   },
 
@@ -324,9 +358,9 @@ module.exports = {
 
   dependents: [
     {
-      table: 'audit_logs',
-      foreignKey: 'resource_id',
-      polymorphicType: { column: 'resource_type', value: 'work_orders' },
+      table: "audit_logs",
+      foreignKey: "resource_id",
+      polymorphicType: { column: "resource_type", value: "work_orders" },
     },
   ],
 
@@ -334,25 +368,25 @@ module.exports = {
   // SEARCH CONFIGURATION (Text Search with ILIKE)
   // ============================================================================
 
-  searchableFields: ['work_order_number', 'name', 'summary'],
+  searchableFields: ["work_order_number", "name", "summary"],
 
   // ============================================================================
   // FILTER CONFIGURATION (Exact Match & Operators)
   // ============================================================================
 
   filterableFields: [
-    'id',
-    'work_order_number',
-    'name',
-    'customer_id',
-    'assigned_technician_id',
-    'is_active',
-    'status',
-    'priority',
-    'scheduled_start',
-    'scheduled_end',
-    'created_at',
-    'updated_at',
+    "id",
+    "work_order_number",
+    "name",
+    "customer_id",
+    "assigned_technician_id",
+    "is_active",
+    "status",
+    "priority",
+    "scheduled_start",
+    "scheduled_end",
+    "created_at",
+    "updated_at",
   ],
 
   // ============================================================================
@@ -360,21 +394,21 @@ module.exports = {
   // ============================================================================
 
   sortableFields: [
-    'id',
-    'work_order_number',
-    'name',
-    'priority',
-    'status',
-    'scheduled_start',
-    'scheduled_end',
-    'completed_at',
-    'created_at',
-    'updated_at',
+    "id",
+    "work_order_number",
+    "name",
+    "priority",
+    "status",
+    "scheduled_start",
+    "scheduled_end",
+    "completed_at",
+    "created_at",
+    "updated_at",
   ],
 
   defaultSort: {
-    field: 'created_at',
-    order: 'DESC',
+    field: "created_at",
+    order: "DESC",
   },
 
   // ============================================================================
@@ -383,56 +417,56 @@ module.exports = {
 
   fields: {
     // TIER 1: Universal Entity Contract Fields
-    id: { type: 'integer', readonly: true },
+    id: { type: "integer", readonly: true },
     work_order_number: {
-      type: 'string',
+      type: "string",
       readonly: true, // Auto-generated: WO-YYYY-NNNN
       maxLength: 100,
-      pattern: '^WO-[0-9]{4}-[0-9]+$',
+      pattern: "^WO-[0-9]{4}-[0-9]+$",
       errorMessages: {
-        pattern: 'Work order number must be in format WO-YYYY-NNNN',
+        pattern: "Work order number must be in format WO-YYYY-NNNN",
       },
     },
-    is_active: { type: 'boolean', default: true },
-    created_at: { type: 'timestamp', readonly: true },
-    updated_at: { type: 'timestamp', readonly: true },
+    is_active: { type: "boolean", default: true },
+    created_at: { type: "timestamp", readonly: true },
+    updated_at: { type: "timestamp", readonly: true },
 
     // TIER 2: Entity-Specific Lifecycle Field
     status: {
-      type: 'enum',
-      values: ['pending', 'assigned', 'in_progress', 'completed', 'cancelled'],
-      default: 'pending',
+      type: "enum",
+      values: ["pending", "assigned", "in_progress", "completed", "cancelled"],
+      default: "pending",
     },
 
     // COMPUTED entity name field (aliased as "Title" in UI)
     // Optional because it's computed from template: {customer}: {summary}: {work_order_number}
-    name: { type: 'string', maxLength: 255 },
-    summary: { type: 'string', maxLength: 255 },
+    name: { type: "string", maxLength: 255 },
+    summary: { type: "string", maxLength: 255 },
 
     // Entity-specific fields
     priority: {
-      type: 'enum',
-      values: ['low', 'normal', 'high', 'urgent'],
-      default: 'normal',
+      type: "enum",
+      values: ["low", "normal", "high", "urgent"],
+      default: "normal",
     },
     customer_id: {
-      type: 'foreignKey',
-      relatedEntity: 'customer',
-      displayFields: ['first_name', 'last_name', 'email'],
-      displayTemplate: '{first_name} {last_name} - {email}',
+      type: "foreignKey",
+      relatedEntity: "customer",
+      displayFields: ["first_name", "last_name", "email"],
+      displayTemplate: "{first_name} {last_name} - {email}",
       required: true,
     },
     assigned_technician_id: {
-      type: 'foreignKey',
-      relatedEntity: 'technician',
-      displayFields: ['first_name', 'last_name', 'email'],
-      displayTemplate: '{first_name} {last_name} - {email}',
+      type: "foreignKey",
+      relatedEntity: "technician",
+      displayFields: ["first_name", "last_name", "email"],
+      displayTemplate: "{first_name} {last_name} - {email}",
     },
-    scheduled_start: { type: 'timestamp' },
-    scheduled_end: { type: 'timestamp' },
-    completed_at: { type: 'timestamp' },
+    scheduled_start: { type: "timestamp" },
+    scheduled_end: { type: "timestamp" },
+    completed_at: { type: "timestamp" },
 
     // Flat address fields for work location (using field-type-standards generators)
-    ...createAddressFields('location'),
+    ...createAddressFields("location"),
   },
 };

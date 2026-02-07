@@ -25,9 +25,9 @@
  *   app.use(timeoutHandler);
  */
 
-const { logger } = require('../config/logger');
-const { HTTP_STATUS } = require('../config/constants');
-const { TIMEOUTS } = require('../config/timeouts');
+const { logger } = require("../config/logger");
+const { HTTP_STATUS } = require("../config/constants");
+const { TIMEOUTS } = require("../config/timeouts");
 
 /**
  * Request timeout middleware
@@ -40,10 +40,7 @@ const { TIMEOUTS } = require('../config/timeouts');
  * @returns {Function} Express middleware
  */
 function requestTimeout(timeoutMs = TIMEOUTS.REQUEST.DEFAULT_MS, options = {}) {
-  const {
-    logSlowRequests = true,
-    onTimeout = null,
-  } = options;
+  const { logSlowRequests = true, onTimeout = null } = options;
 
   return (req, res, next) => {
     // Skip if already timed out
@@ -64,23 +61,25 @@ function requestTimeout(timeoutMs = TIMEOUTS.REQUEST.DEFAULT_MS, options = {}) {
       const duration = Date.now() - req.startTime;
 
       // Log timeout with context
-      logger.warn('Request timeout', {
+      logger.warn("Request timeout", {
         method: req.method,
         path: req.path,
         url: req.originalUrl,
         timeoutMs,
         duration,
         ip: req.ip,
-        userAgent: req.get('user-agent'),
+        userAgent: req.get("user-agent"),
         userId: req.user?.id || null,
       });
 
       // Call custom timeout handler if provided
-      if (onTimeout && typeof onTimeout === 'function') {
+      if (onTimeout && typeof onTimeout === "function") {
         try {
           onTimeout(req, res);
         } catch (error) {
-          logger.error('Custom timeout handler error', { error: error.message });
+          logger.error("Custom timeout handler error", {
+            error: error.message,
+          });
         }
       }
 
@@ -91,7 +90,7 @@ function requestTimeout(timeoutMs = TIMEOUTS.REQUEST.DEFAULT_MS, options = {}) {
 
       // Send timeout response
       res.status(HTTP_STATUS.REQUEST_TIMEOUT).json({
-        error: 'Request Timeout',
+        error: "Request Timeout",
         message: `Request exceeded ${timeoutMs / 1000} second timeout`,
         timeout: timeoutMs,
         duration,
@@ -101,7 +100,7 @@ function requestTimeout(timeoutMs = TIMEOUTS.REQUEST.DEFAULT_MS, options = {}) {
     }, timeoutMs);
 
     // Clear timeout when response finishes
-    res.on('finish', () => {
+    res.on("finish", () => {
       clearTimeout(timeoutId);
 
       // Log slow requests
@@ -109,7 +108,7 @@ function requestTimeout(timeoutMs = TIMEOUTS.REQUEST.DEFAULT_MS, options = {}) {
         const duration = Date.now() - req.startTime;
 
         if (duration >= TIMEOUTS.MONITORING.VERY_SLOW_REQUEST_MS) {
-          logger.error('Very slow request detected', {
+          logger.error("Very slow request detected", {
             method: req.method,
             path: req.path,
             url: req.originalUrl,
@@ -118,7 +117,7 @@ function requestTimeout(timeoutMs = TIMEOUTS.REQUEST.DEFAULT_MS, options = {}) {
             userId: req.user?.id || null,
           });
         } else if (duration >= TIMEOUTS.MONITORING.SLOW_REQUEST_MS) {
-          logger.warn('Slow request detected', {
+          logger.warn("Slow request detected", {
             method: req.method,
             path: req.path,
             url: req.originalUrl,
@@ -131,7 +130,7 @@ function requestTimeout(timeoutMs = TIMEOUTS.REQUEST.DEFAULT_MS, options = {}) {
     });
 
     // Clear timeout on connection close
-    res.on('close', () => {
+    res.on("close", () => {
       clearTimeout(timeoutId);
     });
 
@@ -158,8 +157,8 @@ function timeoutHandler(req, res, next) {
   if (!res.headersSent) {
     const duration = Date.now() - (req.startTime || Date.now());
     res.status(HTTP_STATUS.REQUEST_TIMEOUT).json({
-      error: 'Request Timeout',
-      message: 'Request processing was terminated due to timeout',
+      error: "Request Timeout",
+      message: "Request processing was terminated due to timeout",
       timeout: req.timeoutMs || TIMEOUTS.REQUEST.DEFAULT_MS,
       duration,
       timestamp: new Date().toISOString(),
@@ -212,7 +211,7 @@ function isTimeoutImminent(req, bufferMs = 1000) {
     return false;
   }
   const elapsed = Date.now() - req.startTime;
-  return elapsed >= (req.timeoutMs - bufferMs);
+  return elapsed >= req.timeoutMs - bufferMs;
 }
 
 /**

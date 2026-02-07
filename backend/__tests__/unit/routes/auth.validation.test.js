@@ -5,7 +5,7 @@
  * Uses centralized setup from route-test-setup.js (DRY architecture).
  *
  * Test Coverage: Error handling, validation, edge cases
- * 
+ *
  * NOTE: PUT /api/auth/me now uses GenericEntityService.findByField and
  * GenericEntityService.update (strangler-fig Phase 4 complete)
  */
@@ -45,15 +45,18 @@ jest.mock("../../../validators", () => {
   return {
     validateProfileUpdate: jest.fn((req, res, next) => next()),
     validateRefreshToken: jest.fn(() => (req, res, next) => next()),
-    validateIdParam: jest.fn(({ paramName = 'id' } = {}) => (req, res, next) => {
-      const value = parseInt(req.params[paramName], 10);
-      if (isNaN(value) || value < 1) {
-        return ResponseFormatter.badRequest(res, `Invalid ${paramName}`);
-      }
-      if (!req.validated) req.validated = {};
-      req.validated[paramName] = value;
-      next();
-    }),
+    validateIdParam: jest.fn(
+      ({ paramName = "id" } = {}) =>
+        (req, res, next) => {
+          const value = parseInt(req.params[paramName], 10);
+          if (isNaN(value) || value < 1) {
+            return ResponseFormatter.badRequest(res, `Invalid ${paramName}`);
+          }
+          if (!req.validated) req.validated = {};
+          req.validated[paramName] = value;
+          next();
+        },
+    ),
   };
 });
 
@@ -178,7 +181,9 @@ describe("routes/auth.js - Validation & Error Handling", () => {
         auth0_id: "auth0|123",
       });
 
-      GenericEntityService.update.mockRejectedValue(new Error("Database error"));
+      GenericEntityService.update.mockRejectedValue(
+        new Error("Database error"),
+      );
 
       // Act
       const response = await request(app)

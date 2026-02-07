@@ -7,9 +7,9 @@
  * PRINCIPLE: No hardcoded tests - all derived from route metadata.
  */
 
-const { runRouteTests } = require('../factory/route-runner');
-const app = require('../../server');
-const db = require('../../db/connection');
+const { runRouteTests } = require("../factory/route-runner");
+const app = require("../../server");
+const db = require("../../db/connection");
 
 // Run all route scenarios for stats
-runRouteTests('stats', { app, db });
+runRouteTests("stats", { app, db });

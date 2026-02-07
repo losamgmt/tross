@@ -20,7 +20,7 @@
 function exportsAllDeclaredMethods(serviceMeta, ctx) {
   for (const methodName of Object.keys(serviceMeta.methods)) {
     ctx.it(`exports ${methodName}()`, () => {
-      ctx.expect(typeof ctx.service[methodName]).toBe('function');
+      ctx.expect(typeof ctx.service[methodName]).toBe("function");
     });
   }
 }
@@ -75,7 +75,7 @@ function syncMethodsReturnImmediately(serviceMeta, ctx) {
  */
 function methodsReturnCorrectTypes(serviceMeta, ctx) {
   for (const [methodName, methodMeta] of Object.entries(serviceMeta.methods)) {
-    if (!methodMeta.returns || methodMeta.returns === 'void') continue;
+    if (!methodMeta.returns || methodMeta.returns === "void") continue;
 
     ctx.it(`${methodName}() returns ${methodMeta.returns}`, async () => {
       const args = generateTestArgs(methodMeta.args || []);
@@ -131,12 +131,14 @@ function handlesNullInputs(serviceMeta, ctx) {
  */
 function handlesEmptyStrings(serviceMeta, ctx) {
   for (const [methodName, methodMeta] of Object.entries(serviceMeta.methods)) {
-    const stringArgs = (methodMeta.args || []).filter((a) => a.type === 'string');
+    const stringArgs = (methodMeta.args || []).filter(
+      (a) => a.type === "string",
+    );
     if (stringArgs.length === 0) continue;
 
     ctx.it(`${methodName}() handles empty string inputs`, async () => {
       const args = (methodMeta.args || []).map((arg) =>
-        arg.type === 'string' ? '' : generateSingleArg(arg),
+        arg.type === "string" ? "" : generateSingleArg(arg),
       );
 
       try {
@@ -158,21 +160,27 @@ function handlesEmptyStrings(serviceMeta, ctx) {
  */
 function handlesInvalidIds(serviceMeta, ctx) {
   for (const [methodName, methodMeta] of Object.entries(serviceMeta.methods)) {
-    const idArgs = (methodMeta.args || []).filter((a) => a.type === 'id');
+    const idArgs = (methodMeta.args || []).filter((a) => a.type === "id");
     if (idArgs.length === 0) continue;
 
     ctx.it(`${methodName}() handles invalid ID gracefully`, async () => {
       const args = (methodMeta.args || []).map((arg) =>
-        arg.type === 'id' ? -999 : generateSingleArg(arg),
+        arg.type === "id" ? -999 : generateSingleArg(arg),
       );
 
       try {
         if (methodMeta.async) {
           const result = await ctx.service[methodName](...args);
           // Should return null/undefined/false for invalid ID, not crash
-          ctx.expect([null, undefined, false, []].some(v => 
-            result === v || (Array.isArray(result) && result.length === 0)
-          )).toBe(true);
+          ctx
+            .expect(
+              [null, undefined, false, []].some(
+                (v) =>
+                  result === v ||
+                  (Array.isArray(result) && result.length === 0),
+              ),
+            )
+            .toBe(true);
         } else {
           ctx.service[methodName](...args);
         }
@@ -192,10 +200,10 @@ function handlesInvalidIds(serviceMeta, ctx) {
  * Test: Query services return arrays for list methods
  */
 function queryMethodsReturnArrays(serviceMeta, ctx) {
-  if (serviceMeta.type !== 'query') return;
+  if (serviceMeta.type !== "query") return;
 
   for (const [methodName, methodMeta] of Object.entries(serviceMeta.methods)) {
-    if (methodMeta.returns !== 'array') continue;
+    if (methodMeta.returns !== "array") continue;
 
     ctx.it(`${methodName}() returns an array`, async () => {
       const args = generateTestArgs(methodMeta.args || []);
@@ -254,20 +262,20 @@ function generateSingleArg(arg) {
   if (arg.optional) return undefined;
 
   switch (arg.type) {
-    case 'string':
-      return 'test-value';
-    case 'id':
+    case "string":
+      return "test-value";
+    case "id":
       return 1;
-    case 'object':
+    case "object":
       return {};
-    case 'array':
+    case "array":
       return [];
-    case 'boolean':
+    case "boolean":
       return true;
-    case 'number':
+    case "number":
       return 1;
-    case 'any':
-      return 'test';
+    case "any":
+      return "test";
     default:
       return null;
   }
@@ -278,26 +286,26 @@ function generateSingleArg(arg) {
  */
 function assertReturnType(expect, result, expectedType) {
   switch (expectedType) {
-    case 'array':
+    case "array":
       expect(Array.isArray(result)).toBe(true);
       break;
-    case 'object':
-      expect(typeof result).toBe('object');
+    case "object":
+      expect(typeof result).toBe("object");
       expect(result).not.toBeNull();
       break;
-    case 'object|null':
-      expect(result === null || typeof result === 'object').toBe(true);
+    case "object|null":
+      expect(result === null || typeof result === "object").toBe(true);
       break;
-    case 'string':
-      expect(typeof result).toBe('string');
+    case "string":
+      expect(typeof result).toBe("string");
       break;
-    case 'boolean':
-      expect(typeof result).toBe('boolean');
+    case "boolean":
+      expect(typeof result).toBe("boolean");
       break;
-    case 'number':
-      expect(typeof result).toBe('number');
+    case "number":
+      expect(typeof result).toBe("number");
       break;
-    case 'void':
+    case "void":
       expect(result).toBeUndefined();
       break;
   }

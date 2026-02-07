@@ -7,6 +7,7 @@ Guide to Tross's continuous integration and deployment pipeline.
 ## Overview
 
 **What runs automatically:**
+
 - ✅ Backend tests (unit + integration)
 - ✅ Frontend tests (Flutter analyze + test)
 - ✅ Security audit (npm audit + dependency review)
@@ -15,12 +16,14 @@ Guide to Tross's continuous integration and deployment pipeline.
 - ✅ E2E smoke tests (against Railway production)
 
 **When it runs:**
+
 - Every push to `main` or `develop`
 - Every pull request to `main`
 - Mobile builds: Only on `main` branch pushes
 - Triggered by GitHub Actions
 
 **Automation:**
+
 - 🤖 **Dependabot**: Weekly dependency updates (npm, Flutter, Docker, Actions)
 - 👥 **CODEOWNERS**: Auto-assigns reviewers for PRs
 
@@ -31,6 +34,7 @@ Guide to Tross's continuous integration and deployment pipeline.
 ### 1. Backend Unit Tests 🧪
 
 **What runs:**
+
 - Unit tests (fast, isolated, mocked dependencies)
 - ESLint code quality checks
 
@@ -41,6 +45,7 @@ Guide to Tross's continuous integration and deployment pipeline.
 ### 2. Backend Integration Tests 🔗
 
 **What runs:**
+
 - Integration tests (real database, API endpoints)
 - PostgreSQL 15 service container
 
@@ -51,6 +56,7 @@ Guide to Tross's continuous integration and deployment pipeline.
 ### 3. Security Audit 🔒
 
 **What runs:**
+
 - `npm audit --audit-level=high`
 - Dependency review (PRs only) - blocks high-severity vulnerabilities
 
@@ -59,6 +65,7 @@ Guide to Tross's continuous integration and deployment pipeline.
 ### 4. Frontend Tests 🎨
 
 **What runs:**
+
 - `flutter analyze` (static analysis)
 - `flutter test` (all widget + unit tests)
 
@@ -69,6 +76,7 @@ Guide to Tross's continuous integration and deployment pipeline.
 ### 5. Web Build 🌐
 
 **What runs:**
+
 - `flutter build web --no-tree-shake-icons`
 - Uploads artifact (main branch only)
 
@@ -77,10 +85,12 @@ Guide to Tross's continuous integration and deployment pipeline.
 ### 6. Mobile Builds 📱 (main branch only)
 
 **Android 🤖:**
+
 - Builds debug + release APKs
 - Uploads as artifacts (30-day retention)
 
 **iOS 🍎:**
+
 - Builds unsigned IPA (macOS runner)
 - Creates Payload zip for testing
 - Uploads as artifact (30-day retention)
@@ -88,6 +98,7 @@ Guide to Tross's continuous integration and deployment pipeline.
 ### 7. E2E Smoke Tests 🎭
 
 **What runs:**
+
 - Playwright tests against Railway production
 - Health checks, security headers, routing
 
@@ -99,10 +110,10 @@ Guide to Tross's continuous integration and deployment pipeline.
 
 ### Why This Approach?
 
-| Approach | Problem |
-|----------|---------|
+| Approach                  | Problem                                                      |
+| ------------------------- | ------------------------------------------------------------ |
 | ❌ Simulate Railway in CI | Complex DB setup, env var juggling, tests a mock not reality |
-| ✅ Test real deployment | Simple, tests what users actually experience |
+| ✅ Test real deployment   | Simple, tests what users actually experience                 |
 
 ### What E2E Tests Verify
 
@@ -140,8 +151,8 @@ E2E waits for Railway to be healthy, then runs against the production URL.
 
 ### Required GitHub Secrets
 
-| Secret | Value | Example |
-|--------|-------|---------|
+| Secret                | Value                    | Example                                       |
+| --------------------- | ------------------------ | --------------------------------------------- |
 | `RAILWAY_BACKEND_URL` | Your Railway backend URL | `https://tross-api-production.up.railway.app` |
 
 ### Running Tests
@@ -203,6 +214,7 @@ BACKEND_URL=https://tross-api-production.up.railway.app npm run test:e2e
 **Status after setup (see `.github/BRANCH_PROTECTION_SETUP.md`):**
 
 ✅ `main` branch is protected:
+
 - Requires PR (no direct pushes)
 - Requires 1 approval (you)
 - Requires CI to pass (all checks green)
@@ -210,6 +222,7 @@ BACKEND_URL=https://tross-api-production.up.railway.app npm run test:e2e
 - Only you can merge
 
 **This protects against:**
+
 - Accidental direct commits to main
 - Merging broken code
 - Merging without review
@@ -222,17 +235,20 @@ BACKEND_URL=https://tross-api-production.up.railway.app npm run test:e2e
 ### Frontend (Vercel)
 
 **Triggers:**
+
 - Push to `main` → Deploy to production
 - Open PR → Deploy to preview URL
 - New commit to PR → Update preview
 
 **Auto-deployment:**
+
 ```
 PR opened → Vercel builds → Preview URL in comment
 PR merged → Vercel builds → Production deploy
 ```
 
 **Preview URLs:**
+
 ```
 Production: https://trossapp.vercel.app
 Preview: https://tross-pr-123.vercel.app
@@ -241,10 +257,12 @@ Preview: https://tross-pr-123.vercel.app
 ### Backend (Railway)
 
 **Triggers:**
+
 - Push to `main` → Deploy to production
 - (Optional) Push to `develop` → Deploy to staging
 
 **Auto-deployment:**
+
 ```
 Push to main → Railway builds → Health check → Live
 ```
@@ -262,6 +280,7 @@ Tross's backend uses `deployment-adapter.js` for zero-config deployment across p
 **No code changes needed** when switching platforms—just set the appropriate environment variables.
 
 **Railway Environment Variables Required:**
+
 ```bash
 NODE_ENV=production
 DATABASE_URL=postgresql://...  # Auto-provided by Railway Postgres
@@ -275,6 +294,7 @@ FRONTEND_URL=https://trossapp.vercel.app
 Railway automatically provides `DATABASE_URL` when you provision a PostgreSQL database. The deployment adapter handles the rest.
 
 **URLs:**
+
 ```
 Production: https://tross-api-production.up.railway.app
 Health: https://tross-api-production.up.railway.app/api/health
@@ -288,11 +308,13 @@ API Docs: https://tross-api-production.up.railway.app/api-docs
 ### View CI Logs
 
 **GitHub UI:**
+
 1. Go to PR or commit
 2. Click "Details" next to failed check
 3. View logs for each step
 
 **Failed tests:**
+
 - Logs show exact test that failed
 - Stack traces included
 - Can re-run failed jobs
@@ -300,24 +322,29 @@ API Docs: https://tross-api-production.up.railway.app/api-docs
 ### Common CI Failures
 
 **"npm ci failed"**
+
 - Cause: package-lock.json out of sync with Node 22
 - Fix: Run `npm install` locally, commit lock file
 
 **"Tests failed"**
+
 - Cause: Code breaks existing tests
 - Fix: Run tests locally, fix broken functionality
 
 **"Linting failed"**
+
 - Cause: Code style violations
 - Fix: Run `npm run lint -- --fix` locally
 
 **"Build failed"**
+
 - Cause: TypeScript errors, missing deps
 - Fix: Run `npm run build` locally, fix errors
 
 ### Re-running CI
 
 **If CI fails due to flaky test or infrastructure:**
+
 1. Click "Re-run failed jobs" in GitHub Actions
 2. Or push empty commit to trigger re-run:
    ```bash
@@ -332,10 +359,12 @@ API Docs: https://tross-api-production.up.railway.app/api-docs
 ### GitHub Actions
 
 **Free tier (PUBLIC REPO):**
+
 - ✅ Unlimited minutes on all runners (ubuntu, macos, windows)
 - ✅ No cost for iOS builds (macos-latest)
 
 **Current usage:**
+
 - ~3 minutes per PR (backend + frontend + security)
 - ~4-5 minutes per main push (includes mobile builds with Gradle caching)
 - **Cost: $0** (public repo) ✅
@@ -343,11 +372,13 @@ API Docs: https://tross-api-production.up.railway.app/api-docs
 ### Vercel
 
 **Free tier:**
+
 - Unlimited deployments
 - 100GB bandwidth/month
 - Commercial use restrictions
 
 **Current usage:**
+
 - ~10 deployments/day (PRs + main)
 - <1GB bandwidth/month
 - Free tier perfect for MVP ✅
@@ -355,6 +386,7 @@ API Docs: https://tross-api-production.up.railway.app/api-docs
 ### Railway
 
 **Starter plan:**
+
 - $5/month base
 - ~$5-10/month usage (compute + DB)
 - Total: ~$10-15/month
@@ -364,12 +396,14 @@ API Docs: https://tross-api-production.up.railway.app/api-docs
 ## Security Notes
 
 **Secrets management:**
+
 - GitHub Secrets for CI (`RAILWAY_BACKEND_URL`, R2 storage credentials)
 - Railway environment variables for production
 - Vercel environment variables for frontend
 - **Never commit secrets to repo!**
 
 **Fork PR security:**
+
 - Secrets not exposed to fork PRs
 - E2E only runs on `main` branch (requires `RAILWAY_BACKEND_URL` secret)
 - Build and tests run in isolated environment
@@ -379,21 +413,25 @@ API Docs: https://tross-api-production.up.railway.app/api-docs
 ## Troubleshooting
 
 **"CI stuck on waiting for PostgreSQL"**
+
 - Usually times out after 30s
 - Rare infrastructure issue
 - Fix: Re-run jobs
 
 **"E2E tests failing with connection refused"**
+
 - Check `RAILWAY_BACKEND_URL` secret is set correctly
 - Verify Railway deployment is healthy
 - E2E waits up to 5 minutes for Railway to respond
 
 **"Coverage upload failed"**
+
 - Non-blocking (won't fail PR)
 - Optional codecov.io integration
 - Can ignore or configure token
 
 **"Vercel deployment failed"**
+
 - Check Vercel dashboard for logs
 - Usually build command or env var issue
 - Can redeploy manually from Vercel UI

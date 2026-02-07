@@ -20,6 +20,7 @@ import '../services/error_service.dart';
 import '../services/nav_config_loader.dart';
 import '../services/permission_service_dynamic.dart';
 import '../utils/entity_icon_resolver.dart';
+import '../widgets/molecules/menus/adaptive_nav_menu.dart';
 import '../widgets/organisms/navigation/nav_menu_item.dart';
 import '../core/routing/app_routes.dart';
 
@@ -30,6 +31,27 @@ class NavMenuBuilder {
   // ============================================================================
   // PUBLIC API
   // ============================================================================
+
+  /// Get the display mode for a menu type from config
+  ///
+  /// Returns the configured MenuDisplayMode for the given menu type.
+  /// Defaults to MenuDisplayMode.adaptive if not configured.
+  ///
+  /// Menu types: 'userMenu', 'sidebar', 'mobileNav'
+  static MenuDisplayMode getDisplayModeForMenu(String menuType) {
+    if (!NavConfigService.isInitialized) {
+      // Default: userMenu is always dropdown, others adaptive
+      return menuType == 'userMenu'
+          ? MenuDisplayMode.dropdown
+          : MenuDisplayMode.adaptive;
+    }
+
+    final configMode = NavConfigService.config.getDisplayModeForMenu(menuType);
+    return switch (configMode) {
+      ConfigDisplayMode.dropdown => MenuDisplayMode.dropdown,
+      ConfigDisplayMode.adaptive => MenuDisplayMode.adaptive,
+    };
+  }
 
   /// Build sidebar navigation items (main app navigation)
   ///
@@ -349,10 +371,14 @@ class NavMenuBuilder {
             items.addAll(groupChildren);
           } else {
             // Multiple groups - add as collapsible section
+            // Include group icon for mobile bottom nav support
             items.add(
               NavMenuItem(
                 id: 'section_$groupId',
                 label: group.label,
+                icon: group.icon != null
+                    ? EntityIconResolver.getStaticIcon(group.icon!)
+                    : null,
                 isSectionHeader: true,
                 children: groupChildren,
                 requiresAuth: false,

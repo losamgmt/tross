@@ -57,7 +57,12 @@ function validateParams(options = {}) {
   const maxLimit = options.maxLimit || DEFAULTS.MAX_LIMIT;
 
   // Gracefully clamp values (user-friendly pagination)
-  const page = safeClamp(options.page, DEFAULTS.PAGE, 1, Number.MAX_SAFE_INTEGER);
+  const page = safeClamp(
+    options.page,
+    DEFAULTS.PAGE,
+    1,
+    Number.MAX_SAFE_INTEGER,
+  );
   const limit = safeClamp(options.limit, DEFAULTS.LIMIT, 1, maxLimit);
 
   // KISS: Simple offset calculation

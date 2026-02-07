@@ -5,7 +5,7 @@
  * Driven by searchableFields, filterableFields, sortableFields.
  */
 
-const validationGenerator = require('../data/validation-data-generator');
+const validationGenerator = require("../data/validation-data-generator");
 
 /**
  * Scenario: Text search across searchable fields
@@ -21,57 +21,68 @@ function textSearch(meta, ctx) {
   // Prefer fields without validation rules (like 'description', 'title')
   // Skip COMPUTED entity identifiers (work_order_number, invoice_number, contract_number)
   const strictPatternFields = [
-    'email', 'phone', 'first_name', 'last_name',
-    'work_order_number', 'invoice_number', 'contract_number'
+    "email",
+    "phone",
+    "first_name",
+    "last_name",
+    "work_order_number",
+    "invoice_number",
+    "contract_number",
   ];
-  
-  const searchField = searchableFields.find(f => 
-    !strictPatternFields.some(pattern => f.includes(pattern))
-  ) || searchableFields.find(f => 
-    !f.includes('email') && !f.includes('phone')
-  ) || searchableFields[0];
-  
+
+  const searchField =
+    searchableFields.find(
+      (f) => !strictPatternFields.some((pattern) => f.includes(pattern)),
+    ) ||
+    searchableFields.find(
+      (f) => !f.includes("email") && !f.includes("phone"),
+    ) ||
+    searchableFields[0];
+
   // Generate unique search token - letters only for compatibility
   const { num } = validationGenerator.getNextUnique();
   const uniqueToken = `search${validationGenerator.numberToLetters(num)}`;
-  
+
   // Build override value based on field type and validation rules
   let overrideValue;
   const year = new Date().getFullYear();
-  
-  if (searchField.includes('email')) {
+
+  if (searchField.includes("email")) {
     overrideValue = `${uniqueToken.toLowerCase()}@example.com`;
-  } else if (searchField.includes('phone')) {
-    overrideValue = `+1555${String(num).padStart(7, '0')}`;
-  } else if (searchField === 'first_name' || searchField === 'last_name') {
+  } else if (searchField.includes("phone")) {
+    overrideValue = `+1555${String(num).padStart(7, "0")}`;
+  } else if (searchField === "first_name" || searchField === "last_name") {
     // Human name fields: letters, spaces, hyphens, apostrophes only
     overrideValue = uniqueToken; // Already alphabetic
-  } else if (searchField === 'work_order_number') {
-    overrideValue = `WO-${year}-${String(num).padStart(4, '0')}`;
-  } else if (searchField === 'invoice_number') {
-    overrideValue = `INV-${year}-${String(num).padStart(4, '0')}`;
-  } else if (searchField === 'contract_number') {
-    overrideValue = `CTR-${year}-${String(num).padStart(4, '0')}`;
+  } else if (searchField === "work_order_number") {
+    overrideValue = `WO-${year}-${String(num).padStart(4, "0")}`;
+  } else if (searchField === "invoice_number") {
+    overrideValue = `INV-${year}-${String(num).padStart(4, "0")}`;
+  } else if (searchField === "contract_number") {
+    overrideValue = `CTR-${year}-${String(num).padStart(4, "0")}`;
   } else {
     overrideValue = `Test ${uniqueToken} Entity`;
   }
 
-  ctx.it(`GET /api/${meta.tableName}?search=<term> - searches correctly`, async () => {
-    const created = await ctx.factory.create(meta.entityName, {
-      [searchField]: overrideValue,
-    });
-    const auth = await ctx.authHeader('admin');
+  ctx.it(
+    `GET /api/${meta.tableName}?search=<term> - searches correctly`,
+    async () => {
+      const created = await ctx.factory.create(meta.entityName, {
+        [searchField]: overrideValue,
+      });
+      const auth = await ctx.authHeader("admin");
 
-    const response = await ctx.request
-      .get(`/api/${meta.tableName}`)
-      .query({ search: uniqueToken, page: 1, limit: 50 })
-      .set(auth);
+      const response = await ctx.request
+        .get(`/api/${meta.tableName}`)
+        .query({ search: uniqueToken, page: 1, limit: 50 })
+        .set(auth);
 
-    ctx.expect(response.status).toBe(200);
-    const items = response.body.data || response.body;
-    const found = items.find((item) => item.id === created.id);
-    ctx.expect(found).toBeDefined();
-  });
+      ctx.expect(response.status).toBe(200);
+      const items = response.body.data || response.body;
+      const found = items.find((item) => item.id === created.id);
+      ctx.expect(found).toBeDefined();
+    },
+  );
 }
 
 /**
@@ -81,21 +92,24 @@ function textSearch(meta, ctx) {
  * Tests: Limit and offset work correctly
  */
 function pagination(meta, ctx) {
-  ctx.it(`GET /api/${meta.tableName}?limit=1 - returns limited results`, async () => {
-    // Create multiple entities
-    await ctx.factory.create(meta.entityName);
-    await ctx.factory.create(meta.entityName);
-    const auth = await ctx.authHeader('admin');
+  ctx.it(
+    `GET /api/${meta.tableName}?limit=1 - returns limited results`,
+    async () => {
+      // Create multiple entities
+      await ctx.factory.create(meta.entityName);
+      await ctx.factory.create(meta.entityName);
+      const auth = await ctx.authHeader("admin");
 
-    const response = await ctx.request
-      .get(`/api/${meta.tableName}`)
-      .query({ limit: 1 })
-      .set(auth);
+      const response = await ctx.request
+        .get(`/api/${meta.tableName}`)
+        .query({ limit: 1 })
+        .set(auth);
 
-    ctx.expect(response.status).toBe(200);
-    const items = response.body.data || response.body;
-    ctx.expect(items.length).toBeLessThanOrEqual(1);
-  });
+      ctx.expect(response.status).toBe(200);
+      const items = response.body.data || response.body;
+      ctx.expect(items.length).toBeLessThanOrEqual(1);
+    },
+  );
 }
 
 /**
@@ -111,29 +125,35 @@ function sorting(meta, ctx) {
   // Test with first sortable field
   const sortField = sortableFields[0];
 
-  ctx.it(`GET /api/${tableName}?sortBy=${sortField}&sortOrder=asc - sorts ascending`, async () => {
-    await ctx.factory.create(entityName);
-    await ctx.factory.create(entityName);
-    const auth = await ctx.authHeader('admin');
+  ctx.it(
+    `GET /api/${tableName}?sortBy=${sortField}&sortOrder=asc - sorts ascending`,
+    async () => {
+      await ctx.factory.create(entityName);
+      await ctx.factory.create(entityName);
+      const auth = await ctx.authHeader("admin");
 
-    const response = await ctx.request
-      .get(`/api/${tableName}`)
-      .query({ sortBy: sortField, sortOrder: 'asc', limit: 10 })
-      .set(auth);
+      const response = await ctx.request
+        .get(`/api/${tableName}`)
+        .query({ sortBy: sortField, sortOrder: "asc", limit: 10 })
+        .set(auth);
 
-    ctx.expect(response.status).toBe(200);
-  });
+      ctx.expect(response.status).toBe(200);
+    },
+  );
 
-  ctx.it(`GET /api/${tableName}?sortBy=${sortField}&sortOrder=desc - sorts descending`, async () => {
-    const auth = await ctx.authHeader('admin');
+  ctx.it(
+    `GET /api/${tableName}?sortBy=${sortField}&sortOrder=desc - sorts descending`,
+    async () => {
+      const auth = await ctx.authHeader("admin");
 
-    const response = await ctx.request
-      .get(`/api/${tableName}`)
-      .query({ sortBy: sortField, sortOrder: 'desc', limit: 10 })
-      .set(auth);
+      const response = await ctx.request
+        .get(`/api/${tableName}`)
+        .query({ sortBy: sortField, sortOrder: "desc", limit: 10 })
+        .set(auth);
 
-    ctx.expect(response.status).toBe(200);
-  });
+      ctx.expect(response.status).toBe(200);
+    },
+  );
 }
 
 /**
@@ -143,16 +163,19 @@ function sorting(meta, ctx) {
  * Tests: Arbitrary/invalid sortBy values are rejected
  */
 function invalidSortField(meta, ctx) {
-  ctx.it(`GET /api/${meta.tableName}?sortBy=hackerField - rejects invalid sort field`, async () => {
-    const auth = await ctx.authHeader('admin');
+  ctx.it(
+    `GET /api/${meta.tableName}?sortBy=hackerField - rejects invalid sort field`,
+    async () => {
+      const auth = await ctx.authHeader("admin");
 
-    const response = await ctx.request
-      .get(`/api/${meta.tableName}`)
-      .query({ sortBy: 'hackerField', sortOrder: 'asc', limit: 10 })
-      .set(auth);
+      const response = await ctx.request
+        .get(`/api/${meta.tableName}`)
+        .query({ sortBy: "hackerField", sortOrder: "asc", limit: 10 })
+        .set(auth);
 
-    ctx.expect(response.status).toBe(400);
-  });
+      ctx.expect(response.status).toBe(400);
+    },
+  );
 }
 
 /**
@@ -165,16 +188,23 @@ function invalidSortOrder(meta, ctx) {
   const { sortableFields } = meta;
   if (!sortableFields?.length) return;
 
-  ctx.it(`GET /api/${meta.tableName}?sortOrder=invalid - rejects invalid sort order`, async () => {
-    const auth = await ctx.authHeader('admin');
+  ctx.it(
+    `GET /api/${meta.tableName}?sortOrder=invalid - rejects invalid sort order`,
+    async () => {
+      const auth = await ctx.authHeader("admin");
 
-    const response = await ctx.request
-      .get(`/api/${meta.tableName}`)
-      .query({ sortBy: sortableFields[0], sortOrder: 'DROP TABLE', limit: 10 })
-      .set(auth);
+      const response = await ctx.request
+        .get(`/api/${meta.tableName}`)
+        .query({
+          sortBy: sortableFields[0],
+          sortOrder: "DROP TABLE",
+          limit: 10,
+        })
+        .set(auth);
 
-    ctx.expect(response.status).toBe(400);
-  });
+      ctx.expect(response.status).toBe(400);
+    },
+  );
 }
 
 /**
@@ -184,19 +214,22 @@ function invalidSortOrder(meta, ctx) {
  * Tests: page < 1 or invalid limit rejected
  */
 function invalidPagination(meta, ctx) {
-  ctx.it(`GET /api/${meta.tableName}?page=-1 - rejects negative page`, async () => {
-    const auth = await ctx.authHeader('admin');
+  ctx.it(
+    `GET /api/${meta.tableName}?page=-1 - rejects negative page`,
+    async () => {
+      const auth = await ctx.authHeader("admin");
 
-    const response = await ctx.request
-      .get(`/api/${meta.tableName}`)
-      .query({ page: -1, limit: 10 })
-      .set(auth);
+      const response = await ctx.request
+        .get(`/api/${meta.tableName}`)
+        .query({ page: -1, limit: 10 })
+        .set(auth);
 
-    ctx.expect(response.status).toBe(400);
-  });
+      ctx.expect(response.status).toBe(400);
+    },
+  );
 
   ctx.it(`GET /api/${meta.tableName}?page=0 - rejects zero page`, async () => {
-    const auth = await ctx.authHeader('admin');
+    const auth = await ctx.authHeader("admin");
 
     const response = await ctx.request
       .get(`/api/${meta.tableName}`)
@@ -206,16 +239,19 @@ function invalidPagination(meta, ctx) {
     ctx.expect(response.status).toBe(400);
   });
 
-  ctx.it(`GET /api/${meta.tableName}?limit=10000 - rejects excessive limit`, async () => {
-    const auth = await ctx.authHeader('admin');
+  ctx.it(
+    `GET /api/${meta.tableName}?limit=10000 - rejects excessive limit`,
+    async () => {
+      const auth = await ctx.authHeader("admin");
 
-    const response = await ctx.request
-      .get(`/api/${meta.tableName}`)
-      .query({ page: 1, limit: 10000 })
-      .set(auth);
+      const response = await ctx.request
+        .get(`/api/${meta.tableName}`)
+        .query({ page: 1, limit: 10000 })
+        .set(auth);
 
-    ctx.expect(response.status).toBe(400);
-  });
+      ctx.expect(response.status).toBe(400);
+    },
+  );
 }
 
 module.exports = {

@@ -18,6 +18,7 @@ npm run db:migrate
 ## Migration Naming
 
 Format: `NNN_description.sql`
+
 - Sequential numbering (000, 001, 002...)
 - Snake_case description
 - Descriptive, actionable name
@@ -25,6 +26,7 @@ Format: `NNN_description.sql`
 ## Migration Structure
 
 Each migration includes:
+
 - **UP**: Schema changes to apply
 - **DOWN**: Rollback instructions (in comments)
 - **Idempotency**: Safe to re-run

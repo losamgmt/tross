@@ -148,8 +148,8 @@ describe("AppConfig", () => {
       expect(AppConfig.auth0).toBeDefined();
       // Auth0 values require explicit env vars - no fallbacks for security
       // In test environment without env vars, these will be undefined
-      expect(AppConfig.auth0).toHaveProperty('domain');
-      expect(AppConfig.auth0).toHaveProperty('clientId');
+      expect(AppConfig.auth0).toHaveProperty("domain");
+      expect(AppConfig.auth0).toHaveProperty("clientId");
     });
 
     test("Auth0 domain should be valid format when set", () => {
@@ -175,7 +175,7 @@ describe("AppConfig", () => {
     test("should have JWT config object", () => {
       expect(AppConfig.jwt).toBeDefined();
       // JWT secret requires explicit env var - no fallback for security
-      expect(AppConfig.jwt).toHaveProperty('secret');
+      expect(AppConfig.jwt).toHaveProperty("secret");
       expect(AppConfig.jwt.expiresIn).toBeDefined();
       expect(AppConfig.jwt.algorithm).toBe("HS256");
     });
@@ -292,7 +292,7 @@ describe("AppConfig", () => {
   describe("Production Validation Branch Coverage", () => {
     // These tests exercise the production branches by mocking isProduction
     // Note: Since isProduction is a getter, we test the edge case logic
-    
+
     test("validate() exits early in non-production", () => {
       // In test env, this should not throw
       expect(() => AppConfig.validate()).not.toThrow();

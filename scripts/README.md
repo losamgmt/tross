@@ -25,6 +25,6 @@ npm test                   # All tests
 ## ���️ Backend Scripts
 
 See `backend/scripts/`:
+
 - `manual-curl-tests.sh` - API testing
 - `run-migration.js` - Database migrations
-

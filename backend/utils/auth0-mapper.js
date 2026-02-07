@@ -10,22 +10,22 @@
  * - Default role resolution is configurable, not hardcoded
  */
 
-const userMetadata = require('../config/models/user-metadata');
-const AppError = require('./app-error');
+const userMetadata = require("../config/models/user-metadata");
+const AppError = require("./app-error");
 
 /**
  * Default role name for new users (configurable via metadata)
  * Falls back to 'customer' if not specified in metadata
  */
-const DEFAULT_ROLE_NAME = userMetadata.defaultRoleName || 'customer';
+const DEFAULT_ROLE_NAME = userMetadata.defaultRoleName || "customer";
 
 /**
  * Default values for missing name fields
  * Used when Auth0 doesn't provide given_name/family_name
  * (e.g., social logins, passwordless, etc.)
  */
-const DEFAULT_FIRST_NAME = 'New';
-const DEFAULT_LAST_NAME = 'User';
+const DEFAULT_FIRST_NAME = "New";
+const DEFAULT_LAST_NAME = "User";
 
 /**
  * Map Auth0 token fields to local user fields
@@ -49,17 +49,17 @@ const DEFAULT_LAST_NAME = 'User';
  */
 function mapAuth0ToUser(auth0Data) {
   if (!auth0Data) {
-    throw new AppError('Auth0 data is required', 400, 'BAD_REQUEST');
+    throw new AppError("Auth0 data is required", 400, "BAD_REQUEST");
   }
 
   const { sub, email, given_name, family_name, role } = auth0Data;
 
   if (!sub) {
-    throw new AppError('Auth0 sub (user ID) is required', 400, 'BAD_REQUEST');
+    throw new AppError("Auth0 sub (user ID) is required", 400, "BAD_REQUEST");
   }
 
   if (!email) {
-    throw new AppError('Auth0 email is required', 400, 'BAD_REQUEST');
+    throw new AppError("Auth0 email is required", 400, "BAD_REQUEST");
   }
 
   return {
@@ -83,15 +83,15 @@ function mapAuth0ToUser(auth0Data) {
  */
 function validateAuth0Data(auth0Data) {
   if (!auth0Data) {
-    throw new AppError('Auth0 data is required', 400, 'BAD_REQUEST');
+    throw new AppError("Auth0 data is required", 400, "BAD_REQUEST");
   }
 
   if (!auth0Data.sub) {
-    throw new AppError('Auth0 sub (user ID) is required', 400, 'BAD_REQUEST');
+    throw new AppError("Auth0 sub (user ID) is required", 400, "BAD_REQUEST");
   }
 
   if (!auth0Data.email) {
-    throw new AppError('Auth0 email is required', 400, 'BAD_REQUEST');
+    throw new AppError("Auth0 email is required", 400, "BAD_REQUEST");
   }
 
   return true;

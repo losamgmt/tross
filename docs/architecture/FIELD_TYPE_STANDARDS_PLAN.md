@@ -25,17 +25,21 @@
 ## Executive Summary
 
 ### Goal
+
 Establish a **Single Source of Truth (SSOT)** for field types across all layers of Tross, enabling:
+
 - Zero-hardcoding field additions
 - Consistent validation frontend/backend
 - Type-safe field handling
 - Extensible patterns for future needs
 
 ### Key Files Created
+
 - `backend/config/geo-standards.js` - Geographic data (countries, states/provinces)
 - `backend/config/field-type-standards.js` - Field definitions and generators
 
 ### Key Principles
+
 1. **Semantic Types** - Email IS an email, not "string with format"
 2. **Flat Fields** - No JSONB except truly dynamic user-defined data
 3. **Composable Patterns** - Generators for field groups (addresses, human names)
@@ -46,25 +50,30 @@ Establish a **Single Source of Truth (SSOT)** for field types across all layers 
 ## Design Decisions
 
 ### Decision 1: Semantic Types vs Formatted Strings
+
 **Chosen**: Semantic types (`type: 'email'`) over formatted strings (`type: 'string', format: 'email'`)
 
 **Rationale**: The type answers "what IS this field?" - an email field IS an email.
 
 ### Decision 2: JSONB Policy
+
 **Chosen**: JSONB ONLY for truly dynamic user-defined data
 
-| Use Case | Decision |
-|----------|----------|
-| `saved_views.settings` | KEEP as JSONB (user-defined structure) |
-| `user_preferences.preferences` | FLATTEN to individual columns |
-| `customer.billing_address` | FLATTEN to 6 address columns |
+| Use Case                       | Decision                               |
+| ------------------------------ | -------------------------------------- |
+| `saved_views.settings`         | KEEP as JSONB (user-defined structure) |
+| `user_preferences.preferences` | FLATTEN to individual columns          |
+| `customer.billing_address`     | FLATTEN to 6 address columns           |
 
 ### Decision 3: Eliminated Types
+
 - **`number`** - Removed. Use `integer` or `decimal` instead.
 - **`richtext`** - Not implemented. Add later if needed.
 
 ### Decision 4: Text Size Limits
+
 All text types have explicit limits (security/performance):
+
 - `string`: Varies by field (100-255 typical)
 - `text`: 2,000-50,000 depending on use case
 
@@ -78,66 +87,73 @@ All text types have explicit limits (security/performance):
 ### What Was Done
 
 #### 1. Created `geo-standards.js`
+
 **Location**: `backend/config/geo-standards.js`
 
 ```javascript
 // Exports:
-SUPPORTED_COUNTRIES      // ['US', 'CA'] - extensible
-DEFAULT_COUNTRY          // 'US'
-US_STATES               // 56 entries (50 states + DC + territories)
-CA_PROVINCES            // 13 entries
-ALL_SUBDIVISIONS        // Combined for enum validation
-COUNTRY_NAMES           // Display names
-SUBDIVISION_NAMES       // Display names
+SUPPORTED_COUNTRIES; // ['US', 'CA'] - extensible
+DEFAULT_COUNTRY; // 'US'
+US_STATES; // 56 entries (50 states + DC + territories)
+CA_PROVINCES; // 13 entries
+ALL_SUBDIVISIONS; // Combined for enum validation
+COUNTRY_NAMES; // Display names
+SUBDIVISION_NAMES; // Display names
 
 // Helper functions:
-isValidCountry(code)
-isValidSubdivision(code)
-isValidSubdivisionForCountry(code, country)
-getSubdivisionsForCountry(country)
-getSubdivisionName(code, country)
-getCountryName(code)
+isValidCountry(code);
+isValidSubdivision(code);
+isValidSubdivisionForCountry(code, country);
+getSubdivisionsForCountry(country);
+getSubdivisionName(code, country);
+getCountryName(code);
 ```
 
 #### 2. Created `field-type-standards.js`
+
 **Location**: `backend/config/field-type-standards.js`
 
 ```javascript
 // FIELD constants:
-FIELD.EMAIL              // { type: 'email', maxLength: 255 }
-FIELD.PHONE              // { type: 'phone', maxLength: 50 }
-FIELD.FIRST_NAME         // { type: 'string', maxLength: 100 }
-FIELD.LAST_NAME          // { type: 'string', maxLength: 100 }
-FIELD.NAME               // { type: 'string', maxLength: 200 }
-FIELD.SUMMARY            // { type: 'string', maxLength: 200 }
-FIELD.DESCRIPTION        // { type: 'string', maxLength: 2000 }
-FIELD.ADDRESS_LINE1      // { type: 'string', maxLength: 255 }
-FIELD.ADDRESS_LINE2      // { type: 'string', maxLength: 255 }
-FIELD.ADDRESS_CITY       // { type: 'string', maxLength: 100 }
-FIELD.ADDRESS_STATE      // { type: 'string', maxLength: 10 }
-FIELD.ADDRESS_POSTAL_CODE // { type: 'string', maxLength: 20 }
-FIELD.ADDRESS_COUNTRY    // { type: 'string', maxLength: 2 }
+FIELD.EMAIL; // { type: 'email', maxLength: 255 }
+FIELD.PHONE; // { type: 'phone', maxLength: 50 }
+FIELD.FIRST_NAME; // { type: 'string', maxLength: 100 }
+FIELD.LAST_NAME; // { type: 'string', maxLength: 100 }
+FIELD.NAME; // { type: 'string', maxLength: 200 }
+FIELD.SUMMARY; // { type: 'string', maxLength: 200 }
+FIELD.DESCRIPTION; // { type: 'string', maxLength: 2000 }
+FIELD.ADDRESS_LINE1; // { type: 'string', maxLength: 255 }
+FIELD.ADDRESS_LINE2; // { type: 'string', maxLength: 255 }
+FIELD.ADDRESS_CITY; // { type: 'string', maxLength: 100 }
+FIELD.ADDRESS_STATE; // { type: 'string', maxLength: 10 }
+FIELD.ADDRESS_POSTAL_CODE; // { type: 'string', maxLength: 20 }
+FIELD.ADDRESS_COUNTRY; // { type: 'string', maxLength: 2 }
 
 // Generators:
-createAddressFields(prefix, options)
-createAddressFieldAccess(prefix, minRole, options)
+createAddressFields(prefix, options);
+createAddressFieldAccess(prefix, minRole, options);
 ```
 
 #### 3. Updated `validation-loader.js`
+
 Added semantic types to switch statement:
+
 - `email` → `Joi.string().email()`
 - `phone` → `Joi.string().pattern(E.164)`
 
 #### 4. Updated `validation-deriver.js`
+
 - Imports `FIELD.*` from field-type-standards
 - Imports `ALL_SUBDIVISIONS`, `SUPPORTED_COUNTRIES` from geo-standards
 - `SHARED_FIELD_DEFS` now uses `...FIELD.*` spread
 
 #### 5. Created Unit Tests
+
 - `backend/__tests__/unit/config/geo-standards.test.js`
 - `backend/__tests__/unit/config/field-type-standards.test.js`
 
 ### Verification
+
 ```bash
 npm run test:unit
 ```
@@ -181,7 +197,7 @@ case 'url':
   break;
 ```
 
-#### 1.2 Add Missing FIELD.* Constants
+#### 1.2 Add Missing FIELD.\* Constants
 
 Add to `field-type-standards.js`:
 
@@ -205,10 +221,12 @@ URL: { type: 'url', maxLength: 2000 },
 #### 1.3 Update Tests
 
 Add tests for:
+
 - New types in `field-type-standards.test.js`
 - New Joi mappings in validation tests
 
 #### 1.4 Verification Gate
+
 ```bash
 npm run test:unit  # All tests pass
 ```
@@ -222,7 +240,9 @@ npm run test:unit  # All tests pass
 **Dependencies**: Phase 1
 
 ### Context
+
 Currently `user_preferences.preferences` is a JSONB column containing:
+
 ```json
 {
   "theme": "system",
@@ -284,6 +304,7 @@ cd scripts && node sync-entity-metadata.js
 - Preferences UI should auto-update to use flat fields
 
 #### 2.4 Verification Gate
+
 ```bash
 npm run test:unit
 npm run test:integration  # Preferences CRUD works
@@ -291,6 +312,7 @@ flutter test
 ```
 
 #### 2.5 Cleanup Migration (After Verification Period)
+
 ```sql
 ALTER TABLE user_preferences DROP COLUMN preferences;
 ```
@@ -304,7 +326,9 @@ ALTER TABLE user_preferences DROP COLUMN preferences;
 **Dependencies**: Phase 1
 
 ### Context
+
 Currently customers have:
+
 - `billing_address` (JSONB)
 - `service_address` (JSONB)
 
@@ -389,6 +413,7 @@ cd scripts && node sync-entity-metadata.js
 - Address fields appear as groups (detected by `_line1`, `_city`, etc. suffixes)
 
 #### 3.4 Verification Gate
+
 ```bash
 npm run test:unit
 npm run test:integration  # Customer CRUD with addresses
@@ -397,8 +422,9 @@ flutter test
 ```
 
 #### 3.5 Cleanup Migration
+
 ```sql
-ALTER TABLE customers 
+ALTER TABLE customers
   DROP COLUMN billing_address,
   DROP COLUMN service_address;
 ```
@@ -413,6 +439,7 @@ ALTER TABLE customers
 **Note**: This was the original user request that sparked this entire architecture effort!
 
 ### Context
+
 Work orders need a location/address to indicate where work is performed. This uses the same address pattern established in Phases 0-3.
 
 ### Tasks
@@ -468,16 +495,18 @@ cd scripts && node sync-entity-metadata.js
 #### 4.4 Optional: Link to Customer Address
 
 Consider adding a "Copy from Customer" feature:
+
 ```javascript
 // In work order form - copy service address from linked customer
 onCopyFromCustomer: () => {
   setLocationLine1(customer.service_line1);
   setLocationCity(customer.service_city);
   // ... etc
-}
+};
 ```
 
 #### 4.5 Verification Gate
+
 ```bash
 npm run test:unit
 npm run test:integration  # Work order CRUD with location
@@ -494,34 +523,37 @@ flutter test
 **Dependencies**: Phases 1-4
 
 ### Context
+
 Comprehensive audit and refactor of all 13 entity metadata files to use:
+
 - `FIELD.*` constants instead of inline definitions
 - Semantic types (`type: 'email'`) not format patterns
 - Consistent field naming and constraints
 
 ### Entities to Refactor
 
-| Entity | File | Priority Notes |
-|--------|------|----------------|
-| users | user-metadata.js | email, phone, name fields |
-| customers | customer-metadata.js | email, phone, addresses (done in Phase 3) |
-| technicians | technician-metadata.js | email, phone, name fields |
-| vendors | vendor-metadata.js | email, phone, addresses |
-| work_orders | work-order-metadata.js | location (done in Phase 4), description |
-| quotes | quote-metadata.js | description, terms |
-| invoices | invoice-metadata.js | description, terms, totals |
-| products | product-metadata.js | SKU, description |
-| equipment | equipment-metadata.js | model, serial, description |
-| interactions | interaction-metadata.js | notes/description |
-| parts_and_labor | parts-labor-metadata.js | descriptions |
-| saved_views | saved-views-metadata.js | Keep settings JSONB! |
-| user_preferences | preferences-metadata.js | (done in Phase 2) |
+| Entity           | File                    | Priority Notes                            |
+| ---------------- | ----------------------- | ----------------------------------------- |
+| users            | user-metadata.js        | email, phone, name fields                 |
+| customers        | customer-metadata.js    | email, phone, addresses (done in Phase 3) |
+| technicians      | technician-metadata.js  | email, phone, name fields                 |
+| vendors          | vendor-metadata.js      | email, phone, addresses                   |
+| work_orders      | work-order-metadata.js  | location (done in Phase 4), description   |
+| quotes           | quote-metadata.js       | description, terms                        |
+| invoices         | invoice-metadata.js     | description, terms, totals                |
+| products         | product-metadata.js     | SKU, description                          |
+| equipment        | equipment-metadata.js   | model, serial, description                |
+| interactions     | interaction-metadata.js | notes/description                         |
+| parts_and_labor  | parts-labor-metadata.js | descriptions                              |
+| saved_views      | saved-views-metadata.js | Keep settings JSONB!                      |
+| user_preferences | preferences-metadata.js | (done in Phase 2)                         |
 
 ### Tasks
 
 #### 5.1 Create Refactoring Checklist
 
 For each entity, check:
+
 - [ ] Uses `FIELD.*` for common fields (email, phone, name, description)
 - [ ] Uses semantic types (no `type: 'string', format: 'email'`)
 - [ ] Addresses use `createAddressFields()` pattern
@@ -531,6 +563,7 @@ For each entity, check:
 #### 5.2 Refactor One Entity at a Time
 
 Pattern for each:
+
 ```javascript
 // Before
 email: {
@@ -547,17 +580,20 @@ email: { ...FIELD.EMAIL, required: true },
 ```
 
 #### 5.3 Run Tests After Each Entity
+
 ```bash
 npm run test:unit
 flutter test
 ```
 
 #### 5.4 Sync Frontend After All Entities
+
 ```bash
 cd scripts && node sync-entity-metadata.js
 ```
 
 #### 5.5 Verification Gate
+
 ```bash
 npm run test:unit
 npm run test:integration
@@ -573,6 +609,7 @@ flutter test
 **Dependencies**: Phases 1-3 (complete)
 
 ### Context
+
 Address fields now render as coherent groups with proper row layouts using the generic metadata-driven system. No specialized `AddressFieldGroup` widget is needed - the existing `GenericForm`, `DetailPanel`, and `FormSection` widgets handle address layout automatically based on `fieldGroups` and `rows` metadata.
 
 ### Implemented Solution
@@ -633,11 +670,13 @@ Flat address fields are generated using reusable helpers:
 
 ```javascript
 // Generate 6 flat address fields with geo-standard enums
-const fields = createAddressFields('billing');
+const fields = createAddressFields("billing");
 // => { billing_line1, billing_line2, billing_city, billing_state, billing_postal_code, billing_country }
 
 // Generate field access rules for all 6 fields
-const access = createAddressFieldAccess('billing', 'customer', { updateRole: 'dispatcher' });
+const access = createAddressFieldAccess("billing", "customer", {
+  updateRole: "dispatcher",
+});
 ```
 
 #### 6.5 Geo Standards Flow
@@ -646,10 +685,10 @@ State/Country enum values flow from `geo-standards.js` through `field-type-stand
 
 ### Entities Using Address Groups
 
-| Entity | Address Groups | Row Layout |
-|--------|---------------|------------|
-| customer | billing_address, service_address | city \| state \| postal_code |
-| work_order | location_address | city \| state \| postal_code |
+| Entity     | Address Groups                   | Row Layout                   |
+| ---------- | -------------------------------- | ---------------------------- |
+| customer   | billing_address, service_address | city \| state \| postal_code |
+| work_order | location_address                 | city \| state \| postal_code |
 
 ### Why Generic Over Specialized
 
@@ -659,6 +698,7 @@ State/Country enum values flow from `geo-standards.js` through `field-type-stand
 4. **Extensible** - Can add flex ratios, responsive breakpoints later in metadata
 
 #### 6.6 Verification Gate
+
 ```bash
 dart analyze --fatal-infos  # No issues
 node scripts/sync-entity-metadata.js  # Syncs row hints to frontend
@@ -677,6 +717,7 @@ node scripts/sync-entity-metadata.js  # Syncs row hints to frontend
 #### 7.1 Update ARCHITECTURE.md
 
 Add section on Field Type Standards:
+
 - Link to this plan document
 - Explain semantic types concept
 - Explain SSOT flow
@@ -684,6 +725,7 @@ Add section on Field Type Standards:
 #### 7.2 Update API.md
 
 Document any API changes from flattening:
+
 - Preference endpoints now return flat fields
 - Customer endpoints return flat address fields
 - Work order endpoints include location fields
@@ -691,6 +733,7 @@ Document any API changes from flattening:
 #### 7.3 Archive Old Patterns
 
 Document deprecated patterns for historical reference:
+
 - JSONB preferences pattern
 - JSONB address pattern
 - `type: 'string', format: 'email'` pattern
@@ -698,15 +741,17 @@ Document deprecated patterns for historical reference:
 #### 7.4 Run Full Cleanup Migrations
 
 After 1-2 weeks in production with dual columns:
+
 ```sql
 -- preferences-cleanup.sql
 ALTER TABLE user_preferences DROP COLUMN preferences;
 
--- customer-cleanup.sql  
+-- customer-cleanup.sql
 ALTER TABLE customers DROP COLUMN billing_address, DROP COLUMN service_address;
 ```
 
 #### 7.5 Final Verification
+
 ```bash
 npm run test:all
 flutter test
@@ -720,92 +765,92 @@ npm run lint
 
 ### A. Complete Type Reference
 
-| Type | Backend Joi | Frontend Dart | DB Column | maxLength |
-|------|-------------|---------------|-----------|-----------|
-| `string` | `Joi.string()` | `String` | `VARCHAR(n)` | varies |
-| `text` | `Joi.string()` | `String` | `TEXT` | 2K-50K |
-| `email` | `Joi.string().email()` | `String` | `VARCHAR(255)` | 255 |
-| `phone` | `Joi.string().pattern(/^\+?[1-9]\d{1,14}$/)` | `String` | `VARCHAR(20)` | 20 |
-| `url` | `Joi.string().uri()` | `String` | `VARCHAR(2048)` | 2048 |
-| `integer` | `Joi.number().integer()` | `int` | `INTEGER` | - |
-| `decimal` | `Joi.number()` | `double` | `DECIMAL(n,m)` | - |
-| `boolean` | `Joi.boolean()` | `bool` | `BOOLEAN` | - |
-| `date` | `Joi.date()` | `DateTime` | `DATE` | - |
-| `time` | `Joi.string().pattern(/.../)` | `TimeOfDay` | `TIME` | - |
-| `timestamp` | `Joi.date().iso()` | `DateTime` | `TIMESTAMPTZ` | - |
-| `enum` | `Joi.string().valid(...values)` | `String` | `VARCHAR(50)` | - |
-| `foreignKey` | `Joi.number().integer()` | `int` | `INTEGER` FK | - |
-| `object` | (only saved_views) | `Map` | `JSONB` | - |
+| Type         | Backend Joi                                  | Frontend Dart | DB Column       | maxLength |
+| ------------ | -------------------------------------------- | ------------- | --------------- | --------- |
+| `string`     | `Joi.string()`                               | `String`      | `VARCHAR(n)`    | varies    |
+| `text`       | `Joi.string()`                               | `String`      | `TEXT`          | 2K-50K    |
+| `email`      | `Joi.string().email()`                       | `String`      | `VARCHAR(255)`  | 255       |
+| `phone`      | `Joi.string().pattern(/^\+?[1-9]\d{1,14}$/)` | `String`      | `VARCHAR(20)`   | 20        |
+| `url`        | `Joi.string().uri()`                         | `String`      | `VARCHAR(2048)` | 2048      |
+| `integer`    | `Joi.number().integer()`                     | `int`         | `INTEGER`       | -         |
+| `decimal`    | `Joi.number()`                               | `double`      | `DECIMAL(n,m)`  | -         |
+| `boolean`    | `Joi.boolean()`                              | `bool`        | `BOOLEAN`       | -         |
+| `date`       | `Joi.date()`                                 | `DateTime`    | `DATE`          | -         |
+| `time`       | `Joi.string().pattern(/.../)`                | `TimeOfDay`   | `TIME`          | -         |
+| `timestamp`  | `Joi.date().iso()`                           | `DateTime`    | `TIMESTAMPTZ`   | -         |
+| `enum`       | `Joi.string().valid(...values)`              | `String`      | `VARCHAR(50)`   | -         |
+| `foreignKey` | `Joi.number().integer()`                     | `int`         | `INTEGER` FK    | -         |
+| `object`     | (only saved_views)                           | `Map`         | `JSONB`         | -         |
 
 ### B. FIELD Constants Reference
 
-| Constant | Type | maxLength | Notes |
-|----------|------|-----------|-------|
-| `FIELD.EMAIL` | email | 255 | Standard email |
-| `FIELD.PHONE` | phone | 20 | E.164 format |
-| `FIELD.FIRST_NAME` | string | 50 | Person name |
-| `FIELD.LAST_NAME` | string | 50 | Person name |
-| `FIELD.NAME` | string | 100 | Business/entity name |
-| `FIELD.TITLE` | string | 150 | Document/item title |
-| `FIELD.SUMMARY` | string | 255 | Short summary |
-| `FIELD.DESCRIPTION` | text | 5000 | Long description |
-| `FIELD.NOTES` | text | 10000 | Internal notes |
-| `FIELD.TERMS` | text | 50000 | Legal terms |
-| `FIELD.SKU` | string | 50 | Product SKU |
-| `FIELD.IDENTIFIER` | string | 100 | General identifier |
-| `FIELD.URL` | url | 2048 | Web URL |
-| `FIELD.CURRENCY` | decimal | - | min: 0, precision: 2 |
-| `FIELD.ADDRESS_LINE1` | string | 255 | Street address |
-| `FIELD.ADDRESS_LINE2` | string | 255 | Apt/Suite/Unit |
-| `FIELD.ADDRESS_CITY` | string | 100 | City name |
-| `FIELD.ADDRESS_STATE` | enum | - | US_STATES + CA_PROVINCES |
-| `FIELD.ADDRESS_POSTAL_CODE` | string | 20 | ZIP/Postal code |
-| `FIELD.ADDRESS_COUNTRY` | enum | - | SUPPORTED_COUNTRIES |
+| Constant                    | Type    | maxLength | Notes                    |
+| --------------------------- | ------- | --------- | ------------------------ |
+| `FIELD.EMAIL`               | email   | 255       | Standard email           |
+| `FIELD.PHONE`               | phone   | 20        | E.164 format             |
+| `FIELD.FIRST_NAME`          | string  | 50        | Person name              |
+| `FIELD.LAST_NAME`           | string  | 50        | Person name              |
+| `FIELD.NAME`                | string  | 100       | Business/entity name     |
+| `FIELD.TITLE`               | string  | 150       | Document/item title      |
+| `FIELD.SUMMARY`             | string  | 255       | Short summary            |
+| `FIELD.DESCRIPTION`         | text    | 5000      | Long description         |
+| `FIELD.NOTES`               | text    | 10000     | Internal notes           |
+| `FIELD.TERMS`               | text    | 50000     | Legal terms              |
+| `FIELD.SKU`                 | string  | 50        | Product SKU              |
+| `FIELD.IDENTIFIER`          | string  | 100       | General identifier       |
+| `FIELD.URL`                 | url     | 2048      | Web URL                  |
+| `FIELD.CURRENCY`            | decimal | -         | min: 0, precision: 2     |
+| `FIELD.ADDRESS_LINE1`       | string  | 255       | Street address           |
+| `FIELD.ADDRESS_LINE2`       | string  | 255       | Apt/Suite/Unit           |
+| `FIELD.ADDRESS_CITY`        | string  | 100       | City name                |
+| `FIELD.ADDRESS_STATE`       | enum    | -         | US_STATES + CA_PROVINCES |
+| `FIELD.ADDRESS_POSTAL_CODE` | string  | 20        | ZIP/Postal code          |
+| `FIELD.ADDRESS_COUNTRY`     | enum    | -         | SUPPORTED_COUNTRIES      |
 
 ### C. Key Files Reference
 
-| Purpose | File Path |
-|---------|-----------|
-| Geographic SSOT | `backend/config/geo-standards.js` |
-| Field Type SSOT | `backend/config/field-type-standards.js` |
-| Validation Loader | `backend/utils/validation-loader.js` |
-| Validation Deriver | `backend/config/validation-deriver.js` |
-| Geo Standards Tests | `backend/__tests__/unit/config/geo-standards.test.js` |
+| Purpose               | File Path                                                    |
+| --------------------- | ------------------------------------------------------------ |
+| Geographic SSOT       | `backend/config/geo-standards.js`                            |
+| Field Type SSOT       | `backend/config/field-type-standards.js`                     |
+| Validation Loader     | `backend/utils/validation-loader.js`                         |
+| Validation Deriver    | `backend/config/validation-deriver.js`                       |
+| Geo Standards Tests   | `backend/__tests__/unit/config/geo-standards.test.js`        |
 | Field Standards Tests | `backend/__tests__/unit/config/field-type-standards.test.js` |
-| Entity Metadata | `backend/config/models/*-metadata.js` |
-| Frontend Sync Script | `scripts/sync-entity-metadata.js` |
-| This Plan | `docs/architecture/FIELD_TYPE_STANDARDS_PLAN.md` |
+| Entity Metadata       | `backend/config/models/*-metadata.js`                        |
+| Frontend Sync Script  | `scripts/sync-entity-metadata.js`                            |
+| This Plan             | `docs/architecture/FIELD_TYPE_STANDARDS_PLAN.md`             |
 
 ### D. Rollback Strategy
 
 Each phase has its own rollback path:
 
-| Phase | Rollback Strategy |
-|-------|-------------------|
-| Phase 0-1 | Revert code changes; no DB impact |
-| Phase 2 | Re-enable JSONB reads; preferences column still exists |
-| Phase 3 | Re-enable JSONB reads; address columns still exist |
-| Phase 4 | Drop location columns (no prior data) |
-| Phase 5 | Revert metadata files to prior versions |
-| Phase 6 | Revert widget changes; forms still work with individual fields |
-| Phase 7 | N/A (documentation only) |
+| Phase     | Rollback Strategy                                              |
+| --------- | -------------------------------------------------------------- |
+| Phase 0-1 | Revert code changes; no DB impact                              |
+| Phase 2   | Re-enable JSONB reads; preferences column still exists         |
+| Phase 3   | Re-enable JSONB reads; address columns still exist             |
+| Phase 4   | Drop location columns (no prior data)                          |
+| Phase 5   | Revert metadata files to prior versions                        |
+| Phase 6   | Revert widget changes; forms still work with individual fields |
+| Phase 7   | N/A (documentation only)                                       |
 
 ---
 
 ## Change Log
 
-| Date | Phase | Changes |
-|------|-------|---------|  
-| 2026-01-23 | 0 | Created geo-standards.js, field-type-standards.js, tests |
-| 2026-01-23 | 1 | Added validation layer support for all semantic types |
-| 2026-01-23 | 2 | Flattened preferences JSONB to 6 individual columns, uses generic router |
-| 2026-01-23 | 3 | Flattened customer addresses to 12 flat columns (billing_*, service_*) |
-| 2026-01-23 | 4 | Added work_order location with 6 flat columns (location_*) |
-| 2026-01-23 | 5 | Refactored all 13 entities to use FIELD.* constants, foreignKey types |
-| 2026-01-23 | - | Backend complete! All unit tests passing |
-| 2026-01-27 | 6 | Frontend address UI: row layouts via fieldGroups.rows, GenericForm/DetailPanel row rendering |
+| Date       | Phase | Changes                                                                                      |
+| ---------- | ----- | -------------------------------------------------------------------------------------------- |
+| 2026-01-23 | 0     | Created geo-standards.js, field-type-standards.js, tests                                     |
+| 2026-01-23 | 1     | Added validation layer support for all semantic types                                        |
+| 2026-01-23 | 2     | Flattened preferences JSONB to 6 individual columns, uses generic router                     |
+| 2026-01-23 | 3     | Flattened customer addresses to 12 flat columns (billing*\*, service*\*)                     |
+| 2026-01-23 | 4     | Added work*order location with 6 flat columns (location*\*)                                  |
+| 2026-01-23 | 5     | Refactored all 13 entities to use FIELD.\* constants, foreignKey types                       |
+| 2026-01-23 | -     | Backend complete! All unit tests passing                                                     |
+| 2026-01-27 | 6     | Frontend address UI: row layouts via fieldGroups.rows, GenericForm/DetailPanel row rendering |
 
 ---
 
-*Last Updated: January 27, 2026*  
-*Author: Development Team + AI Assistant*
+_Last Updated: January 27, 2026_  
+_Author: Development Team + AI Assistant_

@@ -8,8 +8,8 @@
  * their read access level defined in metadata.fieldAccess.
  */
 
-const permissions = require('../../../../config/permissions.json');
-const { ROLE_HIERARCHY } = require('../../../config/constants');
+const permissions = require("../../../../config/permissions.json");
+const { ROLE_HIERARCHY } = require("../../../config/constants");
 
 // Role priority order from single source of truth
 const ROLE_ORDER = ROLE_HIERARCHY;
@@ -26,12 +26,16 @@ function getHiddenFields(meta, role) {
 
   for (const [field, access] of Object.entries(fieldAccess)) {
     // Skip system-only fields (already hidden by sensitiveFields)
-    if (access === 'system_only' || access.read === 'none' || access.read === 'system') {
+    if (
+      access === "system_only" ||
+      access.read === "none" ||
+      access.read === "system"
+    ) {
       continue;
     }
 
     // If access.read is a role name, check if current role has access
-    if (typeof access.read === 'string' && ROLE_ORDER.includes(access.read)) {
+    if (typeof access.read === "string" && ROLE_ORDER.includes(access.read)) {
       const requiredRoleIndex = ROLE_ORDER.indexOf(access.read);
       if (roleIndex < requiredRoleIndex) {
         hiddenFields.push(field);
@@ -55,17 +59,17 @@ function getVisibleFields(meta, role) {
   for (const [field, access] of Object.entries(fieldAccess)) {
     // Skip sensitive/system fields
     if (meta.sensitiveFields?.includes(field)) continue;
-    if (access === 'system_only') continue;
-    if (access.read === 'none' || access.read === 'system') continue;
+    if (access === "system_only") continue;
+    if (access.read === "none" || access.read === "system") continue;
 
     // If access.read is a role name or priority level
-    if (typeof access.read === 'string') {
+    if (typeof access.read === "string") {
       if (ROLE_ORDER.includes(access.read)) {
         const requiredRoleIndex = ROLE_ORDER.indexOf(access.read);
         if (roleIndex >= requiredRoleIndex) {
           visibleFields.push(field);
         }
-      } else if (access.read === 'self' || access.read === 'customer') {
+      } else if (access.read === "self" || access.read === "customer") {
         // 'customer' is lowest, everyone can see
         visibleFields.push(field);
       }
@@ -85,26 +89,29 @@ function restrictedFieldsHiddenFromLowerRoles(meta, ctx) {
   const { tableName, entityName } = meta;
 
   // Get fields hidden from customer role
-  const customerHiddenFields = getHiddenFields(meta, 'customer');
+  const customerHiddenFields = getHiddenFields(meta, "customer");
   if (!customerHiddenFields.length) return;
 
-  ctx.it(`GET /api/${tableName}/:id - hides restricted fields from customer role`, async () => {
-    const created = await ctx.factory.create(entityName);
-    const auth = await ctx.authHeader('customer');
+  ctx.it(
+    `GET /api/${tableName}/:id - hides restricted fields from customer role`,
+    async () => {
+      const created = await ctx.factory.create(entityName);
+      const auth = await ctx.authHeader("customer");
 
-    const response = await ctx.request
-      .get(`/api/${tableName}/${created.id}`)
-      .set(auth);
+      const response = await ctx.request
+        .get(`/api/${tableName}/${created.id}`)
+        .set(auth);
 
-    // Customer may be denied entirely (403/404) or get filtered response
-    if (response.status === 200) {
-      const data = response.body.data || response.body;
-      for (const field of customerHiddenFields) {
-        ctx.expect(data[field]).toBeUndefined();
+      // Customer may be denied entirely (403/404) or get filtered response
+      if (response.status === 200) {
+        const data = response.body.data || response.body;
+        for (const field of customerHiddenFields) {
+          ctx.expect(data[field]).toBeUndefined();
+        }
       }
-    }
-    // 403/404 is also acceptable - means RLS denied access entirely
-  });
+      // 403/404 is also acceptable - means RLS denied access entirely
+    },
+  );
 }
 
 /**
@@ -115,36 +122,41 @@ function restrictedFieldsHiddenFromLowerRoles(meta, ctx) {
  */
 function adminSeesAllFields(meta, ctx) {
   const { tableName, entityName, sensitiveFields = [] } = meta;
-  const visibleFields = getVisibleFields(meta, 'admin');
-  
+  const visibleFields = getVisibleFields(meta, "admin");
+
   if (!visibleFields.length) return;
 
-  ctx.it(`GET /api/${tableName}/:id - admin sees all non-sensitive fields`, async () => {
-    const created = await ctx.factory.create(entityName);
-    const auth = await ctx.authHeader('admin');
+  ctx.it(
+    `GET /api/${tableName}/:id - admin sees all non-sensitive fields`,
+    async () => {
+      const created = await ctx.factory.create(entityName);
+      const auth = await ctx.authHeader("admin");
 
-    const response = await ctx.request
-      .get(`/api/${tableName}/${created.id}`)
-      .set(auth);
+      const response = await ctx.request
+        .get(`/api/${tableName}/${created.id}`)
+        .set(auth);
 
-    ctx.expect(response.status).toBe(200);
-    const data = response.body.data || response.body;
+      ctx.expect(response.status).toBe(200);
+      const data = response.body.data || response.body;
 
-    // Check a sample of visible fields are present
-    const fieldsToCheck = visibleFields.slice(0, 5);
-    for (const field of fieldsToCheck) {
-      // Field should be present unless it's optional and wasn't set
-      if (!sensitiveFields.includes(field)) {
-        // Just verify the field exists in response (may be null)
-        ctx.expect(field in data || data[field] !== undefined || true).toBe(true);
+      // Check a sample of visible fields are present
+      const fieldsToCheck = visibleFields.slice(0, 5);
+      for (const field of fieldsToCheck) {
+        // Field should be present unless it's optional and wasn't set
+        if (!sensitiveFields.includes(field)) {
+          // Just verify the field exists in response (may be null)
+          ctx
+            .expect(field in data || data[field] !== undefined || true)
+            .toBe(true);
+        }
       }
-    }
 
-    // Sensitive fields should never appear
-    for (const field of sensitiveFields) {
-      ctx.expect(data[field]).toBeUndefined();
-    }
-  });
+      // Sensitive fields should never appear
+      for (const field of sensitiveFields) {
+        ctx.expect(data[field]).toBeUndefined();
+      }
+    },
+  );
 }
 
 /**
@@ -155,35 +167,42 @@ function adminSeesAllFields(meta, ctx) {
  */
 function technicianSeesAppropriateFields(meta, ctx) {
   const { tableName, entityName } = meta;
-  
+
   // Check if there's a difference between customer and technician visibility
-  const customerHidden = getHiddenFields(meta, 'customer');
-  const technicianHidden = getHiddenFields(meta, 'technician');
-  
+  const customerHidden = getHiddenFields(meta, "customer");
+  const technicianHidden = getHiddenFields(meta, "technician");
+
   // Only test if technician has MORE visibility than customer
-  const techCanSeeMore = customerHidden.some(f => !technicianHidden.includes(f));
+  const techCanSeeMore = customerHidden.some(
+    (f) => !technicianHidden.includes(f),
+  );
   if (!techCanSeeMore) return;
 
-  ctx.it(`GET /api/${tableName}/:id - technician sees role-appropriate fields`, async () => {
-    const created = await ctx.factory.create(entityName);
-    const auth = await ctx.authHeader('technician');
+  ctx.it(
+    `GET /api/${tableName}/:id - technician sees role-appropriate fields`,
+    async () => {
+      const created = await ctx.factory.create(entityName);
+      const auth = await ctx.authHeader("technician");
 
-    const response = await ctx.request
-      .get(`/api/${tableName}/${created.id}`)
-      .set(auth);
+      const response = await ctx.request
+        .get(`/api/${tableName}/${created.id}`)
+        .set(auth);
 
-    // Technician may be denied entirely or get filtered response
-    if (response.status === 200) {
-      const data = response.body.data || response.body;
-      
-      // Fields visible to technician but not customer should be present
-      const techOnlyFields = customerHidden.filter(f => !technicianHidden.includes(f));
-      for (const field of techOnlyFields) {
-        // Field may exist (could be null if optional)
-        ctx.expect(field in data || true).toBe(true);
+      // Technician may be denied entirely or get filtered response
+      if (response.status === 200) {
+        const data = response.body.data || response.body;
+
+        // Fields visible to technician but not customer should be present
+        const techOnlyFields = customerHidden.filter(
+          (f) => !technicianHidden.includes(f),
+        );
+        for (const field of techOnlyFields) {
+          // Field may exist (could be null if optional)
+          ctx.expect(field in data || true).toBe(true);
+        }
       }
-    }
-  });
+    },
+  );
 }
 
 module.exports = {

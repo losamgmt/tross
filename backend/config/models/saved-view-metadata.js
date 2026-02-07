@@ -13,23 +13,21 @@
  * - is_default: one default view per entity per user
  */
 
-const {
-  FIELD_ACCESS_LEVELS: FAL,
-} = require('../constants');
-const { FIELD } = require('../field-type-standards');
+const { FIELD_ACCESS_LEVELS: FAL } = require("../constants");
+const { FIELD } = require("../field-type-standards");
 
 module.exports = {
   // Entity key (singular, for API params and lookups)
-  entityKey: 'saved_view',
+  entityKey: "saved_view",
 
   // Table name in database (plural, also used for API URLs)
-  tableName: 'saved_views',
+  tableName: "saved_views",
 
   // Primary key
-  primaryKey: 'id',
+  primaryKey: "id",
 
   // Material icon for navigation menus and entity displays
-  icon: 'bookmark',
+  icon: "bookmark",
 
   // ============================================================================
   // IDENTITY CONFIGURATION
@@ -38,7 +36,7 @@ module.exports = {
   /**
    * The human-readable identifier field
    */
-  identityField: 'view_name',
+  identityField: "view_name",
 
   /**
    * Whether the identity field has a UNIQUE constraint
@@ -49,18 +47,18 @@ module.exports = {
   /**
    * RLS resource name for permission checks
    */
-  rlsResource: 'saved_views',
+  rlsResource: "saved_views",
 
   /**
    * Row-Level Security policy per role
    * Users can only access their own saved views, admin can see all
    */
   rlsPolicy: {
-    customer: 'own_record_only',
-    technician: 'own_record_only',
-    dispatcher: 'own_record_only',
-    manager: 'own_record_only',
-    admin: 'all_records',
+    customer: "own_record_only",
+    technician: "own_record_only",
+    dispatcher: "own_record_only",
+    manager: "own_record_only",
+    admin: "all_records",
   },
 
   /**
@@ -78,10 +76,10 @@ module.exports = {
    * Matches permissions.json - all users can manage their own saved views
    */
   entityPermissions: {
-    create: 'customer',
-    read: 'customer',
-    update: 'customer',
-    delete: 'customer',
+    create: "customer",
+    read: "customer",
+    update: "customer",
+    delete: "customer",
   },
 
   /**   * Route configuration - explicit opt-in for generic router
@@ -93,7 +91,7 @@ module.exports = {
   fieldGroups: {},
 
   rlsFilterConfig: {
-    ownRecordField: 'user_id',
+    ownRecordField: "user_id",
   },
 
   // ============================================================================
@@ -110,9 +108,9 @@ module.exports = {
   // ============================================================================
 
   fieldAliases: {
-    view_name: 'Name',
-    entity_name: 'Entity',
-    is_default: 'Default',
+    view_name: "Name",
+    entity_name: "Entity",
+    is_default: "Default",
   },
 
   // ============================================================================
@@ -128,18 +126,24 @@ module.exports = {
   /**
    * Fields required when creating a new saved view
    */
-  requiredFields: ['user_id', 'entity_name', 'view_name', 'settings'],
+  requiredFields: ["user_id", "entity_name", "view_name", "settings"],
 
   /**
    * Fields that cannot be modified after creation
    */
-  immutableFields: ['id', 'user_id'],
+  immutableFields: ["id", "user_id"],
 
   /**
    * Default columns to display in table views (ordered)
    * Used by admin panel for viewing saved views
    */
-  displayColumns: ['view_name', 'entity_name', 'is_default', 'user_id', 'updated_at'],
+  displayColumns: [
+    "view_name",
+    "entity_name",
+    "is_default",
+    "user_id",
+    "updated_at",
+  ],
 
   // ============================================================================
   // FIELD ACCESS CONTROL
@@ -149,10 +153,10 @@ module.exports = {
     // Note: id inherits from UNIVERSAL_FIELD_ACCESS (PUBLIC_READONLY)
     // Do NOT override with SYSTEM_ONLY - that blocks read access and breaks API responses
     user_id: {
-      create: 'system', // Set automatically from auth context
-      read: 'customer',
-      update: 'none',
-      delete: 'none',
+      create: "system", // Set automatically from auth context
+      read: "customer",
+      update: "none",
+      delete: "none",
     },
     entity_name: FAL.SELF_EDITABLE,
     view_name: FAL.SELF_EDITABLE,
@@ -167,8 +171,8 @@ module.exports = {
 
   foreignKeys: {
     user_id: {
-      table: 'users',
-      displayName: 'User',
+      table: "users",
+      displayName: "User",
       settableOnCreate: false, // Set from auth context
     },
   },
@@ -183,15 +187,27 @@ module.exports = {
   // SEARCH/FILTER/SORT CONFIGURATION
   // ============================================================================
 
-  searchableFields: ['view_name'],
+  searchableFields: ["view_name"],
 
-  filterableFields: ['user_id', 'entity_name', 'is_default', 'created_at', 'updated_at'],
+  filterableFields: [
+    "user_id",
+    "entity_name",
+    "is_default",
+    "created_at",
+    "updated_at",
+  ],
 
-  sortableFields: ['view_name', 'entity_name', 'is_default', 'created_at', 'updated_at'],
+  sortableFields: [
+    "view_name",
+    "entity_name",
+    "is_default",
+    "created_at",
+    "updated_at",
+  ],
 
   defaultSort: {
-    field: 'view_name',
-    order: 'ASC',
+    field: "view_name",
+    order: "ASC",
   },
 
   // ============================================================================
@@ -202,10 +218,10 @@ module.exports = {
 
   relationships: {
     user: {
-      type: 'belongsTo',
-      foreignKey: 'user_id',
-      table: 'users',
-      fields: ['id', 'email', 'first_name', 'last_name'],
+      type: "belongsTo",
+      foreignKey: "user_id",
+      table: "users",
+      fields: ["id", "email", "first_name", "last_name"],
     },
   },
 
@@ -215,42 +231,42 @@ module.exports = {
 
   fields: {
     id: {
-      type: 'integer',
+      type: "integer",
       readonly: true,
-      description: 'Primary key',
+      description: "Primary key",
     },
     user_id: {
-      type: 'foreignKey',
-      relatedEntity: 'user',
+      type: "foreignKey",
+      relatedEntity: "user",
       required: true,
       readonly: true,
-      description: 'Owner user ID (FK to users)',
+      description: "Owner user ID (FK to users)",
     },
     entity_name: {
-      type: 'string',
+      type: "string",
       required: true,
       maxLength: 50,
-      description: 'Which entity this view applies to',
+      description: "Which entity this view applies to",
     },
     view_name: {
       ...FIELD.NAME,
       required: true,
       maxLength: 100,
-      description: 'User-defined name for this view',
+      description: "User-defined name for this view",
     },
     settings: {
-      type: 'jsonb',
+      type: "jsonb",
       required: true,
       default: {},
-      description: 'View configuration (hiddenColumns, density, filters, sort)',
+      description: "View configuration (hiddenColumns, density, filters, sort)",
     },
     is_default: {
-      type: 'boolean',
+      type: "boolean",
       default: false,
-      description: 'Whether this is the default view for this entity',
+      description: "Whether this is the default view for this entity",
     },
-    created_at: { type: 'timestamp', readonly: true },
-    updated_at: { type: 'timestamp', readonly: true },
+    created_at: { type: "timestamp", readonly: true },
+    updated_at: { type: "timestamp", readonly: true },
   },
 
   // ============================================================================
@@ -259,27 +275,27 @@ module.exports = {
 
   settingsSchema: {
     hiddenColumns: {
-      type: 'array',
-      items: 'string',
-      description: 'Column IDs to hide',
+      type: "array",
+      items: "string",
+      description: "Column IDs to hide",
     },
     density: {
-      type: 'enum',
-      values: ['compact', 'standard', 'comfortable'],
-      default: 'standard',
-      description: 'Table row density',
+      type: "enum",
+      values: ["compact", "standard", "comfortable"],
+      default: "standard",
+      description: "Table row density",
     },
     filters: {
-      type: 'object',
-      description: 'Active filter values by field name',
+      type: "object",
+      description: "Active filter values by field name",
     },
     sort: {
-      type: 'object',
+      type: "object",
       properties: {
-        field: { type: 'string' },
-        direction: { type: 'enum', values: ['asc', 'desc'] },
+        field: { type: "string" },
+        direction: { type: "enum", values: ["asc", "desc"] },
       },
-      description: 'Sort configuration',
+      description: "Sort configuration",
     },
   },
 };

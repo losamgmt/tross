@@ -20,12 +20,12 @@
  * Each layer validates independently - no assumptions about prior checks.
  */
 
-const GenericEntityService = require('../services/generic-entity-service');
-const { logSecurityEvent } = require('../config/logger');
-const { getClientIp, getUserAgent } = require('../utils/request-helpers');
-const { buildEntitySchema } = require('../utils/validation-schema-builder');
-const ResponseFormatter = require('../utils/response-formatter');
-const { ERROR_CODES } = require('../utils/response-formatter');
+const GenericEntityService = require("../services/generic-entity-service");
+const { logSecurityEvent } = require("../config/logger");
+const { getClientIp, getUserAgent } = require("../utils/request-helpers");
+const { buildEntitySchema } = require("../utils/validation-schema-builder");
+const ResponseFormatter = require("../utils/response-formatter");
+const { ERROR_CODES } = require("../utils/response-formatter");
 
 // =============================================================================
 // ENTITY NAME MAPPING (METADATA-DRIVEN - NO HARDCODING!)
@@ -41,7 +41,7 @@ const { ERROR_CODES } = require('../utils/response-formatter');
  * - Kebab-case form: 'work-orders' → 'work_order'
  * - Snake_case form: 'work_orders' → 'work_order'
  */
-const allMetadata = require('../config/models');
+const allMetadata = require("../config/models");
 
 function buildEntityUrlMap() {
   const map = {};
@@ -57,10 +57,10 @@ function buildEntityUrlMap() {
 
     // Map kebab-case variants for URL compatibility
     // work_order → work-order, work-orders
-    const kebabCase = entityName.replace(/_/g, '-');
+    const kebabCase = entityName.replace(/_/g, "-");
     map[kebabCase] = entityName;
     if (metadata.tableName) {
-      map[metadata.tableName.replace(/_/g, '-')] = entityName;
+      map[metadata.tableName.replace(/_/g, "-")] = entityName;
     }
   }
 
@@ -111,7 +111,9 @@ const attachEntity = (entityName) => {
     metadata = GenericEntityService._getMetadata(entityName);
   } catch (_error) {
     // Fail at startup, not at request time
-    throw new Error(`attachEntity: Unknown entity '${entityName}' - check config/models`);
+    throw new Error(
+      `attachEntity: Unknown entity '${entityName}' - check config/models`,
+    );
   }
 
   return (req, res, next) => {
@@ -151,14 +153,18 @@ const extractEntity = (req, res, next) => {
   const entityName = normalizeEntityName(urlEntity);
 
   if (!entityName) {
-    logSecurityEvent('GENERIC_ENTITY_INVALID', {
+    logSecurityEvent("GENERIC_ENTITY_INVALID", {
       ip: getClientIp(req),
       userAgent: getUserAgent(req),
       url: req.url,
       urlEntity,
-      severity: 'WARN',
+      severity: "WARN",
     });
-    return ResponseFormatter.notFound(res, `Unknown entity: ${urlEntity}`, ERROR_CODES.RESOURCE_NOT_FOUND);
+    return ResponseFormatter.notFound(
+      res,
+      `Unknown entity: ${urlEntity}`,
+      ERROR_CODES.RESOURCE_NOT_FOUND,
+    );
   }
 
   // Get metadata (validates entity exists in registry)
@@ -167,15 +173,19 @@ const extractEntity = (req, res, next) => {
     metadata = GenericEntityService._getMetadata(entityName);
   } catch (error) {
     // This shouldn't happen if ENTITY_URL_MAP is in sync with metadata registry
-    logSecurityEvent('GENERIC_ENTITY_METADATA_MISSING', {
+    logSecurityEvent("GENERIC_ENTITY_METADATA_MISSING", {
       ip: getClientIp(req),
       userAgent: getUserAgent(req),
       url: req.url,
       entityName,
       error: error.message,
-      severity: 'ERROR',
+      severity: "ERROR",
     });
-    return ResponseFormatter.internalError(res, new Error('Entity configuration error'), ERROR_CODES.SERVER_ERROR);
+    return ResponseFormatter.internalError(
+      res,
+      new Error("Entity configuration error"),
+      ERROR_CODES.SERVER_ERROR,
+    );
   }
 
   // Attach entity info to request
@@ -220,22 +230,40 @@ const genericValidateBody = (operation) => (req, res, next) => {
 
   // Defense-in-depth: Verify extractEntity ran
   if (!entityName || !entityMetadata) {
-    return ResponseFormatter.internalError(res, new Error('Entity not extracted'), ERROR_CODES.SERVER_ERROR);
+    return ResponseFormatter.internalError(
+      res,
+      new Error("Entity not extracted"),
+      ERROR_CODES.SERVER_ERROR,
+    );
   }
 
   // Defense-in-depth: Verify user is authenticated (should be caught by auth middleware)
   if (!userRole) {
-    return ResponseFormatter.forbidden(res, 'User role not available for field access control', ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS);
+    return ResponseFormatter.forbidden(
+      res,
+      "User role not available for field access control",
+      ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS,
+    );
   }
 
   // Validate body is an object
-  if (!body || typeof body !== 'object' || Array.isArray(body)) {
-    return ResponseFormatter.badRequest(res, 'Request body must be a JSON object', null, ERROR_CODES.VALIDATION_FAILED);
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return ResponseFormatter.badRequest(
+      res,
+      "Request body must be a JSON object",
+      null,
+      ERROR_CODES.VALIDATION_FAILED,
+    );
   }
 
   // Build role-aware Joi schema for this entity/operation/role
   // This ensures only fields the user's role can write are accepted
-  const schema = buildEntitySchema(entityName, operation, entityMetadata, userRole);
+  const schema = buildEntitySchema(
+    entityName,
+    operation,
+    entityMetadata,
+    userRole,
+  );
 
   // Validate with Joi - stripUnknown removes fields not in schema
   const { error, value } = schema.validate(body, {
@@ -246,41 +274,68 @@ const genericValidateBody = (operation) => (req, res, next) => {
   if (error) {
     // Format Joi errors into user-friendly message
     const messages = error.details.map((detail) => detail.message);
-    return ResponseFormatter.badRequest(res, messages.join('; '), null, ERROR_CODES.VALIDATION_FAILED);
+    return ResponseFormatter.badRequest(
+      res,
+      messages.join("; "),
+      null,
+      ERROR_CODES.VALIDATION_FAILED,
+    );
   }
 
   // Additional operation-specific checks
-  if (operation === 'create') {
+  if (operation === "create") {
     // Required fields check is now role-aware (handled in schema builder)
     // But we do belt-and-suspenders check here for fields the user CAN set
     const requiredFields = entityMetadata.requiredFields || [];
     // Only check required fields that user's role can create
-    const { deriveCreatableFields } = require('../utils/validation-schema-builder');
-    const creatableByRole = new Set(deriveCreatableFields(entityMetadata, userRole));
+    const {
+      deriveCreatableFields,
+    } = require("../utils/validation-schema-builder");
+    const creatableByRole = new Set(
+      deriveCreatableFields(entityMetadata, userRole),
+    );
 
     const missingFields = requiredFields.filter((field) => {
       // Only enforce required if user can create this field
       if (!creatableByRole.has(field)) {
         return false;
       }
-      return value[field] === undefined || value[field] === null || value[field] === '';
+      return (
+        value[field] === undefined ||
+        value[field] === null ||
+        value[field] === ""
+      );
     });
 
     if (missingFields.length > 0) {
-      return ResponseFormatter.badRequest(res, `Missing required fields: ${missingFields.join(', ')}`, null, ERROR_CODES.VALIDATION_MISSING_FIELD);
+      return ResponseFormatter.badRequest(
+        res,
+        `Missing required fields: ${missingFields.join(", ")}`,
+        null,
+        ERROR_CODES.VALIDATION_MISSING_FIELD,
+      );
     }
-  } else if (operation === 'update') {
+  } else if (operation === "update") {
     // Ensure at least one valid field
     if (Object.keys(value).length === 0) {
       // Derive updateable fields from fieldAccess for this role
-      const { deriveUpdateableFields } = require('../utils/validation-schema-builder');
+      const {
+        deriveUpdateableFields,
+      } = require("../utils/validation-schema-builder");
       const updateableFields = deriveUpdateableFields(entityMetadata, userRole);
-      return ResponseFormatter.badRequest(res, `No valid updateable fields provided. Allowed for your role: ${updateableFields.join(', ')}`, null, ERROR_CODES.VALIDATION_FAILED);
+      return ResponseFormatter.badRequest(
+        res,
+        `No valid updateable fields provided. Allowed for your role: ${updateableFields.join(", ")}`,
+        null,
+        ERROR_CODES.VALIDATION_FAILED,
+      );
     }
   }
 
   // Store validated and filtered body in unified location
-  if (!req.validated) {req.validated = {};}
+  if (!req.validated) {
+    req.validated = {};
+  }
   req.validated.body = value;
 
   next();

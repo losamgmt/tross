@@ -18,17 +18,17 @@
  * with field-level error details. No silent partial updates.
  */
 
-const { ENTITY_FIELDS } = require('../../config/constants');
+const { ENTITY_FIELDS } = require("../../config/constants");
 
 /**
  * Custom error for immutable field violations
  */
 class ImmutableFieldError extends Error {
   constructor(violations) {
-    const fieldNames = violations.map(v => v.field).join(', ');
+    const fieldNames = violations.map((v) => v.field).join(", ");
     super(`Cannot update immutable field(s): ${fieldNames}`);
-    this.name = 'ImmutableFieldError';
-    this.code = 'IMMUTABLE_FIELD_VIOLATION';
+    this.name = "ImmutableFieldError";
+    this.code = "IMMUTABLE_FIELD_VIOLATION";
     this.violations = violations;
     this.statusCode = 400;
   }
@@ -72,7 +72,10 @@ function buildUpdateClause(data, excludedFields = [], options = {}) {
   const { jsonbFields = [], trimFields = [] } = options;
 
   // Combine universal immutables (from centralized constants) with entity-specific exclusions
-  const allExcluded = [...ENTITY_FIELDS.UNIVERSAL_IMMUTABLES, ...excludedFields];
+  const allExcluded = [
+    ...ENTITY_FIELDS.UNIVERSAL_IMMUTABLES,
+    ...excludedFields,
+  ];
 
   // STRICT MODE: Check for immutable field violations BEFORE building query
   const violations = [];
@@ -85,7 +88,7 @@ function buildUpdateClause(data, excludedFields = [], options = {}) {
       violations.push({
         field: key,
         message: `Field '${key}' is immutable and cannot be updated`,
-        code: 'IMMUTABLE_FIELD',
+        code: "IMMUTABLE_FIELD",
       });
     }
   }
@@ -117,7 +120,7 @@ function buildUpdateClause(data, excludedFields = [], options = {}) {
     updates.push(`${key} = $${paramIndex}`);
 
     // Trim string fields if specified
-    if (trimFields.includes(key) && typeof value === 'string') {
+    if (trimFields.includes(key) && typeof value === "string") {
       values.push(value.trim());
     } else {
       values.push(value);

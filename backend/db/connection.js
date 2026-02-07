@@ -1,15 +1,15 @@
 // Database connection and pool management
-const { Pool } = require('pg');
-const { logger } = require('../config/logger');
-const { DATABASE, DATABASE_PERFORMANCE } = require('../config/constants');
-const { TIMEOUTS } = require('../config/timeouts');
-const { getDatabaseConfig } = require('../config/deployment-adapter');
-require('dotenv').config();
+const { Pool } = require("pg");
+const { logger } = require("../config/logger");
+const { DATABASE, DATABASE_PERFORMANCE } = require("../config/constants");
+const { TIMEOUTS } = require("../config/timeouts");
+const { getDatabaseConfig } = require("../config/deployment-adapter");
+require("dotenv").config();
 
 // Determine which database configuration to use based on environment
-const isTest = process.env.NODE_ENV === 'test';
-const isDevelopment = process.env.NODE_ENV === 'development';
-const useRailwayDB = process.env.DB_ENV === 'railway';
+const isTest = process.env.NODE_ENV === "test";
+const isDevelopment = process.env.NODE_ENV === "development";
+const useRailwayDB = process.env.DB_ENV === "railway";
 
 // Railway database configuration (for testing against production DB)
 const railwayDbConfig = {
@@ -29,7 +29,7 @@ const railwayDbConfig = {
   connectionTimeoutMillis: TIMEOUTS.DATABASE.CONNECTION_TIMEOUT_MS,
   statement_timeout: TIMEOUTS.DATABASE.STATEMENT_TIMEOUT_MS,
   query_timeout: TIMEOUTS.DATABASE.QUERY_TIMEOUT_MS,
-  application_name: 'tross_dev_railway_test',
+  application_name: "tross_dev_railway_test",
 };
 
 // Test database configuration (port 5433, separate from default on 5432)
@@ -48,7 +48,7 @@ const testDbConfig = {
   connectionTimeoutMillis: TIMEOUTS.DATABASE.TEST.CONNECTION_TIMEOUT_MS,
   statement_timeout: TIMEOUTS.DATABASE.TEST.STATEMENT_TIMEOUT_MS,
   query_timeout: TIMEOUTS.DATABASE.TEST.QUERY_TIMEOUT_MS,
-  application_name: 'tross_test',
+  application_name: "tross_test",
 };
 
 // Default database configuration (standard PostgreSQL port 5432)
@@ -59,55 +59,59 @@ const adapterConfig = getDatabaseConfig();
 
 // Handle both string (DATABASE_URL) and object (individual vars) formats
 const defaultDbConfig =
-  typeof adapterConfig === 'string'
+  typeof adapterConfig === "string"
     ? {
-      // DATABASE_URL format - add pool and timeout config
-      connectionString: adapterConfig,
-      max: DATABASE.DEV.POOL.MAX,
-      min: DATABASE.DEV.POOL.MIN,
-      idleTimeoutMillis: TIMEOUTS.DATABASE.IDLE_TIMEOUT_MS,
-      connectionTimeoutMillis: TIMEOUTS.DATABASE.CONNECTION_TIMEOUT_MS,
-      statement_timeout: TIMEOUTS.DATABASE.STATEMENT_TIMEOUT_MS,
-      query_timeout: TIMEOUTS.DATABASE.QUERY_TIMEOUT_MS,
-      application_name: 'tross_backend',
-    }
+        // DATABASE_URL format - add pool and timeout config
+        connectionString: adapterConfig,
+        max: DATABASE.DEV.POOL.MAX,
+        min: DATABASE.DEV.POOL.MIN,
+        idleTimeoutMillis: TIMEOUTS.DATABASE.IDLE_TIMEOUT_MS,
+        connectionTimeoutMillis: TIMEOUTS.DATABASE.CONNECTION_TIMEOUT_MS,
+        statement_timeout: TIMEOUTS.DATABASE.STATEMENT_TIMEOUT_MS,
+        query_timeout: TIMEOUTS.DATABASE.QUERY_TIMEOUT_MS,
+        application_name: "tross_backend",
+      }
     : {
-      // Individual vars format - merge with pool and timeout config
-      ...adapterConfig,
-      max: DATABASE.DEV.POOL.MAX,
-      min: DATABASE.DEV.POOL.MIN,
-      idleTimeoutMillis: TIMEOUTS.DATABASE.IDLE_TIMEOUT_MS,
-      connectionTimeoutMillis: TIMEOUTS.DATABASE.CONNECTION_TIMEOUT_MS,
-      statement_timeout: TIMEOUTS.DATABASE.STATEMENT_TIMEOUT_MS,
-      query_timeout: TIMEOUTS.DATABASE.QUERY_TIMEOUT_MS,
-      application_name: 'tross_backend',
-    };
+        // Individual vars format - merge with pool and timeout config
+        ...adapterConfig,
+        max: DATABASE.DEV.POOL.MAX,
+        min: DATABASE.DEV.POOL.MIN,
+        idleTimeoutMillis: TIMEOUTS.DATABASE.IDLE_TIMEOUT_MS,
+        connectionTimeoutMillis: TIMEOUTS.DATABASE.CONNECTION_TIMEOUT_MS,
+        statement_timeout: TIMEOUTS.DATABASE.STATEMENT_TIMEOUT_MS,
+        query_timeout: TIMEOUTS.DATABASE.QUERY_TIMEOUT_MS,
+        application_name: "tross_backend",
+      };
 
 // Create connection pool with appropriate configuration
-const poolConfig = isTest ? testDbConfig : (useRailwayDB ? railwayDbConfig : defaultDbConfig);
+const poolConfig = isTest
+  ? testDbConfig
+  : useRailwayDB
+    ? railwayDbConfig
+    : defaultDbConfig;
 const pool = new Pool(poolConfig);
 
 // Log which database we're connecting to (environment + database name)
 if (isTest) {
-  logger.info('🧪 Using TEST database', {
+  logger.info("🧪 Using TEST database", {
     host: poolConfig.host,
     port: poolConfig.port,
     database: poolConfig.database,
   });
 } else if (useRailwayDB) {
-  logger.warn('🚂 Using RAILWAY PRODUCTION database (READ-ONLY TESTING)', {
+  logger.warn("🚂 Using RAILWAY PRODUCTION database (READ-ONLY TESTING)", {
     host: poolConfig.host,
     port: poolConfig.port,
     database: poolConfig.database,
   });
 } else if (isDevelopment) {
-  logger.info('🔧 Using DEVELOPMENT database', {
+  logger.info("🔧 Using DEVELOPMENT database", {
     host: poolConfig.host,
     port: poolConfig.port,
     database: poolConfig.database,
   });
 } else {
-  logger.info('� Using PRODUCTION database', {
+  logger.info("� Using PRODUCTION database", {
     host: poolConfig.host,
     port: poolConfig.port,
     database: poolConfig.database,
@@ -115,20 +119,20 @@ if (isTest) {
 }
 
 // Comprehensive pool event logging and error handling
-pool.on('connect', (_client) => {
-  logger.debug('New database client connected to pool');
+pool.on("connect", (_client) => {
+  logger.debug("New database client connected to pool");
 });
 
-pool.on('acquire', (_client) => {
-  logger.debug('Client acquired from pool');
+pool.on("acquire", (_client) => {
+  logger.debug("Client acquired from pool");
 });
 
-pool.on('remove', (_client) => {
-  logger.debug('Client removed from pool');
+pool.on("remove", (_client) => {
+  logger.debug("Client removed from pool");
 });
 
-pool.on('error', (err, _client) => {
-  logger.error('Unexpected error on idle database client:', err);
+pool.on("error", (err, _client) => {
+  logger.error("Unexpected error on idle database client:", err);
   // Don't exit process - let application handle gracefully
 });
 
@@ -141,7 +145,7 @@ const query = async (text, params) => {
 
     // Log slow queries for optimization
     if (duration >= DATABASE_PERFORMANCE.SLOW_QUERY_THRESHOLD_MS) {
-      logger.warn('🐌 Slow query detected', {
+      logger.warn("🐌 Slow query detected", {
         duration: `${duration}ms`,
         query: text.substring(0, 200), // Truncate long queries
         params: params ? params.length : 0,
@@ -154,7 +158,7 @@ const query = async (text, params) => {
     return result;
   } catch (error) {
     // Logger outputs JSON in production for Railway visibility
-    logger.error('Query error', { error: error.message, code: error.code });
+    logger.error("Query error", { error: error.message, code: error.code });
     throw error;
   }
 };
@@ -167,12 +171,12 @@ const testConnection = async (retries = 3, delay = 1000) => {
     try {
       const client = await pool.connect();
       const result = await client.query(
-        'SELECT NOW() as current_time, version() as postgres_version',
+        "SELECT NOW() as current_time, version() as postgres_version",
       );
       client.release();
-      logger.info('✅ Database connection successful', {
+      logger.info("✅ Database connection successful", {
         timestamp: result.rows[0].current_time,
-        version: result.rows[0].postgres_version.split(' ')[0],
+        version: result.rows[0].postgres_version.split(" ")[0],
       });
       return true;
     } catch (error) {
@@ -202,10 +206,10 @@ const testConnection = async (retries = 3, delay = 1000) => {
 const closePool = async () => {
   try {
     await pool.end();
-    logger.info('✅ Database pool closed gracefully');
+    logger.info("✅ Database pool closed gracefully");
     return true;
   } catch (err) {
-    logger.error('❌ Error closing database pool:', err.message);
+    logger.error("❌ Error closing database pool:", err.message);
     return false;
   }
 };

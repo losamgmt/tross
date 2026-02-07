@@ -5,8 +5,8 @@
  * Driven by fieldAccess in metadata and permissions.json.
  */
 
-const permissions = require('../../../../config/permissions.json');
-const { ROLE_HIERARCHY } = require('../../../config/constants');
+const permissions = require("../../../../config/permissions.json");
+const { ROLE_HIERARCHY } = require("../../../config/constants");
 
 // Role priority order from single source of truth
 const ROLE_ORDER = ROLE_HIERARCHY;
@@ -19,7 +19,9 @@ function getDeniedRoles(resourceName, operation) {
   if (!resource?.permissions?.[operation]) return [];
 
   const minPriority = resource.permissions[operation].minimumPriority;
-  return ROLE_ORDER.filter(role => permissions.roles[role].priority < minPriority);
+  return ROLE_ORDER.filter(
+    (role) => permissions.roles[role].priority < minPriority,
+  );
 }
 
 /**
@@ -45,21 +47,24 @@ function createPermissionDenied(meta, ctx) {
   const { rlsResource, tableName } = meta;
   if (!rlsResource) return;
 
-  const deniedRoles = getDeniedRoles(rlsResource, 'create');
+  const deniedRoles = getDeniedRoles(rlsResource, "create");
   if (!deniedRoles.length) return;
 
   for (const role of deniedRoles) {
-    ctx.it(`POST /api/${tableName} - returns 403 for ${role} role`, async () => {
-      const payload = ctx.factory.buildMinimal(meta.entityName);
-      const auth = await ctx.authHeader(role);
+    ctx.it(
+      `POST /api/${tableName} - returns 403 for ${role} role`,
+      async () => {
+        const payload = ctx.factory.buildMinimal(meta.entityName);
+        const auth = await ctx.authHeader(role);
 
-      const response = await ctx.request
-        .post(`/api/${tableName}`)
-        .set(auth)
-        .send(payload);
+        const response = await ctx.request
+          .post(`/api/${tableName}`)
+          .set(auth)
+          .send(payload);
 
-      ctx.expect(response.status).toBe(403);
-    });
+        ctx.expect(response.status).toBe(403);
+      },
+    );
   }
 }
 
@@ -73,21 +78,24 @@ function updatePermissionDenied(meta, ctx) {
   const { rlsResource, tableName, entityName } = meta;
   if (!rlsResource) return;
 
-  const deniedRoles = getDeniedRoles(rlsResource, 'update');
+  const deniedRoles = getDeniedRoles(rlsResource, "update");
   if (!deniedRoles.length) return;
 
   for (const role of deniedRoles) {
-    ctx.it(`PATCH /api/${tableName}/:id - returns 403 for ${role} role`, async () => {
-      const created = await ctx.factory.create(entityName);
-      const auth = await ctx.authHeader(role);
+    ctx.it(
+      `PATCH /api/${tableName}/:id - returns 403 for ${role} role`,
+      async () => {
+        const created = await ctx.factory.create(entityName);
+        const auth = await ctx.authHeader(role);
 
-      const response = await ctx.request
-        .patch(`/api/${tableName}/${created.id}`)
-        .set(auth)
-        .send({ is_active: true });
+        const response = await ctx.request
+          .patch(`/api/${tableName}/${created.id}`)
+          .set(auth)
+          .send({ is_active: true });
 
-      ctx.expect(response.status).toBe(403);
-    });
+        ctx.expect(response.status).toBe(403);
+      },
+    );
   }
 }
 
@@ -101,20 +109,23 @@ function deletePermissionDenied(meta, ctx) {
   const { rlsResource, tableName, entityName } = meta;
   if (!rlsResource) return;
 
-  const deniedRoles = getDeniedRoles(rlsResource, 'delete');
+  const deniedRoles = getDeniedRoles(rlsResource, "delete");
   if (!deniedRoles.length) return;
 
   for (const role of deniedRoles) {
-    ctx.it(`DELETE /api/${tableName}/:id - returns 403 for ${role} role`, async () => {
-      const created = await ctx.factory.create(entityName);
-      const auth = await ctx.authHeader(role);
+    ctx.it(
+      `DELETE /api/${tableName}/:id - returns 403 for ${role} role`,
+      async () => {
+        const created = await ctx.factory.create(entityName);
+        const auth = await ctx.authHeader(role);
 
-      const response = await ctx.request
-        .delete(`/api/${tableName}/${created.id}`)
-        .set(auth);
+        const response = await ctx.request
+          .delete(`/api/${tableName}/${created.id}`)
+          .set(auth);
 
-      ctx.expect(response.status).toBe(403);
-    });
+        ctx.expect(response.status).toBe(403);
+      },
+    );
   }
 }
 
@@ -128,21 +139,24 @@ function sensitiveFieldsHidden(meta, ctx) {
   const { sensitiveFields } = meta;
   if (!sensitiveFields?.length) return;
 
-  ctx.it(`GET /api/${meta.tableName}/:id - never exposes sensitive fields`, async () => {
-    const created = await ctx.factory.create(meta.entityName);
-    const auth = await ctx.authHeader('admin');
+  ctx.it(
+    `GET /api/${meta.tableName}/:id - never exposes sensitive fields`,
+    async () => {
+      const created = await ctx.factory.create(meta.entityName);
+      const auth = await ctx.authHeader("admin");
 
-    const response = await ctx.request
-      .get(`/api/${meta.tableName}/${created.id}`)
-      .set(auth);
+      const response = await ctx.request
+        .get(`/api/${meta.tableName}/${created.id}`)
+        .set(auth);
 
-    ctx.expect(response.status).toBe(200);
-    const data = response.body.data || response.body;
+      ctx.expect(response.status).toBe(200);
+      const data = response.body.data || response.body;
 
-    for (const field of sensitiveFields) {
-      ctx.expect(data[field]).toBeUndefined();
-    }
-  });
+      for (const field of sensitiveFields) {
+        ctx.expect(data[field]).toBeUndefined();
+      }
+    },
+  );
 }
 
 module.exports = {

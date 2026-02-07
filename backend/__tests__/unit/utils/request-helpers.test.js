@@ -4,10 +4,7 @@
  * Tests request utility functions for extracting IP addresses and user agents.
  */
 
-const {
-  getClientIp,
-  getUserAgent,
-} = require("../../../utils/request-helpers");
+const { getClientIp, getUserAgent } = require("../../../utils/request-helpers");
 
 describe("utils/request-helpers.js", () => {
   describe("getClientIp()", () => {

@@ -5,23 +5,29 @@
  * Ensures migrations run exactly once and in correct order
  */
 
-const { runMigrations, verifyMigrations } = require('../../scripts/run-migrations');
-const { pool } = require('../../db/connection');
-const { setupTestDatabase, cleanupTestDatabase } = require('../helpers/test-db');
+const {
+  runMigrations,
+  verifyMigrations,
+} = require("../../scripts/run-migrations");
+const { pool } = require("../../db/connection");
+const {
+  setupTestDatabase,
+  cleanupTestDatabase,
+} = require("../helpers/test-db");
 
-describe('Database Migration System', () => {
+describe("Database Migration System", () => {
   beforeAll(async () => {
     await setupTestDatabase();
     // Clean up any existing migrations table for clean test
-    await pool.query('DROP TABLE IF EXISTS schema_migrations CASCADE');
+    await pool.query("DROP TABLE IF EXISTS schema_migrations CASCADE");
   });
 
   afterAll(async () => {
     await cleanupTestDatabase();
   });
 
-  describe('Migration Tracking Table', () => {
-    test('should create schema_migrations table on first run', async () => {
+  describe("Migration Tracking Table", () => {
+    test("should create schema_migrations table on first run", async () => {
       await runMigrations({ dryRun: true });
 
       const result = await pool.query(
@@ -34,7 +40,7 @@ describe('Database Migration System', () => {
       expect(result.rows[0].exists).toBe(true);
     });
 
-    test('schema_migrations should have required columns', async () => {
+    test("schema_migrations should have required columns", async () => {
       const result = await pool.query(
         `SELECT column_name, data_type 
          FROM information_schema.columns 
@@ -44,15 +50,15 @@ describe('Database Migration System', () => {
 
       const columns = result.rows.map((r) => r.column_name);
 
-      expect(columns).toContain('id');
-      expect(columns).toContain('version');
-      expect(columns).toContain('name');
-      expect(columns).toContain('applied_at');
-      expect(columns).toContain('execution_time_ms');
-      expect(columns).toContain('checksum');
+      expect(columns).toContain("id");
+      expect(columns).toContain("version");
+      expect(columns).toContain("name");
+      expect(columns).toContain("applied_at");
+      expect(columns).toContain("execution_time_ms");
+      expect(columns).toContain("checksum");
     });
 
-    test('version column should have unique constraint', async () => {
+    test("version column should have unique constraint", async () => {
       const result = await pool.query(
         `SELECT constraint_name, constraint_type
          FROM information_schema.table_constraints
@@ -62,15 +68,15 @@ describe('Database Migration System', () => {
 
       const uniqueConstraints = result.rows.map((r) => r.constraint_name);
       const hasVersionUnique = uniqueConstraints.some((c) =>
-        c.includes('version'),
+        c.includes("version"),
       );
 
       expect(hasVersionUnique).toBe(true);
     });
   });
 
-  describe('Migration Execution', () => {
-    test('should handle migrations (pending or none)', async () => {
+  describe("Migration Execution", () => {
+    test("should handle migrations (pending or none)", async () => {
       const result = await runMigrations({ dryRun: true });
 
       // With our pre-production strategy, we may have 0 pending migrations
@@ -80,25 +86,25 @@ describe('Database Migration System', () => {
       expect(result.applied).toBe(0); // Dry run doesn't apply
     });
 
-    test('dry run should not modify database', async () => {
+    test("dry run should not modify database", async () => {
       const beforeCount = await pool.query(
-        'SELECT COUNT(*) FROM schema_migrations',
+        "SELECT COUNT(*) FROM schema_migrations",
       );
 
       await runMigrations({ dryRun: true });
 
       const afterCount = await pool.query(
-        'SELECT COUNT(*) FROM schema_migrations',
+        "SELECT COUNT(*) FROM schema_migrations",
       );
 
       expect(afterCount.rows[0].count).toBe(beforeCount.rows[0].count);
     });
 
-    test('should record migration metadata', async () => {
+    test("should record migration metadata", async () => {
       // Apply first migration manually to test metadata
-      const testVersion = '999_test';
-      const testName = 'test_migration';
-      const testChecksum = 'abc123';
+      const testVersion = "999_test";
+      const testName = "test_migration";
+      const testChecksum = "abc123";
 
       await pool.query(
         `INSERT INTO schema_migrations (version, name, checksum, execution_time_ms)
@@ -107,7 +113,7 @@ describe('Database Migration System', () => {
       );
 
       const result = await pool.query(
-        'SELECT * FROM schema_migrations WHERE version = $1',
+        "SELECT * FROM schema_migrations WHERE version = $1",
         [testVersion],
       );
 
@@ -118,60 +124,60 @@ describe('Database Migration System', () => {
       expect(result.rows[0].applied_at).toBeDefined();
 
       // Cleanup
-      await pool.query('DELETE FROM schema_migrations WHERE version = $1', [
+      await pool.query("DELETE FROM schema_migrations WHERE version = $1", [
         testVersion,
       ]);
     });
   });
 
-  describe('Migration Idempotency', () => {
-    test('should not reapply already applied migrations', async () => {
+  describe("Migration Idempotency", () => {
+    test("should not reapply already applied migrations", async () => {
       // Mark a migration as applied
       await pool.query(
         `INSERT INTO schema_migrations (version, name, checksum)
          VALUES ($1, $2, $3)
          ON CONFLICT (version) DO NOTHING`,
-        ['001_add', 'test_already_applied', 'checksum123'],
+        ["001_add", "test_already_applied", "checksum123"],
       );
 
       const beforeCount = await pool.query(
-        'SELECT COUNT(*) FROM schema_migrations WHERE version = $1',
-        ['001_add'],
+        "SELECT COUNT(*) FROM schema_migrations WHERE version = $1",
+        ["001_add"],
       );
 
       // Try to run migrations (dry run)
       await runMigrations({ dryRun: true });
 
       const afterCount = await pool.query(
-        'SELECT COUNT(*) FROM schema_migrations WHERE version = $1',
-        ['001_add'],
+        "SELECT COUNT(*) FROM schema_migrations WHERE version = $1",
+        ["001_add"],
       );
 
       // Should still be 1 (not duplicated)
       expect(afterCount.rows[0].count).toBe(beforeCount.rows[0].count);
 
       // Cleanup
-      await pool.query('DELETE FROM schema_migrations WHERE version = $1', [
-        '001_add',
+      await pool.query("DELETE FROM schema_migrations WHERE version = $1", [
+        "001_add",
       ]);
     });
   });
 
-  describe('Migration Integrity', () => {
-    test('should verify migration checksums', async () => {
+  describe("Migration Integrity", () => {
+    test("should verify migration checksums", async () => {
       const isValid = await verifyMigrations();
 
       // Should be true since we haven't modified any applied migrations
-      expect(typeof isValid).toBe('boolean');
+      expect(typeof isValid).toBe("boolean");
     });
 
-    test('should detect missing migration files', async () => {
+    test("should detect missing migration files", async () => {
       // Insert a record for a non-existent migration
       await pool.query(
         `INSERT INTO schema_migrations (version, name, checksum)
          VALUES ($1, $2, $3)
          ON CONFLICT (version) DO NOTHING`,
-        ['999_nonexistent', 'nonexistent_migration', 'fake_checksum'],
+        ["999_nonexistent", "nonexistent_migration", "fake_checksum"],
       );
 
       const isValid = await verifyMigrations();
@@ -180,19 +186,19 @@ describe('Database Migration System', () => {
       expect(isValid).toBe(false);
 
       // Cleanup
-      await pool.query('DELETE FROM schema_migrations WHERE version = $1', [
-        '999_nonexistent',
+      await pool.query("DELETE FROM schema_migrations WHERE version = $1", [
+        "999_nonexistent",
       ]);
     });
   });
 
-  describe('Migration Ordering', () => {
-    test('should apply migrations in version order', async () => {
+  describe("Migration Ordering", () => {
+    test("should apply migrations in version order", async () => {
       // Clear migrations table
-      await pool.query('TRUNCATE schema_migrations');
+      await pool.query("TRUNCATE schema_migrations");
 
       const result = await pool.query(
-        'SELECT version FROM schema_migrations ORDER BY applied_at',
+        "SELECT version FROM schema_migrations ORDER BY applied_at",
       );
 
       const versions = result.rows.map((r) => r.version);
@@ -206,8 +212,8 @@ describe('Database Migration System', () => {
     });
   });
 
-  describe('Error Handling', () => {
-    test('should handle database connection errors gracefully', async () => {
+  describe("Error Handling", () => {
+    test("should handle database connection errors gracefully", async () => {
       // This test just ensures the function doesn't crash
       // Actual connection errors are hard to simulate without breaking the connection
       await expect(runMigrations({ dryRun: true })).resolves.toBeDefined();

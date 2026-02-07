@@ -11,14 +11,14 @@
  * - requirePermission(operation) reads resource from req.entityMetadata.rlsResource
  * - attachEntity middleware sets req.entityMetadata at factory time
  */
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const { authenticateToken, requirePermission } = require('../middleware/auth');
-const { attachEntity } = require('../middleware/generic-entity');
-const { validateIdParam, validatePagination } = require('../validators');
-const ResponseFormatter = require('../utils/response-formatter');
-const GenericEntityService = require('../services/generic-entity-service');
-const { asyncHandler } = require('../middleware/utils');
+const { authenticateToken, requirePermission } = require("../middleware/auth");
+const { attachEntity } = require("../middleware/generic-entity");
+const { validateIdParam, validatePagination } = require("../validators");
+const ResponseFormatter = require("../utils/response-formatter");
+const GenericEntityService = require("../services/generic-entity-service");
+const { asyncHandler } = require("../middleware/utils");
 
 /**
  * @openapi
@@ -55,17 +55,17 @@ const { asyncHandler } = require('../middleware/utils');
  *         description: Server error
  */
 router.get(
-  '/:id/users',
+  "/:id/users",
   authenticateToken,
-  attachEntity('user'),
-  requirePermission('read'),
+  attachEntity("user"),
+  requirePermission("read"),
   validateIdParam(),
   validatePagination(),
   asyncHandler(async (req, res) => {
     const roleId = req.validated.id;
     const { page, limit } = req.validated.pagination;
 
-    const result = await GenericEntityService.findAll('user', {
+    const result = await GenericEntityService.findAll("user", {
       filters: { role_id: roleId },
       page,
       limit,

@@ -5,18 +5,18 @@
  * Validates metadata extraction for auto-generating UIs
  */
 
-const request = require('supertest');
-const app = require('../../server');
-const { createTestUser, cleanupTestDatabase } = require('../helpers/test-db');
+const request = require("supertest");
+const app = require("../../server");
+const { createTestUser, cleanupTestDatabase } = require("../helpers/test-db");
 
-describe('Schema Endpoints - Integration Tests', () => {
+describe("Schema Endpoints - Integration Tests", () => {
   let technicianToken;
   let adminToken;
 
   beforeAll(async () => {
     // Create test users with tokens
-    const technician = await createTestUser('technician');
-    const admin = await createTestUser('admin');
+    const technician = await createTestUser("technician");
+    const admin = await createTestUser("admin");
     technicianToken = technician.token;
     adminToken = admin.token;
   });
@@ -25,12 +25,12 @@ describe('Schema Endpoints - Integration Tests', () => {
     await cleanupTestDatabase();
   });
 
-  describe('GET /api/schema - List All Tables', () => {
-    test('should return 200 with list of tables', async () => {
+  describe("GET /api/schema - List All Tables", () => {
+    test("should return 200 with list of tables", async () => {
       // Act
       const response = await request(app)
-        .get('/api/schema')
-        .set('Authorization', `Bearer ${technicianToken}`);
+        .get("/api/schema")
+        .set("Authorization", `Bearer ${technicianToken}`);
 
       // Assert
       expect(response.status).toBe(200);
@@ -41,31 +41,31 @@ describe('Schema Endpoints - Integration Tests', () => {
       });
     });
 
-    test('should return 401 without authentication', async () => {
+    test("should return 401 without authentication", async () => {
       // Act
-      const response = await request(app).get('/api/schema');
+      const response = await request(app).get("/api/schema");
 
       // Assert
       expect(response.status).toBe(401);
     });
 
-    test('should include expected tables', async () => {
+    test("should include expected tables", async () => {
       // Act
       const response = await request(app)
-        .get('/api/schema')
-        .set('Authorization', `Bearer ${adminToken}`);
+        .get("/api/schema")
+        .set("Authorization", `Bearer ${adminToken}`);
 
       // Assert
       const tableNames = response.body.data.map((t) => t.name);
-      expect(tableNames).toContain('users');
-      expect(tableNames).toContain('roles');
+      expect(tableNames).toContain("users");
+      expect(tableNames).toContain("roles");
     });
 
-    test('should include table metadata', async () => {
+    test("should include table metadata", async () => {
       // Act
       const response = await request(app)
-        .get('/api/schema')
-        .set('Authorization', `Bearer ${technicianToken}`);
+        .get("/api/schema")
+        .set("Authorization", `Bearer ${technicianToken}`);
 
       // Assert
       const tables = response.body.data;
@@ -80,14 +80,14 @@ describe('Schema Endpoints - Integration Tests', () => {
       });
     });
 
-    test('should handle concurrent requests', async () => {
+    test("should handle concurrent requests", async () => {
       // Act - Make 5 concurrent requests
       const requests = Array(5)
         .fill(null)
         .map(() =>
           request(app)
-            .get('/api/schema')
-            .set('Authorization', `Bearer ${technicianToken}`),
+            .get("/api/schema")
+            .set("Authorization", `Bearer ${technicianToken}`),
         );
 
       const responses = await Promise.all(requests);
@@ -101,62 +101,62 @@ describe('Schema Endpoints - Integration Tests', () => {
     });
   });
 
-  describe('GET /api/schema/:tableName - Get Table Schema', () => {
-    test('should return schema for users table', async () => {
+  describe("GET /api/schema/:tableName - Get Table Schema", () => {
+    test("should return schema for users table", async () => {
       // Act
       const response = await request(app)
-        .get('/api/schema/users')
-        .set('Authorization', `Bearer ${technicianToken}`);
+        .get("/api/schema/users")
+        .set("Authorization", `Bearer ${technicianToken}`);
 
       // Assert
       expect(response.status).toBe(200);
       expect(response.body).toMatchObject({
         success: true,
         data: expect.objectContaining({
-          tableName: 'users',
+          tableName: "users",
           columns: expect.any(Array),
         }),
         timestamp: expect.any(String),
       });
     });
 
-    test('should return schema for roles table', async () => {
+    test("should return schema for roles table", async () => {
       // Act
       const response = await request(app)
-        .get('/api/schema/roles')
-        .set('Authorization', `Bearer ${adminToken}`);
+        .get("/api/schema/roles")
+        .set("Authorization", `Bearer ${adminToken}`);
 
       // Assert
       expect(response.status).toBe(200);
-      expect(response.body.data.tableName).toBe('roles');
+      expect(response.body.data.tableName).toBe("roles");
       expect(response.body.data.columns).toBeInstanceOf(Array);
       expect(response.body.data.columns.length).toBeGreaterThan(0);
     });
 
-    test('should return error for non-existent table', async () => {
+    test("should return error for non-existent table", async () => {
       // Act
       const response = await request(app)
-        .get('/api/schema/nonexistent_table')
-        .set('Authorization', `Bearer ${technicianToken}`);
+        .get("/api/schema/nonexistent_table")
+        .set("Authorization", `Bearer ${technicianToken}`);
 
       // Assert - Schema service returns 200 with empty columns for non-existent tables
       expect(response.status).toBe(200);
       expect(response.body.data.columns).toEqual([]);
     });
 
-    test('should return 401 without authentication', async () => {
+    test("should return 401 without authentication", async () => {
       // Act
-      const response = await request(app).get('/api/schema/users');
+      const response = await request(app).get("/api/schema/users");
 
       // Assert
       expect(response.status).toBe(401);
     });
 
-    test('should include column metadata', async () => {
+    test("should include column metadata", async () => {
       // Act
       const response = await request(app)
-        .get('/api/schema/users')
-        .set('Authorization', `Bearer ${technicianToken}`);
+        .get("/api/schema/users")
+        .set("Authorization", `Bearer ${technicianToken}`);
 
       // Assert
       const columns = response.body.data.columns;
@@ -171,55 +171,55 @@ describe('Schema Endpoints - Integration Tests', () => {
       });
     });
 
-    test('should include primary key column', async () => {
+    test("should include primary key column", async () => {
       // Act
       const response = await request(app)
-        .get('/api/schema/users')
-        .set('Authorization', `Bearer ${adminToken}`);
+        .get("/api/schema/users")
+        .set("Authorization", `Bearer ${adminToken}`);
 
       // Assert
       const columns = response.body.data.columns;
-      const idColumn = columns.find((c) => c.name === 'id');
+      const idColumn = columns.find((c) => c.name === "id");
       expect(idColumn).toBeDefined();
-      expect(idColumn.name).toBe('id');
+      expect(idColumn.name).toBe("id");
     });
 
-    test('should identify foreign key relationships', async () => {
+    test("should identify foreign key relationships", async () => {
       // Act
       const response = await request(app)
-        .get('/api/schema/users')
-        .set('Authorization', `Bearer ${technicianToken}`);
+        .get("/api/schema/users")
+        .set("Authorization", `Bearer ${technicianToken}`);
 
       // Assert
       const columns = response.body.data.columns;
-      const roleIdColumn = columns.find((c) => c.name === 'role_id');
+      const roleIdColumn = columns.find((c) => c.name === "role_id");
 
       expect(roleIdColumn).toBeDefined();
       expect(roleIdColumn.foreignKey).toBeDefined();
-      expect(roleIdColumn.foreignKey.table).toBe('roles');
-      expect(roleIdColumn.foreignKey.column).toBe('id');
+      expect(roleIdColumn.foreignKey.table).toBe("roles");
+      expect(roleIdColumn.foreignKey.column).toBe("id");
     });
 
-    test('should include UI metadata (labels, types)', async () => {
+    test("should include UI metadata (labels, types)", async () => {
       // Act
       const response = await request(app)
-        .get('/api/schema/users')
-        .set('Authorization', `Bearer ${adminToken}`);
+        .get("/api/schema/users")
+        .set("Authorization", `Bearer ${adminToken}`);
 
       // Assert
       const columns = response.body.data.columns;
-      const emailColumn = columns.find((c) => c.name === 'email');
+      const emailColumn = columns.find((c) => c.name === "email");
 
       expect(emailColumn).toBeDefined();
       expect(emailColumn.label).toBeDefined();
       expect(emailColumn.uiType).toBeDefined();
     });
 
-    test('should identify searchable columns', async () => {
+    test("should identify searchable columns", async () => {
       // Act
       const response = await request(app)
-        .get('/api/schema/users')
-        .set('Authorization', `Bearer ${technicianToken}`);
+        .get("/api/schema/users")
+        .set("Authorization", `Bearer ${technicianToken}`);
 
       // Assert
       const columns = response.body.data.columns;
@@ -227,29 +227,29 @@ describe('Schema Endpoints - Integration Tests', () => {
       expect(searchableColumns.length).toBeGreaterThan(0);
 
       // Email should be searchable
-      expect(searchableColumns.some((c) => c.name === 'email')).toBe(true);
+      expect(searchableColumns.some((c) => c.name === "email")).toBe(true);
     });
 
-    test('should identify readonly columns', async () => {
+    test("should identify readonly columns", async () => {
       // Act
       const response = await request(app)
-        .get('/api/schema/roles')
-        .set('Authorization', `Bearer ${adminToken}`);
+        .get("/api/schema/roles")
+        .set("Authorization", `Bearer ${adminToken}`);
 
       // Assert
       const columns = response.body.data.columns;
-      const idColumn = columns.find((c) => c.name === 'id');
+      const idColumn = columns.find((c) => c.name === "id");
 
       expect(idColumn.readonly).toBe(true);
     });
   });
 
-  describe('GET /api/schema/:tableName/options/:column - Get FK Options', () => {
-    test('should return role options for users.role_id', async () => {
+  describe("GET /api/schema/:tableName/options/:column - Get FK Options", () => {
+    test("should return role options for users.role_id", async () => {
       // Act
       const response = await request(app)
-        .get('/api/schema/users/options/role_id')
-        .set('Authorization', `Bearer ${technicianToken}`);
+        .get("/api/schema/users/options/role_id")
+        .set("Authorization", `Bearer ${technicianToken}`);
 
       // Assert
       expect(response.status).toBe(200);
@@ -260,41 +260,42 @@ describe('Schema Endpoints - Integration Tests', () => {
       });
     });
 
-    test('should return 401 without authentication', async () => {
+    test("should return 401 without authentication", async () => {
       // Act
       const response = await request(app).get(
-        '/api/schema/users/options/role_id',
+        "/api/schema/users/options/role_id",
       );
 
       // Assert
       expect(response.status).toBe(401);
     });
 
-    test('should return 400 for non-FK column', async () => {
+    test("should return 400 for non-FK column", async () => {
       // Act
       const response = await request(app)
-        .get('/api/schema/users/options/email')
-        .set('Authorization', `Bearer ${adminToken}`);
+        .get("/api/schema/users/options/email")
+        .set("Authorization", `Bearer ${adminToken}`);
 
       // Assert
       expect(response.status).toBe(400);
       expect(response.body.success).toBe(false);
       expect(response.body.message).toBeDefined();
-    });    test('should return error for non-existent table', async () => {
+    });
+    test("should return error for non-existent table", async () => {
       // Act
       const response = await request(app)
-        .get('/api/schema/nonexistent/options/column')
-        .set('Authorization', `Bearer ${technicianToken}`);
+        .get("/api/schema/nonexistent/options/column")
+        .set("Authorization", `Bearer ${technicianToken}`);
 
       // Assert
       expect([400, 404, 500]).toContain(response.status);
     });
 
-    test('should return options with value and label', async () => {
+    test("should return options with value and label", async () => {
       // Act
       const response = await request(app)
-        .get('/api/schema/users/options/role_id')
-        .set('Authorization', `Bearer ${adminToken}`);
+        .get("/api/schema/users/options/role_id")
+        .set("Authorization", `Bearer ${adminToken}`);
 
       // Assert
       const options = response.body.data;
@@ -309,11 +310,11 @@ describe('Schema Endpoints - Integration Tests', () => {
       });
     });
 
-    test('should return actual role data', async () => {
+    test("should return actual role data", async () => {
       // Act
       const response = await request(app)
-        .get('/api/schema/users/options/role_id')
-        .set('Authorization', `Bearer ${technicianToken}`);
+        .get("/api/schema/users/options/role_id")
+        .set("Authorization", `Bearer ${technicianToken}`);
 
       // Assert
       const options = response.body.data;
@@ -328,15 +329,15 @@ describe('Schema Endpoints - Integration Tests', () => {
     });
   });
 
-  describe('Schema Endpoints - Performance', () => {
-    test('should respond quickly for table list', async () => {
+  describe("Schema Endpoints - Performance", () => {
+    test("should respond quickly for table list", async () => {
       // Arrange
       const start = Date.now();
 
       // Act
       const response = await request(app)
-        .get('/api/schema')
-        .set('Authorization', `Bearer ${technicianToken}`);
+        .get("/api/schema")
+        .set("Authorization", `Bearer ${technicianToken}`);
 
       // Assert
       const duration = Date.now() - start;
@@ -344,14 +345,14 @@ describe('Schema Endpoints - Integration Tests', () => {
       expect(duration).toBeLessThan(1000); // Under 1 second
     });
 
-    test('should respond quickly for table schema', async () => {
+    test("should respond quickly for table schema", async () => {
       // Arrange
       const start = Date.now();
 
       // Act
       const response = await request(app)
-        .get('/api/schema/users')
-        .set('Authorization', `Bearer ${adminToken}`);
+        .get("/api/schema/users")
+        .set("Authorization", `Bearer ${adminToken}`);
 
       // Assert
       const duration = Date.now() - start;
@@ -359,14 +360,14 @@ describe('Schema Endpoints - Integration Tests', () => {
       expect(duration).toBeLessThan(1000); // Under 1 second
     });
 
-    test('should respond quickly for FK options', async () => {
+    test("should respond quickly for FK options", async () => {
       // Arrange
       const start = Date.now();
 
       // Act
       const response = await request(app)
-        .get('/api/schema/users/options/role_id')
-        .set('Authorization', `Bearer ${technicianToken}`);
+        .get("/api/schema/users/options/role_id")
+        .set("Authorization", `Bearer ${technicianToken}`);
 
       // Assert
       const duration = Date.now() - start;
@@ -375,29 +376,29 @@ describe('Schema Endpoints - Integration Tests', () => {
     });
   });
 
-  describe('Schema Endpoints - Response Format', () => {
-    test('should return proper content-type', async () => {
+  describe("Schema Endpoints - Response Format", () => {
+    test("should return proper content-type", async () => {
       // Act
       const response = await request(app)
-        .get('/api/schema')
-        .set('Authorization', `Bearer ${technicianToken}`);
+        .get("/api/schema")
+        .set("Authorization", `Bearer ${technicianToken}`);
 
       // Assert
-      expect(response.headers['content-type']).toMatch(/application\/json/);
+      expect(response.headers["content-type"]).toMatch(/application\/json/);
     });
 
-    test('should include timestamp in all responses', async () => {
+    test("should include timestamp in all responses", async () => {
       // Act
       const responses = await Promise.all([
         request(app)
-          .get('/api/schema')
-          .set('Authorization', `Bearer ${technicianToken}`),
+          .get("/api/schema")
+          .set("Authorization", `Bearer ${technicianToken}`),
         request(app)
-          .get('/api/schema/users')
-          .set('Authorization', `Bearer ${technicianToken}`),
+          .get("/api/schema/users")
+          .set("Authorization", `Bearer ${technicianToken}`),
         request(app)
-          .get('/api/schema/users/options/role_id')
-          .set('Authorization', `Bearer ${technicianToken}`),
+          .get("/api/schema/users/options/role_id")
+          .set("Authorization", `Bearer ${technicianToken}`),
       ]);
 
       // Assert

@@ -25,7 +25,7 @@
  * @module config/role-hierarchy-loader
  */
 
-const { logger } = require('./logger');
+const { logger } = require("./logger");
 
 // Fallback constants (used for tests and before DB initialization)
 const {
@@ -33,7 +33,7 @@ const {
   ROLE_PRIORITY_TO_NAME: FALLBACK_ROLE_PRIORITY_TO_NAME,
   ROLE_NAME_TO_PRIORITY: FALLBACK_ROLE_NAME_TO_PRIORITY,
   ROLE_DESCRIPTIONS: FALLBACK_ROLE_DESCRIPTIONS,
-} = require('./role-definitions');
+} = require("./role-definitions");
 
 // ============================================================================
 // Module State
@@ -79,7 +79,7 @@ async function initializeFromDatabase(db) {
     `);
 
     if (!result.rows || result.rows.length === 0) {
-      throw new Error('No active roles found in database');
+      throw new Error("No active roles found in database");
     }
 
     // Build derived structures from DB data
@@ -107,14 +107,14 @@ async function initializeFromDatabase(db) {
     isInitializedFromDB = true;
     isUsingFallback = false;
 
-    logger.info('[RoleHierarchy] Initialized from database:', {
+    logger.info("[RoleHierarchy] Initialized from database:", {
       roles: roleHierarchy.length,
-      hierarchy: roleHierarchy.join(' → '),
+      hierarchy: roleHierarchy.join(" → "),
     });
 
     return true;
   } catch (error) {
-    logger.error('[RoleHierarchy] Failed to initialize from database:', {
+    logger.error("[RoleHierarchy] Failed to initialize from database:", {
       error: error.message,
     });
     throw error;
@@ -136,8 +136,8 @@ function initializeFromFallback() {
   isInitializedFromDB = false;
   isUsingFallback = true;
 
-  if (process.env.NODE_ENV !== 'test') {
-    logger.warn('[RoleHierarchy] Using FALLBACK constants (not from database)');
+  if (process.env.NODE_ENV !== "test") {
+    logger.warn("[RoleHierarchy] Using FALLBACK constants (not from database)");
   }
 
   return true;
@@ -212,7 +212,7 @@ function getRoleDescriptions() {
  * @returns {number|null} Priority or null if not found
  */
 function getRolePriority(roleName) {
-  if (!roleName || typeof roleName !== 'string') {
+  if (!roleName || typeof roleName !== "string") {
     return null;
   }
   ensureInitialized();

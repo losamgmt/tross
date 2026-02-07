@@ -5,7 +5,7 @@
  * Uses centralized setup from route-test-setup.js (DRY architecture).
  *
  * Test Coverage: Profile retrieval and updates
- * 
+ *
  * NOTE: PUT /api/auth/me now uses GenericEntityService.findByField and
  * GenericEntityService.update (strangler-fig Phase 4 complete)
  */
@@ -38,15 +38,18 @@ jest.mock("../../../validators", () => {
   return {
     validateProfileUpdate: jest.fn(() => (req, res, next) => next()),
     validateRefreshToken: jest.fn(() => (req, res, next) => next()),
-    validateIdParam: jest.fn(({ paramName = 'id' } = {}) => (req, res, next) => {
-      const value = parseInt(req.params[paramName], 10);
-      if (isNaN(value) || value < 1) {
-        return ResponseFormatter.badRequest(res, `Invalid ${paramName}`);
-      }
-      if (!req.validated) req.validated = {};
-      req.validated[paramName] = value;
-      next();
-    }),
+    validateIdParam: jest.fn(
+      ({ paramName = "id" } = {}) =>
+        (req, res, next) => {
+          const value = parseInt(req.params[paramName], 10);
+          if (isNaN(value) || value < 1) {
+            return ResponseFormatter.badRequest(res, `Invalid ${paramName}`);
+          }
+          if (!req.validated) req.validated = {};
+          req.validated[paramName] = value;
+          next();
+        },
+    ),
   };
 });
 jest.mock("../../../utils/request-helpers");
@@ -198,8 +201,16 @@ describe("routes/auth.js - Profile Operations", () => {
       expect(response.body.message).toBe("Profile updated successfully");
       expect(response.body.data.first_name).toBe("Updated");
       expect(response.body.data.last_name).toBe("Name");
-      expect(GenericEntityService.findByField).toHaveBeenCalledWith("user", "auth0_id", "auth0|123");
-      expect(GenericEntityService.update).toHaveBeenCalledWith("user", 1, updates);
+      expect(GenericEntityService.findByField).toHaveBeenCalledWith(
+        "user",
+        "auth0_id",
+        "auth0|123",
+      );
+      expect(GenericEntityService.update).toHaveBeenCalledWith(
+        "user",
+        1,
+        updates,
+      );
     });
 
     test("should update single field successfully", async () => {
@@ -223,7 +234,9 @@ describe("routes/auth.js - Profile Operations", () => {
 
       // Assert
       expect(response.status).toBe(200);
-      expect(GenericEntityService.update).toHaveBeenCalledWith("user", 1, { first_name: "NewName" });
+      expect(GenericEntityService.update).toHaveBeenCalledWith("user", 1, {
+        first_name: "NewName",
+      });
     });
 
     test("should filter out disallowed fields", async () => {
@@ -249,7 +262,9 @@ describe("routes/auth.js - Profile Operations", () => {
 
       // Assert
       expect(response.status).toBe(200);
-      expect(GenericEntityService.update).toHaveBeenCalledWith("user", 1, { first_name: "Updated" });
+      expect(GenericEntityService.update).toHaveBeenCalledWith("user", 1, {
+        first_name: "Updated",
+      });
     });
 
     test("should return 404 when user not found by auth0_id", async () => {
@@ -282,7 +297,9 @@ describe("routes/auth.js - Profile Operations", () => {
       // Assert
       // Validator strips unknown fields, then min(1) validation fires
       expect(response.status).toBe(400);
-      expect(response.body.message).toBe("At least one field (first_name or last_name) must be provided");
+      expect(response.body.message).toBe(
+        "At least one field (first_name or last_name) must be provided",
+      );
     });
   });
 });

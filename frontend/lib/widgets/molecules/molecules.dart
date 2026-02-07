@@ -58,11 +58,12 @@ export 'layout/page_toolbar.dart';
 export 'layout/refreshable_section.dart';
 
 // Menus
-export 'menus/dropdown_menu.dart';
+export 'menus/adaptive_nav_menu.dart'; // PRIMARY: Unified nav menu (popup/bottom sheet)
+export 'menus/dropdown_menu.dart'; // DEPRECATED: Use adaptive_nav_menu.dart instead
 
 // Pagination
 export 'pagination/pagination_display.dart';
 
 // - guards/permission_guard.dart → use display/conditional_display.dart
-// - user_menu.dart → use menus/dropdown_menu.dart
+// - user_menu.dart → use menus/adaptive_nav_menu.dart
 // - pagination_controls.dart → use pagination/pagination_display.dart

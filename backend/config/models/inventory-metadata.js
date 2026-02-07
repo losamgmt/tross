@@ -13,22 +13,22 @@
 const {
   FIELD_ACCESS_LEVELS: FAL,
   UNIVERSAL_FIELD_ACCESS,
-} = require('../constants');
-const { NAME_TYPES } = require('../entity-types');
-const { FIELD } = require('../field-type-standards');
+} = require("../constants");
+const { NAME_TYPES } = require("../entity-types");
+const { FIELD } = require("../field-type-standards");
 
 module.exports = {
   // Entity key (singular, for API params and lookups)
-  entityKey: 'inventory',
+  entityKey: "inventory",
 
   // Table name in database (plural, also used for API URLs)
-  tableName: 'inventory',
+  tableName: "inventory",
 
   // Primary key
-  primaryKey: 'id',
+  primaryKey: "id",
 
   // Material icon for navigation menus and entity displays
-  icon: 'inventory_2',
+  icon: "inventory_2",
 
   // ============================================================================
   // PLURALIZATION
@@ -58,13 +58,13 @@ module.exports = {
    * The unique identifier field - SKU is the barcode/lookup identity
    * Multiple items can have the same 'name' but different SKUs
    */
-  identityField: 'sku',
+  identityField: "sku",
 
   /**
    * The human-readable display field for relationships
    * Used when JOINing this entity - 'name' is what we show
    */
-  displayField: 'name',
+  displayField: "name",
 
   /**
    * Whether the identity field has a UNIQUE constraint in the database
@@ -75,25 +75,25 @@ module.exports = {
    * RLS resource name for permission checks
    * Maps to permissions.json resource names
    */
-  rlsResource: 'inventory',
+  rlsResource: "inventory",
 
   /**
    * Row-Level Security policy per role
    * Inventory is a public resource - all authorized users can read
    */
   rlsPolicy: {
-    customer: 'public_resource',
-    technician: 'public_resource',
-    dispatcher: 'public_resource',
-    manager: 'public_resource',
-    admin: 'public_resource',
+    customer: "public_resource",
+    technician: "public_resource",
+    dispatcher: "public_resource",
+    manager: "public_resource",
+    admin: "public_resource",
   },
 
   /**
    * Navigation visibility - minimum role to see this entity in nav menus
    * Inventory is visible to technician+ (those who use it for work orders)
    */
-  navVisibility: 'technician',
+  navVisibility: "technician",
 
   /**
    * File attachments - whether this entity supports file uploads
@@ -106,10 +106,10 @@ module.exports = {
    * Matches permissions.json - technician+ read/update, dispatcher+ create, manager+ delete
    */
   entityPermissions: {
-    create: 'dispatcher',
-    read: 'technician',
-    update: 'technician',
-    delete: 'manager',
+    create: "dispatcher",
+    read: "technician",
+    update: "technician",
+    delete: "manager",
   },
 
   /**
@@ -130,19 +130,26 @@ module.exports = {
   /**
    * Fields required when creating a new entity
    */
-  requiredFields: ['name', 'sku'],
+  requiredFields: ["name", "sku"],
 
   /**
    * Fields that cannot be modified after creation (beyond universal immutables: id, created_at)
    * - sku: Barcode/lookup identity, cannot change
    */
-  immutableFields: ['sku'],
+  immutableFields: ["sku"],
 
   /**
    * Default columns to display in table views (ordered)
    * Used by admin panel and frontend table widgets
    */
-  displayColumns: ['sku', 'name', 'category', 'quantity', 'unit_price', 'status'],
+  displayColumns: [
+    "sku",
+    "name",
+    "category",
+    "quantity",
+    "unit_price",
+    "status",
+  ],
 
   // ============================================================================
   // FIELD-LEVEL ACCESS CONTROL (for field-access-controller.js)
@@ -163,44 +170,44 @@ module.exports = {
 
     // Identity field - set on create, immutable, technician+ read
     name: {
-      create: 'dispatcher',
-      read: 'technician',
-      update: 'dispatcher',
-      delete: 'none',
+      create: "dispatcher",
+      read: "technician",
+      update: "dispatcher",
+      delete: "none",
     },
 
     // SKU - immutable after creation (barcode identity)
     sku: {
-      create: 'dispatcher',
-      read: 'technician',
-      update: 'none', // Immutable
-      delete: 'none',
+      create: "dispatcher",
+      read: "technician",
+      update: "none", // Immutable
+      delete: "none",
     },
 
     // Operational fields - dispatcher+ manages, technician+ reads
     description: {
-      create: 'dispatcher',
-      read: 'technician',
-      update: 'dispatcher',
-      delete: 'none',
+      create: "dispatcher",
+      read: "technician",
+      update: "dispatcher",
+      delete: "none",
     },
     quantity: {
-      create: 'dispatcher',
-      read: 'technician',
-      update: 'dispatcher',
-      delete: 'none',
+      create: "dispatcher",
+      read: "technician",
+      update: "dispatcher",
+      delete: "none",
     },
     reorder_level: {
-      create: 'dispatcher',
-      read: 'technician',
-      update: 'dispatcher',
-      delete: 'none',
+      create: "dispatcher",
+      read: "technician",
+      update: "dispatcher",
+      delete: "none",
     },
     location: {
-      create: 'dispatcher',
-      read: 'technician',
-      update: 'dispatcher',
-      delete: 'none',
+      create: "dispatcher",
+      read: "technician",
+      update: "dispatcher",
+      delete: "none",
     },
 
     // Financial field - manager+ only (cost data is sensitive)
@@ -208,10 +215,10 @@ module.exports = {
 
     // Supplier info - manager+ manages, technician+ can read
     supplier: {
-      create: 'manager',
-      read: 'technician',
-      update: 'manager',
-      delete: 'none',
+      create: "manager",
+      read: "technician",
+      update: "manager",
+      delete: "none",
     },
   },
 
@@ -246,9 +253,9 @@ module.exports = {
    */
   dependents: [
     {
-      table: 'audit_logs',
-      foreignKey: 'resource_id',
-      polymorphicType: { column: 'resource_type', value: 'inventory' },
+      table: "audit_logs",
+      foreignKey: "resource_id",
+      polymorphicType: { column: "resource_type", value: "inventory" },
     },
   ],
 
@@ -260,7 +267,7 @@ module.exports = {
    * Fields that support text search (ILIKE %term%)
    * These are concatenated with OR for full-text search
    */
-  searchableFields: ['name', 'sku', 'description'],
+  searchableFields: ["name", "sku", "description"],
 
   // ============================================================================
   // FILTER CONFIGURATION (Exact Match & Operators)
@@ -271,17 +278,17 @@ module.exports = {
    * Supports: exact match, gt, gte, lt, lte, in, not
    */
   filterableFields: [
-    'id',
-    'name',
-    'sku',
-    'is_active',
-    'status',
-    'quantity',
-    'reorder_level',
-    'location',
-    'supplier',
-    'created_at',
-    'updated_at',
+    "id",
+    "name",
+    "sku",
+    "is_active",
+    "status",
+    "quantity",
+    "reorder_level",
+    "location",
+    "supplier",
+    "created_at",
+    "updated_at",
   ],
 
   // ============================================================================
@@ -292,22 +299,22 @@ module.exports = {
    * Fields that can be used in ORDER BY clauses
    */
   sortableFields: [
-    'id',
-    'name',
-    'sku',
-    'status',
-    'quantity',
-    'unit_cost',
-    'created_at',
-    'updated_at',
+    "id",
+    "name",
+    "sku",
+    "status",
+    "quantity",
+    "unit_cost",
+    "created_at",
+    "updated_at",
   ],
 
   /**
    * Default sort when no sortBy specified
    */
   defaultSort: {
-    field: 'created_at',
-    order: 'DESC',
+    field: "created_at",
+    order: "DESC",
   },
 
   // ============================================================================
@@ -316,24 +323,24 @@ module.exports = {
 
   fields: {
     // TIER 1: Universal Entity Contract Fields
-    id: { type: 'integer', readonly: true },
+    id: { type: "integer", readonly: true },
     name: { ...FIELD.NAME, required: true },
-    is_active: { type: 'boolean', default: true },
-    created_at: { type: 'timestamp', readonly: true },
-    updated_at: { type: 'timestamp', readonly: true },
+    is_active: { type: "boolean", default: true },
+    created_at: { type: "timestamp", readonly: true },
+    updated_at: { type: "timestamp", readonly: true },
 
     // TIER 2: Entity-Specific Lifecycle Field
     status: {
-      type: 'enum',
-      values: ['in_stock', 'low_stock', 'out_of_stock', 'discontinued'],
-      default: 'in_stock',
+      type: "enum",
+      values: ["in_stock", "low_stock", "out_of_stock", "discontinued"],
+      default: "in_stock",
     },
 
     // Entity-specific fields
     sku: { ...FIELD.SKU, required: true },
     description: FIELD.DESCRIPTION,
-    quantity: { type: 'integer', default: 0 },
-    reorder_level: { type: 'integer', default: 10 },
+    quantity: { type: "integer", default: 0 },
+    reorder_level: { type: "integer", default: 10 },
     unit_cost: FIELD.CURRENCY,
     location: FIELD.NAME,
     supplier: FIELD.NAME,

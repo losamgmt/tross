@@ -19,6 +19,7 @@ These fields serve distinct purposes and are **not mutually exclusive**. Many en
 **Meaning:** `false` = "deactivated" — hidden from normal queries, but data preserved
 
 > **Terminology:** We use "deactivation" (not "soft delete") to distinguish from hard delete.
+>
 > - **Deactivation** = `is_active = false` (UPDATE operation, data preserved)
 > - **Delete** = Hard DELETE (data removed permanently)
 
@@ -52,6 +53,7 @@ These fields serve distinct purposes and are **not mutually exclusive**. Many en
 ### Decision: Separation of Concerns
 
 **Why we separate `is_active` from `status`:**
+
 - `is_active = false` means "deactivated" — hidden from normal queries
 - `status` captures meaningful business workflow only
 - Queries remain simple and consistent
@@ -60,6 +62,7 @@ These fields serve distinct purposes and are **not mutually exclusive**. Many en
 ### Decision: Status Values in Metadata
 
 **Why status enums live in entity metadata files:**
+
 - Single source of truth for all validation
 - CHECK constraints derived, not duplicated
 - Frontend and backend automatically synchronized
@@ -68,6 +71,7 @@ These fields serve distinct purposes and are **not mutually exclusive**. Many en
 ### Decision: Default to Operational State
 
 **Why new records default to an operational status:**
+
 - Minimizes special-case handling
 - Matches user expectation (created = ready to use)
 - Exceptions (like pending approval) are explicit in business rules
@@ -75,6 +79,7 @@ These fields serve distinct purposes and are **not mutually exclusive**. Many en
 ### Decision: Non-Nullable Status
 
 **Why status fields have NOT NULL constraints:**
+
 - Forces explicit lifecycle state
 - Simplifies query logic (no NULL checks)
 - Every record has a defined state
@@ -82,6 +87,7 @@ These fields serve distinct purposes and are **not mutually exclusive**. Many en
 ### Decision: HUMAN Entities Share Status
 
 **Why User, Customer, and Technician have identical status values:**
+
 - They represent the same lifecycle pattern (humans in the system)
 - Simplifies authentication and authorization logic
 - Allows consistent admin interfaces
@@ -90,6 +96,7 @@ These fields serve distinct purposes and are **not mutually exclusive**. Many en
 ## When NOT to Add Status
 
 Entities that should NEVER have a status field:
+
 - Pure reference data (lookup tables)
 - Join/association tables
 - Configuration entities
@@ -127,6 +134,7 @@ Standard patterns for lifecycle-aware queries:
 ## Transition Validation
 
 Not all status transitions are valid. The business logic should:
+
 - Define which transitions are allowed
 - Determine what side effects occur on transition
 - Control who can perform each transition
@@ -134,6 +142,7 @@ Not all status transitions are valid. The business logic should:
 ## Audit Requirements
 
 All status changes should be logged because:
+
 - Status changes represent business events
 - Compliance may require transition history
 - Debugging requires understanding state changes
@@ -141,6 +150,7 @@ All status changes should be logged because:
 ## SSOT Integration
 
 Status values are defined in entity metadata files. From there:
+
 - Database CHECK constraints are derived
 - API validation is derived
 - Swagger documentation is derived

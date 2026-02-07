@@ -227,31 +227,31 @@ describe("Constants Service", () => {
     test("ROLE.USERS_ASSIGNED should return correct message with count", () => {
       // These are arrow functions that need to be tested
       expect(MODEL_ERRORS.ROLE.USERS_ASSIGNED(5)).toBe(
-        "Cannot delete role: 5 user(s) are assigned to this role. Use force=true to proceed and set their role to NULL."
+        "Cannot delete role: 5 user(s) are assigned to this role. Use force=true to proceed and set their role to NULL.",
       );
       expect(MODEL_ERRORS.ROLE.USERS_ASSIGNED(1)).toBe(
-        "Cannot delete role: 1 user(s) are assigned to this role. Use force=true to proceed and set their role to NULL."
+        "Cannot delete role: 1 user(s) are assigned to this role. Use force=true to proceed and set their role to NULL.",
       );
       expect(MODEL_ERRORS.ROLE.USERS_ASSIGNED(0)).toBe(
-        "Cannot delete role: 0 user(s) are assigned to this role. Use force=true to proceed and set their role to NULL."
+        "Cannot delete role: 0 user(s) are assigned to this role. Use force=true to proceed and set their role to NULL.",
       );
     });
 
     test("CUSTOMER.WORK_ORDERS_EXIST should return correct message with count", () => {
       expect(MODEL_ERRORS.CUSTOMER.WORK_ORDERS_EXIST(3)).toBe(
-        "Cannot delete customer: 3 work order(s) exist. Use force=true to cascade delete."
+        "Cannot delete customer: 3 work order(s) exist. Use force=true to cascade delete.",
       );
       expect(MODEL_ERRORS.CUSTOMER.WORK_ORDERS_EXIST(1)).toBe(
-        "Cannot delete customer: 1 work order(s) exist. Use force=true to cascade delete."
+        "Cannot delete customer: 1 work order(s) exist. Use force=true to cascade delete.",
       );
     });
 
     test("TECHNICIAN.WORK_ORDERS_ASSIGNED should return correct message with count", () => {
       expect(MODEL_ERRORS.TECHNICIAN.WORK_ORDERS_ASSIGNED(10)).toBe(
-        "Cannot delete technician: 10 work order(s) assigned. Use force=true to cascade delete."
+        "Cannot delete technician: 10 work order(s) assigned. Use force=true to cascade delete.",
       );
       expect(MODEL_ERRORS.TECHNICIAN.WORK_ORDERS_ASSIGNED(1)).toBe(
-        "Cannot delete technician: 1 work order(s) assigned. Use force=true to cascade delete."
+        "Cannot delete technician: 1 work order(s) assigned. Use force=true to cascade delete.",
       );
     });
   });

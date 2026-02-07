@@ -52,6 +52,7 @@ Execute these steps in GitHub web interface to protect the `main` branch.
 ## Verification
 
 After setup:
+
 - Try to push directly to main → Should be blocked
 - Try to merge PR without approval → Should be blocked
 - Try to merge PR with failing tests → Should be blocked
@@ -68,12 +69,14 @@ After setup:
 ## Current Workflow (Private Repo, No Team Plan)
 
 **What you have:**
+
 - ✅ CI runs on all PRs (tests, lint, build)
 - ✅ Vercel preview deployments
 - ✅ Manual code review process
 - ⚠️ Trust-based enforcement (GitHub doesn't block bad merges)
 
 **How to protect main branch manually:**
+
 1. **Always use PRs** (even for your own changes)
 2. **Check CI status** before merging (green ✅ required)
 3. **Don't merge failing PRs** (red ❌ = don't merge)
@@ -81,6 +84,7 @@ After setup:
 5. **Team discipline** (everyone follows the rules)
 
 **When to upgrade:**
+
 - Make repo public → Branch protection free ✅
 - Subscribe to GitHub Team → $4/user/month ($12 total for 3 users)
 

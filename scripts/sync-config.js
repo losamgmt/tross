@@ -1,35 +1,39 @@
 #!/usr/bin/env node
 /**
  * Configuration Sync Script
- * 
+ *
  * SINGLE SOURCE OF TRUTH: config/*.json files at project root
- * 
+ *
  * This script syncs root config files to frontend/assets/config/
  * ensuring parity between backend and frontend permissions.
- * 
+ *
  * Run before:
  * - flutter run
  * - flutter build
  * - flutter test (if config changed)
- * 
+ *
  * Usage:
  *   node scripts/sync-config.js
  */
 
-const fs = require('fs');
-const path = require('path');
+const fs = require("fs");
+const path = require("path");
 
-const ROOT_CONFIG = path.join(__dirname, '..', 'config');
-const FRONTEND_ASSETS = path.join(__dirname, '..', 'frontend', 'assets', 'config');
+const ROOT_CONFIG = path.join(__dirname, "..", "config");
+const FRONTEND_ASSETS = path.join(
+  __dirname,
+  "..",
+  "frontend",
+  "assets",
+  "config",
+);
 
 // NOTE: validation-rules.json removed - validation is now derived from metadata
 // via validation-deriver.js and exposed via /api/schema endpoints
-const CONFIG_FILES = [
-  'permissions.json',
-];
+const CONFIG_FILES = ["permissions.json"];
 
 function syncConfig() {
-  console.log('🔄 Syncing configuration files...\n');
+  console.log("🔄 Syncing configuration files...\n");
 
   // Ensure frontend assets/config directory exists
   if (!fs.existsSync(FRONTEND_ASSETS)) {
@@ -53,17 +57,17 @@ function syncConfig() {
       }
 
       // Read source
-      const content = fs.readFileSync(source, 'utf8');
-      
+      const content = fs.readFileSync(source, "utf8");
+
       // Check if dest needs update
       let needsUpdate = true;
       if (fs.existsSync(dest)) {
-        const existingContent = fs.readFileSync(dest, 'utf8');
+        const existingContent = fs.readFileSync(dest, "utf8");
         needsUpdate = content !== existingContent;
       }
 
       if (needsUpdate) {
-        fs.writeFileSync(dest, content, 'utf8');
+        fs.writeFileSync(dest, content, "utf8");
         console.log(`✅ Synced: ${file}`);
         syncCount++;
       } else {
@@ -76,7 +80,7 @@ function syncConfig() {
   }
 
   console.log(`\n📊 Summary: ${syncCount} synced, ${errorCount} errors`);
-  
+
   if (errorCount > 0) {
     process.exit(1);
   }

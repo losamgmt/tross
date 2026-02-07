@@ -12,11 +12,11 @@
 function isFkSettableOnCreate(meta, fkField, fkDef) {
   // Explicit metadata flag takes precedence
   if (fkDef.settableOnCreate === false) return false;
-  
+
   // Check fieldAccess if available
   const fieldAccess = meta.fieldAccess?.[fkField];
-  if (fieldAccess && fieldAccess.create === 'none') return false;
-  
+  if (fieldAccess && fieldAccess.create === "none") return false;
+
   // Default: assume settable
   return true;
 }
@@ -35,26 +35,29 @@ function fkReferencesValidParent(meta, ctx) {
     // Skip FKs that aren't settable during creation
     if (!isFkSettableOnCreate(meta, fkField, fkDef)) continue;
 
-    ctx.it(`POST /api/${meta.tableName} - accepts valid ${fkField} reference`, async () => {
-      // Create parent entity first (the one we're specifically testing)
-      const parentName = ctx.entityNameFromTable(fkDef.table);
-      const parent = await ctx.factory.create(parentName);
-      const auth = await ctx.authHeader('admin');
+    ctx.it(
+      `POST /api/${meta.tableName} - accepts valid ${fkField} reference`,
+      async () => {
+        // Create parent entity first (the one we're specifically testing)
+        const parentName = ctx.entityNameFromTable(fkDef.table);
+        const parent = await ctx.factory.create(parentName);
+        const auth = await ctx.authHeader("admin");
 
-      // Use buildMinimalWithFKs to resolve ALL FK dependencies, then override the tested one
-      const payload = await ctx.factory.buildMinimalWithFKs(meta.entityName, {
-        [fkField]: parent.id,
-      });
+        // Use buildMinimalWithFKs to resolve ALL FK dependencies, then override the tested one
+        const payload = await ctx.factory.buildMinimalWithFKs(meta.entityName, {
+          [fkField]: parent.id,
+        });
 
-      const response = await ctx.request
-        .post(`/api/${meta.tableName}`)
-        .set(auth)
-        .send(payload);
+        const response = await ctx.request
+          .post(`/api/${meta.tableName}`)
+          .set(auth)
+          .send(payload);
 
-      ctx.expect(response.status).toBe(201);
-      const data = response.body.data || response.body;
-      ctx.expect(data[fkField]).toBe(parent.id);
-    });
+        ctx.expect(response.status).toBe(201);
+        const data = response.body.data || response.body;
+        ctx.expect(data[fkField]).toBe(parent.id);
+      },
+    );
   }
 }
 

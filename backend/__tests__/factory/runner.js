@@ -15,10 +15,10 @@
  *   runEntityTests('customer', { categories: ['crud', 'validation'] });
  */
 
-const allMetadata = require('../../config/models');
-const scenarios = require('./scenarios');
-const { buildTestContext } = require('./data/test-context');
-const entityFactory = require('./data/entity-factory');
+const allMetadata = require("../../config/models");
+const scenarios = require("./scenarios");
+const { buildTestContext } = require("./data/test-context");
+const entityFactory = require("./data/entity-factory");
 
 /**
  * Run all test scenarios for an entity
@@ -43,7 +43,7 @@ function runEntityTests(entityName, options = {}) {
 
     beforeAll(async () => {
       if (!options.app || !options.db) {
-        throw new Error('runEntityTests requires options.app and options.db');
+        throw new Error("runEntityTests requires options.app and options.db");
       }
       ctx = buildTestContext(options.app, options.db);
     });
@@ -65,20 +65,36 @@ function runEntityTests(entityName, options = {}) {
 
       describe(`${category}`, () => {
         // Run each scenario in the category
-        for (const [scenarioName, scenarioFn] of Object.entries(categoryScenarios)) {
+        for (const [scenarioName, scenarioFn] of Object.entries(
+          categoryScenarios,
+        )) {
           // Create a lazy context that accesses ctx at runtime
           const lazyCtx = {
-            get request() { return ctx.request; },
-            get db() { return ctx.db; },
-            get factory() { return ctx.factory; },
-            get authHeader() { return ctx.authHeader; },
-            get authHeaderForUser() { return ctx.authHeaderForUser; },
-            get getTestUser() { return ctx.getTestUser; },
-            get entityNameFromTable() { return ctx.entityNameFromTable; },
+            get request() {
+              return ctx.request;
+            },
+            get db() {
+              return ctx.db;
+            },
+            get factory() {
+              return ctx.factory;
+            },
+            get authHeader() {
+              return ctx.authHeader;
+            },
+            get authHeaderForUser() {
+              return ctx.authHeaderForUser;
+            },
+            get getTestUser() {
+              return ctx.getTestUser;
+            },
+            get entityNameFromTable() {
+              return ctx.entityNameFromTable;
+            },
             it: (name, fn) => it(name, fn),
             expect: expect,
           };
-          
+
           // Scenarios self-select: if preconditions not met, they return early
           scenarioFn(meta, lazyCtx);
         }

@@ -11,9 +11,9 @@
  * - Static class (no instance state)
  */
 
-const db = require('../db/connection');
-const { logger } = require('../config/logger');
-const AppError = require('../utils/app-error');
+const db = require("../db/connection");
+const { logger } = require("../config/logger");
+const AppError = require("../utils/app-error");
 
 class SessionsService {
   /**
@@ -45,7 +45,7 @@ class SessionsService {
     `;
 
     const result = await db.query(query);
-    return result.rows.map(row => ({
+    return result.rows.map((row) => ({
       sessionId: row.session_id,
       userId: row.user_id,
       loginTime: row.login_time,
@@ -57,7 +57,9 @@ class SessionsService {
         email: row.email,
         firstName: row.first_name,
         lastName: row.last_name,
-        fullName: [row.first_name, row.last_name].filter(Boolean).join(' ') || row.email,
+        fullName:
+          [row.first_name, row.last_name].filter(Boolean).join(" ") ||
+          row.email,
         status: row.user_status,
         role: row.role_name,
       },
@@ -87,7 +89,7 @@ class SessionsService {
     `;
 
     const result = await db.query(query, [userId]);
-    return result.rows.map(row => ({
+    return result.rows.map((row) => ({
       sessionId: row.session_id,
       loginTime: row.login_time,
       lastUsedAt: row.last_used_at,
@@ -107,13 +109,13 @@ class SessionsService {
   static async forceLogoutUser(userId, adminUserId, reason = null) {
     // Prevent admin from locking themselves (check before transaction)
     if (userId === adminUserId) {
-      throw new AppError('Cannot force logout yourself', 400, 'BAD_REQUEST');
+      throw new AppError("Cannot force logout yourself", 400, "BAD_REQUEST");
     }
 
     const client = await db.getClient();
 
     try {
-      await client.query('BEGIN');
+      await client.query("BEGIN");
 
       // Get user info before suspension
       const userQuery = `
@@ -124,7 +126,11 @@ class SessionsService {
       const userResult = await client.query(userQuery, [userId]);
 
       if (userResult.rows.length === 0) {
-        throw new AppError(`User with ID ${userId} not found`, 404, 'NOT_FOUND');
+        throw new AppError(
+          `User with ID ${userId} not found`,
+          404,
+          "NOT_FOUND",
+        );
       }
 
       const user = userResult.rows[0];
@@ -149,9 +155,9 @@ class SessionsService {
       `;
       const revokeResult = await client.query(revokeTokensQuery, [userId]);
 
-      await client.query('COMMIT');
+      await client.query("COMMIT");
 
-      logger.info('User force logged out', {
+      logger.info("User force logged out", {
         userId,
         adminUserId,
         reason,
@@ -163,16 +169,18 @@ class SessionsService {
         user: {
           id: user.id,
           email: user.email,
-          fullName: [user.first_name, user.last_name].filter(Boolean).join(' ') || user.email,
+          fullName:
+            [user.first_name, user.last_name].filter(Boolean).join(" ") ||
+            user.email,
           previousStatus: user.status,
-          newStatus: 'suspended',
+          newStatus: "suspended",
         },
         revokedSessionCount: revokeResult.rowCount,
         reason,
       };
     } catch (error) {
-      await client.query('ROLLBACK');
-      logger.error('Failed to force logout user', {
+      await client.query("ROLLBACK");
+      logger.error("Failed to force logout user", {
         userId,
         adminUserId,
         error: error.message,
@@ -202,10 +210,14 @@ class SessionsService {
     const result = await db.query(query, [sessionId]);
 
     if (result.rowCount === 0) {
-      throw new AppError(`Session ${sessionId} not found or already revoked`, 404, 'NOT_FOUND');
+      throw new AppError(
+        `Session ${sessionId} not found or already revoked`,
+        404,
+        "NOT_FOUND",
+      );
     }
 
-    logger.info('Session revoked', {
+    logger.info("Session revoked", {
       sessionId,
       userId: result.rows[0].user_id,
       adminUserId,
@@ -235,12 +247,16 @@ class SessionsService {
     const result = await db.query(query, [userId]);
 
     if (result.rowCount === 0) {
-      throw new AppError(`User ${userId} not found or not suspended`, 404, 'NOT_FOUND');
+      throw new AppError(
+        `User ${userId} not found or not suspended`,
+        404,
+        "NOT_FOUND",
+      );
     }
 
     const user = result.rows[0];
 
-    logger.info('User reactivated', {
+    logger.info("User reactivated", {
       userId,
       adminUserId,
     });
@@ -250,7 +266,9 @@ class SessionsService {
       user: {
         id: user.id,
         email: user.email,
-        fullName: [user.first_name, user.last_name].filter(Boolean).join(' ') || user.email,
+        fullName:
+          [user.first_name, user.last_name].filter(Boolean).join(" ") ||
+          user.email,
         status: user.status,
       },
     };

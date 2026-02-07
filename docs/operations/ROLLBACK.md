@@ -43,6 +43,7 @@ Emergency procedures for reverting Tross deployments to previous stable versions
 ### Method 1: Railway Dashboard (Fastest)
 
 **Steps:**
+
 1. Go to https://railway.app
 2. Select Tross project
 3. Click on backend service
@@ -57,6 +58,7 @@ Emergency procedures for reverting Tross deployments to previous stable versions
 ### Method 2: Git Revert + Push
 
 **Steps:**
+
 ```bash
 # 1. Find the bad commit
 git log --oneline -10
@@ -93,6 +95,7 @@ git push -f origin main
 ### Method 1: Vercel Dashboard (Recommended)
 
 **Steps:**
+
 1. Go to https://vercel.com/dashboard
 2. Select Tross project
 3. Click "Deployments" tab
@@ -129,6 +132,7 @@ vercel promote <deployment-url>
 ### ⚠️ WARNING: Database Rollbacks are Complex
 
 **Why it's hard:**
+
 - Data may have been created with new schema
 - Dropping columns loses data
 - Constraint changes may break existing data
@@ -149,11 +153,13 @@ ALTER TABLE users ALTER COLUMN new_column DROP NOT NULL;
 **Option 2: Full Rollback (Data Loss Risk)**
 
 **Only if:**
+
 - No production data affected yet
 - Migration just ran (< 1 hour)
 - You have a backup
 
 **Steps:**
+
 ```bash
 # 1. Create backup FIRST
 railway run bash
@@ -199,6 +205,7 @@ ALTER TABLE users ALTER COLUMN old_field DROP NOT NULL;
 ### When both backend AND frontend need rollback
 
 **Steps:**
+
 1. **Rollback backend first** (Railway dashboard)
 2. **Wait for backend to be healthy** (check `/api/health`)
 3. **Rollback frontend** (Vercel dashboard)
@@ -289,6 +296,7 @@ Next Steps: [Plan for fix and redeployment]
    - Vercel: https://vercel.com/status
 
 2. **Check your DNS:**
+
    ```bash
    nslookup trossapp.vercel.app
    dig tross-api-production.up.railway.app
@@ -334,14 +342,14 @@ Next Steps: [Plan for fix and redeployment]
 
 ## Rollback Decision Matrix
 
-| Issue Severity | User Impact | Database Changed | Action |
-|---------------|-------------|------------------|--------|
-| Critical | All users | No | Immediate rollback |
-| Critical | All users | Yes | Forward fix (usually) |
-| Major | >50% users | No | Rollback if fix >30 min |
-| Major | >50% users | Yes | Forward fix |
-| Minor | <10% users | Any | Forward fix |
-| Cosmetic | Any | Any | Forward fix |
+| Issue Severity | User Impact | Database Changed | Action                  |
+| -------------- | ----------- | ---------------- | ----------------------- |
+| Critical       | All users   | No               | Immediate rollback      |
+| Critical       | All users   | Yes              | Forward fix (usually)   |
+| Major          | >50% users  | No               | Rollback if fix >30 min |
+| Major          | >50% users  | Yes              | Forward fix             |
+| Minor          | <10% users  | Any              | Forward fix             |
+| Cosmetic       | Any         | Any              | Forward fix             |
 
 ---
 

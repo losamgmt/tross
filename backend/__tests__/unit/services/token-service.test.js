@@ -4,7 +4,11 @@
  */
 
 // Setup mocks FIRST (before any imports)
-const { setupModuleMocks, setupMocks, MOCK_USERS } = require("../../setup/test-setup");
+const {
+  setupModuleMocks,
+  setupMocks,
+  MOCK_USERS,
+} = require("../../setup/test-setup");
 setupModuleMocks();
 
 // NOW import modules (they'll use the mocks)
@@ -396,10 +400,9 @@ describe("TokenService", () => {
       expect(result).toHaveLength(2);
       expect(result[0]).toHaveProperty("id", "token-1");
       expect(result[1]).toHaveProperty("id", "token-2");
-      expect(db.query).toHaveBeenCalledWith(
-        expect.stringContaining("SELECT"),
-        [userId],
-      );
+      expect(db.query).toHaveBeenCalledWith(expect.stringContaining("SELECT"), [
+        userId,
+      ]);
     });
 
     test("should return empty array if user has no tokens", async () => {

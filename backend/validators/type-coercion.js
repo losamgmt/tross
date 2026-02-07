@@ -20,8 +20,8 @@
 const {
   logTypeCoercion,
   logValidationFailure,
-} = require('./validation-logger');
-const AppError = require('../utils/app-error');
+} = require("./validation-logger");
+const AppError = require("../utils/app-error");
 
 /**
  * Safely coerce a value to an integer ID
@@ -36,7 +36,7 @@ const AppError = require('../utils/app-error');
  * @returns {number|null} Coerced integer or null
  * @throws {Error} If coercion fails and allowNull is false
  */
-function toSafeInteger(value, fieldName = 'id', options = {}) {
+function toSafeInteger(value, fieldName = "id", options = {}) {
   const {
     allowNull = false,
     min = 1,
@@ -45,26 +45,26 @@ function toSafeInteger(value, fieldName = 'id', options = {}) {
   } = options;
 
   // Handle null/undefined
-  if (value === null || value === undefined || value === '') {
+  if (value === null || value === undefined || value === "") {
     if (allowNull) {
       logTypeCoercion({
         field: fieldName,
         originalValue: value,
         originalType: typeof value,
         coercedValue: null,
-        coercedType: 'null',
-        reason: 'Null value allowed by configuration',
+        coercedType: "null",
+        reason: "Null value allowed by configuration",
       });
       return null;
     }
 
     logValidationFailure({
-      validator: 'toSafeInteger',
+      validator: "toSafeInteger",
       field: fieldName,
       value,
       reason: `Field is required but received ${value}`,
     });
-    throw new AppError(`${fieldName} is required`, 400, 'BAD_REQUEST');
+    throw new AppError(`${fieldName} is required`, 400, "BAD_REQUEST");
   }
 
   // Attempt coercion
@@ -74,44 +74,56 @@ function toSafeInteger(value, fieldName = 'id', options = {}) {
   // Check if parsing succeeded
   if (isNaN(parsed)) {
     logValidationFailure({
-      validator: 'toSafeInteger',
+      validator: "toSafeInteger",
       field: fieldName,
       value,
-      reason: 'Cannot convert to integer (parsed as NaN)',
+      reason: "Cannot convert to integer (parsed as NaN)",
     });
-    throw new AppError(`${fieldName} must be a valid integer`, 400, 'BAD_REQUEST');
+    throw new AppError(
+      `${fieldName} must be a valid integer`,
+      400,
+      "BAD_REQUEST",
+    );
   }
 
   // Check range
   if (parsed < min) {
     logValidationFailure({
-      validator: 'toSafeInteger',
+      validator: "toSafeInteger",
       field: fieldName,
       value,
       reason: `Value ${parsed} is below minimum ${min}`,
     });
-    throw new AppError(`${fieldName} must be at least ${min}`, 400, 'BAD_REQUEST');
+    throw new AppError(
+      `${fieldName} must be at least ${min}`,
+      400,
+      "BAD_REQUEST",
+    );
   }
 
   if (parsed > max) {
     logValidationFailure({
-      validator: 'toSafeInteger',
+      validator: "toSafeInteger",
       field: fieldName,
       value,
       reason: `Value ${parsed} exceeds maximum ${max}`,
     });
-    throw new AppError(`${fieldName} must be at most ${max}`, 400, 'BAD_REQUEST');
+    throw new AppError(
+      `${fieldName} must be at most ${max}`,
+      400,
+      "BAD_REQUEST",
+    );
   }
 
   // Log coercion if type changed (unless silent mode for expected conversions)
-  if (originalType !== 'number' && !silent) {
+  if (originalType !== "number" && !silent) {
     logTypeCoercion({
       field: fieldName,
       originalValue: value,
       originalType,
       coercedValue: parsed,
-      coercedType: 'number',
-      reason: 'Type conversion for database safety',
+      coercedType: "number",
+      reason: "Type conversion for database safety",
     });
   }
 
@@ -128,25 +140,25 @@ function toSafeInteger(value, fieldName = 'id', options = {}) {
  * @param {string} fieldName - Name of field (for logging)
  * @returns {number|null} Integer userId or null for dev tokens
  */
-function toSafeUserId(value, fieldName = 'userId') {
+function toSafeUserId(value, fieldName = "userId") {
   // Handle null/undefined
-  if (value === null || value === undefined || value === '') {
+  if (value === null || value === undefined || value === "") {
     return null;
   }
 
   // Handle strings (likely dev token auth0_id)
-  if (typeof value === 'string') {
+  if (typeof value === "string") {
     // Skip verbose logging for expected dev tokens - this is routine, not exceptional
     // Dev tokens have auth0_id format like 'dev|admin001'
-    if (!value.startsWith('dev|')) {
+    if (!value.startsWith("dev|")) {
       logTypeCoercion({
         field: fieldName,
         originalValue: value,
-        originalType: 'string',
+        originalType: "string",
         coercedValue: null,
-        coercedType: 'null',
+        coercedType: "null",
         reason:
-          'String userId detected (likely dev token) - dev users have no database ID',
+          "String userId detected (likely dev token) - dev users have no database ID",
       });
     }
     return null;
@@ -154,14 +166,14 @@ function toSafeUserId(value, fieldName = 'userId') {
 
   // Handle fake dev user IDs (9991-9995) - convert to NULL for audit logs
   // These IDs exist in test-users.js but NOT in database
-  if (typeof value === 'number' && value >= 9991 && value <= 9995) {
+  if (typeof value === "number" && value >= 9991 && value <= 9995) {
     logTypeCoercion({
       field: fieldName,
       originalValue: value,
-      originalType: 'number',
+      originalType: "number",
       coercedValue: null,
-      coercedType: 'null',
-      reason: 'Dev user ID (9991-9995) - file-based user, no DB record',
+      coercedType: "null",
+      reason: "Dev user ID (9991-9995) - file-based user, no DB record",
     });
     return null;
   }
@@ -178,59 +190,63 @@ function toSafeUserId(value, fieldName = 'userId') {
  * @param {boolean} defaultValue - Default if value is null/undefined
  * @returns {boolean} Coerced boolean
  */
-function toSafeBoolean(value, fieldName = 'boolean', defaultValue = false) {
-  if (value === null || value === undefined || value === '') {
+function toSafeBoolean(value, fieldName = "boolean", defaultValue = false) {
+  if (value === null || value === undefined || value === "") {
     return defaultValue;
   }
 
   const originalType = typeof value;
 
   // Handle string representations
-  if (typeof value === 'string') {
+  if (typeof value === "string") {
     const lower = value.toLowerCase().trim();
-    if (lower === 'true' || lower === '1' || lower === 'yes') {
+    if (lower === "true" || lower === "1" || lower === "yes") {
       logTypeCoercion({
         field: fieldName,
         originalValue: value,
-        originalType: 'string',
+        originalType: "string",
         coercedValue: true,
-        coercedType: 'boolean',
-        reason: 'String to boolean conversion',
+        coercedType: "boolean",
+        reason: "String to boolean conversion",
       });
       return true;
     }
-    if (lower === 'false' || lower === '0' || lower === 'no') {
+    if (lower === "false" || lower === "0" || lower === "no") {
       logTypeCoercion({
         field: fieldName,
         originalValue: value,
-        originalType: 'string',
+        originalType: "string",
         coercedValue: false,
-        coercedType: 'boolean',
-        reason: 'String to boolean conversion',
+        coercedType: "boolean",
+        reason: "String to boolean conversion",
       });
       return false;
     }
 
     logValidationFailure({
-      validator: 'toSafeBoolean',
+      validator: "toSafeBoolean",
       field: fieldName,
       value,
       reason: `Cannot convert string "${value}" to boolean`,
     });
-    throw new AppError(`${fieldName} must be a valid boolean`, 400, 'BAD_REQUEST');
+    throw new AppError(
+      `${fieldName} must be a valid boolean`,
+      400,
+      "BAD_REQUEST",
+    );
   }
 
   // Handle numbers
-  if (typeof value === 'number') {
+  if (typeof value === "number") {
     const result = value !== 0;
-    if (originalType !== 'boolean') {
+    if (originalType !== "boolean") {
       logTypeCoercion({
         field: fieldName,
         originalValue: value,
-        originalType: 'number',
+        originalType: "number",
         coercedValue: result,
-        coercedType: 'boolean',
-        reason: 'Number to boolean conversion',
+        coercedType: "boolean",
+        reason: "Number to boolean conversion",
       });
     }
     return result;
@@ -248,12 +264,12 @@ function toSafeBoolean(value, fieldName = 'boolean', defaultValue = false) {
  * @returns {Object} Validated { page, limit, offset }
  */
 function toSafePagination(query, limits = { defaultLimit: 50, maxLimit: 200 }) {
-  const page = toSafeInteger(query.page || 1, 'page', {
+  const page = toSafeInteger(query.page || 1, "page", {
     min: 1,
     allowNull: false,
     silent: true,
   });
-  const limit = toSafeInteger(query.limit || limits.defaultLimit, 'limit', {
+  const limit = toSafeInteger(query.limit || limits.defaultLimit, "limit", {
     min: 1,
     max: limits.maxLimit,
     allowNull: false,
@@ -274,33 +290,37 @@ function toSafePagination(query, limits = { defaultLimit: 50, maxLimit: 200 }) {
  * @returns {string|null} Validated UUID or null
  * @throws {Error} If value is not a valid UUID
  */
-function toSafeUuid(value, fieldName = 'uuid', options = {}) {
+function toSafeUuid(value, fieldName = "uuid", options = {}) {
   const { allowNull = false } = options;
 
   // Handle null/undefined
-  if (value === null || value === undefined || value === '') {
+  if (value === null || value === undefined || value === "") {
     if (allowNull) {
       return null;
     }
 
     logValidationFailure({
-      validator: 'toSafeUuid',
+      validator: "toSafeUuid",
       field: fieldName,
       value,
       reason: `Field is required but received ${value}`,
     });
-    throw new AppError(`${fieldName} is required`, 400, 'BAD_REQUEST');
+    throw new AppError(`${fieldName} is required`, 400, "BAD_REQUEST");
   }
 
   // Must be string
-  if (typeof value !== 'string') {
+  if (typeof value !== "string") {
     logValidationFailure({
-      validator: 'toSafeUuid',
+      validator: "toSafeUuid",
       field: fieldName,
       value,
       reason: `UUID must be a string (received ${typeof value})`,
     });
-    throw new AppError(`${fieldName} must be a valid UUID string`, 400, 'BAD_REQUEST');
+    throw new AppError(
+      `${fieldName} must be a valid UUID string`,
+      400,
+      "BAD_REQUEST",
+    );
   }
 
   // Validate UUID v4 format
@@ -308,12 +328,16 @@ function toSafeUuid(value, fieldName = 'uuid', options = {}) {
     /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   if (!uuidRegex.test(value)) {
     logValidationFailure({
-      validator: 'toSafeUuid',
+      validator: "toSafeUuid",
       field: fieldName,
       value,
-      reason: 'Invalid UUID v4 format',
+      reason: "Invalid UUID v4 format",
     });
-    throw new AppError(`${fieldName} must be a valid UUID v4`, 400, 'BAD_REQUEST');
+    throw new AppError(
+      `${fieldName} must be a valid UUID v4`,
+      400,
+      "BAD_REQUEST",
+    );
   }
 
   return value;
@@ -332,7 +356,7 @@ function toSafeUuid(value, fieldName = 'uuid', options = {}) {
  * @returns {string|null} Validated string or null
  * @throws {Error} If validation fails
  */
-function toSafeString(value, fieldName = 'field', options = {}) {
+function toSafeString(value, fieldName = "field", options = {}) {
   const {
     allowNull = false,
     minLength = 0,
@@ -341,26 +365,26 @@ function toSafeString(value, fieldName = 'field', options = {}) {
   } = options;
 
   // Handle null/undefined
-  if (value === null || value === undefined || value === '') {
+  if (value === null || value === undefined || value === "") {
     if (allowNull) {
       logTypeCoercion({
         field: fieldName,
         originalValue: value,
         originalType: typeof value,
         coercedValue: null,
-        coercedType: 'null',
-        reason: 'Null value allowed by configuration',
+        coercedType: "null",
+        reason: "Null value allowed by configuration",
       });
       return null;
     }
 
     logValidationFailure({
-      validator: 'toSafeString',
+      validator: "toSafeString",
       field: fieldName,
       value,
       reason: `Field is required but received ${value}`,
     });
-    throw new AppError(`${fieldName} is required`, 400, 'BAD_REQUEST');
+    throw new AppError(`${fieldName} is required`, 400, "BAD_REQUEST");
   }
 
   // Coerce to string
@@ -375,55 +399,63 @@ function toSafeString(value, fieldName = 'field', options = {}) {
       logTypeCoercion({
         field: fieldName,
         originalValue: originalStr,
-        originalType: 'string',
+        originalType: "string",
         coercedValue: str,
-        coercedType: 'string',
-        reason: 'Whitespace trimmed',
+        coercedType: "string",
+        reason: "Whitespace trimmed",
       });
     }
   }
 
   // Check empty after trim
-  if (str === '' && !allowNull) {
+  if (str === "" && !allowNull) {
     logValidationFailure({
-      validator: 'toSafeString',
+      validator: "toSafeString",
       field: fieldName,
       value,
-      reason: 'String is empty after trimming',
+      reason: "String is empty after trimming",
     });
-    throw new AppError(`${fieldName} cannot be empty`, 400, 'BAD_REQUEST');
+    throw new AppError(`${fieldName} cannot be empty`, 400, "BAD_REQUEST");
   }
 
   // Check length
   if (str.length < minLength) {
     logValidationFailure({
-      validator: 'toSafeString',
+      validator: "toSafeString",
       field: fieldName,
       value: str,
       reason: `Length ${str.length} is below minimum ${minLength}`,
     });
-    throw new AppError(`${fieldName} must be at least ${minLength} characters`, 400, 'BAD_REQUEST');
+    throw new AppError(
+      `${fieldName} must be at least ${minLength} characters`,
+      400,
+      "BAD_REQUEST",
+    );
   }
 
   if (str.length > maxLength) {
     logValidationFailure({
-      validator: 'toSafeString',
+      validator: "toSafeString",
       field: fieldName,
       value: str,
       reason: `Length ${str.length} exceeds maximum ${maxLength}`,
     });
-    throw new AppError(`${fieldName} must be at most ${maxLength} characters`, 400, 'BAD_REQUEST');
+    throw new AppError(
+      `${fieldName} must be at most ${maxLength} characters`,
+      400,
+      "BAD_REQUEST",
+    );
   }
 
   // Log coercion if type changed
-  if (originalType !== 'string') {
+  if (originalType !== "string") {
     logTypeCoercion({
       field: fieldName,
       originalValue: value,
       originalType,
       coercedValue: str,
-      coercedType: 'string',
-      reason: 'Type conversion to string',
+      coercedType: "string",
+      reason: "Type conversion to string",
     });
   }
 
@@ -440,7 +472,7 @@ function toSafeString(value, fieldName = 'field', options = {}) {
  * @returns {string|null} Validated email or null
  * @throws {Error} If email is invalid
  */
-function toSafeEmail(value, fieldName = 'email', options = {}) {
+function toSafeEmail(value, fieldName = "email", options = {}) {
   const { allowNull = false } = options;
 
   // First validate as string
@@ -459,12 +491,16 @@ function toSafeEmail(value, fieldName = 'email', options = {}) {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
     logValidationFailure({
-      validator: 'toSafeEmail',
+      validator: "toSafeEmail",
       field: fieldName,
       value: email,
-      reason: 'Invalid email format',
+      reason: "Invalid email format",
     });
-    throw new AppError(`${fieldName} must be a valid email address`, 400, 'BAD_REQUEST');
+    throw new AppError(
+      `${fieldName} must be a valid email address`,
+      400,
+      "BAD_REQUEST",
+    );
   }
 
   return email.toLowerCase(); // Normalize to lowercase

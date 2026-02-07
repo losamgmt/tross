@@ -6,12 +6,14 @@
  */
 
 // Mock dependencies BEFORE requiring the helper
-jest.mock('../../../config/logger');
+jest.mock("../../../config/logger");
 
-const { cascadeDeleteDependents } = require('../../../db/helpers/cascade-helper');
-const { createMockClient } = require('../../mocks');
+const {
+  cascadeDeleteDependents,
+} = require("../../../db/helpers/cascade-helper");
+const { createMockClient } = require("../../mocks");
 
-describe('db/helpers/cascade-helper.js', () => {
+describe("db/helpers/cascade-helper.js", () => {
   let mockClient;
 
   beforeEach(() => {
@@ -26,10 +28,10 @@ describe('db/helpers/cascade-helper.js', () => {
   // =============================================================================
   // BASIC FUNCTIONALITY
   // =============================================================================
-  describe('Basic cascade operations', () => {
-    test('should return empty result when no dependents defined', async () => {
+  describe("Basic cascade operations", () => {
+    test("should return empty result when no dependents defined", async () => {
       const metadata = {
-        tableName: 'inventory',
+        tableName: "inventory",
         dependents: [],
       };
 
@@ -42,9 +44,9 @@ describe('db/helpers/cascade-helper.js', () => {
       expect(mockClient.query).not.toHaveBeenCalled();
     });
 
-    test('should return empty result when dependents is undefined', async () => {
+    test("should return empty result when dependents is undefined", async () => {
       const metadata = {
-        tableName: 'inventory',
+        tableName: "inventory",
         // dependents not defined
       };
 
@@ -57,14 +59,14 @@ describe('db/helpers/cascade-helper.js', () => {
       expect(mockClient.query).not.toHaveBeenCalled();
     });
 
-    test('should handle single polymorphic dependent', async () => {
+    test("should handle single polymorphic dependent", async () => {
       const metadata = {
-        tableName: 'roles',
+        tableName: "roles",
         dependents: [
           {
-            table: 'audit_logs',
-            foreignKey: 'resource_id',
-            polymorphicType: { column: 'resource_type', value: 'roles' },
+            table: "audit_logs",
+            foreignKey: "resource_id",
+            polymorphicType: { column: "resource_type", value: "roles" },
           },
         ],
       };
@@ -77,8 +79,8 @@ describe('db/helpers/cascade-helper.js', () => {
         totalDeleted: 5,
         details: [
           {
-            table: 'audit_logs',
-            foreignKey: 'resource_id',
+            table: "audit_logs",
+            foreignKey: "resource_id",
             polymorphic: true,
             deleted: 5,
           },
@@ -86,18 +88,18 @@ describe('db/helpers/cascade-helper.js', () => {
       });
 
       expect(mockClient.query).toHaveBeenCalledWith(
-        'DELETE FROM audit_logs WHERE resource_id = $1 AND resource_type = $2',
-        [123, 'roles'],
+        "DELETE FROM audit_logs WHERE resource_id = $1 AND resource_type = $2",
+        [123, "roles"],
       );
     });
 
-    test('should handle single non-polymorphic dependent', async () => {
+    test("should handle single non-polymorphic dependent", async () => {
       const metadata = {
-        tableName: 'customers',
+        tableName: "customers",
         dependents: [
           {
-            table: 'notes',
-            foreignKey: 'customer_id',
+            table: "notes",
+            foreignKey: "customer_id",
           },
         ],
       };
@@ -110,8 +112,8 @@ describe('db/helpers/cascade-helper.js', () => {
         totalDeleted: 3,
         details: [
           {
-            table: 'notes',
-            foreignKey: 'customer_id',
+            table: "notes",
+            foreignKey: "customer_id",
             polymorphic: false,
             deleted: 3,
           },
@@ -119,7 +121,7 @@ describe('db/helpers/cascade-helper.js', () => {
       });
 
       expect(mockClient.query).toHaveBeenCalledWith(
-        'DELETE FROM notes WHERE customer_id = $1',
+        "DELETE FROM notes WHERE customer_id = $1",
         [456],
       );
     });
@@ -128,26 +130,26 @@ describe('db/helpers/cascade-helper.js', () => {
   // =============================================================================
   // MULTIPLE DEPENDENTS
   // =============================================================================
-  describe('Multiple dependents', () => {
-    test('should cascade delete multiple dependents in order', async () => {
+  describe("Multiple dependents", () => {
+    test("should cascade delete multiple dependents in order", async () => {
       const metadata = {
-        tableName: 'users',
+        tableName: "users",
         dependents: [
           {
-            table: 'audit_logs',
-            foreignKey: 'resource_id',
-            polymorphicType: { column: 'resource_type', value: 'users' },
+            table: "audit_logs",
+            foreignKey: "resource_id",
+            polymorphicType: { column: "resource_type", value: "users" },
           },
           {
-            table: 'user_sessions',
-            foreignKey: 'user_id',
+            table: "user_sessions",
+            foreignKey: "user_id",
           },
         ],
       };
 
       mockClient.query
-        .mockResolvedValueOnce({ rowCount: 10 })  // audit_logs
-        .mockResolvedValueOnce({ rowCount: 2 });  // user_sessions
+        .mockResolvedValueOnce({ rowCount: 10 }) // audit_logs
+        .mockResolvedValueOnce({ rowCount: 2 }); // user_sessions
 
       const result = await cascadeDeleteDependents(mockClient, metadata, 789);
 
@@ -155,14 +157,14 @@ describe('db/helpers/cascade-helper.js', () => {
         totalDeleted: 12,
         details: [
           {
-            table: 'audit_logs',
-            foreignKey: 'resource_id',
+            table: "audit_logs",
+            foreignKey: "resource_id",
             polymorphic: true,
             deleted: 10,
           },
           {
-            table: 'user_sessions',
-            foreignKey: 'user_id',
+            table: "user_sessions",
+            foreignKey: "user_id",
             polymorphic: false,
             deleted: 2,
           },
@@ -172,13 +174,17 @@ describe('db/helpers/cascade-helper.js', () => {
       expect(mockClient.query).toHaveBeenCalledTimes(2);
     });
 
-    test('should accumulate total deleted count correctly', async () => {
+    test("should accumulate total deleted count correctly", async () => {
       const metadata = {
-        tableName: 'customers',
+        tableName: "customers",
         dependents: [
-          { table: 'audit_logs', foreignKey: 'resource_id', polymorphicType: { column: 'resource_type', value: 'customers' } },
-          { table: 'notes', foreignKey: 'customer_id' },
-          { table: 'preferences', foreignKey: 'customer_id' },
+          {
+            table: "audit_logs",
+            foreignKey: "resource_id",
+            polymorphicType: { column: "resource_type", value: "customers" },
+          },
+          { table: "notes", foreignKey: "customer_id" },
+          { table: "preferences", foreignKey: "customer_id" },
         ],
       };
 
@@ -197,15 +203,15 @@ describe('db/helpers/cascade-helper.js', () => {
   // =============================================================================
   // EDGE CASES
   // =============================================================================
-  describe('Edge cases', () => {
-    test('should handle zero rows deleted gracefully', async () => {
+  describe("Edge cases", () => {
+    test("should handle zero rows deleted gracefully", async () => {
       const metadata = {
-        tableName: 'roles',
+        tableName: "roles",
         dependents: [
           {
-            table: 'audit_logs',
-            foreignKey: 'resource_id',
-            polymorphicType: { column: 'resource_type', value: 'roles' },
+            table: "audit_logs",
+            foreignKey: "resource_id",
+            polymorphicType: { column: "resource_type", value: "roles" },
           },
         ],
       };
@@ -218,8 +224,8 @@ describe('db/helpers/cascade-helper.js', () => {
         totalDeleted: 0,
         details: [
           {
-            table: 'audit_logs',
-            foreignKey: 'resource_id',
+            table: "audit_logs",
+            foreignKey: "resource_id",
             polymorphic: true,
             deleted: 0,
           },
@@ -227,57 +233,61 @@ describe('db/helpers/cascade-helper.js', () => {
       });
     });
 
-    test('should propagate database errors', async () => {
+    test("should propagate database errors", async () => {
       const metadata = {
-        tableName: 'roles',
+        tableName: "roles",
         dependents: [
           {
-            table: 'audit_logs',
-            foreignKey: 'resource_id',
-            polymorphicType: { column: 'resource_type', value: 'roles' },
+            table: "audit_logs",
+            foreignKey: "resource_id",
+            polymorphicType: { column: "resource_type", value: "roles" },
           },
         ],
       };
 
-      const dbError = new Error('Connection lost');
+      const dbError = new Error("Connection lost");
       mockClient.query.mockRejectedValue(dbError);
 
       await expect(
         cascadeDeleteDependents(mockClient, metadata, 123),
-      ).rejects.toThrow('Connection lost');
+      ).rejects.toThrow("Connection lost");
     });
 
-    test('should handle partial cascade failure', async () => {
+    test("should handle partial cascade failure", async () => {
       const metadata = {
-        tableName: 'users',
+        tableName: "users",
         dependents: [
-          { table: 'audit_logs', foreignKey: 'resource_id', polymorphicType: { column: 'resource_type', value: 'users' } },
-          { table: 'user_sessions', foreignKey: 'user_id' },
+          {
+            table: "audit_logs",
+            foreignKey: "resource_id",
+            polymorphicType: { column: "resource_type", value: "users" },
+          },
+          { table: "user_sessions", foreignKey: "user_id" },
         ],
       };
 
       mockClient.query
-        .mockResolvedValueOnce({ rowCount: 5 })  // First succeeds
-        .mockRejectedValueOnce(new Error('Table does not exist'));  // Second fails
+        .mockResolvedValueOnce({ rowCount: 5 }) // First succeeds
+        .mockRejectedValueOnce(new Error("Table does not exist")); // Second fails
 
       await expect(
         cascadeDeleteDependents(mockClient, metadata, 123),
-      ).rejects.toThrow('Table does not exist');
+      ).rejects.toThrow("Table does not exist");
     });
   });
 
   // =============================================================================
   // QUERY STRUCTURE VALIDATION
   // =============================================================================
-  describe('Query structure', () => {
-    test('should build correct polymorphic DELETE query', async () => {
+  describe("Query structure", () => {
+    test("should build correct polymorphic DELETE query", async () => {
       const metadata = {
-        tableName: 'technicians',
+        tableName: "technicians",
         dependents: [
           {
-            table: 'audit_logs',
-            foreignKey: 'resource_id',
-            polymorphicType: { column: 'resource_type', value: 'technicians' },
+            table: "audit_logs",
+            foreignKey: "resource_id",
+            polymorphicType: { column: "resource_type", value: "technicians" },
           },
         ],
       };
@@ -287,18 +297,18 @@ describe('db/helpers/cascade-helper.js', () => {
       await cascadeDeleteDependents(mockClient, metadata, 42);
 
       expect(mockClient.query).toHaveBeenCalledWith(
-        'DELETE FROM audit_logs WHERE resource_id = $1 AND resource_type = $2',
-        [42, 'technicians'],
+        "DELETE FROM audit_logs WHERE resource_id = $1 AND resource_type = $2",
+        [42, "technicians"],
       );
     });
 
-    test('should build correct simple FK DELETE query', async () => {
+    test("should build correct simple FK DELETE query", async () => {
       const metadata = {
-        tableName: 'work_orders',
+        tableName: "work_orders",
         dependents: [
           {
-            table: 'line_items',
-            foreignKey: 'work_order_id',
+            table: "line_items",
+            foreignKey: "work_order_id",
           },
         ],
       };
@@ -308,19 +318,19 @@ describe('db/helpers/cascade-helper.js', () => {
       await cascadeDeleteDependents(mockClient, metadata, 99);
 
       expect(mockClient.query).toHaveBeenCalledWith(
-        'DELETE FROM line_items WHERE work_order_id = $1',
+        "DELETE FROM line_items WHERE work_order_id = $1",
         [99],
       );
     });
 
-    test('should preserve exact polymorphic type value from metadata', async () => {
+    test("should preserve exact polymorphic type value from metadata", async () => {
       const metadata = {
-        tableName: 'inventory',
+        tableName: "inventory",
         dependents: [
           {
-            table: 'audit_logs',
-            foreignKey: 'resource_id',
-            polymorphicType: { column: 'resource_type', value: 'inventory' },
+            table: "audit_logs",
+            foreignKey: "resource_id",
+            polymorphicType: { column: "resource_type", value: "inventory" },
           },
         ],
       };
@@ -332,7 +342,7 @@ describe('db/helpers/cascade-helper.js', () => {
       // Verify the exact value is used (not inferred from tableName)
       expect(mockClient.query).toHaveBeenCalledWith(
         expect.any(String),
-        [1, 'inventory'],  // Uses 'inventory' from polymorphicType.value
+        [1, "inventory"], // Uses 'inventory' from polymorphicType.value
       );
     });
   });

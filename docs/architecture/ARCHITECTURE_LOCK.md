@@ -11,6 +11,7 @@ This document certifies which architectural patterns are locked and explains the
 ### 1. Entity Contract v2.0
 
 **What's locked:**
+
 - Tier 1 universal fields (id, identity field, is_active, created_at, updated_at)
 - Tier 2 optional lifecycle field (status)
 - Deactivation via is_active (never use status for deactivation)
@@ -21,12 +22,14 @@ This document certifies which architectural patterns are locked and explains the
 ### 2. Two-Tier Lifecycle System
 
 **What's locked:**
+
 - `is_active` = record visibility (universal deactivation flag)
 - `status` = workflow state (entity-specific)
 - These fields serve different purposes and both may be needed
 - `is_active = false` always means "deactivated" regardless of status
 
 **Terminology:**
+
 - **Deactivation** = `is_active = false` (UPDATE, data preserved)
 - **Delete** = Hard DELETE (data removed permanently)
 
@@ -35,6 +38,7 @@ This document certifies which architectural patterns are locked and explains the
 ### 3. SSOT Pattern
 
 **What's locked:**
+
 - Entity metadata files as the single source of truth
 - All validation, documentation, and UI derived from metadata
 - No parallel definitions of the same information
@@ -45,6 +49,7 @@ This document certifies which architectural patterns are locked and explains the
 ### 4. Triple-Tier Security
 
 **What's locked:**
+
 - Auth0 for identity verification
 - RBAC for role-based permissions
 - RLS for row-level data isolation
@@ -55,12 +60,14 @@ This document certifies which architectural patterns are locked and explains the
 ### 5. Role Hierarchy SSOT
 
 **What's locked:**
+
 - Database `roles` table is the Single Source of Truth for role priorities
 - At server startup, `role-hierarchy-loader.js` reads from DB and caches in memory
 - Permission checks use the in-memory cache (O(1) lookups)
 - `role-definitions.js` is FALLBACK ONLY (tests + pre-DB bootstrap)
 
 **Initialization sequence (server.js):**
+
 1. Database connection established
 2. `initRoleHierarchy(db)` called to load roles from DB
 3. Routes registered (permissions system is now ready)
@@ -71,6 +78,7 @@ This document certifies which architectural patterns are locked and explains the
 ### 6. Naming Conventions
 
 **What's locked:**
+
 - Snake case for database fields
 - Camel case for JavaScript
 - Status values: lowercase with underscores
@@ -79,6 +87,7 @@ This document certifies which architectural patterns are locked and explains the
 ### 7. Schema-Driven UI
 
 **What's locked:**
+
 - Database schema drives UI generation
 - Metadata fetched at runtime
 - Generic components introspect metadata
@@ -91,6 +100,7 @@ This document certifies which architectural patterns are locked and explains the
 ### Import role-definitions.js in production code
 
 The `role-definitions.js` file is FALLBACK ONLY. For production permission checks:
+
 - Use `role-hierarchy-loader.js` accessor functions
 - Role data is loaded from database at startup
 - Never import role constants directly in middleware or services

@@ -42,11 +42,24 @@
  * These match the database roles.priority values exactly.
  */
 const ROLE_DEFINITIONS = Object.freeze({
-  customer: { priority: 1, description: 'Basic access - can view own data and work orders' },
-  technician: { priority: 2, description: 'Executes work orders, can view user list' },
-  dispatcher: { priority: 3, description: 'Creates and assigns work orders' },
-  manager: { priority: 4, description: 'Manages operations - can view roles, manage work orders' },
-  admin: { priority: 5, description: 'Full system access - can manage users, roles, and all resources' },
+  customer: {
+    priority: 1,
+    description: "Basic access - can view own data and work orders",
+  },
+  technician: {
+    priority: 2,
+    description: "Executes work orders, can view user list",
+  },
+  dispatcher: { priority: 3, description: "Creates and assigns work orders" },
+  manager: {
+    priority: 4,
+    description: "Manages operations - can view roles, manage work orders",
+  },
+  admin: {
+    priority: 5,
+    description:
+      "Full system access - can manage users, roles, and all resources",
+  },
 });
 
 /**
@@ -112,7 +125,7 @@ const ROLE_DESCRIPTIONS = Object.freeze(
  * @returns {number|null} Priority or null if not found
  */
 function getRolePriority(roleName) {
-  if (!roleName || typeof roleName !== 'string') {
+  if (!roleName || typeof roleName !== "string") {
     return null;
   }
   return ROLE_NAME_TO_PRIORITY[roleName.toLowerCase()] || null;

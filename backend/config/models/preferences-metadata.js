@@ -5,30 +5,30 @@
  * Uses flat fields for individual preferences (not JSONB).
  */
 
-const { FIELD_ACCESS_LEVELS: FAL } = require('../constants');
+const { FIELD_ACCESS_LEVELS: FAL } = require("../constants");
 
 module.exports = {
   // Entity key (singular, for API params and lookups)
-  entityKey: 'preferences',
+  entityKey: "preferences",
 
   // Table name in database (plural, also used for API URLs)
-  tableName: 'preferences',
+  tableName: "preferences",
 
-  primaryKey: 'id',
-  icon: 'settings',
-  identityField: 'id',
+  primaryKey: "id",
+  icon: "settings",
+  identityField: "id",
   identityFieldUnique: true,
-  rlsResource: 'preferences',
+  rlsResource: "preferences",
   sharedPrimaryKey: true,
   uncountable: true, // 'preferences' doesn't pluralize to 'preferencess'
   nameType: null,
 
   rlsPolicy: {
-    customer: 'own_record_only',
-    technician: 'own_record_only',
-    dispatcher: 'own_record_only',
-    manager: 'own_record_only',
-    admin: 'all_records',
+    customer: "own_record_only",
+    technician: "own_record_only",
+    dispatcher: "own_record_only",
+    manager: "own_record_only",
+    admin: "all_records",
   },
 
   /**
@@ -43,10 +43,10 @@ module.exports = {
   supportsFileAttachments: false,
 
   entityPermissions: {
-    create: 'customer',
-    read: 'customer',
-    update: 'customer',
-    delete: 'admin',
+    create: "customer",
+    read: "customer",
+    update: "customer",
+    delete: "admin",
   },
 
   routeConfig: {
@@ -55,40 +55,40 @@ module.exports = {
 
   fieldGroups: {
     appearance: {
-      label: 'Appearance',
-      fields: ['theme', 'density'],
+      label: "Appearance",
+      fields: ["theme", "density"],
       order: 1,
     },
     notifications: {
-      label: 'Notifications',
-      fields: ['notifications_enabled', 'notification_retention_days'],
+      label: "Notifications",
+      fields: ["notifications_enabled", "notification_retention_days"],
       order: 2,
     },
     data: {
-      label: 'Data & Performance',
-      fields: ['items_per_page', 'auto_refresh_interval'],
+      label: "Data & Performance",
+      fields: ["items_per_page", "auto_refresh_interval"],
       order: 3,
     },
   },
 
-  requiredFields: ['id'],
-  immutableFields: ['id'],
+  requiredFields: ["id"],
+  immutableFields: ["id"],
   searchableFields: [],
-  filterableFields: ['id', 'created_at', 'updated_at'],
-  sortableFields: ['id', 'created_at', 'updated_at'],
+  filterableFields: ["id", "created_at", "updated_at"],
+  sortableFields: ["id", "created_at", "updated_at"],
 
   defaultSort: {
-    field: 'created_at',
-    order: 'DESC',
+    field: "created_at",
+    order: "DESC",
   },
 
   fieldAccess: {
     // For sharedPrimaryKey, users must provide their own id on create
     id: {
-      create: 'customer', // Users create their own preferences (id = their userId)
-      read: 'customer',
-      update: 'none',
-      delete: 'none',
+      create: "customer", // Users create their own preferences (id = their userId)
+      read: "customer",
+      update: "none",
+      delete: "none",
     },
     theme: FAL.SELF_EDITABLE,
     density: FAL.SELF_EDITABLE,
@@ -102,17 +102,17 @@ module.exports = {
 
   foreignKeys: {
     id: {
-      table: 'users',
+      table: "users",
       settableOnCreate: true,
     },
   },
 
   relationships: {
     user: {
-      type: 'belongsTo',
-      foreignKey: 'id',
-      table: 'users',
-      fields: ['id', 'email', 'first_name', 'last_name'],
+      type: "belongsTo",
+      foreignKey: "id",
+      table: "users",
+      fields: ["id", "email", "first_name", "last_name"],
     },
   },
 
@@ -120,43 +120,43 @@ module.exports = {
 
   fields: {
     id: {
-      type: 'integer',
+      type: "integer",
       required: true,
       readonly: true,
     },
     theme: {
-      type: 'enum',
-      values: ['system', 'light', 'dark'],
-      default: 'system',
+      type: "enum",
+      values: ["system", "light", "dark"],
+      default: "system",
     },
     density: {
-      type: 'enum',
-      values: ['compact', 'standard', 'comfortable'],
-      default: 'comfortable',
+      type: "enum",
+      values: ["compact", "standard", "comfortable"],
+      default: "comfortable",
     },
     notifications_enabled: {
-      type: 'boolean',
+      type: "boolean",
       default: true,
     },
     items_per_page: {
-      type: 'integer',
+      type: "integer",
       min: 10,
       max: 100,
       default: 25,
     },
     notification_retention_days: {
-      type: 'integer',
+      type: "integer",
       min: 1,
       max: 365,
       default: 30,
     },
     auto_refresh_interval: {
-      type: 'integer',
+      type: "integer",
       min: 0,
       max: 300,
       default: 0,
     },
-    created_at: { type: 'timestamp', readonly: true },
-    updated_at: { type: 'timestamp', readonly: true },
+    created_at: { type: "timestamp", readonly: true },
+    updated_at: { type: "timestamp", readonly: true },
   },
 };

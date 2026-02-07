@@ -16,20 +16,20 @@ All entities follow a standardized contract ensuring consistency across the appl
 
 Every business entity MUST have these fields:
 
-| Field | Purpose |
-|-------|---------|
-| `id` | Auto-incrementing primary key |
-| Identity field | Human-readable unique identifier (varies by entity) |
-| `is_active` | Deactivation flag (false = hidden from normal queries) |
-| `created_at` | Creation timestamp (cached from audit_logs) |
-| `updated_at` | Auto-managed modification timestamp |
+| Field          | Purpose                                                |
+| -------------- | ------------------------------------------------------ |
+| `id`           | Auto-incrementing primary key                          |
+| Identity field | Human-readable unique identifier (varies by entity)    |
+| `is_active`    | Deactivation flag (false = hidden from normal queries) |
+| `created_at`   | Creation timestamp (cached from audit_logs)            |
+| `updated_at`   | Auto-managed modification timestamp                    |
 
 ### Tier 2: Lifecycle Fields (Optional)
 
 Entities with workflow requirements add:
 
-| Field | Purpose |
-|-------|---------|
+| Field    | Purpose                                             |
+| -------- | --------------------------------------------------- |
 | `status` | Lifecycle state (values defined in entity metadata) |
 
 **See `ENTITY_LIFECYCLE.md` for when to add status fields.**
@@ -39,10 +39,12 @@ Entities with workflow requirements add:
 ### Decision: Deactivation via `is_active`
 
 **Terminology:**
+
 - **Deactivation** = Set `is_active = false` (UPDATE operation, data preserved)
 - **Delete** = Hard DELETE (data removed permanently from database)
 
 **Why we use deactivation instead of hard deletes:**
+
 - Preserves data for audit trails
 - Enables easy reactivation if needed
 - Maintains referential integrity
@@ -53,6 +55,7 @@ Entities with workflow requirements add:
 ### Decision: Identity Field Varies by Entity
 
 **Why each entity chooses its own identity field:**
+
 - Some entities use `name` (roles, skills)
 - Some use `email` (users)
 - Some use `title` (work orders)
@@ -63,11 +66,13 @@ Entities with workflow requirements add:
 ### Decision: Automatic Timestamps
 
 **Why `updated_at` is trigger-managed:**
+
 - Ensures consistency (no developer can forget)
 - Single implementation for all tables
 - Reduces boilerplate in application code
 
 **Why `created_at` is a cache:**
+
 - True source of truth is `audit_logs.created_at`
 - Cached on entity for query performance
 - Never updated after initial insert
@@ -75,6 +80,7 @@ Entities with workflow requirements add:
 ### Decision: Status Values in Metadata
 
 **Why status enums are NOT hardcoded in schema:**
+
 - Entity metadata files are the SSOT
 - CHECK constraints can be derived from metadata
 - Keeps all entity configuration in one place
@@ -83,11 +89,13 @@ Entities with workflow requirements add:
 ### Decision: Foreign Key Policies
 
 **Why we use `ON DELETE SET NULL`:**
+
 - Prevents cascade deletes that could be destructive
 - Leaves clear trail (NULL indicates "was referenced, now gone")
 - Application can handle NULL explicitly
 
 **When to use `ON DELETE CASCADE`:**
+
 - Only for true composition (child cannot exist without parent)
 - Examples: refresh_tokens when user is hard deleted
 
@@ -116,6 +124,7 @@ Entities with workflow requirements add:
 ### Standard Filtering
 
 All normal queries should filter by existence:
+
 - `WHERE is_active = true` for basic queries
 - Add `AND status = ?` when filtering by lifecycle
 
@@ -130,6 +139,7 @@ All normal queries should filter by existence:
 ### Platform Agnostic
 
 The database connection layer automatically adapts to deployment platform:
+
 - Detects platform from environment
 - Supports both connection strings and individual variables
 - Pool sizing adjusts for environment
@@ -137,6 +147,7 @@ The database connection layer automatically adapts to deployment platform:
 ### Test Isolation
 
 Test environment uses separate:
+
 - Database name
 - Port
 - Connection pool (smaller, faster cleanup)
@@ -171,6 +182,7 @@ This ensures tests never interfere with development.
 ### Skipping `is_active`
 
 Every business entity needs deactivation capability. The only exceptions are:
+
 - Join tables (many-to-many relationships)
 - System tables (migrations tracking, etc.)
 
@@ -181,6 +193,7 @@ If an entity has a status field, it should have a DEFAULT and NOT NULL constrain
 ### Hard Deletes for Business Data
 
 Use deactivation (`is_active = false`) for business data. Hard deletes are only for:
+
 - Test cleanup
 - GDPR "right to erasure" compliance
 - True system-level cleanup

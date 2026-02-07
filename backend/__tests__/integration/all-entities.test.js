@@ -16,22 +16,25 @@
  * - file_attachment: /api/:entityType/:entityId/files (polymorphic)
  */
 
-const { runEntityTests } = require('../factory/runner');
+const { runEntityTests } = require("../factory/runner");
 const {
   getGenericCrudEntityNames,
   getSpecializedRouteEntityNames,
   assertValidMetadata,
-} = require('../factory/entity-registry');
-const { setupTestDatabase, cleanupTestDatabase } = require('../helpers/test-db');
-const app = require('../../server');
-const db = require('../../db/connection');
+} = require("../factory/entity-registry");
+const {
+  setupTestDatabase,
+  cleanupTestDatabase,
+} = require("../helpers/test-db");
+const app = require("../../server");
+const db = require("../../db/connection");
 
 // Validate metadata before running tests (fail fast)
 beforeAll(() => {
   assertValidMetadata();
 });
 
-describe('All Entities Integration Tests', () => {
+describe("All Entities Integration Tests", () => {
   beforeAll(async () => {
     await setupTestDatabase();
   });
@@ -60,17 +63,19 @@ describe('All Entities Integration Tests', () => {
   // These are tested in separate files with specialized scenarios
   // ============================================================================
 
-  describe('Specialized Route Entities (documentation)', () => {
+  describe("Specialized Route Entities (documentation)", () => {
     const specializedEntities = getSpecializedRouteEntityNames();
 
     test(`${specializedEntities.length} entities use specialized routes`, () => {
       // This test documents which entities are NOT tested here
       // preferences was moved to generic router (2026-01-23)
-      expect(specializedEntities).toContain('file_attachment');
-      expect(specializedEntities).toContain('audit_log');
+      expect(specializedEntities).toContain("file_attachment");
+      expect(specializedEntities).toContain("audit_log");
 
       // Log for visibility
-      console.log(`Specialized route entities (tested separately): ${specializedEntities.join(', ')}`);
+      console.log(
+        `Specialized route entities (tested separately): ${specializedEntities.join(", ")}`,
+      );
     });
   });
 });

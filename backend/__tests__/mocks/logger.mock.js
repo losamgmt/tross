@@ -1,13 +1,13 @@
 /**
  * Logger Mock Factory
- * 
+ *
  * SRP: ONLY mocks logger behavior
  * Use: Prevent console spam in tests
  */
 
 /**
  * Create a mock logger
- * 
+ *
  * @returns {Object} Mocked logger with all methods
  */
 function createMockLogger() {
@@ -31,7 +31,7 @@ const LOGGER_MOCK_CONFIG = () => ({
 
 /**
  * Reset all logger mocks
- * 
+ *
  * @param {Object} logger - Logger mock instance
  */
 function resetLoggerMocks(logger) {
@@ -43,7 +43,7 @@ function resetLoggerMocks(logger) {
 
 /**
  * Mock logger to suppress all output
- * 
+ *
  * @param {Object} logger - Logger mock instance
  */
 function mockLoggerSilent(logger) {

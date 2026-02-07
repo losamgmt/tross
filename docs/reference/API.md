@@ -7,6 +7,7 @@ RESTful API design patterns and conventions.
 ## API Philosophy
 
 **Principles:**
+
 - **RESTful** - Resources as nouns, actions as HTTP verbs
 - **Consistent** - Same patterns across all endpoints
 - **Self-documenting** - OpenAPI/Swagger for live docs
@@ -29,6 +30,7 @@ RESTful API design patterns and conventions.
 ## Request/Response Patterns
 
 ### Standard Request
+
 ```http
 POST /api/customers
 Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
@@ -42,6 +44,7 @@ Content-Type: application/json
 ```
 
 ### Standard Response (Success)
+
 ```http
 HTTP/1.1 201 Created
 Content-Type: application/json
@@ -60,6 +63,7 @@ Content-Type: application/json
 ```
 
 ### Standard Response (Error)
+
 ```http
 HTTP/1.1 400 Bad Request
 Content-Type: application/json
@@ -79,11 +83,13 @@ Content-Type: application/json
 ## HTTP Status Codes
 
 **Success:**
+
 - `200 OK` - Request succeeded (GET, PUT, DELETE)
 - `201 Created` - Resource created (POST)
 - `204 No Content` - Success with no response body
 
 **Client Errors:**
+
 - `400 Bad Request` - Invalid input
 - `401 Unauthorized` - Missing/invalid authentication
 - `403 Forbidden` - Insufficient permissions
@@ -92,6 +98,7 @@ Content-Type: application/json
 - `422 Unprocessable Entity` - Validation failed
 
 **Server Errors:**
+
 - `500 Internal Server Error` - Unexpected server error
 - `503 Service Unavailable` - Server temporarily unavailable
 
@@ -100,20 +107,25 @@ Content-Type: application/json
 ## Pagination
 
 ### Request
+
 ```http
 GET /api/customers?page=1&limit=20&sort=name&order=asc
 ```
 
 **Query Parameters:**
+
 - `page` - Page number (default: 1)
 - `limit` - Items per page (default: 20, max: 100)
 - `sort` - Field to sort by (default: id)
 - `order` - Sort order: `asc` or `desc` (default: asc)
 
 ### Response
+
 ```json
 {
-  "data": [ /* array of items */ ],
+  "data": [
+    /* array of items */
+  ],
   "pagination": {
     "page": 1,
     "limit": 20,
@@ -130,17 +142,20 @@ GET /api/customers?page=1&limit=20&sort=name&order=asc
 ## Filtering
 
 ### Query Parameters
+
 ```http
 GET /api/customers?status=active&search=acme
 ```
 
 **Common Filters:**
+
 - `search` - Text search across multiple fields
 - `status` - Filter by status value
 - `is_active` - Filter active/inactive (true/false)
 - `created_after` - Filter by creation date (ISO 8601)
 
 ### Example
+
 ```http
 GET /api/work_orders?status=pending&assigned_to=123&created_after=2025-01-01
 ```
@@ -150,12 +165,14 @@ GET /api/work_orders?status=pending&assigned_to=123&created_after=2025-01-01
 ## Authentication
 
 **All endpoints require authentication except:**
+
 - `GET /api/health`
 - `GET /api/dev/token` (dev mode)
 - `POST /api/auth0/callback` (Auth0 callback)
 - `POST /api/auth0/validate` (Auth0 PKCE validation)
 
 ### Bearer Token
+
 ```http
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
@@ -163,6 +180,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ### Getting a Token
 
 **Dev Mode:**
+
 ```bash
 GET /api/dev/token?role=admin
 
@@ -170,6 +188,7 @@ GET /api/dev/token?role=admin
 ```
 
 **Production (Auth0 PKCE):**
+
 ```bash
 # Frontend handles PKCE flow:
 # 1. Redirect to Auth0 with code_challenge
@@ -183,11 +202,13 @@ GET /api/dev/token?role=admin
 ## Core Endpoints
 
 ### Health Check
+
 ```http
 GET /api/health
 ```
 
 **Response:**
+
 ```json
 {
   "status": "healthy",
@@ -204,16 +225,19 @@ GET /api/health
 > **All User CRUD operations require admin role.** Non-admin users cannot read, create, update, or delete user records via the API.
 
 **List Users** (Admin only)
+
 ```http
 GET /api/users?page=1&limit=20
 ```
 
 **Get User** (Admin only)
+
 ```http
 GET /api/users/:id
 ```
 
 **Create User** (Admin only)
+
 ```http
 POST /api/users
 {
@@ -225,6 +249,7 @@ POST /api/users
 ```
 
 **Update User** (Partial update)
+
 ```http
 PATCH /api/users/:id
 {
@@ -234,6 +259,7 @@ PATCH /api/users/:id
 ```
 
 **Assign Role** (Admin only)
+
 ```http
 PUT /api/users/:id/role
 {
@@ -242,6 +268,7 @@ PUT /api/users/:id/role
 ```
 
 **Deactivate User** (Sets is_active=false)
+
 ```http
 DELETE /api/users/:id
 ```
@@ -251,16 +278,19 @@ DELETE /api/users/:id
 ### Customers
 
 **List Customers**
+
 ```http
 GET /api/customers?page=1&limit=20&search=acme
 ```
 
 **Get Customer**
+
 ```http
 GET /api/customers/:id
 ```
 
 **Create Customer**
+
 ```http
 POST /api/customers
 {
@@ -272,6 +302,7 @@ POST /api/customers
 ```
 
 **Update Customer** (Partial update)
+
 ```http
 PATCH /api/customers/:id
 {
@@ -281,6 +312,7 @@ PATCH /api/customers/:id
 ```
 
 **Deactivate Customer** (Sets is_active=false)
+
 ```http
 DELETE /api/customers/:id
 ```
@@ -290,16 +322,19 @@ DELETE /api/customers/:id
 ### Work Orders
 
 **List Work Orders**
+
 ```http
 GET /api/work_orders?status=pending&assigned_to=123
 ```
 
 **Get Work Order**
+
 ```http
 GET /api/work_orders/:id
 ```
 
 **Create Work Order**
+
 ```http
 POST /api/work_orders
 {
@@ -312,6 +347,7 @@ POST /api/work_orders
 ```
 
 **Update Work Order** (Partial update)
+
 ```http
 PATCH /api/work_orders/:id
 {
@@ -321,6 +357,7 @@ PATCH /api/work_orders/:id
 ```
 
 **Deactivate Work Order** (Sets is_active=false)
+
 ```http
 DELETE /api/work_orders/:id
 ```
@@ -332,6 +369,7 @@ DELETE /api/work_orders/:id
 Files are attached to entities using a **sub-resource pattern**. The URL path uses `tableName` (plural, snake_case) from entity metadata.
 
 **URL Pattern:**
+
 ```
 /api/:tableName/:id/files
 ```
@@ -347,14 +385,17 @@ Files are attached to entities using a **sub-resource pattern**. The URL path us
 ---
 
 **List Files for Entity**
+
 ```http
 GET /api/work_orders/123/files
 ```
 
 **Query Parameters:**
+
 - `category` - Filter by category (e.g., `before_photo`, `after_photo`, `document`)
 
 **Response:**
+
 ```json
 {
   "data": [
@@ -379,11 +420,13 @@ GET /api/work_orders/123/files
 ---
 
 **Get Single File**
+
 ```http
 GET /api/work_orders/123/files/42
 ```
 
 **Response:**
+
 ```json
 {
   "data": {
@@ -406,6 +449,7 @@ GET /api/work_orders/123/files/42
 ---
 
 **Upload File**
+
 ```http
 POST /api/work_orders/123/files
 Content-Type: image/jpeg
@@ -417,6 +461,7 @@ X-Description: Before work started
 ```
 
 **Response:**
+
 ```json
 {
   "data": {
@@ -438,6 +483,7 @@ X-Description: Before work started
 ---
 
 **Delete File** (Soft delete—sets `is_active=false`)
+
 ```http
 DELETE /api/work_orders/123/files/42
 ```
@@ -445,13 +491,15 @@ DELETE /api/work_orders/123/files/42
 ---
 
 **Supported File Types:**
+
 - Images: JPEG, PNG, GIF, WebP
 - Documents: PDF
 - Max size: 10MB
 
 **File Categories:**
+
 - `before_photo` - Work order before photos
-- `after_photo` - Work order after photos  
+- `after_photo` - Work order after photos
 - `document` - General documents
 - `signature` - Customer signatures
 - `attachment` - Generic attachments (default)
@@ -473,17 +521,18 @@ All errors use the unified `AppError` class with explicit status codes. The resp
 
 ### Error Codes
 
-| Code | HTTP Status | Description |
-|------|-------------|-------------|
-| `BAD_REQUEST` | 400 | Invalid input, missing fields, validation errors |
-| `UNAUTHORIZED` | 401 | Authentication failed, token expired/invalid |
-| `FORBIDDEN` | 403 | Permission denied, insufficient role |
-| `NOT_FOUND` | 404 | Resource doesn't exist |
-| `CONFLICT` | 409 | Duplicate entry, already exists |
-| `INTERNAL_ERROR` | 500 | Server error (details hidden in production) |
-| `SERVICE_UNAVAILABLE` | 503 | External service down (storage, database) |
+| Code                  | HTTP Status | Description                                      |
+| --------------------- | ----------- | ------------------------------------------------ |
+| `BAD_REQUEST`         | 400         | Invalid input, missing fields, validation errors |
+| `UNAUTHORIZED`        | 401         | Authentication failed, token expired/invalid     |
+| `FORBIDDEN`           | 403         | Permission denied, insufficient role             |
+| `NOT_FOUND`           | 404         | Resource doesn't exist                           |
+| `CONFLICT`            | 409         | Duplicate entry, already exists                  |
+| `INTERNAL_ERROR`      | 500         | Server error (details hidden in production)      |
+| `SERVICE_UNAVAILABLE` | 503         | External service down (storage, database)        |
 
 ### Validation Errors
+
 ```json
 {
   "success": false,
@@ -498,6 +547,7 @@ All errors use the unified `AppError` class with explicit status codes. The resp
 ```
 
 ### Authentication Errors
+
 ```json
 {
   "success": false,
@@ -508,6 +558,7 @@ All errors use the unified `AppError` class with explicit status codes. The resp
 ```
 
 ### Permission Errors
+
 ```json
 {
   "success": false,
@@ -518,6 +569,7 @@ All errors use the unified `AppError` class with explicit status codes. The resp
 ```
 
 ### Not Found Errors
+
 ```json
 {
   "success": false,
@@ -532,10 +584,12 @@ All errors use the unified `AppError` class with explicit status codes. The resp
 ## Rate Limiting
 
 **Limits:**
+
 - 100 requests per minute per IP
 - 5 login attempts per 15 minutes
 
 **Headers:**
+
 ```http
 X-RateLimit-Limit: 100
 X-RateLimit-Remaining: 95
@@ -543,6 +597,7 @@ X-RateLimit-Reset: 1700000000
 ```
 
 **Response when rate limited:**
+
 ```json
 {
   "error": "Too Many Requests",
@@ -568,6 +623,7 @@ X-RateLimit-Reset: 1700000000
 **Interactive Documentation:** http://localhost:3001/api-docs
 
 **Features:**
+
 - Try endpoints directly in browser
 - See request/response schemas
 - View authentication requirements
@@ -580,6 +636,7 @@ X-RateLimit-Reset: 1700000000
 ## Versioning (Future)
 
 When breaking changes needed:
+
 ```http
 GET /api/v2/customers
 ```
@@ -591,18 +648,21 @@ GET /api/v2/customers
 ## Best Practices
 
 ### Request Design
+
 - ✅ Use plural nouns (`/customers`, not `/customer`)
 - ✅ Use HTTP verbs (GET, POST, PUT, DELETE)
 - ✅ Use query params for filtering, not path params
 - ❌ Don't use verbs in URLs (`/createCustomer` ❌, `/customers` POST ✅)
 
 ### Response Design
+
 - ✅ Always return JSON
 - ✅ Use consistent structure (`{ data, error, pagination }`)
 - ✅ Include timestamps
 - ❌ Don't leak sensitive info in errors
 
 ### Error Handling
+
 - ✅ Return appropriate status codes
 - ✅ Provide helpful error messages
 - ✅ Include validation details
@@ -613,7 +673,9 @@ GET /api/v2/customers
 ## Testing APIs
 
 ### Postman Collection
+
 Import OpenAPI spec into Postman:
+
 1. Open Postman
 2. File → Import
 3. URL: http://localhost:3001/api-docs.json
@@ -621,17 +683,20 @@ Import OpenAPI spec into Postman:
 ### cURL Examples
 
 **Get dev token:**
+
 ```bash
 curl "http://localhost:3001/api/dev/token?role=admin"
 ```
 
 **List customers:**
+
 ```bash
 curl http://localhost:3001/api/customers \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
 **Create customer:**
+
 ```bash
 curl -X POST http://localhost:3001/api/customers \
   -H "Authorization: Bearer YOUR_TOKEN" \

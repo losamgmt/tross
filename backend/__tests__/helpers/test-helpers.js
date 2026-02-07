@@ -214,46 +214,46 @@ const _runId = Date.now();
 /**
  * Get the next unique counter value and formatted variants
  * SINGLE SOURCE OF TRUTH for unique test values.
- * 
+ *
  * All generated values comply with validation-rules.json patterns.
- * 
+ *
  * @returns {Object} { num, id, suffix, email, priority, phone, firstName, lastName, ... }
  */
 function getUniqueValues() {
   const num = ++_uniqueCounter;
   const id = `${_runId}_${num}`;
-  
+
   // Convert number to letters for human-readable suffixes (1->A, 27->AA)
   // This is VALIDATION-SAFE for human names (letters only)
   let n = num;
-  let suffix = '';
+  let suffix = "";
   while (n > 0) {
     n--;
     suffix = String.fromCharCode(65 + (n % 26)) + suffix;
     n = Math.floor(n / 26);
   }
-  suffix = suffix || 'A';
-  
+  suffix = suffix || "A";
+
   // Priority: validation rules allow 1-100, seed data uses 1-5
   // Map num to range 10-99 using modulo, wrapping if needed
   const priority = 10 + ((num - 1) % 90);
-  
+
   return {
-    num,                                    // Raw counter: 1, 2, 3...
-    id,                                     // Full unique ID: "1734567890123_1"
-    suffix,                                 // Letter suffix: "A", "B", "AA" (validation-safe)
-    email: `test_${id}@example.com`,        // Unique email
-    priority,                               // Unique priority (10-99, avoids seed data 1-5)
-    phone: `+1555${String(num).padStart(7, '0')}`, // Unique phone E.164 format
-    
+    num, // Raw counter: 1, 2, 3...
+    id, // Full unique ID: "1734567890123_1"
+    suffix, // Letter suffix: "A", "B", "AA" (validation-safe)
+    email: `test_${id}@example.com`, // Unique email
+    priority, // Unique priority (10-99, avoids seed data 1-5)
+    phone: `+1555${String(num).padStart(7, "0")}`, // Unique phone E.164 format
+
     // Human names - LETTERS ONLY per validation pattern ^[a-zA-Z\s'-]+$
-    firstName: `Test${suffix}`,             // e.g., "TestA", "TestAB"
-    lastName: `User${suffix}`,              // e.g., "UserA", "UserAB"
-    name: `Test${suffix}`,                  // Generic name (letters only)
-    
+    firstName: `Test${suffix}`, // e.g., "TestA", "TestAB"
+    lastName: `User${suffix}`, // e.g., "UserA", "UserAB"
+    name: `Test${suffix}`, // Generic name (letters only)
+
     // Role/entity names - allow alphanumeric per pattern ^[a-zA-Z0-9\s_-]+$
-    roleName: `TestRole${suffix}`,          // e.g., "TestRoleA" (no underscores for safety)
-    companyName: `Company ${suffix}`,       // e.g., "Company A"
+    roleName: `TestRole${suffix}`, // e.g., "TestRoleA" (no underscores for safety)
+    companyName: `Company ${suffix}`, // e.g., "Company A"
   };
 }
 
@@ -264,7 +264,7 @@ function getUniqueValues() {
  */
 function uniqueValue(fieldType) {
   const vals = getUniqueValues();
-  
+
   const typeMap = {
     email: vals.email,
     priority: vals.priority,
@@ -280,7 +280,7 @@ function uniqueValue(fieldType) {
     suffix: vals.suffix,
     num: vals.num,
   };
-  
+
   return typeMap[fieldType] ?? vals.id;
 }
 

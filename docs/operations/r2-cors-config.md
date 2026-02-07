@@ -27,6 +27,7 @@ Add this configuration to your R2 bucket in Cloudflare Dashboard:
 ## Why This Is Needed
 
 When the Flutter web app loads images or PDFs directly from R2 signed URLs using:
+
 - `Image.network(downloadUrl)` for images
 - `<iframe src="downloadUrl">` for PDFs
 
@@ -34,21 +35,23 @@ The browser enforces CORS. Without the `Access-Control-Allow-Origin` header from
 
 ## Environments
 
-| Environment | Origins |
-|-------------|---------|
-| Local dev | `http://localhost:8080`, `http://localhost:3000` |
-| Production | `https://trossapp.vercel.app` |
-| Vercel previews | `https://*.vercel.app` |
+| Environment     | Origins                                          |
+| --------------- | ------------------------------------------------ |
+| Local dev       | `http://localhost:8080`, `http://localhost:3000` |
+| Production      | `https://trossapp.vercel.app`                    |
+| Vercel previews | `https://*.vercel.app`                           |
 
 ## Troubleshooting
 
 If you see this error in browser console:
+
 ```
-Access to XMLHttpRequest at 'https://...r2.cloudflarestorage.com/...' 
+Access to XMLHttpRequest at 'https://...r2.cloudflarestorage.com/...'
 from origin 'http://localhost:8080' has been blocked by CORS policy
 ```
 
 Check that:
+
 1. CORS rules are configured on the R2 bucket
 2. The origin matches one of the allowed origins
 3. The method is GET or HEAD
@@ -61,14 +64,14 @@ Check that:
 
 Set these in Railway dashboard for the backend service:
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `STORAGE_PROVIDER` | Storage provider type | `r2` |
-| `STORAGE_ENDPOINT` | R2 S3-compatible endpoint | `https://<account-id>.r2.cloudflarestorage.com` |
-| `STORAGE_BUCKET` | R2 bucket name | `tross-files` |
-| `STORAGE_ACCESS_KEY` | R2 API Token Access Key ID | `<your-access-key>` |
-| `STORAGE_SECRET_KEY` | R2 API Token Secret | `<your-secret-key>` |
-| `STORAGE_REGION` | R2 region (always 'auto') | `auto` |
+| Variable             | Description                | Example                                         |
+| -------------------- | -------------------------- | ----------------------------------------------- |
+| `STORAGE_PROVIDER`   | Storage provider type      | `r2`                                            |
+| `STORAGE_ENDPOINT`   | R2 S3-compatible endpoint  | `https://<account-id>.r2.cloudflarestorage.com` |
+| `STORAGE_BUCKET`     | R2 bucket name             | `tross-files`                                   |
+| `STORAGE_ACCESS_KEY` | R2 API Token Access Key ID | `<your-access-key>`                             |
+| `STORAGE_SECRET_KEY` | R2 API Token Secret        | `<your-secret-key>`                             |
+| `STORAGE_REGION`     | R2 region (always 'auto')  | `auto`                                          |
 
 ### Getting R2 Credentials
 

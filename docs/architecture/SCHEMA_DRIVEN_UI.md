@@ -13,6 +13,7 @@ Adding a field should not require updating multiple files across frontend and ba
 ## The Problem This Solves
 
 In traditional architectures, adding a field requires updating:
+
 - Database schema
 - Backend model
 - Frontend model
@@ -22,6 +23,7 @@ In traditional architectures, adding a field requires updating:
 - TypeScript/Dart types
 
 This creates:
+
 - Synchronization burden
 - Drift between layers
 - Maintenance overhead
@@ -30,6 +32,7 @@ This creates:
 ## The Solution
 
 Entity metadata serves as the single definition point. From there:
+
 - Backend derives validation (Joi schemas)
 - Backend derives API documentation (Swagger/OpenAPI)
 - Frontend derives form fields and validation
@@ -40,6 +43,7 @@ Entity metadata serves as the single definition point. From there:
 ### Decision: Introspection Over Configuration
 
 **Why we introspect rather than duplicate:**
+
 - Schema IS the source of truth
 - No configuration files to keep in sync
 - Changes propagate automatically
@@ -48,6 +52,7 @@ Entity metadata serves as the single definition point. From there:
 ### Decision: Generic Components
 
 **Why we build generic table/form components:**
+
 - One component handles all entities
 - Consistent look and feel
 - New entities work immediately
@@ -56,6 +61,7 @@ Entity metadata serves as the single definition point. From there:
 ### Decision: Field Type Inference
 
 **Why we infer UI types from schema types:**
+
 - Email fields → email validation
 - Boolean fields → toggle widgets
 - Text fields → textarea widgets
@@ -65,6 +71,7 @@ Entity metadata serves as the single definition point. From there:
 ### Decision: Customization Layer
 
 **Why we allow overrides:**
+
 - Defaults work for most cases
 - Edge cases need customization
 - Overrides merge with introspected schema
@@ -73,6 +80,7 @@ Entity metadata serves as the single definition point. From there:
 ### Decision: Runtime Metadata Fetch
 
 **Why frontend fetches metadata at runtime:**
+
 - Always up-to-date
 - No frontend rebuild for schema changes
 - Metadata can be cached client-side
@@ -90,6 +98,7 @@ Entity metadata serves as the single definition point. From there:
 ### Field Metadata Properties
 
 For each field, metadata includes:
+
 - Data type (string, number, boolean, etc.)
 - Required/optional
 - Allowed values (for enums)
@@ -100,6 +109,7 @@ For each field, metadata includes:
 ### UI Generation
 
 Generic components:
+
 - Read field list from metadata
 - Determine appropriate widget per field type
 - Apply validation rules from metadata
@@ -144,11 +154,13 @@ Generic components:
 ## When NOT to Use
 
 Schema-driven UI works best for:
+
 - Standard CRUD operations
 - Admin dashboards
 - Data management screens
 
 Consider custom UI for:
+
 - Complex multi-step workflows
 - Heavily branded consumer experiences
 - Non-CRUD interactions
@@ -157,6 +169,7 @@ Consider custom UI for:
 ## Integration with SSOT
 
 This pattern connects to the broader SSOT architecture:
+
 - Entity metadata is THE source
 - Validation derives from metadata
 - Swagger derives from metadata

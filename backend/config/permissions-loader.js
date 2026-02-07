@@ -11,8 +11,8 @@
  * - Frontend fetches from API (same derived data)
  */
 
-const { logger } = require('./logger');
-const { derivePermissions, clearCache } = require('./permissions-deriver');
+const { logger } = require("./logger");
+const { derivePermissions, clearCache } = require("./permissions-deriver");
 
 // Cached permission data (derived from metadata)
 let permissionCache = null;
@@ -45,8 +45,8 @@ function loadPermissions(forceReload = false) {
     permissionCache = config;
 
     // Log initialization info (logger respects test silence)
-    if (process.env.NODE_ENV !== 'test') {
-      logger.info('[Permissions] Derived from metadata:', {
+    if (process.env.NODE_ENV !== "test") {
+      logger.info("[Permissions] Derived from metadata:", {
         roles: Object.keys(config.roles).length,
         resources: Object.keys(config.resources).length,
       });
@@ -54,7 +54,7 @@ function loadPermissions(forceReload = false) {
 
     return config;
   } catch (error) {
-    logger.error('[Permissions] Failed to derive:', { error: error.message });
+    logger.error("[Permissions] Failed to derive:", { error: error.message });
     throw new Error(`Permission derivation error: ${error.message}`);
   }
 }
@@ -66,26 +66,28 @@ function loadPermissions(forceReload = false) {
  */
 function validatePermissionConfig(config) {
   // Check required top-level keys
-  if (!config.roles || typeof config.roles !== 'object') {
+  if (!config.roles || typeof config.roles !== "object") {
     throw new Error('Missing or invalid "roles" object');
   }
-  if (!config.resources || typeof config.resources !== 'object') {
+  if (!config.resources || typeof config.resources !== "object") {
     throw new Error('Missing or invalid "resources" object');
   }
 
   // Validate roles
   const roleNames = Object.keys(config.roles);
   if (roleNames.length === 0) {
-    throw new Error('At least one role must be defined');
+    throw new Error("At least one role must be defined");
   }
 
   const priorities = new Set();
   for (const [roleName, roleConfig] of Object.entries(config.roles)) {
-    if (typeof roleConfig.priority !== 'number' || roleConfig.priority < 1) {
+    if (typeof roleConfig.priority !== "number" || roleConfig.priority < 1) {
       throw new Error(`Invalid priority for role "${roleName}"`);
     }
     if (priorities.has(roleConfig.priority)) {
-      throw new Error(`Duplicate priority ${roleConfig.priority} - each role must have unique priority`);
+      throw new Error(
+        `Duplicate priority ${roleConfig.priority} - each role must have unique priority`,
+      );
     }
     priorities.add(roleConfig.priority);
   }
@@ -93,39 +95,51 @@ function validatePermissionConfig(config) {
   // Validate resources
   const resourceNames = Object.keys(config.resources);
   if (resourceNames.length === 0) {
-    throw new Error('At least one resource must be defined');
+    throw new Error("At least one resource must be defined");
   }
 
-  for (const [resourceName, resourceConfig] of Object.entries(config.resources)) {
-    if (!resourceConfig.permissions || typeof resourceConfig.permissions !== 'object') {
+  for (const [resourceName, resourceConfig] of Object.entries(
+    config.resources,
+  )) {
+    if (
+      !resourceConfig.permissions ||
+      typeof resourceConfig.permissions !== "object"
+    ) {
       throw new Error(`Missing permissions for resource "${resourceName}"`);
     }
 
     // Validate CRUD operations
-    const operations = ['create', 'read', 'update', 'delete'];
+    const operations = ["create", "read", "update", "delete"];
     for (const op of operations) {
       if (!resourceConfig.permissions[op]) {
-        throw new Error(`Missing "${op}" permission for resource "${resourceName}"`);
+        throw new Error(
+          `Missing "${op}" permission for resource "${resourceName}"`,
+        );
       }
 
       const permission = resourceConfig.permissions[op];
-      if (typeof permission.minimumPriority !== 'number') {
+      if (typeof permission.minimumPriority !== "number") {
         throw new Error(`Invalid minimumPriority for ${resourceName}.${op}`);
       }
 
       // Handle disabled operations (minimumRole: null, minimumPriority: 0)
       if (permission.disabled === true) {
-        if (permission.minimumPriority !== 0 || permission.minimumRole !== null) {
+        if (
+          permission.minimumPriority !== 0 ||
+          permission.minimumRole !== null
+        ) {
           throw new Error(
             `Invalid disabled operation for ${resourceName}.${op}: ` +
-            'expected minimumPriority=0 and minimumRole=null',
+              "expected minimumPriority=0 and minimumRole=null",
           );
         }
         continue; // Skip further validation for disabled operations
       }
 
       if (!permission.minimumRole || !config.roles[permission.minimumRole]) {
-        throw new Error(`Invalid minimumRole "${permission.minimumRole}" for ${resourceName}.${op}`);
+        throw new Error(
+          `Invalid minimumRole "${permission.minimumRole}" for ${resourceName}.${op}`,
+        );
       }
 
       // Verify priority matches role
@@ -133,8 +147,8 @@ function validatePermissionConfig(config) {
       if (permission.minimumPriority !== expectedPriority) {
         throw new Error(
           `Priority mismatch for ${resourceName}.${op}: ` +
-          `minimumPriority=${permission.minimumPriority} but ` +
-          `role "${permission.minimumRole}" has priority=${expectedPriority}`,
+            `minimumPriority=${permission.minimumPriority} but ` +
+            `role "${permission.minimumRole}" has priority=${expectedPriority}`,
         );
       }
     }
@@ -164,9 +178,13 @@ function getPermissionMatrix() {
   const config = loadPermissions();
   const matrix = {};
 
-  for (const [resourceName, resourceConfig] of Object.entries(config.resources)) {
+  for (const [resourceName, resourceConfig] of Object.entries(
+    config.resources,
+  )) {
     matrix[resourceName] = {};
-    for (const [operation, permission] of Object.entries(resourceConfig.permissions)) {
+    for (const [operation, permission] of Object.entries(
+      resourceConfig.permissions,
+    )) {
       matrix[resourceName][operation] = permission.minimumPriority;
     }
   }
@@ -180,7 +198,7 @@ function getPermissionMatrix() {
  * @returns {number|null} Role priority or null if not found
  */
 function getRolePriority(roleName) {
-  if (!roleName || typeof roleName !== 'string') {
+  if (!roleName || typeof roleName !== "string") {
     return null;
   }
 
@@ -280,7 +298,7 @@ function getRowLevelSecurity(roleName, resource) {
  * @returns {Object} New permission configuration
  */
 function reloadPermissions() {
-  logger.info('[Permissions] Re-deriving from metadata...');
+  logger.info("[Permissions] Re-deriving from metadata...");
   permissionCache = null; // Clear local cache
   return loadPermissions(true);
 }

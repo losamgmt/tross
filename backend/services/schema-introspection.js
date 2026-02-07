@@ -13,7 +13,7 @@
  * Add a column → UI updates automatically.
  */
 
-const db = require('../db/connection');
+const db = require("../db/connection");
 
 class SchemaIntrospectionService {
   /**
@@ -56,7 +56,9 @@ class SchemaIntrospectionService {
 
     return result.rows.map((row) => ({
       name: row.table_name,
-      displayName: SchemaIntrospectionService._generateDisplayName(row.table_name),
+      displayName: SchemaIntrospectionService._generateDisplayName(
+        row.table_name,
+      ),
       description: row.description,
     }));
   }
@@ -187,8 +189,11 @@ class SchemaIntrospectionService {
 
       return {
         name: col.column_name,
-        type: SchemaIntrospectionService._mapPostgreSQLType(col.data_type, col.udt_name),
-        nullable: col.is_nullable === 'YES',
+        type: SchemaIntrospectionService._mapPostgreSQLType(
+          col.data_type,
+          col.udt_name,
+        ),
+        nullable: col.is_nullable === "YES",
         default: col.column_default,
         maxLength: col.character_maximum_length,
         precision: col.numeric_precision,
@@ -214,26 +219,26 @@ class SchemaIntrospectionService {
    */
   static _mapPostgreSQLType(dataType, udtName) {
     const typeMap = {
-      integer: 'number',
-      bigint: 'number',
-      smallint: 'number',
-      numeric: 'number',
-      real: 'number',
-      'double precision': 'number',
-      'character varying': 'string',
-      character: 'string',
-      text: 'string',
-      boolean: 'boolean',
-      'timestamp without time zone': 'datetime',
-      'timestamp with time zone': 'datetime',
-      date: 'date',
-      time: 'time',
-      uuid: 'string',
-      json: 'json',
-      jsonb: 'json',
+      integer: "number",
+      bigint: "number",
+      smallint: "number",
+      numeric: "number",
+      real: "number",
+      "double precision": "number",
+      "character varying": "string",
+      character: "string",
+      text: "string",
+      boolean: "boolean",
+      "timestamp without time zone": "datetime",
+      "timestamp with time zone": "datetime",
+      date: "date",
+      time: "time",
+      uuid: "string",
+      json: "json",
+      jsonb: "json",
     };
 
-    return typeMap[dataType] || typeMap[udtName] || 'string';
+    return typeMap[dataType] || typeMap[udtName] || "string";
   }
 
   /**
@@ -244,71 +249,67 @@ class SchemaIntrospectionService {
     const { column_name, data_type } = column;
 
     // System fields (readonly) - Contract v2.0
-    if (
-      ['id', 'created_at', 'updated_at'].includes(
-        column_name,
-      )
-    ) {
-      return 'readonly';
+    if (["id", "created_at", "updated_at"].includes(column_name)) {
+      return "readonly";
     }
 
     // Foreign keys → select dropdown
     if (foreignKey) {
-      return 'select';
+      return "select";
     }
 
     // Email detection
-    if (column_name.includes('email')) {
-      return 'email';
+    if (column_name.includes("email")) {
+      return "email";
     }
 
     // URL detection
-    if (column_name.includes('url') || column_name.includes('website')) {
-      return 'url';
+    if (column_name.includes("url") || column_name.includes("website")) {
+      return "url";
     }
 
     // Phone detection
-    if (column_name.includes('phone') || column_name.includes('tel')) {
-      return 'tel';
+    if (column_name.includes("phone") || column_name.includes("tel")) {
+      return "tel";
     }
 
     // Boolean → toggle
-    if (data_type === 'boolean') {
-      return 'boolean';
+    if (data_type === "boolean") {
+      return "boolean";
     }
 
     // Text → textarea
-    if (data_type === 'text') {
-      return 'textarea';
+    if (data_type === "text") {
+      return "textarea";
     }
 
     // Timestamps → datetime picker
-    if (data_type.includes('timestamp')) {
-      return 'datetime';
+    if (data_type.includes("timestamp")) {
+      return "datetime";
     }
 
     // Date → date picker
-    if (data_type === 'date') {
-      return 'date';
+    if (data_type === "date") {
+      return "date";
     }
 
     // Numbers
     if (
-      data_type.includes('int') ||
-      data_type.includes('numeric') ||
-      data_type === 'real' ||
-      data_type === 'double precision'
+      data_type.includes("int") ||
+      data_type.includes("numeric") ||
+      data_type === "real" ||
+      data_type === "double precision"
     ) {
-      return 'number';
+      return "number";
     }
 
     // JSON → code editor
-    if (data_type === 'json' || data_type === 'jsonb') {
-      return 'json';
+    if (data_type === "json" || data_type === "jsonb") {
+      return "json";
     }
 
     // Default
-    return 'text';
+    return "text";
   }
 
   /**
@@ -318,13 +319,13 @@ class SchemaIntrospectionService {
   static _generateLabel(columnName) {
     // Special cases
     const specialLabels = {
-      id: 'ID',
-      email: 'Email Address',
-      auth0_id: 'Auth0 ID',
-      role_id: 'Role',
-      is_active: 'Active',
-      created_at: 'Created',
-      updated_at: 'Last Updated',
+      id: "ID",
+      email: "Email Address",
+      auth0_id: "Auth0 ID",
+      role_id: "Role",
+      is_active: "Active",
+      created_at: "Created",
+      updated_at: "Last Updated",
     };
 
     if (specialLabels[columnName]) {
@@ -333,9 +334,9 @@ class SchemaIntrospectionService {
 
     // Convert snake_case to Title Case
     return columnName
-      .split('_')
+      .split("_")
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
+      .join(" ");
   }
 
   /**
@@ -347,9 +348,9 @@ class SchemaIntrospectionService {
    */
   static _generateDisplayName(tableName) {
     return tableName
-      .split('_')
+      .split("_")
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
+      .join(" ");
   }
 
   /**
@@ -358,11 +359,7 @@ class SchemaIntrospectionService {
    */
   static _isReadonly(columnName) {
     // Contract v2.0: Readonly fields (cached from audit_logs or auto-managed)
-    const readonlyFields = [
-      'id',
-      'created_at',
-      'updated_at',
-    ];
+    const readonlyFields = ["id", "created_at", "updated_at"];
 
     return readonlyFields.includes(columnName);
   }
@@ -375,15 +372,15 @@ class SchemaIntrospectionService {
     const { column_name, data_type } = column;
 
     // Don't search IDs or timestamps
-    if (column_name === 'id' || column_name.endsWith('_at')) {
+    if (column_name === "id" || column_name.endsWith("_at")) {
       return false;
     }
 
     // Only search text and varchar fields
     return (
-      data_type === 'text' ||
-      data_type === 'character varying' ||
-      data_type === 'character'
+      data_type === "text" ||
+      data_type === "character varying" ||
+      data_type === "character"
     );
   }
 
@@ -397,11 +394,11 @@ class SchemaIntrospectionService {
    */
   static async getForeignKeyOptions(
     tableName,
-    valueColumn = 'id',
-    labelColumn = 'name',
+    valueColumn = "id",
+    labelColumn = "name",
   ) {
     // Try to find a name-like column
-    const nameColumns = ['name', 'title', 'email', 'description'];
+    const nameColumns = ["name", "title", "email", "description"];
     const schema = await SchemaIntrospectionService.getTableSchema(tableName);
 
     // Find best label column

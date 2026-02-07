@@ -6,11 +6,9 @@
  *
  * All validators attach validated values to req.validated.query = {}
  */
-const {
-  toSafePagination,
-} = require('./type-coercion');
-const { logValidationFailure } = require('./validation-logger');
-const ResponseFormatter = require('../utils/response-formatter');
+const { toSafePagination } = require("./type-coercion");
+const { logValidationFailure } = require("./validation-logger");
+const ResponseFormatter = require("../utils/response-formatter");
 
 /**
  * Validate pagination query parameters
@@ -29,21 +27,23 @@ function validatePagination(limits = { defaultLimit: 50, maxLimit: 200 }) {
     try {
       const pagination = toSafePagination(req.query, limits);
 
-      if (!req.validated) {req.validated = {};}
+      if (!req.validated) {
+        req.validated = {};
+      }
       req.validated.pagination = pagination;
 
       next();
     } catch (error) {
       logValidationFailure({
-        validator: 'validatePagination',
-        field: 'pagination',
+        validator: "validatePagination",
+        field: "pagination",
         value: req.query,
         reason: error.message,
         context: { url: req.url, method: req.method },
       });
 
       return ResponseFormatter.badRequest(res, error.message, [
-        { field: 'pagination', message: error.message },
+        { field: "pagination", message: error.message },
       ]);
     }
   };
@@ -66,22 +66,27 @@ function validateSearch(options = {}) {
   const { minLength = 1, maxLength = 255, required = false } = options;
 
   return (req, res, next) => {
-    const search = req.query.search || req.query.q || '';
+    const search = req.query.search || req.query.q || "";
 
     if (!search && required) {
-      return ResponseFormatter.badRequest(res, 'Search query is required', [
-        { field: 'search', message: 'Search query is required' },
+      return ResponseFormatter.badRequest(res, "Search query is required", [
+        { field: "search", message: "Search query is required" },
       ]);
     }
 
-    if (search && typeof search === 'string') {
+    if (search && typeof search === "string") {
       const trimmed = search.trim();
 
       if (trimmed.length < minLength) {
         return ResponseFormatter.badRequest(
           res,
           `Search query must be at least ${minLength} characters`,
-          [{ field: 'search', message: `Search query must be at least ${minLength} characters` }],
+          [
+            {
+              field: "search",
+              message: `Search query must be at least ${minLength} characters`,
+            },
+          ],
         );
       }
 
@@ -89,12 +94,21 @@ function validateSearch(options = {}) {
         return ResponseFormatter.badRequest(
           res,
           `Search query cannot exceed ${maxLength} characters`,
-          [{ field: 'search', message: `Search query cannot exceed ${maxLength} characters` }],
+          [
+            {
+              field: "search",
+              message: `Search query cannot exceed ${maxLength} characters`,
+            },
+          ],
         );
       }
 
-      if (!req.validated) {req.validated = {};}
-      if (!req.validated.query) {req.validated.query = {};}
+      if (!req.validated) {
+        req.validated = {};
+      }
+      if (!req.validated.query) {
+        req.validated.query = {};
+      }
       req.validated.query.search = trimmed;
     }
 
@@ -117,10 +131,10 @@ function validateSearch(options = {}) {
 function validateSort(
   allowedFields,
   defaultField = null,
-  defaultOrder = 'asc',
+  defaultOrder = "asc",
 ) {
   if (!allowedFields || allowedFields.length === 0) {
-    throw new Error('validateSort requires at least one allowed field');
+    throw new Error("validateSort requires at least one allowed field");
   }
 
   const defaultSortField = defaultField || allowedFields[0];
@@ -136,25 +150,30 @@ function validateSort(
     // Validate sortBy
     if (!allowedFields.includes(sortBy)) {
       logValidationFailure({
-        validator: 'validateSort',
-        field: 'sortBy',
+        validator: "validateSort",
+        field: "sortBy",
         value: sortBy,
-        reason: `Field not in allowed list: ${allowedFields.join(', ')}`,
+        reason: `Field not in allowed list: ${allowedFields.join(", ")}`,
         context: { url: req.url, method: req.method },
       });
 
       return ResponseFormatter.badRequest(
         res,
-        `sortBy must be one of: ${allowedFields.join(', ')}`,
-        [{ field: 'sortBy', message: `sortBy must be one of: ${allowedFields.join(', ')}` }],
+        `sortBy must be one of: ${allowedFields.join(", ")}`,
+        [
+          {
+            field: "sortBy",
+            message: `sortBy must be one of: ${allowedFields.join(", ")}`,
+          },
+        ],
       );
     }
 
     // Validate sortOrder
-    if (!['asc', 'desc'].includes(sortOrder)) {
+    if (!["asc", "desc"].includes(sortOrder)) {
       logValidationFailure({
-        validator: 'validateSort',
-        field: 'sortOrder',
+        validator: "validateSort",
+        field: "sortOrder",
         value: sortOrder,
         reason: 'Must be "asc" or "desc"',
         context: { url: req.url, method: req.method },
@@ -163,12 +182,16 @@ function validateSort(
       return ResponseFormatter.badRequest(
         res,
         'sortOrder must be "asc" or "desc"',
-        [{ field: 'sortOrder', message: 'sortOrder must be "asc" or "desc"' }],
+        [{ field: "sortOrder", message: 'sortOrder must be "asc" or "desc"' }],
       );
     }
 
-    if (!req.validated) {req.validated = {};}
-    if (!req.validated.query) {req.validated.query = {};}
+    if (!req.validated) {
+      req.validated = {};
+    }
+    if (!req.validated.query) {
+      req.validated.query = {};
+    }
     req.validated.query.sortBy = sortBy;
     req.validated.query.sortOrder = sortOrder;
 
@@ -200,23 +223,32 @@ function validateQuery(metadata) {
     searchableFields: _searchableFields = [],
     filterableFields = [],
     sortableFields = [],
-    defaultSort: _defaultSort = { field: 'id', order: 'ASC' },
+    defaultSort: _defaultSort = { field: "id", order: "ASC" },
   } = metadata;
 
   return (req, res, next) => {
     try {
-      if (!req.validated) {req.validated = {};}
-      if (!req.validated.query) {req.validated.query = {};}
+      if (!req.validated) {
+        req.validated = {};
+      }
+      if (!req.validated.query) {
+        req.validated.query = {};
+      }
 
       // Validate search (optional)
       const search = req.query.search || req.query.q;
-      if (search && typeof search === 'string') {
+      if (search && typeof search === "string") {
         const trimmed = search.trim();
         if (trimmed.length > 255) {
           return ResponseFormatter.badRequest(
             res,
-            'Search query cannot exceed 255 characters',
-            [{ field: 'search', message: 'Search query cannot exceed 255 characters' }],
+            "Search query cannot exceed 255 characters",
+            [
+              {
+                field: "search",
+                message: "Search query cannot exceed 255 characters",
+              },
+            ],
           );
         }
         req.validated.query.search = trimmed.length > 0 ? trimmed : undefined;
@@ -233,12 +265,17 @@ function validateQuery(metadata) {
         }
 
         // Check for operator-based filters (field[operator]=value)
-        const operators = ['gt', 'gte', 'lt', 'lte', 'in', 'not'];
+        const operators = ["gt", "gte", "lt", "lte", "in", "not"];
         for (const op of operators) {
           const opKey = `${field}[${op}]`;
           if (req.query[opKey] !== undefined) {
-            if (!filters[field]) {filters[field] = {};}
-            if (typeof filters[field] === 'object' && !Array.isArray(filters[field])) {
+            if (!filters[field]) {
+              filters[field] = {};
+            }
+            if (
+              typeof filters[field] === "object" &&
+              !Array.isArray(filters[field])
+            ) {
               filters[field][op] = req.query[opKey];
             } else {
               // If direct value exists, create object
@@ -251,7 +288,8 @@ function validateQuery(metadata) {
           }
         }
       }
-      req.validated.query.filters = Object.keys(filters).length > 0 ? filters : undefined;
+      req.validated.query.filters =
+        Object.keys(filters).length > 0 ? filters : undefined;
 
       // Validate sort (optional)
       const sortBy = req.query.sortBy || req.query.sort;
@@ -259,25 +297,35 @@ function validateQuery(metadata) {
 
       if (sortBy && !sortableFields.includes(sortBy)) {
         logValidationFailure({
-          validator: 'validateQuery',
-          field: 'sortBy',
+          validator: "validateQuery",
+          field: "sortBy",
           value: sortBy,
-          reason: `Field not in sortable list: ${sortableFields.join(', ')}`,
+          reason: `Field not in sortable list: ${sortableFields.join(", ")}`,
           context: { url: req.url, method: req.method },
         });
 
         return ResponseFormatter.badRequest(
           res,
-          `sortBy must be one of: ${sortableFields.join(', ')}`,
-          [{ field: 'sortBy', message: `sortBy must be one of: ${sortableFields.join(', ')}` }],
+          `sortBy must be one of: ${sortableFields.join(", ")}`,
+          [
+            {
+              field: "sortBy",
+              message: `sortBy must be one of: ${sortableFields.join(", ")}`,
+            },
+          ],
         );
       }
 
-      if (sortOrder && !['asc', 'desc', 'ASC', 'DESC'].includes(sortOrder)) {
+      if (sortOrder && !["asc", "desc", "ASC", "DESC"].includes(sortOrder)) {
         return ResponseFormatter.badRequest(
           res,
           'sortOrder must be "asc" or "desc"',
-          [{ field: 'sortOrder', message: 'sortOrder must be "asc" or "desc"' }],
+          [
+            {
+              field: "sortOrder",
+              message: 'sortOrder must be "asc" or "desc"',
+            },
+          ],
         );
       }
 
@@ -287,15 +335,15 @@ function validateQuery(metadata) {
       next();
     } catch (error) {
       logValidationFailure({
-        validator: 'validateQuery',
-        field: 'query',
+        validator: "validateQuery",
+        field: "query",
         value: req.query,
         reason: error.message,
         context: { url: req.url, method: req.method },
       });
 
       return ResponseFormatter.badRequest(res, error.message, [
-        { field: 'query', message: error.message },
+        { field: "query", message: error.message },
       ]);
     }
   };

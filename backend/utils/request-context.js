@@ -10,7 +10,7 @@
  * - Middleware Integration: Works with auth and RLS middleware output
  */
 
-const { getClientIp, getUserAgent } = require('./request-helpers');
+const { getClientIp, getUserAgent } = require("./request-helpers");
 
 /**
  * Build RLS (Row-Level Security) context from request middleware

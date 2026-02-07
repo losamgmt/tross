@@ -1,13 +1,13 @@
 /**
  * Database Connection Mock Factory
- * 
+ *
  * SRP: ONLY mocks database connection behavior
  * Use: Import and apply in test files
  */
 
 /**
  * Create a mock database connection
- * 
+ *
  * @returns {Object} Mocked db connection with query method
  */
 function createMockDb() {
@@ -31,7 +31,7 @@ const DB_MOCK_CONFIG = () => ({
 /**
  * Reset all database mocks
  * Call in beforeEach() or afterEach()
- * 
+ *
  * @param {Object} db - Database mock instance
  */
 function resetDbMocks(db) {
@@ -42,7 +42,7 @@ function resetDbMocks(db) {
 
 /**
  * Setup db.query to return specific result
- * 
+ *
  * @param {Object} db - Database mock instance
  * @param {Object} result - Query result to return
  */
@@ -52,8 +52,8 @@ function mockQuery(db, result) {
 
 /**
  * Setup db.query to return specific result once
- * 
- * @param {Object} db - Database mock instance  
+ *
+ * @param {Object} db - Database mock instance
  * @param {Object} result - Query result to return
  */
 function mockQueryOnce(db, result) {
@@ -62,7 +62,7 @@ function mockQueryOnce(db, result) {
 
 /**
  * Setup db.query to reject with error
- * 
+ *
  * @param {Object} db - Database mock instance
  * @param {Error|string} error - Error to throw
  */
@@ -73,7 +73,7 @@ function mockQueryError(db, error) {
 
 /**
  * Setup db.query to reject with error once
- * 
+ *
  * @param {Object} db - Database mock instance
  * @param {Error|string} error - Error to throw
  */
@@ -85,7 +85,7 @@ function mockQueryErrorOnce(db, error) {
 /**
  * Chain multiple query responses
  * Useful for methods that make multiple queries
- * 
+ *
  * @param {Object} db - Database mock instance
  * @param {Array<Object>} results - Array of query results
  */

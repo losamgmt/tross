@@ -6,14 +6,14 @@
  * Usage: node scripts/analyze-database.js
  */
 
-const db = require('../db/connection');
-const { logger } = require('../config/logger');
+const db = require("../db/connection");
+const { logger } = require("../config/logger");
 
 /**
  * Analyze table indexes and suggest optimizations
  */
 async function analyzeIndexes() {
-  console.log('\n📊 Analyzing Database Indexes...\n');
+  console.log("\n📊 Analyzing Database Indexes...\n");
 
   try {
     // Get all user tables (exclude system tables)
@@ -56,7 +56,7 @@ async function analyzeIndexes() {
 
       if (indexes.rows.length > 0) {
         const indexMap = {};
-        indexes.rows.forEach(idx => {
+        indexes.rows.forEach((idx) => {
           if (!indexMap[idx.index_name]) {
             indexMap[idx.index_name] = {
               columns: [],
@@ -66,13 +66,20 @@ async function analyzeIndexes() {
           indexMap[idx.index_name].columns.push(idx.column_name);
         });
 
-        Object.values(indexMap).forEach(idx => {
-          const type = idx.is_primary ? '🔑 PRIMARY' : idx.is_unique ? '🔒 UNIQUE' : '📇 INDEX';
-          const usage = idx.index_scans > 0 ? `✅ ${idx.index_scans} scans` : '⚠️  UNUSED';
-          console.log(`  ${type} ${idx.index_name}: ${idx.columns.join(', ')} (${idx.index_size}) - ${usage}`);
+        Object.values(indexMap).forEach((idx) => {
+          const type = idx.is_primary
+            ? "🔑 PRIMARY"
+            : idx.is_unique
+              ? "🔒 UNIQUE"
+              : "📇 INDEX";
+          const usage =
+            idx.index_scans > 0 ? `✅ ${idx.index_scans} scans` : "⚠️  UNUSED";
+          console.log(
+            `  ${type} ${idx.index_name}: ${idx.columns.join(", ")} (${idx.index_size}) - ${usage}`,
+          );
         });
       } else {
-        console.log('  ⚠️  No indexes found (consider adding!)');
+        console.log("  ⚠️  No indexes found (consider adding!)");
       }
 
       // Check for missing indexes on foreign keys
@@ -92,14 +99,14 @@ async function analyzeIndexes() {
       const fks = await db.query(fkQuery, [table.tablename]);
 
       if (fks.rows.length > 0) {
-        console.log('\n  🔗 Foreign Keys:');
-        fks.rows.forEach(fk => {
+        console.log("\n  🔗 Foreign Keys:");
+        fks.rows.forEach((fk) => {
           console.log(`    ${fk.column_name} → ${fk.foreign_table_name}`);
         });
       }
     }
 
-    console.log('\n\n📈 Index Usage Statistics:\n');
+    console.log("\n\n📈 Index Usage Statistics:\n");
 
     // Find unused indexes
     const unusedIndexesQuery = `
@@ -118,15 +125,17 @@ async function analyzeIndexes() {
     const unusedIndexes = await db.query(unusedIndexesQuery);
 
     if (unusedIndexes.rows.length > 0) {
-      console.log('⚠️  Unused Indexes (consider removing if not needed):');
-      unusedIndexes.rows.forEach(idx => {
-        console.log(`  ${idx.tablename}.${idx.indexname} (${idx.index_size}) - ${idx.idx_scan} scans`);
+      console.log("⚠️  Unused Indexes (consider removing if not needed):");
+      unusedIndexes.rows.forEach((idx) => {
+        console.log(
+          `  ${idx.tablename}.${idx.indexname} (${idx.index_size}) - ${idx.idx_scan} scans`,
+        );
       });
     } else {
-      console.log('✅ All indexes are being used!');
+      console.log("✅ All indexes are being used!");
     }
 
-    console.log('\n\n💾 Database Size Summary:\n');
+    console.log("\n\n💾 Database Size Summary:\n");
 
     const sizeQuery = `
       SELECT
@@ -144,10 +153,9 @@ async function analyzeIndexes() {
     console.log(`  Tables: ${size.tables_size}`);
     console.log(`  Indexes: ${size.indexes_size}`);
 
-    console.log('\n✅ Analysis complete!\n');
-
+    console.log("\n✅ Analysis complete!\n");
   } catch (error) {
-    logger.error('Database analysis failed:', error);
+    logger.error("Database analysis failed:", error);
     throw error;
   }
 }
@@ -156,7 +164,7 @@ async function analyzeIndexes() {
  * Check for missing indexes on commonly queried columns
  */
 async function suggestIndexes() {
-  console.log('\n💡 Index Suggestions:\n');
+  console.log("\n💡 Index Suggestions:\n");
 
   try {
     // Check for tables without indexes on foreign key columns
@@ -183,18 +191,19 @@ async function suggestIndexes() {
     const missingIndexes = await db.query(missingFKIndexesQuery);
 
     if (missingIndexes.rows.length > 0) {
-      console.log('⚠️  Foreign keys without indexes (may slow down JOINs):');
-      missingIndexes.rows.forEach(mi => {
-        console.log(`  CREATE INDEX idx_${mi.table_name}_${mi.column_name} ON ${mi.table_name}(${mi.column_name});`);
+      console.log("⚠️  Foreign keys without indexes (may slow down JOINs):");
+      missingIndexes.rows.forEach((mi) => {
+        console.log(
+          `  CREATE INDEX idx_${mi.table_name}_${mi.column_name} ON ${mi.table_name}(${mi.column_name});`,
+        );
       });
     } else {
-      console.log('✅ All foreign keys have indexes!');
+      console.log("✅ All foreign keys have indexes!");
     }
 
-    console.log('\n');
-
+    console.log("\n");
   } catch (error) {
-    logger.error('Index suggestion failed:', error);
+    logger.error("Index suggestion failed:", error);
     throw error;
   }
 }
@@ -203,15 +212,15 @@ async function suggestIndexes() {
  * Main execution
  */
 async function main() {
-  console.log('🔍 Tross Database Optimization Analysis');
-  console.log('==========================================');
+  console.log("🔍 Tross Database Optimization Analysis");
+  console.log("==========================================");
 
   try {
     await db.testConnection();
     await analyzeIndexes();
     await suggestIndexes();
   } catch (error) {
-    console.error('\n❌ Analysis failed:', error.message);
+    console.error("\n❌ Analysis failed:", error.message);
     process.exit(1);
   } finally {
     await db.closePool();

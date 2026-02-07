@@ -8,7 +8,9 @@
 /// - onNavigate, onLogout callbacks for navigation/auth actions
 /// - No Provider access - pure, testable component
 ///
-/// GENERIC: Menu items are fully configurable via menuItems parameter.
+/// **UNIFIED MENU SYSTEM:** Uses NavMenuItem + AdaptiveNavMenu
+/// - Desktop/Tablet: Popup menu dropdown
+/// - Mobile: Modal bottom sheet
 library;
 
 import 'package:flutter/material.dart';
@@ -20,28 +22,18 @@ import '../../../services/auth/auth_profile_service.dart';
 import '../../atoms/buttons/app_button.dart';
 import '../../molecules/display/initials_avatar.dart';
 import '../../molecules/display/user_info_header.dart';
+import '../../molecules/menus/adaptive_nav_menu.dart';
 import '../../../core/routing/app_routes.dart';
+import 'nav_menu_item.dart';
 
-/// Menu item configuration for AppHeader
-class AppHeaderMenuItem {
-  final String id;
-  final String label;
-  final IconData icon;
-  final String? route;
-  final bool Function(Map<String, dynamic>? user)? visibleWhen;
-  final Future<void> Function(BuildContext context)? onTap;
-
-  const AppHeaderMenuItem({
-    required this.id,
-    required this.label,
-    required this.icon,
-    this.route,
-    this.visibleWhen,
-    this.onTap,
-  });
+/// Helper class for default app header menu items
+///
+/// Provides factory methods for common menu items using NavMenuItem.
+class AppHeaderMenuItems {
+  AppHeaderMenuItems._();
 
   /// Standard settings menu item
-  static const settings = AppHeaderMenuItem(
+  static NavMenuItem get settings => NavMenuItem(
     id: 'settings',
     label: 'Settings',
     icon: Icons.settings,
@@ -49,7 +41,7 @@ class AppHeaderMenuItem {
   );
 
   /// Standard admin menu item (visible to admins only)
-  static final admin = AppHeaderMenuItem(
+  static NavMenuItem get admin => NavMenuItem(
     id: 'admin',
     label: 'Admin Dashboard',
     icon: Icons.admin_panel_settings,
@@ -58,19 +50,24 @@ class AppHeaderMenuItem {
   );
 
   /// Standard logout menu item
-  static const logout = AppHeaderMenuItem(
+  static NavMenuItem get logout => NavMenuItem(
     id: 'logout',
     label: AppConstants.logoutButton,
     icon: Icons.logout,
   );
 
   /// Default menu items for standard app
-  static List<AppHeaderMenuItem> get defaultItems => [settings, admin, logout];
+  static List<NavMenuItem> get defaultItems => [
+    settings,
+    admin,
+    NavMenuItem.divider(),
+    logout,
+  ];
 }
 
 class AppHeader extends StatelessWidget implements PreferredSizeWidget {
   final String pageTitle;
-  final List<AppHeaderMenuItem>? menuItems;
+  final List<NavMenuItem>? menuItems;
   final VoidCallback? onLogoPressed;
 
   /// Required user display name
@@ -107,8 +104,8 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 
-  List<AppHeaderMenuItem> get _effectiveMenuItems =>
-      menuItems ?? AppHeaderMenuItem.defaultItems;
+  List<NavMenuItem> get _effectiveMenuItems =>
+      menuItems ?? AppHeaderMenuItems.defaultItems;
 
   @override
   Widget build(BuildContext context) {
@@ -122,6 +119,11 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
         context.go(route);
       }
     }
+
+    // Filter items based on user permissions
+    final visibleItems = _effectiveMenuItems
+        .where((item) => item.isVisibleFor(user))
+        .toList();
 
     return AppBar(
       backgroundColor: AppColors.brandPrimary,
@@ -144,116 +146,40 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
       ),
       centerTitle: true,
       actions: [
-        // User menu with circular hover effect
+        // User menu - always dropdown from avatar, never bottom sheet
         Padding(
           padding: EdgeInsets.only(right: spacing.sm),
-          child: PopupMenuButton<String>(
-            offset: Offset(0, spacing.xxl * 1.75),
+          child: AdaptiveNavMenu(
             tooltip: 'User Menu',
-            icon: InitialsAvatar(name: userName, email: userEmail),
-            itemBuilder: (context) => _buildMenuItems(
-              context,
-              effectiveUserName: userName,
-              effectiveUserEmail: userEmail,
-              effectiveUserRole: userRole,
-              user: user,
+            displayMode: MenuDisplayMode.dropdown,
+            trigger: InitialsAvatar(name: userName, email: userEmail),
+            header: UserInfoHeader(
+              userName: userName,
+              userEmail: userEmail,
+              userRole: userRole,
             ),
-            onSelected: (value) => _handleMenuSelection(
-              context,
-              value,
-              navigateTo: navigateTo,
-              user: user,
-            ),
+            items: visibleItems,
+            onSelected: (item) =>
+                _handleMenuSelection(context, item, navigateTo: navigateTo),
           ),
         ),
       ],
     );
   }
 
-  List<PopupMenuEntry<String>> _buildMenuItems(
-    BuildContext context, {
-    required String effectiveUserName,
-    required String effectiveUserEmail,
-    required String effectiveUserRole,
-    required Map<String, dynamic>? user,
-  }) {
-    final items = <PopupMenuEntry<String>>[];
-
-    // User info header - clicking navigates to settings
-    items.add(
-      PopupMenuItem<String>(
-        value: AppConstants.menuSettings,
-        padding: EdgeInsets.zero,
-        child: UserInfoHeader(
-          userName: effectiveUserName,
-          userEmail: effectiveUserEmail,
-          userRole: effectiveUserRole,
-        ),
-      ),
-    );
-    items.add(const PopupMenuDivider());
-
-    // Build menu items from config
-    bool needsDividerBeforeLogout = false;
-    for (final menuItem in _effectiveMenuItems) {
-      // Check visibility
-      if (menuItem.visibleWhen != null && !menuItem.visibleWhen!(user)) {
-        continue;
-      }
-
-      // Add divider before logout
-      if (menuItem.id == 'logout' && needsDividerBeforeLogout) {
-        items.add(const PopupMenuDivider());
-      }
-
-      items.add(
-        PopupMenuItem<String>(
-          value: menuItem.id,
-          child: ListTile(
-            leading: Icon(menuItem.icon, size: 20),
-            title: Text(menuItem.label),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: AppSpacingConst.md,
-            ),
-            dense: true,
-          ),
-        ),
-      );
-
-      if (menuItem.id != 'logout') {
-        needsDividerBeforeLogout = true;
-      }
-    }
-
-    return items;
-  }
-
   void _handleMenuSelection(
     BuildContext context,
-    String value, {
+    NavMenuItem item, {
     required void Function(String route) navigateTo,
-    required Map<String, dynamic>? user,
   }) async {
-    // Handle settings/profile click (user info header)
-    if (value == AppConstants.menuSettings) {
-      navigateTo(AppRoutes.settings);
-      return;
-    }
-
-    // Find the menu item
-    final menuItem = _effectiveMenuItems.firstWhere(
-      (item) => item.id == value,
-      orElse: () => AppHeaderMenuItem.settings,
-    );
-
-    // Custom handler
-    if (menuItem.onTap != null) {
-      await menuItem.onTap!(context);
+    // Execute item's onTap if defined
+    if (item.onTap != null) {
+      item.onTap!(context);
       return;
     }
 
     // Handle logout specially
-    if (value == 'logout') {
+    if (item.id == 'logout') {
       if (onLogout != null) {
         await onLogout!();
       }
@@ -267,8 +193,8 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
     }
 
     // Navigate to route
-    if (menuItem.route != null && context.mounted) {
-      navigateTo(menuItem.route!);
+    if (item.route != null && context.mounted) {
+      navigateTo(item.route!);
     }
   }
 }

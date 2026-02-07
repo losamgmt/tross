@@ -1,18 +1,18 @@
 /**
  * Smart Mock Infrastructure - Main Exports
- * 
+ *
  * Centralized mock factory for consistent, intelligent test mocking
- * 
+ *
  * USAGE:
  *   const { createDBMock, createMockClient } = require('../mocks');
- *   
+ *
  *   // Setup in test file
  *   jest.mock('../../db/connection', () => createDBMock({ rows: [...] }));
- *   
+ *
  *   // Use in tests
  *   const db = require('../../db/connection');
  *   db.query.mockResolvedValue({ rows: [data] }); // Simple query pattern
- *   
+ *
  *   const client = db.__getMockClient(); // Access transaction client
  *   // or use helper functions like mockSuccessfulTransaction(client, {...})
  */
@@ -22,7 +22,7 @@ const {
   createQueryBuilderMock,
   createPaginationMock,
   createSmartMocks,
-} = require('./service-mocks');
+} = require("./service-mocks");
 
 // Smart database mocks (ENHANCED - supports both db.query AND db.getClient)
 const {
@@ -35,22 +35,22 @@ const {
   mockFailedTransaction,
   mockRecordNotFound,
   transactionMatchers,
-} = require('./db-mocks');
+} = require("./db-mocks");
 
 // Smart utility mocks
 const {
   createLoggerMock,
   createAuditMock,
   createMetadataMock,
-} = require('./utility-mocks');
+} = require("./utility-mocks");
 
 // Legacy mocks (for backward compatibility)
-const dbMocksLegacy = require('./db.mock');
+const dbMocksLegacy = require("./db.mock");
 // modelMocks removed - models no longer used (GenericEntityService replaces them)
-const serviceMocks = require('./services.mock');
-const middlewareMocks = require('./middleware.mock');
-const loggerMocks = require('./logger.mock');
-const fixtures = require('../fixtures');
+const serviceMocks = require("./services.mock");
+const middlewareMocks = require("./middleware.mock");
+const loggerMocks = require("./logger.mock");
+const fixtures = require("../fixtures");
 
 module.exports = {
   // PRIMARY DATABASE MOCKS - Use these!
@@ -81,5 +81,3 @@ module.exports = {
   ...loggerMocks,
   ...fixtures,
 };
-
-

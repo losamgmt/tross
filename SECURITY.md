@@ -5,7 +5,7 @@
 If you discover a security vulnerability in Tross, please report it responsibly:
 
 1. **DO NOT** create a public GitHub issue
-2. Email security concerns to: [your-email@example.com] *(Update this with your contact)*
+2. Email security concerns to: [your-email@example.com] _(Update this with your contact)_
 3. Include detailed steps to reproduce the vulnerability
 4. Allow reasonable time for a fix before public disclosure
 
@@ -26,6 +26,7 @@ All sensitive configuration is stored in environment variables, **never** in sou
 ### What's NOT in This Repository
 
 ✅ **Safe (in repo):**
+
 - Source code
 - Documentation
 - Tests
@@ -33,6 +34,7 @@ All sensitive configuration is stored in environment variables, **never** in sou
 - Public API specifications
 
 ❌ **Never committed:**
+
 - `.env` files with real values
 - API keys or secrets
 - Database passwords
@@ -116,12 +118,10 @@ If secrets are accidentally committed:
    - Railway: Regenerate DATABASE_URL
    - Auth0: Rotate client secret
    - Generate new JWT_SECRET
-   
 2. **Update environment variables** in:
    - Railway dashboard
    - Vercel dashboard
    - Local `.env` file
-   
 3. **Redeploy applications** to use new secrets
 
 ### Git History Cleanup

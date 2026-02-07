@@ -7,14 +7,17 @@
  * Performance: Schemas are cacheable (TTL: 5 minutes)
  */
 
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const SchemaIntrospectionService = require('../services/schema-introspection');
-const { authenticateToken } = require('../middleware/auth');
-const ResponseFormatter = require('../utils/response-formatter');
-const { deriveValidationRules, getCompositeValidation } = require('../config/validation-deriver');
-const { asyncHandler } = require('../middleware/utils');
-const AppError = require('../utils/app-error');
+const SchemaIntrospectionService = require("../services/schema-introspection");
+const { authenticateToken } = require("../middleware/auth");
+const ResponseFormatter = require("../utils/response-formatter");
+const {
+  deriveValidationRules,
+  getCompositeValidation,
+} = require("../config/validation-deriver");
+const { asyncHandler } = require("../middleware/utils");
+const AppError = require("../utils/app-error");
 
 /**
  * @openapi
@@ -47,14 +50,18 @@ const AppError = require('../utils/app-error');
  *                       description:
  *                         type: string
  */
-router.get('/', authenticateToken, asyncHandler(async (req, res) => {
-  const tables = await SchemaIntrospectionService.getAllTables();
+router.get(
+  "/",
+  authenticateToken,
+  asyncHandler(async (req, res) => {
+    const tables = await SchemaIntrospectionService.getAllTables();
 
-  return ResponseFormatter.list(res, {
-    data: tables,
-    message: 'Tables retrieved successfully',
-  });
-}));
+    return ResponseFormatter.list(res, {
+      data: tables,
+      message: "Tables retrieved successfully",
+    });
+  }),
+);
 
 /**
  * @openapi
@@ -111,15 +118,19 @@ router.get('/', authenticateToken, asyncHandler(async (req, res) => {
  *       404:
  *         description: Table not found
  */
-router.get('/:tableName', authenticateToken, asyncHandler(async (req, res) => {
-  const { tableName } = req.params;
+router.get(
+  "/:tableName",
+  authenticateToken,
+  asyncHandler(async (req, res) => {
+    const { tableName } = req.params;
 
-  const schema = await SchemaIntrospectionService.getTableSchema(tableName);
+    const schema = await SchemaIntrospectionService.getTableSchema(tableName);
 
-  return ResponseFormatter.get(res, schema, {
-    message: 'Table schema retrieved successfully',
-  });
-}));
+    return ResponseFormatter.get(res, schema, {
+      message: "Table schema retrieved successfully",
+    });
+  }),
+);
 
 /**
  * @openapi
@@ -163,18 +174,21 @@ router.get('/:tableName', authenticateToken, asyncHandler(async (req, res) => {
  *                         type: string
  */
 router.get(
-  '/:tableName/options/:column',
+  "/:tableName/options/:column",
   authenticateToken,
   asyncHandler(async (req, res) => {
     const { tableName, column } = req.params;
 
     // Get the schema to find the foreign key
-    const schema =
-      await SchemaIntrospectionService.getTableSchema(tableName);
+    const schema = await SchemaIntrospectionService.getTableSchema(tableName);
     const columnInfo = schema.columns.find((c) => c.name === column);
 
     if (!columnInfo || !columnInfo.foreignKey) {
-      throw new AppError(`Column '${column}' is not a foreign key`, 400, 'BAD_REQUEST');
+      throw new AppError(
+        `Column '${column}' is not a foreign key`,
+        400,
+        "BAD_REQUEST",
+      );
     }
 
     // Get options from the referenced table
@@ -184,7 +198,7 @@ router.get(
 
     return ResponseFormatter.list(res, {
       data: options,
-      message: 'Foreign key options retrieved successfully',
+      message: "Foreign key options retrieved successfully",
     });
   }),
 );
@@ -222,16 +236,20 @@ router.get(
  *                     compositeValidations:
  *                       type: object
  */
-router.get('/validation-rules', authenticateToken, asyncHandler(async (req, res) => {
-  const rules = deriveValidationRules();
+router.get(
+  "/validation-rules",
+  authenticateToken,
+  asyncHandler(async (req, res) => {
+    const rules = deriveValidationRules();
 
-  // Set cache headers (validation rules don't change at runtime)
-  res.set('Cache-Control', 'public, max-age=300'); // 5 minutes
+    // Set cache headers (validation rules don't change at runtime)
+    res.set("Cache-Control", "public, max-age=300"); // 5 minutes
 
-  return ResponseFormatter.success(res, rules, {
-    message: 'Validation rules derived from metadata',
-  });
-}));
+    return ResponseFormatter.success(res, rules, {
+      message: "Validation rules derived from metadata",
+    });
+  }),
+);
 
 /**
  * @openapi
@@ -255,40 +273,52 @@ router.get('/validation-rules', authenticateToken, asyncHandler(async (req, res)
  *       404:
  *         description: Operation not found
  */
-router.get('/validation-rules/:operationName', authenticateToken, asyncHandler(async (req, res) => {
-  const { operationName } = req.params;
-  const composite = getCompositeValidation(operationName);
+router.get(
+  "/validation-rules/:operationName",
+  authenticateToken,
+  asyncHandler(async (req, res) => {
+    const { operationName } = req.params;
+    const composite = getCompositeValidation(operationName);
 
-  if (!composite) {
-    throw new AppError(`Validation operation '${operationName}' not found`, 404, 'NOT_FOUND');
-  }
-
-  // Get field definitions for this operation
-  const rules = deriveValidationRules();
-  const fieldDefs = {};
-
-  // Include required fields
-  composite.requiredFields?.forEach(fieldName => {
-    if (rules.fields[fieldName]) {
-      fieldDefs[fieldName] = { ...rules.fields[fieldName], required: true };
+    if (!composite) {
+      throw new AppError(
+        `Validation operation '${operationName}' not found`,
+        404,
+        "NOT_FOUND",
+      );
     }
-  });
 
-  // Include optional fields
-  composite.optionalFields?.forEach(fieldName => {
-    if (rules.fields[fieldName]) {
-      fieldDefs[fieldName] = { ...rules.fields[fieldName], required: false };
-    }
-  });
+    // Get field definitions for this operation
+    const rules = deriveValidationRules();
+    const fieldDefs = {};
 
-  return ResponseFormatter.success(res, {
-    operationName,
-    entityName: composite.entityName,
-    description: composite.description,
-    fields: fieldDefs,
-  }, {
-    message: `Validation rules for ${operationName}`,
-  });
-}));
+    // Include required fields
+    composite.requiredFields?.forEach((fieldName) => {
+      if (rules.fields[fieldName]) {
+        fieldDefs[fieldName] = { ...rules.fields[fieldName], required: true };
+      }
+    });
+
+    // Include optional fields
+    composite.optionalFields?.forEach((fieldName) => {
+      if (rules.fields[fieldName]) {
+        fieldDefs[fieldName] = { ...rules.fields[fieldName], required: false };
+      }
+    });
+
+    return ResponseFormatter.success(
+      res,
+      {
+        operationName,
+        entityName: composite.entityName,
+        description: composite.description,
+        fields: fieldDefs,
+      },
+      {
+        message: `Validation rules for ${operationName}`,
+      },
+    );
+  }),
+);
 
 module.exports = router;

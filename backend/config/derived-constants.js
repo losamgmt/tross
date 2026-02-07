@@ -14,7 +14,7 @@
  * - constants.js: Re-exports everything for convenience
  */
 
-const { NAME_TYPES } = require('./entity-types');
+const { NAME_TYPES } = require("./entity-types");
 
 // Lazy-load to avoid circular dependencies at module load time
 let _nameTypeMap = null;
@@ -27,7 +27,7 @@ let _allMetadata = null;
 function getAllMetadata() {
   if (!_allMetadata) {
     // Require here to avoid circular dependency at module load time
-    _allMetadata = require('./models');
+    _allMetadata = require("./models");
   }
   return _allMetadata;
 }
@@ -348,14 +348,14 @@ function getAuditAction(entityName, operation) {
  * These are entities with full CRUD API exposure
  */
 const SWAGGER_ENTITY_NAMES = [
-  'user',
-  'role',
-  'customer',
-  'technician',
-  'work_order',
-  'invoice',
-  'contract',
-  'inventory',
+  "user",
+  "role",
+  "customer",
+  "technician",
+  "work_order",
+  "invoice",
+  "contract",
+  "inventory",
 ];
 
 // Lazy cache for swagger entity configs
@@ -369,17 +369,17 @@ let _swaggerEntityConfigs = null;
  */
 function toSwaggerDisplayName(entityName) {
   // Split on underscores, capitalize each word
-  const words = entityName.split('_').map(
-    (word) => word.charAt(0).toUpperCase() + word.slice(1),
-  );
+  const words = entityName
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1));
   // Join with space and add 's' for plural (handle 'inventory' specially)
-  const joined = words.join(' ');
+  const joined = words.join(" ");
   // Inventory is already plural-ish, use "Inventory Items" for clarity
-  if (entityName === 'inventory') {
-    return 'Inventory Items';
+  if (entityName === "inventory") {
+    return "Inventory Items";
   }
   // Most entities just add 's'
-  return joined + 's';
+  return joined + "s";
 }
 
 /**
@@ -389,9 +389,10 @@ function toSwaggerDisplayName(entityName) {
  * @returns {string} Schema reference name
  */
 function toSwaggerSchemaRef(entityName) {
-  return entityName.split('_').map(
-    (word) => word.charAt(0).toUpperCase() + word.slice(1),
-  ).join('_');
+  return entityName
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join("_");
 }
 
 /**
@@ -457,14 +458,14 @@ function metadataFieldToOpenAPI(field) {
   const base = {};
 
   switch (field.type) {
-    case 'integer':
-    case 'foreignKey':
-      base.type = 'integer';
+    case "integer":
+    case "foreignKey":
+      base.type = "integer";
       break;
 
-    case 'string':
-    case 'text':
-      base.type = 'string';
+    case "string":
+    case "text":
+      base.type = "string";
       if (field.maxLength) {
         base.maxLength = field.maxLength;
       }
@@ -473,47 +474,47 @@ function metadataFieldToOpenAPI(field) {
       }
       break;
 
-    case 'email':
-      base.type = 'string';
-      base.format = 'email';
+    case "email":
+      base.type = "string";
+      base.format = "email";
       break;
 
-    case 'boolean':
-      base.type = 'boolean';
+    case "boolean":
+      base.type = "boolean";
       break;
 
-    case 'enum':
-      base.type = 'string';
+    case "enum":
+      base.type = "string";
       if (field.values && field.values.length > 0) {
         base.enum = [...field.values]; // Clone to avoid mutation
       }
       break;
 
-    case 'timestamp':
-    case 'datetime':
-      base.type = 'string';
-      base.format = 'date-time';
+    case "timestamp":
+    case "datetime":
+      base.type = "string";
+      base.format = "date-time";
       break;
 
-    case 'date':
-      base.type = 'string';
-      base.format = 'date';
+    case "date":
+      base.type = "string";
+      base.format = "date";
       break;
 
-    case 'decimal':
-    case 'number':
-    case 'money':
-      base.type = 'number';
-      base.format = 'decimal';
+    case "decimal":
+    case "number":
+    case "money":
+      base.type = "number";
+      base.format = "decimal";
       break;
 
-    case 'json':
-    case 'array':
-      base.type = 'object';
+    case "json":
+    case "array":
+      base.type = "object";
       break;
 
     default:
-      base.type = 'string'; // Safe default
+      base.type = "string"; // Safe default
   }
 
   // Add description if available
@@ -558,7 +559,7 @@ function buildEntitySchema(entityName, entityMetadata) {
   }
 
   const schema = {
-    type: 'object',
+    type: "object",
     properties,
   };
 

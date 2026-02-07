@@ -6,8 +6,8 @@
  * This file focuses on: headers, input sanitization, and general security.
  */
 
-const helmet = require('helmet');
-const { SECURITY } = require('../config/constants');
+const helmet = require("helmet");
+const { SECURITY } = require("../config/constants");
 
 /**
  * Input sanitization middleware
@@ -16,22 +16,22 @@ const { SECURITY } = require('../config/constants');
 const sanitizeInput = () => {
   return (req, res, next) => {
     // Fields that should NOT be sanitized (contain dots by design)
-    const EXCLUDED_FIELDS = ['id_token', 'access_token', 'refresh_token'];
+    const EXCLUDED_FIELDS = ["id_token", "access_token", "refresh_token"];
 
     // Manual sanitization to avoid the read-only property issue
-    const sanitizeObject = (obj, _parentKey = '') => {
-      if (obj && typeof obj === 'object') {
+    const sanitizeObject = (obj, _parentKey = "") => {
+      if (obj && typeof obj === "object") {
         Object.keys(obj).forEach((key) => {
           // Skip sanitization for JWT tokens and email fields
-          if (EXCLUDED_FIELDS.includes(key) || key === 'email') {
+          if (EXCLUDED_FIELDS.includes(key) || key === "email") {
             return; // Don't sanitize JWT tokens or emails!
           }
 
-          if (typeof obj[key] === 'string') {
+          if (typeof obj[key] === "string") {
             // Remove MongoDB operators (we use PostgreSQL but this prevents injection attempts)
             // Only replace leading $ signs, not dots in general text
-            obj[key] = obj[key].replace(/^\$/, '_');
-          } else if (typeof obj[key] === 'object') {
+            obj[key] = obj[key].replace(/^\$/, "_");
+          } else if (typeof obj[key] === "object") {
             sanitizeObject(obj[key], key);
           }
         });
@@ -55,19 +55,21 @@ const sanitizeInput = () => {
  * Environment-aware: Stricter policies in production, relaxed for Flutter development
  */
 const securityHeaders = () => {
-  const isDevelopment = process.env.NODE_ENV !== 'production';
+  const isDevelopment = process.env.NODE_ENV !== "production";
   // In production, these MUST be set via environment variables
   const cdnDomain = process.env.CDN_DOMAIN;
   const apiDomain = process.env.API_DOMAIN;
 
   // Build production image sources (filter out undefined)
-  const prodImgSrc = [SECURITY.HEADERS.CSP_SELF, 'data:', cdnDomain].filter(Boolean);
+  const prodImgSrc = [SECURITY.HEADERS.CSP_SELF, "data:", cdnDomain].filter(
+    Boolean,
+  );
 
   // Build production connect sources (filter out undefined)
   const prodConnectSrc = [
     SECURITY.HEADERS.CSP_SELF,
     apiDomain,
-    'https://*.auth0.com',
+    "https://*.auth0.com",
   ].filter(Boolean);
 
   return helmet({
@@ -81,11 +83,11 @@ const securityHeaders = () => {
         scriptSrc: [SECURITY.HEADERS.CSP_SELF],
         // Allow all HTTPS images in dev (Flutter hot reload), restrict to CDN in production
         imgSrc: isDevelopment
-          ? [SECURITY.HEADERS.CSP_SELF, 'data:', 'https:']
+          ? [SECURITY.HEADERS.CSP_SELF, "data:", "https:"]
           : prodImgSrc,
         // Allow all connections in dev, restrict to API domain in production
         connectSrc: isDevelopment
-          ? [SECURITY.HEADERS.CSP_SELF, '*']
+          ? [SECURITY.HEADERS.CSP_SELF, "*"]
           : prodConnectSrc,
         fontSrc: [SECURITY.HEADERS.CSP_SELF],
         objectSrc: [SECURITY.HEADERS.CSP_NONE],

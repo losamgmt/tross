@@ -7,6 +7,10 @@
 /// - Touch devices: Haptic feedback on selection
 /// - All devices: Route-based active state
 ///
+/// Supports section headers with children:
+/// - Items with children but no route open AdaptiveNavMenu picker
+/// - Allows entity section navigation on mobile
+///
 /// Usage:
 /// ```dart
 /// MobileNavBar(
@@ -19,7 +23,9 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import '../../../config/platform_utilities.dart';
+import '../menus/adaptive_nav_menu.dart';
 import '../../organisms/navigation/nav_menu_item.dart';
 
 /// Bottom navigation bar for mobile/compact screens
@@ -61,6 +67,12 @@ class MobileNavBar extends StatelessWidget {
   });
 
   /// Build from NavMenuItems, filtering to max 5 with icons
+  ///
+  /// Handles two types of items:
+  /// 1. **Direct route items**: Items with both icon and route
+  /// 2. **Section headers with children**: Items with icon and children but no route
+  ///    - Opens AdaptiveNavMenu picker showing child items
+  ///    - Allows entity navigation on mobile
   factory MobileNavBar.fromItems({
     Key? key,
     required List<NavMenuItem> allItems,
@@ -68,11 +80,50 @@ class MobileNavBar extends StatelessWidget {
     void Function(NavMenuItem item)? onItemTap,
     int maxItems = 5,
   }) {
-    // Filter to items that have icons and routes (required for bottom nav)
-    final validItems = allItems
-        .where((item) => item.icon != null && item.route != null)
-        .take(maxItems)
-        .toList();
+    final validItems = <NavMenuItem>[];
+
+    for (final item in allItems) {
+      if (validItems.length >= maxItems) break;
+
+      // Skip items without icons (required for bottom nav)
+      if (item.icon == null) continue;
+
+      // Type 1: Direct route items
+      if (item.route != null) {
+        validItems.add(item);
+        continue;
+      }
+
+      // Type 2: Section headers with children (e.g., Entities)
+      // Create a nav item that opens a picker with children
+      if (item.children != null && item.children!.isNotEmpty) {
+        // Filter children to only those with routes
+        final navigableChildren = item.children!
+            .where((child) => child.route != null)
+            .toList();
+
+        if (navigableChildren.isEmpty) continue;
+
+        // Create item with onTap that shows picker
+        validItems.add(
+          item.copyWith(
+            onTap: (context) async {
+              final selected = await AdaptiveNavMenu.show(
+                context: context,
+                items: navigableChildren,
+                title: item.label,
+              );
+
+              if (selected != null &&
+                  selected.route != null &&
+                  context.mounted) {
+                context.go(selected.route!);
+              }
+            },
+          ),
+        );
+      }
+    }
 
     return MobileNavBar(
       key: key,
@@ -136,10 +187,26 @@ class MobileNavBar extends StatelessWidget {
   }
 
   bool _isItemSelected(NavMenuItem item) {
-    if (item.route == null) return false;
-    // Exact match or starts with (for nested routes)
-    return currentRoute == item.route ||
-        currentRoute.startsWith('${item.route}/');
+    // Direct route match
+    if (item.route != null) {
+      // Exact match or starts with (for nested routes)
+      return currentRoute == item.route ||
+          currentRoute.startsWith('${item.route}/');
+    }
+
+    // For items with children, check if any child route matches
+    if (item.children != null) {
+      for (final child in item.children!) {
+        if (child.route != null) {
+          if (currentRoute == child.route ||
+              currentRoute.startsWith('${child.route}/')) {
+            return true;
+          }
+        }
+      }
+    }
+
+    return false;
   }
 
   void _handleTap(BuildContext context, int index) {

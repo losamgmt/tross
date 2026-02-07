@@ -34,7 +34,7 @@ const {
   SUPPORTED_COUNTRIES,
   DEFAULT_COUNTRY,
   ALL_SUBDIVISIONS,
-} = require('./geo-standards');
+} = require("./geo-standards");
 
 // ============================================================================
 // STANDARD SINGLE-FIELD DEFINITIONS
@@ -54,7 +54,7 @@ const FIELD = Object.freeze({
    * - Trimmed and lowercased by data-hygiene
    */
   EMAIL: Object.freeze({
-    type: 'email',
+    type: "email",
     maxLength: 255,
   }),
 
@@ -65,7 +65,7 @@ const FIELD = Object.freeze({
    * - Trimmed by data-hygiene
    */
   PHONE: Object.freeze({
-    type: 'phone',
+    type: "phone",
     maxLength: 50,
   }),
 
@@ -77,7 +77,7 @@ const FIELD = Object.freeze({
    * - No pattern restriction (allows international Unicode names)
    */
   FIRST_NAME: Object.freeze({
-    type: 'string',
+    type: "string",
     maxLength: 100,
   }),
 
@@ -87,7 +87,7 @@ const FIELD = Object.freeze({
    * - No pattern restriction (allows international Unicode names)
    */
   LAST_NAME: Object.freeze({
-    type: 'string',
+    type: "string",
     maxLength: 100,
   }),
 
@@ -98,7 +98,7 @@ const FIELD = Object.freeze({
    * - Max length: 255
    */
   NAME: Object.freeze({
-    type: 'string',
+    type: "string",
     maxLength: 255,
   }),
 
@@ -107,7 +107,7 @@ const FIELD = Object.freeze({
    * - Max length: 255
    */
   SUMMARY: Object.freeze({
-    type: 'string',
+    type: "string",
     maxLength: 255,
   }),
 
@@ -116,7 +116,7 @@ const FIELD = Object.freeze({
    * - Max length: 5000
    */
   DESCRIPTION: Object.freeze({
-    type: 'text',
+    type: "text",
     maxLength: 5000,
   }),
 
@@ -127,7 +127,7 @@ const FIELD = Object.freeze({
    * - Max length: 150
    */
   TITLE: Object.freeze({
-    type: 'string',
+    type: "string",
     maxLength: 150,
   }),
 
@@ -136,7 +136,7 @@ const FIELD = Object.freeze({
    * - Max length: 10000
    */
   NOTES: Object.freeze({
-    type: 'text',
+    type: "text",
     maxLength: 10000,
   }),
 
@@ -145,7 +145,7 @@ const FIELD = Object.freeze({
    * - Max length: 50000
    */
   TERMS: Object.freeze({
-    type: 'text',
+    type: "text",
     maxLength: 50000,
   }),
 
@@ -157,7 +157,7 @@ const FIELD = Object.freeze({
    * - Typically immutable and unique
    */
   IDENTIFIER: Object.freeze({
-    type: 'string',
+    type: "string",
     maxLength: 100,
   }),
 
@@ -167,7 +167,7 @@ const FIELD = Object.freeze({
    * - Typically immutable and unique
    */
   SKU: Object.freeze({
-    type: 'string',
+    type: "string",
     maxLength: 50,
   }),
 
@@ -179,7 +179,7 @@ const FIELD = Object.freeze({
    * - Minimum 0 (no negative amounts)
    */
   CURRENCY: Object.freeze({
-    type: 'currency',
+    type: "currency",
     precision: 2,
     min: 0,
   }),
@@ -191,7 +191,7 @@ const FIELD = Object.freeze({
    * - Max length: 2048 (browser URL limit)
    */
   URL: Object.freeze({
-    type: 'url',
+    type: "url",
     maxLength: 2048,
   }),
 
@@ -203,7 +203,7 @@ const FIELD = Object.freeze({
    * Address line 1 (street address)
    */
   ADDRESS_LINE1: Object.freeze({
-    type: 'string',
+    type: "string",
     maxLength: 255,
   }),
 
@@ -211,7 +211,7 @@ const FIELD = Object.freeze({
    * Address line 2 (apt, suite, unit)
    */
   ADDRESS_LINE2: Object.freeze({
-    type: 'string',
+    type: "string",
     maxLength: 255,
   }),
 
@@ -219,7 +219,7 @@ const FIELD = Object.freeze({
    * City name
    */
   ADDRESS_CITY: Object.freeze({
-    type: 'string',
+    type: "string",
     maxLength: 100,
   }),
 
@@ -228,7 +228,7 @@ const FIELD = Object.freeze({
    * Enum-validated against ALL_SUBDIVISIONS
    */
   ADDRESS_STATE: Object.freeze({
-    type: 'enum',
+    type: "enum",
     values: ALL_SUBDIVISIONS,
   }),
 
@@ -237,7 +237,7 @@ const FIELD = Object.freeze({
    * String type (not integer - preserves leading zeros)
    */
   ADDRESS_POSTAL_CODE: Object.freeze({
-    type: 'string',
+    type: "string",
     maxLength: 20,
   }),
 
@@ -246,7 +246,7 @@ const FIELD = Object.freeze({
    * Defaults to 'US'
    */
   ADDRESS_COUNTRY: Object.freeze({
-    type: 'enum',
+    type: "enum",
     values: SUPPORTED_COUNTRIES,
     default: DEFAULT_COUNTRY,
   }),
@@ -261,12 +261,12 @@ const FIELD = Object.freeze({
  * This order is used for form rendering
  */
 const ADDRESS_SUFFIXES = Object.freeze([
-  'line1',
-  'line2',
-  'city',
-  'state',
-  'postal_code',
-  'country',
+  "line1",
+  "line2",
+  "city",
+  "state",
+  "postal_code",
+  "country",
 ]);
 
 /**
@@ -350,13 +350,13 @@ function createAddressFields(prefix, options = {}) {
  * }
  */
 function createAddressFieldAccess(prefix, minRole, options = {}) {
-  const { readRole = 'customer', updateRole = minRole } = options;
+  const { readRole = "customer", updateRole = minRole } = options;
 
   const accessDef = Object.freeze({
     create: minRole,
     read: readRole,
     update: updateRole,
-    delete: 'none',
+    delete: "none",
   });
 
   return ADDRESS_SUFFIXES.reduce((acc, suffix) => {
@@ -378,7 +378,7 @@ function createAddressFieldAccess(prefix, minRole, options = {}) {
  * //  'location_state', 'location_postal_code', 'location_country']
  */
 function getAddressFieldNames(prefix) {
-  return ADDRESS_SUFFIXES.map(suffix => `${prefix}_${suffix}`);
+  return ADDRESS_SUFFIXES.map((suffix) => `${prefix}_${suffix}`);
 }
 
 /**
@@ -409,7 +409,7 @@ function getAddressPrefix(fieldName) {
  */
 function hasCompleteAddress(fieldNames, prefix) {
   const required = getAddressFieldNames(prefix);
-  return required.every(name => fieldNames.includes(name));
+  return required.every((name) => fieldNames.includes(name));
 }
 
 // ============================================================================

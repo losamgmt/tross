@@ -23,14 +23,14 @@ PlatformUtilities.adaptive(pointer: 8, touch: 48)
 
 ### Platform Detection
 
-| Property | Description |
-|----------|-------------|
-| `isWeb` | Running in browser |
-| `isIOS` | Native iOS app |
-| `isAndroid` | Native Android app |
-| `isMobile` | iOS or Android native |
-| `isDesktop` | Windows, macOS, or Linux |
-| `isTouchDevice` | Touch-primary (mobile native) |
+| Property          | Description                   |
+| ----------------- | ----------------------------- |
+| `isWeb`           | Running in browser            |
+| `isIOS`           | Native iOS app                |
+| `isAndroid`       | Native Android app            |
+| `isMobile`        | iOS or Android native         |
+| `isDesktop`       | Windows, macOS, or Linux      |
+| `isTouchDevice`   | Touch-primary (mobile native) |
 | `isPointerDevice` | Pointer-primary (web/desktop) |
 
 ### Adaptive Helpers
@@ -189,6 +189,7 @@ AdaptiveShell(
 ```
 
 Layout behavior:
+
 - **Compact (< 900dp)**: Hamburger menu + bottom nav
 - **Expanded (>= 900dp)**: Persistent sidebar
 
@@ -211,6 +212,7 @@ AppDataTable<User>(
 ### Platform-Aware Resize Handles
 
 Column resize handles adapt:
+
 - **Touch**: 48dp drag area with haptic feedback
 - **Pointer**: 8dp area with cursor feedback
 

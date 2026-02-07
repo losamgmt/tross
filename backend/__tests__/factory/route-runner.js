@@ -12,9 +12,9 @@
  *   runAllRouteTests({ app, db });
  */
 
-const routeRegistry = require('./route-registry');
-const routeScenarios = require('./scenarios/route.scenarios');
-const { buildTestContext } = require('./data/test-context');
+const routeRegistry = require("./route-registry");
+const routeScenarios = require("./scenarios/route.scenarios");
+const { buildTestContext } = require("./data/test-context");
 
 /**
  * Run all test scenarios for a route
@@ -30,12 +30,16 @@ function runRouteTests(routeName, options = {}) {
   const routeMeta = routeRegistry[routeName];
 
   if (!routeMeta) {
-    throw new Error(`Unknown route: ${routeName}. Available: ${Object.keys(routeRegistry).join(', ')}`);
+    throw new Error(
+      `Unknown route: ${routeName}. Available: ${Object.keys(routeRegistry).join(", ")}`,
+    );
   }
 
   // Skip dynamic routes (tested via entity runner)
   if (routeMeta.isDynamic) {
-    console.log(`Skipping dynamic route: ${routeName} (use entity runner instead)`);
+    console.log(
+      `Skipping dynamic route: ${routeName} (use entity runner instead)`,
+    );
     return;
   }
 
@@ -47,7 +51,7 @@ function runRouteTests(routeName, options = {}) {
 
     beforeAll(async () => {
       if (!options.app || !options.db) {
-        throw new Error('runRouteTests requires options.app and options.db');
+        throw new Error("runRouteTests requires options.app and options.db");
       }
       ctx = buildTestContext(options.app, options.db);
     });

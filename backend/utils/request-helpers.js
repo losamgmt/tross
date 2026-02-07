@@ -17,7 +17,7 @@
  * @returns {string} Client IP address
  */
 function getClientIp(req) {
-  return req.ip || req.connection?.remoteAddress || 'unknown';
+  return req.ip || req.connection?.remoteAddress || "unknown";
 }
 
 /**
@@ -27,7 +27,7 @@ function getClientIp(req) {
  * @returns {string|undefined} User agent string, or undefined if not present
  */
 function getUserAgent(req) {
-  return req.headers['user-agent'];
+  return req.headers["user-agent"];
 }
 
 module.exports = {

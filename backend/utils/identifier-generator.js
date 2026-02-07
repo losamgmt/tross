@@ -12,17 +12,17 @@
  * @module utils/identifier-generator
  */
 
-'use strict';
+"use strict";
 
-const db = require('../db/connection');
-const { sanitizeIdentifier } = require('./sql-safety');
-const AppError = require('./app-error');
+const db = require("../db/connection");
+const { sanitizeIdentifier } = require("./sql-safety");
+const AppError = require("./app-error");
 const {
   getIdentifierFields,
   getEntityPrefix,
   getIdentifierField,
   getTableName,
-} = require('../config/derived-constants');
+} = require("../config/derived-constants");
 
 /**
  * Format identifier components into the standard format
@@ -33,7 +33,7 @@ const {
  * @returns {string} Formatted identifier (PREFIX-YYYY-NNNN)
  */
 function formatIdentifier(prefix, year, sequence) {
-  const paddedSequence = String(sequence).padStart(4, '0');
+  const paddedSequence = String(sequence).padStart(4, "0");
   return `${prefix}-${year}-${paddedSequence}`;
 }
 
@@ -57,15 +57,19 @@ async function generateIdentifier(entityType) {
   const tableName = getTableName(entityType);
 
   if (!prefix || !tableName || !identifierField) {
-    throw new AppError(`Unknown entity type: ${entityType}`, 400, 'BAD_REQUEST');
+    throw new AppError(
+      `Unknown entity type: ${entityType}`,
+      400,
+      "BAD_REQUEST",
+    );
   }
 
   const year = new Date().getFullYear();
   const yearPrefix = `${prefix}-${year}-`;
 
   // SECURITY: Defense-in-depth validation even for config-sourced values
-  const safeTable = sanitizeIdentifier(tableName, 'table name');
-  const safeField = sanitizeIdentifier(identifierField, 'identifier field');
+  const safeTable = sanitizeIdentifier(tableName, "table name");
+  const safeField = sanitizeIdentifier(identifierField, "identifier field");
 
   // Find the highest sequence number for this year using raw pg
   const result = await db.query(
@@ -80,7 +84,7 @@ async function generateIdentifier(entityType) {
 
   if (result.rows.length > 0 && result.rows[0][identifierField]) {
     const existingId = result.rows[0][identifierField];
-    const sequencePart = existingId.replace(yearPrefix, '');
+    const sequencePart = existingId.replace(yearPrefix, "");
     const existingSequence = parseInt(sequencePart, 10);
 
     if (!isNaN(existingSequence)) {

@@ -1,11 +1,8 @@
-const { query: db } = require('../db/connection');
-const { logger } = require('../config/logger');
-const {
-  AuditActions,
-  AuditResults,
-} = require('./audit-constants');
-const { toSafeUserId, toSafeInteger } = require('../validators/type-coercion');
-const AppError = require('../utils/app-error');
+const { query: db } = require("../db/connection");
+const { logger } = require("../config/logger");
+const { AuditActions, AuditResults } = require("./audit-constants");
+const { toSafeUserId, toSafeInteger } = require("../validators/type-coercion");
+const AppError = require("../utils/app-error");
 
 /**
  * AuditService - Comprehensive audit logging for security and compliance
@@ -66,7 +63,7 @@ class AuditService {
       // CRITICAL FIX: Safely coerce userId to integer or null
       // Dev tokens provide string auth0_id which doesn't map to database ID
       // This prevents "invalid input syntax for type integer" PostgreSQL errors
-      const safeUserId = toSafeUserId(userId, 'userId');
+      const safeUserId = toSafeUserId(userId, "userId");
 
       await db(
         `INSERT INTO audit_logs 
@@ -88,7 +85,7 @@ class AuditService {
       );
 
       // Also log to application logger for real-time monitoring
-      logger.info('Audit event', {
+      logger.info("Audit event", {
         userId: safeUserId,
         originalUserId: userId !== safeUserId ? userId : undefined, // Track coercion
         action,
@@ -100,25 +97,28 @@ class AuditService {
     } catch (error) {
       // Don't throw - audit logging should never break the application
       // But DO ensure the event is captured for security review
-      logger.error('CRITICAL: Audit log write failed - event captured in logs', {
-        error: error.message,
-        // Capture full audit event in error log as fallback
-        auditEvent: {
-          userId,
-          action,
-          resourceType,
-          resourceId,
-          result,
-          ipAddress,
-          timestamp: new Date().toISOString(),
+      logger.error(
+        "CRITICAL: Audit log write failed - event captured in logs",
+        {
+          error: error.message,
+          // Capture full audit event in error log as fallback
+          auditEvent: {
+            userId,
+            action,
+            resourceType,
+            resourceId,
+            result,
+            ipAddress,
+            timestamp: new Date().toISOString(),
+          },
+          stack: error.stack,
         },
-        stack: error.stack,
-      });
+      );
 
       // Emit event for monitoring systems to detect audit failures
       // In production, this should trigger alerts
-      if (typeof process.emit === 'function') {
-        process.emit('audit:failure', {
+      if (typeof process.emit === "function") {
+        process.emit("audit:failure", {
           error: error.message,
           action,
           resourceType,
@@ -138,11 +138,11 @@ class AuditService {
   static async getUserAuditTrail(userId, limit = 100) {
     try {
       // TYPE SAFETY: Validate userId and limit before query
-      const safeUserId = toSafeInteger(userId, 'userId', {
+      const safeUserId = toSafeInteger(userId, "userId", {
         min: 1,
         allowNull: false,
       });
-      const safeLimit = toSafeInteger(limit, 'limit', {
+      const safeLimit = toSafeInteger(limit, "limit", {
         min: 1,
         max: 1000,
         allowNull: false,
@@ -158,7 +158,7 @@ class AuditService {
 
       return result.rows;
     } catch (error) {
-      logger.error('Error fetching user audit trail', {
+      logger.error("Error fetching user audit trail", {
         error: error.message,
         userId,
       });
@@ -185,7 +185,7 @@ class AuditService {
 
       return result.rows;
     } catch (error) {
-      logger.error('Error fetching security events', { error: error.message });
+      logger.error("Error fetching security events", { error: error.message });
       throw error;
     }
   }
@@ -200,18 +200,22 @@ class AuditService {
    * @param {string} options.actionFilter - Filter by action type ('data' or 'auth')
    * @returns {Promise<{logs: Array, total: number}>}
    */
-  static async getAllRecentLogs({ limit = 100, offset = 0, actionFilter = null } = {}) {
+  static async getAllRecentLogs({
+    limit = 100,
+    offset = 0,
+    actionFilter = null,
+  } = {}) {
     try {
       const safeLimit = Math.min(Math.max(1, parseInt(limit) || 100), 500);
       const safeOffset = Math.max(0, parseInt(offset) || 0);
 
       // Build WHERE clause based on filter
-      let whereClause = '';
+      let whereClause = "";
       const params = [];
 
-      if (actionFilter === 'auth') {
+      if (actionFilter === "auth") {
         // Auth events: login, logout, token, session management
-        whereClause = 'WHERE action IN ($1, $2, $3, $4, $5, $6, $7, $8)';
+        whereClause = "WHERE action IN ($1, $2, $3, $4, $5, $6, $7, $8)";
         params.push(
           AuditActions.LOGIN,
           AuditActions.LOGIN_FAILED,
@@ -222,9 +226,9 @@ class AuditService {
           AuditActions.PASSWORD_RESET,
           AuditActions.UNAUTHORIZED_ACCESS,
         );
-      } else if (actionFilter === 'data') {
+      } else if (actionFilter === "data") {
         // Data events: all CRUD operations (NOT auth events)
-        whereClause = 'WHERE action NOT IN ($1, $2, $3, $4, $5, $6, $7, $8)';
+        whereClause = "WHERE action NOT IN ($1, $2, $3, $4, $5, $6, $7, $8)";
         params.push(
           AuditActions.LOGIN,
           AuditActions.LOGIN_FAILED,
@@ -266,7 +270,7 @@ class AuditService {
         offset: safeOffset,
       };
     } catch (error) {
-      logger.error('Error fetching all recent logs', { error: error.message });
+      logger.error("Error fetching all recent logs", { error: error.message });
       throw error;
     }
   }
@@ -282,14 +286,18 @@ class AuditService {
   static async getResourceAuditTrail(resourceType, resourceId, limit = 50) {
     try {
       // TYPE SAFETY: Validate inputs before query
-      if (!resourceType || typeof resourceType !== 'string') {
-        throw new AppError('resourceType must be a non-empty string', 400, 'BAD_REQUEST');
+      if (!resourceType || typeof resourceType !== "string") {
+        throw new AppError(
+          "resourceType must be a non-empty string",
+          400,
+          "BAD_REQUEST",
+        );
       }
-      const safeResourceId = toSafeInteger(resourceId, 'resourceId', {
+      const safeResourceId = toSafeInteger(resourceId, "resourceId", {
         min: 1,
         allowNull: false,
       });
-      const safeLimit = toSafeInteger(limit, 'limit', {
+      const safeLimit = toSafeInteger(limit, "limit", {
         min: 1,
         max: 1000,
         allowNull: false,
@@ -305,7 +313,7 @@ class AuditService {
 
       return result.rows;
     } catch (error) {
-      logger.error('Error fetching resource audit trail', {
+      logger.error("Error fetching resource audit trail", {
         error: error.message,
         resourceType,
         resourceId,
@@ -333,7 +341,7 @@ class AuditService {
 
       return parseInt(result.rows[0].count, 10);
     } catch (error) {
-      logger.error('Error checking failed login attempts', {
+      logger.error("Error checking failed login attempts", {
         error: error.message,
         ipAddress,
       });
@@ -357,12 +365,12 @@ class AuditService {
       const count = result.rowCount;
 
       if (count > 0) {
-        logger.info('Old audit logs cleaned up', { count, daysToKeep });
+        logger.info("Old audit logs cleaned up", { count, daysToKeep });
       }
 
       return count;
     } catch (error) {
-      logger.error('Error cleaning up audit logs', { error: error.message });
+      logger.error("Error cleaning up audit logs", { error: error.message });
       throw error;
     }
   }
@@ -397,7 +405,7 @@ class AuditService {
 
       return result.rows[0] || null;
     } catch (error) {
-      logger.error('Error getting creator', {
+      logger.error("Error getting creator", {
         error: error.message,
         resourceType,
         resourceId,
@@ -429,7 +437,7 @@ class AuditService {
 
       return result.rows[0] || null;
     } catch (error) {
-      logger.error('Error getting last editor', {
+      logger.error("Error getting last editor", {
         error: error.message,
         resourceType,
         resourceId,
@@ -485,7 +493,7 @@ class AuditService {
 
       return result.rows[0] || null;
     } catch (error) {
-      logger.error('Error getting deactivator', {
+      logger.error("Error getting deactivator", {
         error: error.message,
         resourceType,
         resourceId,
@@ -516,37 +524,37 @@ class AuditService {
    * Auth-related action types for filtering
    */
   static AUTH_ACTIONS = [
-    'login',
-    'logout',
-    'login_success',
-    'login_failure',
-    'token_refresh',
-    'token_revoked',
-    'session_expired',
-    'password_reset',
-    'password_change',
-    'mfa_challenge',
-    'mfa_success',
-    'mfa_failure',
-    'account_locked',
-    'account_unlocked',
-    'maintenance_enabled',
-    'maintenance_disabled',
+    "login",
+    "logout",
+    "login_success",
+    "login_failure",
+    "token_refresh",
+    "token_revoked",
+    "session_expired",
+    "password_reset",
+    "password_change",
+    "mfa_challenge",
+    "mfa_success",
+    "mfa_failure",
+    "account_locked",
+    "account_unlocked",
+    "maintenance_enabled",
+    "maintenance_disabled",
   ];
 
   /**
    * Data-related action types for filtering
    */
   static DATA_ACTIONS = [
-    'create',
-    'read',
-    'update',
-    'delete',
-    'bulk_create',
-    'bulk_update',
-    'bulk_delete',
-    'import',
-    'export',
+    "create",
+    "read",
+    "update",
+    "delete",
+    "bulk_create",
+    "bulk_update",
+    "bulk_delete",
+    "import",
+    "export",
   ];
 
   /**
@@ -557,10 +565,14 @@ class AuditService {
     return {
       id: row.id,
       userId: row.user_id,
-      user: row.user_email ? {
-        email: row.user_email,
-        fullName: [row.first_name, row.last_name].filter(Boolean).join(' ') || row.user_email,
-      } : null,
+      user: row.user_email
+        ? {
+            email: row.user_email,
+            fullName:
+              [row.first_name, row.last_name].filter(Boolean).join(" ") ||
+              row.user_email,
+          }
+        : null,
       action: row.action,
       resourceType: row.resource_type,
       resourceId: row.resource_id,
@@ -630,9 +642,8 @@ class AuditService {
       )`);
     }
 
-    const whereClause = conditions.length > 0
-      ? `WHERE ${conditions.join(' AND ')}`
-      : '';
+    const whereClause =
+      conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
     // Count query
     const countQuery = `
@@ -687,7 +698,8 @@ class AuditService {
       },
       filters: {
         availableActions: AuditService.DATA_ACTIONS,
-        availableResourceTypes: await AuditService._getDistinctResourceTypes('data'),
+        availableResourceTypes:
+          await AuditService._getDistinctResourceTypes("data"),
       },
     };
   }
@@ -748,9 +760,8 @@ class AuditService {
       )`);
     }
 
-    const whereClause = conditions.length > 0
-      ? `WHERE ${conditions.join(' AND ')}`
-      : '';
+    const whereClause =
+      conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
     // Count query
     const countQuery = `
@@ -803,7 +814,7 @@ class AuditService {
       },
       filters: {
         availableActions: AuditService.AUTH_ACTIONS,
-        availableResults: ['success', 'failure'],
+        availableResults: ["success", "failure"],
       },
     };
   }
@@ -813,7 +824,10 @@ class AuditService {
    * @private
    */
   static async _getDistinctResourceTypes(category) {
-    const actions = category === 'data' ? AuditService.DATA_ACTIONS : AuditService.AUTH_ACTIONS;
+    const actions =
+      category === "data"
+        ? AuditService.DATA_ACTIONS
+        : AuditService.AUTH_ACTIONS;
     const query = `
       SELECT DISTINCT resource_type
       FROM audit_logs
@@ -823,7 +837,7 @@ class AuditService {
     `;
 
     const result = await db(query, [actions]);
-    return result.rows.map(r => r.resource_type);
+    return result.rows.map((r) => r.resource_type);
   }
 
   /**
@@ -831,11 +845,11 @@ class AuditService {
    * @param {string} period - 'day', 'week', 'month'
    * @returns {Promise<Object>} Summary stats
    */
-  static async getLogSummary(period = 'day') {
+  static async getLogSummary(period = "day") {
     const intervals = {
-      day: '24 hours',
-      week: '7 days',
-      month: '30 days',
+      day: "24 hours",
+      week: "7 days",
+      month: "30 days",
     };
 
     const interval = intervals[period] || intervals.day;
@@ -857,7 +871,7 @@ class AuditService {
     return {
       period,
       interval,
-      actions: result.rows.map(row => ({
+      actions: result.rows.map((row) => ({
         action: row.action,
         total: parseInt(row.count, 10),
         success: parseInt(row.success_count, 10),

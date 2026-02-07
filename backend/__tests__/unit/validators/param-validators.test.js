@@ -11,9 +11,9 @@
 const {
   validateIdParam,
   validateIdParams,
-} = require('../../../validators/param-validators');
+} = require("../../../validators/param-validators");
 
-describe('Param Validators', () => {
+describe("Param Validators", () => {
   let req, res, next;
 
   beforeEach(() => {
@@ -30,10 +30,10 @@ describe('Param Validators', () => {
     next = jest.fn();
   });
 
-  describe('validateIdParam', () => {
-    test('should validate valid ID and attach to req.validated', () => {
+  describe("validateIdParam", () => {
+    test("should validate valid ID and attach to req.validated", () => {
       // Arrange
-      req.params.id = '123';
+      req.params.id = "123";
       const middleware = validateIdParam();
 
       // Act
@@ -44,10 +44,10 @@ describe('Param Validators', () => {
       expect(next).toHaveBeenCalled();
     });
 
-    test('should validate custom param name', () => {
+    test("should validate custom param name", () => {
       // Arrange
-      req.params.userId = '456';
-      const middleware = validateIdParam({ paramName: 'userId' });
+      req.params.userId = "456";
+      const middleware = validateIdParam({ paramName: "userId" });
 
       // Act
       middleware(req, res, next);
@@ -57,9 +57,9 @@ describe('Param Validators', () => {
       expect(next).toHaveBeenCalled();
     });
 
-    test('should reject non-numeric ID', () => {
+    test("should reject non-numeric ID", () => {
       // Arrange
-      req.params.id = 'abc';
+      req.params.id = "abc";
       const middleware = validateIdParam();
 
       // Act
@@ -69,18 +69,18 @@ describe('Param Validators', () => {
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          error: 'Bad Request',
+          error: "Bad Request",
           details: expect.arrayContaining([
-            expect.objectContaining({ field: 'id' }),
+            expect.objectContaining({ field: "id" }),
           ]),
         }),
       );
       expect(next).not.toHaveBeenCalled();
     });
 
-    test('should reject ID below minimum', () => {
+    test("should reject ID below minimum", () => {
       // Arrange
-      req.params.id = '0';
+      req.params.id = "0";
       const middleware = validateIdParam({ min: 1 });
 
       // Act
@@ -90,14 +90,14 @@ describe('Param Validators', () => {
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          error: 'Bad Request',
+          error: "Bad Request",
         }),
       );
     });
 
-    test('should reject ID above maximum', () => {
+    test("should reject ID above maximum", () => {
       // Arrange
-      req.params.id = '1000';
+      req.params.id = "1000";
       const middleware = validateIdParam({ max: 999 });
 
       // Act
@@ -107,14 +107,14 @@ describe('Param Validators', () => {
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          error: 'Bad Request',
+          error: "Bad Request",
         }),
       );
     });
 
-    test('should coerce string numbers to integers', () => {
+    test("should coerce string numbers to integers", () => {
       // Arrange
-      req.params.id = '42';
+      req.params.id = "42";
       const middleware = validateIdParam();
 
       // Act
@@ -122,12 +122,12 @@ describe('Param Validators', () => {
 
       // Assert
       expect(req.validated.id).toBe(42);
-      expect(typeof req.validated.id).toBe('number');
+      expect(typeof req.validated.id).toBe("number");
     });
 
-    test('should coerce floating point to integer', () => {
+    test("should coerce floating point to integer", () => {
       // Arrange
-      req.params.id = '12.5';
+      req.params.id = "12.5";
       const middleware = validateIdParam();
 
       // Act
@@ -138,10 +138,10 @@ describe('Param Validators', () => {
       expect(next).toHaveBeenCalled();
     });
 
-    test('should initialize req.validated if not present', () => {
+    test("should initialize req.validated if not present", () => {
       // Arrange
       delete req.validated;
-      req.params.id = '123';
+      req.params.id = "123";
       const middleware = validateIdParam();
 
       // Act
@@ -153,12 +153,12 @@ describe('Param Validators', () => {
     });
   });
 
-  describe('validateIdParams', () => {
-    test('should validate multiple ID parameters', () => {
+  describe("validateIdParams", () => {
+    test("should validate multiple ID parameters", () => {
       // Arrange
-      req.params.userId = '100';
-      req.params.roleId = '200';
-      const middleware = validateIdParams(['userId', 'roleId']);
+      req.params.userId = "100";
+      req.params.roleId = "200";
+      const middleware = validateIdParams(["userId", "roleId"]);
 
       // Act
       middleware(req, res, next);
@@ -169,11 +169,11 @@ describe('Param Validators', () => {
       expect(next).toHaveBeenCalled();
     });
 
-    test('should reject if any parameter is invalid', () => {
+    test("should reject if any parameter is invalid", () => {
       // Arrange
-      req.params.userId = '100';
-      req.params.roleId = 'invalid';
-      const middleware = validateIdParams(['userId', 'roleId']);
+      req.params.userId = "100";
+      req.params.roleId = "invalid";
+      const middleware = validateIdParams(["userId", "roleId"]);
 
       // Act
       middleware(req, res, next);
@@ -182,19 +182,19 @@ describe('Param Validators', () => {
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          error: 'Bad Request',
+          error: "Bad Request",
           details: expect.arrayContaining([
-            expect.objectContaining({ field: 'params' }),
+            expect.objectContaining({ field: "params" }),
           ]),
         }),
       );
       expect(next).not.toHaveBeenCalled();
     });
 
-    test('should validate single parameter in array', () => {
+    test("should validate single parameter in array", () => {
       // Arrange
-      req.params.userId = '300';
-      const middleware = validateIdParams(['userId']);
+      req.params.userId = "300";
+      const middleware = validateIdParams(["userId"]);
 
       // Act
       middleware(req, res, next);
@@ -204,11 +204,11 @@ describe('Param Validators', () => {
       expect(next).toHaveBeenCalled();
     });
 
-    test('should initialize req.validated if not present', () => {
+    test("should initialize req.validated if not present", () => {
       // Arrange
       delete req.validated;
-      req.params.userId = '123';
-      const middleware = validateIdParams(['userId']);
+      req.params.userId = "123";
+      const middleware = validateIdParams(["userId"]);
 
       // Act
       middleware(req, res, next);

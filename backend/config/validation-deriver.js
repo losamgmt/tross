@@ -16,9 +16,9 @@
  * @module config/validation-deriver
  */
 
-const allMetadata = require('./models');
-const { FIELD, ADDRESS_SUFFIXES } = require('./field-type-standards');
-const { ALL_SUBDIVISIONS, SUPPORTED_COUNTRIES } = require('./geo-standards');
+const allMetadata = require("./models");
+const { FIELD, ADDRESS_SUFFIXES } = require("./field-type-standards");
+const { ALL_SUBDIVISIONS, SUPPORTED_COUNTRIES } = require("./geo-standards");
 
 // ============================================================================
 // SHARED FIELD DEFINITIONS (cross-entity fields)
@@ -36,15 +36,15 @@ const SHARED_FIELD_DEFS = {
   // ---- Identity Fields ----
   email: {
     ...FIELD.EMAIL,
-    type: 'string', // Override for Joi (email is validated via format, not type)
-    format: 'email',
+    type: "string", // Override for Joi (email is validated via format, not type)
+    format: "email",
     tldRestriction: false,
     trim: true,
     lowercase: true,
-    pattern: '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z0-9]+$',
+    pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z0-9]+$",
     errorMessages: {
-      required: 'Email is required',
-      format: 'Email must be a valid email address',
+      required: "Email is required",
+      format: "Email must be a valid email address",
       maxLength: `Email cannot exceed ${FIELD.EMAIL.maxLength} characters`,
     },
   },
@@ -56,8 +56,8 @@ const SHARED_FIELD_DEFS = {
     minLength: 1,
     trim: true,
     errorMessages: {
-      required: 'First name is required',
-      minLength: 'First name cannot be empty',
+      required: "First name is required",
+      minLength: "First name cannot be empty",
       maxLength: `First name cannot exceed ${FIELD.FIRST_NAME.maxLength} characters`,
     },
   },
@@ -68,8 +68,8 @@ const SHARED_FIELD_DEFS = {
     minLength: 1,
     trim: true,
     errorMessages: {
-      required: 'Last name is required',
-      minLength: 'Last name cannot be empty',
+      required: "Last name is required",
+      minLength: "Last name cannot be empty",
       maxLength: `Last name cannot exceed ${FIELD.LAST_NAME.maxLength} characters`,
     },
   },
@@ -77,10 +77,10 @@ const SHARED_FIELD_DEFS = {
   // ---- Phone ----
   phone: {
     ...FIELD.PHONE,
-    pattern: '^\\+?[1-9]\\d{1,14}$',
+    pattern: "^\\+?[1-9]\\d{1,14}$",
     trim: true,
     errorMessages: {
-      pattern: 'Phone number must be in international format (E.164)',
+      pattern: "Phone number must be in international format (E.164)",
     },
   },
 
@@ -90,8 +90,8 @@ const SHARED_FIELD_DEFS = {
     minLength: 1,
     trim: true,
     errorMessages: {
-      required: 'Name is required',
-      minLength: 'Name cannot be empty',
+      required: "Name is required",
+      minLength: "Name cannot be empty",
       maxLength: `Name cannot exceed ${FIELD.NAME.maxLength} characters`,
     },
   },
@@ -114,9 +114,9 @@ const SHARED_FIELD_DEFS = {
 
   // ---- Boolean ----
   is_active: {
-    type: 'boolean',
+    type: "boolean",
     errorMessages: {
-      type: 'is_active must be true or false',
+      type: "is_active must be true or false",
     },
   },
 
@@ -141,7 +141,7 @@ function generateAddressFieldValidations(prefix) {
       ...FIELD.ADDRESS_LINE1,
       trim: true,
       errorMessages: {
-        required: 'Street address is required',
+        required: "Street address is required",
         maxLength: `Street address cannot exceed ${FIELD.ADDRESS_LINE1.maxLength} characters`,
       },
     },
@@ -156,15 +156,15 @@ function generateAddressFieldValidations(prefix) {
       ...FIELD.ADDRESS_CITY,
       trim: true,
       errorMessages: {
-        required: 'City is required',
+        required: "City is required",
         maxLength: `City cannot exceed ${FIELD.ADDRESS_CITY.maxLength} characters`,
       },
     },
     [`${prefix}_state`]: {
-      type: 'string',
+      type: "string",
       enum: ALL_SUBDIVISIONS,
       errorMessages: {
-        enum: 'State/Province must be a valid code (e.g., OR, WA, BC)',
+        enum: "State/Province must be a valid code (e.g., OR, WA, BC)",
       },
     },
     [`${prefix}_postal_code`]: {
@@ -175,10 +175,10 @@ function generateAddressFieldValidations(prefix) {
       },
     },
     [`${prefix}_country`]: {
-      type: 'string',
+      type: "string",
       enum: SUPPORTED_COUNTRIES,
       errorMessages: {
-        enum: `Country must be one of: ${SUPPORTED_COUNTRIES.join(', ')}`,
+        enum: `Country must be one of: ${SUPPORTED_COUNTRIES.join(", ")}`,
       },
     },
   };
@@ -204,9 +204,9 @@ function getAddressFieldValidation(fieldName) {
  * Generate error messages for an enum field
  */
 function generateEnumErrorMessages(fieldName, values) {
-  const humanName = fieldName.replace(/_/g, ' ');
+  const humanName = fieldName.replace(/_/g, " ");
   return {
-    enum: `${capitalize(humanName)} must be one of: ${values.join(', ')}`,
+    enum: `${capitalize(humanName)} must be one of: ${values.join(", ")}`,
   };
 }
 
@@ -214,7 +214,7 @@ function generateEnumErrorMessages(fieldName, values) {
  * Generate error messages for a foreign key field
  */
 function generateFkErrorMessages(fieldName) {
-  const humanName = fieldName.replace(/_id$/, '').replace(/_/g, ' ');
+  const humanName = fieldName.replace(/_id$/, "").replace(/_/g, " ");
   return {
     required: `${capitalize(humanName)} is required`,
     type: `${capitalize(humanName)} ID must be an integer`,
@@ -234,9 +234,9 @@ function capitalize(str) {
  */
 function toPascalCase(str) {
   return str
-    .split('_')
+    .split("_")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join('');
+    .join("");
 }
 
 // ============================================================================
@@ -305,15 +305,18 @@ function deriveFieldValidation(fieldName, fieldDef, _entityName) {
   }
 
   // Enum handling
-  if (fieldDef.type === 'enum' && fieldDef.values) {
-    validation.type = 'string';
+  if (fieldDef.type === "enum" && fieldDef.values) {
+    validation.type = "string";
     validation.enum = fieldDef.values;
-    validation.errorMessages = generateEnumErrorMessages(fieldName, fieldDef.values);
+    validation.errorMessages = generateEnumErrorMessages(
+      fieldName,
+      fieldDef.values,
+    );
   }
 
   // Foreign key handling
-  if (fieldDef.type === 'foreignKey') {
-    validation.type = 'integer';
+  if (fieldDef.type === "foreignKey") {
+    validation.type = "integer";
     validation.min = 1;
     validation.max = 2147483647;
     validation.errorMessages = generateFkErrorMessages(fieldName);
@@ -326,7 +329,10 @@ function deriveFieldValidation(fieldName, fieldDef, _entityName) {
 
   // Generate error messages if not already set
   if (!validation.errorMessages) {
-    validation.errorMessages = generateDefaultErrorMessages(fieldName, validation);
+    validation.errorMessages = generateDefaultErrorMessages(
+      fieldName,
+      validation,
+    );
   }
 
   return validation;
@@ -343,45 +349,49 @@ function deriveFieldValidation(fieldName, fieldDef, _entityName) {
 function mapFieldType(metaType) {
   const typeMap = {
     // String-based types
-    string: 'string',
-    text: 'text',
-    email: 'email',
-    phone: 'phone',
-    url: 'url',
-    time: 'time',
+    string: "string",
+    text: "text",
+    email: "email",
+    phone: "phone",
+    url: "url",
+    time: "time",
 
     // Numeric types
-    integer: 'integer',
-    decimal: 'decimal',
-    currency: 'currency', // First-class currency type
-    foreignKey: 'integer',
+    integer: "integer",
+    decimal: "decimal",
+    currency: "currency", // First-class currency type
+    foreignKey: "integer",
 
     // Other types
-    boolean: 'boolean',
-    jsonb: 'object',
-    json: 'object',
+    boolean: "boolean",
+    jsonb: "object",
+    json: "object",
 
     // Date/time types
-    timestamp: 'timestamp',
-    date: 'date',
+    timestamp: "timestamp",
+    date: "date",
 
     // Enum handled specially by caller
-    enum: 'enum',
+    enum: "enum",
   };
-  return typeMap[metaType] || 'string';
+  return typeMap[metaType] || "string";
 }
 
 /**
  * Generate default error messages for a field
  */
 function generateDefaultErrorMessages(fieldName, validation) {
-  const humanName = fieldName.replace(/_/g, ' ');
+  const humanName = fieldName.replace(/_/g, " ");
   const messages = {};
 
   if (validation.required) {
     messages.required = `${capitalize(humanName)} is required`;
   }
-  if (validation.type === 'integer' || validation.type === 'decimal' || validation.type === 'currency') {
+  if (
+    validation.type === "integer" ||
+    validation.type === "decimal" ||
+    validation.type === "currency"
+  ) {
     messages.type = `${capitalize(humanName)} must be a number`;
   }
   if (validation.min !== undefined) {
@@ -462,13 +472,13 @@ function deriveCompositeValidation(entityName, metadata) {
       entityName,
       requiredFields,
       optionalFields,
-      description: `Validation rules for creating a new ${entityName.replace(/_/g, ' ')}`,
+      description: `Validation rules for creating a new ${entityName.replace(/_/g, " ")}`,
     },
     [`update${pascalEntity}`]: {
       entityName,
       requiredFields: [], // All optional for updates
-      optionalFields: [...requiredFields, ...optionalFields, 'is_active'],
-      description: `Validation rules for updating an existing ${entityName.replace(/_/g, ' ')}`,
+      optionalFields: [...requiredFields, ...optionalFields, "is_active"],
+      description: `Validation rules for updating an existing ${entityName.replace(/_/g, " ")}`,
     },
   };
 }
@@ -491,14 +501,15 @@ function deriveValidationRules() {
   }
 
   const rules = {
-    $schema: 'http://json-schema.org/draft-07/schema#',
-    version: '3.0.0',
-    description: 'Validation rules derived from entity metadata - SINGLE SOURCE OF TRUTH',
+    $schema: "http://json-schema.org/draft-07/schema#",
+    version: "3.0.0",
+    description:
+      "Validation rules derived from entity metadata - SINGLE SOURCE OF TRUTH",
     derivedAt: new Date().toISOString(),
     policy: {
       email: {
-        tldValidation: 'permissive',
-        description: 'Accept any TLD format - no fascist restrictions! 🚀',
+        tldValidation: "permissive",
+        description: "Accept any TLD format - no fascist restrictions! 🚀",
       },
     },
     // Global shared field definitions (email, phone, names, etc.)
@@ -514,7 +525,11 @@ function deriveValidationRules() {
     // Store entity-specific field definitions
     rules.entityFields[entityName] = {};
     for (const [fieldName, fieldDef] of Object.entries(fields)) {
-      rules.entityFields[entityName][fieldName] = deriveFieldValidation(fieldName, fieldDef, entityName);
+      rules.entityFields[entityName][fieldName] = deriveFieldValidation(
+        fieldName,
+        fieldDef,
+        entityName,
+      );
     }
 
     // Derive composite validations

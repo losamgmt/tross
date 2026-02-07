@@ -1,12 +1,12 @@
 name: tross
 description: "Tross - Professional work order management system with skills-based matching"
-publish_to: 'none'
+publish_to: "none"
 
 version: 1.0.1+1
 
 environment:
-  sdk: '>=3.10.0 <4.0.0'
-  flutter: '>=3.38.0'
+  sdk: ">=3.10.0 <4.0.0"
+  flutter: ">=3.38.0"
 
 dependencies:
   flutter:
@@ -19,11 +19,11 @@ dependencies:
   auth0_flutter: ^1.14.0
   flutter_secure_storage: ^10.0.0
   url_launcher: ^6.3.0
-  crypto: ^3.0.3  # For SHA256 hashing in PKCE
-  convert: ^3.1.1  # For base64 encoding in PKCE
-  connectivity_plus: ^7.0.0  # Network connectivity detection
-  web: ^1.0.0  # Modern web APIs (replaces dart:html)
-  shared_preferences: ^2.3.3  # Column visibility persistence
+  crypto: ^3.0.3 # For SHA256 hashing in PKCE
+  convert: ^3.1.1 # For base64 encoding in PKCE
+  connectivity_plus: ^7.0.0 # Network connectivity detection
+  web: ^1.0.0 # Modern web APIs (replaces dart:html)
+  shared_preferences: ^2.3.3 # Column visibility persistence
   flutter_adaptive_scaffold: ^0.3.3+1
   go_router: ^17.0.1
   flex_color_scheme: ^8.4.0
@@ -49,7 +49,7 @@ flutter_launcher_icons:
   ios: true
   image_path: "assets/icons/tross-icon-512.png"
   # Android adaptive icon (Android 8+)
-  adaptive_icon_background: "#CD7F32"  # Bronze brand color
+  adaptive_icon_background: "#CD7F32" # Bronze brand color
   adaptive_icon_foreground: "assets/icons/tross-icon-512.png"
   # Remove alpha channel for iOS (required)
   remove_alpha_ios: true
@@ -65,7 +65,7 @@ flutter_launcher_icons:
 # Run: dart run flutter_native_splash:create
 # ============================================================================
 flutter_native_splash:
-  color: "#CD7F32"  # Bronze brand color
+  color: "#CD7F32" # Bronze brand color
   image: "assets/icons/tross-icon-512.png"
   android: true
   ios: true
@@ -79,7 +79,6 @@ flutter_native_splash:
 
 # The following section is specific to Flutter packages.
 flutter:
-
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.

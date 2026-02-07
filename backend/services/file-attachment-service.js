@@ -14,10 +14,10 @@
  * - files.js route: HTTP concerns, permission checks, request/response
  */
 
-const { query: db } = require('../db/connection');
-const { logger } = require('../config/logger');
-const AppError = require('../utils/app-error');
-const allMetadata = require('../config/models');
+const { query: db } = require("../db/connection");
+const { logger } = require("../config/logger");
+const AppError = require("../utils/app-error");
+const allMetadata = require("../config/models");
 
 class FileAttachmentService {
   /**
@@ -61,25 +61,29 @@ class FileAttachmentService {
       // SECURITY FIX: Don't swallow DB connection errors
       // Only return false for "entity not found", not for DB failures
       const isConnectionError =
-        error.code === 'ECONNREFUSED' ||
-        error.code === 'ETIMEDOUT' ||
-        error.code === 'ENOTFOUND' ||
-        error.message?.includes('connection') ||
-        error.message?.includes('timeout');
+        error.code === "ECONNREFUSED" ||
+        error.code === "ETIMEDOUT" ||
+        error.code === "ENOTFOUND" ||
+        error.message?.includes("connection") ||
+        error.message?.includes("timeout");
 
       if (isConnectionError) {
-        logger.error('Database connection error checking entity existence', {
+        logger.error("Database connection error checking entity existence", {
           entityKey,
           entityId,
           error: error.message,
           code: error.code,
         });
         // Re-throw connection errors - caller needs to know DB is down
-        throw new AppError(`Database unavailable: ${error.message}`, 503, 'SERVICE_UNAVAILABLE');
+        throw new AppError(
+          `Database unavailable: ${error.message}`,
+          503,
+          "SERVICE_UNAVAILABLE",
+        );
       }
 
       // For other errors (table doesn't exist, etc.), log and return false
-      logger.warn('Error checking entity existence (non-fatal)', {
+      logger.warn("Error checking entity existence (non-fatal)", {
         entityKey,
         entityId,
         error: error.message,
@@ -96,7 +100,7 @@ class FileAttachmentService {
    */
   static async getActiveFile(id) {
     const result = await db(
-      'SELECT * FROM file_attachments WHERE id = $1 AND is_active = true',
+      "SELECT * FROM file_attachments WHERE id = $1 AND is_active = true",
       [id],
     );
     return result.rows[0] || null;
@@ -121,11 +125,11 @@ class FileAttachmentService {
     const params = [entityType, entityId];
 
     if (options.category) {
-      query += ' AND category = $3';
+      query += " AND category = $3";
       params.push(options.category);
     }
 
-    query += ' ORDER BY created_at DESC';
+    query += " ORDER BY created_at DESC";
 
     const result = await db(query, params);
     return result.rows;
@@ -154,7 +158,7 @@ class FileAttachmentService {
       storageKey,
       mimeType,
       fileSize,
-      category = 'attachment',
+      category = "attachment",
       description = null,
       uploadedBy = null,
     } = data;
@@ -180,7 +184,7 @@ class FileAttachmentService {
 
     const attachment = result.rows[0];
 
-    logger.info('File attachment created', {
+    logger.info("File attachment created", {
       id: attachment.id,
       entityType,
       entityId,
@@ -199,12 +203,12 @@ class FileAttachmentService {
    */
   static async softDelete(id) {
     const result = await db(
-      'UPDATE file_attachments SET is_active = false, updated_at = NOW() WHERE id = $1 RETURNING id',
+      "UPDATE file_attachments SET is_active = false, updated_at = NOW() WHERE id = $1 RETURNING id",
       [id],
     );
 
     if (result.rows.length > 0) {
-      logger.info('File attachment soft-deleted', { id });
+      logger.info("File attachment soft-deleted", { id });
       return true;
     }
 
@@ -224,7 +228,7 @@ class FileAttachmentService {
    */
   static formatForResponse(row, downloadInfo) {
     if (!downloadInfo || !downloadInfo.url || !downloadInfo.expiresAt) {
-      throw new Error('downloadInfo with url and expiresAt is required');
+      throw new Error("downloadInfo with url and expiresAt is required");
     }
 
     return {

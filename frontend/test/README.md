@@ -39,10 +39,10 @@ import '../../helpers/helpers.dart';  // Barrel file for all helpers
 testWidgets('example test', (tester) async {
   // Pump a widget with MaterialApp wrapper
   await tester.pumpTestWidget(MyWidget());
-  
+
   // Pump and wait for animations to settle
   await tester.pumpTestWidgetAndSettle(MyWidget());
-  
+
   // Readable finders
   expect(tester.findText('Hello'), findsOneWidget);
   expect(tester.findWidgetByType<MyButton>(), findsOneWidget);
@@ -109,6 +109,7 @@ expect(result, TestMatchers.isNotEmptyString);
 ### Writing Widget Tests
 
 **✅ DO:**
+
 ```dart
 import 'package:flutter_test/flutter_test.dart';
 import '../../helpers/helpers.dart';  // Barrel file
@@ -124,6 +125,7 @@ void main() {
 ```
 
 **❌ DON'T:**
+
 ```dart
 // Don't manually wrap in MaterialApp every time
 await tester.pumpWidget(
@@ -137,13 +139,14 @@ final storage = FlutterSecureStorage(); // ❌ Requires platform code
 ### Mocking Services
 
 **✅ DO:**
+
 ```dart
 // Use dependency injection
 class MyWidget extends StatelessWidget {
   final MockSecureStorage? storage; // Inject for testing
-  
+
   const MyWidget({this.storage});
-  
+
   @override
   Widget build(BuildContext context) {
     final actualStorage = storage ?? realStorageService;
@@ -159,6 +162,7 @@ testWidgets('test with mock', (tester) async {
 ```
 
 **❌ DON'T:**
+
 ```dart
 // Don't hard-code dependencies
 class MyWidget extends StatelessWidget {
@@ -197,7 +201,7 @@ testWidgets('atom renders correctly', (tester) async {
   await tester.pumpTestWidget(
     MyAtom(text: 'Test'),
   );
-  
+
   expect(tester.findText('Test'), findsOneWidget);
 });
 ```
@@ -207,14 +211,14 @@ testWidgets('atom renders correctly', (tester) async {
 ```dart
 testWidgets('organism uses mock service', (tester) async {
   final mockClient = MockApiClient();
-  mockClient.setResponse('/api/data', 
+  mockClient.setResponse('/api/data',
     response: {'data': []},
   );
-  
+
   await tester.pumpTestWidget(
     MyOrganism(apiClient: mockClient),
   );
-  
+
   await tester.pumpAndSettle();
 });
 ```
@@ -229,14 +233,14 @@ testWidgets('handles async data loading', (tester) async {
         TestConfig.animationDuration,
         () => 'Loaded',
       ),
-      builder: (context, snapshot) => 
+      builder: (context, snapshot) =>
         snapshot.hasData ? Text(snapshot.data!) : CircularProgressIndicator(),
     ),
   );
-  
+
   // Initial state - loading
   expect(find.byType(CircularProgressIndicator), findsOneWidget);
-  
+
   // After data loads
   await tester.pumpAndSettle();
   expect(find.text('Loaded'), findsOneWidget);
@@ -248,28 +252,31 @@ testWidgets('handles async data loading', (tester) async {
 If you have existing tests that use platform dependencies:
 
 1. **Replace platform services with mocks**:
+
    ```dart
    // Old
    final storage = FlutterSecureStorage();
-   
+
    // New
    final storage = MockSecureStorage();
    ```
 
 2. **Use widget tester extensions**:
+
    ```dart
    // Old
    await tester.pumpWidget(MaterialApp(home: Scaffold(body: MyWidget())));
-   
+
    // New
    await tester.pumpTestWidget(MyWidget());
    ```
 
 3. **Use test fixtures for data**:
+
    ```dart
    // Old
    final user = {'id': 1, 'email': 'test@example.com', ...};
-   
+
    // New
    final user = TestData.user(email: 'test@example.com');
    ```

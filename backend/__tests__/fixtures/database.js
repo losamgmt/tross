@@ -1,6 +1,6 @@
 /**
  * Database Query Results Fixtures
- * 
+ *
  * SRP: ONLY provides mock query response DATA
  * Simulates PostgreSQL query result structure
  */

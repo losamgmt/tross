@@ -13,22 +13,22 @@
 const {
   FIELD_ACCESS_LEVELS: FAL,
   UNIVERSAL_FIELD_ACCESS,
-} = require('../constants');
-const { NAME_TYPES } = require('../entity-types');
-const { FIELD } = require('../field-type-standards');
+} = require("../constants");
+const { NAME_TYPES } = require("../entity-types");
+const { FIELD } = require("../field-type-standards");
 
 module.exports = {
   // Entity key (singular, for API params and lookups)
-  entityKey: 'contract',
+  entityKey: "contract",
 
   // Table name in database (plural, also used for API URLs)
-  tableName: 'contracts',
+  tableName: "contracts",
 
   // Primary key
-  primaryKey: 'id',
+  primaryKey: "id",
 
   // Material icon for navigation menus and entity displays
-  icon: 'description',
+  icon: "description",
 
   // ============================================================================
   // ENTITY CATEGORY (determines name handling pattern)
@@ -44,7 +44,7 @@ module.exports = {
    * Display field for UI rendering
    * COMPUTED entities use the identifier field (contract_number)
    */
-  displayField: 'contract_number',
+  displayField: "contract_number",
 
   // ============================================================================
   // IDENTITY CONFIGURATION (Entity Contract v2.0)
@@ -54,13 +54,13 @@ module.exports = {
    * The unique identifier field (auto-generated: CTR-YYYY-NNNN)
    * Used for: Unique references, search results, logging
    */
-  identityField: 'contract_number',
+  identityField: "contract_number",
 
   /**
    * Prefix for auto-generated identifiers (COMPUTED entities only)
    * Format: CTR-YYYY-NNNN
    */
-  identifierPrefix: 'CTR',
+  identifierPrefix: "CTR",
 
   /**
    * Whether the identity field has a UNIQUE constraint in the database
@@ -71,18 +71,18 @@ module.exports = {
    * RLS resource name for permission checks
    * Maps to permissions.json resource names
    */
-  rlsResource: 'contracts',
+  rlsResource: "contracts",
 
   /**
    * Row-Level Security policy per role
    * Customers see own contracts, technicians denied, dispatcher+ see all
    */
   rlsPolicy: {
-    customer: 'own_contracts_only',
-    technician: 'deny_all',
-    dispatcher: 'all_records',
-    manager: 'all_records',
-    admin: 'all_records',
+    customer: "own_contracts_only",
+    technician: "deny_all",
+    dispatcher: "all_records",
+    manager: "all_records",
+    admin: "all_records",
   },
 
   /**
@@ -90,10 +90,10 @@ module.exports = {
    * Contracts require manager+ for CUD operations
    */
   entityPermissions: {
-    create: 'manager',
-    read: 'customer',
-    update: 'manager',
-    delete: 'manager',
+    create: "manager",
+    read: "customer",
+    update: "manager",
+    delete: "manager",
   },
 
   /**
@@ -101,7 +101,7 @@ module.exports = {
    * Separate from read permission because RLS may restrict actual data access
    * Contracts are financial docs - only dispatcher+ should see in nav
    */
-  navVisibility: 'dispatcher',
+  navVisibility: "dispatcher",
 
   /**
    * File attachments - whether this entity supports file uploads
@@ -129,8 +129,8 @@ module.exports = {
    * Template: "{customer.fullName}: {summary}: {contract_number}"
    */
   computedName: {
-    template: '{customer.fullName}: {summary}: {contract_number}',
-    sources: ['customer_id', 'summary', 'contract_number'],
+    template: "{customer.fullName}: {summary}: {contract_number}",
+    sources: ["customer_id", "summary", "contract_number"],
     readOnly: false,
   },
 
@@ -142,19 +142,26 @@ module.exports = {
    * Fields required when creating a new entity
    * contract_number is auto-generated
    */
-  requiredFields: ['customer_id', 'start_date'],
+  requiredFields: ["customer_id", "start_date"],
 
   /**
    * Fields that cannot be modified after creation (beyond universal immutables: id, created_at)
    * - contract_number: Audit trail identity, cannot change
    */
-  immutableFields: ['contract_number'],
+  immutableFields: ["contract_number"],
 
   /**
    * Default columns to display in table views (ordered)
    * Used by admin panel and frontend table widgets
    */
-  displayColumns: ['contract_number', 'customer_id', 'status', 'start_date', 'end_date', 'value'],
+  displayColumns: [
+    "contract_number",
+    "customer_id",
+    "status",
+    "start_date",
+    "end_date",
+    "value",
+  ],
 
   // ============================================================================
   // FIELD-LEVEL ACCESS CONTROL (for field-access-controller.js)
@@ -176,34 +183,34 @@ module.exports = {
 
     // Identity field - auto-generated, immutable
     contract_number: {
-      create: 'none', // Auto-generated
-      read: 'customer',
-      update: 'none', // Immutable
-      delete: 'none',
+      create: "none", // Auto-generated
+      read: "customer",
+      update: "none", // Immutable
+      delete: "none",
     },
 
     // Computed name field (optional user override)
     name: {
-      create: 'manager',
-      read: 'customer',
-      update: 'manager',
-      delete: 'none',
+      create: "manager",
+      read: "customer",
+      update: "manager",
+      delete: "none",
     },
 
     // Brief description of this contract
     summary: {
-      create: 'manager',
-      read: 'customer',
-      update: 'manager',
-      delete: 'none',
+      create: "manager",
+      read: "customer",
+      update: "manager",
+      delete: "none",
     },
 
     // FK to customers - required, set on create
     customer_id: {
-      create: 'manager',
-      read: 'customer',
-      update: 'none', // Cannot reassign contract to different customer
-      delete: 'none',
+      create: "manager",
+      read: "customer",
+      update: "none", // Cannot reassign contract to different customer
+      delete: "none",
     },
 
     // Contract dates - manager+ manages
@@ -230,8 +237,8 @@ module.exports = {
    */
   foreignKeys: {
     customer_id: {
-      table: 'customers',
-      displayName: 'Customer',
+      table: "customers",
+      displayName: "Customer",
     },
   },
 
@@ -244,7 +251,7 @@ module.exports = {
    * These are included automatically without needing to specify 'include' option
    * Contracts almost always need customer info displayed
    */
-  defaultIncludes: ['customer'],
+  defaultIncludes: ["customer"],
 
   /**
    * Foreign key relationships
@@ -253,11 +260,18 @@ module.exports = {
   relationships: {
     // Contract belongs to a customer (required)
     customer: {
-      type: 'belongsTo',
-      foreignKey: 'customer_id',
-      table: 'customers',
-      fields: ['id', 'email', 'first_name', 'last_name', 'organization_name', 'phone'],
-      description: 'Customer this contract is with',
+      type: "belongsTo",
+      foreignKey: "customer_id",
+      table: "customers",
+      fields: [
+        "id",
+        "email",
+        "first_name",
+        "last_name",
+        "organization_name",
+        "phone",
+      ],
+      description: "Customer this contract is with",
     },
   },
 
@@ -273,9 +287,9 @@ module.exports = {
    */
   dependents: [
     {
-      table: 'audit_logs',
-      foreignKey: 'resource_id',
-      polymorphicType: { column: 'resource_type', value: 'contracts' },
+      table: "audit_logs",
+      foreignKey: "resource_id",
+      polymorphicType: { column: "resource_type", value: "contracts" },
     },
   ],
 
@@ -287,7 +301,7 @@ module.exports = {
    * Fields that support text search (ILIKE %term%)
    * These are concatenated with OR for full-text search
    */
-  searchableFields: ['contract_number', 'name', 'summary'],
+  searchableFields: ["contract_number", "name", "summary"],
 
   // ============================================================================
   // FILTER CONFIGURATION (Exact Match & Operators)
@@ -298,16 +312,16 @@ module.exports = {
    * Supports: exact match, gt, gte, lt, lte, in, not
    */
   filterableFields: [
-    'id',
-    'contract_number',
-    'customer_id',
-    'is_active',
-    'status',
-    'start_date',
-    'end_date',
-    'billing_cycle',
-    'created_at',
-    'updated_at',
+    "id",
+    "contract_number",
+    "customer_id",
+    "is_active",
+    "status",
+    "start_date",
+    "end_date",
+    "billing_cycle",
+    "created_at",
+    "updated_at",
   ],
 
   // ============================================================================
@@ -318,22 +332,22 @@ module.exports = {
    * Fields that can be used in ORDER BY clauses
    */
   sortableFields: [
-    'id',
-    'contract_number',
-    'status',
-    'value',
-    'start_date',
-    'end_date',
-    'created_at',
-    'updated_at',
+    "id",
+    "contract_number",
+    "status",
+    "value",
+    "start_date",
+    "end_date",
+    "created_at",
+    "updated_at",
   ],
 
   /**
    * Default sort when no sortBy specified
    */
   defaultSort: {
-    field: 'created_at',
-    order: 'DESC',
+    field: "created_at",
+    order: "DESC",
   },
 
   // ============================================================================
@@ -342,24 +356,24 @@ module.exports = {
 
   fields: {
     // TIER 1: Universal Entity Contract Fields
-    id: { type: 'integer', readonly: true },
+    id: { type: "integer", readonly: true },
     contract_number: {
       ...FIELD.IDENTIFIER,
       readonly: true, // Auto-generated: CTR-YYYY-NNNN
-      pattern: '^CTR-[0-9]{4}-[0-9]+$',
+      pattern: "^CTR-[0-9]{4}-[0-9]+$",
       errorMessages: {
-        pattern: 'Contract number must be in format CTR-YYYY-NNNN',
+        pattern: "Contract number must be in format CTR-YYYY-NNNN",
       },
     },
-    is_active: { type: 'boolean', default: true },
-    created_at: { type: 'timestamp', readonly: true },
-    updated_at: { type: 'timestamp', readonly: true },
+    is_active: { type: "boolean", default: true },
+    created_at: { type: "timestamp", readonly: true },
+    updated_at: { type: "timestamp", readonly: true },
 
     // TIER 2: Entity-Specific Lifecycle Field
     status: {
-      type: 'enum',
-      values: ['draft', 'active', 'expired', 'cancelled', 'terminated'],
-      default: 'draft',
+      type: "enum",
+      values: ["draft", "active", "expired", "cancelled", "terminated"],
+      default: "draft",
     },
 
     // COMPUTED entity name field - optional because computed from template
@@ -368,17 +382,17 @@ module.exports = {
 
     // Entity-specific fields
     customer_id: {
-      type: 'foreignKey',
-      relatedEntity: 'customer',
+      type: "foreignKey",
+      relatedEntity: "customer",
       required: true,
     },
-    start_date: { type: 'date', required: true },
-    end_date: { type: 'date' },
+    start_date: { type: "date", required: true },
+    end_date: { type: "date" },
     terms: FIELD.TERMS,
     value: FIELD.CURRENCY,
     billing_cycle: {
-      type: 'enum',
-      values: ['monthly', 'quarterly', 'annually', 'one_time'],
+      type: "enum",
+      values: ["monthly", "quarterly", "annually", "one_time"],
     },
   },
 };

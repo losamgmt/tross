@@ -1,53 +1,69 @@
 {
   "$schema": "./nav-config.schema.json",
-  "version": "1.4.0",
+  "version": "1.5.0",
 
   "_comments": {
     "permissionResource": "Maps to permissions.json resource for nav visibility. Distinct from entity-metadata.json rlsResource which controls row-level data access.",
     "syntheticResources": "dashboard, admin_panel, preferences are synthetic (non-entity) resources defined in permissions.json for nav visibility checks.",
-    "sidebarStrategies": "Define which groups/entities appear in sidebar based on route context. Routes declare their strategy via routeStrategies."
+    "sidebarStrategies": "Define which groups/entities appear in sidebar based on route context. Routes declare their strategy via routeStrategies.",
+    "menuBehaviors": "Defines display behavior for each menu type. displayMode: 'dropdown' = always anchored to trigger, 'adaptive' = responsive based on screen size (popup on desktop, bottom sheet on mobile)."
+  },
+
+  "menuBehaviors": {
+    "userMenu": {
+      "displayMode": "dropdown",
+      "_comment": "User avatar menu always appears as dropdown anchored to avatar, never bottom sheet"
+    },
+    "sidebar": {
+      "displayMode": "adaptive",
+      "_comment": "Sidebar adapts: drawer on mobile, persistent on desktop"
+    },
+    "mobileNav": {
+      "displayMode": "adaptive",
+      "_comment": "Mobile nav items with children show adaptive picker"
+    }
   },
 
   "sidebarStrategies": {
     "app": {
       "label": "Main Navigation",
-      "groups": ["crm", "operations", "finance", "admin"],
+      "groups": ["people", "operations", "finance", "admin"],
       "includeEntities": true,
       "showDashboard": true
     },
     "admin": {
       "label": "Administration",
-      "groups": ["crm", "operations", "finance", "admin"],
+      "groups": ["people", "operations", "finance", "admin"],
       "includeEntities": true,
       "sections": [
-        { 
-          "id": "home", 
-          "label": "Home", 
-          "icon": "dashboard_outlined", 
+        {
+          "id": "home",
+          "label": "Home",
+          "icon": "dashboard_outlined",
           "route": "/admin",
           "order": 0,
           "permissionResource": "admin_panel"
         },
-        { 
-          "id": "entities", 
-          "label": "Entities", 
-          "icon": "dataset_outlined", 
+        {
+          "id": "entities",
+          "label": "Entities",
+          "icon": "dataset_outlined",
           "order": 1,
           "isGrouper": true,
           "permissionResource": "admin_panel"
         },
-        { 
-          "id": "logs", 
-          "label": "Logs", 
-          "icon": "history_outlined", 
+        {
+          "id": "logs",
+          "label": "Logs",
+          "icon": "history_outlined",
           "order": 2,
           "route": "/admin/system/logs",
           "permissionResource": "admin_panel"
         },
-        { 
-          "id": "files", 
-          "label": "Files", 
-          "icon": "folder_outlined", 
+        {
+          "id": "files",
+          "label": "Files",
+          "icon": "folder_outlined",
           "order": 3,
           "route": "/admin/system/files",
           "permissionResource": "admin_panel"
@@ -73,11 +89,31 @@
   ],
 
   "groups": [
-    { "id": "main", "label": "Main", "order": 0 },
-    { "id": "crm", "label": "CRM", "order": 1 },
-    { "id": "operations", "label": "Operations", "order": 2 },
-    { "id": "finance", "label": "Finance", "order": 3 },
-    { "id": "admin", "label": "Administration", "order": 98 }
+    { "id": "main", "label": "Main", "icon": "dashboard_outlined", "order": 0 },
+    {
+      "id": "people",
+      "label": "People",
+      "icon": "people_outlined",
+      "order": 1
+    },
+    {
+      "id": "operations",
+      "label": "Operations",
+      "icon": "build_outlined",
+      "order": 2
+    },
+    {
+      "id": "finance",
+      "label": "Finance",
+      "icon": "payments_outlined",
+      "order": 3
+    },
+    {
+      "id": "admin",
+      "label": "Admin",
+      "icon": "admin_panel_settings_outlined",
+      "order": 98
+    }
   ],
 
   "staticItems": [
@@ -113,12 +149,12 @@
   ],
 
   "entityPlacements": {
-    "customer": { "group": "crm", "order": 1 },
-    "contract": { "group": "crm", "order": 2 },
-    "invoice": { "group": "finance", "order": 1 },
-    "technician": { "group": "operations", "order": 1 },
-    "work_order": { "group": "operations", "order": 2 },
-    "inventory": { "group": "operations", "order": 3 },
+    "customer": { "group": "people", "order": 1 },
+    "technician": { "group": "people", "order": 2 },
+    "work_order": { "group": "operations", "order": 1 },
+    "inventory": { "group": "operations", "order": 2 },
+    "contract": { "group": "finance", "order": 1 },
+    "invoice": { "group": "finance", "order": 2 },
     "user": { "group": "admin", "order": 1 },
     "role": { "group": "admin", "order": 2 }
   }

@@ -1,22 +1,16 @@
 /// DropdownMenu - Generic molecule for dropdown menus
 ///
+/// @deprecated Use [AdaptiveNavMenu] instead for unified popup/bottom-sheet behavior.
+/// This widget will be removed in a future version.
+///
+/// Migration:
+/// - Replace `MenuItemData` with `NavMenuItem`
+/// - Replace `DropdownMenu` with `AdaptiveNavMenu`
+///
 /// SINGLE RESPONSIBILITY: Display menu items in a dropdown
 /// 100% GENERIC - receives menu items as props, NO business logic!
 ///
 /// Parent organism handles menu logic and passes menu item configs down.
-///
-/// Usage:
-/// ```dart
-/// DropdownMenu(
-///   trigger: Text('Menu'),
-///   items: [
-///     MenuItemData(label: 'Profile', icon: Icons.person, onTap: _goProfile),
-///     MenuItemData(label: 'Settings', icon: Icons.settings, onTap: _goSettings),
-///     MenuItemData.divider(),
-///     MenuItemData(label: 'Logout', icon: Icons.logout, onTap: _logout),
-///   ],
-/// )
-/// ```
 library;
 
 import 'package:flutter/material.dart';

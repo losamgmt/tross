@@ -194,6 +194,11 @@ void main() {
     });
 
     testWidgets('user menu opens on tap', (tester) async {
+      // Use wide screen to ensure desktop popup mode (not bottom sheet)
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
       await tester.pumpWidget(
         wrapWithProviders(
           const AdaptiveShell(
@@ -206,12 +211,9 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Tap the user menu button (identified by CircleAvatar icon)
-      final userMenuFinder = find.ancestor(
-        of: find.byType(CircleAvatar),
-        matching: find.byType(PopupMenuButton<String>),
-      );
-      await tester.tap(userMenuFinder);
+      // Tap the user avatar (CircleAvatar is the trigger for the menu)
+      // AdaptiveNavMenu wraps it in PopupMenuButton on desktop
+      await tester.tap(find.byType(CircleAvatar));
       await tester.pumpAndSettle();
 
       // User menu items should appear (account-related only)

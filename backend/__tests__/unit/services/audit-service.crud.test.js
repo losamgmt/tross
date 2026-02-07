@@ -37,7 +37,7 @@ describe("services/audit-service.js - Core Operations", () => {
     // Configure existing mocks (don't reassign!)
     logger.info.mockImplementation(() => {});
     logger.error.mockImplementation(() => {});
-    
+
     // Configure db.query mock (already exists from jest.mock above)
     db.query.mockResolvedValue({ rows: [], rowCount: 0 });
   });

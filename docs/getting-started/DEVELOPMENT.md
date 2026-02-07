@@ -9,6 +9,7 @@ Daily development workflow and best practices.
 ### For Collaborators (Fork-Based Workflow)
 
 **Initial Setup (Once):**
+
 1. **Fork the repo:** Click "Fork" on `losamgmt/tross`
 2. **Clone your fork:**
    ```bash
@@ -22,6 +23,7 @@ Daily development workflow and best practices.
    ```
 
 **Starting New Work:**
+
 1. **Sync with upstream:**
    ```bash
    git checkout main
@@ -41,6 +43,7 @@ Daily development workflow and best practices.
    ```
 
 **Making Changes:**
+
 1. **Write tests first** (TDD approach)
 2. **Implement feature** (smallest possible change)
 3. **Run all tests locally** (required before PR):
@@ -58,6 +61,7 @@ Daily development workflow and best practices.
    ```
 
 **Submitting PR:**
+
 1. Go to **your fork** on GitHub
 2. Click "Compare & pull request"
 3. Set base: `losamgmt/tross:main`
@@ -66,12 +70,14 @@ Daily development workflow and best practices.
 6. Submit PR
 
 **After Submitting:**
+
 - ✅ CI checks run automatically (backend tests, lint, build)
 - ✅ Vercel deploys preview URL (test your changes visually)
 - ⏳ Maintainer reviews code + runs E2E tests locally
 - ⏳ Maintainer approves and merges
 
 **Post-Merge:**
+
 ```bash
 # Sync your fork with upstream
 git checkout main
@@ -83,6 +89,7 @@ git push origin main
 **Alternative: GitHub Codespaces**
 
 Don't want to install Node/Flutter/PostgreSQL locally? Use Codespaces:
+
 1. Go to your fork
 2. Click "Code" → "Codespaces" → "Create codespace on main"
 3. Wait 2 minutes for setup
@@ -93,6 +100,7 @@ Don't want to install Node/Flutter/PostgreSQL locally? Use Codespaces:
 ### For Maintainers (Branch-Based Workflow)
 
 **Starting Your Day:**
+
 1. Pull latest changes: `git pull origin main`
 2. Update dependencies: `npm install && cd frontend && flutter pub get`
 3. Run migrations: `cd backend && npm run migrate`
@@ -100,6 +108,7 @@ Don't want to install Node/Flutter/PostgreSQL locally? Use Codespaces:
 5. Verify tests pass: `npm test` (backend) + `flutter test` (frontend)
 
 **Feature Development:**
+
 1. **Create branch:** `git checkout -b feature/your-feature-name`
 2. **Write tests first** (TDD approach)
 3. **Implement feature** (smallest possible change)
@@ -108,6 +117,7 @@ Don't want to install Node/Flutter/PostgreSQL locally? Use Codespaces:
 6. **Push & PR:** Open pull request for review
 
 **Reviewing Fork PRs:**
+
 1. **Check CI:** Verify all checks pass (test, lint, build)
 2. **Test preview:** Click Vercel preview URL
 3. **Checkout PR locally:**
@@ -129,6 +139,7 @@ Don't want to install Node/Flutter/PostgreSQL locally? Use Codespaces:
 ## Code Organization
 
 ### Backend Structure
+
 ```
 backend/
 ├── server.js              # Express app entry
@@ -148,6 +159,7 @@ backend/
 ```
 
 ### Frontend Structure
+
 ```
 frontend/lib/
 ├── main.dart              # App entry
@@ -167,21 +179,25 @@ frontend/lib/
 ## Testing Philosophy
 
 ### Backend Testing
+
 **Pyramid:** Unit → Integration → E2E
 
 **Unit Tests** (`__tests__/unit/`)
+
 - Test single functions/methods
 - Mock external dependencies
 - Fast (<5s timeout)
 - Example: Model validation, service logic
 
 **Integration Tests** (`__tests__/integration/`)
+
 - Test API endpoints + database
 - Use test database
 - Moderate speed (<10s timeout)
 - Example: Full CRUD workflows
 
 **Run Tests:**
+
 ```bash
 cd backend
 npm test              # All tests
@@ -191,17 +207,21 @@ npm run test:watch    # Watch mode
 ```
 
 ### Frontend Testing
+
 **Widget Tests** (`test/widgets/`)
+
 - Test UI components in isolation
 - Verify rendering and interactions
 - Fast feedback
 
 **Integration Tests**
+
 - Test full user flows
 - Provider integration
 - Navigation flows
 
 **Run Tests:**
+
 ```bash
 cd frontend
 flutter test                    # All tests
@@ -216,6 +236,7 @@ flutter test --coverage         # With coverage
 ### Adding a New Entity
 
 **1. Database Migration**
+
 ```bash
 cd backend
 npm run migrate:create add_entity_table
@@ -235,13 +256,13 @@ See existing metadata files for the complete pattern.
 
 ```javascript
 module.exports = {
-  tableName: 'entities',
-  primaryKey: 'id',
-  identityField: 'name',
-  rlsResource: 'entities',
+  tableName: "entities",
+  primaryKey: "id",
+  identityField: "name",
+  rlsResource: "entities",
   rlsPolicy: {
-    customer: 'own_record_only',
-    admin: 'all_records',
+    customer: "own_record_only",
+    admin: "all_records",
   },
   routeConfig: { useGenericRouter: true },
   // ... fields, validation, etc.
@@ -253,27 +274,40 @@ module.exports = {
 Add your entity to the metadata exports.
 
 **4. Create Routes** (automatic via generic router)
-```javascript
-router.get('/', authenticateToken, requirePermission('entities:read'), async (req, res) => {
-  // GET /api/entities
-});
 
-router.post('/', authenticateToken, requirePermission('entities:create'), async (req, res) => {
-  // POST /api/entities
-});
+```javascript
+router.get(
+  "/",
+  authenticateToken,
+  requirePermission("entities:read"),
+  async (req, res) => {
+    // GET /api/entities
+  },
+);
+
+router.post(
+  "/",
+  authenticateToken,
+  requirePermission("entities:create"),
+  async (req, res) => {
+    // POST /api/entities
+  },
+);
 ```
 
 **4. Add Tests**
+
 - Unit: `__tests__/unit/models/Entity.crud.test.js`
 - Integration: `__tests__/integration/entities-api.test.js`
 
 **5. Frontend Model** (`frontend/lib/models/entity_model.dart`)
+
 ```dart
 class Entity {
   final int id;
   final String name;
   final bool isActive;
-  
+
   Entity.fromJson(Map<String, dynamic> json)
     : id = json['id'],
       name = json['name'],
@@ -286,6 +320,7 @@ class Entity {
 ## Git Workflow
 
 ### Commit Messages
+
 Follow [Conventional Commits](https://www.conventionalcommits.org/):
 
 ```
@@ -297,6 +332,7 @@ refactor: extract common validation logic
 ```
 
 ### Branch Naming
+
 ```
 feature/customer-filtering
 fix/user-validation-bug
@@ -306,19 +342,24 @@ refactor/validation-extraction
 ```
 
 ### Pull Request Template
+
 ```markdown
 ## What
+
 Brief description of changes
 
 ## Why
+
 Rationale for the change
 
 ## Testing
+
 - [ ] Unit tests added/updated
 - [ ] Integration tests pass
 - [ ] Manual testing completed
 
 ## Checklist
+
 - [ ] Tests pass locally
 - [ ] No console errors
 - [ ] Documentation updated
@@ -329,6 +370,7 @@ Rationale for the change
 ## Code Style
 
 ### Backend (JavaScript)
+
 - **ESLint:** Follow `.eslintrc.js`
 - **Naming:** camelCase for variables, PascalCase for classes
 - **Async:** Always use `async/await`, not callbacks
@@ -336,20 +378,23 @@ Rationale for the change
 - **Comments:** Explain WHY, not WHAT
 
 **Good:**
+
 ```javascript
 // Strategy pattern allows swapping auth methods in dev vs prod
-const strategy = AppConfig.devAuthEnabled 
-  ? new DevelopmentStrategy() 
+const strategy = AppConfig.devAuthEnabled
+  ? new DevelopmentStrategy()
   : new Auth0Strategy();
 ```
 
 **Bad:**
+
 ```javascript
 // Create strategy
 const strategy = new Strategy();
 ```
 
 ### Frontend (Dart)
+
 - **Linter:** Follow `analysis_options.yaml`
 - **Naming:** camelCase for variables, PascalCase for classes
 - **Widgets:** Prefer const constructors
@@ -360,6 +405,7 @@ const strategy = new Strategy();
 ## Database Migrations
 
 ### Creating Migrations
+
 ```bash
 cd backend
 npm run migrate:create your_migration_name
@@ -372,6 +418,7 @@ npm run migrate:rollback # Undo last
 ```
 
 ### Migration Best Practices
+
 - **One change per migration**
 - **Always write `down()`** (rollback)
 - **Test rollback** before merging
@@ -382,6 +429,7 @@ npm run migrate:rollback # Undo last
 ## Debugging
 
 ### Backend Debugging
+
 ```bash
 # Enable verbose logging
 DEBUG=* npm run dev
@@ -395,6 +443,7 @@ tail -f backend/logs/combined.log
 ```
 
 ### Frontend Debugging
+
 ```bash
 # Flutter DevTools
 flutter run -d chrome --observatory-port=9200
@@ -406,11 +455,13 @@ flutter run -d chrome --observatory-port=9200
 ### Frontend Logging Strategy
 
 Use `ErrorService` for all logging. This ensures:
+
 - **Silent in production** (no console spam for users)
 - **Silent in tests** (clean test output)
 - **Active in local dev** (full debugging)
 
 **Log Levels:**
+
 ```dart
 // Error - Always logged to developer.log, prints in debug mode
 ErrorService.logError('Failed to load data', error: e, context: {'id': 123});
@@ -426,10 +477,12 @@ ErrorService.logDebug('Permission check', context: {'role': role, 'resource': re
 ```
 
 **Never use:**
+
 - `print()` directly - not environment-aware
 - `debugPrint()` directly - use `ErrorService.logDebug()` instead
 
 **Why?**
+
 - `kDebugMode` is false in production Flutter web builds
 - `isInTestMode` prevents log pollution during `flutter test`
 - Centralized control over all logging behavior
@@ -439,12 +492,14 @@ ErrorService.logDebug('Permission check', context: {'role': role, 'resource': re
 ## Performance
 
 ### Backend Performance
+
 - **Connection pooling:** Max 20 connections (configured)
 - **Slow query logging:** Warns on queries >100ms
 - **Request timeout:** 30s max
 - **Rate limiting:** 100 req/min per IP
 
 ### Frontend Performance
+
 - **Lazy loading:** Use `ListView.builder` for long lists
 - **Const constructors:** Reduce rebuilds
 - **Avoid `setState()` in build:** Move to initState/didChangeDependencies
@@ -454,6 +509,7 @@ ErrorService.logDebug('Permission check', context: {'role': role, 'resource': re
 ## Security Checklist
 
 **Before Every Commit:**
+
 - [ ] No secrets in code (use .env)
 - [ ] Input validation on all endpoints
 - [ ] SQL queries use parameterized statements
@@ -466,6 +522,7 @@ ErrorService.logDebug('Permission check', context: {'role': role, 'resource': re
 ## Troubleshooting
 
 ### Backend Won't Start
+
 ```bash
 # Check environment variables
 cd backend
@@ -479,6 +536,7 @@ npx kill-port 3001
 ```
 
 ### Tests Failing
+
 ```bash
 # Reset test database
 cd backend
@@ -492,6 +550,7 @@ npm test -- --verbose
 ```
 
 ### Frontend Build Errors
+
 ```bash
 cd frontend
 flutter clean

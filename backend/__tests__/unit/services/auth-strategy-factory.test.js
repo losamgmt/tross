@@ -20,7 +20,10 @@ jest.mock("../../../config/logger", () => ({
 jest.mock("../../../services/auth/DevAuthStrategy");
 jest.mock("../../../services/auth/Auth0Strategy");
 
-const { AuthStrategyFactory, AUTH_MODES } = require("../../../services/auth/AuthStrategyFactory");
+const {
+  AuthStrategyFactory,
+  AUTH_MODES,
+} = require("../../../services/auth/AuthStrategyFactory");
 const DevAuthStrategy = require("../../../services/auth/DevAuthStrategy");
 const Auth0Strategy = require("../../../services/auth/Auth0Strategy");
 

@@ -13,15 +13,17 @@
 // ============================================================================
 // MOCKS - Must be set up before imports
 // ============================================================================
-jest.mock('../../../db/connection', () => require('../../mocks').createDBMock());
-jest.mock('../../../config/logger', () => ({
-  logger: require('../../mocks').createLoggerMock(),
+jest.mock("../../../db/connection", () =>
+  require("../../mocks").createDBMock(),
+);
+jest.mock("../../../config/logger", () => ({
+  logger: require("../../mocks").createLoggerMock(),
 }));
 
 const mockLogEntityAudit = jest.fn();
 const mockIsAuditEnabled = jest.fn();
 
-jest.mock('../../../db/helpers/audit-helper', () => ({
+jest.mock("../../../db/helpers/audit-helper", () => ({
   logEntityAudit: mockLogEntityAudit,
   isAuditEnabled: mockIsAuditEnabled,
 }));
@@ -29,16 +31,16 @@ jest.mock('../../../db/helpers/audit-helper', () => ({
 // ============================================================================
 // IMPORTS - After mocks
 // ============================================================================
-const GenericEntityService = require('../../../services/generic-entity-service');
-const db = require('../../../db/connection');
+const GenericEntityService = require("../../../services/generic-entity-service");
+const db = require("../../../db/connection");
 
-describe('GenericEntityService - Audit Logging', () => {
+describe("GenericEntityService - Audit Logging", () => {
   // Mock client for transactions
   let mockClient;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     // Default: audit is enabled for all entities
     mockIsAuditEnabled.mockReturnValue(true);
 
@@ -54,20 +56,20 @@ describe('GenericEntityService - Audit Logging', () => {
   // CREATE - Audit Logging
   // ==========================================================================
 
-  describe('create - audit logging', () => {
+  describe("create - audit logging", () => {
     const mockCreatedRecord = {
       id: 1,
-      first_name: 'John',
-      last_name: 'Doe',
-      email: 'test@example.com',
-      organization_name: 'Test Co',
+      first_name: "John",
+      last_name: "Doe",
+      email: "test@example.com",
+      organization_name: "Test Co",
       is_active: true,
     };
 
     const mockAuditContext = {
       userId: 123,
-      ipAddress: '192.168.1.1',
-      userAgent: 'Test-Agent/1.0',
+      ipAddress: "192.168.1.1",
+      userAgent: "Test-Agent/1.0",
     };
 
     beforeEach(() => {
@@ -77,42 +79,52 @@ describe('GenericEntityService - Audit Logging', () => {
       });
     });
 
-    test('should call logEntityAudit on create with auditContext', async () => {
+    test("should call logEntityAudit on create with auditContext", async () => {
       // Act
       await GenericEntityService.create(
-        'customer',
-        { first_name: 'John', last_name: 'Doe', email: 'test@example.com', organization_name: 'Test Co' },
+        "customer",
+        {
+          first_name: "John",
+          last_name: "Doe",
+          email: "test@example.com",
+          organization_name: "Test Co",
+        },
         { auditContext: mockAuditContext },
       );
 
       // Assert
       expect(mockLogEntityAudit).toHaveBeenCalledTimes(1);
       expect(mockLogEntityAudit).toHaveBeenCalledWith(
-        'create',
-        'customer',
+        "create",
+        "customer",
         expect.objectContaining({ id: 1 }),
         mockAuditContext,
       );
     });
 
-    test('should NOT call logEntityAudit without auditContext', async () => {
+    test("should NOT call logEntityAudit without auditContext", async () => {
       // Act
-      await GenericEntityService.create('customer', {
-        first_name: 'John',
-        last_name: 'Doe',
-        email: 'test@example.com',
-        organization_name: 'Test Co',
+      await GenericEntityService.create("customer", {
+        first_name: "John",
+        last_name: "Doe",
+        email: "test@example.com",
+        organization_name: "Test Co",
       });
 
       // Assert
       expect(mockLogEntityAudit).not.toHaveBeenCalled();
     });
 
-    test('should NOT call logEntityAudit with empty auditContext', async () => {
+    test("should NOT call logEntityAudit with empty auditContext", async () => {
       // Act
       await GenericEntityService.create(
-        'customer',
-        { first_name: 'John', last_name: 'Doe', email: 'test@example.com', organization_name: 'Test Co' },
+        "customer",
+        {
+          first_name: "John",
+          last_name: "Doe",
+          email: "test@example.com",
+          organization_name: "Test Co",
+        },
         { auditContext: null },
       );
 
@@ -120,14 +132,19 @@ describe('GenericEntityService - Audit Logging', () => {
       expect(mockLogEntityAudit).not.toHaveBeenCalled();
     });
 
-    test('should NOT call logEntityAudit if audit disabled for entity', async () => {
+    test("should NOT call logEntityAudit if audit disabled for entity", async () => {
       // Arrange
       mockIsAuditEnabled.mockReturnValue(false);
 
       // Act
       await GenericEntityService.create(
-        'customer',
-        { first_name: 'John', last_name: 'Doe', email: 'test@example.com', organization_name: 'Test Co' },
+        "customer",
+        {
+          first_name: "John",
+          last_name: "Doe",
+          email: "test@example.com",
+          organization_name: "Test Co",
+        },
         { auditContext: mockAuditContext },
       );
 
@@ -135,13 +152,13 @@ describe('GenericEntityService - Audit Logging', () => {
       expect(mockLogEntityAudit).not.toHaveBeenCalled();
     });
 
-    test('should return result even without auditContext', async () => {
+    test("should return result even without auditContext", async () => {
       // Act
-      const result = await GenericEntityService.create('customer', {
-        first_name: 'John',
-        last_name: 'Doe',
-        email: 'test@example.com',
-        organization_name: 'Test Co',
+      const result = await GenericEntityService.create("customer", {
+        first_name: "John",
+        last_name: "Doe",
+        email: "test@example.com",
+        organization_name: "Test Co",
       });
 
       // Assert
@@ -153,34 +170,34 @@ describe('GenericEntityService - Audit Logging', () => {
   // UPDATE - Audit Logging
   // ==========================================================================
 
-  describe('update - audit logging', () => {
+  describe("update - audit logging", () => {
     const mockOldRecord = {
       id: 1,
-      first_name: 'John',
-      last_name: 'Doe',
-      email: 'old@example.com',
-      organization_name: 'Old Co',
-      phone: '555-1234',
+      first_name: "John",
+      last_name: "Doe",
+      email: "old@example.com",
+      organization_name: "Old Co",
+      phone: "555-1234",
       is_active: true,
     };
 
     const mockUpdatedRecord = {
       id: 1,
-      first_name: 'John',
-      last_name: 'Doe',
-      email: 'old@example.com',
-      organization_name: 'Old Co',
-      phone: '555-9999',
+      first_name: "John",
+      last_name: "Doe",
+      email: "old@example.com",
+      organization_name: "Old Co",
+      phone: "555-9999",
       is_active: true,
     };
 
     const mockAuditContext = {
       userId: 123,
-      ipAddress: '192.168.1.1',
-      userAgent: 'Test-Agent/1.0',
+      ipAddress: "192.168.1.1",
+      userAgent: "Test-Agent/1.0",
     };
 
-    test('should call logEntityAudit with old and new values', async () => {
+    test("should call logEntityAudit with old and new values", async () => {
       // Arrange - first query fetches old values, second updates, third re-fetches with JOINs
       db.query
         .mockResolvedValueOnce({ rows: [mockOldRecord], rowCount: 1 }) // findById for old values
@@ -189,50 +206,50 @@ describe('GenericEntityService - Audit Logging', () => {
 
       // Act
       await GenericEntityService.update(
-        'customer',
+        "customer",
         1,
-        { phone: '555-9999' },
+        { phone: "555-9999" },
         { auditContext: mockAuditContext },
       );
 
       // Assert
       expect(mockLogEntityAudit).toHaveBeenCalledTimes(1);
       expect(mockLogEntityAudit).toHaveBeenCalledWith(
-        'update',
-        'customer',
-        expect.objectContaining({ id: 1, phone: '555-9999' }),
+        "update",
+        "customer",
+        expect.objectContaining({ id: 1, phone: "555-9999" }),
         mockAuditContext,
-        expect.objectContaining({ id: 1, phone: '555-1234' }), // old values
+        expect.objectContaining({ id: 1, phone: "555-1234" }), // old values
       );
     });
 
-    test('should NOT call logEntityAudit without auditContext', async () => {
+    test("should NOT call logEntityAudit without auditContext", async () => {
       // Arrange - update + re-fetch
       db.query
         .mockResolvedValueOnce({ rows: [{ id: 1 }], rowCount: 1 }) // update
         .mockResolvedValueOnce({ rows: [mockUpdatedRecord], rowCount: 1 }); // re-fetch
 
       // Act
-      await GenericEntityService.update('customer', 1, { phone: '555-9999' });
+      await GenericEntityService.update("customer", 1, { phone: "555-9999" });
 
       // Assert
       expect(mockLogEntityAudit).not.toHaveBeenCalled();
     });
 
-    test('should NOT fetch old values without auditContext', async () => {
+    test("should NOT fetch old values without auditContext", async () => {
       // Arrange - update + re-fetch
       db.query
         .mockResolvedValueOnce({ rows: [{ id: 1 }], rowCount: 1 }) // update
         .mockResolvedValueOnce({ rows: [mockUpdatedRecord], rowCount: 1 }); // re-fetch
 
       // Act
-      await GenericEntityService.update('customer', 1, { phone: '555-9999' });
+      await GenericEntityService.update("customer", 1, { phone: "555-9999" });
 
       // Assert - 2 queries: update + re-fetch (no findById for old values)
       expect(db.query).toHaveBeenCalledTimes(2);
     });
 
-    test('should return null for non-existent entity (no audit)', async () => {
+    test("should return null for non-existent entity (no audit)", async () => {
       // Arrange - findById for old values, update returns nothing (no re-fetch)
       db.query
         .mockResolvedValueOnce({ rows: [mockOldRecord], rowCount: 1 }) // findById for old values
@@ -240,9 +257,9 @@ describe('GenericEntityService - Audit Logging', () => {
 
       // Act
       const result = await GenericEntityService.update(
-        'customer',
+        "customer",
         999,
-        { phone: '555-9999' },
+        { phone: "555-9999" },
         { auditContext: mockAuditContext },
       );
 
@@ -256,21 +273,21 @@ describe('GenericEntityService - Audit Logging', () => {
   // DELETE - Audit Logging
   // ==========================================================================
 
-  describe('delete - audit logging', () => {
+  describe("delete - audit logging", () => {
     const mockDeletedRecord = {
       id: 1,
-      email: 'test@example.com',
-      company_name: 'Test Co',
+      email: "test@example.com",
+      company_name: "Test Co",
       is_active: true,
     };
 
     const mockAuditContext = {
       userId: 123,
-      ipAddress: '192.168.1.1',
-      userAgent: 'Test-Agent/1.0',
+      ipAddress: "192.168.1.1",
+      userAgent: "Test-Agent/1.0",
     };
 
-    test('should call logEntityAudit with old values on delete', async () => {
+    test("should call logEntityAudit with old values on delete", async () => {
       // Arrange - transaction queries: BEGIN, SELECT, CASCADE, DELETE, COMMIT
       mockClient.query
         .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // BEGIN
@@ -280,22 +297,22 @@ describe('GenericEntityService - Audit Logging', () => {
         .mockResolvedValueOnce({ rows: [], rowCount: 0 }); // COMMIT
 
       // Act
-      await GenericEntityService.delete('customer', 1, {
+      await GenericEntityService.delete("customer", 1, {
         auditContext: mockAuditContext,
       });
 
       // Assert
       expect(mockLogEntityAudit).toHaveBeenCalledTimes(1);
       expect(mockLogEntityAudit).toHaveBeenCalledWith(
-        'delete',
-        'customer',
+        "delete",
+        "customer",
         expect.objectContaining({ id: 1 }),
         mockAuditContext,
         expect.objectContaining({ id: 1 }), // old values
       );
     });
 
-    test('should NOT call logEntityAudit without auditContext', async () => {
+    test("should NOT call logEntityAudit without auditContext", async () => {
       // Arrange
       mockClient.query
         .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // BEGIN
@@ -305,13 +322,13 @@ describe('GenericEntityService - Audit Logging', () => {
         .mockResolvedValueOnce({ rows: [], rowCount: 0 }); // COMMIT
 
       // Act
-      await GenericEntityService.delete('customer', 1);
+      await GenericEntityService.delete("customer", 1);
 
       // Assert
       expect(mockLogEntityAudit).not.toHaveBeenCalled();
     });
 
-    test('should return null for non-existent entity (no audit)', async () => {
+    test("should return null for non-existent entity (no audit)", async () => {
       // Arrange - entity not found
       mockClient.query
         .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // BEGIN
@@ -319,7 +336,7 @@ describe('GenericEntityService - Audit Logging', () => {
         .mockResolvedValueOnce({ rows: [], rowCount: 0 }); // ROLLBACK
 
       // Act
-      const result = await GenericEntityService.delete('customer', 999, {
+      const result = await GenericEntityService.delete("customer", 999, {
         auditContext: mockAuditContext,
       });
 
@@ -328,7 +345,7 @@ describe('GenericEntityService - Audit Logging', () => {
       expect(mockLogEntityAudit).not.toHaveBeenCalled();
     });
 
-    test('should NOT call logEntityAudit if audit disabled for entity', async () => {
+    test("should NOT call logEntityAudit if audit disabled for entity", async () => {
       // Arrange
       mockIsAuditEnabled.mockReturnValue(false);
       mockClient.query
@@ -339,7 +356,7 @@ describe('GenericEntityService - Audit Logging', () => {
         .mockResolvedValueOnce({ rows: [], rowCount: 0 }); // COMMIT
 
       // Act
-      await GenericEntityService.delete('customer', 1, {
+      await GenericEntityService.delete("customer", 1, {
         auditContext: mockAuditContext,
       });
 
@@ -352,45 +369,71 @@ describe('GenericEntityService - Audit Logging', () => {
   // EDGE CASES
   // ==========================================================================
 
-  describe('edge cases', () => {
-    test('should handle auditContext with partial fields', async () => {
+  describe("edge cases", () => {
+    test("should handle auditContext with partial fields", async () => {
       // Arrange
       const partialContext = { userId: 123 }; // no ipAddress or userAgent
       db.query.mockResolvedValue({
-        rows: [{ id: 1, first_name: 'John', last_name: 'Doe', email: 'test@example.com', organization_name: 'Test Co' }],
+        rows: [
+          {
+            id: 1,
+            first_name: "John",
+            last_name: "Doe",
+            email: "test@example.com",
+            organization_name: "Test Co",
+          },
+        ],
         rowCount: 1,
       });
 
       // Act
       await GenericEntityService.create(
-        'customer',
-        { first_name: 'John', last_name: 'Doe', email: 'test@example.com', organization_name: 'Test Co' },
+        "customer",
+        {
+          first_name: "John",
+          last_name: "Doe",
+          email: "test@example.com",
+          organization_name: "Test Co",
+        },
         { auditContext: partialContext },
       );
 
       // Assert
       expect(mockLogEntityAudit).toHaveBeenCalledWith(
-        'create',
-        'customer',
+        "create",
+        "customer",
         expect.any(Object),
         partialContext,
       );
     });
 
-    test('should handle options with other fields alongside auditContext', async () => {
+    test("should handle options with other fields alongside auditContext", async () => {
       // Arrange
       db.query.mockResolvedValue({
-        rows: [{ id: 1, first_name: 'John', last_name: 'Doe', email: 'test@example.com', organization_name: 'Test Co' }],
+        rows: [
+          {
+            id: 1,
+            first_name: "John",
+            last_name: "Doe",
+            email: "test@example.com",
+            organization_name: "Test Co",
+          },
+        ],
         rowCount: 1,
       });
 
       // Act
       await GenericEntityService.create(
-        'customer',
-        { first_name: 'John', last_name: 'Doe', email: 'test@example.com', organization_name: 'Test Co' },
+        "customer",
+        {
+          first_name: "John",
+          last_name: "Doe",
+          email: "test@example.com",
+          organization_name: "Test Co",
+        },
         {
           auditContext: { userId: 123 },
-          someOtherOption: 'value', // should be ignored
+          someOtherOption: "value", // should be ignored
         },
       );
 

@@ -28,15 +28,15 @@
  * ============================================================================
  */
 
-const fs = require('fs').promises;
-const path = require('path');
-const { logger } = require('../config/logger');
+const fs = require("fs").promises;
+const path = require("path");
+const { logger } = require("../config/logger");
 
 // Use the standard db connection module
-const db = require('../db/connection');
+const db = require("../db/connection");
 
-const SCHEMA_FILE = path.join(__dirname, '..', 'schema.sql');
-const SEED_FILE = path.join(__dirname, '..', 'seeds', 'seed-data.sql');
+const SCHEMA_FILE = path.join(__dirname, "..", "schema.sql");
+const SEED_FILE = path.join(__dirname, "..", "seeds", "seed-data.sql");
 
 /**
  * Initialize database schema and seed data
@@ -47,27 +47,43 @@ async function initializeDatabase() {
 
   try {
     // Run schema.sql
-    logger.info('📦 Applying database schema...');
-    const schemaSQL = await fs.readFile(SCHEMA_FILE, 'utf8');
+    logger.info("📦 Applying database schema...");
+    const schemaSQL = await fs.readFile(SCHEMA_FILE, "utf8");
     await db.query(schemaSQL);
     results.schema = true;
-    logger.info('✅ Schema applied successfully');
+    logger.info("✅ Schema applied successfully");
   } catch (error) {
     // Use console.error for Railway visibility (single-line JSON)
-    console.error(JSON.stringify({ level: 'error', message: 'Schema failed', error: error.message, code: error.code, detail: error.detail }));
+    console.error(
+      JSON.stringify({
+        level: "error",
+        message: "Schema failed",
+        error: error.message,
+        code: error.code,
+        detail: error.detail,
+      }),
+    );
     // Don't throw - schema might already exist
   }
 
   try {
     // Run seed data
-    logger.info('🌱 Applying seed data...');
-    const seedSQL = await fs.readFile(SEED_FILE, 'utf8');
+    logger.info("🌱 Applying seed data...");
+    const seedSQL = await fs.readFile(SEED_FILE, "utf8");
     await db.query(seedSQL);
     results.seed = true;
-    logger.info('✅ Seed data applied successfully');
+    logger.info("✅ Seed data applied successfully");
   } catch (error) {
     // Use console.error for Railway visibility (single-line JSON)
-    console.error(JSON.stringify({ level: 'error', message: 'Seed failed', error: error.message, code: error.code, detail: error.detail }));
+    console.error(
+      JSON.stringify({
+        level: "error",
+        message: "Seed failed",
+        error: error.message,
+        code: error.code,
+        detail: error.detail,
+      }),
+    );
     // Don't throw - seeds might already exist
   }
 

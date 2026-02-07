@@ -12,12 +12,12 @@ module.exports = async () => {
   try {
     // Import the pool here to close connections made during tests
     const { pool } = require("../../db/connection");
-    
+
     if (pool && pool.totalCount > 0) {
       await pool.end();
       testLogger.log("✅ Test database connections closed");
     }
-    
+
     testLogger.log("✅ Tross integration test suite completed");
   } catch (error) {
     testLogger.error("❌ Global teardown error:", error.message);

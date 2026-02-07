@@ -11,8 +11,15 @@ const request = require("supertest");
 const authRoutes = require("../../../routes/auth");
 const tokenService = require("../../../services/token-service");
 const auditService = require("../../../services/audit-service");
-const { AuditActions, ResourceTypes, AuditResults } = require("../../../services/audit-constants");
-const { authenticateToken, requirePermission } = require("../../../middleware/auth");
+const {
+  AuditActions,
+  ResourceTypes,
+  AuditResults,
+} = require("../../../services/audit-constants");
+const {
+  authenticateToken,
+  requirePermission,
+} = require("../../../middleware/auth");
 const { validateProfileUpdate } = require("../../../validators");
 const { getClientIp, getUserAgent } = require("../../../utils/request-helpers");
 const jwt = require("jsonwebtoken");
@@ -42,15 +49,18 @@ jest.mock("../../../validators", () => {
   return {
     validateProfileUpdate: jest.fn((req, res, next) => next()),
     validateRefreshToken: jest.fn(() => (req, res, next) => next()),
-    validateIdParam: jest.fn(({ paramName = 'id' } = {}) => (req, res, next) => {
-      const value = parseInt(req.params[paramName], 10);
-      if (isNaN(value) || value < 1) {
-        return ResponseFormatter.badRequest(res, `Invalid ${paramName}`);
-      }
-      if (!req.validated) req.validated = {};
-      req.validated[paramName] = value;
-      next();
-    }),
+    validateIdParam: jest.fn(
+      ({ paramName = "id" } = {}) =>
+        (req, res, next) => {
+          const value = parseInt(req.params[paramName], 10);
+          if (isNaN(value) || value < 1) {
+            return ResponseFormatter.badRequest(res, `Invalid ${paramName}`);
+          }
+          if (!req.validated) req.validated = {};
+          req.validated[paramName] = value;
+          next();
+        },
+    ),
   };
 });
 
@@ -139,7 +149,7 @@ describe("routes/auth.js - Session Management", () => {
           userId: 1,
           action: AuditActions.TOKEN_REFRESH,
           resourceType: ResourceTypes.AUTH,
-        })
+        }),
       );
     });
 
@@ -192,7 +202,7 @@ describe("routes/auth.js - Session Management", () => {
           userId: 1,
           action: AuditActions.LOGOUT,
           resourceType: ResourceTypes.AUTH,
-        })
+        }),
       );
     });
 
@@ -252,7 +262,7 @@ describe("routes/auth.js - Session Management", () => {
           resourceType: ResourceTypes.AUTH,
           newValues: { tokensRevoked: 3 },
           result: AuditResults.SUCCESS,
-        })
+        }),
       );
     });
 
@@ -374,7 +384,7 @@ describe("routes/auth.js - Session Management", () => {
     beforeEach(() => {
       // Mock requirePermission to pass for admin
       requirePermission.mockImplementation(() => (req, res, next) => next());
-      
+
       // Reset GenericEntityService mock
       GenericEntityService.findById.mockResolvedValue({
         id: 42,
@@ -402,7 +412,10 @@ describe("routes/auth.js - Session Management", () => {
       expect(response.body.message).toContain("Revoked 3 session(s)");
 
       // Verify token service called
-      expect(tokenService.revokeAllUserTokens).toHaveBeenCalledWith(42, "Account compromised");
+      expect(tokenService.revokeAllUserTokens).toHaveBeenCalledWith(
+        42,
+        "Account compromised",
+      );
 
       // Verify audit log
       expect(auditService.log).toHaveBeenCalledWith(
@@ -411,7 +424,7 @@ describe("routes/auth.js - Session Management", () => {
           resourceType: ResourceTypes.USER,
           resourceId: 42,
           result: AuditResults.SUCCESS,
-        })
+        }),
       );
     });
 
@@ -421,18 +434,23 @@ describe("routes/auth.js - Session Management", () => {
       auditService.log.mockResolvedValue();
 
       // Act
-      const response = await request(app)
-        .post("/api/auth/admin/revoke-user-sessions/42");
+      const response = await request(app).post(
+        "/api/auth/admin/revoke-user-sessions/42",
+      );
 
       // Assert
       expect(response.status).toBe(200);
-      expect(tokenService.revokeAllUserTokens).toHaveBeenCalledWith(42, "admin_revocation");
+      expect(tokenService.revokeAllUserTokens).toHaveBeenCalledWith(
+        42,
+        "admin_revocation",
+      );
     });
 
     test("should return 400 for invalid user ID", async () => {
       // Act
-      const response = await request(app)
-        .post("/api/auth/admin/revoke-user-sessions/invalid");
+      const response = await request(app).post(
+        "/api/auth/admin/revoke-user-sessions/invalid",
+      );
 
       // Assert
       expect(response.status).toBe(400);
@@ -444,8 +462,9 @@ describe("routes/auth.js - Session Management", () => {
       GenericEntityService.findById.mockResolvedValue(null);
 
       // Act
-      const response = await request(app)
-        .post("/api/auth/admin/revoke-user-sessions/999");
+      const response = await request(app).post(
+        "/api/auth/admin/revoke-user-sessions/999",
+      );
 
       // Assert
       expect(response.status).toBe(404);
@@ -458,8 +477,9 @@ describe("routes/auth.js - Session Management", () => {
       auditService.log.mockResolvedValue();
 
       // Act
-      const response = await request(app)
-        .post("/api/auth/admin/revoke-user-sessions/42");
+      const response = await request(app).post(
+        "/api/auth/admin/revoke-user-sessions/42",
+      );
 
       // Assert
       expect(response.status).toBe(200);

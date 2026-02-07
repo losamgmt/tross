@@ -7,9 +7,9 @@
  * PRINCIPLE: No hardcoded tests - all derived from route metadata.
  */
 
-const { runRouteTests } = require('../factory/route-runner');
-const app = require('../../server');
-const db = require('../../db/connection');
+const { runRouteTests } = require("../factory/route-runner");
+const app = require("../../server");
+const db = require("../../db/connection");
 
 // Run all route scenarios for roles-extensions
-runRouteTests('roles-extensions', { app, db });
+runRouteTests("roles-extensions", { app, db });

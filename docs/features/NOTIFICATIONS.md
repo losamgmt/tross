@@ -25,10 +25,10 @@ Tross requires a notification system to alert users of important events:
 
 ### Two Notification Systems
 
-| System | Purpose | Persistence | Transport |
-|--------|---------|-------------|-----------|
-| **Toasts** | Immediate feedback (save success, errors) | None (transient) | Frontend only |
-| **Notification Tray** | Async events, user alerts | Database (per-user) | Fetch on navigation |
+| System                | Purpose                                   | Persistence         | Transport           |
+| --------------------- | ----------------------------------------- | ------------------- | ------------------- |
+| **Toasts**            | Immediate feedback (save success, errors) | None (transient)    | Frontend only       |
+| **Notification Tray** | Async events, user alerts                 | Database (per-user) | Fetch on navigation |
 
 This document covers the **Notification Tray** system. Toasts are already implemented via `NotificationService` and `AppSnackbar`.
 
@@ -39,6 +39,7 @@ This document covers the **Notification Tray** system. Toasts are already implem
 ### Core Principle: Follow `saved_views` Pattern
 
 Notifications are **identical in architecture** to `saved_views`:
+
 - Per-user data with RLS (`own_record_only`)
 - Standard CRUD via generic router
 - **NO custom routes**
@@ -47,27 +48,27 @@ Notifications are **identical in architecture** to `saved_views`:
 
 ### Decisions
 
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| **UI Location** | Bell icon in top nav bar | Standard UX pattern |
-| **Delivery** | Fetch on navigation | KISS - no WebSocket complexity |
-| **Backend Creation** | `GenericEntityService.create()` | Use existing infrastructure |
-| **Custom Endpoints** | **NONE** | Generic CRUD is sufficient |
-| **Unread Count** | Computed from list response | No custom `/unread-count` endpoint |
-| **Mark All Read** | Loop PATCH calls (or defer bulk) | No custom `/mark-all-read` endpoint |
-| **Delete Behavior** | Hard delete via generic router | Standard DELETE |
-| **Action URL** | Computed from `resource_type` + `resource_id` | No redundant field storage |
+| Decision             | Choice                                        | Rationale                           |
+| -------------------- | --------------------------------------------- | ----------------------------------- |
+| **UI Location**      | Bell icon in top nav bar                      | Standard UX pattern                 |
+| **Delivery**         | Fetch on navigation                           | KISS - no WebSocket complexity      |
+| **Backend Creation** | `GenericEntityService.create()`               | Use existing infrastructure         |
+| **Custom Endpoints** | **NONE**                                      | Generic CRUD is sufficient          |
+| **Unread Count**     | Computed from list response                   | No custom `/unread-count` endpoint  |
+| **Mark All Read**    | Loop PATCH calls (or defer bulk)              | No custom `/mark-all-read` endpoint |
+| **Delete Behavior**  | Hard delete via generic router                | Standard DELETE                     |
+| **Action URL**       | Computed from `resource_type` + `resource_id` | No redundant field storage          |
 
 ### What We DON'T Build
 
-| ❌ Rejected | Why |
-|-------------|-----|
-| `/unread-count` endpoint | Count from list response in frontend |
-| `/mark-all-read` endpoint | Loop PATCH calls (bulk can be Phase 2) |
-| `/cleanup` endpoint | Scheduled job, not API |
-| `NotificationService` class | Use `GenericEntityService.create()` |
-| Socket.IO / WebSocket | Overkill for MVP |
-| Polling | Fetch on navigation is sufficient |
+| ❌ Rejected                 | Why                                    |
+| --------------------------- | -------------------------------------- |
+| `/unread-count` endpoint    | Count from list response in frontend   |
+| `/mark-all-read` endpoint   | Loop PATCH calls (bulk can be Phase 2) |
+| `/cleanup` endpoint         | Scheduled job, not API                 |
+| `NotificationService` class | Use `GenericEntityService.create()`    |
+| Socket.IO / WebSocket       | Overkill for MVP                       |
+| Polling                     | Fetch on navigation is sufficient      |
 
 ---
 
@@ -97,6 +98,7 @@ CREATE TABLE IF NOT EXISTS notifications (
 ### Indexes & Triggers
 
 ✅ **IMPLEMENTED** - See `backend/schema.sql` for:
+
 - `idx_notifications_user_unread` - Fast unread queries
 - `idx_notifications_user_created` - Paged list queries
 - `update_notifications_updated_at` trigger
@@ -135,13 +137,13 @@ CREATE TABLE IF NOT EXISTS notifications (
 
 The generic router auto-implements all needed endpoints:
 
-| Method | Endpoint | Purpose |
-|--------|----------|---------|
-| `GET` | `/api/notifications` | List user's notifications (RLS filtered) |
-| `GET` | `/api/notifications/:id` | Get single notification |
-| `PATCH` | `/api/notifications/:id` | Mark as read: `{ is_read: true }` |
-| `DELETE` | `/api/notifications/:id` | Dismiss notification |
-| `POST` | `/api/notifications` | **Returns 403** (create disabled) |
+| Method   | Endpoint                 | Purpose                                  |
+| -------- | ------------------------ | ---------------------------------------- |
+| `GET`    | `/api/notifications`     | List user's notifications (RLS filtered) |
+| `GET`    | `/api/notifications/:id` | Get single notification                  |
+| `PATCH`  | `/api/notifications/:id` | Mark as read: `{ is_read: true }`        |
+| `DELETE` | `/api/notifications/:id` | Dismiss notification                     |
+| `POST`   | `/api/notifications`     | **Returns 403** (create disabled)        |
 
 ### Creating Notifications (Backend Only)
 
@@ -149,16 +151,20 @@ When backend code needs to create a notification (e.g., work order assignment):
 
 ```javascript
 // In the work order route handler or service
-const GenericEntityService = require('../services/generic-entity-service');
+const GenericEntityService = require("../services/generic-entity-service");
 
-await GenericEntityService.create('notification', {
-  user_id: technicianUserId,
-  title: 'New Work Order Assigned',
-  body: `You've been assigned WO-2026-001`,
-  type: 'assignment',
-  resource_type: 'work_order',
-  resource_id: workOrderId,
-}, { auditContext });
+await GenericEntityService.create(
+  "notification",
+  {
+    user_id: technicianUserId,
+    title: "New Work Order Assigned",
+    body: `You've been assigned WO-2026-001`,
+    type: "assignment",
+    resource_type: "work_order",
+    resource_id: workOrderId,
+  },
+  { auditContext },
+);
 ```
 
 **No separate NotificationService needed** - use `GenericEntityService.create()`.
@@ -170,6 +176,7 @@ await GenericEntityService.create('notification', {
 ### Architecture Decision: Pure Props Pattern
 
 Instead of a dedicated `NotificationProvider`, we follow the same pattern as `AppSidebar`:
+
 - **Parent manages state** (`_NotificationTraySection` in `AdaptiveShell`)
 - **Child receives plain props** (`NotificationTray` widget)
 - **Data fetching** via `GenericEntityService.getAll('notification')`
@@ -178,10 +185,10 @@ This keeps widgets pure and testable, with no additional providers.
 
 ### Files Created
 
-| File | Purpose |
-|------|---------|
-| `lib/widgets/organisms/navigation/notification_tray.dart` | Bell icon + dropdown (pure StatelessWidget) |
-| `test/widgets/organisms/navigation/notification_tray_test.dart` | 19 widget tests |
+| File                                                            | Purpose                                     |
+| --------------------------------------------------------------- | ------------------------------------------- |
+| `lib/widgets/organisms/navigation/notification_tray.dart`       | Bell icon + dropdown (pure StatelessWidget) |
+| `test/widgets/organisms/navigation/notification_tray_test.dart` | 19 widget tests                             |
 
 ### NotificationTray Widget
 
@@ -243,12 +250,14 @@ class _NotificationTraySectionState extends State<_NotificationTraySection> {
 ## Implementation Checklist
 
 ### Phase 1: Database & Metadata ✅ COMPLETE
+
 - [x] Database table with indexes and triggers
 - [x] `notification-metadata.js` with generic router config
 - [x] Permissions auto-derived (`create: null` = disabled)
 - [x] Frontend metadata synced
 
 ### Phase 2: Verify Backend Routes ✅ COMPLETE
+
 - [x] Confirm `GET /api/notifications` returns user's notifications (RLS filtered)
 - [x] Confirm `PATCH /api/notifications/:id` marks as read (generic router)
 - [x] Confirm `DELETE /api/notifications/:id` works (generic router)
@@ -256,6 +265,7 @@ class _NotificationTraySectionState extends State<_NotificationTraySection> {
 - [x] Integration tests auto-generated from factory (`all-entities.test.js`)
 
 ### Phase 3: Frontend Implementation ✅ COMPLETE
+
 - [x] Create `NotificationTray` organism (bell icon + dropdown)
 - [x] Use pure props pattern (no dedicated provider)
 - [x] Use `GenericEntityService.getAll('notification')` for data fetching
@@ -264,6 +274,7 @@ class _NotificationTraySectionState extends State<_NotificationTraySection> {
 - [x] Auth guard (hide tray when not authenticated)
 
 ### Phase 4: Backend Triggers (Future)
+
 - [ ] Work order assignment → create notification
 - [ ] Status change → create notification
 - [ ] Other business events as needed
@@ -272,14 +283,14 @@ class _NotificationTraySectionState extends State<_NotificationTraySection> {
 
 ## Anti-Patterns to Avoid
 
-| ❌ Don't Do This | ✅ Do This Instead |
-|------------------|-------------------|
-| Create `notification-service.js` | Use `GenericEntityService.create()` |
-| Create custom routes | Use generic router |
-| Add `/unread-count` endpoint | Count from list in frontend |
-| Add Socket.IO | Fetch on navigation |
-| Add polling | Fetch on navigation |
-| Create notification from frontend | Backend creates, frontend reads |
+| ❌ Don't Do This                  | ✅ Do This Instead                  |
+| --------------------------------- | ----------------------------------- |
+| Create `notification-service.js`  | Use `GenericEntityService.create()` |
+| Create custom routes              | Use generic router                  |
+| Add `/unread-count` endpoint      | Count from list in frontend         |
+| Add Socket.IO                     | Fetch on navigation                 |
+| Add polling                       | Fetch on navigation                 |
+| Create notification from frontend | Backend creates, frontend reads     |
 
 ---
 

@@ -13,34 +13,38 @@
  *   node scripts/ports-helper.js health     -> outputs all ports for health check
  */
 
-const ports = require('../config/ports');
+const ports = require("../config/ports");
 
 const arg = process.argv[2];
 
 switch (arg) {
-  case 'backend':
+  case "backend":
     console.log(ports.BACKEND_PORT);
     break;
-  case 'frontend':
+  case "frontend":
     console.log(ports.FRONTEND_PORT);
     break;
-  case 'all':
-  case 'dev':
+  case "all":
+  case "dev":
     console.log(`${ports.BACKEND_PORT} ${ports.FRONTEND_PORT}`);
     break;
-  case 'health':
-    console.log(`${ports.BACKEND_PORT} ${ports.FRONTEND_PORT} ${ports.DB_DEV_PORT} ${ports.DB_TEST_PORT}`);
+  case "health":
+    console.log(
+      `${ports.BACKEND_PORT} ${ports.FRONTEND_PORT} ${ports.DB_DEV_PORT} ${ports.DB_TEST_PORT}`,
+    );
     break;
-  case 'db':
+  case "db":
     console.log(`${ports.DB_DEV_PORT} ${ports.DB_TEST_PORT}`);
     break;
-  case 'url:backend':
+  case "url:backend":
     console.log(ports.BACKEND_URL);
     break;
-  case 'url:health':
+  case "url:health":
     console.log(ports.BACKEND_HEALTH_URL);
     break;
   default:
-    console.error('Usage: node scripts/ports-helper.js [backend|frontend|all|dev|health|db|url:backend|url:health]');
+    console.error(
+      "Usage: node scripts/ports-helper.js [backend|frontend|all|dev|health|db|url:backend|url:health]",
+    );
     process.exit(1);
 }

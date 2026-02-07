@@ -5,7 +5,7 @@
  * Driven by metadata.fields and database constraints.
  */
 
-const { getCapabilities } = require('./scenario-helpers');
+const { getCapabilities } = require("./scenario-helpers");
 
 /**
  * Scenario: Unique constraint violation
@@ -33,28 +33,31 @@ function uniqueConstraintViolation(meta, ctx) {
   // Skip if identity field is auto-generated (create: 'none')
   // COMPUTED entities have auto-generated identifiers that users cannot set
   const identityFieldAccess = fieldAccess?.[identityField];
-  if (identityFieldAccess?.create === 'none') {
+  if (identityFieldAccess?.create === "none") {
     return; // Skip - server auto-generates unique values
   }
 
-  ctx.it(`POST /api/${meta.tableName} - rejects duplicate ${identityField}`, async () => {
-    // Create first entity
-    const first = await ctx.factory.create(meta.entityName);
-    const auth = await ctx.authHeader('admin');
+  ctx.it(
+    `POST /api/${meta.tableName} - rejects duplicate ${identityField}`,
+    async () => {
+      // Create first entity
+      const first = await ctx.factory.create(meta.entityName);
+      const auth = await ctx.authHeader("admin");
 
-    // Attempt to create second with same identity field
-    // Use buildMinimalWithFKs to resolve FK dependencies
-    const payload = await ctx.factory.buildMinimalWithFKs(meta.entityName, {
-      [identityField]: first[identityField],
-    });
+      // Attempt to create second with same identity field
+      // Use buildMinimalWithFKs to resolve FK dependencies
+      const payload = await ctx.factory.buildMinimalWithFKs(meta.entityName, {
+        [identityField]: first[identityField],
+      });
 
-    const response = await ctx.request
-      .post(`/api/${meta.tableName}`)
-      .set(auth)
-      .send(payload);
+      const response = await ctx.request
+        .post(`/api/${meta.tableName}`)
+        .set(auth)
+        .send(payload);
 
-    ctx.expect(response.status).toBe(409);
-  });
+      ctx.expect(response.status).toBe(409);
+    },
+  );
 }
 
 /**
@@ -70,19 +73,22 @@ function foreignKeyViolation(meta, ctx) {
   if (!caps.canCreate) return; // Create disabled = scenario N/A
 
   for (const [fkField, fkDef] of Object.entries(foreignKeys)) {
-    ctx.it(`POST /api/${meta.tableName} - rejects invalid ${fkField} reference`, async () => {
-      const payload = ctx.factory.buildMinimal(meta.entityName);
-      payload[fkField] = 99999; // Non-existent FK
-      const auth = await ctx.authHeader('admin');
+    ctx.it(
+      `POST /api/${meta.tableName} - rejects invalid ${fkField} reference`,
+      async () => {
+        const payload = ctx.factory.buildMinimal(meta.entityName);
+        payload[fkField] = 99999; // Non-existent FK
+        const auth = await ctx.authHeader("admin");
 
-      const response = await ctx.request
-        .post(`/api/${meta.tableName}`)
-        .set(auth)
-        .send(payload);
+        const response = await ctx.request
+          .post(`/api/${meta.tableName}`)
+          .set(auth)
+          .send(payload);
 
-      // Could be 400 (validation) or 422 (FK constraint)
-      ctx.expect([400, 422]).toContain(response.status);
-    });
+        // Could be 400 (validation) or 422 (FK constraint)
+        ctx.expect([400, 422]).toContain(response.status);
+      },
+    );
   }
 }
 
@@ -96,23 +102,26 @@ function sqlInjectionPrevention(meta, ctx) {
   const { searchableFields } = meta;
   if (!searchableFields?.length) return;
 
-  ctx.it(`GET /api/${meta.tableName}?search=<injection> - handles SQL injection safely`, async () => {
-    const auth = await ctx.authHeader('admin');
-    const injection = "'; DROP TABLE users; --";
+  ctx.it(
+    `GET /api/${meta.tableName}?search=<injection> - handles SQL injection safely`,
+    async () => {
+      const auth = await ctx.authHeader("admin");
+      const injection = "'; DROP TABLE users; --";
 
-    const response = await ctx.request
-      .get(`/api/${meta.tableName}`)
-      .query({ search: injection })
-      .set(auth);
+      const response = await ctx.request
+        .get(`/api/${meta.tableName}`)
+        .query({ search: injection })
+        .set(auth);
 
-    // Should either succeed safely (empty results) or return 400
-    ctx.expect([200, 400]).toContain(response.status);
+      // Should either succeed safely (empty results) or return 400
+      ctx.expect([200, 400]).toContain(response.status);
 
-    // Should NOT expose database errors
-    if (response.body.error) {
-      ctx.expect(response.body.error).not.toMatch(/sql|syntax|query/i);
-    }
-  });
+      // Should NOT expose database errors
+      if (response.body.error) {
+        ctx.expect(response.body.error).not.toMatch(/sql|syntax|query/i);
+      }
+    },
+  );
 }
 
 /**
@@ -120,25 +129,28 @@ function sqlInjectionPrevention(meta, ctx) {
  *
  * Preconditions: None (all entities have :id routes)
  * Tests: Completely non-numeric IDs return 400
- * 
+ *
  * Note: Our API uses parseInt which accepts "1abc" as 1 (JavaScript behavior).
  * We only test IDs that truly cannot be parsed.
  */
 function invalidIdFormat(meta, ctx) {
   // Only IDs that parseInt cannot parse at all
   // Note: Empty string in URL path may route differently, so we exclude it
-  const invalidIds = ['abc', 'undefined', 'null'];
+  const invalidIds = ["abc", "undefined", "null"];
 
   for (const invalidId of invalidIds) {
-    ctx.it(`GET /api/${meta.tableName}/${invalidId} - returns 400 for invalid ID`, async () => {
-      const auth = await ctx.authHeader('admin');
+    ctx.it(
+      `GET /api/${meta.tableName}/${invalidId} - returns 400 for invalid ID`,
+      async () => {
+        const auth = await ctx.authHeader("admin");
 
-      const response = await ctx.request
-        .get(`/api/${meta.tableName}/${invalidId}`)
-        .set(auth);
+        const response = await ctx.request
+          .get(`/api/${meta.tableName}/${invalidId}`)
+          .set(auth);
 
-      ctx.expect(response.status).toBe(400);
-    });
+        ctx.expect(response.status).toBe(400);
+      },
+    );
   }
 }
 
@@ -149,18 +161,21 @@ function invalidIdFormat(meta, ctx) {
  * Tests: Negative/zero/overflow IDs return 400
  */
 function invalidIdRange(meta, ctx) {
-  const invalidIds = ['-1', '0', '99999999999999999999'];
+  const invalidIds = ["-1", "0", "99999999999999999999"];
 
   for (const invalidId of invalidIds) {
-    ctx.it(`GET /api/${meta.tableName}/${invalidId} - returns 400 for out-of-range ID`, async () => {
-      const auth = await ctx.authHeader('admin');
+    ctx.it(
+      `GET /api/${meta.tableName}/${invalidId} - returns 400 for out-of-range ID`,
+      async () => {
+        const auth = await ctx.authHeader("admin");
 
-      const response = await ctx.request
-        .get(`/api/${meta.tableName}/${invalidId}`)
-        .set(auth);
+        const response = await ctx.request
+          .get(`/api/${meta.tableName}/${invalidId}`)
+          .set(auth);
 
-      ctx.expect(response.status).toBe(400);
-    });
+        ctx.expect(response.status).toBe(400);
+      },
+    );
   }
 }
 
@@ -177,24 +192,29 @@ function emptyStringRejected(meta, ctx) {
   if (!caps.canCreate) return; // Create disabled = scenario N/A
 
   // Only test string-type required fields
-  const stringFields = requiredFields.filter(field => {
+  const stringFields = requiredFields.filter((field) => {
     const fieldMeta = meta.fields?.[field];
-    return !fieldMeta || fieldMeta.type === 'string' || fieldMeta.type === undefined;
+    return (
+      !fieldMeta || fieldMeta.type === "string" || fieldMeta.type === undefined
+    );
   });
 
   for (const field of stringFields) {
-    ctx.it(`POST /api/${tableName} - rejects empty string for ${field}`, async () => {
-      const payload = await ctx.factory.buildMinimalWithFKs(entityName);
-      payload[field] = '';
-      const auth = await ctx.authHeader('admin');
+    ctx.it(
+      `POST /api/${tableName} - rejects empty string for ${field}`,
+      async () => {
+        const payload = await ctx.factory.buildMinimalWithFKs(entityName);
+        payload[field] = "";
+        const auth = await ctx.authHeader("admin");
 
-      const response = await ctx.request
-        .post(`/api/${tableName}`)
-        .set(auth)
-        .send(payload);
+        const response = await ctx.request
+          .post(`/api/${tableName}`)
+          .set(auth)
+          .send(payload);
 
-      ctx.expect(response.status).toBe(400);
-    });
+        ctx.expect(response.status).toBe(400);
+      },
+    );
   }
 }
 
@@ -211,9 +231,9 @@ function unknownFieldsStripped(meta, ctx) {
 
   ctx.it(`POST /api/${tableName} - unknown fields stripped`, async () => {
     const payload = await ctx.factory.buildMinimalWithFKs(entityName);
-    payload.__unknown_field__ = 'should be ignored';
-    payload.hackerField = 'also ignored';
-    const auth = await ctx.authHeader('admin');
+    payload.__unknown_field__ = "should be ignored";
+    payload.hackerField = "also ignored";
+    const auth = await ctx.authHeader("admin");
 
     const response = await ctx.request
       .post(`/api/${tableName}`)

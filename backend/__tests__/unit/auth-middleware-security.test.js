@@ -10,9 +10,15 @@
 const request = require("supertest");
 const express = require("express");
 const jwt = require("jsonwebtoken");
-const { authenticateToken, requireMinimumRole, requirePermission } = require("../../middleware/auth");
+const {
+  authenticateToken,
+  requireMinimumRole,
+  requirePermission,
+} = require("../../middleware/auth");
 const AppConfig = require("../../config/app-config");
-const { mockUserDataServiceFindOrCreateUser } = require("../mocks/services.mock");
+const {
+  mockUserDataServiceFindOrCreateUser,
+} = require("../mocks/services.mock");
 
 // Mock the UserDataService (static class)
 jest.mock("../../services/user-data", () => ({
@@ -51,19 +57,36 @@ describe("Authentication Middleware - Security", () => {
     });
 
     // Test endpoint that requires admin role
-    app.get("/api/admin", authenticateToken, requireMinimumRole("admin"), (req, res) => {
-      res.json({ success: true, message: "Admin access granted" });
-    });
+    app.get(
+      "/api/admin",
+      authenticateToken,
+      requireMinimumRole("admin"),
+      (req, res) => {
+        res.json({ success: true, message: "Admin access granted" });
+      },
+    );
 
     // Test endpoint that requires specific permission - unified signature
-    app.get("/api/users", authenticateToken, attachTestEntity("users"), requirePermission("read"), (req, res) => {
-      res.json({ success: true, message: "Users read access granted" });
-    });
+    app.get(
+      "/api/users",
+      authenticateToken,
+      attachTestEntity("users"),
+      requirePermission("read"),
+      (req, res) => {
+        res.json({ success: true, message: "Users read access granted" });
+      },
+    );
 
     // Test endpoint that requires create permission - unified signature
-    app.post("/api/users", authenticateToken, attachTestEntity("users"), requirePermission("create"), (req, res) => {
-      res.json({ success: true, message: "Users create access granted" });
-    });
+    app.post(
+      "/api/users",
+      authenticateToken,
+      attachTestEntity("users"),
+      requirePermission("create"),
+      (req, res) => {
+        res.json({ success: true, message: "Users create access granted" });
+      },
+    );
   });
 
   describe("Development Token Security", () => {
@@ -520,7 +543,13 @@ describe("Authentication Middleware - Security", () => {
     });
 
     test("all dev roles should be blocked from writes", async () => {
-      const roles = ["admin", "manager", "dispatcher", "technician", "customer"];
+      const roles = [
+        "admin",
+        "manager",
+        "dispatcher",
+        "technician",
+        "customer",
+      ];
 
       for (const role of roles) {
         const token = generateDevToken(role);

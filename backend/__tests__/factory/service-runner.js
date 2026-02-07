@@ -15,8 +15,8 @@
  *   runAllServiceTests();
  */
 
-const serviceRegistry = require('./service-registry');
-const serviceScenarios = require('./scenarios/service.scenarios');
+const serviceRegistry = require("./service-registry");
+const serviceScenarios = require("./scenarios/service.scenarios");
 
 /**
  * Run all test scenarios for a service
@@ -33,7 +33,7 @@ function runServiceTests(serviceName, options = {}) {
 
   if (!serviceMeta) {
     throw new Error(
-      `Unknown service: ${serviceName}. Available: ${Object.keys(serviceRegistry).join(', ')}`,
+      `Unknown service: ${serviceName}. Available: ${Object.keys(serviceRegistry).join(", ")}`,
     );
   }
 
@@ -57,18 +57,18 @@ function runServiceTests(serviceName, options = {}) {
       } else {
         // Unit mode - create mocks for dependencies
         mocks = createMocks(serviceMeta.dependencies, options.mocks);
-        
+
         // Try to load the service
         // For unit tests, we may need to mock dependencies first
         try {
           // Reset module cache to pick up mocks
           jest.resetModules();
-          
+
           // Apply mocks
           for (const [depName, mock] of Object.entries(mocks)) {
             jest.doMock(getDependencyPath(depName), () => mock);
           }
-          
+
           service = require(serviceMeta.module);
         } catch (error) {
           console.warn(`Could not load ${serviceName}: ${error.message}`);
@@ -136,7 +136,7 @@ function createMocks(dependencies, customMocks = {}) {
     }
 
     switch (dep) {
-      case 'db':
+      case "db":
         mocks[dep] = {
           query: jest.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
           getClient: jest.fn().mockResolvedValue({
@@ -145,9 +145,9 @@ function createMocks(dependencies, customMocks = {}) {
           }),
         };
         break;
-      case 'fs':
+      case "fs":
         mocks[dep] = {
-          readFile: jest.fn().mockResolvedValue(Buffer.from('test')),
+          readFile: jest.fn().mockResolvedValue(Buffer.from("test")),
           writeFile: jest.fn().mockResolvedValue(undefined),
           unlink: jest.fn().mockResolvedValue(undefined),
           existsSync: jest.fn().mockReturnValue(true),
@@ -166,10 +166,10 @@ function createMocks(dependencies, customMocks = {}) {
  */
 function getDependencyPath(depName) {
   switch (depName) {
-    case 'db':
-      return '../../../db/connection';
-    case 'fs':
-      return 'fs/promises';
+    case "db":
+      return "../../../db/connection";
+    case "fs":
+      return "fs/promises";
     default:
       return depName;
   }
@@ -183,13 +183,13 @@ function createStubService(serviceMeta) {
 
   for (const [methodName, methodMeta] of Object.entries(serviceMeta.methods)) {
     if (methodMeta.async) {
-      stub[methodName] = jest.fn().mockResolvedValue(
-        getDefaultReturnValue(methodMeta.returns),
-      );
+      stub[methodName] = jest
+        .fn()
+        .mockResolvedValue(getDefaultReturnValue(methodMeta.returns));
     } else {
-      stub[methodName] = jest.fn().mockReturnValue(
-        getDefaultReturnValue(methodMeta.returns),
-      );
+      stub[methodName] = jest
+        .fn()
+        .mockReturnValue(getDefaultReturnValue(methodMeta.returns));
     }
   }
 
@@ -201,19 +201,19 @@ function createStubService(serviceMeta) {
  */
 function getDefaultReturnValue(returnType) {
   switch (returnType) {
-    case 'array':
+    case "array":
       return [];
-    case 'object':
+    case "object":
       return {};
-    case 'object|null':
+    case "object|null":
       return null;
-    case 'string':
-      return '';
-    case 'boolean':
+    case "string":
+      return "";
+    case "boolean":
       return true;
-    case 'number':
+    case "number":
       return 0;
-    case 'void':
+    case "void":
       return undefined;
     default:
       return null;

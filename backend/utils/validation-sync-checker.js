@@ -8,9 +8,9 @@
  * database-layer validation (PostgreSQL CHECK constraints).
  */
 
-const { logger } = require('../config/logger');
-const { loadValidationRules } = require('./validation-loader');
-const AppError = require('./app-error');
+const { logger } = require("../config/logger");
+const { loadValidationRules } = require("./validation-loader");
+const AppError = require("./app-error");
 
 /**
  * Query PostgreSQL CHECK constraints to extract enum values
@@ -48,7 +48,7 @@ async function getDbCheckConstraints(pool) {
       // Extract quoted strings from the array
       const quotedValues = match[1].match(/'([^']+)'/g);
       const enumValues = quotedValues
-        ? quotedValues.map(v => v.replace(/'/g, '')).sort()
+        ? quotedValues.map((v) => v.replace(/'/g, "")).sort()
         : [];
 
       const key = `${table_name}.${column_name}`;
@@ -66,14 +66,17 @@ async function getDbCheckConstraints(pool) {
  * UPDATED: Now uses entityFields structure from validation-deriver
  */
 const ENTITY_FIELD_TO_DB_MAPPING = {
-  role: { status: 'roles.status' },
-  user: { status: 'users.status' },
-  customer: { status: 'customers.status' },
-  technician: { status: 'technicians.status' },
-  work_order: { status: 'work_orders.status', priority: 'work_orders.priority' },
-  invoice: { status: 'invoices.status' },
-  contract: { status: 'contracts.status' },
-  inventory: { status: 'inventory.status' },
+  role: { status: "roles.status" },
+  user: { status: "users.status" },
+  customer: { status: "customers.status" },
+  technician: { status: "technicians.status" },
+  work_order: {
+    status: "work_orders.status",
+    priority: "work_orders.priority",
+  },
+  invoice: { status: "invoices.status" },
+  contract: { status: "contracts.status" },
+  inventory: { status: "inventory.status" },
 };
 
 /**
@@ -93,7 +96,9 @@ async function validateEnumSync(pool) {
     let fieldsChecked = 0;
 
     // Check each entity's fields
-    for (const [entityName, fieldMappings] of Object.entries(ENTITY_FIELD_TO_DB_MAPPING)) {
+    for (const [entityName, fieldMappings] of Object.entries(
+      ENTITY_FIELD_TO_DB_MAPPING,
+    )) {
       for (const [fieldName, dbKey] of Object.entries(fieldMappings)) {
         fieldsChecked++;
 
@@ -101,12 +106,16 @@ async function validateEnumSync(pool) {
         const fieldDef = rules.entityFields?.[entityName]?.[fieldName];
 
         if (!fieldDef) {
-          logger.warn(`[ValidationSync] ⚠️  Field definition not found: ${entityName}.${fieldName}`);
+          logger.warn(
+            `[ValidationSync] ⚠️  Field definition not found: ${entityName}.${fieldName}`,
+          );
           continue;
         }
 
         if (!fieldDef.enum) {
-          logger.warn(`[ValidationSync] ⚠️  No enum defined for: ${entityName}.${fieldName}`);
+          logger.warn(
+            `[ValidationSync] ⚠️  No enum defined for: ${entityName}.${fieldName}`,
+          );
           continue;
         }
 
@@ -114,7 +123,9 @@ async function validateEnumSync(pool) {
         const dbEnum = dbConstraints[dbKey];
 
         if (!dbEnum) {
-          logger.warn(`[ValidationSync] ⚠️  No database constraint found for: ${dbKey}`);
+          logger.warn(
+            `[ValidationSync] ⚠️  No database constraint found for: ${dbKey}`,
+          );
           continue;
         }
 
@@ -122,50 +133,66 @@ async function validateEnumSync(pool) {
         const joiSet = new Set(joiEnum);
         const dbSet = new Set(dbEnum);
 
-        if (joiEnum.length !== dbEnum.length || !joiEnum.every(v => dbSet.has(v))) {
+        if (
+          joiEnum.length !== dbEnum.length ||
+          !joiEnum.every((v) => dbSet.has(v))
+        ) {
           mismatches.push({
             field: `${entityName}.${fieldName}`,
             database: dbKey,
             joiEnum,
             dbEnum,
-            missing_in_joi: dbEnum.filter(v => !joiSet.has(v)),
-            missing_in_db: joiEnum.filter(v => !dbSet.has(v)),
+            missing_in_joi: dbEnum.filter((v) => !joiSet.has(v)),
+            missing_in_db: joiEnum.filter((v) => !dbSet.has(v)),
           });
         }
       }
     }
 
     if (mismatches.length > 0) {
-      logger.error('[ValidationSync] ❌ Enum mismatches detected:');
+      logger.error("[ValidationSync] ❌ Enum mismatches detected:");
       for (const mismatch of mismatches) {
         logger.error(`  ${mismatch.field} (${mismatch.database}):`);
-        logger.error(`    Joi:      [${mismatch.joiEnum.join(', ')}]`);
-        logger.error(`    Database: [${mismatch.dbEnum.join(', ')}]`);
+        logger.error(`    Joi:      [${mismatch.joiEnum.join(", ")}]`);
+        logger.error(`    Database: [${mismatch.dbEnum.join(", ")}]`);
         if (mismatch.missing_in_joi.length > 0) {
-          logger.error(`    Missing in Joi: [${mismatch.missing_in_joi.join(', ')}]`);
+          logger.error(
+            `    Missing in Joi: [${mismatch.missing_in_joi.join(", ")}]`,
+          );
         }
         if (mismatch.missing_in_db.length > 0) {
-          logger.error(`    Missing in DB: [${mismatch.missing_in_db.join(', ')}]`);
+          logger.error(
+            `    Missing in DB: [${mismatch.missing_in_db.join(", ")}]`,
+          );
         }
       }
 
       throw new AppError(
-        'Validation enum definitions do not match database CHECK constraints. ' +
-        `Found ${mismatches.length} mismatch(es). ` +
-        'Update entity metadata or database schema to sync.',
+        "Validation enum definitions do not match database CHECK constraints. " +
+          `Found ${mismatches.length} mismatch(es). ` +
+          "Update entity metadata or database schema to sync.",
         500,
-        'INTERNAL_ERROR',
+        "INTERNAL_ERROR",
       );
     }
 
-    logger.info(`[ValidationSync] ✅ Enum validation sync verified - ${fieldsChecked} fields checked`);
+    logger.info(
+      `[ValidationSync] ✅ Enum validation sync verified - ${fieldsChecked} fields checked`,
+    );
     return true;
   } catch (error) {
-    if (error.message.includes('Validation enum definitions')) {
+    if (error.message.includes("Validation enum definitions")) {
       throw error; // Re-throw validation errors
     }
-    logger.error('[ValidationSync] ❌ Error during validation sync check:', error);
-    throw new AppError(`Validation sync check failed: ${error.message}`, 500, 'INTERNAL_ERROR');
+    logger.error(
+      "[ValidationSync] ❌ Error during validation sync check:",
+      error,
+    );
+    throw new AppError(
+      `Validation sync check failed: ${error.message}`,
+      500,
+      "INTERNAL_ERROR",
+    );
   }
 }
 

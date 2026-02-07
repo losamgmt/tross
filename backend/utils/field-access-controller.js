@@ -22,12 +22,12 @@
  *   const sanitizedData = filterDataByRole(data, metadata, 'customer', 'read');
  */
 
-const { UNIVERSAL_FIELD_ACCESS } = require('../config/constants');
+const { UNIVERSAL_FIELD_ACCESS } = require("../config/constants");
 const {
   getRoleHierarchy,
   getRolePriorityToName,
-} = require('../config/role-hierarchy-loader');
-const AppError = require('./app-error');
+} = require("../config/role-hierarchy-loader");
+const AppError = require("./app-error");
 
 /**
  * Get the index of a role in the hierarchy (higher = more permissions)
@@ -49,17 +49,17 @@ function getRoleIndex(role) {
  * @returns {string} Role name (lowercase)
  */
 function normalizeRoleName(role) {
-  if (typeof role === 'string') {
+  if (typeof role === "string") {
     return role.toLowerCase();
   }
 
   // Map priority numbers to role names (from DB-loaded hierarchy)
   const priorityToName = getRolePriorityToName();
-  if (typeof role === 'number' && priorityToName[role]) {
+  if (typeof role === "number" && priorityToName[role]) {
     return priorityToName[role];
   }
 
-  return 'customer'; // Default to lowest permission
+  return "customer"; // Default to lowest permission
 }
 
 /**
@@ -71,7 +71,7 @@ function normalizeRoleName(role) {
  */
 function hasFieldPermission(userRole, requiredRole) {
   // 'none' means no one can do this operation
-  if (requiredRole === 'none') {
+  if (requiredRole === "none") {
     return false;
   }
 
@@ -123,7 +123,8 @@ function getFieldsForOperation(metadata, userRole, operation) {
  */
 function canAccessField(metadata, userRole, fieldName, operation) {
   // Check entity-specific first, then universal
-  const fieldAccess = metadata.fieldAccess?.[fieldName] || UNIVERSAL_FIELD_ACCESS[fieldName];
+  const fieldAccess =
+    metadata.fieldAccess?.[fieldName] || UNIVERSAL_FIELD_ACCESS[fieldName];
 
   if (!fieldAccess) {
     // Field not defined in access control - default to no access
@@ -143,12 +144,12 @@ function canAccessField(metadata, userRole, fieldName, operation) {
  * @param {string} [operation='read'] - CRUD operation (usually 'read' for responses)
  * @returns {Object|Array} Filtered data with only accessible fields
  */
-function filterDataByRole(data, metadata, userRole, operation = 'read') {
+function filterDataByRole(data, metadata, userRole, operation = "read") {
   const allowedFields = getFieldsForOperation(metadata, userRole, operation);
   const allowedSet = new Set(allowedFields);
 
   if (Array.isArray(data)) {
-    return data.map(record => pickFields(record, allowedSet));
+    return data.map((record) => pickFields(record, allowedSet));
   }
 
   return pickFields(data, allowedSet);
@@ -192,9 +193,9 @@ function validateFieldAccess(data, metadata, userRole, operation) {
   if (disallowedFields.length > 0) {
     const roleName = normalizeRoleName(userRole);
     throw new AppError(
-      `Access denied: Role '${roleName}' cannot ${operation} field(s): ${disallowedFields.join(', ')}`,
+      `Access denied: Role '${roleName}' cannot ${operation} field(s): ${disallowedFields.join(", ")}`,
       403,
-      'FORBIDDEN',
+      "FORBIDDEN",
     );
   }
 }
@@ -207,7 +208,7 @@ function validateFieldAccess(data, metadata, userRole, operation) {
  * @returns {Object} New object with only specified fields
  */
 function pickFields(obj, fieldSet) {
-  if (!obj || typeof obj !== 'object') {
+  if (!obj || typeof obj !== "object") {
     return obj;
   }
 
@@ -228,7 +229,7 @@ function pickFields(obj, fieldSet) {
  * @returns {Object} New object without specified fields
  */
 function omitFields(obj, fields) {
-  if (!obj || typeof obj !== 'object') {
+  if (!obj || typeof obj !== "object") {
     return obj;
   }
 

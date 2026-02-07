@@ -1,24 +1,26 @@
 // Clean Tross Backend Server
-const express = require('express');
-const cors = require('cors');
-const swaggerUi = require('swagger-ui-express');
-const swaggerSpec = require('./config/swagger');
-const { HTTP_STATUS, SECURITY } = require('./config/constants');
-const { TIMEOUTS } = require('./config/timeouts');
-const { logger, requestLogger } = require('./config/logger');
-const { securityHeaders, sanitizeInput } = require('./middleware/security');
-const { apiLimiter, authLimiter } = require('./middleware/rate-limit');
-const { requestTimeout, timeoutHandler } = require('./middleware/timeout');
-const { validateEnvironment } = require('./utils/env-validator');
-const { getAllowedOrigins } = require('./config/deployment-adapter');
-const { initializeDatabase } = require('./scripts/init-database');
-const { initializeFromDatabase: initRoleHierarchy } = require('./config/role-hierarchy-loader');
-require('dotenv').config();
+const express = require("express");
+const cors = require("cors");
+const swaggerUi = require("swagger-ui-express");
+const swaggerSpec = require("./config/swagger");
+const { HTTP_STATUS, SECURITY } = require("./config/constants");
+const { TIMEOUTS } = require("./config/timeouts");
+const { logger, requestLogger } = require("./config/logger");
+const { securityHeaders, sanitizeInput } = require("./middleware/security");
+const { apiLimiter, authLimiter } = require("./middleware/rate-limit");
+const { requestTimeout, timeoutHandler } = require("./middleware/timeout");
+const { validateEnvironment } = require("./utils/env-validator");
+const { getAllowedOrigins } = require("./config/deployment-adapter");
+const { initializeDatabase } = require("./scripts/init-database");
+const {
+  initializeFromDatabase: initRoleHierarchy,
+} = require("./config/role-hierarchy-loader");
+require("dotenv").config();
 
 // Environment Validation
 // Comprehensive validation of all environment variables at startup
 // Skipped during tests to allow test-specific configuration
-if (process.env.NODE_ENV !== 'test') {
+if (process.env.NODE_ENV !== "test") {
   const result = validateEnvironment({ exitOnError: true });
   if (!result.valid) {
     // exitOnError: true will have already called process.exit(1)
@@ -29,47 +31,47 @@ if (process.env.NODE_ENV !== 'test') {
 
 // Legacy production checks (kept for backwards compatibility)
 // Note: Most validation now handled by env-validator.js
-if (process.env.NODE_ENV === 'production') {
+if (process.env.NODE_ENV === "production") {
   // Validate DB_PASSWORD strength
   if (
-    process.env.DB_PASSWORD === 'tross123' ||
+    process.env.DB_PASSWORD === "tross123" ||
     process.env.DB_PASSWORD.length < 12
   ) {
     logger.error(
-      '❌ FATAL: DB_PASSWORD must be a strong password (12+ characters) in production',
+      "❌ FATAL: DB_PASSWORD must be a strong password (12+ characters) in production",
     );
     logger.error(
-      'Current DB_PASSWORD is weak or uses default development value',
+      "Current DB_PASSWORD is weak or uses default development value",
     );
     process.exit(1);
   }
 
   // Optional: Validate Auth0 configuration if using Auth0
-  if (process.env.AUTH_MODE === 'auth0') {
+  if (process.env.AUTH_MODE === "auth0") {
     const auth0Required = [
-      'AUTH0_DOMAIN',
-      'AUTH0_CLIENT_ID',
-      'AUTH0_CLIENT_SECRET',
-      'AUTH0_AUDIENCE',
+      "AUTH0_DOMAIN",
+      "AUTH0_CLIENT_ID",
+      "AUTH0_CLIENT_SECRET",
+      "AUTH0_AUDIENCE",
     ];
     const auth0Missing = auth0Required.filter((envVar) => !process.env[envVar]);
     if (auth0Missing.length > 0) {
-      logger.error('❌ FATAL: Missing Auth0 configuration in production', {
+      logger.error("❌ FATAL: Missing Auth0 configuration in production", {
         missing: auth0Missing,
       });
       process.exit(1);
     }
   }
 
-  logger.info('✅ Production environment validation passed');
+  logger.info("✅ Production environment validation passed");
 }
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Trust proxy for Railway/Vercel (required for rate limiting behind reverse proxy)
-if (process.env.NODE_ENV === 'production') {
-  app.set('trust proxy', 1);
+if (process.env.NODE_ENV === "production") {
+  app.set("trust proxy", 1);
 }
 
 // Essential security middleware
@@ -82,8 +84,14 @@ app.use(requestLogger);
 app.use(
   cors({
     origin: getAllowedOrigins(), // Uses ALLOWED_ORIGINS env var with smart defaults
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Filename', 'X-Category', 'X-Description'],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-Filename",
+      "X-Category",
+      "X-Description",
+    ],
     credentials: true,
     maxAge: 86400, // 24 hours preflight cache
   }),
@@ -96,19 +104,19 @@ app.use(
 const fileUploadRawParser = express.raw({
   type: [
     // Images
-    'image/*',
+    "image/*",
     // Documents - PDF and Office formats
-    'application/pdf',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/vnd.ms-excel',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     // Text formats
-    'text/*',
+    "text/*",
     // Fallback for unknown types picked by browser
-    'application/octet-stream',
+    "application/octet-stream",
   ],
-  limit: '10mb',
+  limit: "10mb",
 });
 
 // Apply raw parser to all entity file upload paths
@@ -126,17 +134,17 @@ app.use(sanitizeInput()); // Input sanitization enabled for security
 
 // API Documentation (Swagger UI)
 app.use(
-  '/api-docs',
+  "/api-docs",
   swaggerUi.serve,
   swaggerUi.setup(swaggerSpec, {
-    customCss: '.swagger-ui .topbar { display: none }',
-    customSiteTitle: 'Tross API Documentation',
+    customCss: ".swagger-ui .topbar { display: none }",
+    customSiteTitle: "Tross API Documentation",
   }),
 );
 
 // Swagger JSON spec endpoint
-app.get('/api-docs.json', (req, res) => {
-  res.setHeader('Content-Type', 'application/json');
+app.get("/api-docs.json", (req, res) => {
+  res.setHeader("Content-Type", "application/json");
   res.send(swaggerSpec);
 });
 
@@ -161,28 +169,31 @@ app.get('/api/health/:service', async (req, res) => {
 */
 
 // API routes with rate limiting
-const authRoutes = require('./routes/auth');
-const devAuthRoutes = require('./routes/dev-auth');
-const auth0Routes = require('./routes/auth0');
-const healthRoutes = require('./routes/health');
-const schemaRoutes = require('./routes/schema');
-const rolesExtensions = require('./routes/roles-extensions');
-const statsRoutes = require('./routes/stats');
-const exportRoutes = require('./routes/export');
-const auditRoutes = require('./routes/audit');
-const adminRoutes = require('./routes/admin');
+const authRoutes = require("./routes/auth");
+const devAuthRoutes = require("./routes/dev-auth");
+const auth0Routes = require("./routes/auth0");
+const healthRoutes = require("./routes/health");
+const schemaRoutes = require("./routes/schema");
+const rolesExtensions = require("./routes/roles-extensions");
+const statsRoutes = require("./routes/stats");
+const exportRoutes = require("./routes/export");
+const auditRoutes = require("./routes/audit");
+const adminRoutes = require("./routes/admin");
 
 // Metadata-driven entity route loading (replaces hardcoded entity router imports)
-const { loadEntityRoutes, loadFileSubRoutes } = require('./config/route-loader');
+const {
+  loadEntityRoutes,
+  loadFileSubRoutes,
+} = require("./config/route-loader");
 const entityRoutes = loadEntityRoutes();
 const fileSubRoutes = loadFileSubRoutes();
 
 // =============================================================================
 // AUTHENTICATION ROUTES
 // =============================================================================
-app.use('/api/auth', authLimiter, authRoutes);
-app.use('/api/auth0', authLimiter, auth0Routes); // Auth0 OAuth endpoints
-app.use('/api/dev', devAuthRoutes); // Development auth (no rate limit - dev only)
+app.use("/api/auth", authLimiter, authRoutes);
+app.use("/api/auth0", authLimiter, auth0Routes); // Auth0 OAuth endpoints
+app.use("/api/dev", devAuthRoutes); // Development auth (no rate limit - dev only)
 
 // =============================================================================
 // FILE ATTACHMENT SUB-ROUTES (Metadata-Driven)
@@ -202,32 +213,32 @@ for (const { path, router } of entityRoutes) {
 }
 
 // Entity-specific extensions (not generic - kept explicit)
-app.use('/api/roles', apiLimiter, rolesExtensions); // Extension: /:id/users
+app.use("/api/roles", apiLimiter, rolesExtensions); // Extension: /:id/users
 
 // =============================================================================
 // INFRASTRUCTURE & UTILITY ROUTES (not entity-driven)
 // =============================================================================
-app.use('/api/health', apiLimiter, healthRoutes); // Health monitoring
-app.use('/api/schema', apiLimiter, schemaRoutes); // Schema introspection for UI generation
-app.use('/api/stats', apiLimiter, statsRoutes); // Aggregation endpoints
-app.use('/api/export', apiLimiter, exportRoutes); // CSV export
-app.use('/api/audit', apiLimiter, auditRoutes); // Audit log queries
-app.use('/api/admin', apiLimiter, adminRoutes); // Admin system management
-app.use('/api', apiLimiter); // Catch-all rate limiting
+app.use("/api/health", apiLimiter, healthRoutes); // Health monitoring
+app.use("/api/schema", apiLimiter, schemaRoutes); // Schema introspection for UI generation
+app.use("/api/stats", apiLimiter, statsRoutes); // Aggregation endpoints
+app.use("/api/export", apiLimiter, exportRoutes); // CSV export
+app.use("/api/audit", apiLimiter, auditRoutes); // Audit log queries
+app.use("/api/admin", apiLimiter, adminRoutes); // Admin system management
+app.use("/api", apiLimiter); // Catch-all rate limiting
 
 // 404 handler for unknown endpoints
 app.use((req, res) => {
   res.status(HTTP_STATUS.NOT_FOUND).json({
-    error: 'API endpoint not found',
+    error: "API endpoint not found",
     path: req.originalUrl,
     method: req.method,
     timestamp: new Date().toISOString(),
     available_endpoints: [
-      '/api/health',
-      '/api/auth/me',
-      '/api/auth/users',
-      '/api/roles',
-      process.env.USE_TEST_AUTH === 'true' ? '/api/dev/status' : null,
+      "/api/health",
+      "/api/auth/me",
+      "/api/auth/users",
+      "/api/roles",
+      process.env.USE_TEST_AUTH === "true" ? "/api/dev/status" : null,
     ].filter(Boolean),
   });
 });
@@ -239,51 +250,62 @@ app.use(timeoutHandler);
 // Services throw plain Error objects; this handler maps them to HTTP responses
 app.use((error, req, res, _next) => {
   // Determine status code from error properties or message patterns
-  let statusCode = error.statusCode || error.status || HTTP_STATUS.INTERNAL_SERVER_ERROR;
-  let errorCode = error.code || 'INTERNAL_ERROR';
+  let statusCode =
+    error.statusCode || error.status || HTTP_STATUS.INTERNAL_SERVER_ERROR;
+  let errorCode = error.code || "INTERNAL_ERROR";
 
   // Pattern matching for common error messages (services stay simple)
-  const message = error.message || '';
+  const message = error.message || "";
   const messageLower = message.toLowerCase();
 
   if (!error.statusCode && !error.status) {
     // Not Found patterns
-    if (messageLower.includes('not found') || messageLower.includes('does not exist')) {
+    if (
+      messageLower.includes("not found") ||
+      messageLower.includes("does not exist")
+    ) {
       statusCode = HTTP_STATUS.NOT_FOUND;
-      errorCode = 'NOT_FOUND';
+      errorCode = "NOT_FOUND";
     }
     // Bad Request patterns
     // Note: "cannot read properties" is JS internal error, not validation
     else if (
-      messageLower.includes('invalid') ||
-      messageLower.includes('required') ||
-      (messageLower.includes('cannot') && !messageLower.includes('cannot read properties')) ||
-      messageLower.includes('must be') ||
-      messageLower.includes('already exists') ||
-      messageLower.includes('yourself') ||
-      messageLower.includes('not a foreign key')
+      messageLower.includes("invalid") ||
+      messageLower.includes("required") ||
+      (messageLower.includes("cannot") &&
+        !messageLower.includes("cannot read properties")) ||
+      messageLower.includes("must be") ||
+      messageLower.includes("already exists") ||
+      messageLower.includes("yourself") ||
+      messageLower.includes("not a foreign key")
     ) {
       statusCode = HTTP_STATUS.BAD_REQUEST;
-      errorCode = 'BAD_REQUEST';
+      errorCode = "BAD_REQUEST";
     }
     // Unauthorized patterns
     else if (
-      messageLower.includes('expired') ||
-      messageLower.includes('unauthorized') ||
-      messageLower.includes('not authenticated')
+      messageLower.includes("expired") ||
+      messageLower.includes("unauthorized") ||
+      messageLower.includes("not authenticated")
     ) {
       statusCode = HTTP_STATUS.UNAUTHORIZED;
-      errorCode = 'UNAUTHORIZED';
+      errorCode = "UNAUTHORIZED";
     }
     // Forbidden patterns
-    else if (messageLower.includes('forbidden') || messageLower.includes('not allowed')) {
+    else if (
+      messageLower.includes("forbidden") ||
+      messageLower.includes("not allowed")
+    ) {
       statusCode = HTTP_STATUS.FORBIDDEN;
-      errorCode = 'FORBIDDEN';
+      errorCode = "FORBIDDEN";
     }
     // Conflict patterns
-    else if (messageLower.includes('conflict') || messageLower.includes('duplicate')) {
+    else if (
+      messageLower.includes("conflict") ||
+      messageLower.includes("duplicate")
+    ) {
       statusCode = HTTP_STATUS.CONFLICT;
-      errorCode = 'CONFLICT';
+      errorCode = "CONFLICT";
     }
   }
 
@@ -298,18 +320,19 @@ app.use((error, req, res, _next) => {
 
   if (statusCode >= 500) {
     logContext.stack = error.stack;
-    logger.error('Server error', logContext);
+    logger.error("Server error", logContext);
   } else {
-    logger.warn('Client error', logContext);
+    logger.warn("Client error", logContext);
   }
 
   // Build consistent response
   const response = {
     success: false,
     error: errorCode,
-    message: statusCode >= 500 && process.env.NODE_ENV !== 'development'
-      ? 'Something went wrong'
-      : message,
+    message:
+      statusCode >= 500 && process.env.NODE_ENV !== "development"
+        ? "Something went wrong"
+        : message,
     timestamp: new Date().toISOString(),
   };
 
@@ -324,53 +347,53 @@ app.use((error, req, res, _next) => {
   // Add retry-after for rate limits
   if (error.retryAfter) {
     response.retryAfter = error.retryAfter;
-    res.set('Retry-After', String(error.retryAfter));
+    res.set("Retry-After", String(error.retryAfter));
   }
 
   res.status(statusCode).json(response);
 });
 
 // Graceful shutdown (no hard dependencies)
-process.on('SIGTERM', async () => {
-  logger.info('📴 Shutting down gracefully...');
+process.on("SIGTERM", async () => {
+  logger.info("📴 Shutting down gracefully...");
   try {
     // Try to close DB connection if available, but don't fail if it's not
-    const db = require('./db/connection');
+    const db = require("./db/connection");
     await db.end();
-    logger.info('✅ Database connection closed');
+    logger.info("✅ Database connection closed");
   } catch (_error) {
-    logger.warn('⚠️ Database was already disconnected or unavailable');
+    logger.warn("⚠️ Database was already disconnected or unavailable");
   }
   process.exit(0);
 });
 
-process.on('SIGINT', async () => {
-  logger.info('📴 SIGINT received, shutting down gracefully');
+process.on("SIGINT", async () => {
+  logger.info("📴 SIGINT received, shutting down gracefully");
   try {
-    const db = require('./db/connection');
+    const db = require("./db/connection");
     await db.end();
-    logger.info('✅ Database connection closed');
+    logger.info("✅ Database connection closed");
   } catch (_error) {
-    logger.warn('⚠️ Database was already disconnected or unavailable');
+    logger.warn("⚠️ Database was already disconnected or unavailable");
   }
   process.exit(0);
 });
 
 // Start server and test database connection (skip in test mode - supertest handles it)
-if (process.env.NODE_ENV !== 'test') {
+if (process.env.NODE_ENV !== "test") {
   // Initialize database schema and seed data (idempotent - safe to run every time)
   (async () => {
     try {
       await initializeDatabase();
     } catch (error) {
-      logger.error('⚠️ Database initialization failed:', error.message);
+      logger.error("⚠️ Database initialization failed:", error.message);
       // Continue server startup - DB may already be initialized
     }
 
     const server = app.listen(PORT, async () => {
       logger.info(`🚀 Tross Backend running on port ${PORT}`);
       logger.info(`📍 Health check: http://localhost:${PORT}/api/health`);
-      logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+      logger.info(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
 
       // Configure server-level timeouts
       // Layer 1: Outermost timeout protection
@@ -378,13 +401,13 @@ if (process.env.NODE_ENV !== 'test') {
       server.keepAliveTimeout = TIMEOUTS.SERVER.KEEP_ALIVE_TIMEOUT_MS;
       server.headersTimeout = TIMEOUTS.SERVER.HEADERS_TIMEOUT_MS;
 
-      logger.info('⏱️  Server timeouts configured:', {
+      logger.info("⏱️  Server timeouts configured:", {
         requestTimeout: `${TIMEOUTS.SERVER.REQUEST_TIMEOUT_MS / 1000}s`,
         keepAliveTimeout: `${TIMEOUTS.SERVER.KEEP_ALIVE_TIMEOUT_MS / 1000}s`,
         headersTimeout: `${TIMEOUTS.SERVER.HEADERS_TIMEOUT_MS / 1000}s`,
       });
 
-      logger.info('⏱️  Request timeouts configured:', {
+      logger.info("⏱️  Request timeouts configured:", {
         defaultTimeout: `${TIMEOUTS.REQUEST.DEFAULT_MS / 1000}s`,
         databaseTimeout: `${TIMEOUTS.DATABASE.STATEMENT_TIMEOUT_MS / 1000}s`,
         slowRequestThreshold: `${TIMEOUTS.MONITORING.SLOW_REQUEST_MS / 1000}s`,
@@ -392,25 +415,30 @@ if (process.env.NODE_ENV !== 'test') {
 
       // Test database connection on startup
       try {
-        const db = require('./db/connection');
+        const db = require("./db/connection");
         await db.testConnection();
 
         // Initialize role hierarchy from database (SSOT for permissions)
         // This MUST happen before any authenticated requests are processed
         try {
           await initRoleHierarchy(db);
-          logger.info('✅ Role hierarchy loaded from database');
+          logger.info("✅ Role hierarchy loaded from database");
         } catch (roleError) {
-          logger.error('❌ CRITICAL: Failed to load role hierarchy from database:', roleError.message);
-          logger.error('   Permission checks will use fallback constants (may be stale!)');
+          logger.error(
+            "❌ CRITICAL: Failed to load role hierarchy from database:",
+            roleError.message,
+          );
+          logger.error(
+            "   Permission checks will use fallback constants (may be stale!)",
+          );
         }
 
         // Validate enum synchronization between Joi and PostgreSQL
-        const { validateEnumSync } = require('./utils/validation-sync-checker');
+        const { validateEnumSync } = require("./utils/validation-sync-checker");
         await validateEnumSync(db);
       } catch (_error) {
         logger.error(
-          '⚠️ Database connection failed on startup. Server will continue but DB-dependent features will be unavailable.',
+          "⚠️ Database connection failed on startup. Server will continue but DB-dependent features will be unavailable.",
         );
       }
     });

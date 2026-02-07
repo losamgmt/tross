@@ -14,16 +14,16 @@
 
 module.exports = {
   // Entity key (singular, for API params and lookups)
-  entityKey: 'audit_log',
+  entityKey: "audit_log",
 
   // Table name in database (plural, also used for API URLs)
-  tableName: 'audit_logs',
+  tableName: "audit_logs",
 
   // Primary key
-  primaryKey: 'id',
+  primaryKey: "id",
 
   // Material icon for navigation menus and entity displays
-  icon: 'history',
+  icon: "history",
 
   // ============================================================================
   // IDENTITY CONFIGURATION
@@ -32,7 +32,7 @@ module.exports = {
   /**
    * The human-readable identifier field
    */
-  identityField: 'id',
+  identityField: "id",
 
   /**
    * Whether the identity field has a UNIQUE constraint
@@ -42,18 +42,18 @@ module.exports = {
   /**
    * RLS resource name for permission checks
    */
-  rlsResource: 'audit_logs',
+  rlsResource: "audit_logs",
 
   /**
    * Row-Level Security policy per role
    * Only admin can access audit logs
    */
   rlsPolicy: {
-    customer: 'deny_all',
-    technician: 'deny_all',
-    dispatcher: 'deny_all',
-    manager: 'deny_all',
-    admin: 'all_records',
+    customer: "deny_all",
+    technician: "deny_all",
+    dispatcher: "deny_all",
+    manager: "deny_all",
+    admin: "all_records",
   },
 
   /**
@@ -73,7 +73,7 @@ module.exports = {
    * This is the SSOT for "admin only" access control.
    */
   permissionOverrides: {
-    read: 'admin',
+    read: "admin",
     create: null,
     update: null,
     delete: null,
@@ -85,48 +85,48 @@ module.exports = {
 
   fields: {
     id: {
-      type: 'integer',
+      type: "integer",
       required: false, // Auto-generated
       readOnly: true,
     },
     action: {
-      type: 'string',
+      type: "string",
       required: true,
       readOnly: true,
     },
     resource_type: {
-      type: 'string',
+      type: "string",
       required: false,
       readOnly: true,
     },
     resource_id: {
-      type: 'integer',
+      type: "integer",
       required: false,
       readOnly: true,
     },
     user_id: {
-      type: 'foreignKey',
-      relatedEntity: 'user',
+      type: "foreignKey",
+      relatedEntity: "user",
       required: false,
       readOnly: true,
     },
     ip_address: {
-      type: 'string',
+      type: "string",
       required: false,
       readOnly: true,
     },
     user_agent: {
-      type: 'string',
+      type: "string",
       required: false,
       readOnly: true,
     },
     details: {
-      type: 'jsonb',
+      type: "jsonb",
       required: false,
       readOnly: true,
     },
     created_at: {
-      type: 'timestamp',
+      type: "timestamp",
       required: false,
       readOnly: true,
     },
@@ -142,58 +142,58 @@ module.exports = {
    */
   fieldAccess: {
     id: {
-      create: 'none',
-      read: 'admin',
-      update: 'none',
-      delete: 'none',
+      create: "none",
+      read: "admin",
+      update: "none",
+      delete: "none",
     },
     action: {
-      create: 'none',
-      read: 'admin',
-      update: 'none',
-      delete: 'none',
+      create: "none",
+      read: "admin",
+      update: "none",
+      delete: "none",
     },
     resource_type: {
-      create: 'none',
-      read: 'admin',
-      update: 'none',
-      delete: 'none',
+      create: "none",
+      read: "admin",
+      update: "none",
+      delete: "none",
     },
     resource_id: {
-      create: 'none',
-      read: 'admin',
-      update: 'none',
-      delete: 'none',
+      create: "none",
+      read: "admin",
+      update: "none",
+      delete: "none",
     },
     user_id: {
-      create: 'none',
-      read: 'admin',
-      update: 'none',
-      delete: 'none',
+      create: "none",
+      read: "admin",
+      update: "none",
+      delete: "none",
     },
     ip_address: {
-      create: 'none',
-      read: 'admin',
-      update: 'none',
-      delete: 'none',
+      create: "none",
+      read: "admin",
+      update: "none",
+      delete: "none",
     },
     user_agent: {
-      create: 'none',
-      read: 'admin',
-      update: 'none',
-      delete: 'none',
+      create: "none",
+      read: "admin",
+      update: "none",
+      delete: "none",
     },
     details: {
-      create: 'none',
-      read: 'admin',
-      update: 'none',
-      delete: 'none',
+      create: "none",
+      read: "admin",
+      update: "none",
+      delete: "none",
     },
     created_at: {
-      create: 'none',
-      read: 'admin',
-      update: 'none',
-      delete: 'none',
+      create: "none",
+      read: "admin",
+      update: "none",
+      delete: "none",
     },
   },
 
@@ -204,25 +204,38 @@ module.exports = {
   /**
    * Fields that can be used for filtering
    */
-  filterableFields: ['action', 'resource_type', 'resource_id', 'user_id', 'created_at'],
+  filterableFields: [
+    "action",
+    "resource_type",
+    "resource_id",
+    "user_id",
+    "created_at",
+  ],
 
   /**
    * Fields that can be used for sorting
    */
-  sortableFields: ['id', 'action', 'created_at'],
+  sortableFields: ["id", "action", "created_at"],
 
   /**
    * Default sort configuration
    */
   defaultSort: {
-    field: 'created_at',
-    order: 'DESC',
+    field: "created_at",
+    order: "DESC",
   },
 
   /**
    * Columns to display in list views
    */
-  displayColumns: ['id', 'action', 'resource_type', 'resource_id', 'user_id', 'created_at'],
+  displayColumns: [
+    "id",
+    "action",
+    "resource_type",
+    "resource_id",
+    "user_id",
+    "created_at",
+  ],
 
   // ============================================================================
   // API CONFIGURATION

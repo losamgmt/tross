@@ -122,6 +122,7 @@ class _AdminHomeContentState extends State<AdminHomeContent> {
                   emptyMessage: 'No active sessions',
                   showCustomizationMenu: false,
                   autoSizeColumns: true,
+                  pinnedColumns: 0, // Disable pinning for this small table
                   columns: [
                     TableColumn<Map<String, dynamic>>(
                       id: 'user',

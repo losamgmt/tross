@@ -11,15 +11,15 @@ erDiagram
     USERS ||--o| TECHNICIANS : "has profile"
     USERS ||--o{ AUDIT_LOGS : "creates"
     USERS ||--o{ REFRESH_TOKENS : "has"
-    
+
     CUSTOMERS ||--o{ WORK_ORDERS : "requests"
     CUSTOMERS ||--o{ INVOICES : "billed to"
     CUSTOMERS ||--o{ CONTRACTS : "signs"
-    
+
     TECHNICIANS ||--o{ WORK_ORDERS : "assigned to"
-    
+
     WORK_ORDERS ||--o| INVOICES : "generates"
-    
+
     ROLES {
         serial id PK
         varchar name UK
@@ -29,7 +29,7 @@ erDiagram
         timestamp created_at
         timestamp updated_at
     }
-    
+
     USERS {
         serial id PK
         varchar email UK
@@ -44,7 +44,7 @@ erDiagram
         timestamp created_at
         timestamp updated_at
     }
-    
+
     CUSTOMERS {
         serial id PK
         varchar email UK
@@ -57,7 +57,7 @@ erDiagram
         timestamp created_at
         timestamp updated_at
     }
-    
+
     TECHNICIANS {
         serial id PK
         varchar license_number UK
@@ -74,7 +74,7 @@ erDiagram
         timestamp created_at
         timestamp updated_at
     }
-    
+
     WORK_ORDERS {
         serial id PK
         varchar title
@@ -90,7 +90,7 @@ erDiagram
         timestamp created_at
         timestamp updated_at
     }
-    
+
     INVOICES {
         serial id PK
         varchar invoice_number UK
@@ -106,7 +106,7 @@ erDiagram
         timestamp created_at
         timestamp updated_at
     }
-    
+
     CONTRACTS {
         serial id PK
         varchar contract_number UK
@@ -121,7 +121,7 @@ erDiagram
         timestamp created_at
         timestamp updated_at
     }
-    
+
     INVENTORY {
         serial id PK
         varchar name
@@ -137,7 +137,7 @@ erDiagram
         timestamp created_at
         timestamp updated_at
     }
-    
+
     AUDIT_LOGS {
         serial id PK
         varchar resource_type
@@ -152,7 +152,7 @@ erDiagram
         text error_message
         timestamp created_at
     }
-    
+
     REFRESH_TOKENS {
         serial id PK
         integer user_id FK
@@ -173,7 +173,7 @@ erDiagram
 Core domain entities following Entity Contract v2.0:
 
 - **USERS** - System users with authentication
-- **CUSTOMERS** - Service recipients  
+- **CUSTOMERS** - Service recipients
 - **TECHNICIANS** - Service providers
 - **WORK_ORDERS** - Service requests
 - **INVOICES** - Billing records
@@ -198,6 +198,7 @@ Internal system tables:
 ### User-Profile Pattern
 
 Users can have optional profile associations:
+
 - User → Customer (customer portal access)
 - User → Technician (field service access)
 
@@ -206,6 +207,7 @@ This enables role-based views of the same underlying user.
 ### Ownership Pattern
 
 Business entities reference their owner for RLS:
+
 - Work orders → Customer (requester)
 - Work orders → Technician (assignee)
 - Invoices → Customer (billable party)
@@ -213,6 +215,7 @@ Business entities reference their owner for RLS:
 ### Audit Pattern
 
 All modifications tracked:
+
 - Resource type + ID identifies the changed entity
 - Old/new values capture the delta
 - User ID tracks who made the change
@@ -222,6 +225,7 @@ All modifications tracked:
 See [DATABASE_ARCHITECTURE.md](DATABASE_ARCHITECTURE.md) for full contract details.
 
 **Key Points:**
+
 - All business entities have `id`, identity field, `is_active`, timestamps
 - Workflow entities add `status` field
 - Status values defined in entity metadata files

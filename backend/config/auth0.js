@@ -19,12 +19,14 @@ const AUTH0_CONFIG = {
     audience: process.env.AUTH0_AUDIENCE, // Required - no fallback
     callbackUrl:
       process.env.AUTH0_CALLBACK_URL ||
-      (process.env.NODE_ENV === 'development' ? 'http://localhost:3001/api/auth/callback' : undefined),
+      (process.env.NODE_ENV === "development"
+        ? "http://localhost:3001/api/auth/callback"
+        : undefined),
   },
 
   // JWT Configuration for Auth0
   JWT: {
-    algorithm: 'RS256',
+    algorithm: "RS256",
     issuer: process.env.AUTH0_DOMAIN
       ? `https://${process.env.AUTH0_DOMAIN}/`
       : null,
@@ -33,25 +35,25 @@ const AUTH0_CONFIG = {
 
   // Auth0 API Endpoints (relative paths - domain comes from AUTH0_DOMAIN)
   ENDPOINTS: {
-    token: '/oauth/token',
-    userinfo: '/userinfo',
-    logout: '/v2/logout',
-    jwks: '/.well-known/jwks.json',
+    token: "/oauth/token",
+    userinfo: "/userinfo",
+    logout: "/v2/logout",
+    jwks: "/.well-known/jwks.json",
   },
 
   // Auth0 Scopes
   SCOPES: {
-    openid: 'openid',
-    profile: 'profile',
-    email: 'email',
-    offline_access: 'offline_access', // For refresh tokens
+    openid: "openid",
+    profile: "profile",
+    email: "email",
+    offline_access: "offline_access", // For refresh tokens
   },
 
   // Grant Types
   GRANT_TYPES: {
-    authorization_code: 'authorization_code',
-    refresh_token: 'refresh_token',
-    client_credentials: 'client_credentials',
+    authorization_code: "authorization_code",
+    refresh_token: "refresh_token",
+    client_credentials: "client_credentials",
   },
 };
 

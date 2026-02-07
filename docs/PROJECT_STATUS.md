@@ -27,6 +27,7 @@
 ### In Progress 🔄
 
 **Mobile App Deployment**
+
 - [x] Android build working locally + CI
 - [x] iOS build working in CI (macOS runner)
 - [x] Auth0 mobile login working (physical device + emulator)
@@ -34,6 +35,7 @@
 - [ ] Play Store listing
 
 **Admin Files Interface (Phase 6B)**
+
 - [ ] Files tab - Paginated table with filters and search
 - [ ] Storage tab - R2 bucket statistics
 - [ ] Maintenance tab - Orphan detection and cleanup
@@ -63,48 +65,48 @@ Screen (<50 lines)
 
 ### Route Structure
 
-| Route | Template | Body |
-|-------|----------|------|
-| `/login` | CenteredLayout | LoginContent |
-| `/home` | AdaptiveShell | DashboardContent |
-| `/settings` | AdaptiveShell | SettingsContent |
-| `/:entity` | AdaptiveShell | FilterableDataTable |
-| `/:entity/:id` | AdaptiveShell | EntityDetailScreen |
-| `/admin` | AdaptiveShell | AdminHomeContent |
-| `/admin/system/health` | AdaptiveShell | DbHealthDashboard |
-| `/admin/system/logs/:tab` | AdaptiveShell | TabbedContent |
-| `/admin/system/files` | AdaptiveShell | TabbedContent |
-| `/admin/:entity` | AdaptiveShell | TabbedContent |
+| Route                     | Template       | Body                |
+| ------------------------- | -------------- | ------------------- |
+| `/login`                  | CenteredLayout | LoginContent        |
+| `/home`                   | AdaptiveShell  | DashboardContent    |
+| `/settings`               | AdaptiveShell  | SettingsContent     |
+| `/:entity`                | AdaptiveShell  | FilterableDataTable |
+| `/:entity/:id`            | AdaptiveShell  | EntityDetailScreen  |
+| `/admin`                  | AdaptiveShell  | AdminHomeContent    |
+| `/admin/system/health`    | AdaptiveShell  | DbHealthDashboard   |
+| `/admin/system/logs/:tab` | AdaptiveShell  | TabbedContent       |
+| `/admin/system/files`     | AdaptiveShell  | TabbedContent       |
+| `/admin/:entity`          | AdaptiveShell  | TabbedContent       |
 
 ---
 
 ## Key Documentation
 
-| Topic | Document |
-|-------|----------|
-| **Architecture** | [ARCHITECTURE.md](architecture/ARCHITECTURE.md) |
-| **ADRs** | [decisions/](architecture/decisions/) |
-| **Entity Naming** | [ADR-006](architecture/decisions/006-entity-naming-convention.md) |
+| Topic                | Document                                                               |
+| -------------------- | ---------------------------------------------------------------------- |
+| **Architecture**     | [ARCHITECTURE.md](architecture/ARCHITECTURE.md)                        |
+| **ADRs**             | [decisions/](architecture/decisions/)                                  |
+| **Entity Naming**    | [ADR-006](architecture/decisions/006-entity-naming-convention.md)      |
 | **File Attachments** | [ADR-007](architecture/decisions/007-file-attachments-architecture.md) |
-| **API Reference** | [API.md](reference/API.md) |
-| **Authentication** | [AUTH.md](reference/AUTH.md) |
-| **Testing** | [TESTING.md](reference/TESTING.md) |
-| **R2/CORS Config** | [r2-cors-config.md](operations/r2-cors-config.md) |
+| **API Reference**    | [API.md](reference/API.md)                                             |
+| **Authentication**   | [AUTH.md](reference/AUTH.md)                                           |
+| **Testing**          | [TESTING.md](reference/TESTING.md)                                     |
+| **R2/CORS Config**   | [r2-cors-config.md](operations/r2-cors-config.md)                      |
 
 ---
 
 ## File Locations
 
-| Category | Path |
-|----------|------|
-| Screens | `lib/screens/` |
-| Templates | `lib/widgets/templates/` |
-| Organisms | `lib/widgets/organisms/` |
-| Molecules | `lib/widgets/molecules/` |
-| Atoms | `lib/widgets/atoms/` |
-| Routing | `lib/core/routing/` |
-| Config | `lib/config/` |
-| Services | `lib/services/` |
+| Category        | Path                                  |
+| --------------- | ------------------------------------- |
+| Screens         | `lib/screens/`                        |
+| Templates       | `lib/widgets/templates/`              |
+| Organisms       | `lib/widgets/organisms/`              |
+| Molecules       | `lib/widgets/molecules/`              |
+| Atoms           | `lib/widgets/atoms/`                  |
+| Routing         | `lib/core/routing/`                   |
+| Config          | `lib/config/`                         |
+| Services        | `lib/services/`                       |
 | Entity Metadata | `backend/config/models/*-metadata.js` |
 
 ---
@@ -115,4 +117,4 @@ Run `npm test` to execute all tests. See [TESTING.md](reference/TESTING.md) for 
 
 ---
 
-*This document tracks current project state. For architectural decisions, see [ADRs](architecture/decisions/).*
+_This document tracks current project state. For architectural decisions, see [ADRs](architecture/decisions/)._

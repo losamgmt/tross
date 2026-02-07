@@ -21,7 +21,7 @@ const {
   getRoleHierarchy,
   getRolePriorityToName,
   getRoleDescriptions,
-} = require('./role-hierarchy-loader');
+} = require("./role-hierarchy-loader");
 
 // Cache for derived permissions (computed once, reused)
 let cachedPermissions = null;
@@ -30,68 +30,68 @@ let cachedPermissions = null;
 // These are UI navigation resources or system resources
 const SYNTHETIC_RESOURCES = {
   audit_logs: {
-    description: 'System audit trail and security events',
+    description: "System audit trail and security events",
     rlsPolicy: {
-      customer: 'deny_all',
-      technician: 'deny_all',
-      dispatcher: 'deny_all',
-      manager: 'deny_all',
-      admin: 'all_records',
+      customer: "deny_all",
+      technician: "deny_all",
+      dispatcher: "deny_all",
+      manager: "deny_all",
+      admin: "all_records",
     },
     // Entity-level permissions (no fieldAccess to derive from)
     entityPermissions: {
-      create: 'customer', // System auto-creates
-      read: 'admin',
-      update: 'admin',
-      delete: 'admin',
+      create: "customer", // System auto-creates
+      read: "admin",
+      update: "admin",
+      delete: "admin",
     },
   },
   dashboard: {
-    description: 'Main dashboard view - role-driven overview',
+    description: "Main dashboard view - role-driven overview",
     rlsPolicy: {
-      customer: 'own_record_only',
-      technician: 'own_record_only',
-      dispatcher: 'all_records',
-      manager: 'all_records',
-      admin: 'all_records',
+      customer: "own_record_only",
+      technician: "own_record_only",
+      dispatcher: "all_records",
+      manager: "all_records",
+      admin: "all_records",
     },
     entityPermissions: {
-      create: 'admin',
-      read: 'customer',
-      update: 'admin',
-      delete: 'admin',
+      create: "admin",
+      read: "customer",
+      update: "admin",
+      delete: "admin",
     },
   },
   admin_panel: {
-    description: 'Admin control center - system health, sessions, audit logs',
+    description: "Admin control center - system health, sessions, audit logs",
     rlsPolicy: {
-      customer: 'deny_all',
-      technician: 'deny_all',
-      dispatcher: 'deny_all',
-      manager: 'deny_all',
-      admin: 'all_records',
+      customer: "deny_all",
+      technician: "deny_all",
+      dispatcher: "deny_all",
+      manager: "deny_all",
+      admin: "all_records",
     },
     entityPermissions: {
-      create: 'admin',
-      read: 'admin',
-      update: 'admin',
-      delete: 'admin',
+      create: "admin",
+      read: "admin",
+      update: "admin",
+      delete: "admin",
     },
   },
   system_settings: {
-    description: 'System-wide configuration (maintenance mode, feature flags)',
+    description: "System-wide configuration (maintenance mode, feature flags)",
     rlsPolicy: {
-      customer: 'deny_all',
-      technician: 'deny_all',
-      dispatcher: 'deny_all',
-      manager: 'deny_all',
-      admin: 'all_records',
+      customer: "deny_all",
+      technician: "deny_all",
+      dispatcher: "deny_all",
+      manager: "deny_all",
+      admin: "all_records",
     },
     entityPermissions: {
-      create: 'admin',
-      read: 'admin',
-      update: 'admin',
-      delete: 'admin',
+      create: "admin",
+      read: "admin",
+      update: "admin",
+      delete: "admin",
     },
   },
 };
@@ -102,7 +102,7 @@ const SYNTHETIC_RESOURCES = {
  * @returns {number} Priority (1-5), or 0 if invalid
  */
 function getRolePriorityFromName(roleName) {
-  if (!roleName || roleName === 'none') {
+  if (!roleName || roleName === "none") {
     return 0;
   }
   const hierarchy = getRoleHierarchy();
@@ -122,20 +122,20 @@ function getRolePriorityFromName(roleName) {
  */
 function deriveMinimumRole(fieldAccess, operation) {
   if (!fieldAccess || Object.keys(fieldAccess).length === 0) {
-    return 'admin'; // No fieldAccess defined = admin only
+    return "admin"; // No fieldAccess defined = admin only
   }
 
   let minPriority = Infinity;
-  let minRole = 'admin';
+  let minRole = "admin";
 
   for (const fieldConfig of Object.values(fieldAccess)) {
     // Skip non-object values or malformed entries
-    if (!fieldConfig || typeof fieldConfig !== 'object') {
+    if (!fieldConfig || typeof fieldConfig !== "object") {
       continue;
     }
 
     const roleName = fieldConfig[operation];
-    if (!roleName || roleName === 'none') {
+    if (!roleName || roleName === "none") {
       continue;
     }
 
@@ -176,7 +176,7 @@ function buildResourceConfig(metadata, resourceName) {
   const { fieldAccess, rlsPolicy, entityPermissions } = metadata;
 
   // Standard CRUD operations (always derived or overridden)
-  const standardOps = ['create', 'read', 'update', 'delete'];
+  const standardOps = ["create", "read", "update", "delete"];
   const permissions = {};
 
   for (const op of standardOps) {
@@ -189,7 +189,7 @@ function buildResourceConfig(metadata, resourceName) {
       const permValue = entityPermissions[op];
 
       // null or 'none' means operation is disabled (system-only)
-      if (permValue === null || permValue === 'none') {
+      if (permValue === null || permValue === "none") {
         // Use special marker: priority 0 means "no one can access via API"
         permissions[op] = {
           minimumRole: null,
@@ -239,14 +239,15 @@ function buildResourceConfig(metadata, resourceName) {
     navVisibility = {
       minimumRole: navRole,
       minimumPriority: navPriority,
-      description: 'Explicit navVisibility - minimum role to see in nav menus',
+      description: "Explicit navVisibility - minimum role to see in nav menus",
     };
   } else if (permissions.read && !permissions.read.disabled) {
     // Fall back to read permission for nav visibility
     navVisibility = {
       minimumRole: permissions.read.minimumRole,
       minimumPriority: permissions.read.minimumPriority,
-      description: 'Derived from read permission - nav visibility follows read access',
+      description:
+        "Derived from read permission - nav visibility follows read access",
     };
   }
 
@@ -281,16 +282,17 @@ function buildSyntheticResourceConfig(resourceName, config) {
   const readPerm = permissions.read;
   const navVisibility = config.navVisibility
     ? {
-      minimumRole: config.navVisibility,
-      minimumPriority: getRolePriorityFromName(config.navVisibility),
-      description: 'Explicit navVisibility for synthetic resource',
-    }
+        minimumRole: config.navVisibility,
+        minimumPriority: getRolePriorityFromName(config.navVisibility),
+        description: "Explicit navVisibility for synthetic resource",
+      }
     : readPerm
       ? {
-        minimumRole: readPerm.minimumRole,
-        minimumPriority: readPerm.minimumPriority,
-        description: 'Derived from read permission - nav visibility follows read access',
-      }
+          minimumRole: readPerm.minimumRole,
+          minimumPriority: readPerm.minimumPriority,
+          description:
+            "Derived from read permission - nav visibility follows read access",
+        }
       : null;
 
   return {
@@ -314,7 +316,7 @@ function derivePermissions(forceReload = false) {
   }
 
   // Load all entity metadata
-  const allMetadata = require('./models');
+  const allMetadata = require("./models");
 
   // Build roles from constants
   const roles = buildRolesConfig();
@@ -331,7 +333,10 @@ function derivePermissions(forceReload = false) {
       if (metadata.rlsPolicy) {
         // Use table name as resource for polymorphic entities
         const polyResourceName = metadata.tableName || entityName;
-        resources[polyResourceName] = buildResourceConfig(metadata, polyResourceName);
+        resources[polyResourceName] = buildResourceConfig(
+          metadata,
+          polyResourceName,
+        );
       }
       continue;
     }
@@ -341,17 +346,20 @@ function derivePermissions(forceReload = false) {
 
   // Add synthetic resources (dashboard, admin_panel, etc.)
   for (const [resourceName, config] of Object.entries(SYNTHETIC_RESOURCES)) {
-    resources[resourceName] = buildSyntheticResourceConfig(resourceName, config);
+    resources[resourceName] = buildSyntheticResourceConfig(
+      resourceName,
+      config,
+    );
   }
 
   // Build complete config
   cachedPermissions = {
-    $schema: 'http://json-schema.org/draft-07/schema#',
-    $id: 'https://tross.com/schemas/permissions.json',
-    title: 'Tross Permission Configuration (DERIVED)',
-    description: 'Auto-derived from entity metadata - DO NOT EDIT MANUALLY',
-    version: '4.0.0-derived',
-    lastModified: new Date().toISOString().split('T')[0],
+    $schema: "http://json-schema.org/draft-07/schema#",
+    $id: "https://tross.com/schemas/permissions.json",
+    title: "Tross Permission Configuration (DERIVED)",
+    description: "Auto-derived from entity metadata - DO NOT EDIT MANUALLY",
+    version: "4.0.0-derived",
+    lastModified: new Date().toISOString().split("T")[0],
     roles,
     resources,
   };

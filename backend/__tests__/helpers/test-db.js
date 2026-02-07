@@ -50,7 +50,7 @@ async function setupTestDatabase() {
   setupPromise = (async () => {
     try {
       testLogger.log("🚀 Setting up test database...");
-      
+
       // Test connection
       const client = await centralPool.connect();
       await client.query("SELECT NOW()");
@@ -133,7 +133,7 @@ async function runMigrations(pool) {
  * Clean up test database - truncate all tables
  * Call this in afterEach() to reset state between tests
  * Uses centralized pool
- * 
+ *
  * STANDARD PATTERN: Assumes schema is already set up by globalSetup
  * Just cleans data, doesn't touch schema
  */
@@ -142,10 +142,12 @@ async function cleanupTestDatabase() {
     // Derive table names from metadata (SSOT)
     const tableNames = Object.values(getTableNames());
     // Add non-entity tables that need cleanup
-    const allTables = [...tableNames, 'audit_logs', 'refresh_tokens'];
+    const allTables = [...tableNames, "audit_logs", "refresh_tokens"];
     // Exclude 'roles' (seed data) and join into SQL
-    const tablesToTruncate = allTables.filter(t => t !== 'roles').join(',\n        ');
-    
+    const tablesToTruncate = allTables
+      .filter((t) => t !== "roles")
+      .join(",\n        ");
+
     // KISS: Truncate test data tables (preserve roles as they're seeded by schema)
     // CASCADE handles foreign key dependencies automatically
     await centralPool.query(`
@@ -157,7 +159,9 @@ async function cleanupTestDatabase() {
     // Note: We don't truncate 'roles' table because it contains seed data
     // from schema (admin, manager, dispatcher, technician, customer)
 
-    testLogger.log("🧹 Test database cleaned (all business tables + audit/auth)");
+    testLogger.log(
+      "🧹 Test database cleaned (all business tables + audit/auth)",
+    );
   } catch (error) {
     testLogger.error("❌ Database cleanup failed:", error.message);
     throw error;
@@ -186,7 +190,7 @@ async function teardownTestDatabase() {
 /**
  * Get test database pool (for direct queries in tests)
  * Returns the centralized pool which is automatically configured for tests
- * 
+ *
  * STANDARD PATTERN: Assumes globalSetup has already configured the database
  */
 function getTestPool() {

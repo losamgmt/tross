@@ -11,19 +11,19 @@
  *   node scripts/run-migrations.js --rollback 005
  */
 
-const fs = require('fs').promises;
-const path = require('path');
-const crypto = require('crypto');
-const { pool } = require('../db/connection');
-const { logger } = require('../config/logger');
+const fs = require("fs").promises;
+const path = require("path");
+const crypto = require("crypto");
+const { pool } = require("../db/connection");
+const { logger } = require("../config/logger");
 
-const MIGRATIONS_DIR = path.join(__dirname, '../migrations');
+const MIGRATIONS_DIR = path.join(__dirname, "../migrations");
 
 /**
  * Calculate SHA-256 checksum of file content
  */
 function calculateChecksum(content) {
-  return crypto.createHash('sha256').update(content).digest('hex');
+  return crypto.createHash("sha256").update(content).digest("hex");
 }
 
 /**
@@ -31,12 +31,12 @@ function calculateChecksum(content) {
  */
 async function ensureMigrationsTable() {
   const createTableSQL = await fs.readFile(
-    path.join(MIGRATIONS_DIR, '000_create_migrations_table.sql'),
-    'utf8',
+    path.join(MIGRATIONS_DIR, "000_create_migrations_table.sql"),
+    "utf8",
   );
 
   await pool.query(createTableSQL);
-  logger.info('✅ Migration tracking table ready');
+  logger.info("✅ Migration tracking table ready");
 }
 
 /**
@@ -44,7 +44,7 @@ async function ensureMigrationsTable() {
  */
 async function getAppliedMigrations() {
   const result = await pool.query(
-    'SELECT version, checksum FROM schema_migrations ORDER BY version',
+    "SELECT version, checksum FROM schema_migrations ORDER BY version",
   );
   return result.rows;
 }
@@ -56,8 +56,10 @@ async function getMigrationFiles() {
   const files = await fs.readdir(MIGRATIONS_DIR);
 
   return files
-    .filter((f) => f.endsWith('.sql') && f !== '000_create_migrations_table.sql')
-    .filter((f) => !f.includes('rollback'))
+    .filter(
+      (f) => f.endsWith(".sql") && f !== "000_create_migrations_table.sql",
+    )
+    .filter((f) => !f.includes("rollback"))
     .sort();
 }
 
@@ -83,20 +85,20 @@ function parseMigrationFilename(filename) {
  */
 async function applyMigration(migration, dryRun = false) {
   const filePath = path.join(MIGRATIONS_DIR, migration.filename);
-  const content = await fs.readFile(filePath, 'utf8');
+  const content = await fs.readFile(filePath, "utf8");
   const checksum = calculateChecksum(content);
 
   logger.info(`📄 Migration ${migration.version}: ${migration.name}`);
 
   if (dryRun) {
-    logger.info('   [DRY RUN] Would execute migration');
-    return { status: 'dry-run' };
+    logger.info("   [DRY RUN] Would execute migration");
+    return { status: "dry-run" };
   }
 
   const client = await pool.connect();
 
   try {
-    await client.query('BEGIN');
+    await client.query("BEGIN");
 
     const startTime = Date.now();
 
@@ -113,21 +115,23 @@ async function applyMigration(migration, dryRun = false) {
       [migration.version, migration.name, executionTime, checksum],
     );
 
-    await client.query('COMMIT');
+    await client.query("COMMIT");
 
     logger.info(`   ✅ Applied in ${executionTime}ms`);
-    return { status: 'applied', executionTime };
+    return { status: "applied", executionTime };
   } catch (error) {
-    await client.query('ROLLBACK');
+    await client.query("ROLLBACK");
 
     // Check if this is a "already exists" type error - migration may have been partially applied
     const isIdempotentError =
-      error.message.includes('already exists') ||
-      error.message.includes('duplicate key') ||
-      error.message.includes('violates unique constraint');
+      error.message.includes("already exists") ||
+      error.message.includes("duplicate key") ||
+      error.message.includes("violates unique constraint");
 
     if (isIdempotentError) {
-      logger.info(`   ⏭️  Skipped (already applied): ${error.message.split('\n')[0]}`);
+      logger.info(
+        `   ⏭️  Skipped (already applied): ${error.message.split("\n")[0]}`,
+      );
 
       // Still record it as applied if not already recorded
       try {
@@ -140,7 +144,7 @@ async function applyMigration(migration, dryRun = false) {
       } catch (_recordError) {
         // Ignore - already recorded
       }
-      return { status: 'skipped' };
+      return { status: "skipped" };
     }
 
     logger.error(`   ❌ Failed: ${error.message}`);
@@ -156,7 +160,7 @@ async function applyMigration(migration, dryRun = false) {
 async function runMigrations(options = {}) {
   const { dryRun = false } = options;
 
-  logger.info('🔄 Starting migration check...');
+  logger.info("🔄 Starting migration check...");
 
   // Ensure tracking table exists
   await ensureMigrationsTable();
@@ -173,7 +177,7 @@ async function runMigrations(options = {}) {
   const pending = allMigrations.filter((m) => !appliedVersions.has(m.version));
 
   if (pending.length === 0) {
-    logger.info('✅ Database is up to date - no pending migrations');
+    logger.info("✅ Database is up to date - no pending migrations");
     return { applied: 0, pending: 0 };
   }
 
@@ -183,7 +187,7 @@ async function runMigrations(options = {}) {
   });
 
   if (dryRun) {
-    logger.info('\n🔍 DRY RUN - No changes will be made\n');
+    logger.info("\n🔍 DRY RUN - No changes will be made\n");
   }
 
   // Apply pending migrations in order
@@ -206,7 +210,7 @@ async function runMigrations(options = {}) {
  * Checks if applied migrations have been modified
  */
 async function verifyMigrations() {
-  logger.info('🔍 Verifying migration integrity...');
+  logger.info("🔍 Verifying migration integrity...");
 
   const applied = await getAppliedMigrations();
   const issues = [];
@@ -218,21 +222,21 @@ async function verifyMigrations() {
     if (!matchingFile) {
       issues.push({
         version: migration.version,
-        issue: 'Migration file deleted from disk',
+        issue: "Migration file deleted from disk",
       });
       continue;
     }
 
     const content = await fs.readFile(
       path.join(MIGRATIONS_DIR, matchingFile),
-      'utf8',
+      "utf8",
     );
     const currentChecksum = calculateChecksum(content);
 
     if (migration.checksum && currentChecksum !== migration.checksum) {
       issues.push({
         version: migration.version,
-        issue: 'Migration file modified after being applied',
+        issue: "Migration file modified after being applied",
         expected: migration.checksum,
         actual: currentChecksum,
       });
@@ -240,14 +244,14 @@ async function verifyMigrations() {
   }
 
   if (issues.length > 0) {
-    logger.warn('⚠️  Migration integrity issues found:');
+    logger.warn("⚠️  Migration integrity issues found:");
     issues.forEach((issue) => {
       logger.warn(`   - ${issue.version}: ${issue.issue}`);
     });
     return false;
   }
 
-  logger.info('✅ All migrations verified - integrity intact');
+  logger.info("✅ All migrations verified - integrity intact");
   return true;
 }
 
@@ -262,38 +266,40 @@ async function getStatus() {
   const allMigrations = allFiles.map(parseMigrationFilename);
   const appliedVersions = new Set(applied.map((m) => m.version));
 
-  console.log('\n📊 Migration Status\n');
-  console.log('Applied Migrations:');
-  console.log('─'.repeat(70));
+  console.log("\n📊 Migration Status\n");
+  console.log("Applied Migrations:");
+  console.log("─".repeat(70));
 
   if (applied.length === 0) {
-    console.log('(none)');
+    console.log("(none)");
   } else {
     applied.forEach((m) => {
-      console.log(`✅ ${m.version} (applied ${new Date(m.applied_at).toLocaleString()})`);
+      console.log(
+        `✅ ${m.version} (applied ${new Date(m.applied_at).toLocaleString()})`,
+      );
     });
   }
 
   const pending = allMigrations.filter((m) => !appliedVersions.has(m.version));
 
   if (pending.length > 0) {
-    console.log('\nPending Migrations:');
-    console.log('─'.repeat(70));
+    console.log("\nPending Migrations:");
+    console.log("─".repeat(70));
     pending.forEach((m) => {
       console.log(`⏳ ${m.version}: ${m.name}`);
     });
   }
 
-  console.log('\n' + '─'.repeat(70));
+  console.log("\n" + "─".repeat(70));
   console.log(`Total: ${applied.length} applied, ${pending.length} pending\n`);
 }
 
 // CLI Handler
 if (require.main === module) {
   const args = process.argv.slice(2);
-  const dryRun = args.includes('--dry-run');
-  const status = args.includes('--status');
-  const verify = args.includes('--verify');
+  const dryRun = args.includes("--dry-run");
+  const status = args.includes("--status");
+  const verify = args.includes("--verify");
 
   (async () => {
     try {
@@ -308,7 +314,7 @@ if (require.main === module) {
       await pool.end();
       process.exit(0);
     } catch (error) {
-      logger.error('Migration failed:', error);
+      logger.error("Migration failed:", error);
       await pool.end();
       process.exit(1);
     }

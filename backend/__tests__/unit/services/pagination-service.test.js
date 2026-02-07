@@ -1,6 +1,6 @@
 /**
  * Pagination Service Tests
- * 
+ *
  * Tests ONLY pagination logic - no database, no routes
  * SRP LITERALISM: Each test validates ONE behavior
  */
@@ -39,18 +39,18 @@ describe("PaginationService", () => {
     });
 
     test("should allow custom max limit", () => {
-      const result = PaginationService.validateParams({ 
-        limit: 300, 
-        maxLimit: 500 
+      const result = PaginationService.validateParams({
+        limit: 300,
+        maxLimit: 500,
       });
 
       expect(result.limit).toBe(300);
     });
 
     test("should cap limit at custom max when exceeded", () => {
-      const result = PaginationService.validateParams({ 
-        limit: 600, 
-        maxLimit: 500 
+      const result = PaginationService.validateParams({
+        limit: 600,
+        maxLimit: 500,
       });
 
       expect(result.limit).toBe(500); // Gracefully capped at custom maxLimit
@@ -81,9 +81,9 @@ describe("PaginationService", () => {
     });
 
     test("should handle string inputs (type coercion)", () => {
-      const result = PaginationService.validateParams({ 
-        page: "3", 
-        limit: "25" 
+      const result = PaginationService.validateParams({
+        page: "3",
+        limit: "25",
       });
 
       expect(result.page).toBe(3);

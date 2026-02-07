@@ -20,14 +20,14 @@ const {
   ROLE_PRIORITY_TO_NAME,
   ROLE_NAME_TO_PRIORITY,
   ROLE_DESCRIPTIONS,
-} = require('./role-definitions');
+} = require("./role-definitions");
 
 // Environment Constants
 const ENVIRONMENTS = Object.freeze({
-  DEVELOPMENT: 'development',
-  STAGING: 'staging',
-  PRODUCTION: 'production',
-  TEST: 'test',
+  DEVELOPMENT: "development",
+  STAGING: "staging",
+  PRODUCTION: "production",
+  TEST: "test",
 });
 
 // Database Performance Constants
@@ -39,17 +39,17 @@ const DATABASE_PERFORMANCE = Object.freeze({
 // Authentication Constants
 const AUTH = Object.freeze({
   AUTH_MODES: Object.freeze({
-    DEVELOPMENT: 'development',
-    AUTH0: 'auth0',
+    DEVELOPMENT: "development",
+    AUTH0: "auth0",
   }),
   PROVIDERS: Object.freeze({
-    DEVELOPMENT_JWT: 'development',
-    AUTH0: 'auth0',
+    DEVELOPMENT_JWT: "development",
+    AUTH0: "auth0",
   }),
   JWT: Object.freeze({
-    ALGORITHM: 'HS256',
-    DEFAULT_EXPIRY: '24h',
-    BEARER_PREFIX: 'Bearer ',
+    ALGORITHM: "HS256",
+    DEFAULT_EXPIRY: "24h",
+    BEARER_PREFIX: "Bearer ",
   }),
 });
 
@@ -73,8 +73,8 @@ const HTTP_STATUS = Object.freeze({
 // NOTE: Rate limiting configuration moved to backend/middleware/rate-limit.js (uses env vars)
 const SECURITY = Object.freeze({
   REQUEST_LIMITS: Object.freeze({
-    JSON_BODY_SIZE: '1mb', // Reduced from 10mb - sufficient for all API operations
-    URL_ENCODED_SIZE: '1mb', // Reduced from 10mb - prevents DoS via large form submissions
+    JSON_BODY_SIZE: "1mb", // Reduced from 10mb - sufficient for all API operations
+    URL_ENCODED_SIZE: "1mb", // Reduced from 10mb - prevents DoS via large form submissions
   }),
   HEADERS: Object.freeze({
     CSP_UNSAFE_INLINE: "'unsafe-inline'",
@@ -89,11 +89,11 @@ const SECURITY = Object.freeze({
 // Production credentials MUST come from environment variables
 const DATABASE = Object.freeze({
   DEV: Object.freeze({
-    HOST: 'localhost',
+    HOST: "localhost",
     PORT: 5432,
-    NAME: 'tross_dev',
-    USER: 'postgres',
-    PASSWORD: 'tross123', // Dev only, never use in production
+    NAME: "tross_dev",
+    USER: "postgres",
+    PASSWORD: "tross123", // Dev only, never use in production
     POOL: Object.freeze({
       MIN: 2,
       MAX: 20,
@@ -102,11 +102,11 @@ const DATABASE = Object.freeze({
     }),
   }),
   TEST: Object.freeze({
-    HOST: 'localhost',
+    HOST: "localhost",
     PORT: 5433,
-    NAME: 'tross_test',
-    USER: 'postgres', // SAME as dev for simplicity
-    PASSWORD: 'tross123', // SAME as dev for simplicity
+    NAME: "tross_test",
+    USER: "postgres", // SAME as dev for simplicity
+    PASSWORD: "tross123", // SAME as dev for simplicity
     POOL: Object.freeze({
       MIN: 1,
       MAX: 5,
@@ -124,12 +124,12 @@ const DATABASE = Object.freeze({
 // Redis Configuration Constants
 const REDIS = Object.freeze({
   DEV: Object.freeze({
-    HOST: 'localhost',
+    HOST: "localhost",
     PORT: 6379,
     DB: 0,
   }),
   TEST: Object.freeze({
-    HOST: 'localhost',
+    HOST: "localhost",
     PORT: 6379,
     DB: 1, // Different DB index for test isolation
   }),
@@ -147,17 +147,17 @@ const FILE_ATTACHMENTS = Object.freeze({
   MAX_FILE_SIZE: 10 * 1024 * 1024,
   // Allowed MIME types for uploads
   ALLOWED_MIME_TYPES: Object.freeze([
-    'image/jpeg',
-    'image/png',
-    'image/gif',
-    'image/webp',
-    'application/pdf',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/vnd.ms-excel',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'text/plain',
-    'text/csv',
+    "image/jpeg",
+    "image/png",
+    "image/gif",
+    "image/webp",
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "text/plain",
+    "text/csv",
   ]),
 });
 
@@ -168,7 +168,7 @@ const FILE_ATTACHMENTS = Object.freeze({
 // Entity-specific overrides live in metadata files (e.g., role-metadata.js).
 
 // Import NAME_TYPES from single source of truth
-const { NAME_TYPES } = require('./entity-types');
+const { NAME_TYPES } = require("./entity-types");
 
 // ============================================================================
 // RLS (ROW-LEVEL SECURITY) RESOURCE TYPES
@@ -197,26 +197,26 @@ const RLS_RESOURCE_TYPES = Object.freeze({
    * - Routes must handle parent entity validation before child access
    * - The parent entity's rlsResource is used for permission checks
    */
-  PARENT_DERIVED: '_parent_derived',
+  PARENT_DERIVED: "_parent_derived",
 });
 
 // Import ENTITY_CATEGORY_MAP - derived from metadata at runtime
 // This is a getter that lazy-loads to avoid circular dependencies
-const derivedConstants = require('./derived-constants');
+const derivedConstants = require("./derived-constants");
 
 const ENTITY_FIELDS = Object.freeze({
   /**
    * Fields that are auto-generated by the database and should NEVER be set during CREATE.
    * These are universal across ALL entities - no exceptions.
    */
-  SYSTEM_MANAGED_ON_CREATE: Object.freeze(['id', 'created_at', 'updated_at']),
+  SYSTEM_MANAGED_ON_CREATE: Object.freeze(["id", "created_at", "updated_at"]),
 
   /**
    * Fields that can NEVER be modified after initial creation.
    * These are universal across ALL entities.
    * Entity-specific immutables (e.g., 'email' on users) are defined in metadata.immutableFields
    */
-  UNIVERSAL_IMMUTABLES: Object.freeze(['id', 'created_at']),
+  UNIVERSAL_IMMUTABLES: Object.freeze(["id", "created_at"]),
 });
 
 // ============================================================================
@@ -243,83 +243,83 @@ const FIELD_ACCESS_LEVELS = Object.freeze({
   // System-only fields - never exposed or writable by any role
   // Used for: id, created_at, updated_at on system tables
   SYSTEM_ONLY: Object.freeze({
-    create: 'none',
-    read: 'none',
-    update: 'none',
-    delete: 'none',
+    create: "none",
+    read: "none",
+    update: "none",
+    delete: "none",
   }),
 
   // System-generated fields - readable by internal roles, never writable
   SYSTEM_READONLY: Object.freeze({
-    create: 'none',
-    read: 'dispatcher',
-    update: 'none',
-    delete: 'none',
+    create: "none",
+    read: "dispatcher",
+    update: "none",
+    delete: "none",
   }),
 
   // Public fields - readable by all, not directly writable
   PUBLIC_READONLY: Object.freeze({
-    create: 'none',
-    read: 'customer',
-    update: 'none',
-    delete: 'none',
+    create: "none",
+    read: "customer",
+    update: "none",
+    delete: "none",
   }),
 
   // Internal fields - readable by technician+, not directly writable
   INTERNAL_READONLY: Object.freeze({
-    create: 'none',
-    read: 'technician',
-    update: 'none',
-    delete: 'none',
+    create: "none",
+    read: "technician",
+    update: "none",
+    delete: "none",
   }),
 
   // Self-editable fields - users can update their own profile (with RLS)
   // Manager+ can create, customer+ can read, technician+ can update own
   SELF_EDITABLE: Object.freeze({
-    create: 'manager',
-    read: 'customer',
-    update: 'technician',
-    delete: 'none',
+    create: "manager",
+    read: "customer",
+    update: "technician",
+    delete: "none",
   }),
 
   // Dispatcher-managed fields - dispatcher+ can update (e.g., status)
   DISPATCHER_MANAGED: Object.freeze({
-    create: 'manager',
-    read: 'customer',
-    update: 'dispatcher',
-    delete: 'none',
+    create: "manager",
+    read: "customer",
+    update: "dispatcher",
+    delete: "none",
   }),
 
   // Manager-managed fields - manager+ full CRUD (except delete)
   MANAGER_MANAGED: Object.freeze({
-    create: 'manager',
-    read: 'manager',
-    update: 'manager',
-    delete: 'none',
+    create: "manager",
+    read: "manager",
+    update: "manager",
+    delete: "none",
   }),
 
   // Manager-managed but publicly readable
   MANAGER_MANAGED_PUBLIC_READ: Object.freeze({
-    create: 'manager',
-    read: 'customer',
-    update: 'manager',
-    delete: 'none',
+    create: "manager",
+    read: "customer",
+    update: "manager",
+    delete: "none",
   }),
 
   // Admin-only fields - full access only for admin
   ADMIN_ONLY: Object.freeze({
-    create: 'admin',
-    read: 'admin',
-    update: 'admin',
-    delete: 'admin',
+    create: "admin",
+    read: "admin",
+    update: "admin",
+    delete: "admin",
   }),
 
   // Admin-managed with manager read access
   ADMIN_MANAGED_MANAGER_READ: Object.freeze({
-    create: 'admin',
-    read: 'manager',
-    update: 'admin',
-    delete: 'admin',
+    create: "admin",
+    read: "manager",
+    update: "admin",
+    delete: "admin",
   }),
 });
 
@@ -334,10 +334,10 @@ const UNIVERSAL_FIELD_ACCESS = Object.freeze({
 
   // Soft-delete flag - manager+ can change, publicly readable
   is_active: Object.freeze({
-    create: 'none', // Defaults to true in DB
-    read: 'customer',
-    update: 'manager',
-    delete: 'none',
+    create: "none", // Defaults to true in DB
+    read: "customer",
+    update: "manager",
+    delete: "none",
   }),
 
   // Timestamps - system-managed, internal read only
@@ -361,7 +361,7 @@ const HEALTH = Object.freeze({
     DB_CRITICAL_MS: 500,
 
     // Connection pool usage thresholds (percentage)
-    POOL_DEGRADED_PERCENT: 0.80,
+    POOL_DEGRADED_PERCENT: 0.8,
     POOL_CRITICAL_PERCENT: 0.95,
 
     // Memory usage thresholds (MB)
@@ -371,20 +371,20 @@ const HEALTH = Object.freeze({
 
   // Status values (for consistent responses)
   STATUS: Object.freeze({
-    HEALTHY: 'healthy',
-    DEGRADED: 'degraded',
-    CRITICAL: 'critical',
-    UNHEALTHY: 'unhealthy',
+    HEALTHY: "healthy",
+    DEGRADED: "degraded",
+    CRITICAL: "critical",
+    UNHEALTHY: "unhealthy",
   }),
 });
 
 // API Endpoints
 const API_ENDPOINTS = Object.freeze({
-  HEALTH: '/api/health',
-  AUTH: '/api/auth',
-  AUTH0: '/api/auth0',
-  DEV: '/api/dev',
-  ROLES: '/api/roles',
+  HEALTH: "/api/health",
+  AUTH: "/api/auth",
+  AUTH0: "/api/auth0",
+  DEV: "/api/dev",
+  ROLES: "/api/roles",
 });
 
 // Model Error Messages
@@ -393,146 +393,151 @@ const API_ENDPOINTS = Object.freeze({
 const MODEL_ERRORS = Object.freeze({
   ROLE: Object.freeze({
     // Validation errors
-    NAME_REQUIRED: 'Role name is required',
-    NAME_EMPTY: 'Role name cannot be empty',
-    NAME_TOO_SHORT: 'Role name must be at least 2 characters',
-    NAME_TOO_LONG: 'Role name cannot exceed 50 characters',
-    ID_REQUIRED: 'Role ID is required',
-    ID_AND_NAME_REQUIRED: 'Role ID and name are required',
-    NO_VALID_FIELDS: 'No valid fields to update',
+    NAME_REQUIRED: "Role name is required",
+    NAME_EMPTY: "Role name cannot be empty",
+    NAME_TOO_SHORT: "Role name must be at least 2 characters",
+    NAME_TOO_LONG: "Role name cannot exceed 50 characters",
+    ID_REQUIRED: "Role ID is required",
+    ID_AND_NAME_REQUIRED: "Role ID and name are required",
+    NO_VALID_FIELDS: "No valid fields to update",
 
     // Business logic errors
-    NAME_EXISTS: 'Role name already exists',
-    PROTECTED_ROLE: 'Cannot modify protected role',
-    PROTECTED_DELETE: 'Cannot delete protected role',
-    PROTECTED_DEACTIVATE: 'Cannot deactivate protected role',
-    NOT_FOUND: 'Role not found',
-    CREATION_FAILED: 'Failed to create role',
-    RETRIEVAL_ALL_FAILED: 'Failed to retrieve roles',
+    NAME_EXISTS: "Role name already exists",
+    PROTECTED_ROLE: "Cannot modify protected role",
+    PROTECTED_DELETE: "Cannot delete protected role",
+    PROTECTED_DEACTIVATE: "Cannot deactivate protected role",
+    NOT_FOUND: "Role not found",
+    CREATION_FAILED: "Failed to create role",
+    RETRIEVAL_ALL_FAILED: "Failed to retrieve roles",
 
     // Delete validation (function for dynamic user count)
-    USERS_ASSIGNED: (count) => `Cannot delete role: ${count} user(s) are assigned to this role. Use force=true to proceed and set their role to NULL.`,
+    USERS_ASSIGNED: (count) =>
+      `Cannot delete role: ${count} user(s) are assigned to this role. Use force=true to proceed and set their role to NULL.`,
   }),
 
   USER: Object.freeze({
     // Validation errors
-    EMAIL_REQUIRED: 'Email is required',
-    EMAIL_INVALID: 'Invalid email format',
-    FIRST_NAME_REQUIRED: 'First name is required',
-    LAST_NAME_REQUIRED: 'Last name is required',
-    AUTH0_ID_REQUIRED: 'Auth0 ID is required',
-    AUTH0_ID_AND_EMAIL_REQUIRED: 'Auth0 ID and email are required',
-    AUTH0_DATA_INVALID: 'Invalid Auth0 data',
-    ID_AND_UPDATES_REQUIRED: 'Valid user ID and updates are required',
-    NO_VALID_FIELDS: 'No valid fields to update',
+    EMAIL_REQUIRED: "Email is required",
+    EMAIL_INVALID: "Invalid email format",
+    FIRST_NAME_REQUIRED: "First name is required",
+    LAST_NAME_REQUIRED: "Last name is required",
+    AUTH0_ID_REQUIRED: "Auth0 ID is required",
+    AUTH0_ID_AND_EMAIL_REQUIRED: "Auth0 ID and email are required",
+    AUTH0_DATA_INVALID: "Invalid Auth0 data",
+    ID_AND_UPDATES_REQUIRED: "Valid user ID and updates are required",
+    NO_VALID_FIELDS: "No valid fields to update",
 
     // Business logic errors
-    EMAIL_EXISTS: 'Email already exists',
-    USER_EXISTS: 'User already exists',
-    NOT_FOUND: 'User not found',
-    NOT_FOUND_AFTER_UPDATE: 'User not found after update',
-    CREATION_FAILED: 'Failed to create user',
-    UPDATE_FAILED: 'Failed to update user',
-    DELETE_FAILED: 'Failed to delete user',
-    RETRIEVAL_FAILED: 'Failed to find user',
-    RETRIEVAL_ALL_FAILED: 'Failed to retrieve users',
+    EMAIL_EXISTS: "Email already exists",
+    USER_EXISTS: "User already exists",
+    NOT_FOUND: "User not found",
+    NOT_FOUND_AFTER_UPDATE: "User not found after update",
+    CREATION_FAILED: "Failed to create user",
+    UPDATE_FAILED: "Failed to update user",
+    DELETE_FAILED: "Failed to delete user",
+    RETRIEVAL_FAILED: "Failed to find user",
+    RETRIEVAL_ALL_FAILED: "Failed to retrieve users",
   }),
 
   CUSTOMER: Object.freeze({
     // Validation errors
-    EMAIL_REQUIRED: 'Email is required',
-    NO_FIELDS_TO_UPDATE: 'No fields to update',
-    NO_VALID_FIELDS: 'No valid fields to update',
+    EMAIL_REQUIRED: "Email is required",
+    NO_FIELDS_TO_UPDATE: "No fields to update",
+    NO_VALID_FIELDS: "No valid fields to update",
 
     // Business logic errors
-    EMAIL_EXISTS: 'Customer with this email already exists',
-    NOT_FOUND: 'Customer not found',
-    CREATION_FAILED: 'Failed to create customer',
-    UPDATE_FAILED: 'Failed to update customer',
-    DELETE_FAILED: 'Failed to delete customer',
-    DEACTIVATE_FAILED: 'Failed to deactivate customer',
-    REACTIVATE_FAILED: 'Failed to reactivate customer',
-    RETRIEVAL_FAILED: 'Failed to find customer',
-    RETRIEVAL_ALL_FAILED: 'Failed to retrieve customers',
-    WORK_ORDERS_EXIST: (count) => `Cannot delete customer: ${count} work order(s) exist. Use force=true to cascade delete.`,
+    EMAIL_EXISTS: "Customer with this email already exists",
+    NOT_FOUND: "Customer not found",
+    CREATION_FAILED: "Failed to create customer",
+    UPDATE_FAILED: "Failed to update customer",
+    DELETE_FAILED: "Failed to delete customer",
+    DEACTIVATE_FAILED: "Failed to deactivate customer",
+    REACTIVATE_FAILED: "Failed to reactivate customer",
+    RETRIEVAL_FAILED: "Failed to find customer",
+    RETRIEVAL_ALL_FAILED: "Failed to retrieve customers",
+    WORK_ORDERS_EXIST: (count) =>
+      `Cannot delete customer: ${count} work order(s) exist. Use force=true to cascade delete.`,
   }),
 
   TECHNICIAN: Object.freeze({
     // Validation errors
-    LICENSE_NUMBER_REQUIRED: 'License number is required',
-    NO_FIELDS_TO_UPDATE: 'No fields to update',
-    NO_VALID_FIELDS: 'No valid fields to update',
+    LICENSE_NUMBER_REQUIRED: "License number is required",
+    NO_FIELDS_TO_UPDATE: "No fields to update",
+    NO_VALID_FIELDS: "No valid fields to update",
 
     // Business logic errors
-    NOT_FOUND: 'Technician not found',
-    CREATION_FAILED: 'Failed to create technician',
-    UPDATE_FAILED: 'Failed to update technician',
-    DELETE_FAILED: 'Failed to delete technician',
-    DEACTIVATE_FAILED: 'Failed to deactivate technician',
-    REACTIVATE_FAILED: 'Failed to reactivate technician',
-    RETRIEVAL_FAILED: 'Failed to find technician',
-    RETRIEVAL_ALL_FAILED: 'Failed to retrieve technicians',
-    WORK_ORDERS_ASSIGNED: (count) => `Cannot delete technician: ${count} work order(s) assigned. Use force=true to cascade delete.`,
+    NOT_FOUND: "Technician not found",
+    CREATION_FAILED: "Failed to create technician",
+    UPDATE_FAILED: "Failed to update technician",
+    DELETE_FAILED: "Failed to delete technician",
+    DEACTIVATE_FAILED: "Failed to deactivate technician",
+    REACTIVATE_FAILED: "Failed to reactivate technician",
+    RETRIEVAL_FAILED: "Failed to find technician",
+    RETRIEVAL_ALL_FAILED: "Failed to retrieve technicians",
+    WORK_ORDERS_ASSIGNED: (count) =>
+      `Cannot delete technician: ${count} work order(s) assigned. Use force=true to cascade delete.`,
   }),
 
   WORK_ORDER: Object.freeze({
     // Validation errors
-    TITLE_AND_CUSTOMER_REQUIRED: 'Title and customer_id are required',
-    NO_VALID_FIELDS: 'No valid fields to update',
+    TITLE_AND_CUSTOMER_REQUIRED: "Title and customer_id are required",
+    NO_VALID_FIELDS: "No valid fields to update",
 
     // Business logic errors
-    NOT_FOUND: 'Work order not found',
-    CREATION_FAILED: 'Failed to create work order',
-    UPDATE_FAILED: 'Failed to update work order',
-    DELETE_FAILED: 'Failed to delete work order',
-    DEACTIVATE_FAILED: 'Failed to deactivate work order',
-    RETRIEVAL_FAILED: 'Failed to find work order',
-    RETRIEVAL_ALL_FAILED: 'Failed to retrieve work orders',
+    NOT_FOUND: "Work order not found",
+    CREATION_FAILED: "Failed to create work order",
+    UPDATE_FAILED: "Failed to update work order",
+    DELETE_FAILED: "Failed to delete work order",
+    DEACTIVATE_FAILED: "Failed to deactivate work order",
+    RETRIEVAL_FAILED: "Failed to find work order",
+    RETRIEVAL_ALL_FAILED: "Failed to retrieve work orders",
   }),
 
   INVOICE: Object.freeze({
     // Validation errors
-    INVOICE_NUMBER_CUSTOMER_AMOUNT_TOTAL_REQUIRED: 'Invoice number, customer_id, amount, and total are required',
-    NO_VALID_FIELDS: 'No valid fields to update',
+    INVOICE_NUMBER_CUSTOMER_AMOUNT_TOTAL_REQUIRED:
+      "Invoice number, customer_id, amount, and total are required",
+    NO_VALID_FIELDS: "No valid fields to update",
 
     // Business logic errors
-    NOT_FOUND: 'Invoice not found',
-    CREATION_FAILED: 'Failed to create invoice',
-    UPDATE_FAILED: 'Failed to update invoice',
-    DELETE_FAILED: 'Failed to delete invoice',
-    DEACTIVATE_FAILED: 'Failed to deactivate invoice',
-    RETRIEVAL_FAILED: 'Failed to find invoice',
-    RETRIEVAL_ALL_FAILED: 'Failed to retrieve invoices',
+    NOT_FOUND: "Invoice not found",
+    CREATION_FAILED: "Failed to create invoice",
+    UPDATE_FAILED: "Failed to update invoice",
+    DELETE_FAILED: "Failed to delete invoice",
+    DEACTIVATE_FAILED: "Failed to deactivate invoice",
+    RETRIEVAL_FAILED: "Failed to find invoice",
+    RETRIEVAL_ALL_FAILED: "Failed to retrieve invoices",
   }),
 
   INVENTORY: Object.freeze({
     // Validation errors
-    NAME_AND_SKU_REQUIRED: 'Name and SKU are required',
-    NO_VALID_FIELDS: 'No valid fields to update',
+    NAME_AND_SKU_REQUIRED: "Name and SKU are required",
+    NO_VALID_FIELDS: "No valid fields to update",
 
     // Business logic errors
-    NOT_FOUND: 'Inventory item not found',
-    CREATION_FAILED: 'Failed to create inventory item',
-    UPDATE_FAILED: 'Failed to update inventory item',
-    DELETE_FAILED: 'Failed to delete inventory item',
-    DEACTIVATE_FAILED: 'Failed to deactivate inventory item',
-    RETRIEVAL_FAILED: 'Failed to find inventory item',
-    RETRIEVAL_ALL_FAILED: 'Failed to retrieve inventory items',
+    NOT_FOUND: "Inventory item not found",
+    CREATION_FAILED: "Failed to create inventory item",
+    UPDATE_FAILED: "Failed to update inventory item",
+    DELETE_FAILED: "Failed to delete inventory item",
+    DEACTIVATE_FAILED: "Failed to deactivate inventory item",
+    RETRIEVAL_FAILED: "Failed to find inventory item",
+    RETRIEVAL_ALL_FAILED: "Failed to retrieve inventory items",
   }),
 
   CONTRACT: Object.freeze({
     // Validation errors
-    CONTRACT_NUMBER_CUSTOMER_START_DATE_REQUIRED: 'Contract number, customer_id, and start_date are required',
-    NO_VALID_FIELDS: 'No valid fields to update',
+    CONTRACT_NUMBER_CUSTOMER_START_DATE_REQUIRED:
+      "Contract number, customer_id, and start_date are required",
+    NO_VALID_FIELDS: "No valid fields to update",
 
     // Business logic errors
-    NOT_FOUND: 'Contract not found',
-    CREATION_FAILED: 'Failed to create contract',
-    UPDATE_FAILED: 'Failed to update contract',
-    DELETE_FAILED: 'Failed to delete contract',
-    DEACTIVATE_FAILED: 'Failed to deactivate contract',
-    RETRIEVAL_FAILED: 'Failed to find contract',
-    RETRIEVAL_ALL_FAILED: 'Failed to retrieve contracts',
+    NOT_FOUND: "Contract not found",
+    CREATION_FAILED: "Failed to create contract",
+    UPDATE_FAILED: "Failed to update contract",
+    DELETE_FAILED: "Failed to delete contract",
+    DEACTIVATE_FAILED: "Failed to deactivate contract",
+    RETRIEVAL_FAILED: "Failed to find contract",
+    RETRIEVAL_ALL_FAILED: "Failed to retrieve contracts",
   }),
 });
 

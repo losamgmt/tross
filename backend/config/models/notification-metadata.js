@@ -14,23 +14,21 @@
  * - resource_type + resource_id for navigation on click
  */
 
-const {
-  FIELD_ACCESS_LEVELS: FAL,
-} = require('../constants');
-const { FIELD } = require('../field-type-standards');
+const { FIELD_ACCESS_LEVELS: FAL } = require("../constants");
+const { FIELD } = require("../field-type-standards");
 
 module.exports = {
   // Entity key (singular, for API params and lookups)
-  entityKey: 'notification',
+  entityKey: "notification",
 
   // Table name in database (plural, also used for API URLs)
-  tableName: 'notifications',
+  tableName: "notifications",
 
   // Primary key
-  primaryKey: 'id',
+  primaryKey: "id",
 
   // Material icon for navigation menus and entity displays
-  icon: 'notifications',
+  icon: "notifications",
 
   // ============================================================================
   // IDENTITY CONFIGURATION
@@ -39,7 +37,7 @@ module.exports = {
   /**
    * The human-readable identifier field
    */
-  identityField: 'title',
+  identityField: "title",
 
   /**
    * Whether the identity field has a UNIQUE constraint
@@ -49,18 +47,18 @@ module.exports = {
   /**
    * RLS resource name for permission checks
    */
-  rlsResource: 'notifications',
+  rlsResource: "notifications",
 
   /**
    * Row-Level Security policy per role
    * Users can only access their own notifications
    */
   rlsPolicy: {
-    customer: 'own_record_only',
-    technician: 'own_record_only',
-    dispatcher: 'own_record_only',
-    manager: 'own_record_only',
-    admin: 'own_record_only', // Even admins only see their own notifications
+    customer: "own_record_only",
+    technician: "own_record_only",
+    dispatcher: "own_record_only",
+    manager: "own_record_only",
+    admin: "own_record_only", // Even admins only see their own notifications
   },
 
   /**
@@ -81,9 +79,9 @@ module.exports = {
    */
   entityPermissions: {
     create: null, // System only - backend creates notifications
-    read: 'customer',
-    update: 'customer', // For marking as read
-    delete: 'customer', // For dismissing
+    read: "customer",
+    update: "customer", // For marking as read
+    delete: "customer", // For dismissing
   },
 
   /**
@@ -96,7 +94,7 @@ module.exports = {
   fieldGroups: {},
 
   rlsFilterConfig: {
-    ownRecordField: 'user_id',
+    ownRecordField: "user_id",
   },
 
   // ============================================================================
@@ -113,11 +111,11 @@ module.exports = {
   // ============================================================================
 
   fieldAliases: {
-    title: 'Title',
-    body: 'Message',
-    type: 'Type',
-    is_read: 'Read',
-    resource_type: 'Related Entity',
+    title: "Title",
+    body: "Message",
+    type: "Type",
+    is_read: "Read",
+    resource_type: "Related Entity",
   },
 
   // ============================================================================
@@ -133,17 +131,26 @@ module.exports = {
   /**
    * Fields required when creating a new notification (system use only)
    */
-  requiredFields: ['user_id', 'title', 'type'],
+  requiredFields: ["user_id", "title", "type"],
 
   /**
    * Fields that cannot be modified after creation
    */
-  immutableFields: ['id', 'user_id', 'title', 'body', 'type', 'resource_type', 'resource_id', 'created_at'],
+  immutableFields: [
+    "id",
+    "user_id",
+    "title",
+    "body",
+    "type",
+    "resource_type",
+    "resource_id",
+    "created_at",
+  ],
 
   /**
    * Default columns to display in table views (ordered)
    */
-  displayColumns: ['title', 'type', 'is_read', 'created_at'],
+  displayColumns: ["title", "type", "is_read", "created_at"],
 
   // ============================================================================
   // FIELD ACCESS CONTROL
@@ -153,52 +160,52 @@ module.exports = {
     // Note: id inherits from UNIVERSAL_FIELD_ACCESS (PUBLIC_READONLY)
     // Do NOT override with SYSTEM_ONLY - that blocks read access and breaks API responses
     user_id: {
-      create: 'system', // Set by backend when creating notification
-      read: 'customer',
-      update: 'none',
-      delete: 'none',
+      create: "system", // Set by backend when creating notification
+      read: "customer",
+      update: "none",
+      delete: "none",
     },
     title: {
-      create: 'system',
-      read: 'customer',
-      update: 'none',
-      delete: 'none',
+      create: "system",
+      read: "customer",
+      update: "none",
+      delete: "none",
     },
     body: {
-      create: 'system',
-      read: 'customer',
-      update: 'none',
-      delete: 'none',
+      create: "system",
+      read: "customer",
+      update: "none",
+      delete: "none",
     },
     type: {
-      create: 'system',
-      read: 'customer',
-      update: 'none',
-      delete: 'none',
+      create: "system",
+      read: "customer",
+      update: "none",
+      delete: "none",
     },
     resource_type: {
-      create: 'system',
-      read: 'customer',
-      update: 'none',
-      delete: 'none',
+      create: "system",
+      read: "customer",
+      update: "none",
+      delete: "none",
     },
     resource_id: {
-      create: 'system',
-      read: 'customer',
-      update: 'none',
-      delete: 'none',
+      create: "system",
+      read: "customer",
+      update: "none",
+      delete: "none",
     },
     is_read: {
-      create: 'system',
-      read: 'customer',
-      update: 'customer', // Users can mark as read
-      delete: 'none',
+      create: "system",
+      read: "customer",
+      update: "customer", // Users can mark as read
+      delete: "none",
     },
     read_at: {
-      create: 'system',
-      read: 'customer',
-      update: 'system', // Set automatically when is_read changes
-      delete: 'none',
+      create: "system",
+      read: "customer",
+      update: "system", // Set automatically when is_read changes
+      delete: "none",
     },
     created_at: FAL.SYSTEM_ONLY,
     updated_at: FAL.SYSTEM_ONLY,
@@ -210,15 +217,15 @@ module.exports = {
 
   enums: {
     type: {
-      values: ['info', 'success', 'warning', 'error', 'assignment', 'reminder'],
-      default: 'info',
+      values: ["info", "success", "warning", "error", "assignment", "reminder"],
+      default: "info",
       labels: {
-        info: 'Info',
-        success: 'Success',
-        warning: 'Warning',
-        error: 'Error',
-        assignment: 'Assignment',
-        reminder: 'Reminder',
+        info: "Info",
+        success: "Success",
+        warning: "Warning",
+        error: "Error",
+        assignment: "Assignment",
+        reminder: "Reminder",
       },
     },
   },
@@ -229,8 +236,8 @@ module.exports = {
 
   foreignKeys: {
     user_id: {
-      table: 'users',
-      displayName: 'User',
+      table: "users",
+      displayName: "User",
       settableOnCreate: false, // Set by backend
     },
   },
@@ -245,15 +252,21 @@ module.exports = {
   // SEARCH/FILTER/SORT CONFIGURATION
   // ============================================================================
 
-  searchableFields: ['title', 'body'],
+  searchableFields: ["title", "body"],
 
-  filterableFields: ['user_id', 'type', 'is_read', 'resource_type', 'created_at'],
+  filterableFields: [
+    "user_id",
+    "type",
+    "is_read",
+    "resource_type",
+    "created_at",
+  ],
 
-  sortableFields: ['created_at', 'is_read', 'type'],
+  sortableFields: ["created_at", "is_read", "type"],
 
   defaultSort: {
-    field: 'created_at',
-    order: 'DESC',
+    field: "created_at",
+    order: "DESC",
   },
 
   // ============================================================================
@@ -264,10 +277,10 @@ module.exports = {
 
   relationships: {
     user: {
-      type: 'belongsTo',
-      foreignKey: 'user_id',
-      table: 'users',
-      fields: ['id', 'email', 'first_name', 'last_name'],
+      type: "belongsTo",
+      foreignKey: "user_id",
+      table: "users",
+      fields: ["id", "email", "first_name", "last_name"],
     },
   },
 
@@ -277,67 +290,67 @@ module.exports = {
 
   fields: {
     id: {
-      type: 'integer',
+      type: "integer",
       readonly: true,
-      description: 'Primary key',
+      description: "Primary key",
     },
     user_id: {
-      type: 'foreignKey',
-      relatedEntity: 'user',
+      type: "foreignKey",
+      relatedEntity: "user",
       required: true,
       readonly: true,
-      description: 'Notification recipient (FK to users)',
+      description: "Notification recipient (FK to users)",
     },
     title: {
       ...FIELD.TITLE,
       required: true,
       readonly: true,
-      description: 'Notification title/summary',
+      description: "Notification title/summary",
     },
     body: {
-      type: 'text',
+      type: "text",
       required: false,
       readonly: true,
-      description: 'Full notification message (optional)',
+      description: "Full notification message (optional)",
     },
     type: {
-      type: 'enum',
+      type: "enum",
       required: true,
       readonly: true,
-      description: 'Notification type for UI styling',
+      description: "Notification type for UI styling",
     },
     resource_type: {
-      type: 'string',
+      type: "string",
       required: false,
       maxLength: 50,
       readonly: true,
-      description: 'Related entity type (work_order, invoice, etc.)',
+      description: "Related entity type (work_order, invoice, etc.)",
     },
     resource_id: {
-      type: 'integer',
+      type: "integer",
       required: false,
       readonly: true,
-      description: 'Related entity ID for navigation',
+      description: "Related entity ID for navigation",
     },
     is_read: {
-      type: 'boolean',
+      type: "boolean",
       default: false,
-      description: 'Whether notification has been read',
+      description: "Whether notification has been read",
     },
     read_at: {
-      type: 'timestamp',
+      type: "timestamp",
       readonly: true,
-      description: 'When notification was marked as read',
+      description: "When notification was marked as read",
     },
     created_at: {
-      type: 'timestamp',
+      type: "timestamp",
       readonly: true,
-      description: 'When notification was created',
+      description: "When notification was created",
     },
     updated_at: {
-      type: 'timestamp',
+      type: "timestamp",
       readonly: true,
-      description: 'Last update timestamp',
+      description: "Last update timestamp",
     },
   },
 };

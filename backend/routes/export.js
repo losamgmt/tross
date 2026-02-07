@@ -13,15 +13,15 @@
  *   - Respects RLS policies (user sees only their data)
  */
 
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const ExportService = require('../services/export-service');
-const { authenticateToken, requirePermission } = require('../middleware/auth');
-const { enforceRLS } = require('../middleware/row-level-security');
-const { extractEntity } = require('../middleware/generic-entity');
-const ResponseFormatter = require('../utils/response-formatter');
-const { logger } = require('../config/logger');
-const { asyncHandler } = require('../middleware/utils');
+const ExportService = require("../services/export-service");
+const { authenticateToken, requirePermission } = require("../middleware/auth");
+const { enforceRLS } = require("../middleware/row-level-security");
+const { extractEntity } = require("../middleware/generic-entity");
+const ResponseFormatter = require("../utils/response-formatter");
+const { logger } = require("../config/logger");
+const { asyncHandler } = require("../middleware/utils");
 
 /**
  * GET /api/export/:entity
@@ -41,10 +41,10 @@ const { asyncHandler } = require('../middleware/utils');
  *   - Content-Disposition: attachment with filename
  */
 router.get(
-  '/:entity',
+  "/:entity",
   authenticateToken,
   extractEntity,
-  requirePermission('read'),
+  requirePermission("read"),
   enforceRLS,
   asyncHandler(async (req, res) => {
     const entityName = req.entityName;
@@ -55,11 +55,18 @@ router.get(
       filters: {},
       sortBy: req.query.sortBy,
       sortOrder: req.query.sortOrder,
-      includeInactive: req.query.includeInactive === 'true',
+      includeInactive: req.query.includeInactive === "true",
     };
 
     // Parse filter params (exclude known non-filter params)
-    const nonFilterParams = ['search', 'sortBy', 'sortOrder', 'fields', 'includeInactive', 'format'];
+    const nonFilterParams = [
+      "search",
+      "sortBy",
+      "sortOrder",
+      "fields",
+      "includeInactive",
+      "format",
+    ];
     for (const [key, value] of Object.entries(req.query)) {
       if (!nonFilterParams.includes(key)) {
         options.filters[key] = value;
@@ -68,7 +75,7 @@ router.get(
 
     // Parse selected fields if provided
     const selectedFields = req.query.fields
-      ? req.query.fields.split(',').map(f => f.trim())
+      ? req.query.fields.split(",").map((f) => f.trim())
       : null;
 
     // Get RLS context from middleware
@@ -83,7 +90,7 @@ router.get(
     );
 
     // Log export for audit
-    logger.info('[Export] CSV download', {
+    logger.info("[Export] CSV download", {
       entity: entityName,
       userId: req.user?.id,
       rowCount: result.count,
@@ -92,10 +99,13 @@ router.get(
     });
 
     // Set response headers for file download
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
-    res.setHeader('X-Row-Count', result.count);
-    res.setHeader('X-Column-Count', result.columns.length);
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${result.filename}"`,
+    );
+    res.setHeader("X-Row-Count", result.count);
+    res.setHeader("X-Column-Count", result.columns.length);
 
     // Send CSV data
     res.send(result.csv);
@@ -112,10 +122,10 @@ router.get(
  *   { fields: [{ field: 'name', label: 'Name' }, ...] }
  */
 router.get(
-  '/:entity/fields',
+  "/:entity/fields",
   authenticateToken,
   extractEntity,
-  requirePermission('read'),
+  requirePermission("read"),
   asyncHandler(async (req, res) => {
     const entityName = req.entityName;
 

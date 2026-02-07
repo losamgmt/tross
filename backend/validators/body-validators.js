@@ -12,8 +12,8 @@
  *
  * Philosophy: Explicit is better than implicit. No auto-generation.
  */
-const Joi = require('joi');
-const ResponseFormatter = require('../utils/response-formatter');
+const Joi = require("joi");
+const ResponseFormatter = require("../utils/response-formatter");
 
 /**
  * Helper function to create validation middleware
@@ -27,7 +27,7 @@ const createValidator = (schema) => (req, res, next) => {
 
   if (error) {
     const details = error.details.map((d) => ({
-      field: d.path.join('.'),
+      field: d.path.join("."),
       message: d.message,
     }));
 
@@ -53,19 +53,20 @@ const createValidator = (schema) => (req, res, next) => {
 const validateProfileUpdate = createValidator(
   Joi.object({
     first_name: Joi.string().trim().min(1).max(100).messages({
-      'string.empty': 'First name cannot be empty',
-      'string.min': 'First name must be at least 1 character',
-      'string.max': 'First name cannot exceed 100 characters',
+      "string.empty": "First name cannot be empty",
+      "string.min": "First name must be at least 1 character",
+      "string.max": "First name cannot exceed 100 characters",
     }),
     last_name: Joi.string().trim().min(1).max(100).messages({
-      'string.empty': 'Last name cannot be empty',
-      'string.min': 'Last name must be at least 1 character',
-      'string.max': 'Last name cannot exceed 100 characters',
+      "string.empty": "Last name cannot be empty",
+      "string.min": "Last name must be at least 1 character",
+      "string.max": "Last name cannot exceed 100 characters",
     }),
   })
     .min(1)
     .messages({
-      'object.min': 'At least one field (first_name or last_name) must be provided',
+      "object.min":
+        "At least one field (first_name or last_name) must be provided",
     }),
 );
 
@@ -77,10 +78,10 @@ const validateProfileUpdate = createValidator(
 const validateRoleAssignment = createValidator(
   Joi.object({
     role_id: Joi.number().integer().positive().required().messages({
-      'number.base': 'Role ID must be a number',
-      'number.integer': 'Role ID must be an integer',
-      'number.positive': 'Role ID must be positive',
-      'any.required': 'Role ID is required',
+      "number.base": "Role ID must be a number",
+      "number.integer": "Role ID must be an integer",
+      "number.positive": "Role ID must be positive",
+      "any.required": "Role ID is required",
     }),
   }),
 );
@@ -98,11 +99,11 @@ const validateRoleAssignment = createValidator(
 const validateAuthCallback = createValidator(
   Joi.object({
     code: Joi.string().required().trim().messages({
-      'string.empty': 'Authorization code is required',
-      'any.required': 'Authorization code is required',
+      "string.empty": "Authorization code is required",
+      "any.required": "Authorization code is required",
     }),
     redirect_uri: Joi.string().uri().optional().trim().messages({
-      'string.uri': 'Redirect URI must be a valid URL',
+      "string.uri": "Redirect URI must be a valid URL",
     }),
   }),
 );
@@ -115,8 +116,8 @@ const validateAuthCallback = createValidator(
 const validateAuth0Token = createValidator(
   Joi.object({
     id_token: Joi.string().required().trim().messages({
-      'string.empty': 'ID token is required',
-      'any.required': 'ID token is required',
+      "string.empty": "ID token is required",
+      "any.required": "ID token is required",
     }),
   }),
 );
@@ -129,8 +130,8 @@ const validateAuth0Token = createValidator(
 const validateAuth0Refresh = createValidator(
   Joi.object({
     refresh_token: Joi.string().required().trim().messages({
-      'string.empty': 'Refresh token is required',
-      'any.required': 'Refresh token is required',
+      "string.empty": "Refresh token is required",
+      "any.required": "Refresh token is required",
     }),
   }),
 );
@@ -143,8 +144,8 @@ const validateAuth0Refresh = createValidator(
 const validateRefreshToken = createValidator(
   Joi.object({
     refreshToken: Joi.string().required().trim().messages({
-      'string.empty': 'Refresh token is required',
-      'any.required': 'Refresh token is required',
+      "string.empty": "Refresh token is required",
+      "any.required": "Refresh token is required",
     }),
   }),
 );

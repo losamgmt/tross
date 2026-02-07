@@ -37,6 +37,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/generic_entity_service.dart';
 import '../../services/nav_menu_builder.dart';
 import '../atoms/atoms.dart';
+import '../molecules/menus/adaptive_nav_menu.dart';
 import '../molecules/navigation/mobile_nav_bar.dart';
 import '../organisms/navigation/nav_menu_item.dart';
 import '../organisms/navigation/notification_tray.dart';
@@ -531,6 +532,10 @@ class _SidebarContentState extends State<_SidebarContent> {
 // ============================================================================
 
 /// User menu button with dropdown for account actions
+///
+/// Uses AdaptiveNavMenu with config-driven display mode:
+/// - displayMode comes from nav-config.json menuBehaviors.userMenu
+/// - Default: dropdown (always anchored to avatar trigger)
 class _UserMenuButton extends StatelessWidget {
   final AuthProvider authProvider;
   final List<NavMenuItem> userItems;
@@ -547,72 +552,63 @@ class _UserMenuButton extends StatelessWidget {
     final userName = authProvider.userName;
     final userEmail = authProvider.userEmail;
 
-    return PopupMenuButton<String>(
-      icon: CircleAvatar(
+    // Build full menu items including logout
+    final allItems = [
+      ...userItems,
+      NavMenuItem.divider(),
+      NavMenuItem(id: 'logout', label: 'Logout', icon: Icons.logout),
+    ];
+
+    // Get display mode from config (userMenu defaults to dropdown)
+    final displayMode = NavMenuBuilder.getDisplayModeForMenu('userMenu');
+
+    return AdaptiveNavMenu(
+      tooltip: 'User Menu',
+      displayMode: displayMode,
+      trigger: CircleAvatar(
         backgroundColor: AppColors.white.withValues(alpha: 0.2),
         child: Text(
           userName.isNotEmpty ? userName[0].toUpperCase() : '?',
           style: const TextStyle(color: AppColors.white),
         ),
       ),
-      onSelected: (value) => _handleSelection(context, value),
-      itemBuilder: (_) => [
-        // User info header
-        PopupMenuItem(
-          enabled: false,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(userName, style: Theme.of(context).textTheme.titleSmall),
-              Text(userEmail, style: Theme.of(context).textTheme.bodySmall),
-            ],
-          ),
-        ),
-        const PopupMenuDivider(),
-
-        // User menu items (Settings, Admin, etc.)
-        ...userItems.map(
-          (item) => PopupMenuItem<String>(
-            value: item.id,
-            child: ListTile(
-              leading: Icon(item.icon),
-              title: Text(item.label),
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-            ),
-          ),
-        ),
-
-        const PopupMenuDivider(),
-
-        // Logout (always present, handled separately)
-        const PopupMenuItem(
-          value: 'logout',
-          child: ListTile(
-            leading: Icon(Icons.logout),
-            title: Text('Logout'),
-            dense: true,
-            contentPadding: EdgeInsets.zero,
-          ),
-        ),
-      ],
+      header: _UserInfoHeader(userName: userName, userEmail: userEmail),
+      items: allItems,
+      onSelected: (item) => _handleSelection(context, item),
     );
   }
 
-  void _handleSelection(BuildContext context, String value) async {
-    if (value == 'logout') {
+  void _handleSelection(BuildContext context, NavMenuItem item) async {
+    if (item.id == 'logout') {
       await authProvider.logout();
       return;
     }
 
-    // Find and navigate to the selected item's route
-    final menuItem = userItems.firstWhere(
-      (item) => item.id == value,
-      orElse: () => userItems.first,
-    );
-    if (menuItem.route != null && menuItem.route != currentRoute) {
-      context.go(menuItem.route!);
+    // Navigate to the selected item's route
+    if (item.route != null && item.route != currentRoute) {
+      context.go(item.route!);
     }
+  }
+}
+
+/// User info header for the menu
+class _UserInfoHeader extends StatelessWidget {
+  final String userName;
+  final String userEmail;
+
+  const _UserInfoHeader({required this.userName, required this.userEmail});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(userName, style: theme.textTheme.titleSmall),
+        Text(userEmail, style: theme.textTheme.bodySmall),
+      ],
+    );
   }
 }
 

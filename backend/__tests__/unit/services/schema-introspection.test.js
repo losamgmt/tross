@@ -11,50 +11,50 @@
  * No DB mocking - integration tests cover DB queries
  */
 
-const SchemaIntrospectionService = require('../../../services/schema-introspection');
-const db = require('../../../db/connection');
+const SchemaIntrospectionService = require("../../../services/schema-introspection");
+const db = require("../../../db/connection");
 
 // Mock DB connection
-jest.mock('../../../db/connection');
+jest.mock("../../../db/connection");
 
-describe('SchemaIntrospectionService - Business Logic', () => {
-  describe('getTableSchema', () => {
-    test('should return enriched schema with all metadata', async () => {
+describe("SchemaIntrospectionService - Business Logic", () => {
+  describe("getTableSchema", () => {
+    test("should return enriched schema with all metadata", async () => {
       // Arrange - Mock minimal DB responses
       db.query.mockResolvedValueOnce({
         // Columns
         rows: [
           {
-            column_name: 'id',
-            data_type: 'integer',
-            is_nullable: 'NO',
+            column_name: "id",
+            data_type: "integer",
+            is_nullable: "NO",
             column_default: "nextval('users_id_seq'::regclass)",
             character_maximum_length: null,
             numeric_precision: 32,
             numeric_scale: 0,
-            udt_name: 'int4',
+            udt_name: "int4",
             ordinal_position: 1,
           },
           {
-            column_name: 'email',
-            data_type: 'character varying',
-            is_nullable: 'NO',
+            column_name: "email",
+            data_type: "character varying",
+            is_nullable: "NO",
             column_default: null,
             character_maximum_length: 255,
             numeric_precision: null,
             numeric_scale: null,
-            udt_name: 'varchar',
+            udt_name: "varchar",
             ordinal_position: 2,
           },
           {
-            column_name: 'created_at',
-            data_type: 'timestamp without time zone',
-            is_nullable: 'NO',
-            column_default: 'CURRENT_TIMESTAMP',
+            column_name: "created_at",
+            data_type: "timestamp without time zone",
+            is_nullable: "NO",
+            column_default: "CURRENT_TIMESTAMP",
             character_maximum_length: null,
             numeric_precision: null,
             numeric_scale: null,
-            udt_name: 'timestamp',
+            udt_name: "timestamp",
             ordinal_position: 3,
           },
         ],
@@ -66,35 +66,35 @@ describe('SchemaIntrospectionService - Business Logic', () => {
         .mockResolvedValueOnce({ rows: [] }); // Indexes
 
       // Act
-      const result = await SchemaIntrospectionService.getTableSchema('users');
+      const result = await SchemaIntrospectionService.getTableSchema("users");
 
       // Assert
       expect(result).toMatchObject({
-        tableName: 'users',
-        displayName: 'Users',
+        tableName: "users",
+        displayName: "Users",
         columns: expect.arrayContaining([
           expect.objectContaining({
-            name: 'id',
-            type: 'number',
-            uiType: 'readonly',
-            label: 'ID',
+            name: "id",
+            type: "number",
+            uiType: "readonly",
+            label: "ID",
             readonly: true,
             nullable: false,
           }),
           expect.objectContaining({
-            name: 'email',
-            type: 'string',
-            uiType: 'email',
-            label: 'Email Address',
+            name: "email",
+            type: "string",
+            uiType: "email",
+            label: "Email Address",
             readonly: false,
             nullable: false,
             maxLength: 255,
           }),
           expect.objectContaining({
-            name: 'created_at',
-            type: 'datetime',
-            uiType: 'readonly',
-            label: 'Created',
+            name: "created_at",
+            type: "datetime",
+            uiType: "readonly",
+            label: "Created",
             readonly: true,
             nullable: false,
           }),
@@ -103,14 +103,14 @@ describe('SchemaIntrospectionService - Business Logic', () => {
     });
   });
 
-  describe('getAllTables', () => {
-    test('should return all public schema tables with display names', async () => {
+  describe("getAllTables", () => {
+    test("should return all public schema tables with display names", async () => {
       // Arrange
       db.query.mockResolvedValueOnce({
         rows: [
-          { table_name: 'users', description: 'System users' },
-          { table_name: 'roles', description: 'User roles' },
-          { table_name: 'audit_logs', description: null },
+          { table_name: "users", description: "System users" },
+          { table_name: "roles", description: "User roles" },
+          { table_name: "audit_logs", description: null },
         ],
       });
 
@@ -119,38 +119,38 @@ describe('SchemaIntrospectionService - Business Logic', () => {
 
       // Assert
       expect(result).toEqual([
-        { name: 'users', displayName: 'Users', description: 'System users' },
-        { name: 'roles', displayName: 'Roles', description: 'User roles' },
-        { name: 'audit_logs', displayName: 'Audit Logs', description: null },
+        { name: "users", displayName: "Users", description: "System users" },
+        { name: "roles", displayName: "Roles", description: "User roles" },
+        { name: "audit_logs", displayName: "Audit Logs", description: null },
       ]);
     });
   });
 
-  describe('Type Mapping Logic', () => {
-    test('should map PostgreSQL numeric types correctly', async () => {
+  describe("Type Mapping Logic", () => {
+    test("should map PostgreSQL numeric types correctly", async () => {
       // Arrange
       db.query.mockResolvedValueOnce({
         rows: [
           {
-            column_name: 'count',
-            data_type: 'integer',
-            is_nullable: 'NO',
+            column_name: "count",
+            data_type: "integer",
+            is_nullable: "NO",
             column_default: null,
             character_maximum_length: null,
             numeric_precision: 32,
             numeric_scale: 0,
-            udt_name: 'int4',
+            udt_name: "int4",
             ordinal_position: 1,
           },
           {
-            column_name: 'price',
-            data_type: 'numeric',
-            is_nullable: 'YES',
+            column_name: "price",
+            data_type: "numeric",
+            is_nullable: "YES",
             column_default: null,
             character_maximum_length: null,
             numeric_precision: 10,
             numeric_scale: 2,
-            udt_name: 'numeric',
+            udt_name: "numeric",
             ordinal_position: 2,
           },
         ],
@@ -162,38 +162,39 @@ describe('SchemaIntrospectionService - Business Logic', () => {
         .mockResolvedValueOnce({ rows: [] });
 
       // Act
-      const result = await SchemaIntrospectionService.getTableSchema('products');
+      const result =
+        await SchemaIntrospectionService.getTableSchema("products");
 
       // Assert
       expect(result.columns[0]).toMatchObject({
-        name: 'count',
-        type: 'number',
-        uiType: 'number',
+        name: "count",
+        type: "number",
+        uiType: "number",
         precision: 32,
         scale: 0,
       });
       expect(result.columns[1]).toMatchObject({
-        name: 'price',
-        type: 'number',
-        uiType: 'number',
+        name: "price",
+        type: "number",
+        uiType: "number",
         precision: 10,
         scale: 2,
       });
     });
 
-    test('should map PostgreSQL text types correctly', async () => {
+    test("should map PostgreSQL text types correctly", async () => {
       // Arrange
       db.query.mockResolvedValueOnce({
         rows: [
           {
-            column_name: 'description',
-            data_type: 'text',
-            is_nullable: 'YES',
+            column_name: "description",
+            data_type: "text",
+            is_nullable: "YES",
             column_default: null,
             character_maximum_length: null,
             numeric_precision: null,
             numeric_scale: null,
-            udt_name: 'text',
+            udt_name: "text",
             ordinal_position: 1,
           },
         ],
@@ -205,28 +206,28 @@ describe('SchemaIntrospectionService - Business Logic', () => {
         .mockResolvedValueOnce({ rows: [] });
 
       // Act
-      const result = await SchemaIntrospectionService.getTableSchema('test');
+      const result = await SchemaIntrospectionService.getTableSchema("test");
 
       // Assert
       expect(result.columns[0]).toMatchObject({
-        type: 'string',
-        uiType: 'textarea',
+        type: "string",
+        uiType: "textarea",
       });
     });
 
-    test('should map PostgreSQL boolean correctly', async () => {
+    test("should map PostgreSQL boolean correctly", async () => {
       // Arrange
       db.query.mockResolvedValueOnce({
         rows: [
           {
-            column_name: 'is_active',
-            data_type: 'boolean',
-            is_nullable: 'NO',
-            column_default: 'true',
+            column_name: "is_active",
+            data_type: "boolean",
+            is_nullable: "NO",
+            column_default: "true",
             character_maximum_length: null,
             numeric_precision: null,
             numeric_scale: null,
-            udt_name: 'bool',
+            udt_name: "bool",
             ordinal_position: 1,
           },
         ],
@@ -238,30 +239,30 @@ describe('SchemaIntrospectionService - Business Logic', () => {
         .mockResolvedValueOnce({ rows: [] });
 
       // Act
-      const result = await SchemaIntrospectionService.getTableSchema('test');
+      const result = await SchemaIntrospectionService.getTableSchema("test");
 
       // Assert
       expect(result.columns[0]).toMatchObject({
-        type: 'boolean',
-        uiType: 'boolean',
+        type: "boolean",
+        uiType: "boolean",
       });
     });
   });
 
-  describe('UI Type Inference Logic', () => {
-    test('should infer email input for email columns', async () => {
+  describe("UI Type Inference Logic", () => {
+    test("should infer email input for email columns", async () => {
       // Arrange
       db.query.mockResolvedValueOnce({
         rows: [
           {
-            column_name: 'contact_email',
-            data_type: 'character varying',
-            is_nullable: 'YES',
+            column_name: "contact_email",
+            data_type: "character varying",
+            is_nullable: "YES",
             column_default: null,
             character_maximum_length: 255,
             numeric_precision: null,
             numeric_scale: null,
-            udt_name: 'varchar',
+            udt_name: "varchar",
             ordinal_position: 1,
           },
         ],
@@ -273,25 +274,25 @@ describe('SchemaIntrospectionService - Business Logic', () => {
         .mockResolvedValueOnce({ rows: [] });
 
       // Act
-      const result = await SchemaIntrospectionService.getTableSchema('test');
+      const result = await SchemaIntrospectionService.getTableSchema("test");
 
       // Assert
-      expect(result.columns[0].uiType).toBe('email');
+      expect(result.columns[0].uiType).toBe("email");
     });
 
-    test('should infer url input for url columns', async () => {
+    test("should infer url input for url columns", async () => {
       // Arrange
       db.query.mockResolvedValueOnce({
         rows: [
           {
-            column_name: 'website_url',
-            data_type: 'character varying',
-            is_nullable: 'YES',
+            column_name: "website_url",
+            data_type: "character varying",
+            is_nullable: "YES",
             column_default: null,
             character_maximum_length: 255,
             numeric_precision: null,
             numeric_scale: null,
-            udt_name: 'varchar',
+            udt_name: "varchar",
             ordinal_position: 1,
           },
         ],
@@ -303,25 +304,25 @@ describe('SchemaIntrospectionService - Business Logic', () => {
         .mockResolvedValueOnce({ rows: [] });
 
       // Act
-      const result = await SchemaIntrospectionService.getTableSchema('test');
+      const result = await SchemaIntrospectionService.getTableSchema("test");
 
       // Assert
-      expect(result.columns[0].uiType).toBe('url');
+      expect(result.columns[0].uiType).toBe("url");
     });
 
-    test('should infer tel input for phone columns', async () => {
+    test("should infer tel input for phone columns", async () => {
       // Arrange
       db.query.mockResolvedValueOnce({
         rows: [
           {
-            column_name: 'phone_number',
-            data_type: 'character varying',
-            is_nullable: 'YES',
+            column_name: "phone_number",
+            data_type: "character varying",
+            is_nullable: "YES",
             column_default: null,
             character_maximum_length: 20,
             numeric_precision: null,
             numeric_scale: null,
-            udt_name: 'varchar',
+            udt_name: "varchar",
             ordinal_position: 1,
           },
         ],
@@ -333,25 +334,25 @@ describe('SchemaIntrospectionService - Business Logic', () => {
         .mockResolvedValueOnce({ rows: [] });
 
       // Act
-      const result = await SchemaIntrospectionService.getTableSchema('test');
+      const result = await SchemaIntrospectionService.getTableSchema("test");
 
       // Assert
-      expect(result.columns[0].uiType).toBe('tel');
+      expect(result.columns[0].uiType).toBe("tel");
     });
 
-    test('should infer select dropdown for foreign keys', async () => {
+    test("should infer select dropdown for foreign keys", async () => {
       // Arrange
       db.query.mockResolvedValueOnce({
         rows: [
           {
-            column_name: 'role_id',
-            data_type: 'integer',
-            is_nullable: 'NO',
+            column_name: "role_id",
+            data_type: "integer",
+            is_nullable: "NO",
             column_default: null,
             character_maximum_length: null,
             numeric_precision: 32,
             numeric_scale: 0,
-            udt_name: 'int4',
+            udt_name: "int4",
             ordinal_position: 1,
           },
         ],
@@ -363,47 +364,47 @@ describe('SchemaIntrospectionService - Business Logic', () => {
           // Foreign key
           rows: [
             {
-              column_name: 'role_id',
-              foreign_table_name: 'roles',
-              foreign_column_name: 'id',
-              update_rule: 'CASCADE',
-              delete_rule: 'RESTRICT',
+              column_name: "role_id",
+              foreign_table_name: "roles",
+              foreign_column_name: "id",
+              update_rule: "CASCADE",
+              delete_rule: "RESTRICT",
             },
           ],
         })
         .mockResolvedValueOnce({ rows: [] });
 
       // Act
-      const result = await SchemaIntrospectionService.getTableSchema('users');
+      const result = await SchemaIntrospectionService.getTableSchema("users");
 
       // Assert
       expect(result.columns[0]).toMatchObject({
-        name: 'role_id',
-        uiType: 'select',
+        name: "role_id",
+        uiType: "select",
         foreignKey: {
-          table: 'roles',
-          column: 'id',
-          updateRule: 'CASCADE',
-          deleteRule: 'RESTRICT',
+          table: "roles",
+          column: "id",
+          updateRule: "CASCADE",
+          deleteRule: "RESTRICT",
         },
       });
     });
   });
 
-  describe('Label Generation Logic', () => {
-    test('should convert snake_case to Title Case', async () => {
+  describe("Label Generation Logic", () => {
+    test("should convert snake_case to Title Case", async () => {
       // Arrange
       db.query.mockResolvedValueOnce({
         rows: [
           {
-            column_name: 'first_name',
-            data_type: 'character varying',
-            is_nullable: 'NO',
+            column_name: "first_name",
+            data_type: "character varying",
+            is_nullable: "NO",
             column_default: null,
             character_maximum_length: 100,
             numeric_precision: null,
             numeric_scale: null,
-            udt_name: 'varchar',
+            udt_name: "varchar",
             ordinal_position: 1,
           },
         ],
@@ -415,25 +416,25 @@ describe('SchemaIntrospectionService - Business Logic', () => {
         .mockResolvedValueOnce({ rows: [] });
 
       // Act
-      const result = await SchemaIntrospectionService.getTableSchema('test');
+      const result = await SchemaIntrospectionService.getTableSchema("test");
 
       // Assert
-      expect(result.columns[0].label).toBe('First Name');
+      expect(result.columns[0].label).toBe("First Name");
     });
 
-    test('should use special labels for known fields', async () => {
+    test("should use special labels for known fields", async () => {
       // Arrange
       db.query.mockResolvedValueOnce({
         rows: [
           {
-            column_name: 'auth0_id',
-            data_type: 'character varying',
-            is_nullable: 'YES',
+            column_name: "auth0_id",
+            data_type: "character varying",
+            is_nullable: "YES",
             column_default: null,
             character_maximum_length: 255,
             numeric_precision: null,
             numeric_scale: null,
-            udt_name: 'varchar',
+            udt_name: "varchar",
             ordinal_position: 1,
           },
         ],
@@ -445,49 +446,49 @@ describe('SchemaIntrospectionService - Business Logic', () => {
         .mockResolvedValueOnce({ rows: [] });
 
       // Act
-      const result = await SchemaIntrospectionService.getTableSchema('test');
+      const result = await SchemaIntrospectionService.getTableSchema("test");
 
       // Assert
-      expect(result.columns[0].label).toBe('Auth0 ID');
+      expect(result.columns[0].label).toBe("Auth0 ID");
     });
   });
 
-  describe('Readonly Field Logic', () => {
-    test('should mark system fields as readonly', async () => {
+  describe("Readonly Field Logic", () => {
+    test("should mark system fields as readonly", async () => {
       // Arrange
       db.query.mockResolvedValueOnce({
         rows: [
           {
-            column_name: 'id',
-            data_type: 'integer',
-            is_nullable: 'NO',
+            column_name: "id",
+            data_type: "integer",
+            is_nullable: "NO",
             column_default: "nextval('test_id_seq'::regclass)",
             character_maximum_length: null,
             numeric_precision: 32,
             numeric_scale: 0,
-            udt_name: 'int4',
+            udt_name: "int4",
             ordinal_position: 1,
           },
           {
-            column_name: 'created_at',
-            data_type: 'timestamp without time zone',
-            is_nullable: 'NO',
-            column_default: 'CURRENT_TIMESTAMP',
+            column_name: "created_at",
+            data_type: "timestamp without time zone",
+            is_nullable: "NO",
+            column_default: "CURRENT_TIMESTAMP",
             character_maximum_length: null,
             numeric_precision: null,
             numeric_scale: null,
-            udt_name: 'timestamp',
+            udt_name: "timestamp",
             ordinal_position: 2,
           },
           {
-            column_name: 'updated_at',
-            data_type: 'timestamp without time zone',
-            is_nullable: 'NO',
-            column_default: 'CURRENT_TIMESTAMP',
+            column_name: "updated_at",
+            data_type: "timestamp without time zone",
+            is_nullable: "NO",
+            column_default: "CURRENT_TIMESTAMP",
             character_maximum_length: null,
             numeric_precision: null,
             numeric_scale: null,
-            udt_name: 'timestamp',
+            udt_name: "timestamp",
             ordinal_position: 3,
           },
         ],
@@ -499,7 +500,7 @@ describe('SchemaIntrospectionService - Business Logic', () => {
         .mockResolvedValueOnce({ rows: [] });
 
       // Act
-      const result = await SchemaIntrospectionService.getTableSchema('test');
+      const result = await SchemaIntrospectionService.getTableSchema("test");
 
       // Assert
       expect(result.columns[0].readonly).toBe(true); // id
@@ -507,19 +508,19 @@ describe('SchemaIntrospectionService - Business Logic', () => {
       expect(result.columns[2].readonly).toBe(true); // updated_at
     });
 
-    test('should mark user fields as editable', async () => {
+    test("should mark user fields as editable", async () => {
       // Arrange
       db.query.mockResolvedValueOnce({
         rows: [
           {
-            column_name: 'name',
-            data_type: 'character varying',
-            is_nullable: 'NO',
+            column_name: "name",
+            data_type: "character varying",
+            is_nullable: "NO",
             column_default: null,
             character_maximum_length: 255,
             numeric_precision: null,
             numeric_scale: null,
-            udt_name: 'varchar',
+            udt_name: "varchar",
             ordinal_position: 1,
           },
         ],
@@ -531,38 +532,38 @@ describe('SchemaIntrospectionService - Business Logic', () => {
         .mockResolvedValueOnce({ rows: [] });
 
       // Act
-      const result = await SchemaIntrospectionService.getTableSchema('test');
+      const result = await SchemaIntrospectionService.getTableSchema("test");
 
       // Assert
       expect(result.columns[0].readonly).toBe(false);
     });
   });
 
-  describe('Searchable Field Logic', () => {
-    test('should mark text fields as searchable', async () => {
+  describe("Searchable Field Logic", () => {
+    test("should mark text fields as searchable", async () => {
       // Arrange
       db.query.mockResolvedValueOnce({
         rows: [
           {
-            column_name: 'name',
-            data_type: 'character varying',
-            is_nullable: 'NO',
+            column_name: "name",
+            data_type: "character varying",
+            is_nullable: "NO",
             column_default: null,
             character_maximum_length: 255,
             numeric_precision: null,
             numeric_scale: null,
-            udt_name: 'varchar',
+            udt_name: "varchar",
             ordinal_position: 1,
           },
           {
-            column_name: 'description',
-            data_type: 'text',
-            is_nullable: 'YES',
+            column_name: "description",
+            data_type: "text",
+            is_nullable: "YES",
             column_default: null,
             character_maximum_length: null,
             numeric_precision: null,
             numeric_scale: null,
-            udt_name: 'text',
+            udt_name: "text",
             ordinal_position: 2,
           },
         ],
@@ -574,37 +575,37 @@ describe('SchemaIntrospectionService - Business Logic', () => {
         .mockResolvedValueOnce({ rows: [] });
 
       // Act
-      const result = await SchemaIntrospectionService.getTableSchema('test');
+      const result = await SchemaIntrospectionService.getTableSchema("test");
 
       // Assert
       expect(result.columns[0].searchable).toBe(true); // varchar
       expect(result.columns[1].searchable).toBe(true); // text
     });
 
-    test('should not mark id and timestamp fields as searchable', async () => {
+    test("should not mark id and timestamp fields as searchable", async () => {
       // Arrange
       db.query.mockResolvedValueOnce({
         rows: [
           {
-            column_name: 'id',
-            data_type: 'integer',
-            is_nullable: 'NO',
+            column_name: "id",
+            data_type: "integer",
+            is_nullable: "NO",
             column_default: "nextval('test_id_seq'::regclass)",
             character_maximum_length: null,
             numeric_precision: 32,
             numeric_scale: 0,
-            udt_name: 'int4',
+            udt_name: "int4",
             ordinal_position: 1,
           },
           {
-            column_name: 'created_at',
-            data_type: 'timestamp without time zone',
-            is_nullable: 'NO',
-            column_default: 'CURRENT_TIMESTAMP',
+            column_name: "created_at",
+            data_type: "timestamp without time zone",
+            is_nullable: "NO",
+            column_default: "CURRENT_TIMESTAMP",
             character_maximum_length: null,
             numeric_precision: null,
             numeric_scale: null,
-            udt_name: 'timestamp',
+            udt_name: "timestamp",
             ordinal_position: 2,
           },
         ],
@@ -616,7 +617,7 @@ describe('SchemaIntrospectionService - Business Logic', () => {
         .mockResolvedValueOnce({ rows: [] });
 
       // Act
-      const result = await SchemaIntrospectionService.getTableSchema('test');
+      const result = await SchemaIntrospectionService.getTableSchema("test");
 
       // Assert
       expect(result.columns[0].searchable).toBe(false); // id
@@ -624,14 +625,34 @@ describe('SchemaIntrospectionService - Business Logic', () => {
     });
   });
 
-  describe('getForeignKeyOptions', () => {
-    test('should return foreign key dropdown options', async () => {
+  describe("getForeignKeyOptions", () => {
+    test("should return foreign key dropdown options", async () => {
       // Arrange - Mock getTableSchema call
       db.query
         .mockResolvedValueOnce({
           rows: [
-            { column_name: 'id', data_type: 'integer', is_nullable: 'NO', column_default: null, character_maximum_length: null, numeric_precision: 32, numeric_scale: 0, udt_name: 'int4', ordinal_position: 1 },
-            { column_name: 'name', data_type: 'character varying', is_nullable: 'NO', column_default: null, character_maximum_length: 100, numeric_precision: null, numeric_scale: null, udt_name: 'varchar', ordinal_position: 2 },
+            {
+              column_name: "id",
+              data_type: "integer",
+              is_nullable: "NO",
+              column_default: null,
+              character_maximum_length: null,
+              numeric_precision: 32,
+              numeric_scale: 0,
+              udt_name: "int4",
+              ordinal_position: 1,
+            },
+            {
+              column_name: "name",
+              data_type: "character varying",
+              is_nullable: "NO",
+              column_default: null,
+              character_maximum_length: 100,
+              numeric_precision: null,
+              numeric_scale: null,
+              udt_name: "varchar",
+              ordinal_position: 2,
+            },
           ],
         })
         .mockResolvedValueOnce({ rows: [] })
@@ -641,18 +662,19 @@ describe('SchemaIntrospectionService - Business Logic', () => {
       // Mock actual options query
       db.query.mockResolvedValueOnce({
         rows: [
-          { value: 1, label: 'Admin' },
-          { value: 2, label: 'User' },
+          { value: 1, label: "Admin" },
+          { value: 2, label: "User" },
         ],
       });
 
       // Act
-      const result = await SchemaIntrospectionService.getForeignKeyOptions('roles');
+      const result =
+        await SchemaIntrospectionService.getForeignKeyOptions("roles");
 
       // Assert
       expect(result).toEqual([
-        { value: 1, label: 'Admin' },
-        { value: 2, label: 'User' },
+        { value: 1, label: "Admin" },
+        { value: 2, label: "User" },
       ]);
     });
   });

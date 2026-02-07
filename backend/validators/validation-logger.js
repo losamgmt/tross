@@ -7,7 +7,7 @@
  * Philosophy: Invalid inputs are potential security issues or integration bugs.
  * They deserve permanent logging, not debug-only visibility.
  */
-const { logger } = require('../config/logger');
+const { logger } = require("../config/logger");
 
 /**
  * Log a validation failure with full context
@@ -27,10 +27,10 @@ function logValidationFailure({
   context = {},
 }) {
   // ALWAYS log at WARNING level - validation failures need visibility
-  logger.warn('⚠️  Validation failure', {
+  logger.warn("⚠️  Validation failure", {
     validator,
     field,
-    value: typeof value === 'object' ? JSON.stringify(value) : value,
+    value: typeof value === "object" ? JSON.stringify(value) : value,
     valueType: typeof value,
     reason,
     ...context,
@@ -61,16 +61,16 @@ function logTypeCoercion({
   reason,
 }) {
   // Only log in development - this is normal HTTP behavior
-  if (process.env.NODE_ENV === 'development') {
-    logger.info('🔄 Type coercion', {
+  if (process.env.NODE_ENV === "development") {
+    logger.info("🔄 Type coercion", {
       field,
       originalValue:
-        typeof originalValue === 'object'
+        typeof originalValue === "object"
           ? JSON.stringify(originalValue)
           : originalValue,
       originalType,
       coercedValue:
-        typeof coercedValue === 'object'
+        typeof coercedValue === "object"
           ? JSON.stringify(coercedValue)
           : coercedValue,
       coercedType,
@@ -88,7 +88,7 @@ function logTypeCoercion({
  * @param {string} params.field - Field validated
  */
 function logValidationSuccess({ validator, field }) {
-  logger.debug('✅ Validation success', {
+  logger.debug("✅ Validation success", {
     validator,
     field,
     timestamp: new Date().toISOString(),

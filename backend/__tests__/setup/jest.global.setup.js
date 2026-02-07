@@ -26,7 +26,7 @@ module.exports = async () => {
   try {
     // Simple, fast schema setup - DROP and recreate for clean state
     const schemaPath = path.join(__dirname, "../../schema.sql");
-    
+
     testLogger.log("🗑️  Dropping existing schema...");
     await pool.query("DROP SCHEMA IF EXISTS public CASCADE");
     await pool.query("CREATE SCHEMA IF NOT EXISTS public");
@@ -38,7 +38,7 @@ module.exports = async () => {
     await pool.query(sql);
 
     testLogger.log("✅ Test database schema ready!");
-    
+
     // Close the pool - tests will create their own connections
     await pool.end();
   } catch (error) {

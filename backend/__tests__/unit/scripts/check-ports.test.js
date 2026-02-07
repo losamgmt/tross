@@ -5,36 +5,36 @@
  * Note: These tests mock execSync to avoid actual system calls.
  */
 
-const { checkPorts } = require('../../../../scripts/check-ports');
+const { checkPorts } = require("../../../../scripts/check-ports");
 
 // Mock child_process for testing without real system calls
-jest.mock('child_process', () => ({
+jest.mock("child_process", () => ({
   execSync: jest.fn(),
 }));
 
-const { execSync } = require('child_process');
+const { execSync } = require("child_process");
 
-describe('check-ports', () => {
+describe("check-ports", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  describe('checkPorts', () => {
-    it('returns port status for each requested port', () => {
+  describe("checkPorts", () => {
+    it("returns port status for each requested port", () => {
       // Mock: all ports free
       execSync.mockImplementation(() => {
-        throw new Error('No process found');
+        throw new Error("No process found");
       });
 
       const result = checkPorts([3000, 8080]);
 
-      expect(result).toHaveProperty('3000');
-      expect(result).toHaveProperty('8080');
+      expect(result).toHaveProperty("3000");
+      expect(result).toHaveProperty("8080");
     });
 
-    it('marks port as free when no process found', () => {
+    it("marks port as free when no process found", () => {
       execSync.mockImplementation(() => {
-        throw new Error('No process found');
+        throw new Error("No process found");
       });
 
       const result = checkPorts([3000]);
@@ -46,16 +46,16 @@ describe('check-ports', () => {
       });
     });
 
-    it('handles empty port array', () => {
+    it("handles empty port array", () => {
       const result = checkPorts([]);
       expect(result).toEqual({});
     });
 
-    it('checks multiple ports independently', () => {
+    it("checks multiple ports independently", () => {
       let callCount = 0;
       execSync.mockImplementation(() => {
         callCount++;
-        throw new Error('No process');
+        throw new Error("No process");
       });
 
       checkPorts([3000, 3001, 3002]);

@@ -15,9 +15,9 @@
  * - Static class (no instance state)
  */
 
-const { query: db } = require('../db/connection');
-const { logger, logSecurityEvent } = require('../config/logger');
-const AppError = require('../utils/app-error');
+const { query: db } = require("../db/connection");
+const { logger, logSecurityEvent } = require("../config/logger");
+const AppError = require("../utils/app-error");
 
 /**
  * Known setting keys with their default values
@@ -26,8 +26,8 @@ const AppError = require('../utils/app-error');
 const DEFAULT_SETTINGS = {
   maintenance_mode: {
     enabled: false,
-    message: 'System is under maintenance. Please try again later.',
-    allowed_roles: ['admin'],
+    message: "System is under maintenance. Please try again later.",
+    allowed_roles: ["admin"],
     estimated_end: null,
   },
   feature_flags: {
@@ -45,8 +45,8 @@ class SystemSettingsService {
    * @returns {Promise<Object|null>} The setting value (JSONB) or default
    */
   static async getSetting(key) {
-    if (!key || typeof key !== 'string') {
-      throw new AppError('Setting key is required', 400, 'BAD_REQUEST');
+    if (!key || typeof key !== "string") {
+      throw new AppError("Setting key is required", 400, "BAD_REQUEST");
     }
 
     const result = await db(
@@ -99,12 +99,12 @@ class SystemSettingsService {
    * @returns {Promise<Object>} The updated setting
    */
   static async updateSetting(key, value, userId) {
-    if (!key || typeof key !== 'string') {
-      throw new AppError('Setting key is required', 400, 'BAD_REQUEST');
+    if (!key || typeof key !== "string") {
+      throw new AppError("Setting key is required", 400, "BAD_REQUEST");
     }
 
     if (value === undefined) {
-      throw new AppError('Setting value is required', 400, 'BAD_REQUEST');
+      throw new AppError("Setting value is required", 400, "BAD_REQUEST");
     }
 
     const result = await db(
@@ -118,7 +118,7 @@ class SystemSettingsService {
       [key, JSON.stringify(value), userId],
     );
 
-    logger.info('System setting updated', {
+    logger.info("System setting updated", {
       key,
       updatedBy: userId,
     });
@@ -137,7 +137,7 @@ class SystemSettingsService {
    * @returns {Promise<Object>} Maintenance mode state
    */
   static async getMaintenanceMode() {
-    const setting = await SystemSettingsService.getSetting('maintenance_mode');
+    const setting = await SystemSettingsService.getSetting("maintenance_mode");
     return setting?.value || DEFAULT_SETTINGS.maintenance_mode;
   }
 
@@ -162,12 +162,16 @@ class SystemSettingsService {
       estimated_end: options.estimated_end || null,
     };
 
-    logSecurityEvent('MAINTENANCE_MODE_ENABLED', {
+    logSecurityEvent("MAINTENANCE_MODE_ENABLED", {
       userId,
       estimatedEnd: newValue.estimated_end,
     });
 
-    return SystemSettingsService.updateSetting('maintenance_mode', newValue, userId);
+    return SystemSettingsService.updateSetting(
+      "maintenance_mode",
+      newValue,
+      userId,
+    );
   }
 
   /**
@@ -185,9 +189,13 @@ class SystemSettingsService {
       estimated_end: null,
     };
 
-    logSecurityEvent('MAINTENANCE_MODE_DISABLED', { userId });
+    logSecurityEvent("MAINTENANCE_MODE_DISABLED", { userId });
 
-    return SystemSettingsService.updateSetting('maintenance_mode', newValue, userId);
+    return SystemSettingsService.updateSetting(
+      "maintenance_mode",
+      newValue,
+      userId,
+    );
   }
 
   /**
@@ -216,7 +224,7 @@ class SystemSettingsService {
    * @returns {Promise<Object>} Feature flags object
    */
   static async getFeatureFlags() {
-    const setting = await SystemSettingsService.getSetting('feature_flags');
+    const setting = await SystemSettingsService.getSetting("feature_flags");
     return setting?.value || DEFAULT_SETTINGS.feature_flags;
   }
 

@@ -29,8 +29,8 @@
  *   });
  */
 
-const db = require('../connection');
-const { logger } = require('../../config/logger');
+const db = require("../connection");
+const { logger } = require("../../config/logger");
 
 /**
  * Execute callback within a database transaction
@@ -56,20 +56,20 @@ async function withTransaction(callback) {
   const client = await db.getClient();
 
   try {
-    await client.query('BEGIN');
+    await client.query("BEGIN");
 
     // Execute the callback with the client
     const result = await callback(client);
 
-    await client.query('COMMIT');
+    await client.query("COMMIT");
 
     return result;
   } catch (error) {
     // Rollback on any error
     try {
-      await client.query('ROLLBACK');
+      await client.query("ROLLBACK");
     } catch (rollbackError) {
-      logger.error('Transaction rollback failed', {
+      logger.error("Transaction rollback failed", {
         originalError: error.message,
         rollbackError: rollbackError.message,
       });
@@ -141,8 +141,14 @@ async function withTransactionSteps(operations) {
  *     await client.query('UPDATE customers SET ...');
  *   });
  */
-async function checkAndLock(client, tableName, primaryKey, id, forUpdate = true) {
-  const lockClause = forUpdate ? ' FOR UPDATE' : '';
+async function checkAndLock(
+  client,
+  tableName,
+  primaryKey,
+  id,
+  forUpdate = true,
+) {
+  const lockClause = forUpdate ? " FOR UPDATE" : "";
   const query = `SELECT * FROM ${tableName} WHERE ${primaryKey} = $1${lockClause}`;
   const result = await client.query(query, [id]);
   return result.rows.length > 0 ? result.rows[0] : null;

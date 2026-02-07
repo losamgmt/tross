@@ -19,7 +19,7 @@
  *   const safeUsers = filterOutputArray(users, userMetadata);
  */
 
-const { logger } = require('../../config/logger');
+const { logger } = require("../../config/logger");
 
 /**
  * Default sensitive fields that should NEVER be returned to clients
@@ -30,12 +30,12 @@ const { logger } = require('../../config/logger');
  * because it's an external system identifier, not useful to clients.
  */
 const ALWAYS_SENSITIVE = [
-  'auth0_id', // External auth provider ID - not useful to clients
-  'refresh_token', // Session tokens (if we ever add them)
-  'api_key', // API secrets (future-proofing)
-  'api_secret',
-  'secret_key',
-  'private_key',
+  "auth0_id", // External auth provider ID - not useful to clients
+  "refresh_token", // Session tokens (if we ever add them)
+  "api_key", // API secrets (future-proofing)
+  "api_secret",
+  "secret_key",
+  "private_key",
 ];
 
 /**
@@ -65,13 +65,13 @@ const ALWAYS_SENSITIVE = [
  */
 function filterOutput(record, metadata = {}) {
   // Handle null/undefined input gracefully
-  if (!record || typeof record !== 'object') {
+  if (!record || typeof record !== "object") {
     return record;
   }
 
   // Don't modify arrays - use filterOutputArray for those
   if (Array.isArray(record)) {
-    logger.warn('filterOutput received array - use filterOutputArray instead');
+    logger.warn("filterOutput received array - use filterOutputArray instead");
     return filterOutputArray(record, metadata);
   }
 
@@ -117,11 +117,11 @@ function filterOutput(record, metadata = {}) {
  */
 function filterOutputArray(records, metadata = {}) {
   if (!Array.isArray(records)) {
-    logger.warn('filterOutputArray received non-array - using filterOutput');
+    logger.warn("filterOutputArray received non-array - using filterOutput");
     return filterOutput(records, metadata);
   }
 
-  return records.map(record => filterOutput(record, metadata));
+  return records.map((record) => filterOutput(record, metadata));
 }
 
 /**

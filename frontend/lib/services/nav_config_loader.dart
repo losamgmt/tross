@@ -34,14 +34,22 @@ class PublicRoute {
 class NavGroup {
   final String id;
   final String label;
+  final String?
+  icon; // Icon name string (e.g., 'people_outlined') for mobile bottom nav
   final int order;
 
-  const NavGroup({required this.id, required this.label, required this.order});
+  const NavGroup({
+    required this.id,
+    required this.label,
+    this.icon,
+    required this.order,
+  });
 
   factory NavGroup.fromJson(Map<String, dynamic> json) {
     return NavGroup(
       id: json['id'] as String,
       label: json['label'] as String,
+      icon: json['icon'] as String?,
       order: json['order'] as int,
     );
   }
@@ -255,6 +263,43 @@ class SidebarStrategy {
   bool get hasSections => sections.isNotEmpty;
 }
 
+// ============================================================================
+// MENU BEHAVIOR MODELS
+// ============================================================================
+
+/// Display mode for menus - controls how the menu appears
+///
+/// Mirrors the MenuDisplayMode enum in adaptive_nav_menu.dart.
+/// Defined here since config is the SSOT for menu behavior.
+enum ConfigDisplayMode {
+  /// Adapts based on screen size (popup on desktop, bottom sheet on mobile)
+  adaptive,
+
+  /// Always shows as popup dropdown anchored to trigger
+  dropdown,
+}
+
+/// Menu behavior configuration from nav-config.json
+///
+/// Defines how a specific menu type (userMenu, sidebar, mobileNav) should
+/// display and behave.
+class MenuBehavior {
+  final String menuType;
+  final ConfigDisplayMode displayMode;
+
+  const MenuBehavior({required this.menuType, required this.displayMode});
+
+  factory MenuBehavior.fromJson(String menuType, Map<String, dynamic> json) {
+    final modeString = json['displayMode'] as String? ?? 'adaptive';
+    final displayMode = switch (modeString) {
+      'dropdown' => ConfigDisplayMode.dropdown,
+      _ => ConfigDisplayMode.adaptive,
+    };
+
+    return MenuBehavior(menuType: menuType, displayMode: displayMode);
+  }
+}
+
 /// Complete navigation configuration
 class NavConfig {
   final String version;
@@ -264,6 +309,7 @@ class NavConfig {
   final Map<String, EntityPlacement> entityPlacements;
   final Map<String, SidebarStrategy> sidebarStrategies;
   final Map<String, String> routeStrategies;
+  final Map<String, MenuBehavior> menuBehaviors;
 
   const NavConfig({
     required this.version,
@@ -273,6 +319,7 @@ class NavConfig {
     required this.entityPlacements,
     this.sidebarStrategies = const {},
     this.routeStrategies = const {},
+    this.menuBehaviors = const {},
   });
 
   factory NavConfig.fromJson(Map<String, dynamic> json) {
@@ -335,6 +382,18 @@ class NavConfig {
       }
     }
 
+    // Parse menu behaviors
+    final menuBehaviors = <String, MenuBehavior>{};
+    final behaviorsJson = json['menuBehaviors'] as Map?;
+    if (behaviorsJson != null) {
+      for (final entry in behaviorsJson.entries) {
+        menuBehaviors[entry.key as String] = MenuBehavior.fromJson(
+          entry.key as String,
+          Map<String, dynamic>.from(entry.value as Map),
+        );
+      }
+    }
+
     return NavConfig(
       version: json['version'] as String? ?? '1.0.0',
       publicRoutes: publicRoutes,
@@ -343,6 +402,7 @@ class NavConfig {
       entityPlacements: entityPlacements,
       sidebarStrategies: sidebarStrategies,
       routeStrategies: routeStrategies,
+      menuBehaviors: menuBehaviors,
     );
   }
 
@@ -431,6 +491,15 @@ class NavConfig {
         .where((item) => item.menuType == NavMenuType.userMenu)
         .toList()
       ..sort((a, b) => a.order.compareTo(b.order));
+  }
+
+  /// Get display mode for a menu type (userMenu, sidebar, mobileNav)
+  ///
+  /// Returns the configured display mode from menuBehaviors,
+  /// or ConfigDisplayMode.adaptive if not configured.
+  ConfigDisplayMode getDisplayModeForMenu(String menuType) {
+    final behavior = menuBehaviors[menuType];
+    return behavior?.displayMode ?? ConfigDisplayMode.adaptive;
   }
 }
 

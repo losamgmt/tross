@@ -21,8 +21,8 @@
  *   // => [] if valid, or ['entity: missing field'] if not
  */
 
-const allMetadata = require('../../config/models');
-const { RLS_RESOURCE_TYPES } = require('../../config/constants');
+const allMetadata = require("../../config/models");
+const { RLS_RESOURCE_TYPES } = require("../../config/constants");
 
 // ============================================================================
 // REQUIRED METADATA FIELDS
@@ -33,10 +33,10 @@ const { RLS_RESOURCE_TYPES } = require('../../config/constants');
  * If an entity lacks any of these, tests cannot run reliably.
  */
 const REQUIRED_FIELDS = [
-  'tableName',      // Database table name (for API routes)
-  'primaryKey',     // Primary key field (usually 'id')
-  'requiredFields', // Fields required for entity creation
-  'identityField',  // Human-readable identifier field
+  "tableName", // Database table name (for API routes)
+  "primaryKey", // Primary key field (usually 'id')
+  "requiredFields", // Fields required for entity creation
+  "identityField", // Human-readable identifier field
 ];
 
 /**
@@ -44,15 +44,15 @@ const REQUIRED_FIELDS = [
  * System tables (preferences, saved_view, file_attachment) may not have these.
  */
 const RLS_REQUIRED_FIELDS = [
-  'rlsResource',    // Permission resource name in permissions.json
-  'fieldAccess',    // Role-based field-level access control
+  "rlsResource", // Permission resource name in permissions.json
+  "fieldAccess", // Role-based field-level access control
 ];
 
 /**
  * Name types that are business entities (vs system tables).
  * Business entities require full RLS testing.
  */
-const BUSINESS_NAME_TYPES = ['human', 'simple', 'computed'];
+const BUSINESS_NAME_TYPES = ["human", "simple", "computed"];
 
 // ============================================================================
 // ENTITY DISCOVERY
@@ -78,7 +78,7 @@ function getAllEntityNames() {
 function getEntityMetadata(entityName) {
   const meta = allMetadata[entityName];
   if (!meta) {
-    const available = getAllEntityNames().join(', ');
+    const available = getAllEntityNames().join(", ");
     throw new Error(`Unknown entity: ${entityName}. Available: ${available}`);
   }
   return { ...meta, entityName };
@@ -96,14 +96,20 @@ function isBusinessEntity(entityName) {
   if (!meta) return false;
 
   // Has a business name type
-  if (meta.nameType && BUSINESS_NAME_TYPES.includes(meta.nameType.toLowerCase())) {
+  if (
+    meta.nameType &&
+    BUSINESS_NAME_TYPES.includes(meta.nameType.toLowerCase())
+  ) {
     return true;
   }
 
   // Has RLS resource that's NOT parent-derived (participates directly in permission system)
   // Parent-derived entities (like file_attachment) get their RLS from parent, so they're
   // considered system/polymorphic entities for testing purposes.
-  if (meta.rlsResource && meta.rlsResource !== RLS_RESOURCE_TYPES.PARENT_DERIVED) {
+  if (
+    meta.rlsResource &&
+    meta.rlsResource !== RLS_RESOURCE_TYPES.PARENT_DERIVED
+  ) {
     return true;
   }
 
@@ -125,7 +131,7 @@ function getBusinessEntityNames() {
  * @returns {string[]} Array of system entity names
  */
 function getSystemEntityNames() {
-  return getAllEntityNames().filter(name => !isBusinessEntity(name));
+  return getAllEntityNames().filter((name) => !isBusinessEntity(name));
 }
 
 // ============================================================================
@@ -155,7 +161,9 @@ function validateEntityMetadata() {
     if (isBusinessEntity(entityName)) {
       for (const field of RLS_REQUIRED_FIELDS) {
         if (meta[field] === undefined || meta[field] === null) {
-          errors.push(`${entityName}: missing RLS field '${field}' (required for business entities)`);
+          errors.push(
+            `${entityName}: missing RLS field '${field}' (required for business entities)`,
+          );
         }
       }
     }
@@ -166,7 +174,7 @@ function validateEntityMetadata() {
     }
 
     // Validate fieldAccess is an object (if present)
-    if (meta.fieldAccess && typeof meta.fieldAccess !== 'object') {
+    if (meta.fieldAccess && typeof meta.fieldAccess !== "object") {
       errors.push(`${entityName}: fieldAccess must be an object`);
     }
   }
@@ -183,7 +191,9 @@ function validateEntityMetadata() {
 function assertValidMetadata() {
   const errors = validateEntityMetadata();
   if (errors.length > 0) {
-    throw new Error(`Entity metadata validation failed:\n  - ${errors.join('\n  - ')}`);
+    throw new Error(
+      `Entity metadata validation failed:\n  - ${errors.join("\n  - ")}`,
+    );
   }
 }
 
@@ -193,17 +203,21 @@ function assertValidMetadata() {
 
 /**
  * Entities that use specialized routes (not the generic CRUD factory).
- * 
+ *
  * These entities require custom route handling:
  * - file_attachment: Polymorphic S3-based storage, specialized upload flow
  * - saved_view: User-owned entity (user_id auto-injected from auth context)
  * - audit_log: Read-only system table at /api/audit/*, writes internal only
- * 
+ *
  * NOTE: preferences was moved to generic router (2026-01-23)
- * 
+ *
  * They should have their own dedicated tests, not run through all-entities.test.js
  */
-const SPECIALIZED_ROUTE_ENTITIES = ['file_attachment', 'saved_view', 'audit_log'];
+const SPECIALIZED_ROUTE_ENTITIES = [
+  "file_attachment",
+  "saved_view",
+  "audit_log",
+];
 
 /**
  * Check if an entity uses generic CRUD routes (testable by factory).
@@ -231,7 +245,9 @@ function getGenericCrudEntityNames() {
  * @returns {string[]} Entity names with specialized routes
  */
 function getSpecializedRouteEntityNames() {
-  return SPECIALIZED_ROUTE_ENTITIES.filter(name => getAllEntityNames().includes(name));
+  return SPECIALIZED_ROUTE_ENTITIES.filter((name) =>
+    getAllEntityNames().includes(name),
+  );
 }
 
 // ============================================================================
@@ -245,15 +261,15 @@ function getSpecializedRouteEntityNames() {
  */
 function getEntitiesByCategory() {
   const categories = {
-    human: [],      // first_name + last_name entities
-    simple: [],     // single 'name' field entities (role, inventory)
-    computed: [],   // auto-generated identity (work orders, invoices)
-    system: [],     // system tables (preferences, saved_views)
+    human: [], // first_name + last_name entities
+    simple: [], // single 'name' field entities (role, inventory)
+    computed: [], // auto-generated identity (work orders, invoices)
+    system: [], // system tables (preferences, saved_views)
   };
 
   for (const entityName of getAllEntityNames()) {
     const meta = allMetadata[entityName];
-    const category = meta.nameType?.toLowerCase() || 'system';
+    const category = meta.nameType?.toLowerCase() || "system";
 
     if (categories[category]) {
       categories[category].push(entityName);
@@ -273,9 +289,9 @@ function getEntitiesByCategory() {
  * @returns {string[]} Entity names that have the feature
  */
 function getEntitiesWithFeature(featurePath) {
-  return getAllEntityNames().filter(entityName => {
+  return getAllEntityNames().filter((entityName) => {
     const meta = allMetadata[entityName];
-    const parts = featurePath.split('.');
+    const parts = featurePath.split(".");
     let value = meta;
 
     for (const part of parts) {
@@ -285,7 +301,8 @@ function getEntitiesWithFeature(featurePath) {
 
     // Feature exists if value is truthy or is an array/object with content
     if (Array.isArray(value)) return value.length > 0;
-    if (typeof value === 'object' && value !== null) return Object.keys(value).length > 0;
+    if (typeof value === "object" && value !== null)
+      return Object.keys(value).length > 0;
     return Boolean(value);
   });
 }

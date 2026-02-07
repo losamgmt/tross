@@ -24,8 +24,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: '22'
-  FLUTTER_VERSION: '3.38.7'  # Includes Dart 3.10.x (satisfies >=3.9.2 <4.0.0)
+  NODE_VERSION: "22"
+  FLUTTER_VERSION: "3.38.7" # Includes Dart 3.10.x (satisfies >=3.9.2 <4.0.0)
 
 jobs:
   # ============================================================================
@@ -39,13 +39,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1  # Shallow clone for speed
+          fetch-depth: 1 # Shallow clone for speed
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
@@ -79,19 +79,19 @@ jobs:
           --health-timeout 5s
           --health-retries 5
         ports:
-          - 5433:5432  # Maps to TEST config in constants.js
+          - 5433:5432 # Maps to TEST config in constants.js
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1  # Shallow clone for speed
+          fetch-depth: 1 # Shallow clone for speed
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
@@ -107,7 +107,7 @@ jobs:
           NODE_ENV: test
           JWT_SECRET: test-secret-key-for-ci
           AUTH_MODE: development
-          USE_TEST_AUTH: 'true'
+          USE_TEST_AUTH: "true"
           STORAGE_PROVIDER: r2
           STORAGE_ENDPOINT: ${{ secrets.STORAGE_ENDPOINT }}
           STORAGE_BUCKET: ${{ secrets.STORAGE_BUCKET }}
@@ -126,13 +126,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1  # Shallow clone for speed
+          fetch-depth: 1 # Shallow clone for speed
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+          cache: "npm"
 
       - name: Audit npm dependencies
         run: npm audit --audit-level=high || echo "::warning::Security vulnerabilities found - please review"
@@ -156,7 +156,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1  # Shallow clone for speed
+          fetch-depth: 1 # Shallow clone for speed
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -176,7 +176,7 @@ jobs:
           cd frontend
           flutter test 2>&1 | tee test_output.txt
           TEST_EXIT_CODE=${PIPESTATUS[0]}
-          
+
           if [ $TEST_EXIT_CODE -ne 0 ]; then
             echo ""
             echo "========================================"
@@ -185,7 +185,7 @@ jobs:
             grep -E "❌|FAILED|Exception" test_output.txt || true
             echo "========================================"
           fi
-          
+
           exit $TEST_EXIT_CODE
 
   # ============================================================================
@@ -200,7 +200,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1  # Shallow clone for speed
+          fetch-depth: 1 # Shallow clone for speed
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -235,14 +235,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1  # Shallow clone for speed
+          fetch-depth: 1 # Shallow clone for speed
 
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
-          java-version: '17'
-          cache: 'gradle'  # Built-in Gradle caching
+          distribution: "zulu"
+          java-version: "17"
+          cache: "gradle" # Built-in Gradle caching
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -279,7 +279,7 @@ jobs:
   # ============================================================================
   build-ios:
     name: 🍎 Build iOS
-    runs-on: macos-latest  # Free for public repos!
+    runs-on: macos-latest # Free for public repos!
     # Run in parallel with frontend tests - no dependency needed
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
@@ -287,7 +287,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1  # Shallow clone for speed
+          fetch-depth: 1 # Shallow clone for speed
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -329,13 +329,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1  # Shallow clone for speed
+          fetch-depth: 1 # Shallow clone for speed
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
@@ -347,7 +347,7 @@ jobs:
         run: |
           echo "⏳ Waiting for Railway deployment..."
           sleep 30
-          
+
           for i in {1..30}; do
             if curl -sf "${{ secrets.RAILWAY_BACKEND_URL }}/api/health" | grep -qE "ok|healthy"; then
               echo "✅ Railway backend ready!"
@@ -356,7 +356,7 @@ jobs:
             echo "Waiting... ($i/30)"
             sleep 10
           done
-          
+
           echo "❌ Railway not responding"
           exit 1
         env:
@@ -382,7 +382,17 @@ jobs:
   deploy-summary:
     name: 📋 Deployment Summary
     runs-on: ubuntu-latest
-    needs: [backend-unit, backend-integration, security, frontend, build-web, build-android, build-ios, e2e]
+    needs:
+      [
+        backend-unit,
+        backend-integration,
+        security,
+        frontend,
+        build-web,
+        build-android,
+        build-ios,
+        e2e,
+      ]
     if: always() && github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:

@@ -4,13 +4,13 @@
  * ALWAYS uses DevAuthStrategy - independent of AUTH_MODE.
  * This allows dev login buttons to work alongside Auth0.
  */
-const express = require('express');
-const DevAuthStrategy = require('../services/auth/DevAuthStrategy');
+const express = require("express");
+const DevAuthStrategy = require("../services/auth/DevAuthStrategy");
 // User model removed - not used in this file
-const { ROLE_HIERARCHY } = require('../config/constants');
-const ResponseFormatter = require('../utils/response-formatter');
-const { asyncHandler } = require('../middleware/utils');
-const AppError = require('../utils/app-error');
+const { ROLE_HIERARCHY } = require("../config/constants");
+const ResponseFormatter = require("../utils/response-formatter");
+const { asyncHandler } = require("../middleware/utils");
+const AppError = require("../utils/app-error");
 
 const router = express.Router();
 
@@ -76,35 +76,46 @@ const devStrategy = new DevAuthStrategy();
  *       400:
  *         description: Invalid role specified
  */
-router.get('/token', asyncHandler(async (req, res) => {
-  // Get role from query param, default to technician (backward compatible)
-  const requestedRole = req.query.role || 'technician';
+router.get(
+  "/token",
+  asyncHandler(async (req, res) => {
+    // Get role from query param, default to technician (backward compatible)
+    const requestedRole = req.query.role || "technician";
 
-  // Validate role using centralized ROLE_HIERARCHY (no hardcoding!)
-  if (!ROLE_HIERARCHY.includes(requestedRole)) {
-    throw new AppError(`Invalid role. Role must be one of: ${ROLE_HIERARCHY.join(', ')}`, 400, 'BAD_REQUEST');
-  }
+    // Validate role using centralized ROLE_HIERARCHY (no hardcoding!)
+    if (!ROLE_HIERARCHY.includes(requestedRole)) {
+      throw new AppError(
+        `Invalid role. Role must be one of: ${ROLE_HIERARCHY.join(", ")}`,
+        400,
+        "BAD_REQUEST",
+      );
+    }
 
-  // Use dev strategy directly - always works regardless of AUTH_MODE
-  const { token, user } = await devStrategy.authenticate({
-    role: requestedRole,
-  });
+    // Use dev strategy directly - always works regardless of AUTH_MODE
+    const { token, user } = await devStrategy.authenticate({
+      role: requestedRole,
+    });
 
-  // Note: DevAuthStrategy already logs token generation
+    // Note: DevAuthStrategy already logs token generation
 
-  return ResponseFormatter.success(res, {
-    token,
-    user: {
-      auth0_id: user.auth0_id,
-      email: user.email,
-      name: user.first_name + ' ' + user.last_name,
-      role: user.role,
-    },
-    provider: 'development',
-    expires_in: 86400,
-    instructions: 'Use this token in Authorization header: Bearer <token>',
-  }, { message: 'Test token generated successfully' });
-}));
+    return ResponseFormatter.success(
+      res,
+      {
+        token,
+        user: {
+          auth0_id: user.auth0_id,
+          email: user.email,
+          name: user.first_name + " " + user.last_name,
+          role: user.role,
+        },
+        provider: "development",
+        expires_in: 86400,
+        instructions: "Use this token in Authorization header: Bearer <token>",
+      },
+      { message: "Test token generated successfully" },
+    );
+  }),
+);
 
 /**
  * @openapi
@@ -142,20 +153,20 @@ router.get('/token', asyncHandler(async (req, res) => {
  *                 note:
  *                   type: string
  */
-router.get('/status', (req, res) => {
+router.get("/status", (req, res) => {
   return ResponseFormatter.success(
     res,
     {
       dev_auth_enabled: true,
-      provider: 'development',
+      provider: "development",
       supported_roles: ROLE_HIERARCHY,
       available_endpoints: [
-        `GET /api/dev/token?role=<role> - Get test token for any role (${ROLE_HIERARCHY.join(', ')})`,
-        'GET /api/dev/status - This endpoint',
+        `GET /api/dev/token?role=<role> - Get test token for any role (${ROLE_HIERARCHY.join(", ")})`,
+        "GET /api/dev/status - This endpoint",
       ],
-      note: 'Dev auth works alongside Auth0 - use for testing and internal users',
+      note: "Dev auth works alongside Auth0 - use for testing and internal users",
     },
-    'Dev auth always available (independent of AUTH_MODE)',
+    "Dev auth always available (independent of AUTH_MODE)",
   );
 });
 

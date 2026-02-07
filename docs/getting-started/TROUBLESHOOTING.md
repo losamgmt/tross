@@ -26,6 +26,7 @@ cd backend && npm test -- --testNamePattern="health" --detectOpenHandles
 **Error**: `EADDRINUSE: address already in use :::<PORT>`
 
 **Solution**:
+
 ```bash
 # Find process using port (replace <PORT> with value from config/ports.js)
 lsof -i :<PORT>  # macOS/Linux
@@ -44,6 +45,7 @@ npm run kill-ports
 **Error**: `JWT_SECRET must be set` or similar
 
 **Solution**:
+
 ```bash
 # Create .env from template
 cp .env.example .env
@@ -61,14 +63,16 @@ cat .env | grep -E "^(DATABASE|JWT|AUTH0)"
 **Error**: `ECONNREFUSED 127.0.0.1:5432`
 
 **Causes & Solutions**:
+
 1. **PostgreSQL not running**
+
    ```bash
    # macOS
    brew services start postgresql
-   
+
    # Linux
    sudo systemctl start postgresql
-   
+
    # Docker
    docker compose up db -d
    ```
@@ -84,6 +88,7 @@ cat .env | grep -E "^(DATABASE|JWT|AUTH0)"
 **Error**: `relation "users" does not exist`
 
 **Solution**:
+
 ```bash
 cd backend
 npm run db:migrate:latest
@@ -95,6 +100,7 @@ npm run db:seed:run  # Optional: seed test data
 **Error**: `too many clients already` or `remaining connection slots reserved`
 
 **Solution**:
+
 1. Check for connection leaks in code (missing `release()` calls)
 2. Increase pool size:
    ```env
@@ -114,10 +120,12 @@ npm run db:seed:run  # Optional: seed test data
 **Error**: `JsonWebTokenError: invalid signature`
 
 **Causes**:
+
 1. `JWT_SECRET` mismatch between token creation and verification
 2. Token was created with different secret
 
 **Solution**:
+
 ```bash
 # Ensure same secret across environments
 echo $JWT_SECRET
@@ -129,6 +137,7 @@ curl http://localhost:<BACKEND_PORT>/api/dev/token?role=admin
 #### 401 Unauthorized
 
 **Checklist**:
+
 - [ ] Token included in `Authorization: Bearer <token>` header
 - [ ] Token not expired (check `exp` claim)
 - [ ] Token has required role for endpoint
@@ -143,6 +152,7 @@ echo "<token>" | cut -d. -f2 | base64 -d | jq
 **Error**: `Unable to verify token: Auth0 domain not configured`
 
 **Solution**:
+
 ```env
 AUTH0_DOMAIN=your-tenant.auth0.com
 AUTH0_AUDIENCE=https://api.yourapp.com
@@ -155,6 +165,7 @@ AUTH0_AUDIENCE=https://api.yourapp.com
 **Error**: `Access-Control-Allow-Origin` header missing
 
 **Solution**:
+
 ```env
 # Add all frontend origins (comma-separated)
 ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8080,https://yourapp.com
@@ -171,6 +182,7 @@ ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8080,https://yourapp.com
 **Error**: Tests fail intermittently with duplicate key or missing data
 
 **Solution**:
+
 ```bash
 # Reset test database
 NODE_ENV=test npm run db:migrate:rollback --all
@@ -185,12 +197,13 @@ npm test -- --runInBand
 **Error**: `Timeout - Async callback was not invoked within 5000ms`
 
 **Solution**:
+
 ```javascript
 // Increase Jest timeout for slow tests
 jest.setTimeout(30000);
 
 // Or per-test
-test('slow operation', async () => {
+test("slow operation", async () => {
   // ...
 }, 30000);
 ```
@@ -200,6 +213,7 @@ test('slow operation', async () => {
 **Error**: `Jest did not exit one second after the test run completed`
 
 **Solution**:
+
 ```bash
 # Find the leak
 npm test -- --detectOpenHandles
@@ -219,6 +233,7 @@ npm test -- --detectOpenHandles
 **Error**: `TS2307: Cannot find module`
 
 **Solution**:
+
 ```bash
 cd frontend
 flutter clean
@@ -230,6 +245,7 @@ flutter pub get
 **Error**: Various dependency errors
 
 **Solution**:
+
 ```bash
 # Clean install
 rm -rf node_modules package-lock.json
@@ -246,6 +262,7 @@ npm install --legacy-peer-deps
 #### Container Won't Start
 
 **Check logs**:
+
 ```bash
 docker compose logs backend
 docker compose logs db
@@ -256,6 +273,7 @@ docker compose logs db
 **Error**: `EACCES: permission denied`
 
 **Solution**:
+
 ```bash
 # Fix permissions
 sudo chown -R $(whoami) ./data
@@ -268,6 +286,7 @@ sudo chown -R $(whoami) ./data
 **Error**: Backend starts before database is ready
 
 **Solution**: docker-compose.yml should have health check:
+
 ```yaml
 depends_on:
   db:
@@ -281,6 +300,7 @@ depends_on:
 #### Slow API Responses
 
 **Diagnostics**:
+
 ```bash\n# Check response time (replace <BACKEND_PORT> with value from config/ports.js)
 time curl http://localhost:<BACKEND_PORT>/api/users
 
@@ -289,6 +309,7 @@ npm run db:debug
 ```
 
 **Solutions**:
+
 1. Add database indexes for frequently queried columns
 2. Implement pagination (already done in most endpoints)
 3. Check for N+1 queries in related data fetching
@@ -296,6 +317,7 @@ npm run db:debug
 #### High Memory Usage
 
 **Diagnostics**:
+
 ```bash
 # Check Node memory
 node --max-old-space-size=4096 server.js

@@ -51,6 +51,10 @@
             "type": "string",
             "description": "Display label for the group header"
           },
+          "icon": {
+            "type": "string",
+            "description": "Icon name for mobile bottom nav (e.g., 'people_outlined')"
+          },
           "order": {
             "type": "integer",
             "minimum": 0,
@@ -112,6 +116,25 @@
             "type": "integer",
             "minimum": 0,
             "description": "Sort order within group"
+          }
+        }
+      }
+    },
+    "menuBehaviors": {
+      "type": "object",
+      "description": "Display behavior configuration for each menu type (userMenu, sidebar, mobileNav)",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "displayMode": {
+            "type": "string",
+            "enum": ["dropdown", "adaptive"],
+            "default": "adaptive",
+            "description": "How the menu appears: dropdown (always anchored to trigger), adaptive (popup on desktop, bottom sheet on mobile)"
+          },
+          "_comment": {
+            "type": "string",
+            "description": "Optional documentation comment"
           }
         }
       }

@@ -30,7 +30,7 @@
  *   // applied: true if RLS was processed
  */
 
-const { logger } = require('../../config/logger');
+const { logger } = require("../../config/logger");
 
 /**
  * RLS policy implementations
@@ -46,7 +46,7 @@ const POLICY_HANDLERS = {
    * applied: false because no actual filtering occurs
    */
   all_records: () => ({
-    clause: '',
+    clause: "",
     params: [],
     noFilter: true, // Flag to indicate no filtering was applied
   }),
@@ -56,7 +56,7 @@ const POLICY_HANDLERS = {
    * applied: false because no actual filtering occurs
    */
   public_resource: () => ({
-    clause: '',
+    clause: "",
     params: [],
     noFilter: true,
   }),
@@ -66,7 +66,7 @@ const POLICY_HANDLERS = {
    * Uses metadata.rlsFilterConfig.ownRecordField or defaults to 'id'
    */
   own_record_only: (userId, metadata, paramOffset) => {
-    const field = metadata.rlsFilterConfig?.ownRecordField || 'id';
+    const field = metadata.rlsFilterConfig?.ownRecordField || "id";
     return {
       clause: `${field} = $${paramOffset + 1}`,
       params: [userId],
@@ -78,7 +78,7 @@ const POLICY_HANDLERS = {
    * Filter by customer_id (or metadata.rlsFilterConfig.customerField)
    */
   own_work_orders_only: (userId, metadata, paramOffset) => {
-    const field = metadata.rlsFilterConfig?.customerField || 'customer_id';
+    const field = metadata.rlsFilterConfig?.customerField || "customer_id";
     return {
       clause: `${field} = $${paramOffset + 1}`,
       params: [userId],
@@ -90,7 +90,8 @@ const POLICY_HANDLERS = {
    * Filter by assigned_technician_id (or metadata.rlsFilterConfig.assignedField)
    */
   assigned_work_orders_only: (userId, metadata, paramOffset) => {
-    const field = metadata.rlsFilterConfig?.assignedField || 'assigned_technician_id';
+    const field =
+      metadata.rlsFilterConfig?.assignedField || "assigned_technician_id";
     return {
       clause: `${field} = $${paramOffset + 1}`,
       params: [userId],
@@ -102,7 +103,7 @@ const POLICY_HANDLERS = {
    * Filter by customer_id (or metadata.rlsFilterConfig.customerField)
    */
   own_invoices_only: (userId, metadata, paramOffset) => {
-    const field = metadata.rlsFilterConfig?.customerField || 'customer_id';
+    const field = metadata.rlsFilterConfig?.customerField || "customer_id";
     return {
       clause: `${field} = $${paramOffset + 1}`,
       params: [userId],
@@ -114,7 +115,7 @@ const POLICY_HANDLERS = {
    * Filter by customer_id (or metadata.rlsFilterConfig.customerField)
    */
   own_contracts_only: (userId, metadata, paramOffset) => {
-    const field = metadata.rlsFilterConfig?.customerField || 'customer_id';
+    const field = metadata.rlsFilterConfig?.customerField || "customer_id";
     return {
       clause: `${field} = $${paramOffset + 1}`,
       params: [userId],
@@ -125,7 +126,7 @@ const POLICY_HANDLERS = {
    * deny_all: Block all access (security failsafe)
    */
   deny_all: () => ({
-    clause: '1=0',
+    clause: "1=0",
     params: [],
   }),
 };
@@ -171,11 +172,11 @@ const POLICY_HANDLERS = {
 function buildRLSFilter(rlsContext, metadata, paramOffset = 0) {
   // If no RLS context, return unapplied (caller must decide if this is OK)
   if (!rlsContext || !rlsContext.policy) {
-    logger.debug('buildRLSFilter: No RLS context provided', {
+    logger.debug("buildRLSFilter: No RLS context provided", {
       entity: metadata?.tableName,
     });
     return {
-      clause: '',
+      clause: "",
       params: [],
       applied: false,
     };
@@ -188,13 +189,13 @@ function buildRLSFilter(rlsContext, metadata, paramOffset = 0) {
 
   if (!handler) {
     // Unknown policy = deny access (security failsafe)
-    logger.warn('buildRLSFilter: Unknown RLS policy, denying access', {
+    logger.warn("buildRLSFilter: Unknown RLS policy, denying access", {
       policy,
       entity: metadata?.tableName,
       userId,
     });
     return {
-      clause: '1=0',
+      clause: "1=0",
       params: [],
       applied: true,
     };
@@ -202,22 +203,25 @@ function buildRLSFilter(rlsContext, metadata, paramOffset = 0) {
 
   // Policies that require a valid userId for filtering
   const policiesRequiringUserId = [
-    'own_record_only',
-    'own_work_orders_only',
-    'assigned_work_orders_only',
-    'own_invoices_only',
-    'own_contracts_only',
+    "own_record_only",
+    "own_work_orders_only",
+    "assigned_work_orders_only",
+    "own_invoices_only",
+    "own_contracts_only",
   ];
 
   // If userId is null and the policy requires user-specific filtering, deny access
   // This handles dev users with null userId trying to access user-filtered resources
   if (userId === null && policiesRequiringUserId.includes(policy)) {
-    logger.debug('buildRLSFilter: Denying access - null userId with user-specific policy', {
-      policy,
-      entity: metadata?.tableName,
-    });
+    logger.debug(
+      "buildRLSFilter: Denying access - null userId with user-specific policy",
+      {
+        policy,
+        entity: metadata?.tableName,
+      },
+    );
     return {
-      clause: '1=0',
+      clause: "1=0",
       params: [],
       applied: true,
     };
@@ -231,10 +235,10 @@ function buildRLSFilter(rlsContext, metadata, paramOffset = 0) {
   // 'applied' = false for all_records/public_resource (full access, no restriction)
   const actuallyFiltered = !result.noFilter && (result.clause || false);
 
-  logger.debug('buildRLSFilter: Applied RLS filter', {
+  logger.debug("buildRLSFilter: Applied RLS filter", {
     policy,
     entity: metadata?.tableName,
-    clause: result.clause || '(none)',
+    clause: result.clause || "(none)",
     hasParams: result.params.length > 0,
   });
 
@@ -278,7 +282,7 @@ function buildRLSFilterForFindById(rlsContext, metadata, paramOffset = 1) {
  * @returns {boolean} True if policy allows any access, false if deny_all
  */
 function policyAllowsAccess(policy) {
-  return policy !== 'deny_all' && POLICY_HANDLERS[policy] !== undefined;
+  return policy !== "deny_all" && POLICY_HANDLERS[policy] !== undefined;
 }
 
 /**

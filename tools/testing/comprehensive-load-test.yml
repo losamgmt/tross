@@ -1,14 +1,12 @@
-/**
- * Artillery Load Test Configuration
- * 
- * Tests performance under realistic load for all critical endpoints.
- * 
- * Usage:
- *   npm install -g artillery  (if not installed)
- *   artillery run tools/testing/comprehensive-load-test.yml
- *   artillery run tools/testing/comprehensive-load-test.yml --output report.json
- *   artillery report report.json
- */
+# Artillery Load Test Configuration
+#
+# Tests performance under realistic load for all critical endpoints.
+#
+# Usage:
+#   npm install -g artillery  (if not installed)
+#   artillery run tools/testing/comprehensive-load-test.yml
+#   artillery run tools/testing/comprehensive-load-test.yml --output report.json
+#   artillery report report.json
 
 # Uses BACKEND_URL env var or defaults to config/ports.js value
 config:
@@ -18,34 +16,34 @@ config:
     - duration: 30
       arrivalRate: 5
       name: "Warm-up"
-    
+
     # Normal load
     - duration: 120
       arrivalRate: 20
       name: "Normal operations"
-    
+
     # Peak load simulation
     - duration: 60
       arrivalRate: 50
       name: "Peak traffic"
-    
+
     # Cool down
     - duration: 30
       arrivalRate: 10
       name: "Cool down"
-  
+
   # Performance thresholds - fail if exceeded
   ensure:
-    maxErrorRate: 1  # Max 1% error rate
-    p95: 500  # 95th percentile < 500ms
-    p99: 1000  # 99th percentile < 1s
-  
+    maxErrorRate: 1 # Max 1% error rate
+    p95: 500 # 95th percentile < 500ms
+    p99: 1000 # 99th percentile < 1s
+
   processor: "./load-test-functions.js"
-  
+
   # Variables for test data
   variables:
     adminEmail: "admin@tross.com"
-    
+
   plugins:
     expect: {}
     metrics-by-endpoint: {}
@@ -54,7 +52,7 @@ scenarios:
   # ============================================
   # PUBLIC ENDPOINTS (No Auth Required)
   # ============================================
-  
+
   - name: "Health Check - High Volume"
     weight: 30
     flow:
@@ -71,7 +69,7 @@ scenarios:
   # ============================================
   # AUTHENTICATED READ OPERATIONS
   # ============================================
-  
+
   - name: "Customers List - Paginated Read"
     weight: 20
     flow:
@@ -125,15 +123,15 @@ scenarios:
       - think: 1
 
   # ============================================
-  # AUTHENTICATED WRITE OPERATIONS  
+  # AUTHENTICATED WRITE OPERATIONS
   # ============================================
-  
+
   - name: "Create & Update Work Order Flow"
     weight: 10
     flow:
       - function: "generateAdminToken"
       - function: "getTestCustomerId"
-      
+
       # Create work order
       - post:
           url: "/api/work_orders"
@@ -151,9 +149,9 @@ scenarios:
               as: "workOrderId"
           expect:
             - statusCode: 201
-      
+
       - think: 1
-      
+
       # Update work order
       - patch:
           url: "/api/work_orders/{{ workOrderId }}"
@@ -164,9 +162,9 @@ scenarios:
             status: "in_progress"
           expect:
             - statusCode: 200
-      
+
       - think: 1
-      
+
       # Clean up - soft delete
       - delete:
           url: "/api/work_orders/{{ workOrderId }}"
@@ -178,12 +176,12 @@ scenarios:
   # ============================================
   # ERROR HANDLING PERFORMANCE
   # ============================================
-  
+
   - name: "Error Handling - Invalid Requests"
     weight: 5
     flow:
       - function: "generateAdminToken"
-      
+
       # Invalid ID format
       - get:
           url: "/api/work_orders/invalid-id"
@@ -191,9 +189,9 @@ scenarios:
             Authorization: "Bearer {{ adminToken }}"
           expect:
             - statusCode: 400
-      
+
       - think: 1
-      
+
       # Non-existent resource
       - get:
           url: "/api/work_orders/999999"
@@ -201,9 +199,9 @@ scenarios:
             Authorization: "Bearer {{ adminToken }}"
           expect:
             - statusCode: 404
-      
+
       - think: 1
-      
+
       # Missing auth
       - get:
           url: "/api/work_orders"
@@ -213,12 +211,12 @@ scenarios:
   # ============================================
   # RLS PERFORMANCE TEST
   # ============================================
-  
+
   - name: "RLS Filtering Performance"
     weight: 10
     flow:
       - function: "generateCustomerToken"
-      
+
       # Customer sees filtered data
       - get:
           url: "/api/work_orders?page=1&limit=20"
@@ -230,9 +228,9 @@ scenarios:
             - equals:
                 - "$.rlsApplied"
                 - true
-      
+
       - think: 2
-      
+
       # Get specific work order (RLS check)
       - function: "getTestWorkOrderId"
       - get:
@@ -240,37 +238,37 @@ scenarios:
           headers:
             Authorization: "Bearer {{ customerToken }}"
           expect:
-            - statusCode: [200, 404]  # 404 if not owned by customer
+            - statusCode: [200, 404] # 404 if not owned by customer
 
   # ============================================
   # CONCURRENT OPERATIONS STRESS TEST
   # ============================================
-  
+
   - name: "Concurrent Mixed Operations"
     weight: 15
     flow:
       - function: "generateAdminToken"
-      
+
       # Parallel reads across different entities
       - parallel:
           - get:
               url: "/api/customers?page=1&limit=5"
               headers:
                 Authorization: "Bearer {{ adminToken }}"
-          
+
           - get:
               url: "/api/work_orders?page=1&limit=5"
               headers:
                 Authorization: "Bearer {{ adminToken }}"
-          
+
           - get:
               url: "/api/invoices?page=1&limit=5"
               headers:
                 Authorization: "Bearer {{ adminToken }}"
-          
+
           - get:
               url: "/api/inventory?page=1&limit=5"
               headers:
                 Authorization: "Bearer {{ adminToken }}"
-      
+
       - think: 1

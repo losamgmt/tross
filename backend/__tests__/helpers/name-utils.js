@@ -11,7 +11,7 @@
  * @module __tests__/helpers/name-utils
  */
 
-'use strict';
+"use strict";
 
 // ============================================================================
 // HUMAN ENTITY NAME FUNCTIONS
@@ -30,13 +30,13 @@
  */
 function fullName(entity) {
   if (!entity) {
-    return '';
+    return "";
   }
 
-  const first = (entity.first_name || '').trim();
-  const last = (entity.last_name || '').trim();
+  const first = (entity.first_name || "").trim();
+  const last = (entity.last_name || "").trim();
 
-  return [first, last].filter(Boolean).join(' ');
+  return [first, last].filter(Boolean).join(" ");
 }
 
 /**
@@ -50,16 +50,16 @@ function fullName(entity) {
  */
 function sortName(entity) {
   if (!entity) {
-    return '';
+    return "";
   }
 
-  const first = (entity.first_name || '').trim();
-  const last = (entity.last_name || '').trim();
+  const first = (entity.first_name || "").trim();
+  const last = (entity.last_name || "").trim();
 
   if (last && first) {
     return `${last}, ${first}`;
   }
-  return last || first || '';
+  return last || first || "";
 }
 
 /**
@@ -74,7 +74,7 @@ function sortName(entity) {
  */
 function displayName(entity) {
   if (!entity) {
-    return '';
+    return "";
   }
 
   if (entity.first_name) {
@@ -82,10 +82,10 @@ function displayName(entity) {
   }
 
   if (entity.email) {
-    return entity.email.split('@')[0];
+    return entity.email.split("@")[0];
   }
 
-  return '';
+  return "";
 }
 
 // ============================================================================
@@ -104,7 +104,7 @@ function displayName(entity) {
  */
 function truncate(text, maxLength = 30) {
   if (!text) {
-    return '';
+    return "";
   }
 
   const trimmed = text.trim();
@@ -112,7 +112,7 @@ function truncate(text, maxLength = 30) {
     return trimmed;
   }
 
-  return trimmed.slice(0, maxLength).trim() + '...';
+  return trimmed.slice(0, maxLength).trim() + "...";
 }
 
 // ============================================================================
@@ -139,12 +139,12 @@ function truncate(text, maxLength = 30) {
  */
 function computeName({ entity, customer, identifierField }) {
   if (!entity) {
-    return '';
+    return "";
   }
 
-  const customerName = customer ? fullName(customer) : 'Unknown Customer';
-  const summary = truncate(entity.summary || '', 50);
-  const identifier = entity[identifierField] || '';
+  const customerName = customer ? fullName(customer) : "Unknown Customer";
+  const summary = truncate(entity.summary || "", 50);
+  const identifier = entity[identifierField] || "";
 
   // Build name parts, filtering out empty values
   const parts = [customerName];
@@ -155,7 +155,7 @@ function computeName({ entity, customer, identifierField }) {
     parts.push(identifier);
   }
 
-  return parts.join(': ');
+  return parts.join(": ");
 }
 
 /**
@@ -172,21 +172,21 @@ function computeName({ entity, customer, identifierField }) {
  */
 function formatTemplate(template, data) {
   if (!template || !data) {
-    return template || '';
+    return template || "";
   }
 
   return template.replace(/\{([^}]+)\}/g, (match, path) => {
-    const parts = path.split('.');
+    const parts = path.split(".");
     let value = data;
 
     for (const part of parts) {
       if (value === null || value === undefined) {
-        return '';
+        return "";
       }
       value = value[part];
     }
 
-    return value !== null && value !== undefined ? String(value) : '';
+    return value !== null && value !== undefined ? String(value) : "";
   });
 }
 

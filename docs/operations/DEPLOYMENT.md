@@ -7,6 +7,7 @@ Production deployment guide using Docker and environment configuration.
 ## Deployment Philosophy
 
 **Principles:**
+
 - **Infrastructure as Code** - Docker Compose for reproducibility
 - **Zero-downtime** - Rolling updates with health checks
 - **Security-first** - Secrets management, least privilege
@@ -18,12 +19,14 @@ Production deployment guide using Docker and environment configuration.
 ## Prerequisites
 
 **Required:**
+
 - Docker 20+ with Compose V2
 - Production server (Linux recommended)
 - Domain name with DNS configured
 - SSL certificate (Let's Encrypt recommended)
 
 **Recommended:**
+
 - GitHub Actions for CI/CD
 - Docker Hub or private registry
 - PostgreSQL managed service (AWS RDS, etc.)
@@ -120,6 +123,7 @@ SENTRY_DSN=your-sentry-dsn
 ### Secret Generation
 
 **Generate strong secrets:**
+
 ```bash
 # JWT_SECRET (64+ characters)
 openssl rand -base64 48
@@ -129,6 +133,7 @@ openssl rand -base64 48
 ```
 
 **Validation:**
+
 - Minimum 64 characters
 - Mixed case, numbers, special characters
 - Never commit to git
@@ -143,6 +148,7 @@ Tross is deployed on Railway. The platform auto-detects the Node.js backend and 
 ### Railway Configuration
 
 **Environment Variables (set in Railway dashboard):**
+
 - `DATABASE_URL` - Provided by Railway PostgreSQL plugin
 - `NODE_ENV=production`
 - `JWT_SECRET` - Your secure secret
@@ -168,7 +174,7 @@ For self-hosted deployments, use Docker Compose.
 > **Note:** Create a `docker-compose.prod.yml` based on this template if self-hosting.
 
 ```yaml
-version: '3.8'
+version: "3.8"
 
 services:
   backend:
@@ -202,6 +208,7 @@ services:
 ### Deployment Commands
 
 **Initial deployment:**
+
 ```bash
 # 1. Clone repository
 git clone https://github.com/yourusername/tross.git
@@ -225,6 +232,7 @@ curl http://localhost:3001/api/health
 ```
 
 **Update deployment:**
+
 ```bash
 # Pull latest images
 docker-compose -f docker-compose.prod.yml pull
@@ -268,7 +276,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Build and push Docker images
         run: |
           docker build -t tross/backend:latest ./backend
@@ -276,7 +284,7 @@ jobs:
           echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
           docker push tross/backend:latest
           docker push tross/frontend:latest
-      
+
       - name: Deploy to production
         uses: appleboy/ssh-action@master
         with:
@@ -308,11 +316,13 @@ SSH_PRIVATE_KEY - SSH private key for deployment
 ### Production Migration Strategy
 
 **Before deployment:**
+
 1. Backup database
 2. Test migrations on staging
 3. Plan rollback strategy
 
 **Migration commands:**
+
 ```bash
 # Run migrations
 docker-compose -f docker-compose.prod.yml run --rm backend npm run migrate
@@ -325,6 +335,7 @@ docker-compose -f docker-compose.prod.yml run --rm backend npm run migrate:statu
 ```
 
 **Best practices:**
+
 - Always write `down()` migrations (rollback)
 - Test migrations on staging first
 - Never edit applied migrations (create new ones)
@@ -337,6 +348,7 @@ docker-compose -f docker-compose.prod.yml run --rm backend npm run migrate:statu
 ### Health Endpoints
 
 **Application health:**
+
 ```bash
 curl http://localhost:3001/api/health
 
@@ -349,6 +361,7 @@ curl http://localhost:3001/api/health
 ```
 
 **Database health:**
+
 ```bash
 curl http://localhost:3001/api/health/db
 
@@ -361,6 +374,7 @@ curl http://localhost:3001/api/health/db
 ### Docker Health Checks
 
 Built into `docker-compose.prod.yml`:
+
 ```bash
 # Check service health
 docker-compose -f docker-compose.prod.yml ps
@@ -372,6 +386,7 @@ docker-compose -f docker-compose.prod.yml logs -f backend
 ### Log Monitoring
 
 **Application logs:**
+
 ```bash
 # Real-time logs
 docker-compose -f docker-compose.prod.yml logs -f
@@ -392,6 +407,7 @@ docker-compose -f docker-compose.prod.yml logs backend
 ### Let's Encrypt (Recommended)
 
 **Certbot setup:**
+
 ```bash
 # Install certbot
 sudo apt-get install certbot
@@ -403,6 +419,7 @@ sudo certbot certonly --standalone -d your-domain.com
 ```
 
 **Auto-renewal:**
+
 ```bash
 # Add to crontab
 0 0 * * * certbot renew --quiet
@@ -448,6 +465,7 @@ server {
 ### Rollback to Previous Version
 
 **Quick rollback:**
+
 ```bash
 # Tag current version
 docker tag tross/backend:latest tross/backend:v1.2.3
@@ -470,6 +488,7 @@ docker-compose -f docker-compose.prod.yml run --rm backend npm run migrate:rollb
 ## Security Checklist
 
 **Before deployment:**
+
 - [ ] Strong JWT_SECRET (64+ chars, mixed case/numbers/special)
 - [ ] DATABASE_URL doesn't use localhost
 - [ ] Auth0 production credentials configured
@@ -490,6 +509,7 @@ docker-compose -f docker-compose.prod.yml run --rm backend npm run migrate:rollb
 ### Database Backups
 
 **Automated backup script:**
+
 ```bash
 #!/bin/bash
 # backup-db.sh
@@ -511,6 +531,7 @@ echo "Backup completed: backup_$DATE.sql.gz"
 ```
 
 **Schedule with cron:**
+
 ```bash
 0 2 * * * /opt/tross/scripts/backup-db.sh
 ```
@@ -529,11 +550,13 @@ gunzip -c /backups/backup_20251119_020000.sql.gz | psql $DATABASE_URL
 ### Service Won't Start
 
 **Check logs:**
+
 ```bash
 docker-compose -f docker-compose.prod.yml logs backend
 ```
 
 **Common issues:**
+
 - Missing environment variables → Check `.env.production`
 - Database connection failed → Verify `DATABASE_URL`
 - Port already in use → Check what's using port 3001
@@ -541,11 +564,13 @@ docker-compose -f docker-compose.prod.yml logs backend
 ### High Memory Usage
 
 **Check container stats:**
+
 ```bash
 docker stats
 ```
 
 **Optimize:**
+
 - Reduce `DB_POOL_MAX` if too many connections
 - Increase server resources
 - Enable query caching
@@ -553,12 +578,14 @@ docker stats
 ### Slow API Responses
 
 **Check database:**
+
 ```bash
 # View slow queries
 docker-compose -f docker-compose.prod.yml logs backend | grep "Slow query"
 ```
 
 **Optimize:**
+
 - Add database indexes
 - Review N+1 query patterns
 - Enable query result caching
@@ -568,6 +595,7 @@ docker-compose -f docker-compose.prod.yml logs backend | grep "Slow query"
 ## Production Checklist
 
 **Infrastructure:**
+
 - [ ] Server provisioned (2GB+ RAM recommended)
 - [ ] Docker installed and running
 - [ ] Domain DNS configured
@@ -575,12 +603,14 @@ docker-compose -f docker-compose.prod.yml logs backend | grep "Slow query"
 - [ ] Firewall configured
 
 **Configuration:**
+
 - [ ] `.env.production` created with all variables
 - [ ] Secrets generated and secured
 - [ ] Auth0 production app configured
 - [ ] Database created and migrations run
 
 **Deployment:**
+
 - [ ] Docker images built and pushed
 - [ ] Services started with docker-compose
 - [ ] Health checks passing
@@ -588,6 +618,7 @@ docker-compose -f docker-compose.prod.yml logs backend | grep "Slow query"
 - [ ] Monitoring configured
 
 **Post-Deployment:**
+
 - [ ] Test authentication (dev + Auth0)
 - [ ] Test CRUD operations
 - [ ] Verify logs are writing

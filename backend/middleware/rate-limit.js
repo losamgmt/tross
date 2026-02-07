@@ -11,9 +11,9 @@
  * to allow rapid test execution and local development without limits.
  * Only enabled when NODE_ENV === 'production'.
  */
-const rateLimit = require('express-rate-limit');
-const { logger } = require('../config/logger');
-const { HTTP_STATUS } = require('../config/constants');
+const rateLimit = require("express-rate-limit");
+const { logger } = require("../config/logger");
+const { HTTP_STATUS } = require("../config/constants");
 
 // ─────────────────────────────────────────────────────────────
 // Environment Detection
@@ -21,7 +21,7 @@ const { HTTP_STATUS } = require('../config/constants');
 
 const isTestOrDevEnvironment =
   !process.env.NODE_ENV ||
-  ['test', 'development'].includes(process.env.NODE_ENV);
+  ["test", "development"].includes(process.env.NODE_ENV);
 
 /**
  * Bypass middleware for test/dev environment
@@ -83,15 +83,15 @@ function createRateLimiter(config) {
       const logContext = {
         ip: req.ip,
         path: req.path,
-        userAgent: req.get('User-Agent'),
+        userAgent: req.get("User-Agent"),
       };
 
       // Add optional fields from config
-      if (logFields.includes('method')) {
+      if (logFields.includes("method")) {
         logContext.method = req.method;
       }
-      if (logFields.includes('email')) {
-        logContext.email = req.body?.email || 'unknown';
+      if (logFields.includes("email")) {
+        logContext.email = req.body?.email || "unknown";
       }
 
       logger.warn(`${logEmoji} ${name} rate limit exceeded`, logContext);
@@ -119,31 +119,31 @@ function createRateLimiter(config) {
 
 // General API limits (default: 1000 req/15 min - professional standard)
 const RATE_LIMIT_WINDOW_MS = parseInt(
-  process.env.RATE_LIMIT_WINDOW_MS || '900000',
+  process.env.RATE_LIMIT_WINDOW_MS || "900000",
   10,
 ); // 15 minutes
 const RATE_LIMIT_MAX_REQUESTS = parseInt(
-  process.env.RATE_LIMIT_MAX_REQUESTS || '1000',
+  process.env.RATE_LIMIT_MAX_REQUESTS || "1000",
   10,
 );
 
 // Auth limits (default: 5 failed attempts/15 min - brute force protection)
 const AUTH_RATE_LIMIT_WINDOW_MS = parseInt(
-  process.env.AUTH_RATE_LIMIT_WINDOW_MS || '900000',
+  process.env.AUTH_RATE_LIMIT_WINDOW_MS || "900000",
   10,
 ); // 15 minutes
 const AUTH_RATE_LIMIT_MAX_REQUESTS = parseInt(
-  process.env.AUTH_RATE_LIMIT_MAX_REQUESTS || '5',
+  process.env.AUTH_RATE_LIMIT_MAX_REQUESTS || "5",
   10,
 );
 
 // Refresh token limits (default: 10 req/hour - prevents token spam)
 const REFRESH_RATE_LIMIT_WINDOW_MS = parseInt(
-  process.env.REFRESH_RATE_LIMIT_WINDOW_MS || '3600000',
+  process.env.REFRESH_RATE_LIMIT_WINDOW_MS || "3600000",
   10,
 ); // 1 hour
 const REFRESH_RATE_LIMIT_MAX_REQUESTS = parseInt(
-  process.env.REFRESH_RATE_LIMIT_MAX_REQUESTS || '10',
+  process.env.REFRESH_RATE_LIMIT_MAX_REQUESTS || "10",
   10,
 );
 
@@ -154,16 +154,16 @@ const REFRESH_RATE_LIMIT_MAX_REQUESTS = parseInt(
  * Protects against general API abuse and DoS attacks
  */
 const apiLimiter = createRateLimiter({
-  name: 'API',
-  logEmoji: '⚠️',
+  name: "API",
+  logEmoji: "⚠️",
   windowMs: RATE_LIMIT_WINDOW_MS,
   max: RATE_LIMIT_MAX_REQUESTS,
-  errorType: 'Too many requests',
+  errorType: "Too many requests",
   errorMessage:
-    'You have exceeded the rate limit. Please try again after 15 minutes.',
-  retryAfterLabel: '15 minutes',
+    "You have exceeded the rate limit. Please try again after 15 minutes.",
+  retryAfterLabel: "15 minutes",
   retryAfterSeconds: 900,
-  logFields: ['method'],
+  logFields: ["method"],
 });
 
 /**
@@ -173,17 +173,17 @@ const apiLimiter = createRateLimiter({
  * Only counts failed attempts (skipSuccessfulRequests = true)
  */
 const authLimiter = createRateLimiter({
-  name: 'Auth',
-  logEmoji: '🚨',
+  name: "Auth",
+  logEmoji: "🚨",
   windowMs: AUTH_RATE_LIMIT_WINDOW_MS,
   max: AUTH_RATE_LIMIT_MAX_REQUESTS,
-  errorType: 'Too many login attempts',
+  errorType: "Too many login attempts",
   errorMessage:
-    'Too many failed login attempts from this IP address. Please try again later.',
+    "Too many failed login attempts from this IP address. Please try again later.",
   retryAfterLabel: `${Math.round(AUTH_RATE_LIMIT_WINDOW_MS / 60000)} minutes`,
   retryAfterSeconds: Math.round(AUTH_RATE_LIMIT_WINDOW_MS / 1000),
   skipSuccessfulRequests: true, // Don't count successful logins
-  logFields: ['email'],
+  logFields: ["email"],
 });
 
 /**
@@ -193,12 +193,12 @@ const authLimiter = createRateLimiter({
  * Prevents refresh token spam/abuse
  */
 const refreshLimiter = createRateLimiter({
-  name: 'Refresh',
-  logEmoji: '⚠️',
+  name: "Refresh",
+  logEmoji: "⚠️",
   windowMs: REFRESH_RATE_LIMIT_WINDOW_MS,
   max: REFRESH_RATE_LIMIT_MAX_REQUESTS,
-  errorType: 'Too many refresh requests',
-  errorMessage: 'Too many token refresh requests. Please try again later.',
+  errorType: "Too many refresh requests",
+  errorMessage: "Too many token refresh requests. Please try again later.",
   retryAfterLabel: `${Math.round(REFRESH_RATE_LIMIT_WINDOW_MS / 60000)} minutes`,
   retryAfterSeconds: Math.round(REFRESH_RATE_LIMIT_WINDOW_MS / 1000),
 });

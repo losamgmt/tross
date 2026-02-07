@@ -1,7 +1,7 @@
 // User Data Service - Handles both config-based and database-based user data
-const { TEST_USERS } = require('../config/test-users');
-const GenericEntityService = require('./generic-entity-service');
-const AuthUserService = require('./auth-user-service');
+const { TEST_USERS } = require("../config/test-users");
+const GenericEntityService = require("./generic-entity-service");
+const AuthUserService = require("./auth-user-service");
 
 /**
  * Check if we're in config mode (test auth + development)
@@ -9,8 +9,8 @@ const AuthUserService = require('./auth-user-service');
  */
 function isConfigMode() {
   return (
-    process.env.USE_TEST_AUTH === 'true' &&
-    process.env.NODE_ENV === 'development'
+    process.env.USE_TEST_AUTH === "true" &&
+    process.env.NODE_ENV === "development"
   );
 }
 
@@ -45,7 +45,9 @@ class UserDataService {
       }));
     } else {
       // Use database via GenericEntityService
-      const result = await GenericEntityService.findAll('user', { includeInactive: false });
+      const result = await GenericEntityService.findAll("user", {
+        includeInactive: false,
+      });
       return result.data; // Extract data array from paginated response
     }
   }
@@ -75,7 +77,7 @@ class UserDataService {
       return null;
     } else {
       // Use GenericEntityService instead of User.findByAuth0Id
-      return GenericEntityService.findByField('user', 'auth0_id', auth0Id);
+      return GenericEntityService.findByField("user", "auth0_id", auth0Id);
     }
   }
 

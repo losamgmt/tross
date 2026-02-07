@@ -1,15 +1,15 @@
 /**
  * Smart Database Connection Mocks
- * 
+ *
  * PHILOSOPHY:
  * - Simulates realistic DB responses (rows array + count)
  * - Understands query patterns (SELECT, COUNT, INSERT, UPDATE, DELETE)
  * - Tracks query history for assertions
  * - Override-capable for error simulation
- * 
+ *
  * USAGE:
  *   const { createDBMock } = require('./mocks/db-mocks');
- *   
+ *
  *   jest.mock('../../db/connection', () => createDBMock({
  *     rows: [{ id: 1, name: 'Test' }],
  *     count: 1
@@ -19,7 +19,7 @@
 /**
  * Create intelligent DB connection mock
  * Simulates PostgreSQL query responses with realistic structure
- * 
+ *
  * @param {Object} options - Configuration options
  * @param {Array} options.rows - Default rows to return (can be overridden per test)
  * @param {number} options.count - Default count for COUNT queries
@@ -40,41 +40,41 @@ function createDBMock(options = {}) {
     const sqlLower = sql.toLowerCase().trim();
 
     // COUNT queries
-    if (sqlLower.includes('count(*)') || sqlLower.includes('count (*)')) {
+    if (sqlLower.includes("count(*)") || sqlLower.includes("count (*)")) {
       return Promise.resolve({
         rows: [{ count: String(count) }],
         rowCount: 1,
-        command: 'SELECT',
+        command: "SELECT",
       });
     }
 
     // INSERT queries (RETURNING clause)
-    if (sqlLower.startsWith('insert')) {
+    if (sqlLower.startsWith("insert")) {
       const insertedRow = rows.length > 0 ? rows[0] : {};
       return Promise.resolve({
         rows: [insertedRow],
         rowCount: 1,
-        command: 'INSERT',
+        command: "INSERT",
       });
     }
 
     // UPDATE queries (RETURNING clause)
-    if (sqlLower.startsWith('update')) {
+    if (sqlLower.startsWith("update")) {
       const updatedRow = rows.length > 0 ? rows[0] : {};
       return Promise.resolve({
         rows: [updatedRow],
         rowCount: rows.length > 0 ? 1 : 0,
-        command: 'UPDATE',
+        command: "UPDATE",
       });
     }
 
     // DELETE queries (RETURNING clause)
-    if (sqlLower.startsWith('delete')) {
+    if (sqlLower.startsWith("delete")) {
       const deletedRow = rows.length > 0 ? rows[0] : {};
       return Promise.resolve({
         rows: [deletedRow],
         rowCount: rows.length > 0 ? 1 : 0,
-        command: 'DELETE',
+        command: "DELETE",
       });
     }
 
@@ -82,16 +82,16 @@ function createDBMock(options = {}) {
     return Promise.resolve({
       rows: rows,
       rowCount: rows.length,
-      command: 'SELECT',
+      command: "SELECT",
     });
   });
 
   // Create a mock client for transaction support
   const mockClient = createMockClient();
-  
+
   // Smart default: BEGIN/COMMIT/ROLLBACK auto-resolve
   mockClient.query.mockImplementation((sql) => {
-    if (sql === 'BEGIN' || sql === 'COMMIT' || sql === 'ROLLBACK') {
+    if (sql === "BEGIN" || sql === "COMMIT" || sql === "ROLLBACK") {
       return Promise.resolve({ rows: [], rowCount: 0 });
     }
     // Default: empty result (can be overridden per test)
@@ -100,13 +100,13 @@ function createDBMock(options = {}) {
 
   return {
     query: queryMock,
-    
+
     // Transaction support - returns mock client
     getClient: jest.fn().mockResolvedValue(mockClient),
-    
+
     // Access to the mock client for assertions
     __getMockClient: () => mockClient,
-    
+
     // Utility methods for test assertions and control
     __setRows: (newRows) => {
       rows.splice(0, rows.length, ...newRows);
@@ -125,11 +125,11 @@ function createDBMock(options = {}) {
 /**
  * Create DB mock that simulates connection failures
  * Useful for testing error handling and retry logic
- * 
+ *
  * @param {Error} error - Error to throw (default: connection error)
  * @returns {Object} Mock db connection that always fails
  */
-function createFailingDBMock(error = new Error('Database connection failed')) {
+function createFailingDBMock(error = new Error("Database connection failed")) {
   return {
     query: jest.fn(() => Promise.reject(error)),
     getClient: jest.fn(() => Promise.reject(error)),
@@ -139,12 +139,15 @@ function createFailingDBMock(error = new Error('Database connection failed')) {
 /**
  * Create DB mock that simulates deadlock/timeout errors
  * Useful for testing transaction retry logic
- * 
+ *
  * @param {number} failCount - Number of times to fail before succeeding (default: 1)
  * @param {Object} successResponse - Response to return after failures
  * @returns {Object} Mock db connection with retry behavior
  */
-function createRetryableDBMock(failCount = 1, successResponse = { rows: [], rowCount: 0 }) {
+function createRetryableDBMock(
+  failCount = 1,
+  successResponse = { rows: [], rowCount: 0 },
+) {
   let attempts = 0;
 
   const mockClient = createMockClient();
@@ -153,8 +156,8 @@ function createRetryableDBMock(failCount = 1, successResponse = { rows: [], rowC
     query: jest.fn(() => {
       attempts++;
       if (attempts <= failCount) {
-        const error = new Error('deadlock detected');
-        error.code = '40P01'; // PostgreSQL deadlock error code
+        const error = new Error("deadlock detected");
+        error.code = "40P01"; // PostgreSQL deadlock error code
         return Promise.reject(error);
       }
       return Promise.resolve(successResponse);
@@ -169,7 +172,7 @@ function createRetryableDBMock(failCount = 1, successResponse = { rows: [], rowC
 /**
  * Create DB mock that simulates constraint violations
  * Useful for testing duplicate key, foreign key, check constraint errors
- * 
+ *
  * @param {string} errorCode - PostgreSQL error code (23505, 23503, 23514, etc.)
  * @param {string} message - Error message
  * @param {Object} detail - Error detail object
@@ -191,7 +194,7 @@ function createConstraintViolationMock(errorCode, message, detail = {}) {
 /**
  * Create mock database client for transaction testing
  * Simulates getClient() pattern used in transaction helpers
- * 
+ *
  * @returns {Object} Mock client with query, release methods
  */
 function createMockClient() {
@@ -204,13 +207,13 @@ function createMockClient() {
 /**
  * Mock a successful transaction sequence
  * Configures client.query to respond to BEGIN → operations → COMMIT
- * 
+ *
  * @param {Object} client - Mock client from createMockClient()
  * @param {Object} config - Transaction configuration
  * @param {Object} config.record - Record to return from SELECT/DELETE operations
  * @param {number} [config.auditLogsDeleted=0] - Number of audit logs deleted
  * @returns {Object} client (for chaining)
- * 
+ *
  * @example
  * const client = createMockClient();
  * mockSuccessfulTransaction(client, {
@@ -234,22 +237,22 @@ function mockSuccessfulTransaction(client, config) {
 /**
  * Mock a failed transaction with automatic rollback
  * Configures client.query to respond to BEGIN → error → ROLLBACK
- * 
+ *
  * @param {Object} client - Mock client from createMockClient()
  * @param {Error} error - Error to throw during transaction
  * @param {string} [failAt='operation'] - When to fail: 'select', 'operation', 'audit'
  * @returns {Object} client (for chaining)
- * 
+ *
  * @example
  * const client = createMockClient();
  * mockFailedTransaction(client, new Error('DB error'), 'select');
  */
-function mockFailedTransaction(client, error, failAt = 'operation') {
+function mockFailedTransaction(client, error, failAt = "operation") {
   client.query.mockResolvedValueOnce({ rows: [] }); // BEGIN
 
-  if (failAt === 'select') {
+  if (failAt === "select") {
     client.query.mockRejectedValueOnce(error); // SELECT fails
-  } else if (failAt === 'audit') {
+  } else if (failAt === "audit") {
     client.query
       .mockResolvedValueOnce({ rows: [{ id: 1 }] }) // SELECT succeeds
       .mockRejectedValueOnce(error); // Audit operation fails
@@ -267,7 +270,7 @@ function mockFailedTransaction(client, error, failAt = 'operation') {
 
 /**
  * Mock record not found scenario (within transaction)
- * 
+ *
  * @param {Object} client - Mock client from createMockClient()
  * @returns {Object} client (for chaining)
  */
@@ -291,14 +294,14 @@ const transactionMatchers = {
    */
   toHaveCommittedTransaction(client) {
     const calls = client.query.mock.calls;
-    const hasBegin = calls.some((call) => call[0] === 'BEGIN');
-    const hasCommit = calls.some((call) => call[0] === 'COMMIT');
+    const hasBegin = calls.some((call) => call[0] === "BEGIN");
+    const hasCommit = calls.some((call) => call[0] === "COMMIT");
 
     return {
       pass: hasBegin && hasCommit,
       message: () =>
         hasBegin && hasCommit
-          ? 'Expected transaction NOT to commit'
+          ? "Expected transaction NOT to commit"
           : `Expected transaction to BEGIN and COMMIT. Calls: ${JSON.stringify(calls.map((c) => c[0]))}`,
     };
   },
@@ -309,14 +312,14 @@ const transactionMatchers = {
    */
   toHaveRolledBackTransaction(client) {
     const calls = client.query.mock.calls;
-    const hasBegin = calls.some((call) => call[0] === 'BEGIN');
-    const hasRollback = calls.some((call) => call[0] === 'ROLLBACK');
+    const hasBegin = calls.some((call) => call[0] === "BEGIN");
+    const hasRollback = calls.some((call) => call[0] === "ROLLBACK");
 
     return {
       pass: hasBegin && hasRollback,
       message: () =>
         hasBegin && hasRollback
-          ? 'Expected transaction NOT to rollback'
+          ? "Expected transaction NOT to rollback"
           : `Expected transaction to BEGIN and ROLLBACK. Calls: ${JSON.stringify(calls.map((c) => c[0]))}`,
     };
   },
@@ -332,8 +335,8 @@ const transactionMatchers = {
       pass: released,
       message: () =>
         released
-          ? 'Expected client NOT to be released'
-          : 'Expected client.release() to be called',
+          ? "Expected client NOT to be released"
+          : "Expected client.release() to be called",
     };
   },
 };

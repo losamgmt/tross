@@ -26,13 +26,13 @@ Cross-platform frontend for Tross built with Flutter, featuring:
 
 ### Design Principles
 
-| Principle | Implementation |
-|-----------|----------------|
-| **Keyboard navigable** | Tab focuses all inputs, no mouse required |
-| **Visual focus states** | Clear focus rings on all focusable elements |
-| **Activation shortcuts** | Space/Enter opens pickers, toggles values |
+| Principle                | Implementation                                    |
+| ------------------------ | ------------------------------------------------- |
+| **Keyboard navigable**   | Tab focuses all inputs, no mouse required         |
+| **Visual focus states**  | Clear focus rings on all focusable elements       |
+| **Activation shortcuts** | Space/Enter opens pickers, toggles values         |
 | **Native when possible** | Use Flutter's `DropdownMenu`, `Checkbox`, `Radio` |
-| **Semantics for custom** | `Semantics` widget wraps custom controls |
+| **Semantics for custom** | `Semantics` widget wraps custom controls          |
 
 ### Input Widget Patterns
 
@@ -58,6 +58,7 @@ KeyboardListener(
 ### Testing
 
 Every input has a "Keyboard Accessibility" test group covering:
+
 - Tab navigation focuses the widget
 - Space/Enter activates the control
 - Escape closes menus/pickers
@@ -291,7 +292,7 @@ Run `flutter test --coverage` to generate coverage reports.
 
 **Production:**
 
-> **Note:** Production URL is configured in `lib/config/app_config.dart`. 
+> **Note:** Production URL is configured in `lib/config/app_config.dart`.
 > Current Railway deployment: `https://tross-api-production.up.railway.app`
 
 ### Auth0 Configuration

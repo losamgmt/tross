@@ -13,23 +13,23 @@
 const {
   FIELD_ACCESS_LEVELS: FAL,
   UNIVERSAL_FIELD_ACCESS,
-} = require('../constants');
-const { getRoleHierarchy } = require('../role-hierarchy-loader');
-const { NAME_TYPES } = require('../entity-types');
-const { FIELD } = require('../field-type-standards');
+} = require("../constants");
+const { getRoleHierarchy } = require("../role-hierarchy-loader");
+const { NAME_TYPES } = require("../entity-types");
+const { FIELD } = require("../field-type-standards");
 
 module.exports = {
   // Entity key (singular, for API params and lookups)
-  entityKey: 'role',
+  entityKey: "role",
 
   // Table name in database (plural, also used for API URLs)
-  tableName: 'roles',
+  tableName: "roles",
 
   // Primary key
-  primaryKey: 'id',
+  primaryKey: "id",
 
   // Material icon for navigation menus and entity displays
-  icon: 'badge',
+  icon: "badge",
 
   // ============================================================================
   // ENTITY CATEGORY (determines name handling pattern)
@@ -49,14 +49,14 @@ module.exports = {
    * The unique identifier field - priority determines role hierarchy
    * Used for: Unique identification, role hierarchy enforcement
    */
-  identityField: 'priority',
+  identityField: "priority",
 
   /**
    * The human-readable display field for relationships
    * Used when JOINing this entity - 'name' is what we show as 'role'
    * Distinct from identityField which is for uniqueness validation
    */
-  displayField: 'name',
+  displayField: "name",
 
   /**
    * Whether the identity field has a UNIQUE constraint in the database
@@ -68,25 +68,25 @@ module.exports = {
    * RLS resource name for permission checks
    * Maps to permissions.json resource names
    */
-  rlsResource: 'roles',
+  rlsResource: "roles",
 
   /**
    * Row-Level Security policy per role
    * Roles are a public resource - all authenticated users can read
    */
   rlsPolicy: {
-    customer: 'public_resource',
-    technician: 'public_resource',
-    dispatcher: 'public_resource',
-    manager: 'public_resource',
-    admin: 'public_resource',
+    customer: "public_resource",
+    technician: "public_resource",
+    dispatcher: "public_resource",
+    manager: "public_resource",
+    admin: "public_resource",
   },
 
   /**
    * Navigation visibility - minimum role to see this entity in nav menus
    * Roles are public for reading (dropdowns) but shouldn't appear in nav for non-admins
    */
-  navVisibility: 'admin',
+  navVisibility: "admin",
 
   /**
    * File attachments - whether this entity supports file uploads
@@ -98,10 +98,10 @@ module.exports = {
    * Roles are admin-only for CUD, but readable by all
    */
   entityPermissions: {
-    create: 'admin',
-    read: 'customer',
-    update: 'admin',
-    delete: 'admin',
+    create: "admin",
+    read: "customer",
+    update: "admin",
+    delete: "admin",
   },
 
   /**
@@ -123,7 +123,7 @@ module.exports = {
    * Fields required when creating a new entity
    * Note: priority is required at DB level (NOT NULL, no DEFAULT)
    */
-  requiredFields: ['name', 'priority'],
+  requiredFields: ["name", "priority"],
 
   /**
    * Fields that CANNOT be modified during UPDATE (immutable after creation)
@@ -138,7 +138,7 @@ module.exports = {
    * Default columns to display in table views (ordered)
    * Used by admin panel and frontend table widgets
    */
-  displayColumns: ['name', 'priority', 'description'],
+  displayColumns: ["name", "priority", "description"],
 
   // ============================================================================
   // FIELD ACCESS CONTROL (role-based field-level CRUD permissions)
@@ -154,26 +154,26 @@ module.exports = {
 
     // Name - the role identifier, admin-only management
     name: {
-      create: 'admin',
-      read: 'customer', // Everyone can see role names
-      update: 'admin',
-      delete: 'none',
+      create: "admin",
+      read: "customer", // Everyone can see role names
+      update: "admin",
+      delete: "none",
     },
 
     // Description - role explanation, admin-only management
     description: {
-      create: 'admin',
-      read: 'customer', // Everyone can see role descriptions
-      update: 'admin',
-      delete: 'none',
+      create: "admin",
+      read: "customer", // Everyone can see role descriptions
+      update: "admin",
+      delete: "none",
     },
 
     // Priority - role hierarchy level, admin-only management
     priority: {
-      create: 'admin',
-      read: 'manager', // Only manager+ need to see priority
-      update: 'admin',
-      delete: 'none',
+      create: "admin",
+      read: "manager", // Only manager+ need to see priority
+      update: "admin",
+      delete: "none",
     },
 
     // Is system role flag - read-only indicator
@@ -192,9 +192,9 @@ module.exports = {
    */
   dependents: [
     {
-      table: 'audit_logs',
-      foreignKey: 'resource_id',
-      polymorphicType: { column: 'resource_type', value: 'roles' },
+      table: "audit_logs",
+      foreignKey: "resource_id",
+      polymorphicType: { column: "resource_type", value: "roles" },
     },
   ],
 
@@ -219,7 +219,7 @@ module.exports = {
      * Field to check for protected values (may differ from identityField)
      * For roles: name is the protected identifier, even though priority is the identity field
      */
-    protectedByField: 'name',
+    protectedByField: "name",
 
     /**
      * Values of protectedByField that are protected
@@ -233,7 +233,7 @@ module.exports = {
      * Fields that cannot be modified on protected records
      * Even if the field is in updateableFields, these are blocked for protected values
      */
-    immutableFields: ['name', 'priority'],
+    immutableFields: ["name", "priority"],
 
     /**
      * Whether protected values can be deleted
@@ -249,10 +249,7 @@ module.exports = {
    * Fields that support text search (ILIKE %term%)
    * These are concatenated with OR for full-text search
    */
-  searchableFields: [
-    'name',
-    'description',
-  ],
+  searchableFields: ["name", "description"],
 
   // ============================================================================
   // FILTER CONFIGURATION (Exact Match & Operators)
@@ -263,15 +260,15 @@ module.exports = {
    * Supports: exact match, gt, gte, lt, lte, in, not
    */
   filterableFields: [
-    'id',
-    'name',
-    'description',
-    'priority',
-    'status',
-    'is_active',
-    'is_system_role',
-    'created_at',
-    'updated_at',
+    "id",
+    "name",
+    "description",
+    "priority",
+    "status",
+    "is_active",
+    "is_system_role",
+    "created_at",
+    "updated_at",
   ],
 
   // ============================================================================
@@ -283,15 +280,15 @@ module.exports = {
    * All fields are sortable by default
    */
   sortableFields: [
-    'id',
-    'name',
-    'description',
-    'priority',
-    'status',
-    'is_active',
-    'is_system_role',
-    'created_at',
-    'updated_at',
+    "id",
+    "name",
+    "description",
+    "priority",
+    "status",
+    "is_active",
+    "is_system_role",
+    "created_at",
+    "updated_at",
   ],
 
   /**
@@ -299,8 +296,8 @@ module.exports = {
    * Roles sorted by priority (highest first) for logical display
    */
   defaultSort: {
-    field: 'priority',
-    order: 'DESC',
+    field: "priority",
+    order: "DESC",
   },
 
   // ============================================================================
@@ -347,17 +344,17 @@ module.exports = {
    */
   relationships: {
     permissions: {
-      type: 'hasMany',
-      foreignKey: 'role_id',
-      table: 'role_permissions',
-      through: 'permissions',
-      fields: ['id', 'permission_name', 'resource', 'action'],
+      type: "hasMany",
+      foreignKey: "role_id",
+      table: "role_permissions",
+      through: "permissions",
+      fields: ["id", "permission_name", "resource", "action"],
     },
     users: {
-      type: 'hasMany',
-      foreignKey: 'role_id',
-      table: 'users',
-      fields: ['id', 'email', 'first_name', 'last_name'],
+      type: "hasMany",
+      foreignKey: "role_id",
+      table: "users",
+      fields: ["id", "email", "first_name", "last_name"],
     },
   },
 
@@ -367,37 +364,44 @@ module.exports = {
 
   fields: {
     // TIER 1: Universal Entity Contract Fields
-    id: { type: 'integer', readonly: true },
+    id: { type: "integer", readonly: true },
     // Role name - uses FIELD.NAME with custom validation for role-specific pattern
     name: {
       ...FIELD.NAME,
       required: true,
       minLength: 2,
       maxLength: 100,
-      pattern: '^[a-zA-Z0-9\\s_-]+$',
+      pattern: "^[a-zA-Z0-9\\s_-]+$",
       trim: true,
       errorMessages: {
-        required: 'Role name is required',
-        minLength: 'Role name must be at least 2 characters',
-        maxLength: 'Role name cannot exceed 100 characters',
-        pattern: 'Role name can only contain letters, numbers, spaces, underscores, and hyphens',
+        required: "Role name is required",
+        minLength: "Role name must be at least 2 characters",
+        maxLength: "Role name cannot exceed 100 characters",
+        pattern:
+          "Role name can only contain letters, numbers, spaces, underscores, and hyphens",
       },
     },
-    is_active: { type: 'boolean', default: true },
-    created_at: { type: 'timestamp', readonly: true },
-    updated_at: { type: 'timestamp', readonly: true },
+    is_active: { type: "boolean", default: true },
+    created_at: { type: "timestamp", readonly: true },
+    updated_at: { type: "timestamp", readonly: true },
 
     // TIER 2: Lifecycle status
     status: {
-      type: 'enum',
-      values: ['active', 'disabled'],
-      default: 'active',
-      description: 'Role lifecycle state - disabled roles cannot be newly assigned',
+      type: "enum",
+      values: ["active", "disabled"],
+      default: "active",
+      description:
+        "Role lifecycle state - disabled roles cannot be newly assigned",
     },
 
     // Entity-specific fields
     description: FIELD.DESCRIPTION,
     // Priority starts at 10 in examples to avoid seed data (priorities 1-5)
-    priority: { type: 'integer', required: true, min: 1, examples: { valid: [10, 20, 30] } },
+    priority: {
+      type: "integer",
+      required: true,
+      min: 1,
+      examples: { valid: [10, 20, 30] },
+    },
   },
 };

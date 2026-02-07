@@ -16,13 +16,10 @@ const {
   toSafeUuid,
   toSafeString,
   toSafeEmail,
-} = require('./type-coercion');
+} = require("./type-coercion");
 
 // Export URL param validators
-const {
-  validateIdParam,
-  validateIdParams,
-} = require('./param-validators');
+const { validateIdParam, validateIdParams } = require("./param-validators");
 
 // Export query string validators
 const {
@@ -30,14 +27,14 @@ const {
   validateSearch,
   validateSort,
   validateQuery, // Metadata-driven query validation
-} = require('./query-validators');
+} = require("./query-validators");
 
 // Export logging utilities
 const {
   logValidationFailure,
   logTypeCoercion,
   logValidationSuccess,
-} = require('./validation-logger');
+} = require("./validation-logger");
 
 // Export body validators (request payload validation)
 // Entity CRUD uses genericValidateBody() from middleware/generic-entity.js
@@ -49,7 +46,7 @@ const {
   validateAuth0Token,
   validateAuth0Refresh,
   validateRefreshToken,
-} = require('./body-validators');
+} = require("./body-validators");
 
 module.exports = {
   // Type Coercion

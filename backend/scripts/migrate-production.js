@@ -16,41 +16,49 @@
  *   (These should match your Railway PostgreSQL credentials)
  */
 
-const { Client } = require('pg');
-const fs = require('fs');
-const path = require('path');
+const { Client } = require("pg");
+const fs = require("fs");
+const path = require("path");
 
 // Load environment variables from .env.production
-require('dotenv').config({ path: path.join(__dirname, '..', '.env.production') });
+require("dotenv").config({
+  path: path.join(__dirname, "..", ".env.production"),
+});
 
 // Color output for terminal
 const colors = {
-  reset: '\x1b[0m',
-  green: '\x1b[32m',
-  blue: '\x1b[34m',
-  yellow: '\x1b[33m',
-  red: '\x1b[31m',
-  cyan: '\x1b[36m',
+  reset: "\x1b[0m",
+  green: "\x1b[32m",
+  blue: "\x1b[34m",
+  yellow: "\x1b[33m",
+  red: "\x1b[31m",
+  cyan: "\x1b[36m",
 };
 
-function log(message, color = 'reset') {
+function log(message, color = "reset") {
   console.log(`${colors[color]}${message}${colors.reset}`);
 }
 
 async function runMigration() {
   // Validate environment
-  const required = ['DB_HOST', 'DB_PORT', 'DB_USER', 'DB_PASSWORD', 'DB_NAME'];
-  const missing = required.filter(v => !process.env[v]);
+  const required = ["DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME"];
+  const missing = required.filter((v) => !process.env[v]);
 
   if (missing.length > 0) {
-    log(`❌ Missing required environment variables: ${missing.join(', ')}`, 'red');
-    log('', 'reset');
-    log('Please set them in your shell or create a .env.production file:', 'yellow');
-    log('  DB_HOST=postgres.railway.internal', 'cyan');
-    log('  DB_PORT=5432', 'cyan');
-    log('  DB_USER=postgres', 'cyan');
-    log('  DB_PASSWORD=your-password', 'cyan');
-    log('  DB_NAME=railway', 'cyan');
+    log(
+      `❌ Missing required environment variables: ${missing.join(", ")}`,
+      "red",
+    );
+    log("", "reset");
+    log(
+      "Please set them in your shell or create a .env.production file:",
+      "yellow",
+    );
+    log("  DB_HOST=postgres.railway.internal", "cyan");
+    log("  DB_PORT=5432", "cyan");
+    log("  DB_USER=postgres", "cyan");
+    log("  DB_PASSWORD=your-password", "cyan");
+    log("  DB_NAME=railway", "cyan");
     process.exit(1);
   }
 
@@ -61,33 +69,38 @@ async function runMigration() {
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
-    ssl: process.env.DB_HOST.includes('railway') ? { rejectUnauthorized: false } : false,
+    ssl: process.env.DB_HOST.includes("railway")
+      ? { rejectUnauthorized: false }
+      : false,
   };
 
-  log('', 'reset');
-  log('═══════════════════════════════════════════════', 'blue');
-  log('   🚀 Tross Production Database Migration', 'blue');
-  log('═══════════════════════════════════════════════', 'blue');
-  log('', 'reset');
-  log(`📡 Connecting to: ${config.host}:${config.port}/${config.database}`, 'cyan');
+  log("", "reset");
+  log("═══════════════════════════════════════════════", "blue");
+  log("   🚀 Tross Production Database Migration", "blue");
+  log("═══════════════════════════════════════════════", "blue");
+  log("", "reset");
+  log(
+    `📡 Connecting to: ${config.host}:${config.port}/${config.database}`,
+    "cyan",
+  );
 
   const client = new Client(config);
 
   try {
     await client.connect();
-    log('✅ Connected to database', 'green');
-    log('', 'reset');
+    log("✅ Connected to database", "green");
+    log("", "reset");
 
     // Step 1: Run base schema (includes all tables + 5 roles)
-    log('📝 Step 1/3: Creating base schema...', 'yellow');
-    const schemaPath = path.join(__dirname, '..', 'schema.sql');
-    const schema = fs.readFileSync(schemaPath, 'utf8');
+    log("📝 Step 1/3: Creating base schema...", "yellow");
+    const schemaPath = path.join(__dirname, "..", "schema.sql");
+    const schema = fs.readFileSync(schemaPath, "utf8");
     await client.query(schema);
-    log('✅ Base schema created (all tables + 5 roles)', 'green');
-    log('', 'reset');
+    log("✅ Base schema created (all tables + 5 roles)", "green");
+    log("", "reset");
 
     // Step 2: Create admin user
-    log('📝 Step 2/3: Creating admin user...', 'yellow');
+    log("📝 Step 2/3: Creating admin user...", "yellow");
     const adminSql = `
       INSERT INTO users (
         auth0_id,
@@ -124,17 +137,21 @@ async function runMigration() {
     `;
 
     await client.query(adminSql);
-    log('✅ Admin user created: zarika.amber@gmail.com', 'green');
-    log('', 'reset');
+    log("✅ Admin user created: zarika.amber@gmail.com", "green");
+    log("", "reset");
 
     // Step 3: Verify
-    log('📝 Step 3/3: Verifying database state...', 'yellow');
+    log("📝 Step 3/3: Verifying database state...", "yellow");
 
-    const rolesResult = await client.query('SELECT name, priority FROM roles ORDER BY priority DESC');
-    log(`  ✓ Roles: ${rolesResult.rows.map(r => r.name).join(', ')}`, 'cyan');
+    const rolesResult = await client.query(
+      "SELECT name, priority FROM roles ORDER BY priority DESC",
+    );
+    log(`  ✓ Roles: ${rolesResult.rows.map((r) => r.name).join(", ")}`, "cyan");
 
-    const usersResult = await client.query('SELECT COUNT(*) as count FROM users WHERE is_active = true');
-    log(`  ✓ Active users: ${usersResult.rows[0].count}`, 'cyan');
+    const usersResult = await client.query(
+      "SELECT COUNT(*) as count FROM users WHERE is_active = true",
+    );
+    log(`  ✓ Active users: ${usersResult.rows[0].count}`, "cyan");
 
     const tablesResult = await client.query(`
       SELECT COUNT(*) as count 
@@ -142,28 +159,30 @@ async function runMigration() {
       WHERE table_schema = 'public' 
       AND table_type = 'BASE TABLE'
     `);
-    log(`  ✓ Tables created: ${tablesResult.rows[0].count}`, 'cyan');
+    log(`  ✓ Tables created: ${tablesResult.rows[0].count}`, "cyan");
 
-    log('', 'reset');
-    log('═══════════════════════════════════════════════', 'green');
-    log('   ✨ Migration completed successfully!', 'green');
-    log('═══════════════════════════════════════════════', 'green');
-    log('', 'reset');
-    log('🎯 Next steps:', 'yellow');
-    log('  1. Test your API: https://tross-api-production.up.railway.app/api/health', 'cyan');
-    log('  2. Update Auth0 with Railway URL', 'cyan');
-    log('  3. Lock down CORS (change ALLOWED_ORIGINS from *)', 'cyan');
-    log('', 'reset');
-
+    log("", "reset");
+    log("═══════════════════════════════════════════════", "green");
+    log("   ✨ Migration completed successfully!", "green");
+    log("═══════════════════════════════════════════════", "green");
+    log("", "reset");
+    log("🎯 Next steps:", "yellow");
+    log(
+      "  1. Test your API: https://tross-api-production.up.railway.app/api/health",
+      "cyan",
+    );
+    log("  2. Update Auth0 with Railway URL", "cyan");
+    log("  3. Lock down CORS (change ALLOWED_ORIGINS from *)", "cyan");
+    log("", "reset");
   } catch (error) {
-    log('', 'reset');
-    log('❌ Migration failed:', 'red');
-    log(error.message, 'red');
-    log('', 'reset');
+    log("", "reset");
+    log("❌ Migration failed:", "red");
+    log(error.message, "red");
+    log("", "reset");
 
     if (error.stack) {
-      log('Stack trace:', 'yellow');
-      log(error.stack, 'yellow');
+      log("Stack trace:", "yellow");
+      log(error.stack, "yellow");
     }
 
     process.exit(1);
@@ -173,9 +192,9 @@ async function runMigration() {
 }
 
 // Run migration
-runMigration().catch(error => {
-  log('', 'reset');
-  log('❌ Unexpected error:', 'red');
-  log(error.message, 'red');
+runMigration().catch((error) => {
+  log("", "reset");
+  log("❌ Unexpected error:", "red");
+  log(error.message, "red");
   process.exit(1);
 });

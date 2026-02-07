@@ -17,14 +17,14 @@
  * - ResponseFormatter for consistent responses
  */
 
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const StatsService = require('../services/stats-service');
-const { authenticateToken, requirePermission } = require('../middleware/auth');
-const { enforceRLS } = require('../middleware/row-level-security');
-const { extractEntity } = require('../middleware/generic-entity');
-const ResponseFormatter = require('../utils/response-formatter');
-const { logger } = require('../config/logger');
+const StatsService = require("../services/stats-service");
+const { authenticateToken, requirePermission } = require("../middleware/auth");
+const { enforceRLS } = require("../middleware/row-level-security");
+const { extractEntity } = require("../middleware/generic-entity");
+const ResponseFormatter = require("../utils/response-formatter");
+const { logger } = require("../config/logger");
 
 // ============================================================================
 // MIDDLEWARE CHAIN (unified pattern)
@@ -40,7 +40,7 @@ const { logger } = require('../config/logger');
 const statsMiddleware = [
   authenticateToken,
   extractEntity,
-  requirePermission('read'),
+  requirePermission("read"),
   enforceRLS,
 ];
 
@@ -59,7 +59,7 @@ const statsMiddleware = [
  * @example GET /api/stats/work_order?status=pending
  * @returns { success: true, data: { count: 42 } }
  */
-router.get('/:entity', statsMiddleware, async (req, res, next) => {
+router.get("/:entity", statsMiddleware, async (req, res, next) => {
   try {
     const entityName = req.entityName;
     const filters = req.query || {};
@@ -75,7 +75,10 @@ router.get('/:entity', statsMiddleware, async (req, res, next) => {
 
     return ResponseFormatter.get(res, { count });
   } catch (error) {
-    logger.error('[Stats] Count failed', { entity: req.params.entity, error: error.message });
+    logger.error("[Stats] Count failed", {
+      entity: req.params.entity,
+      error: error.message,
+    });
     next(error);
   }
 });
@@ -88,36 +91,45 @@ router.get('/:entity', statsMiddleware, async (req, res, next) => {
  * @example GET /api/stats/work_order/grouped/status
  * @returns { success: true, data: [{ value: 'pending', count: 5 }, ...] }
  */
-router.get('/:entity/grouped/:field', statsMiddleware, async (req, res, next) => {
-  try {
-    const entityName = req.entityName;
-    const groupByField = req.params.field;
-    const filters = req.query || {};
+router.get(
+  "/:entity/grouped/:field",
+  statsMiddleware,
+  async (req, res, next) => {
+    try {
+      const entityName = req.entityName;
+      const groupByField = req.params.field;
+      const filters = req.query || {};
 
-    // Remove non-filter params
-    delete filters.page;
-    delete filters.limit;
-    delete filters.sort;
-    delete filters.order;
-    delete filters.search;
+      // Remove non-filter params
+      delete filters.page;
+      delete filters.limit;
+      delete filters.sort;
+      delete filters.order;
+      delete filters.search;
 
-    const grouped = await StatsService.countGrouped(entityName, req, groupByField, filters);
+      const grouped = await StatsService.countGrouped(
+        entityName,
+        req,
+        groupByField,
+        filters,
+      );
 
-    return ResponseFormatter.get(res, grouped);
-  } catch (error) {
-    logger.error('[Stats] Grouped count failed', {
-      entity: req.params.entity,
-      field: req.params.field,
-      error: error.message,
-    });
+      return ResponseFormatter.get(res, grouped);
+    } catch (error) {
+      logger.error("[Stats] Grouped count failed", {
+        entity: req.params.entity,
+        field: req.params.field,
+        error: error.message,
+      });
 
-    // Handle validation errors nicely
-    if (error.message.includes('not a filterable field')) {
-      return ResponseFormatter.badRequest(res, error.message);
+      // Handle validation errors nicely
+      if (error.message.includes("not a filterable field")) {
+        return ResponseFormatter.badRequest(res, error.message);
+      }
+      next(error);
     }
-    next(error);
-  }
-});
+  },
+);
 
 /**
  * GET /stats/:entity/sum/:field
@@ -127,7 +139,7 @@ router.get('/:entity/grouped/:field', statsMiddleware, async (req, res, next) =>
  * @example GET /api/stats/invoice/sum/total?status=paid
  * @returns { success: true, data: { sum: 12500.50 } }
  */
-router.get('/:entity/sum/:field', statsMiddleware, async (req, res, next) => {
+router.get("/:entity/sum/:field", statsMiddleware, async (req, res, next) => {
   try {
     const entityName = req.entityName;
     const sumField = req.params.field;
@@ -144,7 +156,7 @@ router.get('/:entity/sum/:field', statsMiddleware, async (req, res, next) => {
 
     return ResponseFormatter.get(res, { sum });
   } catch (error) {
-    logger.error('[Stats] Sum failed', {
+    logger.error("[Stats] Sum failed", {
       entity: req.params.entity,
       field: req.params.field,
       error: error.message,

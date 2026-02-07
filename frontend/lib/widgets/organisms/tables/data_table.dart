@@ -1016,10 +1016,14 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
       TableDensity.comfortable => spacing.md,
     };
 
+    // When autoSizeColumns is true, let content determine width (no maxWidth)
+    // When false, apply constraints for fixed-width columns
     Widget content = ConstrainedBox(
       constraints: BoxConstraints(
         minWidth: TableConfig.cellMinWidth,
-        maxWidth: TableConfig.cellMaxWidth,
+        maxWidth: widget.autoSizeColumns
+            ? double.infinity
+            : TableConfig.cellMaxWidth,
         minHeight: _density.rowHeight,
       ),
       child: Padding(

@@ -12,10 +12,10 @@
  * This is the "ctx" object passed to every scenario function.
  */
 
-const request = require('supertest');
-const entityFactory = require('./entity-factory');
-const allMetadata = require('../../../config/models');
-const { createTestUser } = require('../../helpers/test-db');
+const request = require("supertest");
+const entityFactory = require("./entity-factory");
+const allMetadata = require("../../../config/models");
+const { createTestUser } = require("../../helpers/test-db");
 
 /**
  * Build test context for a given app instance
@@ -65,20 +65,20 @@ function buildTestContext(app, db) {
       return { Authorization: `Bearer ${user.token}` };
     }
     // Fallback: generate token (shouldn't normally happen)
-    const jwt = require('jsonwebtoken');
-    const secret = process.env.JWT_SECRET || 'dev-secret-key';
+    const jwt = require("jsonwebtoken");
+    const secret = process.env.JWT_SECRET || "dev-secret-key";
     const token = jwt.sign(
       {
-        iss: process.env.API_URL || 'https://api.tross.dev',
+        iss: process.env.API_URL || "https://api.tross.dev",
         sub: user.auth0_id || `auth0|${user.id}`,
-        aud: process.env.API_URL || 'https://api.tross.dev',
+        aud: process.env.API_URL || "https://api.tross.dev",
         email: user.email,
-        role: user.role || 'customer',
-        provider: 'auth0',
+        role: user.role || "customer",
+        provider: "auth0",
         userId: user.id,
       },
       secret,
-      { expiresIn: '1h' }
+      { expiresIn: "1h" },
     );
     return { Authorization: `Bearer ${token}` };
   }
@@ -88,19 +88,19 @@ function buildTestContext(app, db) {
 
   /**
    * Resolve FK for a field using fixtures or by creating a new entity
-   * 
+   *
    * @param {string} fkField - FK field name (e.g., 'customer_id')
    * @param {Object} fkDef - FK definition from metadata
    * @returns {Promise<number>} The ID to use for the FK
    */
   async function resolveFkDependency(fkField, fkDef) {
     const parentEntityName = entityFactory.entityNameFromTable(fkDef.table);
-    
+
     // Check if we have a fixture for this entity type
     if (fixtures[parentEntityName]) {
       return fixtures[parentEntityName].id;
     }
-    
+
     // No fixture - create the entity (which may recursively create its own deps)
     const parent = await factory.create(parentEntityName);
     return parent.id;
@@ -135,7 +135,7 @@ function buildTestContext(app, db) {
     /**
      * Create entity via HTTP and track for cleanup.
      * Uses fixtures for FK dependencies when available.
-     * 
+     *
      * For entities with entityPermissions.create: null (system-only creation),
      * this bypasses the API and inserts directly to the database.
      */
@@ -156,39 +156,39 @@ function buildTestContext(app, db) {
 
       // Check if API create is disabled (system-only entities like notifications)
       const createDisabled = meta.entityPermissions?.create === null;
-      
+
       if (createDisabled) {
         // SYSTEMIC FIX: For entities with own_record_only RLS, set the owner field
         // to the admin test user's ID so the record is accessible via API.
         // This uses rlsFilterConfig.ownRecordField to find the owner field.
         const ownRecordField = meta.rlsFilterConfig?.ownRecordField;
         const isOwnRecordOnly = Object.values(meta.rlsPolicy || {}).some(
-          policy => policy === 'own_record_only'
+          (policy) => policy === "own_record_only",
         );
-        
+
         if (isOwnRecordOnly && ownRecordField && !overrides[ownRecordField]) {
-          const { user } = await getTestUser('admin');
+          const { user } = await getTestUser("admin");
           payload[ownRecordField] = user.id;
         }
-        
+
         // Insert directly to database (bypassing API)
         const fields = Object.keys(payload);
         const values = Object.values(payload);
-        const placeholders = fields.map((_, i) => `$${i + 1}`).join(', ');
-        
+        const placeholders = fields.map((_, i) => `$${i + 1}`).join(", ");
+
         const insertQuery = `
-          INSERT INTO ${meta.tableName} (${fields.join(', ')})
+          INSERT INTO ${meta.tableName} (${fields.join(", ")})
           VALUES (${placeholders})
           RETURNING *
         `;
-        
+
         const result = await db.query(insertQuery, values);
         const entityData = result.rows[0];
         createdEntities.push({ table: meta.tableName, id: entityData.id });
         return entityData;
       }
 
-      const auth = await authHeader('admin');
+      const auth = await authHeader("admin");
       const response = await supertestRequest
         .post(`/api/${meta.tableName}`)
         .set(auth)
@@ -196,7 +196,7 @@ function buildTestContext(app, db) {
 
       if (response.status !== 201) {
         throw new Error(
-          `Failed to create ${entityName}: ${response.status} ${JSON.stringify(response.body)}`
+          `Failed to create ${entityName}: ${response.status} ${JSON.stringify(response.body)}`,
         );
       }
 
@@ -231,7 +231,9 @@ function buildTestContext(app, db) {
           dependentRecords.push({ table: dep.table, id: result.rows[0].id });
         } catch (err) {
           // Some tables may need more fields - skip those
-          console.warn(`Could not create dependent in ${dep.table}: ${err.message}`);
+          console.warn(
+            `Could not create dependent in ${dep.table}: ${err.message}`,
+          );
         }
       }
 
@@ -250,7 +252,7 @@ function buildTestContext(app, db) {
      * Create entity with owner for RLS testing
      */
     async createWithOwner(entityName) {
-      const user = await this.create('user');
+      const user = await this.create("user");
       const entity = await this.create(entityName);
       return { entity, user };
     },
@@ -264,7 +266,8 @@ function buildTestContext(app, db) {
       // Find an entity that has FK to this parent
       const childEntities = Object.entries(allMetadata).filter(([_, meta]) => {
         return Object.values(meta.foreignKeys || {}).some(
-          (fk) => fk.table === entityFactory.getMetadata(parentEntityName).tableName
+          (fk) =>
+            fk.table === entityFactory.getMetadata(parentEntityName).tableName,
         );
       });
 
@@ -274,7 +277,8 @@ function buildTestContext(app, db) {
 
       const [childName, childMeta] = childEntities[0];
       const fkField = Object.entries(childMeta.foreignKeys).find(
-        ([_, fk]) => fk.table === entityFactory.getMetadata(parentEntityName).tableName
+        ([_, fk]) =>
+          fk.table === entityFactory.getMetadata(parentEntityName).tableName,
       )[0];
 
       const child = await this.create(childName, { [fkField]: parent.id });
@@ -311,7 +315,7 @@ function buildTestContext(app, db) {
     return Object.entries(allMetadata)
       .filter(([_, meta]) => {
         return Object.values(meta.foreignKeys || {}).some(
-          (fk) => fk.table === targetTable
+          (fk) => fk.table === targetTable,
         );
       })
       .map(([name, meta]) => ({ name, ...meta }));
@@ -353,7 +357,7 @@ function buildTestContext(app, db) {
      * Clears fixture references but actual entities cleaned up in cleanup()
      */
     clearFixtures() {
-      Object.keys(fixtures).forEach(key => delete fixtures[key]);
+      Object.keys(fixtures).forEach((key) => delete fixtures[key]);
     },
   };
 }

@@ -22,11 +22,7 @@
       "user_id",
       "created_at"
     ],
-    "sortableFields": [
-      "id",
-      "action",
-      "created_at"
-    ],
+    "sortableFields": ["id", "action", "created_at"],
     "defaultSort": {
       "field": "created_at",
       "order": "DESC"
@@ -85,18 +81,9 @@
     "displayField": "contract_number",
     "displayName": "Contract",
     "displayNamePlural": "Contracts",
-    "requiredFields": [
-      "customer_id",
-      "start_date"
-    ],
-    "immutableFields": [
-      "contract_number"
-    ],
-    "searchableFields": [
-      "contract_number",
-      "name",
-      "summary"
-    ],
+    "requiredFields": ["customer_id", "start_date"],
+    "immutableFields": ["contract_number"],
+    "searchableFields": ["contract_number", "name", "summary"],
     "filterableFields": [
       "id",
       "contract_number",
@@ -157,13 +144,7 @@
       "status": {
         "type": "enum",
         "default": "draft",
-        "values": [
-          "draft",
-          "active",
-          "expired",
-          "cancelled",
-          "terminated"
-        ]
+        "values": ["draft", "active", "expired", "cancelled", "terminated"]
       },
       "name": {
         "type": "string",
@@ -196,12 +177,7 @@
       },
       "billing_cycle": {
         "type": "enum",
-        "values": [
-          "monthly",
-          "quarterly",
-          "annually",
-          "one_time"
-        ]
+        "values": ["monthly", "quarterly", "annually", "one_time"]
       }
     }
   },
@@ -215,11 +191,7 @@
     "supportsFileAttachments": false,
     "displayName": "Customer",
     "displayNamePlural": "Customers",
-    "requiredFields": [
-      "email",
-      "first_name",
-      "last_name"
-    ],
+    "requiredFields": ["email", "first_name", "last_name"],
     "searchableFields": [
       "first_name",
       "last_name",
@@ -257,25 +229,13 @@
     "fieldGroups": {
       "identity": {
         "label": "Identity",
-        "fields": [
-          "first_name",
-          "last_name"
-        ],
-        "rows": [
-          [
-            "first_name",
-            "last_name"
-          ]
-        ],
+        "fields": ["first_name", "last_name"],
+        "rows": [["first_name", "last_name"]],
         "order": 1
       },
       "contact": {
         "label": "Contact Information",
-        "fields": [
-          "email",
-          "phone",
-          "organization_name"
-        ],
+        "fields": ["email", "phone", "organization_name"],
         "order": 2
       },
       "billing_address": {
@@ -288,13 +248,7 @@
           "billing_postal_code",
           "billing_country"
         ],
-        "rows": [
-          [
-            "billing_city",
-            "billing_state",
-            "billing_postal_code"
-          ]
-        ],
+        "rows": [["billing_city", "billing_state", "billing_postal_code"]],
         "order": 3
       },
       "service_address": {
@@ -307,13 +261,7 @@
           "service_postal_code",
           "service_country"
         ],
-        "rows": [
-          [
-            "service_city",
-            "service_state",
-            "service_postal_code"
-          ]
-        ],
+        "rows": [["service_city", "service_state", "service_postal_code"]],
         "order": 4
       }
     },
@@ -354,11 +302,7 @@
       "status": {
         "type": "enum",
         "default": "pending",
-        "values": [
-          "pending",
-          "active",
-          "suspended"
-        ]
+        "values": ["pending", "active", "suspended"]
       },
       "first_name": {
         "type": "string",
@@ -471,10 +415,7 @@
       "billing_country": {
         "type": "enum",
         "default": "US",
-        "values": [
-          "US",
-          "CA"
-        ]
+        "values": ["US", "CA"]
       },
       "service_line1": {
         "type": "string",
@@ -569,10 +510,7 @@
       "service_country": {
         "type": "enum",
         "default": "US",
-        "values": [
-          "US",
-          "CA"
-        ]
+        "values": ["US", "CA"]
       }
     }
   },
@@ -603,10 +541,7 @@
       "file_size",
       "uploaded_by"
     ],
-    "searchableFields": [
-      "original_filename",
-      "description"
-    ],
+    "searchableFields": ["original_filename", "description"],
     "filterableFields": [
       "entity_type",
       "entity_id",
@@ -700,18 +635,9 @@
     "displayField": "name",
     "displayName": "Inventory",
     "displayNamePlural": "Inventory",
-    "requiredFields": [
-      "name",
-      "sku"
-    ],
-    "immutableFields": [
-      "sku"
-    ],
-    "searchableFields": [
-      "name",
-      "sku",
-      "description"
-    ],
+    "requiredFields": ["name", "sku"],
+    "immutableFields": ["sku"],
+    "searchableFields": ["name", "sku", "description"],
     "filterableFields": [
       "id",
       "name",
@@ -765,12 +691,7 @@
       "status": {
         "type": "enum",
         "default": "in_stock",
-        "values": [
-          "in_stock",
-          "low_stock",
-          "out_of_stock",
-          "discontinued"
-        ]
+        "values": ["in_stock", "low_stock", "out_of_stock", "discontinued"]
       },
       "sku": {
         "type": "string",
@@ -814,19 +735,9 @@
     "displayField": "invoice_number",
     "displayName": "Invoice",
     "displayNamePlural": "Invoices",
-    "requiredFields": [
-      "customer_id",
-      "amount",
-      "total"
-    ],
-    "immutableFields": [
-      "invoice_number"
-    ],
-    "searchableFields": [
-      "invoice_number",
-      "name",
-      "summary"
-    ],
+    "requiredFields": ["customer_id", "amount", "total"],
+    "immutableFields": ["invoice_number"],
+    "searchableFields": ["invoice_number", "name", "summary"],
     "filterableFields": [
       "id",
       "invoice_number",
@@ -893,14 +804,7 @@
       "status": {
         "type": "enum",
         "default": "draft",
-        "values": [
-          "draft",
-          "sent",
-          "paid",
-          "overdue",
-          "cancelled",
-          "void"
-        ]
+        "values": ["draft", "sent", "paid", "overdue", "cancelled", "void"]
       },
       "name": {
         "type": "string",
@@ -954,11 +858,7 @@
     "supportsFileAttachments": false,
     "displayName": "Notification",
     "displayNamePlural": "Notifications",
-    "requiredFields": [
-      "user_id",
-      "title",
-      "type"
-    ],
+    "requiredFields": ["user_id", "title", "type"],
     "immutableFields": [
       "id",
       "user_id",
@@ -969,10 +869,7 @@
       "resource_id",
       "created_at"
     ],
-    "searchableFields": [
-      "title",
-      "body"
-    ],
+    "searchableFields": ["title", "body"],
     "filterableFields": [
       "user_id",
       "type",
@@ -980,11 +877,7 @@
       "resource_type",
       "created_at"
     ],
-    "sortableFields": [
-      "created_at",
-      "is_read",
-      "type"
-    ],
+    "sortableFields": ["created_at", "is_read", "type"],
     "defaultSort": {
       "field": "created_at",
       "order": "DESC"
@@ -1069,22 +962,10 @@
     "supportsFileAttachments": false,
     "displayName": "Preferences",
     "displayNamePlural": "Preferences",
-    "requiredFields": [
-      "id"
-    ],
-    "immutableFields": [
-      "id"
-    ],
-    "filterableFields": [
-      "id",
-      "created_at",
-      "updated_at"
-    ],
-    "sortableFields": [
-      "id",
-      "created_at",
-      "updated_at"
-    ],
+    "requiredFields": ["id"],
+    "immutableFields": ["id"],
+    "filterableFields": ["id", "created_at", "updated_at"],
+    "sortableFields": ["id", "created_at", "updated_at"],
     "defaultSort": {
       "field": "created_at",
       "order": "DESC"
@@ -1092,26 +973,17 @@
     "fieldGroups": {
       "appearance": {
         "label": "Appearance",
-        "fields": [
-          "theme",
-          "density"
-        ],
+        "fields": ["theme", "density"],
         "order": 1
       },
       "notifications": {
         "label": "Notifications",
-        "fields": [
-          "notifications_enabled",
-          "notification_retention_days"
-        ],
+        "fields": ["notifications_enabled", "notification_retention_days"],
         "order": 2
       },
       "data": {
         "label": "Data & Performance",
-        "fields": [
-          "items_per_page",
-          "auto_refresh_interval"
-        ],
+        "fields": ["items_per_page", "auto_refresh_interval"],
         "order": 3
       }
     },
@@ -1133,20 +1005,12 @@
       "theme": {
         "type": "enum",
         "default": "system",
-        "values": [
-          "system",
-          "light",
-          "dark"
-        ]
+        "values": ["system", "light", "dark"]
       },
       "density": {
         "type": "enum",
         "default": "comfortable",
-        "values": [
-          "compact",
-          "standard",
-          "comfortable"
-        ]
+        "values": ["compact", "standard", "comfortable"]
       },
       "notifications_enabled": {
         "type": "boolean",
@@ -1183,11 +1047,7 @@
       "theme": {
         "type": "enum",
         "default": "system",
-        "values": [
-          "system",
-          "light",
-          "dark"
-        ],
+        "values": ["system", "light", "dark"],
         "label": "Theme",
         "order": 0,
         "displayLabels": {
@@ -1199,11 +1059,7 @@
       "density": {
         "type": "enum",
         "default": "comfortable",
-        "values": [
-          "compact",
-          "standard",
-          "comfortable"
-        ],
+        "values": ["compact", "standard", "comfortable"],
         "label": "Density",
         "order": 1,
         "displayLabels": {
@@ -1255,14 +1111,8 @@
     "displayField": "name",
     "displayName": "Role",
     "displayNamePlural": "Roles",
-    "requiredFields": [
-      "name",
-      "priority"
-    ],
-    "searchableFields": [
-      "name",
-      "description"
-    ],
+    "requiredFields": ["name", "priority"],
+    "searchableFields": ["name", "description"],
     "filterableFields": [
       "id",
       "name",
@@ -1291,17 +1141,8 @@
     },
     "systemProtected": {
       "protectedByField": "name",
-      "values": [
-        "customer",
-        "technician",
-        "dispatcher",
-        "manager",
-        "admin"
-      ],
-      "immutableFields": [
-        "name",
-        "priority"
-      ],
+      "values": ["customer", "technician", "dispatcher", "manager", "admin"],
+      "immutableFields": ["name", "priority"],
       "preventDelete": true
     },
     "fieldGroups": {},
@@ -1339,10 +1180,7 @@
       "status": {
         "type": "enum",
         "default": "active",
-        "values": [
-          "active",
-          "disabled"
-        ]
+        "values": ["active", "disabled"]
       },
       "description": {
         "type": "text",
@@ -1365,19 +1203,9 @@
     "supportsFileAttachments": false,
     "displayName": "Saved view",
     "displayNamePlural": "Saved views",
-    "requiredFields": [
-      "user_id",
-      "entity_name",
-      "view_name",
-      "settings"
-    ],
-    "immutableFields": [
-      "id",
-      "user_id"
-    ],
-    "searchableFields": [
-      "view_name"
-    ],
+    "requiredFields": ["user_id", "entity_name", "view_name", "settings"],
+    "immutableFields": ["id", "user_id"],
+    "searchableFields": ["view_name"],
     "filterableFields": [
       "user_id",
       "entity_name",
@@ -1455,17 +1283,8 @@
     "supportsFileAttachments": false,
     "displayName": "Technician",
     "displayNamePlural": "Technicians",
-    "requiredFields": [
-      "email",
-      "first_name",
-      "last_name"
-    ],
-    "searchableFields": [
-      "first_name",
-      "last_name",
-      "email",
-      "license_number"
-    ],
+    "requiredFields": ["email", "first_name", "last_name"],
+    "searchableFields": ["first_name", "last_name", "email", "license_number"],
     "filterableFields": [
       "id",
       "email",
@@ -1498,10 +1317,7 @@
     "fieldGroups": {
       "identity": {
         "label": "Identity",
-        "fields": [
-          "first_name",
-          "last_name"
-        ],
+        "fields": ["first_name", "last_name"],
         "order": 1
       }
     },
@@ -1542,20 +1358,12 @@
       "status": {
         "type": "enum",
         "default": "pending",
-        "values": [
-          "pending",
-          "active",
-          "suspended"
-        ]
+        "values": ["pending", "active", "suspended"]
       },
       "availability": {
         "type": "enum",
         "default": "available",
-        "values": [
-          "available",
-          "on_job",
-          "off_duty"
-        ]
+        "values": ["available", "on_job", "off_duty"]
       },
       "first_name": {
         "type": "string",
@@ -1595,20 +1403,9 @@
     "supportsFileAttachments": false,
     "displayName": "User",
     "displayNamePlural": "Users",
-    "requiredFields": [
-      "email",
-      "first_name",
-      "last_name"
-    ],
-    "immutableFields": [
-      "email",
-      "auth0_id"
-    ],
-    "searchableFields": [
-      "first_name",
-      "last_name",
-      "email"
-    ],
+    "requiredFields": ["email", "first_name", "last_name"],
+    "immutableFields": ["email", "auth0_id"],
+    "searchableFields": ["first_name", "last_name", "email"],
     "filterableFields": [
       "id",
       "email",
@@ -1639,10 +1436,7 @@
     "fieldGroups": {
       "identity": {
         "label": "Identity",
-        "fields": [
-          "first_name",
-          "last_name"
-        ],
+        "fields": ["first_name", "last_name"],
         "order": 1
       }
     },
@@ -1688,11 +1482,7 @@
       "status": {
         "type": "enum",
         "default": "pending",
-        "values": [
-          "pending",
-          "active",
-          "suspended"
-        ]
+        "values": ["pending", "active", "suspended"]
       },
       "auth0_id": {
         "type": "string",
@@ -1735,17 +1525,9 @@
     "displayField": "work_order_number",
     "displayName": "Work order",
     "displayNamePlural": "Work orders",
-    "requiredFields": [
-      "customer_id"
-    ],
-    "immutableFields": [
-      "work_order_number"
-    ],
-    "searchableFields": [
-      "work_order_number",
-      "name",
-      "summary"
-    ],
+    "requiredFields": ["customer_id"],
+    "immutableFields": ["work_order_number"],
+    "searchableFields": ["work_order_number", "name", "summary"],
     "filterableFields": [
       "id",
       "work_order_number",
@@ -1779,11 +1561,7 @@
     "fieldGroups": {
       "identity": {
         "label": "Work Order Details",
-        "fields": [
-          "work_order_number",
-          "name",
-          "summary"
-        ],
+        "fields": ["work_order_number", "name", "summary"],
         "order": 1
       },
       "assignment": {
@@ -1794,27 +1572,13 @@
           "priority",
           "status"
         ],
-        "rows": [
-          [
-            "priority",
-            "status"
-          ]
-        ],
+        "rows": [["priority", "status"]],
         "order": 2
       },
       "scheduling": {
         "label": "Scheduling",
-        "fields": [
-          "scheduled_start",
-          "scheduled_end",
-          "completed_at"
-        ],
-        "rows": [
-          [
-            "scheduled_start",
-            "scheduled_end"
-          ]
-        ],
+        "fields": ["scheduled_start", "scheduled_end", "completed_at"],
+        "rows": [["scheduled_start", "scheduled_end"]],
         "order": 3
       },
       "location_address": {
@@ -1827,13 +1591,7 @@
           "location_postal_code",
           "location_country"
         ],
-        "rows": [
-          [
-            "location_city",
-            "location_state",
-            "location_postal_code"
-          ]
-        ],
+        "rows": [["location_city", "location_state", "location_postal_code"]],
         "order": 4
       }
     },
@@ -1899,12 +1657,7 @@
       "priority": {
         "type": "enum",
         "default": "normal",
-        "values": [
-          "low",
-          "normal",
-          "high",
-          "urgent"
-        ]
+        "values": ["low", "normal", "high", "urgent"]
       },
       "customer_id": {
         "type": "foreignKey",
@@ -2019,10 +1772,7 @@
       "location_country": {
         "type": "enum",
         "default": "US",
-        "values": [
-          "US",
-          "CA"
-        ]
+        "values": ["US", "CA"]
       }
     }
   }

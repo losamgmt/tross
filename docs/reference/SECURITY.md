@@ -16,6 +16,7 @@ Defense-in-depth security architecture.
 ## Triple-Tier Security
 
 ### Overview
+
 Every request passes through three independent security layers:
 
 ```
@@ -31,27 +32,30 @@ Database Query
 ```
 
 ### Tier 1: Authentication (Auth0)
+
 **Purpose:** Verify user identity
 
 **Implementation:**
+
 - Auth0 OAuth2/OIDC for production
 - JWT token validation (RS256 → HS256)
 - Dev mode uses file-based test users
 
 **Code:**
+
 ```javascript
 // backend/middleware/auth.js
 async function authenticateToken(req, res, next) {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: 'No token provided' });
-  
+  const token = req.headers.authorization?.split(" ")[1];
+  if (!token) return res.status(401).json({ error: "No token provided" });
+
   const decoded = jwt.verify(token, process.env.JWT_SECRET);
   req.user = await User.findById(decoded.userId);
-  
+
   if (!req.user || !req.user.is_active) {
-    return res.status(401).json({ error: 'Invalid or inactive user' });
+    return res.status(401).json({ error: "Invalid or inactive user" });
   }
-  
+
   next();
 }
 ```
@@ -64,30 +68,34 @@ Development users (file-based test users) are fundamentally incapable of modifyi
 data. This is a defense-in-depth security measure implemented at the middleware level.
 
 **Why?**
+
 - Dev users are not authenticated through Auth0
 - Dev user IDs are `null` in the database layer
 - Allowing writes could corrupt shared development databases
 - Creates clear separation between "viewing" and "modifying" data
 
 **Implementation:**
+
 ```javascript
 // backend/middleware/auth.js - Global write protection for dev users
-const MUTATING_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];
+const MUTATING_METHODS = ["POST", "PUT", "PATCH", "DELETE"];
 
 // After setting req.dbUser for dev users:
 if (MUTATING_METHODS.includes(req.method)) {
-  logger.security('DEV_WRITE_BLOCKED', {
+  logger.security("DEV_WRITE_BLOCKED", {
     method: req.method,
     path: req.path,
     devUser: req.devUser.name,
   });
-  return ResponseFormatter.forbidden(res, 
-    'Development users have read-only access. Sign in with Auth0 to modify data.'
+  return ResponseFormatter.forbidden(
+    res,
+    "Development users have read-only access. Sign in with Auth0 to modify data.",
   );
 }
 ```
 
 **Behavior:**
+
 - `GET` requests: ✅ Allowed (read-only access via role permissions)
 - `POST/PUT/PATCH/DELETE` requests: ❌ Blocked with 403 Forbidden
 - Admin UI can view all data but cannot modify it
@@ -99,9 +107,11 @@ All blocked write attempts are logged with event type `DEV_WRITE_BLOCKED`.
 ---
 
 ### Tier 2: RBAC (Role-Based Access Control)
+
 **Purpose:** Verify permission for action
 
 **Roles:** (Hierarchical)
+
 1. Admin (level 5) - Full access
 2. Manager (level 4) - Team management
 3. Dispatcher (level 3) - Work order assignment
@@ -111,24 +121,25 @@ All blocked write attempts are logged with event type `DEV_WRITE_BLOCKED`.
 **Permission Matrix:** See `config/permissions.json`
 
 **Code:**
+
 ```javascript
 // backend/middleware/auth.js
 function requirePermission(permission) {
   return (req, res, next) => {
     const userRole = req.user.role;
     const [resource, action] = permission.split(':');
-    
+
     if (!hasPermission(userRole, resource, action)) {
       return res.status(403).json({ error: 'Forbidden' });
     }
-    
+
     next();
   };
 }
 
 // Usage in routes
-router.get('/api/customers', 
-  authenticateToken, 
+router.get('/api/customers',
+  authenticateToken,
   requirePermission('customers:read'),
   async (req, res) => { ... }
 );
@@ -137,15 +148,18 @@ router.get('/api/customers',
 ---
 
 ### Tier 3: RLS (Row-Level Security)
+
 **Purpose:** Filter data by ownership
 
 **Implementation:**
+
 - SQL queries add ownership filters via RLS policies
 - Technicians see only assigned work orders (`assigned_work_orders_only`)
 - Customers see only own data (`own_record_only`, `own_work_orders_only`)
 - Admins bypass RLS via `all_records` policy
 
 **Architecture:**
+
 ```javascript
 // RLS policies defined in backend/config/models/*-metadata.js
 rlsPolicy: {
@@ -165,6 +179,7 @@ rlsPolicy: {
 ## Security Hardening
 
 ### Input Validation
+
 **All inputs validated at multiple layers:**
 
 1. **Frontend** - Type checking, format validation
@@ -172,6 +187,7 @@ rlsPolicy: {
 3. **Database** - CHECK constraints, foreign keys
 
 **Example:**
+
 ```javascript
 // backend/validators/customer-validator.js
 const customerSchema = {
@@ -181,7 +197,7 @@ const customerSchema = {
 };
 
 // Validation middleware
-router.post('/api/customers', 
+router.post('/api/customers',
   authenticateToken,
   requirePermission('customers:create'),
   validateSchema(customerSchema),
@@ -192,20 +208,22 @@ router.post('/api/customers',
 ---
 
 ### SQL Injection Prevention
+
 **Never concatenate user input into SQL queries.**
 
 **✅ Good (Parameterized):**
+
 ```javascript
-const result = await db.query(
-  'SELECT * FROM customers WHERE email = $1',
-  [req.body.email]
-);
+const result = await db.query("SELECT * FROM customers WHERE email = $1", [
+  req.body.email,
+]);
 ```
 
 **❌ Bad (SQL Injection Vulnerable):**
+
 ```javascript
 const result = await db.query(
-  `SELECT * FROM customers WHERE email = '${req.body.email}'`
+  `SELECT * FROM customers WHERE email = '${req.body.email}'`,
 );
 ```
 
@@ -214,6 +232,7 @@ const result = await db.query(
 ---
 
 ### XSS Prevention
+
 **Framework-level protection:**
 
 - **Frontend:** Flutter automatically escapes strings
@@ -222,61 +241,69 @@ const result = await db.query(
 
 ```javascript
 // backend/server.js
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-    }
-  },
-  xssFilter: true,
-  noSniff: true,
-  frameguard: { action: 'deny' }
-}));
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+      },
+    },
+    xssFilter: true,
+    noSniff: true,
+    frameguard: { action: "deny" },
+  }),
+);
 ```
 
 ---
 
 ### CORS Configuration
+
 **Restrict cross-origin requests:**
 
 ```javascript
 // backend/server.js
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:8080',
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL || "http://localhost:8080",
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  }),
+);
 ```
 
 ---
 
 ### Rate Limiting
+
 **Prevent brute force attacks:**
 
 ```javascript
 // backend/middleware/rate-limit.js
-const rateLimit = require('express-rate-limit');
+const rateLimit = require("express-rate-limit");
 
 const limiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 100, // 100 requests per minute
-  message: 'Too many requests, please try again later',
+  message: "Too many requests, please try again later",
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-app.use('/api', limiter);
+app.use("/api", limiter);
 ```
 
 ---
 
 ### Secret Management
+
 **Never hardcode secrets.**
 
 **Configuration:**
+
 ```bash
 # .env (NOT committed to git)
 JWT_SECRET=your-very-long-random-secret-at-least-64-characters
@@ -287,15 +314,16 @@ AUTH0_CLIENT_SECRET=your-client-secret
 ```
 
 **Validation:**
+
 ```javascript
 // backend/utils/env-validator.js
-if (process.env.NODE_ENV === 'production') {
+if (process.env.NODE_ENV === "production") {
   if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 64) {
-    throw new Error('JWT_SECRET must be at least 64 characters in production');
+    throw new Error("JWT_SECRET must be at least 64 characters in production");
   }
-  
-  if (process.env.DATABASE_URL.includes('localhost')) {
-    throw new Error('Production database cannot use localhost');
+
+  if (process.env.DATABASE_URL.includes("localhost")) {
+    throw new Error("Production database cannot use localhost");
   }
 }
 ```
@@ -305,28 +333,34 @@ if (process.env.NODE_ENV === 'production') {
 ## Audit Logging
 
 **All security events logged:**
+
 - Login attempts (success/failure)
 - Permission denials
 - CRUD operations
 - Database changes
 
 **Implementation:**
+
 ```javascript
 // backend/services/audit-service.js
 async function logEvent(eventType, details, userId = null) {
   await db.query(
     `INSERT INTO audit_logs (event_type, details, user_id) 
      VALUES ($1, $2, $3)`,
-    [eventType, JSON.stringify(details), userId]
+    [eventType, JSON.stringify(details), userId],
   );
 }
 
 // Usage
-await auditService.logEvent('user.login.success', {
-  email: user.email,
-  ip: req.ip,
-  userAgent: req.headers['user-agent']
-}, user.id);
+await auditService.logEvent(
+  "user.login.success",
+  {
+    email: user.email,
+    ip: req.ip,
+    userAgent: req.headers["user-agent"],
+  },
+  user.id,
+);
 ```
 
 ---
@@ -334,6 +368,7 @@ await auditService.logEvent('user.login.success', {
 ## Security Checklist
 
 **Before Deployment:**
+
 - [ ] All secrets in environment variables (not code)
 - [ ] JWT_SECRET is 64+ characters with mixed case/numbers/special
 - [ ] DATABASE_URL doesn't use localhost

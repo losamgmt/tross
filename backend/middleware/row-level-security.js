@@ -30,11 +30,11 @@
  * );
  */
 
-const { getRLSRule } = require('../config/permissions-loader');
-const { logSecurityEvent, logger } = require('../config/logger');
-const { getClientIp, getUserAgent } = require('../utils/request-helpers');
-const ResponseFormatter = require('../utils/response-formatter');
-const { ERROR_CODES } = require('../utils/response-formatter');
+const { getRLSRule } = require("../config/permissions-loader");
+const { logSecurityEvent, logger } = require("../config/logger");
+const { getClientIp, getUserAgent } = require("../utils/request-helpers");
+const ResponseFormatter = require("../utils/response-formatter");
+const { ERROR_CODES } = require("../utils/response-formatter");
 
 /**
  * Enforce Row-Level Security for a resource
@@ -66,27 +66,34 @@ const enforceRLS = (req, res, next) => {
 
   if (!resource) {
     // This is a configuration error - route is missing entity attachment middleware
-    logSecurityEvent('RLS_NO_ENTITY_METADATA', {
+    logSecurityEvent("RLS_NO_ENTITY_METADATA", {
       ip: getClientIp(req),
       userAgent: getUserAgent(req),
       url: req.url,
-      severity: 'ERROR',
+      severity: "ERROR",
     });
-    return ResponseFormatter.internalError(res, new Error('Route misconfiguration: entity metadata not attached'));
+    return ResponseFormatter.internalError(
+      res,
+      new Error("Route misconfiguration: entity metadata not attached"),
+    );
   }
 
   const userRole = req.dbUser?.role;
   const userId = req.dbUser?.id;
 
   if (!userRole) {
-    logSecurityEvent('RLS_NO_ROLE', {
+    logSecurityEvent("RLS_NO_ROLE", {
       ip: getClientIp(req),
       userAgent: getUserAgent(req),
       url: req.url,
       userId,
       resource,
     });
-    return ResponseFormatter.forbidden(res, 'User has no assigned role', ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS);
+    return ResponseFormatter.forbidden(
+      res,
+      "User has no assigned role",
+      ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS,
+    );
   }
 
   // Get RLS policy from permissions.json
@@ -103,7 +110,7 @@ const enforceRLS = (req, res, next) => {
 
   // Debug log only - RLS application is routine, not a security concern
   // Use logger.debug directly to avoid cluttering warn logs
-  logger.debug('RLS policy applied', {
+  logger.debug("RLS policy applied", {
     url: req.url,
     userId,
     userRole,
@@ -152,7 +159,7 @@ const validateRLSApplied = (req, result) => {
       `RLS validation failed for ${req.rlsResource}: ` +
         `Model did not apply RLS filtering (policy: ${req.rlsPolicy})`,
     );
-    logSecurityEvent('RLS_VALIDATION_FAILED', {
+    logSecurityEvent("RLS_VALIDATION_FAILED", {
       ip: getClientIp(req),
       userAgent: getUserAgent(req),
       url: req.url,
@@ -160,7 +167,7 @@ const validateRLSApplied = (req, result) => {
       userRole: req.dbUser?.role,
       resource: req.rlsResource,
       policy: req.rlsPolicy,
-      severity: 'CRITICAL',
+      severity: "CRITICAL",
     });
     throw error;
   }

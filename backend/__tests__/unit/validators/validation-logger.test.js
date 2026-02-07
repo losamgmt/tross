@@ -10,25 +10,25 @@ const {
   logValidationFailure,
   logTypeCoercion,
   logValidationSuccess,
-} = require('../../../validators/validation-logger');
-const { logger } = require('../../../config/logger');
+} = require("../../../validators/validation-logger");
+const { logger } = require("../../../config/logger");
 
-jest.mock('../../../config/logger');
+jest.mock("../../../config/logger");
 
-describe('Validation Logger', () => {
+describe("Validation Logger", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  describe('logValidationFailure', () => {
-    test('should log validation failure at warning level', () => {
+  describe("logValidationFailure", () => {
+    test("should log validation failure at warning level", () => {
       // Arrange
       const params = {
-        validator: 'toSafeInteger',
-        field: 'id',
-        value: 'abc',
-        reason: 'Cannot convert to integer',
-        context: { url: '/test', method: 'GET' },
+        validator: "toSafeInteger",
+        field: "id",
+        value: "abc",
+        reason: "Cannot convert to integer",
+        context: { url: "/test", method: "GET" },
       };
 
       // Act
@@ -36,27 +36,27 @@ describe('Validation Logger', () => {
 
       // Assert
       expect(logger.warn).toHaveBeenCalledWith(
-        '⚠️  Validation failure',
+        "⚠️  Validation failure",
         expect.objectContaining({
-          validator: 'toSafeInteger',
-          field: 'id',
-          value: 'abc',
-          valueType: 'string',
-          reason: 'Cannot convert to integer',
-          url: '/test',
-          method: 'GET',
+          validator: "toSafeInteger",
+          field: "id",
+          value: "abc",
+          valueType: "string",
+          reason: "Cannot convert to integer",
+          url: "/test",
+          method: "GET",
           timestamp: expect.any(String),
         }),
       );
     });
 
-    test('should stringify object values', () => {
+    test("should stringify object values", () => {
       // Arrange
       const params = {
-        validator: 'test',
-        field: 'data',
-        value: { foo: 'bar' },
-        reason: 'Invalid object',
+        validator: "test",
+        field: "data",
+        value: { foo: "bar" },
+        reason: "Invalid object",
       };
 
       // Act
@@ -67,18 +67,18 @@ describe('Validation Logger', () => {
         expect.any(String),
         expect.objectContaining({
           value: '{"foo":"bar"}',
-          valueType: 'object',
+          valueType: "object",
         }),
       );
     });
 
-    test('should work without context', () => {
+    test("should work without context", () => {
       // Arrange
       const params = {
-        validator: 'test',
-        field: 'id',
+        validator: "test",
+        field: "id",
         value: 123,
-        reason: 'Test',
+        reason: "Test",
       };
 
       // Act
@@ -89,23 +89,23 @@ describe('Validation Logger', () => {
     });
   });
 
-  describe('logTypeCoercion', () => {
+  describe("logTypeCoercion", () => {
     const originalEnv = process.env.NODE_ENV;
 
     afterEach(() => {
       process.env.NODE_ENV = originalEnv;
     });
 
-    test('should log type coercion in development', () => {
+    test("should log type coercion in development", () => {
       // Arrange
-      process.env.NODE_ENV = 'development';
+      process.env.NODE_ENV = "development";
       const params = {
-        field: 'id',
-        originalValue: '123',
-        originalType: 'string',
+        field: "id",
+        originalValue: "123",
+        originalType: "string",
         coercedValue: 123,
-        coercedType: 'number',
-        reason: 'URL param conversion',
+        coercedType: "number",
+        reason: "URL param conversion",
       };
 
       // Act
@@ -113,29 +113,29 @@ describe('Validation Logger', () => {
 
       // Assert
       expect(logger.info).toHaveBeenCalledWith(
-        '🔄 Type coercion',
+        "🔄 Type coercion",
         expect.objectContaining({
-          field: 'id',
-          originalValue: '123',
-          originalType: 'string',
+          field: "id",
+          originalValue: "123",
+          originalType: "string",
           coercedValue: 123,
-          coercedType: 'number',
-          reason: 'URL param conversion',
+          coercedType: "number",
+          reason: "URL param conversion",
           timestamp: expect.any(String),
         }),
       );
     });
 
-    test('should not log in production', () => {
+    test("should not log in production", () => {
       // Arrange
-      process.env.NODE_ENV = 'production';
+      process.env.NODE_ENV = "production";
       const params = {
-        field: 'id',
-        originalValue: '123',
-        originalType: 'string',
+        field: "id",
+        originalValue: "123",
+        originalType: "string",
         coercedValue: 123,
-        coercedType: 'number',
-        reason: 'Conversion',
+        coercedType: "number",
+        reason: "Conversion",
       };
 
       // Act
@@ -145,16 +145,16 @@ describe('Validation Logger', () => {
       expect(logger.info).not.toHaveBeenCalled();
     });
 
-    test('should not log in test env', () => {
+    test("should not log in test env", () => {
       // Arrange
-      process.env.NODE_ENV = 'test';
+      process.env.NODE_ENV = "test";
       const params = {
-        field: 'id',
-        originalValue: '123',
-        originalType: 'string',
+        field: "id",
+        originalValue: "123",
+        originalType: "string",
         coercedValue: 123,
-        coercedType: 'number',
-        reason: 'Conversion',
+        coercedType: "number",
+        reason: "Conversion",
       };
 
       // Act
@@ -164,16 +164,16 @@ describe('Validation Logger', () => {
       expect(logger.info).not.toHaveBeenCalled();
     });
 
-    test('should stringify object values', () => {
+    test("should stringify object values", () => {
       // Arrange
-      process.env.NODE_ENV = 'development';
+      process.env.NODE_ENV = "development";
       const params = {
-        field: 'data',
-        originalValue: { foo: 'bar' },
-        originalType: 'object',
+        field: "data",
+        originalValue: { foo: "bar" },
+        originalType: "object",
         coercedValue: null,
-        coercedType: 'null',
-        reason: 'Null value allowed',
+        coercedType: "null",
+        reason: "Null value allowed",
       };
 
       // Act
@@ -184,18 +184,18 @@ describe('Validation Logger', () => {
         expect.any(String),
         expect.objectContaining({
           originalValue: '{"foo":"bar"}',
-          coercedValue: 'null',
+          coercedValue: "null",
         }),
       );
     });
   });
 
-  describe('logValidationSuccess', () => {
-    test('should log success at debug level', () => {
+  describe("logValidationSuccess", () => {
+    test("should log success at debug level", () => {
       // Arrange
       const params = {
-        validator: 'toSafeInteger',
-        field: 'id',
+        validator: "toSafeInteger",
+        field: "id",
       };
 
       // Act
@@ -203,10 +203,10 @@ describe('Validation Logger', () => {
 
       // Assert
       expect(logger.debug).toHaveBeenCalledWith(
-        '✅ Validation success',
+        "✅ Validation success",
         expect.objectContaining({
-          validator: 'toSafeInteger',
-          field: 'id',
+          validator: "toSafeInteger",
+          field: "id",
           timestamp: expect.any(String),
         }),
       );

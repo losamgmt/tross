@@ -8,11 +8,11 @@ Guide to monitoring Tross's health and responding to issues.
 
 Tross follows Kubernetes-style health probes with three levels of checks:
 
-| Endpoint | Purpose | Auth | External Calls |
-|----------|---------|------|----------------|
-| `/api/health` | Liveness probe | None | None |
-| `/api/health/ready` | Readiness probe | None | Database only |
-| `/api/health/storage` | Deep storage check | Admin | R2 bucket |
+| Endpoint              | Purpose            | Auth  | External Calls |
+| --------------------- | ------------------ | ----- | -------------- |
+| `/api/health`         | Liveness probe     | None  | None           |
+| `/api/health/ready`   | Readiness probe    | None  | Database only  |
+| `/api/health/storage` | Deep storage check | Admin | R2 bucket      |
 
 ### Liveness Probe
 
@@ -41,12 +41,17 @@ Checks if the service is ready to accept traffic. Includes database connectivity
   "timestamp": "2025-11-21T10:30:00.000Z",
   "checks": {
     "database": { "status": "healthy", "responseTime": 12 },
-    "storage": { "status": "healthy", "provider": "r2", "bucket": "tross-files" }
+    "storage": {
+      "status": "healthy",
+      "provider": "r2",
+      "bucket": "tross-files"
+    }
   }
 }
 ```
 
 **Storage Status Values:**
+
 - `healthy` - Storage is configured
 - `degraded` - Storage not configured (uploads disabled but app works)
 
@@ -71,12 +76,14 @@ Actually pings the R2 bucket using `HeadBucket`. Requires admin authentication.
 ```
 
 **Status Values:**
+
 - `healthy` - Bucket reachable
 - `critical` - Bucket unreachable (connectivity or permission issue)
 - `timeout` - Check exceeded timeout (default 5s)
 - `unconfigured` - Storage env vars not set
 
 **Endpoints:**
+
 - Railway (Production): `https://tross-api-production.up.railway.app/api/health`
 - Local: `http://localhost:<BACKEND_PORT>/api/health` (see [`config/ports.js`](../config/ports.js))
 
@@ -87,6 +94,7 @@ Actually pings the R2 bucket using `HeadBucket`. Requires admin authentication.
 ### Railway (Current Platform)
 
 **Built-in Monitoring:**
+
 1. Go to Railway project dashboard
 2. Click on backend service
 3. View "Metrics" tab:
@@ -101,6 +109,7 @@ Railway automatically checks `/api/health` every 30 seconds (configured in `rail
 ### Manual Health Checks
 
 **Quick Check (Command Line):**
+
 ```bash
 # Backend
 curl https://tross-api-production.up.railway.app/api/health
@@ -113,6 +122,7 @@ curl -w "@curl-format.txt" -o /dev/null -s https://tross-api-production.up.railw
 ```
 
 **Create `curl-format.txt`:**
+
 ```
 time_namelookup:  %{time_namelookup}\n
 time_connect:  %{time_connect}\n
@@ -136,6 +146,7 @@ time_total:  %{time_total}\n
 ### Option 2: UptimeRobot (Free Tier)
 
 **Setup:**
+
 1. Sign up at https://uptimerobot.com
 2. Create new monitor:
    - Type: HTTP(s)
@@ -145,6 +156,7 @@ time_total:  %{time_total}\n
 4. Repeat for frontend: `https://trossapp.vercel.app`
 
 **Recommended Settings:**
+
 - Monitor interval: 5 minutes
 - Alert threshold: 2 consecutive failures
 - Notification channels: Email + Slack
@@ -152,6 +164,7 @@ time_total:  %{time_total}\n
 ### Option 3: Better Uptime (Paid)
 
 **Features:**
+
 - Status page (public or private)
 - Multi-location monitoring
 - SSL certificate expiry alerts
@@ -164,12 +177,14 @@ time_total:  %{time_total}\n
 ### Backend Performance
 
 **Healthy Indicators:**
+
 - Response time < 500ms (p95)
 - CPU usage < 70%
 - Memory usage < 80%
 - Database connections < 80% of pool max
 
 **Warning Signs:**
+
 - Response time > 1000ms consistently
 - CPU usage > 85%
 - Memory usage > 90%
@@ -178,12 +193,14 @@ time_total:  %{time_total}\n
 ### Frontend Performance
 
 **Healthy Indicators:**
+
 - Largest Contentful Paint (LCP) < 2.5s
 - First Input Delay (FID) < 100ms
 - Cumulative Layout Shift (CLS) < 0.1
 - Time to Interactive (TTI) < 3.5s
 
 **Check via:**
+
 - Vercel Analytics (built-in)
 - Google PageSpeed Insights
 - Lighthouse (Chrome DevTools)
@@ -191,11 +208,13 @@ time_total:  %{time_total}\n
 ### Database Health
 
 **Monitor:**
+
 - Active connections (via Railway dashboard)
 - Query performance (slow query logs in backend)
 - Storage usage (Railway PostgreSQL metrics)
 
 **Warning Signs:**
+
 - Connections near pool max (10 in default config)
 - Slow queries > 1000ms frequently
 - Storage > 80% capacity
@@ -268,6 +287,7 @@ fi
 ### Backend Logs
 
 **Railway:**
+
 ```bash
 # Via Railway CLI
 railway logs
@@ -280,6 +300,7 @@ railway logs -f
 ```
 
 **What to look for:**
+
 - `❌` Error messages
 - `⚠️` Warnings
 - `🐌 Slow query` Performance issues
@@ -288,11 +309,13 @@ railway logs -f
 ### Frontend Logs
 
 **Vercel:**
+
 1. Go to Vercel dashboard
 2. Click deployment
 3. View "Functions" or "Runtime Logs"
 
 **Browser Console:**
+
 - Check developer console for JS errors
 - Monitor network tab for failed API calls
 
@@ -302,13 +325,13 @@ railway logs -f
 
 **Target Benchmarks:**
 
-| Metric | Target | Warning | Critical |
-|--------|--------|---------|----------|
+| Metric                      | Target  | Warning  | Critical |
+| --------------------------- | ------- | -------- | -------- |
 | Backend Response Time (p95) | < 500ms | > 1000ms | > 2000ms |
-| Database Query Time | < 100ms | > 500ms | > 1000ms |
-| Frontend LCP | < 2.5s | > 3.5s | > 4.5s |
-| API Error Rate | < 0.1% | > 1% | > 5% |
-| Backend Uptime | 99.9% | < 99.5% | < 99% |
+| Database Query Time         | < 100ms | > 500ms  | > 1000ms |
+| Frontend LCP                | < 2.5s  | > 3.5s   | > 4.5s   |
+| API Error Rate              | < 0.1%  | > 1%     | > 5%     |
+| Backend Uptime              | 99.9%   | < 99.5%  | < 99%    |
 
 ---
 
@@ -375,4 +398,3 @@ railway logs -f
 **That's it!** You'll get email alerts if either URL goes down.
 
 ---
-

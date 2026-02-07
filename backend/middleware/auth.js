@@ -7,32 +7,39 @@
  * SECURITY: Development tokens are ONLY accepted in development/test mode.
  * Production mode ONLY accepts Auth0 tokens.
  */
-const jwt = require('jsonwebtoken');
-const UserDataService = require('../services/user-data');
-const { hasPermission, hasMinimumRole } = require('../config/permissions-loader');
-const { logSecurityEvent } = require('../config/logger');
-const { getClientIp, getUserAgent } = require('../utils/request-helpers');
-const AppConfig = require('../config/app-config');
-const { TEST_USERS } = require('../config/test-users');
-const ResponseFormatter = require('../utils/response-formatter');
-const { ERROR_CODES } = require('../utils/response-formatter');
-const AppError = require('../utils/app-error');
+const jwt = require("jsonwebtoken");
+const UserDataService = require("../services/user-data");
+const {
+  hasPermission,
+  hasMinimumRole,
+} = require("../config/permissions-loader");
+const { logSecurityEvent } = require("../config/logger");
+const { getClientIp, getUserAgent } = require("../utils/request-helpers");
+const AppConfig = require("../config/app-config");
+const { TEST_USERS } = require("../config/test-users");
+const ResponseFormatter = require("../utils/response-formatter");
+const { ERROR_CODES } = require("../utils/response-formatter");
+const AppError = require("../utils/app-error");
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-key";
 
 const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers.authorization;
-  const token = authHeader?.startsWith('Bearer ')
+  const token = authHeader?.startsWith("Bearer ")
     ? authHeader.substring(7)
     : null;
 
   if (!token) {
-    logSecurityEvent('AUTH_MISSING_TOKEN', {
+    logSecurityEvent("AUTH_MISSING_TOKEN", {
       ip: getClientIp(req),
       userAgent: getUserAgent(req),
       url: req.url,
     });
-    return ResponseFormatter.unauthorized(res, 'Access token required', ERROR_CODES.AUTH_REQUIRED);
+    return ResponseFormatter.unauthorized(
+      res,
+      "Access token required",
+      ERROR_CODES.AUTH_REQUIRED,
+    );
   }
 
   try {
@@ -40,84 +47,94 @@ const authenticateToken = async (req, res, next) => {
 
     // Validate required standard claims (RFC 7519)
     if (!decoded.sub) {
-      throw new AppError('Missing required "sub" claim', 401, 'UNAUTHORIZED');
+      throw new AppError('Missing required "sub" claim', 401, "UNAUTHORIZED");
     }
 
     // Accept both development and auth0 providers
     if (
       !decoded.provider ||
-      !['development', 'auth0'].includes(decoded.provider)
+      !["development", "auth0"].includes(decoded.provider)
     ) {
-      throw new AppError('Invalid token provider', 401, 'UNAUTHORIZED');
+      throw new AppError("Invalid token provider", 401, "UNAUTHORIZED");
     }
 
     // SECURITY CHECK: Reject development tokens in production
-    if (decoded.provider === 'development' && !AppConfig.devAuthEnabled) {
-      logSecurityEvent('AUTH_DEV_TOKEN_IN_PRODUCTION', {
+    if (decoded.provider === "development" && !AppConfig.devAuthEnabled) {
+      logSecurityEvent("AUTH_DEV_TOKEN_IN_PRODUCTION", {
         ip: getClientIp(req),
         userAgent: getUserAgent(req),
         url: req.url,
         provider: decoded.provider,
         environment: AppConfig.environment,
-        severity: 'CRITICAL',
+        severity: "CRITICAL",
       });
       throw new AppError(
-        'Development authentication is not permitted in production mode. ' +
-          'Only Auth0 authentication is allowed.',
+        "Development authentication is not permitted in production mode. " +
+          "Only Auth0 authentication is allowed.",
         403,
-        'FORBIDDEN',
+        "FORBIDDEN",
       );
     }
 
     req.user = decoded;
 
     // HTTP methods that mutate data - dev users CANNOT use these (with exceptions)
-    const MUTATING_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];
+    const MUTATING_METHODS = ["POST", "PUT", "PATCH", "DELETE"];
 
     // Routes that are SAFE for dev users even with mutating methods
     // These are session/auth operations, NOT business data mutations
     // Check both full path and route-relative path for flexibility
     const DEV_ALLOWED_WRITE_PATHS = [
-      '/api/auth/logout', // Logout just clears token/session, no DB mutation
-      '/logout', // Route-relative path (when checked via req.path)
-      '/api/auth/refresh', // Token refresh (if dev tokens supported it)
-      '/refresh', // Route-relative path
+      "/api/auth/logout", // Logout just clears token/session, no DB mutation
+      "/logout", // Route-relative path (when checked via req.path)
+      "/api/auth/refresh", // Token refresh (if dev tokens supported it)
+      "/refresh", // Route-relative path
     ];
 
     // CRITICAL: Development tokens should NEVER touch the database
     // They exist purely in-memory from test-users.js config
-    if (decoded.provider === 'development') {
+    if (decoded.provider === "development") {
       // Get the full user object from TEST_USERS (DB-consistent structure)
       const testUser = Object.values(TEST_USERS).find(
         (u) => u.auth0_id === decoded.sub || u.email === decoded.email,
       );
 
       if (!testUser) {
-        throw new AppError('Development user not found in TEST_USERS', 401, 'UNAUTHORIZED');
+        throw new AppError(
+          "Development user not found in TEST_USERS",
+          401,
+          "UNAUTHORIZED",
+        );
       }
 
       // Use the complete test user data (already matches DB schema)
       req.dbUser = {
         ...testUser,
-        name: `${testUser.first_name} ${testUser.last_name}`.trim() || 'User',
+        name: `${testUser.first_name} ${testUser.last_name}`.trim() || "User",
       };
 
       // Attach permissions helper for route-level checks
       req.permissions = {
-        hasPermission: (resource, operation) => hasPermission(req.dbUser.role, resource, operation),
-        hasMinimumRole: (requiredRole) => hasMinimumRole(req.dbUser.role, requiredRole),
+        hasPermission: (resource, operation) =>
+          hasPermission(req.dbUser.role, resource, operation),
+        hasMinimumRole: (requiredRole) =>
+          hasMinimumRole(req.dbUser.role, requiredRole),
       };
 
       // CRITICAL SECURITY: Check if user is active (deactivated users cannot authenticate)
       if (req.dbUser.is_active === false) {
-        logSecurityEvent('AUTH_DEACTIVATED_USER', {
+        logSecurityEvent("AUTH_DEACTIVATED_USER", {
           ip: getClientIp(req),
           userAgent: getUserAgent(req),
           url: req.url,
           userId: req.dbUser.id,
           email: req.dbUser.email,
         });
-        return ResponseFormatter.forbidden(res, 'Account has been deactivated', ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS);
+        return ResponseFormatter.forbidden(
+          res,
+          "Account has been deactivated",
+          ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS,
+        );
       }
 
       // ========================================================================
@@ -128,12 +145,12 @@ const authenticateToken = async (req, res, next) => {
       // session state, not business data
       // ========================================================================
       const requestPath = req.originalUrl || req.url;
-      const isAllowedPath = DEV_ALLOWED_WRITE_PATHS.some(path =>
+      const isAllowedPath = DEV_ALLOWED_WRITE_PATHS.some((path) =>
         requestPath.startsWith(path),
       );
 
       if (MUTATING_METHODS.includes(req.method) && !isAllowedPath) {
-        logSecurityEvent('DEV_WRITE_BLOCKED', {
+        logSecurityEvent("DEV_WRITE_BLOCKED", {
           ip: getClientIp(req),
           userAgent: getUserAgent(req),
           url: req.url,
@@ -143,7 +160,7 @@ const authenticateToken = async (req, res, next) => {
         });
         return ResponseFormatter.forbidden(
           res,
-          'Development users are read-only. Authenticate with Auth0 to modify data.',
+          "Development users are read-only. Authenticate with Auth0 to modify data.",
           ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS,
         );
       }
@@ -168,42 +185,57 @@ const authenticateToken = async (req, res, next) => {
 
       // Attach permissions helper for route-level checks
       req.permissions = {
-        hasPermission: (resource, operation) => hasPermission(req.dbUser.role, resource, operation),
-        hasMinimumRole: (requiredRole) => hasMinimumRole(req.dbUser.role, requiredRole),
+        hasPermission: (resource, operation) =>
+          hasPermission(req.dbUser.role, resource, operation),
+        hasMinimumRole: (requiredRole) =>
+          hasMinimumRole(req.dbUser.role, requiredRole),
       };
 
       // CRITICAL SECURITY: Check if user is active (deactivated users cannot authenticate)
       if (req.dbUser.is_active === false) {
-        logSecurityEvent('AUTH_DEACTIVATED_USER', {
+        logSecurityEvent("AUTH_DEACTIVATED_USER", {
           ip: getClientIp(req),
           userAgent: getUserAgent(req),
           url: req.url,
           userId: req.dbUser.id,
           email: req.dbUser.email,
         });
-        return ResponseFormatter.forbidden(res, 'Account has been deactivated', ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS);
+        return ResponseFormatter.forbidden(
+          res,
+          "Account has been deactivated",
+          ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS,
+        );
       }
 
       next();
     }
   } catch (error) {
     // Distinguish between expected expiration and actual security concerns
-    const isExpiredToken = error.name === 'TokenExpiredError' || error.message === 'jwt expired';
+    const isExpiredToken =
+      error.name === "TokenExpiredError" || error.message === "jwt expired";
 
     if (isExpiredToken) {
       // Token expiration is normal auth flow - user needs to refresh/re-login
       // Don't log as security event to reduce noise
-      return ResponseFormatter.forbidden(res, 'Token expired', ERROR_CODES.AUTH_TOKEN_EXPIRED);
+      return ResponseFormatter.forbidden(
+        res,
+        "Token expired",
+        ERROR_CODES.AUTH_TOKEN_EXPIRED,
+      );
     }
 
     // Actual invalid tokens ARE a security concern
-    logSecurityEvent('AUTH_INVALID_TOKEN', {
+    logSecurityEvent("AUTH_INVALID_TOKEN", {
       ip: getClientIp(req),
       userAgent: getUserAgent(req),
       url: req.url,
       error: error.message,
     });
-    return ResponseFormatter.forbidden(res, 'Invalid or expired token', ERROR_CODES.AUTH_INVALID_TOKEN);
+    return ResponseFormatter.forbidden(
+      res,
+      "Invalid or expired token",
+      ERROR_CODES.AUTH_INVALID_TOKEN,
+    );
   }
 };
 
@@ -229,20 +261,23 @@ const requirePermission = (operation) => (req, res, next) => {
 
   if (!resource) {
     // This is a configuration error - route is missing entity attachment middleware
-    logSecurityEvent('AUTH_NO_ENTITY_METADATA', {
+    logSecurityEvent("AUTH_NO_ENTITY_METADATA", {
       ip: getClientIp(req),
       userAgent: getUserAgent(req),
       url: req.url,
       operation,
-      severity: 'ERROR',
+      severity: "ERROR",
     });
-    return ResponseFormatter.internalError(res, new Error('Route misconfiguration: entity metadata not attached'));
+    return ResponseFormatter.internalError(
+      res,
+      new Error("Route misconfiguration: entity metadata not attached"),
+    );
   }
 
   const userRole = req.dbUser?.role;
 
   if (!userRole) {
-    logSecurityEvent('AUTH_NO_ROLE', {
+    logSecurityEvent("AUTH_NO_ROLE", {
       ip: getClientIp(req),
       userAgent: getUserAgent(req),
       url: req.url,
@@ -250,11 +285,15 @@ const requirePermission = (operation) => (req, res, next) => {
       resource,
       operation,
     });
-    return ResponseFormatter.forbidden(res, 'User has no assigned role', ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS);
+    return ResponseFormatter.forbidden(
+      res,
+      "User has no assigned role",
+      ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS,
+    );
   }
 
   if (!hasPermission(userRole, resource, operation)) {
-    logSecurityEvent('AUTH_INSUFFICIENT_PERMISSION', {
+    logSecurityEvent("AUTH_INSUFFICIENT_PERMISSION", {
       ip: getClientIp(req),
       userAgent: getUserAgent(req),
       url: req.url,
@@ -263,7 +302,11 @@ const requirePermission = (operation) => (req, res, next) => {
       resource,
       operation,
     });
-    return ResponseFormatter.forbidden(res, `Insufficient permissions to ${operation} ${resource}`, ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS);
+    return ResponseFormatter.forbidden(
+      res,
+      `Insufficient permissions to ${operation} ${resource}`,
+      ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS,
+    );
   }
 
   next();
@@ -286,18 +329,22 @@ const requireMinimumRole = (minimumRole) => (req, res, next) => {
   const userRole = req.dbUser?.role;
 
   if (!userRole) {
-    logSecurityEvent('AUTH_NO_ROLE', {
+    logSecurityEvent("AUTH_NO_ROLE", {
       ip: getClientIp(req),
       userAgent: getUserAgent(req),
       url: req.url,
       userId: req.dbUser?.id,
       minimumRole,
     });
-    return ResponseFormatter.forbidden(res, 'User has no assigned role', ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS);
+    return ResponseFormatter.forbidden(
+      res,
+      "User has no assigned role",
+      ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS,
+    );
   }
 
   if (!hasMinimumRole(userRole, minimumRole)) {
-    logSecurityEvent('AUTH_INSUFFICIENT_ROLE', {
+    logSecurityEvent("AUTH_INSUFFICIENT_ROLE", {
       ip: getClientIp(req),
       userAgent: getUserAgent(req),
       url: req.url,
@@ -305,7 +352,11 @@ const requireMinimumRole = (minimumRole) => (req, res, next) => {
       userRole,
       minimumRole,
     });
-    return ResponseFormatter.forbidden(res, `Minimum role required: ${minimumRole}`, ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS);
+    return ResponseFormatter.forbidden(
+      res,
+      `Minimum role required: ${minimumRole}`,
+      ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS,
+    );
   }
 
   next();

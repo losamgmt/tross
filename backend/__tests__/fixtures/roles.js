@@ -1,6 +1,6 @@
 /**
  * Role Mock Fixtures
- * 
+ *
  * SRP: ONLY provides mock DATA, no behavior
  * Use with mock factories for test setup
  */

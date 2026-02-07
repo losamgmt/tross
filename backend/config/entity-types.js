@@ -17,9 +17,9 @@
  * Name field type enum
  */
 const NAME_TYPES = Object.freeze({
-  HUMAN: 'human',
-  SIMPLE: 'simple',
-  COMPUTED: 'computed',
+  HUMAN: "human",
+  SIMPLE: "simple",
+  COMPUTED: "computed",
 });
 
 module.exports = {

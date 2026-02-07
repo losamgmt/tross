@@ -69,6 +69,7 @@ widgets/
 ## Accessibility Principles
 
 **Why Accessibility is Non-Negotiable:**
+
 - Web Content Accessibility Guidelines (WCAG) compliance
 - Keyboard-only users, screen readers, motor impairments
 - Better UX for everyone (keyboard power users, mobile users)
@@ -112,6 +113,7 @@ Radio<T>(...)         // Native - already accessible
 **Testing Accessibility:**
 
 Every input atom has a "Keyboard Accessibility" test group verifying:
+
 - Tab navigation focuses the widget
 - Space/Enter activates the widget
 - Escape closes menus/pickers

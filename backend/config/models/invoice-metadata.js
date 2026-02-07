@@ -13,22 +13,22 @@
 const {
   FIELD_ACCESS_LEVELS: _FAL,
   UNIVERSAL_FIELD_ACCESS,
-} = require('../constants');
-const { NAME_TYPES } = require('../entity-types');
-const { FIELD } = require('../field-type-standards');
+} = require("../constants");
+const { NAME_TYPES } = require("../entity-types");
+const { FIELD } = require("../field-type-standards");
 
 module.exports = {
   // Entity key (singular, for API params and lookups)
-  entityKey: 'invoice',
+  entityKey: "invoice",
 
   // Table name in database (plural, also used for API URLs)
-  tableName: 'invoices',
+  tableName: "invoices",
 
   // Primary key
-  primaryKey: 'id',
+  primaryKey: "id",
 
   // Material icon for navigation menus and entity displays
-  icon: 'receipt',
+  icon: "receipt",
 
   // ============================================================================
   // ENTITY CATEGORY (determines name handling pattern)
@@ -44,7 +44,7 @@ module.exports = {
    * Display field for UI rendering
    * COMPUTED entities use the identifier field (invoice_number)
    */
-  displayField: 'invoice_number',
+  displayField: "invoice_number",
 
   // ============================================================================
   // IDENTITY CONFIGURATION (Entity Contract v2.0)
@@ -54,13 +54,13 @@ module.exports = {
    * The unique identifier field (auto-generated: INV-YYYY-NNNN)
    * Used for: Unique references, search results, logging
    */
-  identityField: 'invoice_number',
+  identityField: "invoice_number",
 
   /**
    * Prefix for auto-generated identifiers (COMPUTED entities only)
    * Format: INV-YYYY-NNNN
    */
-  identifierPrefix: 'INV',
+  identifierPrefix: "INV",
 
   /**
    * Whether the identity field has a UNIQUE constraint in the database
@@ -71,18 +71,18 @@ module.exports = {
    * RLS resource name for permission checks
    * Maps to permissions.json resource names
    */
-  rlsResource: 'invoices',
+  rlsResource: "invoices",
 
   /**
    * Row-Level Security policy per role
    * Customers see own invoices, technicians denied, dispatcher+ see all
    */
   rlsPolicy: {
-    customer: 'own_invoices_only',
-    technician: 'deny_all',
-    dispatcher: 'all_records',
-    manager: 'all_records',
-    admin: 'all_records',
+    customer: "own_invoices_only",
+    technician: "deny_all",
+    dispatcher: "all_records",
+    manager: "all_records",
+    admin: "all_records",
   },
 
   /**
@@ -90,10 +90,10 @@ module.exports = {
    * Matches permissions.json - dispatcher+ create/update, manager+ delete
    */
   entityPermissions: {
-    create: 'dispatcher',
-    read: 'customer',
-    update: 'dispatcher',
-    delete: 'manager',
+    create: "dispatcher",
+    read: "customer",
+    update: "dispatcher",
+    delete: "manager",
   },
 
   /**
@@ -101,7 +101,7 @@ module.exports = {
    * Separate from read permission because RLS may restrict actual data access
    * Invoices are financial docs - only dispatcher+ should see in nav
    */
-  navVisibility: 'dispatcher',
+  navVisibility: "dispatcher",
 
   /**
    * File attachments - whether this entity supports file uploads
@@ -129,8 +129,8 @@ module.exports = {
    * Template: "{customer.fullName}: {summary}: {invoice_number}"
    */
   computedName: {
-    template: '{customer.fullName}: {summary}: {invoice_number}',
-    sources: ['customer_id', 'summary', 'invoice_number'],
+    template: "{customer.fullName}: {summary}: {invoice_number}",
+    sources: ["customer_id", "summary", "invoice_number"],
     readOnly: false,
   },
 
@@ -142,19 +142,26 @@ module.exports = {
    * Fields required when creating a new entity
    * invoice_number is auto-generated
    */
-  requiredFields: ['customer_id', 'amount', 'total'],
+  requiredFields: ["customer_id", "amount", "total"],
 
   /**
    * Fields that cannot be modified after creation (beyond universal immutables: id, created_at)
    * - invoice_number: Audit trail identity, cannot change
    */
-  immutableFields: ['invoice_number'],
+  immutableFields: ["invoice_number"],
 
   /**
    * Default columns to display in table views (ordered)
    * Used by admin panel and frontend table widgets
    */
-  displayColumns: ['invoice_number', 'customer_id', 'status', 'total', 'due_date', 'created_at'],
+  displayColumns: [
+    "invoice_number",
+    "customer_id",
+    "status",
+    "total",
+    "due_date",
+    "created_at",
+  ],
 
   // ============================================================================
   // FIELD-LEVEL ACCESS CONTROL (for field-access-controller.js)
@@ -176,78 +183,78 @@ module.exports = {
 
     // Identity field - auto-generated, immutable
     invoice_number: {
-      create: 'none', // Auto-generated
-      read: 'customer',
-      update: 'none', // Immutable
-      delete: 'none',
+      create: "none", // Auto-generated
+      read: "customer",
+      update: "none", // Immutable
+      delete: "none",
     },
 
     // Computed name field (optional user override)
     name: {
-      create: 'dispatcher',
-      read: 'customer',
-      update: 'dispatcher',
-      delete: 'none',
+      create: "dispatcher",
+      read: "customer",
+      update: "dispatcher",
+      delete: "none",
     },
 
     // Brief description of this invoice
     summary: {
-      create: 'dispatcher',
-      read: 'customer',
-      update: 'dispatcher',
-      delete: 'none',
+      create: "dispatcher",
+      read: "customer",
+      update: "dispatcher",
+      delete: "none",
     },
 
     // FK to customers - required, set on create
     customer_id: {
-      create: 'dispatcher',
-      read: 'customer',
-      update: 'none', // Cannot reassign invoice to different customer
-      delete: 'none',
+      create: "dispatcher",
+      read: "customer",
+      update: "none", // Cannot reassign invoice to different customer
+      delete: "none",
     },
 
     // FK to work_orders - optional, can be updated
     work_order_id: {
-      create: 'dispatcher',
-      read: 'customer',
-      update: 'dispatcher',
-      delete: 'none',
+      create: "dispatcher",
+      read: "customer",
+      update: "dispatcher",
+      delete: "none",
     },
 
     // Financial fields - dispatcher+ manages, customer can read
     amount: {
-      create: 'dispatcher',
-      read: 'customer',
-      update: 'dispatcher',
-      delete: 'none',
+      create: "dispatcher",
+      read: "customer",
+      update: "dispatcher",
+      delete: "none",
     },
     tax: {
-      create: 'dispatcher',
-      read: 'customer',
-      update: 'dispatcher',
-      delete: 'none',
+      create: "dispatcher",
+      read: "customer",
+      update: "dispatcher",
+      delete: "none",
     },
     total: {
-      create: 'dispatcher',
-      read: 'customer',
-      update: 'dispatcher',
-      delete: 'none',
+      create: "dispatcher",
+      read: "customer",
+      update: "dispatcher",
+      delete: "none",
     },
 
     // Due date - dispatcher+ manages
     due_date: {
-      create: 'dispatcher',
-      read: 'customer',
-      update: 'dispatcher',
-      delete: 'none',
+      create: "dispatcher",
+      read: "customer",
+      update: "dispatcher",
+      delete: "none",
     },
 
     // Payment timestamp - system managed on payment
     paid_at: {
-      create: 'none',
-      read: 'customer',
-      update: 'dispatcher', // Set when payment received
-      delete: 'none',
+      create: "none",
+      read: "customer",
+      update: "dispatcher", // Set when payment received
+      delete: "none",
     },
   },
 
@@ -261,12 +268,12 @@ module.exports = {
    */
   foreignKeys: {
     customer_id: {
-      table: 'customers',
-      displayName: 'Customer',
+      table: "customers",
+      displayName: "Customer",
     },
     work_order_id: {
-      table: 'work_orders',
-      displayName: 'Work Order',
+      table: "work_orders",
+      displayName: "Work Order",
     },
   },
 
@@ -279,7 +286,7 @@ module.exports = {
    * These are included automatically without needing to specify 'include' option
    * Invoices almost always need customer info displayed
    */
-  defaultIncludes: ['customer'],
+  defaultIncludes: ["customer"],
 
   /**
    * Foreign key relationships
@@ -288,19 +295,26 @@ module.exports = {
   relationships: {
     // Invoice belongs to a customer (required)
     customer: {
-      type: 'belongsTo',
-      foreignKey: 'customer_id',
-      table: 'customers',
-      fields: ['id', 'email', 'first_name', 'last_name', 'organization_name', 'phone'],
-      description: 'Customer billed by this invoice',
+      type: "belongsTo",
+      foreignKey: "customer_id",
+      table: "customers",
+      fields: [
+        "id",
+        "email",
+        "first_name",
+        "last_name",
+        "organization_name",
+        "phone",
+      ],
+      description: "Customer billed by this invoice",
     },
     // Invoice may be linked to a work order (optional)
     workOrder: {
-      type: 'belongsTo',
-      foreignKey: 'work_order_id',
-      table: 'work_orders',
-      fields: ['id', 'work_order_number', 'name', 'status'],
-      description: 'Work order this invoice is for',
+      type: "belongsTo",
+      foreignKey: "work_order_id",
+      table: "work_orders",
+      fields: ["id", "work_order_number", "name", "status"],
+      description: "Work order this invoice is for",
     },
   },
 
@@ -316,9 +330,9 @@ module.exports = {
    */
   dependents: [
     {
-      table: 'audit_logs',
-      foreignKey: 'resource_id',
-      polymorphicType: { column: 'resource_type', value: 'invoices' },
+      table: "audit_logs",
+      foreignKey: "resource_id",
+      polymorphicType: { column: "resource_type", value: "invoices" },
     },
   ],
 
@@ -330,7 +344,7 @@ module.exports = {
    * Fields that support text search (ILIKE %term%)
    * These are concatenated with OR for full-text search
    */
-  searchableFields: ['invoice_number', 'name', 'summary'],
+  searchableFields: ["invoice_number", "name", "summary"],
 
   // ============================================================================
   // FILTER CONFIGURATION (Exact Match & Operators)
@@ -341,16 +355,16 @@ module.exports = {
    * Supports: exact match, gt, gte, lt, lte, in, not
    */
   filterableFields: [
-    'id',
-    'invoice_number',
-    'customer_id',
-    'work_order_id',
-    'is_active',
-    'status',
-    'due_date',
-    'paid_at',
-    'created_at',
-    'updated_at',
+    "id",
+    "invoice_number",
+    "customer_id",
+    "work_order_id",
+    "is_active",
+    "status",
+    "due_date",
+    "paid_at",
+    "created_at",
+    "updated_at",
   ],
 
   // ============================================================================
@@ -361,23 +375,23 @@ module.exports = {
    * Fields that can be used in ORDER BY clauses
    */
   sortableFields: [
-    'id',
-    'invoice_number',
-    'status',
-    'amount',
-    'total',
-    'due_date',
-    'paid_at',
-    'created_at',
-    'updated_at',
+    "id",
+    "invoice_number",
+    "status",
+    "amount",
+    "total",
+    "due_date",
+    "paid_at",
+    "created_at",
+    "updated_at",
   ],
 
   /**
    * Default sort when no sortBy specified
    */
   defaultSort: {
-    field: 'created_at',
-    order: 'DESC',
+    field: "created_at",
+    order: "DESC",
   },
 
   // ============================================================================
@@ -386,24 +400,24 @@ module.exports = {
 
   fields: {
     // TIER 1: Universal Entity Contract Fields
-    id: { type: 'integer', readonly: true },
+    id: { type: "integer", readonly: true },
     invoice_number: {
       ...FIELD.IDENTIFIER,
       readonly: true, // Auto-generated: INV-YYYY-NNNN
-      pattern: '^INV-[0-9]{4}-[0-9]+$',
+      pattern: "^INV-[0-9]{4}-[0-9]+$",
       errorMessages: {
-        pattern: 'Invoice number must be in format INV-YYYY-NNNN',
+        pattern: "Invoice number must be in format INV-YYYY-NNNN",
       },
     },
-    is_active: { type: 'boolean', default: true },
-    created_at: { type: 'timestamp', readonly: true },
-    updated_at: { type: 'timestamp', readonly: true },
+    is_active: { type: "boolean", default: true },
+    created_at: { type: "timestamp", readonly: true },
+    updated_at: { type: "timestamp", readonly: true },
 
     // TIER 2: Entity-Specific Lifecycle Field
     status: {
-      type: 'enum',
-      values: ['draft', 'sent', 'paid', 'overdue', 'cancelled', 'void'],
-      default: 'draft',
+      type: "enum",
+      values: ["draft", "sent", "paid", "overdue", "cancelled", "void"],
+      default: "draft",
     },
 
     // COMPUTED entity name field - optional because computed from template
@@ -412,18 +426,18 @@ module.exports = {
 
     // Entity-specific fields
     work_order_id: {
-      type: 'foreignKey',
-      relatedEntity: 'work_order',
+      type: "foreignKey",
+      relatedEntity: "work_order",
     },
     customer_id: {
-      type: 'foreignKey',
-      relatedEntity: 'customer',
+      type: "foreignKey",
+      relatedEntity: "customer",
       required: true,
     },
     amount: { ...FIELD.CURRENCY, required: true },
     tax: { ...FIELD.CURRENCY, default: 0 },
     total: { ...FIELD.CURRENCY, required: true },
-    due_date: { type: 'date' },
-    paid_at: { type: 'timestamp' },
+    due_date: { type: "date" },
+    paid_at: { type: "timestamp" },
   },
 };

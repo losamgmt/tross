@@ -20,18 +20,18 @@
  * - Logger for structured logging
  */
 
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const axios = require('axios');
-const db = require('../db/connection');
-const { authenticateToken, requireMinimumRole } = require('../middleware/auth');
-const { logger } = require('../config/logger');
-const { HEALTH } = require('../config/constants');
-const { TIMEOUTS } = require('../config/timeouts');
-const auth0Config = require('../config/auth0');
-const ResponseFormatter = require('../utils/response-formatter');
-const { asyncHandler } = require('../middleware/utils');
-const { storageService } = require('../services/storage-service');
+const axios = require("axios");
+const db = require("../db/connection");
+const { authenticateToken, requireMinimumRole } = require("../middleware/auth");
+const { logger } = require("../config/logger");
+const { HEALTH } = require("../config/constants");
+const { TIMEOUTS } = require("../config/timeouts");
+const auth0Config = require("../config/auth0");
+const ResponseFormatter = require("../utils/response-formatter");
+const { asyncHandler } = require("../middleware/utils");
+const { storageService } = require("../services/storage-service");
 // ServiceUnavailableError available if needed: const { ServiceUnavailableError } = require('../utils/errors');
 
 // ============================================================================
@@ -73,7 +73,7 @@ function clearCache() {
  * @returns {string} Safe error message
  */
 function sanitizeErrorMessage(error) {
-  const isProduction = process.env.NODE_ENV === 'production';
+  const isProduction = process.env.NODE_ENV === "production";
 
   if (!isProduction) {
     // In dev/test, show full error for debugging
@@ -81,18 +81,18 @@ function sanitizeErrorMessage(error) {
   }
 
   // In production, only expose safe categories
-  const msg = error.message?.toLowerCase() || '';
-  if (msg.includes('timeout') || msg.includes('timed out')) {
-    return 'Connection timeout';
+  const msg = error.message?.toLowerCase() || "";
+  if (msg.includes("timeout") || msg.includes("timed out")) {
+    return "Connection timeout";
   }
-  if (msg.includes('connection') || msg.includes('connect')) {
-    return 'Connection failed';
+  if (msg.includes("connection") || msg.includes("connect")) {
+    return "Connection failed";
   }
-  if (msg.includes('authentication') || msg.includes('auth')) {
-    return 'Authentication error';
+  if (msg.includes("authentication") || msg.includes("auth")) {
+    return "Authentication error";
   }
   // Generic fallback - never expose raw error
-  return 'Service unavailable';
+  return "Service unavailable";
 }
 
 // ============================================================================
@@ -107,9 +107,12 @@ async function checkDatabase() {
   const start = Date.now();
   try {
     await Promise.race([
-      db.query('SELECT 1'),
+      db.query("SELECT 1"),
       new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Database timeout')), TIMEOUTS.SERVICES.HEALTH_CHECK_MS),
+        setTimeout(
+          () => reject(new Error("Database timeout")),
+          TIMEOUTS.SERVICES.HEALTH_CHECK_MS,
+        ),
       ),
     ]);
 
@@ -133,12 +136,16 @@ async function checkDatabase() {
 
     if (poolUsage > HEALTH.THRESHOLDS.POOL_CRITICAL_PERCENT) {
       status = HEALTH.STATUS.CRITICAL;
-      message = message ? `${message}; Pool exhaustion: ${Math.round(poolUsage * 100)}%` : `Pool exhaustion: ${Math.round(poolUsage * 100)}%`;
+      message = message
+        ? `${message}; Pool exhaustion: ${Math.round(poolUsage * 100)}%`
+        : `Pool exhaustion: ${Math.round(poolUsage * 100)}%`;
     } else if (poolUsage > HEALTH.THRESHOLDS.POOL_DEGRADED_PERCENT) {
       if (status !== HEALTH.STATUS.CRITICAL) {
         status = HEALTH.STATUS.DEGRADED;
       }
-      message = message ? `${message}; High pool usage: ${Math.round(poolUsage * 100)}%` : `High pool usage: ${Math.round(poolUsage * 100)}%`;
+      message = message
+        ? `${message}; High pool usage: ${Math.round(poolUsage * 100)}%`
+        : `High pool usage: ${Math.round(poolUsage * 100)}%`;
     }
 
     return {
@@ -172,7 +179,7 @@ async function checkAuth0() {
     return {
       configured: false,
       status: HEALTH.STATUS.HEALTHY,
-      message: 'Auth0 not configured (development mode)',
+      message: "Auth0 not configured (development mode)",
     };
   }
 
@@ -190,7 +197,7 @@ async function checkAuth0() {
       responseTime: Date.now() - start,
     };
   } catch (error) {
-    logger.warn('Auth0 health check failed', {
+    logger.warn("Auth0 health check failed", {
       domain: auth0Config.domain,
       error: error.message,
     });
@@ -248,13 +255,15 @@ function getStorageConfiguration() {
  * @returns {Promise<Object>} Storage health status with connectivity info
  */
 async function checkStorage() {
-  const result = await storageService.healthCheck(TIMEOUTS.SERVICES.HEALTH_CHECK_MS);
+  const result = await storageService.healthCheck(
+    TIMEOUTS.SERVICES.HEALTH_CHECK_MS,
+  );
 
   // Map storage status to HEALTH.STATUS constants
   let status;
-  if (result.status === 'healthy') {
+  if (result.status === "healthy") {
     status = HEALTH.STATUS.HEALTHY;
-  } else if (result.status === 'unconfigured') {
+  } else if (result.status === "unconfigured") {
     status = HEALTH.STATUS.DEGRADED;
   } else {
     status = HEALTH.STATUS.CRITICAL;
@@ -301,47 +310,57 @@ function determineOverallStatus(...statuses) {
  *       503:
  *         description: Service is unhealthy
  */
-router.get('/', asyncHandler(async (req, res) => {
-  // Check cache first
-  if (healthCache.liveness && isCacheValid(healthCache.livenessTimestamp)) {
-    return ResponseFormatter.get(res, healthCache.liveness);
-  }
+router.get(
+  "/",
+  asyncHandler(async (req, res) => {
+    // Check cache first
+    if (healthCache.liveness && isCacheValid(healthCache.livenessTimestamp)) {
+      return ResponseFormatter.get(res, healthCache.liveness);
+    }
 
-  // Perform health checks
-  const database = await checkDatabase();
-  const memory = getMemoryMetrics();
-  const overallStatus = determineOverallStatus(database.status, memory.status);
+    // Perform health checks
+    const database = await checkDatabase();
+    const memory = getMemoryMetrics();
+    const overallStatus = determineOverallStatus(
+      database.status,
+      memory.status,
+    );
 
-  const response = {
-    status: overallStatus,
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    cached: false,
-    database: {
-      connected: database.connected,
-      responseTime: database.responseTime,
-      status: database.status,
-    },
-    memory: {
-      rss: memory.rss,
-      heapUsed: memory.heapUsed,
-      heapTotal: memory.heapTotal,
-      status: memory.status,
-    },
-    nodeVersion: process.version,
-  };
+    const response = {
+      status: overallStatus,
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      cached: false,
+      database: {
+        connected: database.connected,
+        responseTime: database.responseTime,
+        status: database.status,
+      },
+      memory: {
+        rss: memory.rss,
+        heapUsed: memory.heapUsed,
+        heapTotal: memory.heapTotal,
+        status: memory.status,
+      },
+      nodeVersion: process.version,
+    };
 
-  // Cache the response
-  healthCache.liveness = { ...response, cached: true };
-  healthCache.livenessTimestamp = Date.now();
+    // Cache the response
+    healthCache.liveness = { ...response, cached: true };
+    healthCache.livenessTimestamp = Date.now();
 
-  // Return 503 if critical (business logic, not error)
-  if (overallStatus === HEALTH.STATUS.CRITICAL) {
-    return ResponseFormatter.serviceUnavailable(res, 'Service health critical', response);
-  }
+    // Return 503 if critical (business logic, not error)
+    if (overallStatus === HEALTH.STATUS.CRITICAL) {
+      return ResponseFormatter.serviceUnavailable(
+        res,
+        "Service health critical",
+        response,
+      );
+    }
 
-  return ResponseFormatter.get(res, response);
-}));
+    return ResponseFormatter.get(res, response);
+  }),
+);
 
 /**
  * @openapi
@@ -363,48 +382,57 @@ router.get('/', asyncHandler(async (req, res) => {
  *       503:
  *         description: Service is not ready
  */
-router.get('/ready', asyncHandler(async (req, res) => {
-  // Run checks in parallel (uncached - always live)
-  const [database, auth0] = await Promise.all([
-    checkDatabase(),
-    checkAuth0(),
-  ]);
+router.get(
+  "/ready",
+  asyncHandler(async (req, res) => {
+    // Run checks in parallel (uncached - always live)
+    const [database, auth0] = await Promise.all([
+      checkDatabase(),
+      checkAuth0(),
+    ]);
 
-  const storage = getStorageConfiguration();
-  const overallStatus = determineOverallStatus(database.status, auth0.status);
-  const ready = database.connected && (auth0.status !== HEALTH.STATUS.CRITICAL || !auth0.configured);
+    const storage = getStorageConfiguration();
+    const overallStatus = determineOverallStatus(database.status, auth0.status);
+    const ready =
+      database.connected &&
+      (auth0.status !== HEALTH.STATUS.CRITICAL || !auth0.configured);
 
-  const response = {
-    ready,
-    status: overallStatus,
-    timestamp: new Date().toISOString(),
-    checks: {
-      database: {
-        connected: database.connected,
-        status: database.status,
-        responseTime: database.responseTime,
+    const response = {
+      ready,
+      status: overallStatus,
+      timestamp: new Date().toISOString(),
+      checks: {
+        database: {
+          connected: database.connected,
+          status: database.status,
+          responseTime: database.responseTime,
+        },
+        auth0: {
+          configured: auth0.configured,
+          reachable: auth0.reachable,
+          status: auth0.status,
+          responseTime: auth0.responseTime,
+        },
+        storage: {
+          configured: storage.configured,
+          provider: storage.provider,
+          status: storage.status,
+        },
       },
-      auth0: {
-        configured: auth0.configured,
-        reachable: auth0.reachable,
-        status: auth0.status,
-        responseTime: auth0.responseTime,
-      },
-      storage: {
-        configured: storage.configured,
-        provider: storage.provider,
-        status: storage.status,
-      },
-    },
-  };
+    };
 
-  // Return 503 if not ready (business logic, not error)
-  if (!ready) {
-    return ResponseFormatter.serviceUnavailable(res, 'Service not ready', response);
-  }
+    // Return 503 if not ready (business logic, not error)
+    if (!ready) {
+      return ResponseFormatter.serviceUnavailable(
+        res,
+        "Service not ready",
+        response,
+      );
+    }
 
-  return ResponseFormatter.get(res, response);
-}));
+    return ResponseFormatter.get(res, response);
+  }),
+);
 
 /**
  * @openapi
@@ -427,28 +455,35 @@ router.get('/ready', asyncHandler(async (req, res) => {
  *       403:
  *         description: Admin access required
  */
-router.get('/databases', authenticateToken, requireMinimumRole('admin'), asyncHandler(async (req, res) => {
-  const database = await checkDatabase();
+router.get(
+  "/databases",
+  authenticateToken,
+  requireMinimumRole("admin"),
+  asyncHandler(async (req, res) => {
+    const database = await checkDatabase();
 
-  const databases = [{
-    name: 'PostgreSQL (Main)',
-    status: database.status,
-    responseTime: database.responseTime,
-    connectionCount: database.connectionCount,
-    maxConnections: database.maxConnections,
-    poolUsage: `${Math.round((database.connectionCount / database.maxConnections) * 100)}%`,
-    lastChecked: new Date().toISOString(),
-    message: database.message,
-    thresholds: {
-      degradedMs: HEALTH.THRESHOLDS.DB_DEGRADED_MS,
-      criticalMs: HEALTH.THRESHOLDS.DB_CRITICAL_MS,
-      degradedPoolPercent: `${Math.round(HEALTH.THRESHOLDS.POOL_DEGRADED_PERCENT * 100)}%`,
-      criticalPoolPercent: `${Math.round(HEALTH.THRESHOLDS.POOL_CRITICAL_PERCENT * 100)}%`,
-    },
-  }];
+    const databases = [
+      {
+        name: "PostgreSQL (Main)",
+        status: database.status,
+        responseTime: database.responseTime,
+        connectionCount: database.connectionCount,
+        maxConnections: database.maxConnections,
+        poolUsage: `${Math.round((database.connectionCount / database.maxConnections) * 100)}%`,
+        lastChecked: new Date().toISOString(),
+        message: database.message,
+        thresholds: {
+          degradedMs: HEALTH.THRESHOLDS.DB_DEGRADED_MS,
+          criticalMs: HEALTH.THRESHOLDS.DB_CRITICAL_MS,
+          degradedPoolPercent: `${Math.round(HEALTH.THRESHOLDS.POOL_DEGRADED_PERCENT * 100)}%`,
+          criticalPoolPercent: `${Math.round(HEALTH.THRESHOLDS.POOL_CRITICAL_PERCENT * 100)}%`,
+        },
+      },
+    ];
 
-  ResponseFormatter.get(res, { databases });
-}));
+    ResponseFormatter.get(res, { databases });
+  }),
+);
 
 /**
  * @openapi
@@ -474,34 +509,47 @@ router.get('/databases', authenticateToken, requireMinimumRole('admin'), asyncHa
  *       503:
  *         description: Storage is not reachable or not configured
  */
-router.get('/storage', authenticateToken, requireMinimumRole('admin'), asyncHandler(async (req, res) => {
-  const storage = await checkStorage();
+router.get(
+  "/storage",
+  authenticateToken,
+  requireMinimumRole("admin"),
+  asyncHandler(async (req, res) => {
+    const storage = await checkStorage();
 
-  const response = {
-    storage: {
-      configured: storage.configured,
-      reachable: storage.reachable,
-      bucket: storage.bucket,
-      provider: process.env.STORAGE_PROVIDER || 'none',
-      status: storage.status,
-      responseTime: storage.responseTime,
-      message: storage.message,
-      lastChecked: new Date().toISOString(),
-    },
-  };
+    const response = {
+      storage: {
+        configured: storage.configured,
+        reachable: storage.reachable,
+        bucket: storage.bucket,
+        provider: process.env.STORAGE_PROVIDER || "none",
+        status: storage.status,
+        responseTime: storage.responseTime,
+        message: storage.message,
+        lastChecked: new Date().toISOString(),
+      },
+    };
 
-  // Return 503 if storage not reachable (but only if configured)
-  if (storage.configured && !storage.reachable) {
-    return ResponseFormatter.serviceUnavailable(res, 'Storage not reachable', response);
-  }
+    // Return 503 if storage not reachable (but only if configured)
+    if (storage.configured && !storage.reachable) {
+      return ResponseFormatter.serviceUnavailable(
+        res,
+        "Storage not reachable",
+        response,
+      );
+    }
 
-  // Return 503 if not configured (informational, not an error per se)
-  if (!storage.configured) {
-    return ResponseFormatter.serviceUnavailable(res, 'Storage not configured', response);
-  }
+    // Return 503 if not configured (informational, not an error per se)
+    if (!storage.configured) {
+      return ResponseFormatter.serviceUnavailable(
+        res,
+        "Storage not configured",
+        response,
+      );
+    }
 
-  ResponseFormatter.get(res, response);
-}));
+    ResponseFormatter.get(res, response);
+  }),
+);
 
 // Export router and helper functions
 module.exports = router;

@@ -7,7 +7,7 @@
  */
 
 // Mock logger
-jest.mock('../../../config/logger', () => ({
+jest.mock("../../../config/logger", () => ({
   logger: {
     info: jest.fn(),
     warn: jest.fn(),
@@ -17,11 +17,11 @@ jest.mock('../../../config/logger', () => ({
 
 // Mock validation-loader with a function we can control per-test
 const mockLoadValidationRules = jest.fn();
-jest.mock('../../../utils/validation-loader', () => ({
+jest.mock("../../../utils/validation-loader", () => ({
   loadValidationRules: mockLoadValidationRules,
 }));
 
-describe('utils/validation-sync-checker.js', () => {
+describe("utils/validation-sync-checker.js", () => {
   let validateEnumSync;
   let getDbCheckConstraints;
   let ENTITY_FIELD_TO_DB_MAPPING;
@@ -33,9 +33,13 @@ describe('utils/validation-sync-checker.js', () => {
     // Default mock for validation rules - uses entityFields structure
     mockLoadValidationRules.mockReturnValue({
       entityFields: {
-        role: { status: { enum: ['active', 'inactive'] } },
-        user: { status: { enum: ['active', 'inactive', 'suspended'] } },
-        work_order: { status: { enum: ['pending', 'in_progress', 'completed', 'cancelled'] } },
+        role: { status: { enum: ["active", "inactive"] } },
+        user: { status: { enum: ["active", "inactive", "suspended"] } },
+        work_order: {
+          status: {
+            enum: ["pending", "in_progress", "completed", "cancelled"],
+          },
+        },
       },
     });
 
@@ -45,21 +49,22 @@ describe('utils/validation-sync-checker.js', () => {
     };
 
     // Require module (no resetModules - keep stable mock reference)
-    const syncChecker = require('../../../utils/validation-sync-checker');
+    const syncChecker = require("../../../utils/validation-sync-checker");
     validateEnumSync = syncChecker.validateEnumSync;
     getDbCheckConstraints = syncChecker.getDbCheckConstraints;
     ENTITY_FIELD_TO_DB_MAPPING = syncChecker.ENTITY_FIELD_TO_DB_MAPPING;
   });
 
-  describe('getDbCheckConstraints()', () => {
-    test('should extract enum values from CHECK constraints', async () => {
+  describe("getDbCheckConstraints()", () => {
+    test("should extract enum values from CHECK constraints", async () => {
       // Arrange
       mockPool.query.mockResolvedValue({
         rows: [
           {
-            table_name: 'roles',
-            column_name: 'status',
-            constraint_definition: "CHECK ((status)::text = ANY (ARRAY['active'::character varying, 'inactive'::character varying]))",
+            table_name: "roles",
+            column_name: "status",
+            constraint_definition:
+              "CHECK ((status)::text = ANY (ARRAY['active'::character varying, 'inactive'::character varying]))",
           },
         ],
       });
@@ -68,23 +73,25 @@ describe('utils/validation-sync-checker.js', () => {
       const result = await getDbCheckConstraints(mockPool);
 
       // Assert
-      expect(result['roles.status']).toBeDefined();
-      expect(result['roles.status']).toEqual(['active', 'inactive']);
+      expect(result["roles.status"]).toBeDefined();
+      expect(result["roles.status"]).toEqual(["active", "inactive"]);
     });
 
-    test('should handle multiple constraints', async () => {
+    test("should handle multiple constraints", async () => {
       // Arrange
       mockPool.query.mockResolvedValue({
         rows: [
           {
-            table_name: 'roles',
-            column_name: 'status',
-            constraint_definition: "CHECK ((status)::text = ANY (ARRAY['active'::character varying, 'inactive'::character varying]))",
+            table_name: "roles",
+            column_name: "status",
+            constraint_definition:
+              "CHECK ((status)::text = ANY (ARRAY['active'::character varying, 'inactive'::character varying]))",
           },
           {
-            table_name: 'users',
-            column_name: 'status',
-            constraint_definition: "CHECK ((status)::text = ANY (ARRAY['active'::character varying, 'inactive'::character varying, 'suspended'::character varying]))",
+            table_name: "users",
+            column_name: "status",
+            constraint_definition:
+              "CHECK ((status)::text = ANY (ARRAY['active'::character varying, 'inactive'::character varying, 'suspended'::character varying]))",
           },
         ],
       });
@@ -94,11 +101,15 @@ describe('utils/validation-sync-checker.js', () => {
 
       // Assert
       expect(Object.keys(result)).toHaveLength(2);
-      expect(result['roles.status']).toEqual(['active', 'inactive']);
-      expect(result['users.status']).toEqual(['active', 'inactive', 'suspended']);
+      expect(result["roles.status"]).toEqual(["active", "inactive"]);
+      expect(result["users.status"]).toEqual([
+        "active",
+        "inactive",
+        "suspended",
+      ]);
     });
 
-    test('should return empty object for no constraints', async () => {
+    test("should return empty object for no constraints", async () => {
       // Arrange
       mockPool.query.mockResolvedValue({ rows: [] });
 
@@ -109,13 +120,13 @@ describe('utils/validation-sync-checker.js', () => {
       expect(result).toEqual({});
     });
 
-    test('should skip constraints without ARRAY match', async () => {
+    test("should skip constraints without ARRAY match", async () => {
       // Arrange
       mockPool.query.mockResolvedValue({
         rows: [
           {
-            table_name: 'test',
-            column_name: 'value',
+            table_name: "test",
+            column_name: "value",
             constraint_definition: "CHECK (value > 0)",
           },
         ],
@@ -129,16 +140,17 @@ describe('utils/validation-sync-checker.js', () => {
     });
   });
 
-  describe('validateEnumSync()', () => {
-    describe('matching enums', () => {
-      test('should return true when Joi and DB enums match', async () => {
+  describe("validateEnumSync()", () => {
+    describe("matching enums", () => {
+      test("should return true when Joi and DB enums match", async () => {
         // Arrange
         mockPool.query.mockResolvedValue({
           rows: [
             {
-              table_name: 'roles',
-              column_name: 'status',
-              constraint_definition: "CHECK ((status)::text = ANY (ARRAY['active'::character varying, 'inactive'::character varying]))",
+              table_name: "roles",
+              column_name: "status",
+              constraint_definition:
+                "CHECK ((status)::text = ANY (ARRAY['active'::character varying, 'inactive'::character varying]))",
             },
           ],
         });
@@ -150,14 +162,15 @@ describe('utils/validation-sync-checker.js', () => {
         expect(result).toBe(true);
       });
 
-      test('should handle order-independent enum comparison', async () => {
+      test("should handle order-independent enum comparison", async () => {
         // Arrange - DB returns in different order
         mockPool.query.mockResolvedValue({
           rows: [
             {
-              table_name: 'roles',
-              column_name: 'status',
-              constraint_definition: "CHECK ((status)::text = ANY (ARRAY['inactive'::character varying, 'active'::character varying]))",
+              table_name: "roles",
+              column_name: "status",
+              constraint_definition:
+                "CHECK ((status)::text = ANY (ARRAY['inactive'::character varying, 'active'::character varying]))",
             },
           ],
         });
@@ -170,20 +183,21 @@ describe('utils/validation-sync-checker.js', () => {
       });
     });
 
-    describe('mismatched enums', () => {
-      test('should throw error when Joi enum has extra values', async () => {
+    describe("mismatched enums", () => {
+      test("should throw error when Joi enum has extra values", async () => {
         // Arrange - Joi has 'extra' but DB doesn't
         mockLoadValidationRules.mockReturnValue({
           entityFields: {
-            role: { status: { enum: ['active', 'inactive', 'extra'] } },
+            role: { status: { enum: ["active", "inactive", "extra"] } },
           },
         });
         mockPool.query.mockResolvedValue({
           rows: [
             {
-              table_name: 'roles',
-              column_name: 'status',
-              constraint_definition: "CHECK ((status)::text = ANY (ARRAY['active'::character varying, 'inactive'::character varying]))",
+              table_name: "roles",
+              column_name: "status",
+              constraint_definition:
+                "CHECK ((status)::text = ANY (ARRAY['active'::character varying, 'inactive'::character varying]))",
             },
           ],
         });
@@ -192,19 +206,20 @@ describe('utils/validation-sync-checker.js', () => {
         await expect(validateEnumSync(mockPool)).rejects.toThrow();
       });
 
-      test('should throw error when DB enum has extra values', async () => {
+      test("should throw error when DB enum has extra values", async () => {
         // Arrange - DB has value that Joi doesn't
         mockLoadValidationRules.mockReturnValue({
           entityFields: {
-            role: { status: { enum: ['active'] } },
+            role: { status: { enum: ["active"] } },
           },
         });
         mockPool.query.mockResolvedValue({
           rows: [
             {
-              table_name: 'roles',
-              column_name: 'status',
-              constraint_definition: "CHECK ((status)::text = ANY (ARRAY['active'::character varying, 'inactive'::character varying]))",
+              table_name: "roles",
+              column_name: "status",
+              constraint_definition:
+                "CHECK ((status)::text = ANY (ARRAY['active'::character varying, 'inactive'::character varying]))",
             },
           ],
         });
@@ -214,8 +229,8 @@ describe('utils/validation-sync-checker.js', () => {
       });
     });
 
-    describe('missing definitions', () => {
-      test('should warn and continue when field definition not found', async () => {
+    describe("missing definitions", () => {
+      test("should warn and continue when field definition not found", async () => {
         // Arrange - field in mapping but not in validation rules
         mockLoadValidationRules.mockReturnValue({
           entityFields: {}, // Empty entityFields
@@ -229,11 +244,11 @@ describe('utils/validation-sync-checker.js', () => {
         expect(result).toBe(true);
       });
 
-      test('should warn and continue when field has no enum', async () => {
+      test("should warn and continue when field has no enum", async () => {
         // Arrange - field exists but no enum
         mockLoadValidationRules.mockReturnValue({
           entityFields: {
-            role: { status: { type: 'string' } }, // No enum
+            role: { status: { type: "string" } }, // No enum
           },
         });
         mockPool.query.mockResolvedValue({ rows: [] });
@@ -245,11 +260,11 @@ describe('utils/validation-sync-checker.js', () => {
         expect(result).toBe(true);
       });
 
-      test('should warn and continue when no DB constraint found', async () => {
+      test("should warn and continue when no DB constraint found", async () => {
         // Arrange
         mockLoadValidationRules.mockReturnValue({
           entityFields: {
-            role: { status: { enum: ['active', 'inactive'] } },
+            role: { status: { enum: ["active", "inactive"] } },
           },
         });
         mockPool.query.mockResolvedValue({ rows: [] }); // No constraints
@@ -262,10 +277,10 @@ describe('utils/validation-sync-checker.js', () => {
       });
     });
 
-    describe('error handling', () => {
-      test('should throw wrapped error on database failure', async () => {
+    describe("error handling", () => {
+      test("should throw wrapped error on database failure", async () => {
         // Arrange
-        mockPool.query.mockRejectedValue(new Error('Connection failed'));
+        mockPool.query.mockRejectedValue(new Error("Connection failed"));
 
         // Act & Assert
         await expect(validateEnumSync(mockPool)).rejects.toThrow();
@@ -273,33 +288,44 @@ describe('utils/validation-sync-checker.js', () => {
     });
   });
 
-  describe('ENTITY_FIELD_TO_DB_MAPPING', () => {
-    test('should export entity field mapping object', () => {
+  describe("ENTITY_FIELD_TO_DB_MAPPING", () => {
+    test("should export entity field mapping object", () => {
       // Assert
       expect(ENTITY_FIELD_TO_DB_MAPPING).toBeDefined();
-      expect(typeof ENTITY_FIELD_TO_DB_MAPPING).toBe('object');
+      expect(typeof ENTITY_FIELD_TO_DB_MAPPING).toBe("object");
     });
 
-    test('should map entity.field to table.column format', () => {
+    test("should map entity.field to table.column format", () => {
       // Assert
-      for (const [entity, fieldMappings] of Object.entries(ENTITY_FIELD_TO_DB_MAPPING)) {
-        expect(typeof entity).toBe('string');
-        expect(typeof fieldMappings).toBe('object');
+      for (const [entity, fieldMappings] of Object.entries(
+        ENTITY_FIELD_TO_DB_MAPPING,
+      )) {
+        expect(typeof entity).toBe("string");
+        expect(typeof fieldMappings).toBe("object");
         for (const [field, dbKey] of Object.entries(fieldMappings)) {
-          expect(typeof field).toBe('string');
+          expect(typeof field).toBe("string");
           expect(dbKey).toMatch(/^\w+\.\w+$/); // table.column format
         }
       }
     });
 
-    test('should include core entity status fields', () => {
+    test("should include core entity status fields", () => {
       // Assert
-      expect(ENTITY_FIELD_TO_DB_MAPPING).toHaveProperty('role');
-      expect(ENTITY_FIELD_TO_DB_MAPPING.role).toHaveProperty('status', 'roles.status');
-      expect(ENTITY_FIELD_TO_DB_MAPPING).toHaveProperty('user');
-      expect(ENTITY_FIELD_TO_DB_MAPPING.user).toHaveProperty('status', 'users.status');
-      expect(ENTITY_FIELD_TO_DB_MAPPING).toHaveProperty('work_order');
-      expect(ENTITY_FIELD_TO_DB_MAPPING.work_order).toHaveProperty('status', 'work_orders.status');
+      expect(ENTITY_FIELD_TO_DB_MAPPING).toHaveProperty("role");
+      expect(ENTITY_FIELD_TO_DB_MAPPING.role).toHaveProperty(
+        "status",
+        "roles.status",
+      );
+      expect(ENTITY_FIELD_TO_DB_MAPPING).toHaveProperty("user");
+      expect(ENTITY_FIELD_TO_DB_MAPPING.user).toHaveProperty(
+        "status",
+        "users.status",
+      );
+      expect(ENTITY_FIELD_TO_DB_MAPPING).toHaveProperty("work_order");
+      expect(ENTITY_FIELD_TO_DB_MAPPING.work_order).toHaveProperty(
+        "status",
+        "work_orders.status",
+      );
     });
   });
 });

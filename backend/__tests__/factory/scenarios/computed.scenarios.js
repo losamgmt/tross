@@ -6,12 +6,12 @@
  *
  * PRINCIPLE: Computed fields (like work_order_number, invoice_number) should
  * be auto-generated on creation, not manually provided by the client.
- * 
+ *
  * DETECTION: Uses identifierPrefix + identityField from metadata
  * Applies to: work_order, invoice, contract (COMPUTED nameType entities)
  */
 
-const { getCapabilities } = require('./scenario-helpers');
+const { getCapabilities } = require("./scenario-helpers");
 
 /**
  * Check if entity has auto-generated identifier (COMPUTED entities)
@@ -35,31 +35,36 @@ function createGeneratesAutoIdentifier(meta, ctx) {
 
   const { entityName, tableName, identityField, identifierPrefix } = meta;
 
-  ctx.it(`POST /api/${tableName} - auto-generates ${identityField}`, async () => {
-    const payload = await ctx.factory.buildMinimalWithFKs(entityName);
-    
-    // Explicitly DO NOT include the computed field
-    delete payload[identityField];
-    
-    const auth = await ctx.authHeader('admin');
+  ctx.it(
+    `POST /api/${tableName} - auto-generates ${identityField}`,
+    async () => {
+      const payload = await ctx.factory.buildMinimalWithFKs(entityName);
 
-    const response = await ctx.request
-      .post(`/api/${tableName}`)
-      .set(auth)
-      .send(payload);
+      // Explicitly DO NOT include the computed field
+      delete payload[identityField];
 
-    ctx.expect(response.status).toBe(201);
-    
-    const data = response.body.data || response.body;
-    
-    // The computed field should be present and non-null
-    ctx.expect(data[identityField]).toBeDefined();
-    ctx.expect(data[identityField]).not.toBeNull();
-    
-    // Should match format: PREFIX-YYYY-NNNN
-    const expectedPattern = new RegExp(`^${identifierPrefix}-\\d{4}-\\d{4,}$`);
-    ctx.expect(data[identityField]).toMatch(expectedPattern);
-  });
+      const auth = await ctx.authHeader("admin");
+
+      const response = await ctx.request
+        .post(`/api/${tableName}`)
+        .set(auth)
+        .send(payload);
+
+      ctx.expect(response.status).toBe(201);
+
+      const data = response.body.data || response.body;
+
+      // The computed field should be present and non-null
+      ctx.expect(data[identityField]).toBeDefined();
+      ctx.expect(data[identityField]).not.toBeNull();
+
+      // Should match format: PREFIX-YYYY-NNNN
+      const expectedPattern = new RegExp(
+        `^${identifierPrefix}-\\d{4}-\\d{4,}$`,
+      );
+      ctx.expect(data[identityField]).toMatch(expectedPattern);
+    },
+  );
 }
 
 /**
@@ -76,41 +81,44 @@ function sequentialCreationIncrements(meta, ctx) {
 
   const { entityName, tableName, identityField } = meta;
 
-  ctx.it(`POST /api/${tableName} - sequential creates increment ${identityField}`, async () => {
-    const auth = await ctx.authHeader('admin');
+  ctx.it(
+    `POST /api/${tableName} - sequential creates increment ${identityField}`,
+    async () => {
+      const auth = await ctx.authHeader("admin");
 
-    // Create first entity
-    const payload1 = await ctx.factory.buildMinimalWithFKs(entityName);
-    delete payload1[identityField];
-    const response1 = await ctx.request
-      .post(`/api/${tableName}`)
-      .set(auth)
-      .send(payload1);
+      // Create first entity
+      const payload1 = await ctx.factory.buildMinimalWithFKs(entityName);
+      delete payload1[identityField];
+      const response1 = await ctx.request
+        .post(`/api/${tableName}`)
+        .set(auth)
+        .send(payload1);
 
-    ctx.expect(response1.status).toBe(201);
-    const data1 = response1.body.data || response1.body;
-    const value1 = data1[identityField];
+      ctx.expect(response1.status).toBe(201);
+      const data1 = response1.body.data || response1.body;
+      const value1 = data1[identityField];
 
-    // Create second entity
-    const payload2 = await ctx.factory.buildMinimalWithFKs(entityName);
-    delete payload2[identityField];
-    const response2 = await ctx.request
-      .post(`/api/${tableName}`)
-      .set(auth)
-      .send(payload2);
+      // Create second entity
+      const payload2 = await ctx.factory.buildMinimalWithFKs(entityName);
+      delete payload2[identityField];
+      const response2 = await ctx.request
+        .post(`/api/${tableName}`)
+        .set(auth)
+        .send(payload2);
 
-    ctx.expect(response2.status).toBe(201);
-    const data2 = response2.body.data || response2.body;
-    const value2 = data2[identityField];
+      ctx.expect(response2.status).toBe(201);
+      const data2 = response2.body.data || response2.body;
+      const value2 = data2[identityField];
 
-    // Values should be different
-    ctx.expect(value2).not.toBe(value1);
+      // Values should be different
+      ctx.expect(value2).not.toBe(value1);
 
-    // Extract sequence portion (last part after final dash)
-    const seq1 = parseInt(value1.split('-').pop(), 10);
-    const seq2 = parseInt(value2.split('-').pop(), 10);
-    ctx.expect(seq2).toBeGreaterThan(seq1);
-  });
+      // Extract sequence portion (last part after final dash)
+      const seq1 = parseInt(value1.split("-").pop(), 10);
+      const seq2 = parseInt(value2.split("-").pop(), 10);
+      ctx.expect(seq2).toBeGreaterThan(seq1);
+    },
+  );
 }
 
 /**
@@ -127,30 +135,35 @@ function clientCannotOverrideIdentifier(meta, ctx) {
 
   const { entityName, tableName, identityField, identifierPrefix } = meta;
 
-  ctx.it(`POST /api/${tableName} - ignores client-provided ${identityField}`, async () => {
-    const payload = await ctx.factory.buildMinimalWithFKs(entityName);
-    
-    // Try to override with a specific value
-    payload[identityField] = 'HACKED-9999-9999';
-    
-    const auth = await ctx.authHeader('admin');
+  ctx.it(
+    `POST /api/${tableName} - ignores client-provided ${identityField}`,
+    async () => {
+      const payload = await ctx.factory.buildMinimalWithFKs(entityName);
 
-    const response = await ctx.request
-      .post(`/api/${tableName}`)
-      .set(auth)
-      .send(payload);
+      // Try to override with a specific value
+      payload[identityField] = "HACKED-9999-9999";
 
-    ctx.expect(response.status).toBe(201);
-    
-    const data = response.body.data || response.body;
-    
-    // Server should have ignored the client value and generated its own
-    ctx.expect(data[identityField]).not.toBe('HACKED-9999-9999');
-    
-    // Should still match the proper format
-    const expectedPattern = new RegExp(`^${identifierPrefix}-\\d{4}-\\d{4,}$`);
-    ctx.expect(data[identityField]).toMatch(expectedPattern);
-  });
+      const auth = await ctx.authHeader("admin");
+
+      const response = await ctx.request
+        .post(`/api/${tableName}`)
+        .set(auth)
+        .send(payload);
+
+      ctx.expect(response.status).toBe(201);
+
+      const data = response.body.data || response.body;
+
+      // Server should have ignored the client value and generated its own
+      ctx.expect(data[identityField]).not.toBe("HACKED-9999-9999");
+
+      // Should still match the proper format
+      const expectedPattern = new RegExp(
+        `^${identifierPrefix}-\\d{4}-\\d{4,}$`,
+      );
+      ctx.expect(data[identityField]).toMatch(expectedPattern);
+    },
+  );
 }
 
 /**
@@ -161,34 +174,37 @@ function clientCannotOverrideIdentifier(meta, ctx) {
  */
 function identifierIsImmutable(meta, ctx) {
   if (!hasAutoGeneratedIdentifier(meta)) return;
-  
+
   // Check if identityField is in immutableFields
   const isImmutable = meta.immutableFields?.includes(meta.identityField);
   if (!isImmutable) return;
 
   const { entityName, tableName, identityField } = meta;
 
-  ctx.it(`PATCH /api/${tableName}/:id - cannot modify ${identityField}`, async () => {
-    const auth = await ctx.authHeader('admin');
-    
-    // Create an entity
-    const created = await ctx.factory.create(entityName);
-    const originalValue = created[identityField];
+  ctx.it(
+    `PATCH /api/${tableName}/:id - cannot modify ${identityField}`,
+    async () => {
+      const auth = await ctx.authHeader("admin");
 
-    // Attempt to modify the immutable field
-    const response = await ctx.request
-      .patch(`/api/${tableName}/${created.id}`)
-      .set(auth)
-      .send({ [identityField]: 'MODIFIED-9999-9999' });
+      // Create an entity
+      const created = await ctx.factory.create(entityName);
+      const originalValue = created[identityField];
 
-    // Should either reject (400) or ignore the field (200 with unchanged value)
-    if (response.status === 200) {
-      const data = response.body.data || response.body;
-      ctx.expect(data[identityField]).toBe(originalValue);
-    } else {
-      ctx.expect(response.status).toBe(400);
-    }
-  });
+      // Attempt to modify the immutable field
+      const response = await ctx.request
+        .patch(`/api/${tableName}/${created.id}`)
+        .set(auth)
+        .send({ [identityField]: "MODIFIED-9999-9999" });
+
+      // Should either reject (400) or ignore the field (200 with unchanged value)
+      if (response.status === 200) {
+        const data = response.body.data || response.body;
+        ctx.expect(data[identityField]).toBe(originalValue);
+      } else {
+        ctx.expect(response.status).toBe(400);
+      }
+    },
+  );
 }
 
 module.exports = {

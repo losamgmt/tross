@@ -1,24 +1,28 @@
 // Clean authentication routes
-const express = require('express');
-const jwt = require('jsonwebtoken');
-const { authenticateToken, requirePermission } = require('../middleware/auth');
-const { attachEntity } = require('../middleware/generic-entity');
-const { refreshLimiter } = require('../middleware/rate-limit');
-const ResponseFormatter = require('../utils/response-formatter');
+const express = require("express");
+const jwt = require("jsonwebtoken");
+const { authenticateToken, requirePermission } = require("../middleware/auth");
+const { attachEntity } = require("../middleware/generic-entity");
+const { refreshLimiter } = require("../middleware/rate-limit");
+const ResponseFormatter = require("../utils/response-formatter");
 // User model removed - using GenericEntityService (strangler-fig Phase 4)
-const tokenService = require('../services/token-service');
-const auditService = require('../services/audit-service');
-const { AuditActions, ResourceTypes, AuditResults } = require('../services/audit-constants');
+const tokenService = require("../services/token-service");
+const auditService = require("../services/audit-service");
+const {
+  AuditActions,
+  ResourceTypes,
+  AuditResults,
+} = require("../services/audit-constants");
 const {
   validateProfileUpdate,
   validateRefreshToken,
-} = require('../validators/body-validators');
-const { validateIdParam } = require('../validators');
-const { logger } = require('../config/logger');
-const { getClientIp, getUserAgent } = require('../utils/request-helpers');
-const { asyncHandler } = require('../middleware/utils');
-const GenericEntityService = require('../services/generic-entity-service');
-const AppError = require('../utils/app-error');
+} = require("../validators/body-validators");
+const { validateIdParam } = require("../validators");
+const { logger } = require("../config/logger");
+const { getClientIp, getUserAgent } = require("../utils/request-helpers");
+const { asyncHandler } = require("../middleware/utils");
+const GenericEntityService = require("../services/generic-entity-service");
+const AppError = require("../utils/app-error");
 
 const router = express.Router();
 
@@ -63,22 +67,26 @@ const router = express.Router();
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get('/me', authenticateToken, asyncHandler(async (req, res) => {
-  // req.dbUser is already populated by authenticateToken middleware
-  // with normalized role fields (role, role_priority, role_name)
-  const user = req.dbUser;
+router.get(
+  "/me",
+  authenticateToken,
+  asyncHandler(async (req, res) => {
+    // req.dbUser is already populated by authenticateToken middleware
+    // with normalized role fields (role, role_priority, role_name)
+    const user = req.dbUser;
 
-  // Format user data for frontend with consistent field names
-  const formattedUser = {
-    ...user,
-    name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'User',
-    // Ensure role fields are present (normalize from JOIN field names)
-    role: user.role || user.role_name,
-    role_priority: user.role_priority,
-  };
+    // Format user data for frontend with consistent field names
+    const formattedUser = {
+      ...user,
+      name: `${user.first_name || ""} ${user.last_name || ""}`.trim() || "User",
+      // Ensure role fields are present (normalize from JOIN field names)
+      role: user.role || user.role_name,
+      role_priority: user.role_priority,
+    };
 
-  return ResponseFormatter.get(res, formattedUser);
-}));
+    return ResponseFormatter.get(res, formattedUser);
+  }),
+);
 
 /**
  * @openapi
@@ -127,18 +135,26 @@ router.get('/me', authenticateToken, asyncHandler(async (req, res) => {
  *         description: User not found
  */
 router.put(
-  '/me',
+  "/me",
   authenticateToken,
   validateProfileUpdate,
   asyncHandler(async (req, res) => {
     // Use GenericEntityService instead of User.findByAuth0Id
-    const dbUser = await GenericEntityService.findByField('user', 'auth0_id', req.user.sub);
+    const dbUser = await GenericEntityService.findByField(
+      "user",
+      "auth0_id",
+      req.user.sub,
+    );
     if (!dbUser) {
-      throw new AppError(`User not found for Auth0 ID: ${req.user.sub}`, 404, 'NOT_FOUND');
+      throw new AppError(
+        `User not found for Auth0 ID: ${req.user.sub}`,
+        404,
+        "NOT_FOUND",
+      );
     }
 
     // Only allow updating certain fields
-    const allowedUpdates = ['first_name', 'last_name'];
+    const allowedUpdates = ["first_name", "last_name"];
     const updates = {};
 
     allowedUpdates.forEach((field) => {
@@ -148,13 +164,21 @@ router.put(
     });
 
     if (Object.keys(updates).length === 0) {
-      throw new AppError('No valid fields to update', 400, 'BAD_REQUEST');
+      throw new AppError("No valid fields to update", 400, "BAD_REQUEST");
     }
 
     // Use GenericEntityService instead of User.update
-    const updatedUser = await GenericEntityService.update('user', dbUser.id, updates);
+    const updatedUser = await GenericEntityService.update(
+      "user",
+      dbUser.id,
+      updates,
+    );
 
-    return ResponseFormatter.updated(res, updatedUser, 'Profile updated successfully');
+    return ResponseFormatter.updated(
+      res,
+      updatedUser,
+      "Profile updated successfully",
+    );
   }),
 );
 
@@ -203,7 +227,7 @@ router.put(
  *         description: Token expired
  */
 router.post(
-  '/refresh',
+  "/refresh",
   refreshLimiter,
   validateRefreshToken,
   asyncHandler(async (req, res) => {
@@ -258,32 +282,36 @@ router.post(
  *       401:
  *         description: Unauthorized
  */
-router.post('/logout', authenticateToken, asyncHandler(async (req, res) => {
-  const { refreshToken } = req.body;
-  const ipAddress = getClientIp(req);
-  const userAgent = getUserAgent(req);
+router.post(
+  "/logout",
+  authenticateToken,
+  asyncHandler(async (req, res) => {
+    const { refreshToken } = req.body;
+    const ipAddress = getClientIp(req);
+    const userAgent = getUserAgent(req);
 
-  if (refreshToken) {
-    const decoded = jwt.decode(refreshToken);
-    if (decoded && decoded.tokenId) {
-      await tokenService.revokeToken(decoded.tokenId, 'logout');
+    if (refreshToken) {
+      const decoded = jwt.decode(refreshToken);
+      if (decoded && decoded.tokenId) {
+        await tokenService.revokeToken(decoded.tokenId, "logout");
+      }
     }
-  }
 
-  // Get userId safely - handles both Auth0 (has userId) and dev (uses sub)
-  const userId = req.user.userId || req.dbUser?.id || req.user.sub;
+    // Get userId safely - handles both Auth0 (has userId) and dev (uses sub)
+    const userId = req.user.userId || req.dbUser?.id || req.user.sub;
 
-  // Log the logout
-  await auditService.log({
-    userId, // Now handles null safely for dev users
-    action: AuditActions.LOGOUT,
-    resourceType: ResourceTypes.AUTH,
-    ipAddress,
-    userAgent,
-  });
+    // Log the logout
+    await auditService.log({
+      userId, // Now handles null safely for dev users
+      action: AuditActions.LOGOUT,
+      resourceType: ResourceTypes.AUTH,
+      ipAddress,
+      userAgent,
+    });
 
-  return ResponseFormatter.deleted(res, 'Logged out successfully');
-}));
+    return ResponseFormatter.deleted(res, "Logged out successfully");
+  }),
+);
 
 /**
  * @openapi
@@ -318,26 +346,34 @@ router.post('/logout', authenticateToken, asyncHandler(async (req, res) => {
  *       401:
  *         description: Unauthorized
  */
-router.post('/logout-all', authenticateToken, asyncHandler(async (req, res) => {
-  const count = await tokenService.revokeAllUserTokens(
-    req.user.userId,
-    'logout_all',
-  );
-  const ipAddress = getClientIp(req);
-  const userAgent = getUserAgent(req);
+router.post(
+  "/logout-all",
+  authenticateToken,
+  asyncHandler(async (req, res) => {
+    const count = await tokenService.revokeAllUserTokens(
+      req.user.userId,
+      "logout_all",
+    );
+    const ipAddress = getClientIp(req);
+    const userAgent = getUserAgent(req);
 
-  await auditService.log({
-    userId: req.user.userId,
-    action: AuditActions.LOGOUT_ALL_DEVICES,
-    resourceType: ResourceTypes.AUTH,
-    newValues: { tokensRevoked: count },
-    ipAddress,
-    userAgent,
-    result: AuditResults.SUCCESS,
-  });
+    await auditService.log({
+      userId: req.user.userId,
+      action: AuditActions.LOGOUT_ALL_DEVICES,
+      resourceType: ResourceTypes.AUTH,
+      newValues: { tokensRevoked: count },
+      ipAddress,
+      userAgent,
+      result: AuditResults.SUCCESS,
+    });
 
-  return ResponseFormatter.updated(res, { tokensRevoked: count }, `Logged out from ${count} device(s)`);
-}));
+    return ResponseFormatter.updated(
+      res,
+      { tokensRevoked: count },
+      `Logged out from ${count} device(s)`,
+    );
+  }),
+);
 
 /**
  * @openapi
@@ -368,22 +404,26 @@ router.post('/logout-all', authenticateToken, asyncHandler(async (req, res) => {
  *       401:
  *         description: Unauthorized
  */
-router.get('/sessions', authenticateToken, asyncHandler(async (req, res) => {
-  const tokens = await tokenService.getUserTokens(req.user.userId);
+router.get(
+  "/sessions",
+  authenticateToken,
+  asyncHandler(async (req, res) => {
+    const tokens = await tokenService.getUserTokens(req.user.userId);
 
-  // Format for frontend (hide sensitive data)
-  const sessions = tokens.map((t) => ({
-    id: t.token_id,
-    createdAt: t.created_at,
-    lastUsedAt: t.last_used_at,
-    expiresAt: t.expires_at,
-    ipAddress: t.ip_address,
-    userAgent: t.user_agent,
-    isCurrent: false, // Frontend can determine this by comparing creation time
-  }));
+    // Format for frontend (hide sensitive data)
+    const sessions = tokens.map((t) => ({
+      id: t.token_id,
+      createdAt: t.created_at,
+      lastUsedAt: t.last_used_at,
+      expiresAt: t.expires_at,
+      ipAddress: t.ip_address,
+      userAgent: t.user_agent,
+      isCurrent: false, // Frontend can determine this by comparing creation time
+    }));
 
-  return ResponseFormatter.get(res, sessions);
-}));
+    return ResponseFormatter.get(res, sessions);
+  }),
+);
 
 /**
  * @openapi
@@ -442,19 +482,22 @@ router.get('/sessions', authenticateToken, asyncHandler(async (req, res) => {
  *         description: User not found
  */
 router.post(
-  '/admin/revoke-user-sessions/:userId',
+  "/admin/revoke-user-sessions/:userId",
   authenticateToken,
-  attachEntity('user'),
-  requirePermission('delete'),
-  validateIdParam({ paramName: 'userId' }),
+  attachEntity("user"),
+  requirePermission("delete"),
+  validateIdParam({ paramName: "userId" }),
   asyncHandler(async (req, res) => {
     const targetUserId = req.validated.userId;
-    const reason = req.body?.reason || 'admin_revocation';
+    const reason = req.body?.reason || "admin_revocation";
 
     // Verify target user exists
-    const targetUser = await GenericEntityService.findById('user', targetUserId);
+    const targetUser = await GenericEntityService.findById(
+      "user",
+      targetUserId,
+    );
     if (!targetUser) {
-      throw new AppError('User not found', 404, 'NOT_FOUND');
+      throw new AppError("User not found", 404, "NOT_FOUND");
     }
 
     // Revoke all tokens for the target user
@@ -479,7 +522,7 @@ router.post(
       result: AuditResults.SUCCESS,
     });
 
-    logger.info('Admin revoked user sessions', {
+    logger.info("Admin revoked user sessions", {
       adminId: req.dbUser.id,
       targetUserId,
       sessionsRevoked: count,

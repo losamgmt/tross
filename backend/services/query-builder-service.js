@@ -18,7 +18,6 @@
  */
 
 class QueryBuilderService {
-
   // ==========================================================================
   // SEARCH (Text Search with ILIKE)
   // ==========================================================================
@@ -39,7 +38,11 @@ class QueryBuilderService {
    *   //   paramOffset: 3
    *   // }
    */
-  static buildSearchClause(searchTerm, searchableFields = [], tablePrefix = null) {
+  static buildSearchClause(
+    searchTerm,
+    searchableFields = [],
+    tablePrefix = null,
+  ) {
     // No search term or no searchable fields = no search clause
     if (!searchTerm || searchableFields.length === 0) {
       return { clause: null, params: [], paramOffset: 0 };
@@ -52,13 +55,13 @@ class QueryBuilderService {
     }
 
     // Build ILIKE clause for each field (with optional table prefix)
-    const prefix = tablePrefix ? `${tablePrefix}.` : '';
+    const prefix = tablePrefix ? `${tablePrefix}.` : "";
     const conditions = searchableFields.map((field, index) => {
       return `${prefix}${field} ILIKE $${index + 1}`;
     });
 
     // Combine with OR (match ANY field)
-    const clause = `(${conditions.join(' OR ')})`;
+    const clause = `(${conditions.join(" OR ")})`;
 
     // All params are '%searchTerm%' (case-insensitive partial match)
     const params = searchableFields.map(() => `%${sanitized}%`);
@@ -100,16 +103,25 @@ class QueryBuilderService {
    *   //   paramOffset: 2
    *   // }
    */
-  static buildFilterClause(filters = {}, filterableFields = [], paramOffset = 0, tablePrefix = null) {
+  static buildFilterClause(
+    filters = {},
+    filterableFields = [],
+    paramOffset = 0,
+    tablePrefix = null,
+  ) {
     // No filters or no filterable fields = no filter clause
-    if (!filters || Object.keys(filters).length === 0 || filterableFields.length === 0) {
+    if (
+      !filters ||
+      Object.keys(filters).length === 0 ||
+      filterableFields.length === 0
+    ) {
       return { clause: null, params: [], paramOffset };
     }
 
     const conditions = [];
     const params = [];
     let currentOffset = paramOffset;
-    const prefix = tablePrefix ? `${tablePrefix}.` : '';
+    const prefix = tablePrefix ? `${tablePrefix}.` : "";
 
     // Process each filter
     for (const [field, value] of Object.entries(filters)) {
@@ -119,35 +131,41 @@ class QueryBuilderService {
       }
 
       // Handle operator-based filters (e.g., priority[gt]=5)
-      if (typeof value === 'object' && value !== null) {
+      if (typeof value === "object" && value !== null) {
         const operators = {
-          gt: '>',
-          gte: '>=',
-          lt: '<',
-          lte: '<=',
-          not: '!=',
-          in: 'IN',
+          gt: ">",
+          gte: ">=",
+          lt: "<",
+          lte: "<=",
+          not: "!=",
+          in: "IN",
         };
 
         for (const [operator, operatorValue] of Object.entries(value)) {
           const sqlOperator = operators[operator];
-          if (!sqlOperator) {continue;} // Unknown operator
+          if (!sqlOperator) {
+            continue;
+          } // Unknown operator
 
           currentOffset++;
 
           // Special handling for IN operator (expects array)
-          if (operator === 'in') {
+          if (operator === "in") {
             // Parse comma-separated values
             const values = Array.isArray(operatorValue)
               ? operatorValue
-              : operatorValue.split(',').map(v => v.trim());
+              : operatorValue.split(",").map((v) => v.trim());
 
-            const placeholders = values.map((_, i) => `$${currentOffset + i}`).join(', ');
+            const placeholders = values
+              .map((_, i) => `$${currentOffset + i}`)
+              .join(", ");
             conditions.push(`${prefix}${field} IN (${placeholders})`);
             params.push(...values);
             currentOffset += values.length - 1; // Adjust for multiple params
           } else {
-            conditions.push(`${prefix}${field} ${sqlOperator} $${currentOffset}`);
+            conditions.push(
+              `${prefix}${field} ${sqlOperator} $${currentOffset}`,
+            );
             params.push(operatorValue);
           }
         }
@@ -165,7 +183,7 @@ class QueryBuilderService {
     }
 
     // Combine with AND (match ALL filters)
-    const clause = conditions.join(' AND ');
+    const clause = conditions.join(" AND ");
 
     return {
       clause,
@@ -192,27 +210,35 @@ class QueryBuilderService {
    *   buildSortClause('created_at', 'desc', ['id', 'created_at'], { field: 'id', order: 'ASC' }, 'users')
    *   // Returns: 'users.created_at DESC'
    */
-  static buildSortClause(sortBy, sortOrder, sortableFields = [], defaultSort = {}, tablePrefix = null) {
+  static buildSortClause(
+    sortBy,
+    sortOrder,
+    sortableFields = [],
+    defaultSort = {},
+    tablePrefix = null,
+  ) {
     // Determine if we're using the requested field or falling back to default
     const isValidField = sortableFields.includes(sortBy);
     const field = isValidField
       ? sortBy
-      : defaultSort.field || sortableFields[0] || 'id';
+      : defaultSort.field || sortableFields[0] || "id";
 
     // If using default field, use default order too (tied together)
     // Otherwise, validate the requested order
     let order;
     if (!isValidField && defaultSort.field) {
       // Using default field → use default order
-      order = (defaultSort.order || 'ASC').toUpperCase();
+      order = (defaultSort.order || "ASC").toUpperCase();
     } else {
       // Using requested field → validate requested order
-      order = (sortOrder?.toUpperCase() === 'ASC' || sortOrder?.toUpperCase() === 'DESC')
-        ? sortOrder.toUpperCase()
-        : (defaultSort.order || 'ASC').toUpperCase();
+      order =
+        sortOrder?.toUpperCase() === "ASC" ||
+        sortOrder?.toUpperCase() === "DESC"
+          ? sortOrder.toUpperCase()
+          : (defaultSort.order || "ASC").toUpperCase();
     }
 
-    const prefix = tablePrefix ? `${tablePrefix}.` : '';
+    const prefix = tablePrefix ? `${tablePrefix}.` : "";
     return `${prefix}${field} ${order}`;
   }
 
@@ -232,14 +258,14 @@ class QueryBuilderService {
    */
   static combineWhereClauses(clauses = []) {
     // Filter out null/undefined/empty clauses
-    const validClauses = clauses.filter(c => c && c.trim().length > 0);
+    const validClauses = clauses.filter((c) => c && c.trim().length > 0);
 
     if (validClauses.length === 0) {
       return null;
     }
 
     // Combine with AND
-    return validClauses.join(' AND ');
+    return validClauses.join(" AND ");
   }
 
   /**
@@ -253,7 +279,7 @@ class QueryBuilderService {
    *   // Returns: ['%john%', '%john%', '2', 'true']
    */
   static combineParams(...paramArrays) {
-    return paramArrays.flat().filter(p => p !== undefined && p !== null);
+    return paramArrays.flat().filter((p) => p !== undefined && p !== null);
   }
 
   // ==========================================================================
@@ -286,19 +312,32 @@ class QueryBuilderService {
    */
   static buildQuery(options = {}, metadata = {}) {
     const { search, filters, sortBy, sortOrder } = options;
-    const { searchableFields, filterableFields, sortableFields, defaultSort } = metadata;
+    const { searchableFields, filterableFields, sortableFields, defaultSort } =
+      metadata;
 
     // Build search clause
     const searchResult = this.buildSearchClause(search, searchableFields);
 
     // Build filter clause (offset by search params)
-    const filterResult = this.buildFilterClause(filters, filterableFields, searchResult.paramOffset);
+    const filterResult = this.buildFilterClause(
+      filters,
+      filterableFields,
+      searchResult.paramOffset,
+    );
 
     // Build sort clause
-    const orderByClause = this.buildSortClause(sortBy, sortOrder, sortableFields, defaultSort);
+    const orderByClause = this.buildSortClause(
+      sortBy,
+      sortOrder,
+      sortableFields,
+      defaultSort,
+    );
 
     // Combine WHERE clauses
-    const whereClause = this.combineWhereClauses([searchResult.clause, filterResult.clause]);
+    const whereClause = this.combineWhereClauses([
+      searchResult.clause,
+      filterResult.clause,
+    ]);
 
     // Combine parameters
     const params = this.combineParams(searchResult.params, filterResult.params);

@@ -15,13 +15,16 @@
  *   const sum = await StatsService.sum('invoice', req, 'amount', { status: 'paid' });
  */
 
-const allMetadata = require('../config/models');
-const { logger } = require('../config/logger');
-const db = require('../db/connection');
-const QueryBuilderService = require('./query-builder-service');
-const { buildRLSFilter } = require('../db/helpers/rls-filter-helper');
-const { sanitizeIdentifier, validateFieldAgainstWhitelist } = require('../utils/sql-safety');
-const AppError = require('../utils/app-error');
+const allMetadata = require("../config/models");
+const { logger } = require("../config/logger");
+const db = require("../db/connection");
+const QueryBuilderService = require("./query-builder-service");
+const { buildRLSFilter } = require("../db/helpers/rls-filter-helper");
+const {
+  sanitizeIdentifier,
+  validateFieldAgainstWhitelist,
+} = require("../utils/sql-safety");
+const AppError = require("../utils/app-error");
 
 class StatsService {
   /**
@@ -31,7 +34,7 @@ class StatsService {
   static _getMetadata(entityName) {
     const metadata = allMetadata[entityName];
     if (!metadata) {
-      throw new AppError(`Unknown entity: ${entityName}`, 404, 'NOT_FOUND');
+      throw new AppError(`Unknown entity: ${entityName}`, 404, "NOT_FOUND");
     }
     return metadata;
   }
@@ -75,13 +78,17 @@ class StatsService {
       whereClauses.push(filterResult.clause);
     }
 
-    const whereSQL = whereClauses.length > 0
-      ? `WHERE ${whereClauses.join(' AND ')}`
-      : '';
+    const whereSQL =
+      whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
 
     const query = `SELECT COUNT(*) as count FROM ${tableName} ${whereSQL}`;
 
-    logger.debug('[StatsService.count]', { entityName, filters, query, params });
+    logger.debug("[StatsService.count]", {
+      entityName,
+      filters,
+      query,
+      params,
+    });
 
     const result = await db.query(query, params);
     return parseInt(result.rows[0].count, 10);
@@ -106,7 +113,11 @@ class StatsService {
 
     // Validate groupByField is filterable
     if (!filterableFields.includes(groupByField)) {
-      throw new AppError(`Cannot group by '${groupByField}' - not a filterable field`, 400, 'BAD_REQUEST');
+      throw new AppError(
+        `Cannot group by '${groupByField}' - not a filterable field`,
+        400,
+        "BAD_REQUEST",
+      );
     }
 
     // Build RLS filter
@@ -132,9 +143,8 @@ class StatsService {
       whereClauses.push(filterResult.clause);
     }
 
-    const whereSQL = whereClauses.length > 0
-      ? `WHERE ${whereClauses.join(' AND ')}`
-      : '';
+    const whereSQL =
+      whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
 
     const query = `
       SELECT ${tableName}.${groupByField} as value, COUNT(*) as count 
@@ -144,10 +154,15 @@ class StatsService {
       ORDER BY count DESC
     `;
 
-    logger.debug('[StatsService.countGrouped]', { entityName, groupByField, query, params });
+    logger.debug("[StatsService.countGrouped]", {
+      entityName,
+      groupByField,
+      query,
+      params,
+    });
 
     const result = await db.query(query, params);
-    return result.rows.map(row => ({
+    return result.rows.map((row) => ({
       value: row.value,
       count: parseInt(row.count, 10),
     }));
@@ -172,12 +187,14 @@ class StatsService {
     // SECURITY: Validate field is a numeric/summable field before interpolation
     // Build list of allowed sum fields from metadata
     const numericFields = Object.entries(metadata.fields || {})
-      .filter(([_, def]) => ['integer', 'number', 'decimal', 'currency'].includes(def.type))
+      .filter(([_, def]) =>
+        ["integer", "number", "decimal", "currency"].includes(def.type),
+      )
       .map(([name]) => name);
 
-    validateFieldAgainstWhitelist(field, numericFields, 'sum field');
-    const safeField = sanitizeIdentifier(field, 'field');
-    const safeTable = sanitizeIdentifier(tableName, 'table');
+    validateFieldAgainstWhitelist(field, numericFields, "sum field");
+    const safeField = sanitizeIdentifier(field, "field");
+    const safeTable = sanitizeIdentifier(tableName, "table");
 
     // Build RLS filter
     const rlsResult = buildRLSFilter(req, metadata, 0);
@@ -202,14 +219,13 @@ class StatsService {
       whereClauses.push(filterResult.clause);
     }
 
-    const whereSQL = whereClauses.length > 0
-      ? `WHERE ${whereClauses.join(' AND ')}`
-      : '';
+    const whereSQL =
+      whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
 
     // SECURITY: Using validated/sanitized identifiers
     const query = `SELECT COALESCE(SUM(${safeTable}.${safeField}), 0) as total FROM ${safeTable} ${whereSQL}`;
 
-    logger.debug('[StatsService.sum]', { entityName, field, query, params });
+    logger.debug("[StatsService.sum]", { entityName, field, query, params });
 
     const result = await db.query(query, params);
     return parseFloat(result.rows[0].total);

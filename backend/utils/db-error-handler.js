@@ -24,9 +24,9 @@
  *   }
  */
 
-const ResponseFormatter = require('./response-formatter');
-const { logger } = require('../config/logger');
-const { ImmutableFieldError } = require('../db/helpers/update-helper');
+const ResponseFormatter = require("./response-formatter");
+const { logger } = require("../config/logger");
+const { ImmutableFieldError } = require("../db/helpers/update-helper");
 
 /**
  * Build DB error config from entity metadata
@@ -41,17 +41,18 @@ const { ImmutableFieldError } = require('../db/helpers/update-helper');
  */
 function buildDbErrorConfig(metadata) {
   const entityName = metadata.tableName
-    ? metadata.tableName.charAt(0).toUpperCase() + metadata.tableName.slice(1).replace(/s$/, '')
-    : 'Resource';
+    ? metadata.tableName.charAt(0).toUpperCase() +
+      metadata.tableName.slice(1).replace(/s$/, "")
+    : "Resource";
 
   // Build uniqueFields from identity field (always unique)
   const uniqueFields = {};
   if (metadata.identityField) {
     // Convert snake_case to Title Case
     const displayName = metadata.identityField
-      .split('_')
-      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-      .join(' ');
+      .split("_")
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ");
     uniqueFields[metadata.identityField] = displayName;
   }
 
@@ -72,16 +73,16 @@ function buildDbErrorConfig(metadata) {
  */
 const PG_ERROR_CODES = Object.freeze({
   // Class 23 — Integrity Constraint Violation
-  FOREIGN_KEY_VIOLATION: '23503',
-  UNIQUE_VIOLATION: '23505',
-  CHECK_VIOLATION: '23514',
-  NOT_NULL_VIOLATION: '23502',
+  FOREIGN_KEY_VIOLATION: "23503",
+  UNIQUE_VIOLATION: "23505",
+  CHECK_VIOLATION: "23514",
+  NOT_NULL_VIOLATION: "23502",
 
   // Class 22 — Data Exception
-  INVALID_DATETIME_FORMAT: '22007',
-  DATETIME_FIELD_OVERFLOW: '22008',
-  NUMERIC_VALUE_OUT_OF_RANGE: '22003',
-  INVALID_TEXT_REPRESENTATION: '22P02',
+  INVALID_DATETIME_FORMAT: "22007",
+  DATETIME_FIELD_OVERFLOW: "22008",
+  NUMERIC_VALUE_OUT_OF_RANGE: "22003",
+  INVALID_TEXT_REPRESENTATION: "22P02",
 });
 
 /**
@@ -95,8 +96,8 @@ const PG_ERROR_CODES = Object.freeze({
  * @returns {string|null} Field name or null
  */
 function extractFieldFromError(error) {
-  const message = error.message || '';
-  const detail = error.detail || '';
+  const message = error.message || "";
+  const detail = error.detail || "";
 
   // FK violation: "Key (customer_id)=(999) is not present..."
   const fkMatch = detail.match(/Key \(([^)]+)\)/);
@@ -136,7 +137,11 @@ function extractFieldFromError(error) {
  *   });
  */
 function handleDbError(error, res, config = {}) {
-  const { uniqueFields = {}, foreignKeys = {}, entityName = 'Resource' } = config;
+  const {
+    uniqueFields = {},
+    foreignKeys = {},
+    entityName = "Resource",
+  } = config;
   const errorCode = error.code;
 
   // =========================================================================
@@ -144,7 +149,7 @@ function handleDbError(error, res, config = {}) {
   // Client attempted to update field(s) that cannot be modified
   // =========================================================================
   if (error instanceof ImmutableFieldError) {
-    logger.warn('Immutable field violation', {
+    logger.warn("Immutable field violation", {
       entity: entityName,
       violations: error.violations,
     });
@@ -152,7 +157,7 @@ function handleDbError(error, res, config = {}) {
     // Return 400 with field-level error details for frontend display
     return res.status(400).json({
       success: false,
-      error: 'Bad Request',
+      error: "Bad Request",
       message: error.message,
       code: error.code,
       violations: error.violations,
@@ -162,7 +167,11 @@ function handleDbError(error, res, config = {}) {
 
   // Not a PostgreSQL error code - let caller handle
   // PostgreSQL error codes are 5 characters: digits or letters (e.g., 23503, 22P02)
-  if (!errorCode || typeof errorCode !== 'string' || !errorCode.match(/^[0-9A-Z]{5}$/i)) {
+  if (
+    !errorCode ||
+    typeof errorCode !== "string" ||
+    !errorCode.match(/^[0-9A-Z]{5}$/i)
+  ) {
     return false;
   }
 
@@ -178,22 +187,22 @@ function handleDbError(error, res, config = {}) {
     //    Detail: "Key (id)=(90) is still referenced from table \"users\""
     // =========================================================================
     case PG_ERROR_CODES.FOREIGN_KEY_VIOLATION: {
-      const detail = error.detail || '';
-      const isDeleteViolation = detail.includes('is still referenced');
+      const detail = error.detail || "";
+      const isDeleteViolation = detail.includes("is still referenced");
 
       let message;
       if (isDeleteViolation) {
         // Extract the referencing table from detail: "...from table \"users\""
         const tableMatch = detail.match(/from table "([^"]+)"/);
-        const referencingTable = tableMatch ? tableMatch[1] : 'other records';
+        const referencingTable = tableMatch ? tableMatch[1] : "other records";
         message = `Cannot delete ${entityName.toLowerCase()}: it is still referenced by ${referencingTable}. Please remove or reassign the dependent records first.`;
       } else {
         // Standard FK violation: referenced record doesn't exist
-        const refEntity = foreignKeys[field] || 'Referenced resource';
-        message = `${refEntity} not found. Please provide a valid ${field || 'reference'}.`;
+        const refEntity = foreignKeys[field] || "Referenced resource";
+        message = `${refEntity} not found. Please provide a valid ${field || "reference"}.`;
       }
 
-      logger.warn('FK violation', {
+      logger.warn("FK violation", {
         entity: entityName,
         field,
         errorCode,
@@ -209,10 +218,10 @@ function handleDbError(error, res, config = {}) {
     // Duplicate value for unique constraint
     // =========================================================================
     case PG_ERROR_CODES.UNIQUE_VIOLATION: {
-      const displayName = uniqueFields[field] || field || 'Value';
+      const displayName = uniqueFields[field] || field || "Value";
       const message = `${displayName} already exists`;
 
-      logger.warn('Unique violation', {
+      logger.warn("Unique violation", {
         entity: entityName,
         field,
         errorCode,
@@ -227,9 +236,9 @@ function handleDbError(error, res, config = {}) {
     // Value doesn't satisfy CHECK constraint (enum values, ranges, etc.)
     // =========================================================================
     case PG_ERROR_CODES.CHECK_VIOLATION: {
-      const message = `Invalid value for ${field || 'field'}. Please check allowed values.`;
+      const message = `Invalid value for ${field || "field"}. Please check allowed values.`;
 
-      logger.warn('Check constraint violation', {
+      logger.warn("Check constraint violation", {
         entity: entityName,
         field,
         errorCode,
@@ -245,9 +254,9 @@ function handleDbError(error, res, config = {}) {
     // Required field is null
     // =========================================================================
     case PG_ERROR_CODES.NOT_NULL_VIOLATION: {
-      const message = `${field || 'Required field'} cannot be empty`;
+      const message = `${field || "Required field"} cannot be empty`;
 
-      logger.warn('Not null violation', {
+      logger.warn("Not null violation", {
         entity: entityName,
         field,
         errorCode,
@@ -263,9 +272,9 @@ function handleDbError(error, res, config = {}) {
     // =========================================================================
     case PG_ERROR_CODES.INVALID_DATETIME_FORMAT:
     case PG_ERROR_CODES.DATETIME_FIELD_OVERFLOW: {
-      const message = 'Invalid date format. Please use YYYY-MM-DD format.';
+      const message = "Invalid date format. Please use YYYY-MM-DD format.";
 
-      logger.warn('Date format error', {
+      logger.warn("Date format error", {
         entity: entityName,
         errorCode,
       });
@@ -279,9 +288,9 @@ function handleDbError(error, res, config = {}) {
     // Invalid numeric value
     // =========================================================================
     case PG_ERROR_CODES.NUMERIC_VALUE_OUT_OF_RANGE: {
-      const message = 'Numeric value is out of allowed range';
+      const message = "Numeric value is out of allowed range";
 
-      logger.warn('Numeric range error', {
+      logger.warn("Numeric range error", {
         entity: entityName,
         errorCode,
       });
@@ -291,9 +300,9 @@ function handleDbError(error, res, config = {}) {
     }
 
     case PG_ERROR_CODES.INVALID_TEXT_REPRESENTATION: {
-      const message = 'Invalid data format provided';
+      const message = "Invalid data format provided";
 
-      logger.warn('Invalid text representation', {
+      logger.warn("Invalid text representation", {
         entity: entityName,
         errorCode,
       });

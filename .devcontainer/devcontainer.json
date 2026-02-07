@@ -1,7 +1,7 @@
 {
   "name": "Tross Development Environment",
   "image": "mcr.microsoft.com/devcontainers/javascript-node:20",
-  
+
   "features": {
     "ghcr.io/devcontainers/features/node:1": {
       "version": "20"
@@ -40,7 +40,7 @@
   },
 
   "forwardPorts": [3001, 8080, 5432],
-  
+
   "portsAttributes": {
     "3001": {
       "label": "Backend API",

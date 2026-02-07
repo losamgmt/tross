@@ -21,9 +21,11 @@
 ## 1. Executive Summary
 
 ### What We're Building
+
 A metadata-driven admin frontend with **zero specificity** - generic templates and widgets composed by routes with configuration. No `AdminDashboardScreen`, `AdminLogsScreen`, etc. - just `TabbedContent`, `AdaptiveShell` templates parameterized at the route level.
 
 ### Core Design Principles
+
 - **100% Metadata-Driven**: UI generated from JSON config, no per-entity code
 - **Zero Specificity**: Generic widgets, specificity only at route composition
 - **Triple-Tier Security**: Router guard → Shell guard → Backend guard
@@ -33,9 +35,11 @@ A metadata-driven admin frontend with **zero specificity** - generic templates a
 - **Atomic Design**: Atoms → Molecules → Organisms → Templates → Screens
 
 ### Current Test Status
+
 All test suites should pass before making changes. Run `npm run test:all` to verify.
 
 ### Current Implementation Status
+
 - Router uses centralized `RouteGuard.checkAccess()` for ALL routes
 - `AdaptiveShell` has defense-in-depth guard (second tier)
 - Route guard tests are comprehensive
@@ -46,18 +50,20 @@ All test suites should pass before making changes. Run `npm run test:all` to ver
 ## 2. Backend API Structure
 
 ### Base URLs
+
 - **Development**: `http://localhost:3001/api`
 - **Production**: `https://tross-api-production.up.railway.app/api`
 - **Frontend baseUrl**: Already includes `/api` - endpoints use relative paths
 
 ### Business Layer (`/api/...`)
+
 ```
 /api/auth/me, /refresh, /logout
 /api/{entity}/              - CRUD for customers, work_orders, invoices, etc.
 /api/{entity}/{id}/files/   - File attachments (sub-resource pattern)
 /api/preferences/           - User preferences (GET, PUT, POST /reset)
 /api/stats/{entity}         - Aggregations
-/api/export/{entity}        - CSV exports  
+/api/export/{entity}        - CSV exports
 /api/audit/                 - Audit log queries
 /api/health/                - Health checks
 /api/schema/                - Schema introspection
@@ -65,6 +71,7 @@ All test suites should pass before making changes. Run `npm run test:all` to ver
 ```
 
 ### Admin Layer (`/api/admin/...`)
+
 ```
 /api/admin/system/settings           - GET/PUT system settings
 /api/admin/system/maintenance        - GET/PUT maintenance mode
@@ -78,6 +85,7 @@ All test suites should pass before making changes. Run `npm run test:all` to ver
 ```
 
 ### Entities
+
 `customers`, `work_orders`, `invoices`, `contracts`, `inventory`, `technicians`, `users`, `roles`, `saved_views`
 
 ---
@@ -85,6 +93,7 @@ All test suites should pass before making changes. Run `npm run test:all` to ver
 ## 3. Frontend Architecture Principles
 
 ### Layer Model
+
 ```
 ┌─────────────────────────────────────────────────────────┐
 │  ROUTES (app_router.dart)                               │
@@ -111,6 +120,7 @@ All test suites should pass before making changes. Run `npm run test:all` to ver
 ```
 
 ### Route Composition Pattern
+
 ```dart
 // Routes compose templates with config - NO specific screen classes
 GoRoute(
@@ -134,6 +144,7 @@ GoRoute(
 ```
 
 ### Data Source Abstraction
+
 ```dart
 // Abstract interface - swap JSON for API when ready
 abstract class MetadataProvider {
@@ -149,103 +160,112 @@ abstract class MetadataProvider {
 ### Already Exists ✅
 
 #### Atoms (`widgets/atoms/`)
-| Component | Subdirectory | Purpose |
-|-----------|--------------|---------|
-| `LoadingIndicator` | `indicators/` | Spinner with size variants |
-| `StatusBadge` | `display/` | Color-coded status labels |
-| Various buttons | `buttons/` | Icon buttons, action buttons |
-| Typography | `typography/` | Text styles |
-| Inputs | `inputs/` | Form input atoms (see below) |
+
+| Component          | Subdirectory  | Purpose                      |
+| ------------------ | ------------- | ---------------------------- |
+| `LoadingIndicator` | `indicators/` | Spinner with size variants   |
+| `StatusBadge`      | `display/`    | Color-coded status labels    |
+| Various buttons    | `buttons/`    | Icon buttons, action buttons |
+| Typography         | `typography/` | Text styles                  |
+| Inputs             | `inputs/`     | Form input atoms (see below) |
 
 **Input Atoms - Accessibility-First Design:**
 
 All form inputs follow these principles:
+
 - **Keyboard navigable** - Tab to focus, Space/Enter to activate
-- **Focus states visible** - Clear visual indicator when focused  
+- **Focus states visible** - Clear visual indicator when focused
 - **Native widgets preferred** - Use Flutter's `DropdownMenu`, `Checkbox`, `Radio` for built-in accessibility
 - **Custom widgets accessible** - `FocusNode` + `KeyboardListener` + `Semantics` wrapper
 
-| Input | Type | Keyboard Support |
-|-------|------|------------------|
-| `TextInput` | Native TextField | Full native support |
-| `NumberInput` | Native TextField | Full native support |
-| `TextAreaInput` | Native TextField | Full native support |
-| `SelectInput` | DropdownMenu | Arrow keys, typeahead, Enter to select |
-| `LookupInput` | Async search dropdown | Search + arrow keys + Enter |
-| `FilterDropdown` | MenuAnchor | Typeahead filtering, arrow keys |
-| `DateInput` | Custom + DatePicker | Space/Enter opens picker |
-| `TimeInput` | Custom + TimePicker | Space/Enter opens picker |
-| `BooleanToggle` | Custom icon button | Space/Enter toggles, focus ring |
-| `CheckboxInput` | Native Checkbox | Full native support |
-| `RadioInput` | Native Radio | Full native support |
+| Input            | Type                  | Keyboard Support                       |
+| ---------------- | --------------------- | -------------------------------------- |
+| `TextInput`      | Native TextField      | Full native support                    |
+| `NumberInput`    | Native TextField      | Full native support                    |
+| `TextAreaInput`  | Native TextField      | Full native support                    |
+| `SelectInput`    | DropdownMenu          | Arrow keys, typeahead, Enter to select |
+| `LookupInput`    | Async search dropdown | Search + arrow keys + Enter            |
+| `FilterDropdown` | MenuAnchor            | Typeahead filtering, arrow keys        |
+| `DateInput`      | Custom + DatePicker   | Space/Enter opens picker               |
+| `TimeInput`      | Custom + TimePicker   | Space/Enter opens picker               |
+| `BooleanToggle`  | Custom icon button    | Space/Enter toggles, focus ring        |
+| `CheckboxInput`  | Native Checkbox       | Full native support                    |
+| `RadioInput`     | Native Radio          | Full native support                    |
 
 #### Molecules (`widgets/molecules/`)
-| Component | Subdirectory | Purpose |
-|-----------|--------------|---------|
-| `ErrorCard` | `cards/` | Inline error with retry |
-| `TitledCard` | `cards/` | Card with title header |
-| `DataCell` | `display/` | Table cell display |
-| `InlineEditCell` | `display/` | Editable cell |
-| `UserInfoHeader` | `display/` | User avatar + name display |
-| Button groups | `buttons/` | Grouped action buttons |
-| Form widgets | `forms/` | Form field molecules |
-| Pagination | `pagination/` | Page controls |
+
+| Component        | Subdirectory  | Purpose                    |
+| ---------------- | ------------- | -------------------------- |
+| `ErrorCard`      | `cards/`      | Inline error with retry    |
+| `TitledCard`     | `cards/`      | Card with title header     |
+| `DataCell`       | `display/`    | Table cell display         |
+| `InlineEditCell` | `display/`    | Editable cell              |
+| `UserInfoHeader` | `display/`    | User avatar + name display |
+| Button groups    | `buttons/`    | Grouped action buttons     |
+| Form widgets     | `forms/`      | Form field molecules       |
+| Pagination       | `pagination/` | Page controls              |
 
 #### Organisms (`widgets/organisms/`)
-| Component | Subdirectory | Purpose |
-|-----------|--------------|---------|
-| `ErrorDisplay` | `feedback/` | Full-page error (404, 403, 500) |
-| `DashboardContent` | `dashboards/` | Config-driven entity charts |
-| `EntityDetailCard` | `cards/` | Metadata-driven entity display |
-| `EntityFormModal` | `modals/` | CRUD form modal |
-| `EntityDataTable` | `tables/` | Metadata-driven data table |
-| `NavMenuItem` | `navigation/` | Sidebar/menu item |
-| Login widgets | `login/` | Auth0 login flow |
-| Guards | `guards/` | Permission gates |
+
+| Component          | Subdirectory  | Purpose                         |
+| ------------------ | ------------- | ------------------------------- |
+| `ErrorDisplay`     | `feedback/`   | Full-page error (404, 403, 500) |
+| `DashboardContent` | `dashboards/` | Config-driven entity charts     |
+| `EntityDetailCard` | `cards/`      | Metadata-driven entity display  |
+| `EntityFormModal`  | `modals/`     | CRUD form modal                 |
+| `EntityDataTable`  | `tables/`     | Metadata-driven data table      |
+| `NavMenuItem`      | `navigation/` | Sidebar/menu item               |
+| Login widgets      | `login/`      | Auth0 login flow                |
+| Guards             | `guards/`     | Permission gates                |
 
 #### Templates (`widgets/templates/`)
-| Component | Purpose |
-|-----------|---------|
-| `AdaptiveShell` | Responsive sidebar/drawer layout with defense-in-depth guard |
-| `CenteredLayout` | Centered content layout for unauthenticated pages |
+
+| Component        | Purpose                                                      |
+| ---------------- | ------------------------------------------------------------ |
+| `AdaptiveShell`  | Responsive sidebar/drawer layout with defense-in-depth guard |
+| `CenteredLayout` | Centered content layout for unauthenticated pages            |
 
 #### Providers (`providers/`)
-| Provider | Purpose |
-|----------|---------|
-| `AuthProvider` | Auth state, user, token, role |
-| `AppProvider` | Network/backend health state |
-| `DashboardProvider` | Dashboard chart data per entity |
-| `PreferencesProvider` | User preferences |
+
+| Provider              | Purpose                         |
+| --------------------- | ------------------------------- |
+| `AuthProvider`        | Auth state, user, token, role   |
+| `AppProvider`         | Network/backend health state    |
+| `DashboardProvider`   | Dashboard chart data per entity |
+| `PreferencesProvider` | User preferences                |
 
 #### Services (`services/`)
-| Service | Purpose |
-|---------|---------|
-| `GenericEntityService` | CRUD for any entity |
-| `NavMenuBuilder` | Builds menus from nav-config.json |
-| `EntityMetadataRegistry` | Entity metadata access |
-| `PermissionServiceDynamic` | Role-based permission checks |
-| `NavConfigService` | Navigation configuration loader |
-| `ApiClient` | HTTP client with auth |
-| `StatsService` | Dashboard statistics API |
-| `AuditLogService` | Audit log queries |
-| `FileService` | File attachment operations |
-| `PreferencesService` | User preferences API |
+
+| Service                    | Purpose                           |
+| -------------------------- | --------------------------------- |
+| `GenericEntityService`     | CRUD for any entity               |
+| `NavMenuBuilder`           | Builds menus from nav-config.json |
+| `EntityMetadataRegistry`   | Entity metadata access            |
+| `PermissionServiceDynamic` | Role-based permission checks      |
+| `NavConfigService`         | Navigation configuration loader   |
+| `ApiClient`                | HTTP client with auth             |
+| `StatsService`             | Dashboard statistics API          |
+| `AuditLogService`          | Audit log queries                 |
+| `FileService`              | File attachment operations        |
+| `PreferencesService`       | User preferences API              |
 
 ### Need to Build ❌
-| Component | Type | Location | Purpose |
-|-----------|------|----------|---------|
-| `MetadataProvider` | Interface | `services/metadata/` | Abstract data source |
-| `JsonMetadataProvider` | Impl | `services/metadata/` | Loads from JSON assets |
-| `EditableFormProvider` | Provider | `providers/` | Dirty state tracking for batch save |
-| `SaveDiscardBar` | Molecule | `molecules/forms/` | Appears when form is dirty |
+
+| Component              | Type      | Location             | Purpose                             |
+| ---------------------- | --------- | -------------------- | ----------------------------------- |
+| `MetadataProvider`     | Interface | `services/metadata/` | Abstract data source                |
+| `JsonMetadataProvider` | Impl      | `services/metadata/` | Loads from JSON assets              |
+| `EditableFormProvider` | Provider  | `providers/`         | Dirty state tracking for batch save |
+| `SaveDiscardBar`       | Molecule  | `molecules/forms/`   | Appears when form is dirty          |
 
 ### Already Built (Completed) ✅
-| Component | Type | Location | Purpose |
-|-----------|------|----------|----------|
-| `DataMatrix` | Molecule | `molecules/display/` | Row×column grid |
-| `KeyValueList` | Molecule | `molecules/display/` | Vertical label:value pairs |
-| `TabbedContent` | Organism | `organisms/layout/` | Unified tab bar with local or URL-synced state |
-| `ScrollableContent` | Molecule | `molecules/containers/` | Standardized scroll wrapper |
+
+| Component           | Type     | Location                | Purpose                                        |
+| ------------------- | -------- | ----------------------- | ---------------------------------------------- |
+| `DataMatrix`        | Molecule | `molecules/display/`    | Row×column grid                                |
+| `KeyValueList`      | Molecule | `molecules/display/`    | Vertical label:value pairs                     |
+| `TabbedContent`     | Organism | `organisms/layout/`     | Unified tab bar with local or URL-synced state |
+| `ScrollableContent` | Molecule | `molecules/containers/` | Standardized scroll wrapper                    |
 
 ---
 
@@ -253,24 +273,27 @@ All form inputs follow these principles:
 
 ### Triple-Tier Defense-in-Depth
 
-| Tier | Component | Location | Mechanism |
-|------|-----------|----------|-----------|
-| **1** | Router Guard | `app_router.dart` | `RouteGuard.checkAccess()` in redirect |
-| **2** | Shell Guard | `AdaptiveShell.build()` | Secondary check before rendering |
-| **3** | Backend Guard | `/api/admin/*` routes | 403 Forbidden if not admin |
+| Tier  | Component     | Location                | Mechanism                              |
+| ----- | ------------- | ----------------------- | -------------------------------------- |
+| **1** | Router Guard  | `app_router.dart`       | `RouteGuard.checkAccess()` in redirect |
+| **2** | Shell Guard   | `AdaptiveShell.build()` | Secondary check before rendering       |
+| **3** | Backend Guard | `/api/admin/*` routes   | 403 Forbidden if not admin             |
 
 ### Security Implementation Details
 
 **File: `app_router.dart`**
+
 - Uses `RouteGuard.checkAccess()` for protection
 - Protects ALL `/admin/*` routes via path matching
 
-**File: `adaptive_shell.dart`**  
+**File: `adaptive_shell.dart`**
+
 - Has defense-in-depth `RouteGuard.checkAccess()` check
 - If access denied, renders inline error with "Go to Home" button
 - Safety net if router guard somehow bypassed
 
 ### Key Files
+
 ```
 frontend/lib/core/routing/
 ├── app_router.dart      # GoRouter config with redirect logic
@@ -282,6 +305,7 @@ frontend/lib/services/auth/
 ```
 
 ### Route Protection Logic
+
 ```dart
 // In RouteGuard.checkAccess()
 if (AppRoutes.requiresAdmin(route)) {  // Uses startsWith('/admin')
@@ -297,17 +321,18 @@ if (AppRoutes.requiresAdmin(route)) {  // Uses startsWith('/admin')
 
 ### Location: `frontend/assets/config/`
 
-| File | Purpose | Used By |
-|------|---------|---------|
+| File                   | Purpose                                               | Used By                                           |
+| ---------------------- | ----------------------------------------------------- | ------------------------------------------------- |
 | `entity-metadata.json` | Entity definitions, fields, validation, relationships | GenericEntityService, forms, JsonMetadataProvider |
-| `nav-config.json` | Sidebar/menu structure, route strategies | NavMenuBuilder, AdaptiveShell |
-| `permissions.json` | RLS policies, role permissions | PermissionGate, backend |
+| `nav-config.json`      | Sidebar/menu structure, route strategies              | NavMenuBuilder, AdaptiveShell                     |
+| `permissions.json`     | RLS policies, role permissions                        | PermissionGate, backend                           |
 
 > **Note**: Validation rules are included in `entity-metadata.json` (SSOT). There is no separate validation-rules.json file.
 
 ### nav-config.json Strategies
 
 **App Strategy** (Main Business Navigation):
+
 ```json
 {
   "sidebarStrategies": {
@@ -326,6 +351,7 @@ if (AppRoutes.requiresAdmin(route)) {  // Uses startsWith('/admin')
 - **Permission Gating**: Nav items filtered by `PermissionService.hasPermission(role, resource, read)`
 
 **Admin Strategy** (System Configuration):
+
 ```json
 {
   "sidebarStrategies": {
@@ -348,6 +374,7 @@ if (AppRoutes.requiresAdmin(route)) {  // Uses startsWith('/admin')
 ```
 
 ### Admin Routes
+
 ```
 /admin                    → AdminScreen (dashboard)
 /admin/system/health      → System health dashboard
@@ -361,27 +388,31 @@ if (AppRoutes.requiresAdmin(route)) {  // Uses startsWith('/admin')
 ## 7. State Management
 
 ### Current Stack
+
 - **Package**: `provider: ^6.1.2` (already installed)
 - **Pattern**: `ChangeNotifier` + `Consumer` / `context.watch`
 
 ### Existing Providers
-| Provider | Scope | Purpose |
-|----------|-------|---------|
-| `AuthProvider` | Global | Auth state, user, token |
-| `AppProvider` | Global | Network/backend health |
-| `DashboardProvider` | Global | Dashboard stats |
-| `PreferencesProvider` | Global | User preferences |
+
+| Provider              | Scope  | Purpose                 |
+| --------------------- | ------ | ----------------------- |
+| `AuthProvider`        | Global | Auth state, user, token |
+| `AppProvider`         | Global | Network/backend health  |
+| `DashboardProvider`   | Global | Dashboard stats         |
+| `PreferencesProvider` | Global | User preferences        |
 
 ### Scope Strategy
-| Data Type | Scope | Reason |
-|-----------|-------|--------|
-| Auth, User | Global | Needed everywhere |
-| Permissions, Metadata | Global | Loaded once, used everywhere |
-| Health Status | Global | Shown in dashboard, admin, header |
-| Audit Logs | Scoped | Fresh fetch each visit, large dataset |
-| Entity Lists | Scoped | Respects filters/pagination |
+
+| Data Type             | Scope  | Reason                                |
+| --------------------- | ------ | ------------------------------------- |
+| Auth, User            | Global | Needed everywhere                     |
+| Permissions, Metadata | Global | Loaded once, used everywhere          |
+| Health Status         | Global | Shown in dashboard, admin, header     |
+| Audit Logs            | Scoped | Fresh fetch each visit, large dataset |
+| Entity Lists          | Scoped | Respects filters/pagination           |
 
 ### Tab State: TabbedContent Dual Mode
+
 ```dart
 // URL-synced mode (bookmarkable, shareable)
 TabbedContent(
@@ -401,14 +432,15 @@ TabbedContent(
 ```
 
 ### Dirty State Pattern (for Phase 5)
+
 ```dart
 class EditableFormProvider extends ChangeNotifier {
   Map<String, dynamic> _original = {};
   Map<String, dynamic> _current = {};
-  
+
   bool get isDirty => _original != _current;
   int get changeCount => ...;
-  
+
   void updateField(String key, dynamic value);
   Future<void> save();
   void discard();
@@ -422,11 +454,13 @@ class EditableFormProvider extends ChangeNotifier {
 ### Critical Testing Infrastructure
 
 #### MockAuthProvider (REQUIRED for widget tests)
+
 Location: `test/mocks/mock_services.dart`
 
 **Why it exists**: Real `AuthProvider` uses platform channels (`flutter_secure_storage`) that don't work in tests. `AdaptiveShell` has defense-in-depth that blocks unauthenticated users.
 
 **Usage Pattern**:
+
 ```dart
 import '../mocks/mock_services.dart';
 
@@ -445,34 +479,39 @@ Widget createTestWidget() {
 ```
 
 **Available factories**:
+
 - `MockAuthProvider()` - Unauthenticated state
 - `MockAuthProvider.authenticated()` - Admin user (default)
 - `MockAuthProvider.authenticated(role: 'technician')` - Specific role
 
 #### Test Helpers
+
 Location: `test/helpers/`
 
-| Helper | Purpose |
-|--------|---------|
-| `pumpTestWidget()` | Wrap widget with MaterialApp + necessary context |
-| `TestHarness` | Full test setup with providers |
-| `TestApiClient` | Mock HTTP responses |
-| `SilentErrorService` | Suppress error logs in tests |
+| Helper               | Purpose                                          |
+| -------------------- | ------------------------------------------------ |
+| `pumpTestWidget()`   | Wrap widget with MaterialApp + necessary context |
+| `TestHarness`        | Full test setup with providers                   |
+| `TestApiClient`      | Mock HTTP responses                              |
+| `SilentErrorService` | Suppress error logs in tests                     |
 
 ### Test Philosophy
 
 **DO test**:
+
 - User-observable behavior (can tap, sees text, form submits)
 - Provider state changes
 - Service API calls and responses
 - Route guard access control
 
 **DON'T test**:
+
 - Specific widget types (fragile, implementation detail)
 - Widget tree structure
 - Thin wrapper screens (test the organisms/templates instead)
 
 ### Running Tests
+
 ```bash
 # All frontend tests
 cd frontend && flutter test
@@ -486,7 +525,7 @@ npm run test:all
 # Backend unit only
 npm run test:unit
 
-# Backend integration only  
+# Backend integration only
 npm run test:integration
 
 # E2E only
@@ -497,18 +536,18 @@ npm run test:e2e
 
 ## 9. Architecture Decisions
 
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| State management library | `provider` (existing) | Already invested, KISS |
-| Async data pattern | Provider-based | Unified with existing patterns |
-| Tab state | URL + Provider hybrid | Deep-linkable, data cached |
-| Metadata source swap | Build-time | One-time major version change |
-| Responsiveness | 100% responsive | Mobile targets planned |
-| Provider scope | Global for shared, Scoped for screen-specific | Simple rule |
-| Edit mode save | Batch save with dirty tracking | Better UX than auto-save |
-| Logs: separate routes vs tabs | Single route with tabs | Simpler sidebar |
-| Screen test strategy | Test organisms/templates, not thin wrappers | Avoids fragile tests |
-| Mock auth in tests | `MockAuthProvider.authenticated()` | Bypasses platform channels |
+| Decision                      | Choice                                        | Rationale                      |
+| ----------------------------- | --------------------------------------------- | ------------------------------ |
+| State management library      | `provider` (existing)                         | Already invested, KISS         |
+| Async data pattern            | Provider-based                                | Unified with existing patterns |
+| Tab state                     | URL + Provider hybrid                         | Deep-linkable, data cached     |
+| Metadata source swap          | Build-time                                    | One-time major version change  |
+| Responsiveness                | 100% responsive                               | Mobile targets planned         |
+| Provider scope                | Global for shared, Scoped for screen-specific | Simple rule                    |
+| Edit mode save                | Batch save with dirty tracking                | Better UX than auto-save       |
+| Logs: separate routes vs tabs | Single route with tabs                        | Simpler sidebar                |
+| Screen test strategy          | Test organisms/templates, not thin wrappers   | Avoids fragile tests           |
+| Mock auth in tests            | `MockAuthProvider.authenticated()`            | Bypasses platform channels     |
 
 ---
 

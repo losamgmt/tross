@@ -19,14 +19,16 @@
  * - Entity extensions (roles-extensions) - these are entity-specific customizations
  */
 
-const allMetadata = require('./models');
-const entityRouters = require('../routes/entities');
-const { createFileSubRouter } = require('../routes/file-sub-router');
+const allMetadata = require("./models");
+const entityRouters = require("../routes/entities");
+const { createFileSubRouter } = require("../routes/file-sub-router");
 
 // Derive uncountable entity names from metadata at load time (no hardcoding!)
 const UNCOUNTABLE_ENTITIES = Object.entries(allMetadata)
   .filter(([, meta]) => meta.uncountable === true)
-  .map(([key]) => key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase()));
+  .map(([key]) =>
+    key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase()),
+  );
 
 /**
  * Maps entity name to router export name.
@@ -37,7 +39,9 @@ const UNCOUNTABLE_ENTITIES = Object.entries(allMetadata)
  */
 function toRouterName(entityName) {
   // Convert snake_case to camelCase
-  const camelCase = entityName.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+  const camelCase = entityName.replace(/_([a-z])/g, (_, letter) =>
+    letter.toUpperCase(),
+  );
 
   // Uncountable nouns derived from metadata (no plural form)
   if (UNCOUNTABLE_ENTITIES.includes(camelCase)) {
@@ -45,10 +49,11 @@ function toRouterName(entityName) {
   }
 
   // Simple pluralization: 'y' -> 'ies' for consonant+y, otherwise add 's'
-  const vowels = ['a', 'e', 'i', 'o', 'u'];
-  const plural = camelCase.endsWith('y') && !vowels.includes(camelCase.slice(-2, -1))
-    ? camelCase.slice(0, -1) + 'ies'
-    : camelCase + 's';
+  const vowels = ["a", "e", "i", "o", "u"];
+  const plural =
+    camelCase.endsWith("y") && !vowels.includes(camelCase.slice(-2, -1))
+      ? camelCase.slice(0, -1) + "ies"
+      : camelCase + "s";
 
   return `${plural}Router`;
 }
@@ -78,13 +83,14 @@ function loadEntityRoutes() {
       // This is a configuration error - routeConfig says use generic, but no router exists
       console.error(
         `[route-loader] ❌ Router not found for entity '${entityName}' ` +
-        `(expected export: '${routerName}'). Check routes/entities.js exports.`,
+          `(expected export: '${routerName}'). Check routes/entities.js exports.`,
       );
       continue;
     }
 
     // Mount path: explicit in routeConfig, or derive from tableName
-    const mountPath = metadata.routeConfig.mountPath || `/api/${metadata.tableName}`;
+    const mountPath =
+      metadata.routeConfig.mountPath || `/api/${metadata.tableName}`;
 
     routes.push({
       path: mountPath,
@@ -102,7 +108,7 @@ function loadEntityRoutes() {
  * @returns {string} Formatted summary
  */
 function getRouteSummary(routes) {
-  return routes.map((r) => `  ${r.path} (${r.entityName})`).join('\n');
+  return routes.map((r) => `  ${r.path} (${r.entityName})`).join("\n");
 }
 
 /**
@@ -144,7 +150,7 @@ function loadFileSubRoutes() {
  * @returns {string} Formatted summary
  */
 function getFileRouteSummary(routes) {
-  return routes.map((r) => `  ${r.path} (${r.entityName})`).join('\n');
+  return routes.map((r) => `  ${r.path} (${r.entityName})`).join("\n");
 }
 
 module.exports = {

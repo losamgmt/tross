@@ -12,11 +12,12 @@ All coverage metrics and test counts are dynamically reported by the test runner
 # Backend coverage
 cd backend && npm run test:all -- --coverage
 
-# Frontend coverage  
+# Frontend coverage
 cd frontend && flutter test --coverage
 ```
 
 **Coverage Thresholds:**
+
 - Backend: Defined in `backend/jest.config.unit.json` under `coverageThreshold`
 - Frontend: Defined in Flutter test configuration
 
@@ -27,6 +28,7 @@ cd frontend && flutter test --coverage
 ## Testing Philosophy
 
 **Why We Test:**
+
 - **Confidence** to refactor without breaking things
 - **Documentation** that never goes stale (tests are executable specs)
 - **Regression prevention** - catch bugs before production
@@ -39,6 +41,7 @@ cd frontend && flutter test --coverage
 ## Test Pyramid Distribution
 
 **Target Ratios:**
+
 - Unit tests: ~80% (fast, isolated, comprehensive)
 - Integration tests: ~20% (API + DB, contract validation)
 - E2E tests: minimal (smoke tests only, stack connectivity)
@@ -53,7 +56,7 @@ cd frontend && flutter test --coverage
        /\      E2E (Playwright)
       /  \     - Critical user journeys
      /____\    - Slow, expensive
-    /      \   
+    /      \
    / Integration \   (Jest + Supertest)
   /   (API + DB)  \  - Endpoint testing
  /________________\ - Real database
@@ -72,28 +75,33 @@ cd frontend && flutter test --coverage
 ### Unit Tests (`__tests__/unit/`)
 
 **What to test:**
+
 - Model methods (CRUD operations)
 - Service logic (business rules)
 - Validators (input validation)
 - Utilities (helpers, formatters)
 
 **Example:** Model validation
+
 ```javascript
 // __tests__/unit/models/Customer.validation.test.js
-describe('Customer Model - Validation', () => {
-  it('should require email', async () => {
-    await expect(Customer.create({ name: 'Test' }))
-      .rejects.toThrow('email is required');
+describe("Customer Model - Validation", () => {
+  it("should require email", async () => {
+    await expect(Customer.create({ name: "Test" })).rejects.toThrow(
+      "email is required",
+    );
   });
 
-  it('should validate email format', async () => {
-    await expect(Customer.create({ email: 'invalid' }))
-      .rejects.toThrow('Invalid email format');
+  it("should validate email format", async () => {
+    await expect(Customer.create({ email: "invalid" })).rejects.toThrow(
+      "Invalid email format",
+    );
   });
 });
 ```
 
 **Best Practices:**
+
 - Mock external dependencies (DB, APIs)
 - Test one thing per test
 - Use descriptive test names
@@ -104,6 +112,7 @@ describe('Customer Model - Validation', () => {
 ### Integration Tests (`__tests__/integration/`)
 
 **What to test:**
+
 - API endpoints (full request → response)
 - Database interactions (real queries)
 - Authentication flow
@@ -141,32 +150,36 @@ __tests__/factory/
 ```
 
 **Example:** Entity factory test
+
 ```javascript
 // __tests__/integration/customers-factory.test.js
-const { runEntityTests } = require('../factory/runner');
+const { runEntityTests } = require("../factory/runner");
 
-// Automatically generates tests for CRUD, validation, RLS, search, 
+// Automatically generates tests for CRUD, validation, RLS, search,
 // relationships, error handling, and more based on entity metadata
-runEntityTests('customers');
+runEntityTests("customers");
 ```
 
 **Example:** Route factory test
+
 ```javascript
 // __tests__/integration/customers-routes.test.js
-const { runRouteTests } = require('../factory/route-runner');
-const app = require('../../server');
-const db = require('../../db/connection');
+const { runRouteTests } = require("../factory/route-runner");
+const app = require("../../server");
+const db = require("../../db/connection");
 
 // Generates auth, validation, and error tests from route metadata
-runRouteTests('customers', { app, db });
+runRouteTests("customers", { app, db });
 ```
 
 **Specialized Tests:** Non-standard behavior tested in `specialized/` folder:
+
 - `user-role-assignment.test.js` - Cross-entity workflows
 - `entity-guards.test.js` - Protected entity deletion
 - `audit-logging.test.js` - Audit trail compliance
 
 **Best Practices:**
+
 - Use test database (not dev/prod!)
 - Clean database between tests
 - Test auth/permissions
@@ -177,6 +190,7 @@ runRouteTests('customers', { app, db });
 ### Test Database Setup
 
 **Configuration:** `jest.config.integration.json`
+
 ```javascript
 {
   "testEnvironment": "node",
@@ -186,11 +200,13 @@ runRouteTests('customers', { app, db });
 ```
 
 **Global Setup:** Runs once before all tests
+
 - Creates test database
 - Runs migrations
 - Seeds test data
 
 **Per-Test Cleanup:**
+
 ```javascript
 beforeEach(async () => {
   // Truncate tables (preserve schema)
@@ -224,6 +240,7 @@ Run `flutter test` to see current test counts and coverage.
 ### Widget Tests (`test/widgets/`)
 
 **What to test:**
+
 - Widget rendering
 - User interactions (taps, input, keyboard)
 - State changes
@@ -231,6 +248,7 @@ Run `flutter test` to see current test counts and coverage.
 - **Keyboard accessibility** (see below)
 
 **Example:** Button widget (using test helpers)
+
 ```dart
 // test/widgets/atoms/custom_button_test.dart
 import 'package:flutter_test/flutter_test.dart';
@@ -269,6 +287,7 @@ void main() {
 ### Keyboard Accessibility Testing
 
 **Why test keyboard accessibility:**
+
 - WCAG compliance requires keyboard-only navigation
 - Power users prefer keyboard shortcuts
 - Screen reader users depend on proper focus management
@@ -303,11 +322,13 @@ group('Keyboard Accessibility', () {
 ```
 
 **Required imports:**
+
 ```dart
 import 'package:flutter/services.dart'; // For LogicalKeyboardKey
 ```
 
 **Pattern for checking control keys in custom widgets:**
+
 ```dart
 // Helper to filter out control keys that shouldn't trigger typeahead
 bool _isControlKey(LogicalKeyboardKey key) {
@@ -377,14 +398,15 @@ for (final entityName in allKnownEntities) {
 
 **Scenario Categories:**
 
-| Category | Tests | What it validates |
-|----------|-------|-------------------|
-| Parity | 31 | Frontend metadata matches backend config |
-| Widget Rendering | 287 | All widgets × all entities render correctly |
-| Validation | 132 | Missing fields, type mismatches, boundaries |
-| **Total** | **450+** | Zero per-entity code |
+| Category         | Tests    | What it validates                           |
+| ---------------- | -------- | ------------------------------------------- |
+| Parity           | 31       | Frontend metadata matches backend config    |
+| Widget Rendering | 287      | All widgets × all entities render correctly |
+| Validation       | 132      | Missing fields, type mismatches, boundaries |
+| **Total**        | **450+** | Zero per-entity code                        |
 
 **Benefits:**
+
 - Add new entity → tests automatically generated
 - Change metadata → parity tests catch drift
 - Bug in factory → one fix covers all entities
@@ -394,6 +416,7 @@ for (final entityName in allKnownEntities) {
 ### Provider Testing
 
 **Testing state management:**
+
 ```dart
 // test/providers/auth_provider_test.dart
 void main() {
@@ -420,6 +443,7 @@ void main() {
 ## E2E Testing (Playwright)
 
 **Philosophy:**
+
 - E2E tests verify **production is up and secure** - nothing more
 - Unit tests verify isolated logic (vast majority of tests)
 - Integration tests verify API contracts with test auth
@@ -428,33 +452,37 @@ void main() {
 **Key Insight:** Tests that can't run in production are cruft. We don't skip them—we remove them. All auth-dependent testing happens in integration tests where test auth is enabled.
 
 **What E2E tests verify:**
+
 - Health checks (server up, database connected, memory healthy)
 - Security (auth required, invalid tokens rejected, security headers present)
 - Routing (unknown routes return 404)
 - File endpoints (auth enforcement)
 
 **What's NOT in E2E (and why):**
+
 - Dev token tests → Dev tokens don't work in production (correct security!)
 - RBAC tests → Tested in integration tests with test auth
 - Read-only protection → Tested in integration tests
 - Pagination/API contracts → Tested in integration tests
 
 **Test File:**
+
 - `e2e/production.spec.ts` - Production health & security
 
 **Configuration:**
+
 - `e2e/config/constants.ts` - URLs (supports `BACKEND_URL` env var for production)
 
 ---
 
 ### E2E Test Categories
 
-| Category | Tests | What it verifies |
-|----------|-------|------------------|
-| Health | 3 | Server running, DB connected, memory healthy |
-| Security | 6 | Auth required, invalid tokens rejected, headers present |
-| Routing | 2 | Unknown routes return 404 |
-| File Storage | 4 | All file endpoints require auth |
+| Category     | Tests | What it verifies                                        |
+| ------------ | ----- | ------------------------------------------------------- |
+| Health       | 3     | Server running, DB connected, memory healthy            |
+| Security     | 6     | Auth required, invalid tokens rejected, headers present |
+| Routing      | 2     | Unknown routes return 404                               |
+| File Storage | 4     | All file endpoints require auth                         |
 
 ---
 
@@ -475,6 +503,7 @@ npx playwright test --ui
 ```
 
 **Local vs CI:**
+
 - **Local:** Runs against `http://localhost:3001` (start backend first)
 - **CI:** Runs against deployed Railway URL via `BACKEND_URL` env var
 
@@ -494,6 +523,7 @@ Push to main
 ```
 
 **Required GitHub Secret:** `RAILWAY_BACKEND_URL`
+
 - Example: `https://tross-api-production.up.railway.app`
 
 ---
@@ -501,42 +531,46 @@ Push to main
 ## Test Patterns
 
 ### AAA Pattern (Arrange-Act-Assert)
+
 ```javascript
-test('should calculate total price', () => {
+test("should calculate total price", () => {
   // Arrange
   const items = [{ price: 10 }, { price: 20 }];
-  
+
   // Act
   const total = calculateTotal(items);
-  
+
   // Assert
   expect(total).toBe(30);
 });
 ```
 
 ### Mocking External Dependencies
+
 ```javascript
 // Mock database
-jest.mock('../../../db/connection');
-const db = require('../../../db/connection');
+jest.mock("../../../db/connection");
+const db = require("../../../db/connection");
 
-db.query.mockResolvedValue({ rows: [{ id: 1, name: 'Test' }] });
+db.query.mockResolvedValue({ rows: [{ id: 1, name: "Test" }] });
 ```
 
 ### Testing Async Code
+
 ```javascript
-test('should fetch user asynchronously', async () => {
+test("should fetch user asynchronously", async () => {
   const user = await User.findById(1);
-  expect(user).toHaveProperty('email');
+  expect(user).toHaveProperty("email");
 });
 ```
 
 ### Testing Error Handling
+
 ```javascript
-test('should throw error for invalid data', async () => {
-  await expect(User.create({ email: 'invalid' }))
-    .rejects
-    .toThrow('Invalid email format');
+test("should throw error for invalid data", async () => {
+  await expect(User.create({ email: "invalid" })).rejects.toThrow(
+    "Invalid email format",
+  );
 });
 ```
 
@@ -546,19 +580,19 @@ The factory system includes comprehensive error scenario testing via `error.scen
 
 ```javascript
 // Automatically generated error tests include:
-- updateNonExistent()     // 404 for missing entity
-- deleteNonExistent()     // 404 for missing entity  
-- noAuthReturns401()      // Authentication required
-- invalidJsonBody()       // Malformed JSON handling
-- emptyBodyOnCreate()     // Empty body rejection
-- nullRequiredField()     // Required field validation
-- invalidEnumRejected()   // Enum value validation
-- invalidEmailRejected()  // Email format validation
-- xssHandledSafely()      // XSS input handling
-- paginationEdgeCases()   // Boundary conditions
-- sortByInvalidField()    // Invalid sort handling
-- errorResponseStructure()// Consistent error format
-- concurrentOperationsSafe() // Race condition handling
+-updateNonExistent() - // 404 for missing entity
+  deleteNonExistent() - // 404 for missing entity
+  noAuthReturns401() - // Authentication required
+  invalidJsonBody() - // Malformed JSON handling
+  emptyBodyOnCreate() - // Empty body rejection
+  nullRequiredField() - // Required field validation
+  invalidEnumRejected() - // Enum value validation
+  invalidEmailRejected() - // Email format validation
+  xssHandledSafely() - // XSS input handling
+  paginationEdgeCases() - // Boundary conditions
+  sortByInvalidField() - // Invalid sort handling
+  errorResponseStructure() - // Consistent error format
+  concurrentOperationsSafe(); // Race condition handling
 ```
 
 **Philosophy:** Every "happy path" has corresponding "unhappy path" tests. Error handling is not optional coverage—it's critical for production reliability.
@@ -568,6 +602,7 @@ The factory system includes comprehensive error scenario testing via `error.scen
 ## Test Organization
 
 ### Backend Test Structure
+
 ```
 backend/__tests__/
 ├── factory/                      # Pattern-based test generation
@@ -603,6 +638,7 @@ backend/__tests__/
 ```
 
 ### Frontend Test Structure
+
 ```
 frontend/test/
 ├── widgets/                      # Widget tests (by atomic design)
@@ -616,23 +652,25 @@ frontend/test/
 ```
 
 ### File Naming Conventions
+
 - `*.test.js` - Test files (Jest auto-discovers)
 - `*-factory.test.js` - Factory-generated tests
 - `*-routes.test.js` - Route-specific tests
 - `*.scenarios.js` - Reusable scenario modules
 
 ### Test Structure
+
 ```javascript
-describe('CustomerModel', () => {
-  describe('create()', () => {
-    it('should create customer with valid data', async () => { });
-    it('should reject duplicate email', async () => { });
-    it('should require name field', async () => { });
+describe("CustomerModel", () => {
+  describe("create()", () => {
+    it("should create customer with valid data", async () => {});
+    it("should reject duplicate email", async () => {});
+    it("should require name field", async () => {});
   });
 
-  describe('update()', () => {
-    it('should update existing customer', async () => { });
-    it('should reject invalid status', async () => { });
+  describe("update()", () => {
+    it("should update existing customer", async () => {});
+    it("should reject invalid status", async () => {});
   });
 });
 ```
@@ -642,6 +680,7 @@ describe('CustomerModel', () => {
 ## Running Tests
 
 ### Backend
+
 ```bash
 cd backend
 
@@ -665,6 +704,7 @@ npm run test:integration
 ```
 
 ### Frontend
+
 ```bash
 cd frontend
 
@@ -685,7 +725,9 @@ open coverage/html/index.html
 ## Performance Optimization
 
 ### Parallel Execution
+
 Jest runs tests in parallel by default:
+
 ```javascript
 // jest.config.js
 {
@@ -694,6 +736,7 @@ Jest runs tests in parallel by default:
 ```
 
 ### Test Timeouts
+
 ```javascript
 // Per-test timeout
 test('slow operation', async () => {
@@ -707,6 +750,7 @@ test('slow operation', async () => {
 ```
 
 ### Database Optimization
+
 - Use transactions for faster cleanup
 - Index test queries
 - Minimize test data
@@ -716,6 +760,7 @@ test('slow operation', async () => {
 ## Debugging Tests
 
 ### Backend
+
 ```bash
 # Verbose output
 npm test -- --verbose
@@ -725,6 +770,7 @@ node --inspect-brk node_modules/.bin/jest --runInBand customers
 ```
 
 ### Frontend
+
 ```bash
 # Print debugging
 debugPrint('Widget tree: ${tester.allWidgets}');
@@ -738,6 +784,7 @@ flutter test test/widgets/atoms/custom_button_test.dart
 ## CI/CD Integration
 
 **GitHub Actions:** Tests run on every push/PR
+
 ```yaml
 # .github/workflows/test.yml
 - name: Run backend tests
@@ -752,6 +799,7 @@ flutter test test/widgets/atoms/custom_button_test.dart
 ```
 
 **Pre-commit Hook:**
+
 ```bash
 # .git/hooks/pre-commit
 #!/bin/bash
@@ -764,6 +812,7 @@ cd ../frontend && flutter test
 ## Test Quality Metrics
 
 **Good Test Characteristics:**
+
 - ✅ **Fast** - Unit tests <5s, integration <10s
 - ✅ **Isolated** - No shared state between tests
 - ✅ **Repeatable** - Same result every time
@@ -771,6 +820,7 @@ cd ../frontend && flutter test
 - ✅ **Timely** - Written with/before code (TDD)
 
 **Bad Test Smells:**
+
 - ❌ Flaky tests (pass/fail randomly)
 - ❌ Slow tests (>10s for integration)
 - ❌ Tests testing implementation details
@@ -788,6 +838,7 @@ cd ../frontend && flutter test
 Run these tests against the production frontend URL after every deployment:
 
 #### 1. Authentication & Session
+
 - [ ] Visit the production frontend URL
 - [ ] Click "Login" button
 - [ ] Auth0 login page loads
@@ -797,6 +848,7 @@ Run these tests against the production frontend URL after every deployment:
 - [ ] User menu shows logged-in state
 
 #### 2. User CRUD Operations
+
 - [ ] Navigate to Users page
 - [ ] Create new user (email, first_name, last_name, role)
 - [ ] Verify new user appears in list
@@ -806,6 +858,7 @@ Run these tests against the production frontend URL after every deployment:
 - [ ] Delete user (if admin)
 
 #### 3. Role Management
+
 - [ ] Navigate to Roles page
 - [ ] View role list (core roles present)
 - [ ] Create new custom role
@@ -814,12 +867,14 @@ Run these tests against the production frontend URL after every deployment:
 - [ ] Verify error handling works
 
 #### 4. Permissions & Security
+
 - [ ] Try accessing admin-only features as non-admin (should reject)
 - [ ] Verify RBAC enforcing correctly
 - [ ] Check browser console for errors (should be clean except source maps)
 - [ ] Verify no CORS errors
 
 #### 5. Backend Health
+
 - [ ] Visit the production API health endpoint (`/api/health`)
 - [ ] Should return JSON: `{"status":"ok",...}`
 - [ ] Check database health in response
@@ -838,11 +893,13 @@ BACKEND_URL=<production-api-url> npm run test:e2e
 **Configuration:** See `.env.production.example` for environment setup.
 
 **When to Run:**
+
 - After every production deployment
 - Before major feature releases
 - Monthly as part of health check
 
 **Expected Results:**
+
 - All tests pass
 - No console errors (except harmless source map warnings)
 - Health badge green

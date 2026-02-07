@@ -30,12 +30,14 @@ DELETE /api/:tableName/:id/files/:fileId   ← Delete file (soft)
 ```
 
 **Why sub-resources:**
+
 - Proper RESTful design - files belong to entities
 - URL encodes the relationship - no ambiguity about which entity owns the file
 - Consistent with API patterns (e.g., `/api/work_orders/123/files`)
 - Permissions naturally inherit from parent entity
 
 **Implementation:**
+
 - `file-sub-router.js` with Express `mergeParams: true`
 - Mounted via `route-loader.js` for entities with `supportsFileAttachments: true`
 
@@ -45,21 +47,24 @@ DELETE /api/:tableName/:id/files/:fileId   ← Delete file (soft)
 
 Every file response includes a ready-to-use signed URL:
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `download_url` | string | ✅ YES | Signed R2/S3 URL |
-| `download_url_expires_at` | datetime | ✅ YES | Absolute expiry timestamp |
+| Field                     | Type     | Required | Description               |
+| ------------------------- | -------- | -------- | ------------------------- |
+| `download_url`            | string   | ✅ YES   | Signed R2/S3 URL          |
+| `download_url_expires_at` | datetime | ✅ YES   | Absolute expiry timestamp |
 
 **Why required (not optional):**
+
 - No separate "get download URL" endpoint needed
 - Frontend can use URL immediately without extra round-trip
 - Expiry is absolute datetime, not relative seconds (easier to cache/compare)
 
 **Why absolute expiry:**
+
 - `expires_in: 3600` requires frontend to track when it received the response
 - `expires_at: "2026-02-01T11:30:00Z"` is unambiguous, can be compared directly
 
 **Frontend refresh pattern:**
+
 ```dart
 if (file.downloadUrlExpiresAt.isBefore(DateTime.now().add(Duration(minutes: 5)))) {
   // Refresh the file to get new download URL
@@ -72,14 +77,15 @@ if (file.downloadUrlExpiresAt.isBefore(DateTime.now().add(Duration(minutes: 5)))
 
 File permissions derive from the **parent entity**, not a separate permission:
 
-| File Operation | Required Permission |
-|----------------|---------------------|
-| List files | `read` on parent entity |
-| Get file | `read` on parent entity |
-| Upload file | `update` on parent entity |
-| Delete file | `update` on parent entity |
+| File Operation | Required Permission       |
+| -------------- | ------------------------- |
+| List files     | `read` on parent entity   |
+| Get file       | `read` on parent entity   |
+| Upload file    | `update` on parent entity |
+| Delete file    | `update` on parent entity |
 
 **Why no separate file permissions:**
+
 - Simpler permission model - if you can edit the work order, you can manage its files
 - No permission explosion (13 entities × 4 operations = 52 new permissions avoided)
 - Matches user mental model - "I'm editing this work order"
@@ -99,16 +105,19 @@ Files stored in Cloudflare R2 (S3-compatible):
 ## Consequences
 
 ### Positive
+
 - **Clean URLs** - `/api/work_orders/123/files` is intuitive
 - **No extra requests** - Download URL included in every response
 - **Simple permissions** - No separate file permission matrix
 - **Frontend simplicity** - Just check `download_url_expires_at` to know if refresh needed
 
 ### Negative
+
 - **URL generation on every request** - Signed URL computed even if not used
 - **1-hour URL expiry** - May need refresh for long-lived pages
 
 ### Neutral
+
 - **Soft delete only** - Files set `is_active=false`, not removed from storage
 - **Category support** - Files can have categories (before_photo, document, etc.)
 

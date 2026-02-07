@@ -24,16 +24,16 @@
 // ROLE PRIORITY: Uses role-definitions.js fallback constants (acceptable for dev-auth)
 // This file is part of the dev auth strategy - not used in production Auth0 flow.
 
-const { ROLE_NAME_TO_PRIORITY } = require('./role-definitions');
+const { ROLE_NAME_TO_PRIORITY } = require("./role-definitions");
 
 // Database role_id to role name mapping
 // This matches the database seed data in roles table
 const ROLE_ID_TO_NAME = {
-  1: 'admin',
-  2: 'manager',
-  3: 'dispatcher',
-  4: 'technician',
-  5: 'customer',
+  1: "admin",
+  2: "manager",
+  3: "dispatcher",
+  4: "technician",
+  5: "customer",
 };
 
 /**
@@ -41,13 +41,7 @@ const ROLE_ID_TO_NAME = {
  * @param {Object} config - User configuration
  * @returns {Object} Complete user object with derived role_priority
  */
-function createTestUser({
-  auth0_id,
-  email,
-  first_name,
-  last_name,
-  role_id,
-}) {
+function createTestUser({ auth0_id, email, first_name, last_name, role_id }) {
   const role = ROLE_ID_TO_NAME[role_id];
   return {
     // DB fields (match users table schema exactly)
@@ -58,52 +52,52 @@ function createTestUser({
     last_name,
     role_id,
     is_active: true,
-    created_at: '2025-01-01T00:00:00.000Z',
-    updated_at: '2025-01-01T00:00:00.000Z',
+    created_at: "2025-01-01T00:00:00.000Z",
+    updated_at: "2025-01-01T00:00:00.000Z",
 
     // Query-time fields (added by JOIN, not in DB)
     role, // From roles.name
     role_priority: ROLE_NAME_TO_PRIORITY[role], // Derived from SSOT
 
     // Dev-only routing field
-    provider: 'development',
+    provider: "development",
   };
 }
 
 const TEST_USERS = {
   admin: createTestUser({
-    auth0_id: 'dev|admin001',
-    email: 'admin@tross.dev',
-    first_name: 'Sarah',
-    last_name: 'Administrator',
+    auth0_id: "dev|admin001",
+    email: "admin@tross.dev",
+    first_name: "Sarah",
+    last_name: "Administrator",
     role_id: 1,
   }),
   manager: createTestUser({
-    auth0_id: 'dev|manager001',
-    email: 'manager@tross.dev',
-    first_name: 'Mike',
-    last_name: 'Manager',
+    auth0_id: "dev|manager001",
+    email: "manager@tross.dev",
+    first_name: "Mike",
+    last_name: "Manager",
     role_id: 2,
   }),
   dispatcher: createTestUser({
-    auth0_id: 'dev|dispatcher001',
-    email: 'dispatcher@tross.dev',
-    first_name: 'Diana',
-    last_name: 'Dispatcher',
+    auth0_id: "dev|dispatcher001",
+    email: "dispatcher@tross.dev",
+    first_name: "Diana",
+    last_name: "Dispatcher",
     role_id: 3,
   }),
   technician: createTestUser({
-    auth0_id: 'dev|tech001',
-    email: 'technician@tross.dev',
-    first_name: 'Tom',
-    last_name: 'Technician',
+    auth0_id: "dev|tech001",
+    email: "technician@tross.dev",
+    first_name: "Tom",
+    last_name: "Technician",
     role_id: 4,
   }),
   customer: createTestUser({
-    auth0_id: 'dev|customer001',
-    email: 'customer@tross.dev',
-    first_name: 'Carol',
-    last_name: 'Customer',
+    auth0_id: "dev|customer001",
+    email: "customer@tross.dev",
+    first_name: "Carol",
+    last_name: "Customer",
     role_id: 5,
   }),
 };
