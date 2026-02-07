@@ -8,9 +8,9 @@
  * database-layer validation (PostgreSQL CHECK constraints).
  */
 
-const { logger } = require("../config/logger");
-const { loadValidationRules } = require("./validation-loader");
-const AppError = require("./app-error");
+const { logger } = require('../config/logger');
+const { loadValidationRules } = require('./validation-loader');
+const AppError = require('./app-error');
 
 /**
  * Query PostgreSQL CHECK constraints to extract enum values
@@ -48,7 +48,7 @@ async function getDbCheckConstraints(pool) {
       // Extract quoted strings from the array
       const quotedValues = match[1].match(/'([^']+)'/g);
       const enumValues = quotedValues
-        ? quotedValues.map((v) => v.replace(/'/g, "")).sort()
+        ? quotedValues.map((v) => v.replace(/'/g, '')).sort()
         : [];
 
       const key = `${table_name}.${column_name}`;
@@ -66,17 +66,17 @@ async function getDbCheckConstraints(pool) {
  * UPDATED: Now uses entityFields structure from validation-deriver
  */
 const ENTITY_FIELD_TO_DB_MAPPING = {
-  role: { status: "roles.status" },
-  user: { status: "users.status" },
-  customer: { status: "customers.status" },
-  technician: { status: "technicians.status" },
+  role: { status: 'roles.status' },
+  user: { status: 'users.status' },
+  customer: { status: 'customers.status' },
+  technician: { status: 'technicians.status' },
   work_order: {
-    status: "work_orders.status",
-    priority: "work_orders.priority",
+    status: 'work_orders.status',
+    priority: 'work_orders.priority',
   },
-  invoice: { status: "invoices.status" },
-  contract: { status: "contracts.status" },
-  inventory: { status: "inventory.status" },
+  invoice: { status: 'invoices.status' },
+  contract: { status: 'contracts.status' },
+  inventory: { status: 'inventory.status' },
 };
 
 /**
@@ -150,29 +150,29 @@ async function validateEnumSync(pool) {
     }
 
     if (mismatches.length > 0) {
-      logger.error("[ValidationSync] ❌ Enum mismatches detected:");
+      logger.error('[ValidationSync] ❌ Enum mismatches detected:');
       for (const mismatch of mismatches) {
         logger.error(`  ${mismatch.field} (${mismatch.database}):`);
-        logger.error(`    Joi:      [${mismatch.joiEnum.join(", ")}]`);
-        logger.error(`    Database: [${mismatch.dbEnum.join(", ")}]`);
+        logger.error(`    Joi:      [${mismatch.joiEnum.join(', ')}]`);
+        logger.error(`    Database: [${mismatch.dbEnum.join(', ')}]`);
         if (mismatch.missing_in_joi.length > 0) {
           logger.error(
-            `    Missing in Joi: [${mismatch.missing_in_joi.join(", ")}]`,
+            `    Missing in Joi: [${mismatch.missing_in_joi.join(', ')}]`,
           );
         }
         if (mismatch.missing_in_db.length > 0) {
           logger.error(
-            `    Missing in DB: [${mismatch.missing_in_db.join(", ")}]`,
+            `    Missing in DB: [${mismatch.missing_in_db.join(', ')}]`,
           );
         }
       }
 
       throw new AppError(
-        "Validation enum definitions do not match database CHECK constraints. " +
+        'Validation enum definitions do not match database CHECK constraints. ' +
           `Found ${mismatches.length} mismatch(es). ` +
-          "Update entity metadata or database schema to sync.",
+          'Update entity metadata or database schema to sync.',
         500,
-        "INTERNAL_ERROR",
+        'INTERNAL_ERROR',
       );
     }
 
@@ -181,17 +181,17 @@ async function validateEnumSync(pool) {
     );
     return true;
   } catch (error) {
-    if (error.message.includes("Validation enum definitions")) {
+    if (error.message.includes('Validation enum definitions')) {
       throw error; // Re-throw validation errors
     }
     logger.error(
-      "[ValidationSync] ❌ Error during validation sync check:",
+      '[ValidationSync] ❌ Error during validation sync check:',
       error,
     );
     throw new AppError(
       `Validation sync check failed: ${error.message}`,
       500,
-      "INTERNAL_ERROR",
+      'INTERNAL_ERROR',
     );
   }
 }

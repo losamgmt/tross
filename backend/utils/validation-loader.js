@@ -12,11 +12,11 @@
  * Frontend can fetch via /api/schema/validation-rules endpoint.
  */
 
-const Joi = require("joi");
-const AppError = require("./app-error");
+const Joi = require('joi');
+const AppError = require('./app-error');
 
 // Import the deriver (SINGLE SOURCE OF TRUTH)
-const { deriveValidationRules } = require("../config/validation-deriver");
+const { deriveValidationRules } = require('../config/validation-deriver');
 
 // Cache for validation rules
 let validationRules = null;
@@ -46,7 +46,7 @@ const TYPE_BUILDERS = {
 
   phone: () => Joi.string().pattern(/^\+?[1-9]\d{1,14}$/), // E.164 format
 
-  url: () => Joi.string().uri({ scheme: ["http", "https"] }),
+  url: () => Joi.string().uri({ scheme: ['http', 'https'] }),
 
   time: () => Joi.string().pattern(/^([01]\d|2[0-3]):([0-5]\d)(:([0-5]\d))?$/), // HH:MM or HH:MM:SS
 
@@ -87,18 +87,18 @@ const TYPE_BUILDERS = {
  * Types that support string modifiers (minLength, maxLength, pattern, trim, etc.)
  */
 const STRING_TYPES = new Set([
-  "string",
-  "email",
-  "phone",
-  "text",
-  "url",
-  "time",
+  'string',
+  'email',
+  'phone',
+  'text',
+  'url',
+  'time',
 ]);
 
 /**
  * Types that support numeric modifiers (min, max)
  */
-const NUMERIC_TYPES = new Set(["integer", "decimal", "currency"]);
+const NUMERIC_TYPES = new Set(['integer', 'decimal', 'currency']);
 
 /**
  * Load validation rules - now derived from metadata
@@ -114,14 +114,14 @@ function loadValidationRules() {
     validationRules = deriveValidationRules();
     return validationRules;
   } catch (error) {
-    const { logger } = require("../config/logger");
-    logger.error("[ValidationLoader] Failed to derive validation rules:", {
+    const { logger } = require('../config/logger');
+    logger.error('[ValidationLoader] Failed to derive validation rules:', {
       error: error.message,
     });
     throw new AppError(
-      "Cannot derive validation rules from metadata",
+      'Cannot derive validation rules from metadata',
       500,
-      "INTERNAL_ERROR",
+      'INTERNAL_ERROR',
     );
   }
 }
@@ -137,16 +137,16 @@ function loadValidationRules() {
  */
 function buildFieldSchema(fieldDef, fieldName) {
   const type =
-    fieldDef.type || (fieldDef.format === "date" ? "date" : "string");
+    fieldDef.type || (fieldDef.format === 'date' ? 'date' : 'string');
 
   // Get builder from registry
   const builder = TYPE_BUILDERS[type];
   if (!builder) {
     throw new AppError(
       `Unsupported field type: ${type} for ${fieldName}. ` +
-        `Supported types: ${Object.keys(TYPE_BUILDERS).join(", ")}`,
+        `Supported types: ${Object.keys(TYPE_BUILDERS).join(', ')}`,
       500,
-      "INTERNAL_ERROR",
+      'INTERNAL_ERROR',
     );
   }
 
@@ -174,7 +174,7 @@ function buildFieldSchema(fieldDef, fieldName) {
  */
 function applyStringModifiers(schema, fieldDef) {
   // Legacy format support for backward compatibility
-  if (fieldDef.type === "string" && fieldDef.format === "email") {
+  if (fieldDef.type === 'string' && fieldDef.format === 'email') {
     schema = schema.email({
       tlds: fieldDef.tldRestriction === false ? false : { allow: true },
     });
@@ -201,7 +201,7 @@ function applyStringModifiers(schema, fieldDef) {
   }
 
   if (fieldDef.allowNull) {
-    schema = schema.allow(null, "");
+    schema = schema.allow(null, '');
   }
 
   // Apply enum validation (for string types)
@@ -257,44 +257,44 @@ function buildErrorMessages(errorMessages) {
   const messages = {};
 
   if (errorMessages.required) {
-    messages["any.required"] = errorMessages.required;
-    messages["string.empty"] = errorMessages.required;
+    messages['any.required'] = errorMessages.required;
+    messages['string.empty'] = errorMessages.required;
   }
 
   if (errorMessages.format) {
-    messages["string.email"] = errorMessages.format;
-    messages["date.format"] = errorMessages.format;
-    messages["date.base"] = errorMessages.format;
+    messages['string.email'] = errorMessages.format;
+    messages['date.format'] = errorMessages.format;
+    messages['date.base'] = errorMessages.format;
   }
 
   if (errorMessages.minLength) {
-    messages["string.min"] = errorMessages.minLength;
+    messages['string.min'] = errorMessages.minLength;
   }
 
   if (errorMessages.maxLength) {
-    messages["string.max"] = errorMessages.maxLength;
+    messages['string.max'] = errorMessages.maxLength;
   }
 
   if (errorMessages.pattern) {
-    messages["string.pattern.base"] = errorMessages.pattern;
+    messages['string.pattern.base'] = errorMessages.pattern;
   }
 
   if (errorMessages.enum) {
-    messages["any.only"] = errorMessages.enum;
+    messages['any.only'] = errorMessages.enum;
   }
 
   if (errorMessages.type) {
-    messages["number.base"] = errorMessages.type;
-    messages["boolean.base"] = errorMessages.type;
+    messages['number.base'] = errorMessages.type;
+    messages['boolean.base'] = errorMessages.type;
   }
 
   if (errorMessages.min) {
-    messages["number.min"] = errorMessages.min;
-    messages["number.positive"] = errorMessages.min;
+    messages['number.min'] = errorMessages.min;
+    messages['number.positive'] = errorMessages.min;
   }
 
   if (errorMessages.max) {
-    messages["number.max"] = errorMessages.max;
+    messages['number.max'] = errorMessages.max;
   }
 
   return messages;
@@ -321,7 +321,7 @@ function buildCompositeSchema(operationName) {
     throw new AppError(
       `Unknown composite validation: ${operationName}`,
       400,
-      "BAD_REQUEST",
+      'BAD_REQUEST',
     );
   }
 
@@ -355,7 +355,7 @@ function buildCompositeSchema(operationName) {
     const fieldDef = getFieldDef(fieldName);
     if (!fieldDef) {
       // Log warning but don't fail - field might be entity-specific
-      const { logger } = require("../config/logger");
+      const { logger } = require('../config/logger');
       logger.warn(
         `[ValidationLoader] Field definition not found: ${fieldName}`,
       );
@@ -370,7 +370,7 @@ function buildCompositeSchema(operationName) {
   composite.optionalFields?.forEach((fieldName) => {
     const fieldDef = getFieldDef(fieldName);
     if (!fieldDef) {
-      const { logger } = require("../config/logger");
+      const { logger } = require('../config/logger');
       logger.warn(
         `[ValidationLoader] Field definition not found: ${fieldName}`,
       );

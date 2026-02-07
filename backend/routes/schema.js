@@ -7,17 +7,17 @@
  * Performance: Schemas are cacheable (TTL: 5 minutes)
  */
 
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const SchemaIntrospectionService = require("../services/schema-introspection");
-const { authenticateToken } = require("../middleware/auth");
-const ResponseFormatter = require("../utils/response-formatter");
+const SchemaIntrospectionService = require('../services/schema-introspection');
+const { authenticateToken } = require('../middleware/auth');
+const ResponseFormatter = require('../utils/response-formatter');
 const {
   deriveValidationRules,
   getCompositeValidation,
-} = require("../config/validation-deriver");
-const { asyncHandler } = require("../middleware/utils");
-const AppError = require("../utils/app-error");
+} = require('../config/validation-deriver');
+const { asyncHandler } = require('../middleware/utils');
+const AppError = require('../utils/app-error');
 
 /**
  * @openapi
@@ -51,14 +51,14 @@ const AppError = require("../utils/app-error");
  *                         type: string
  */
 router.get(
-  "/",
+  '/',
   authenticateToken,
   asyncHandler(async (req, res) => {
     const tables = await SchemaIntrospectionService.getAllTables();
 
     return ResponseFormatter.list(res, {
       data: tables,
-      message: "Tables retrieved successfully",
+      message: 'Tables retrieved successfully',
     });
   }),
 );
@@ -119,7 +119,7 @@ router.get(
  *         description: Table not found
  */
 router.get(
-  "/:tableName",
+  '/:tableName',
   authenticateToken,
   asyncHandler(async (req, res) => {
     const { tableName } = req.params;
@@ -127,7 +127,7 @@ router.get(
     const schema = await SchemaIntrospectionService.getTableSchema(tableName);
 
     return ResponseFormatter.get(res, schema, {
-      message: "Table schema retrieved successfully",
+      message: 'Table schema retrieved successfully',
     });
   }),
 );
@@ -174,7 +174,7 @@ router.get(
  *                         type: string
  */
 router.get(
-  "/:tableName/options/:column",
+  '/:tableName/options/:column',
   authenticateToken,
   asyncHandler(async (req, res) => {
     const { tableName, column } = req.params;
@@ -187,7 +187,7 @@ router.get(
       throw new AppError(
         `Column '${column}' is not a foreign key`,
         400,
-        "BAD_REQUEST",
+        'BAD_REQUEST',
       );
     }
 
@@ -198,7 +198,7 @@ router.get(
 
     return ResponseFormatter.list(res, {
       data: options,
-      message: "Foreign key options retrieved successfully",
+      message: 'Foreign key options retrieved successfully',
     });
   }),
 );
@@ -237,16 +237,16 @@ router.get(
  *                       type: object
  */
 router.get(
-  "/validation-rules",
+  '/validation-rules',
   authenticateToken,
   asyncHandler(async (req, res) => {
     const rules = deriveValidationRules();
 
     // Set cache headers (validation rules don't change at runtime)
-    res.set("Cache-Control", "public, max-age=300"); // 5 minutes
+    res.set('Cache-Control', 'public, max-age=300'); // 5 minutes
 
     return ResponseFormatter.success(res, rules, {
-      message: "Validation rules derived from metadata",
+      message: 'Validation rules derived from metadata',
     });
   }),
 );
@@ -274,7 +274,7 @@ router.get(
  *         description: Operation not found
  */
 router.get(
-  "/validation-rules/:operationName",
+  '/validation-rules/:operationName',
   authenticateToken,
   asyncHandler(async (req, res) => {
     const { operationName } = req.params;
@@ -284,7 +284,7 @@ router.get(
       throw new AppError(
         `Validation operation '${operationName}' not found`,
         404,
-        "NOT_FOUND",
+        'NOT_FOUND',
       );
     }
 

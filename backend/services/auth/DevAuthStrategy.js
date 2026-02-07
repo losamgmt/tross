@@ -4,17 +4,17 @@
  * JWT-based authentication using local test users for development and testing.
  * Implements AuthStrategy interface for the Strategy Pattern.
  */
-const jwt = require("jsonwebtoken");
-const AuthStrategy = require("./AuthStrategy");
-const AppError = require("../../utils/app-error");
-const { TEST_USERS } = require("../../config/test-users");
-const { AUTH } = require("../../config/constants");
-const { logger } = require("../../config/logger");
+const jwt = require('jsonwebtoken');
+const AuthStrategy = require('./AuthStrategy');
+const AppError = require('../../utils/app-error');
+const { TEST_USERS } = require('../../config/test-users');
+const { AUTH } = require('../../config/constants');
+const { logger } = require('../../config/logger');
 
 class DevAuthStrategy extends AuthStrategy {
   constructor() {
     super();
-    this.jwtSecret = process.env.JWT_SECRET || "dev-secret-key";
+    this.jwtSecret = process.env.JWT_SECRET || 'dev-secret-key';
     this.tokenExpiry = AUTH.JWT.DEFAULT_EXPIRY;
   }
 
@@ -23,7 +23,7 @@ class DevAuthStrategy extends AuthStrategy {
    * @returns {string}
    */
   getProviderName() {
-    return "development";
+    return 'development';
   }
 
   /**
@@ -51,9 +51,9 @@ class DevAuthStrategy extends AuthStrategy {
 
       if (!user) {
         throw new AppError(
-          "User not found in development test users",
+          'User not found in development test users',
           404,
-          "NOT_FOUND",
+          'NOT_FOUND',
         );
       }
 
@@ -61,14 +61,14 @@ class DevAuthStrategy extends AuthStrategy {
       const token = jwt.sign(
         {
           // REGISTERED CLAIMS (RFC 7519 Standard)
-          iss: process.env.API_URL || "https://api.tross.dev", // Issuer
+          iss: process.env.API_URL || 'https://api.tross.dev', // Issuer
           sub: user.auth0_id, // Subject (user ID)
-          aud: process.env.API_URL || "https://api.tross.dev", // Audience
+          aud: process.env.API_URL || 'https://api.tross.dev', // Audience
 
           // PRIVATE CLAIMS (Application-specific)
           email: user.email,
           role: user.role,
-          provider: "development",
+          provider: 'development',
           userId: null, // No database ID in dev mode
         },
         this.jwtSecret,
@@ -84,15 +84,15 @@ class DevAuthStrategy extends AuthStrategy {
         token,
         user: {
           ...user,
-          name: `${user.first_name} ${user.last_name}`.trim() || "User",
+          name: `${user.first_name} ${user.last_name}`.trim() || 'User',
         },
       };
     } catch (error) {
-      logger.error("Development authentication error:", error);
+      logger.error('Development authentication error:', error);
       throw new AppError(
         `Authentication failed: ${error.message}`,
         401,
-        "UNAUTHORIZED",
+        'UNAUTHORIZED',
       );
     }
   }
@@ -107,17 +107,17 @@ class DevAuthStrategy extends AuthStrategy {
       const decoded = jwt.verify(token, this.jwtSecret);
 
       // Ensure this is a development token
-      if (decoded.provider !== "development") {
-        throw new AppError("Invalid token provider", 401, "UNAUTHORIZED");
+      if (decoded.provider !== 'development') {
+        throw new AppError('Invalid token provider', 401, 'UNAUTHORIZED');
       }
 
       return decoded;
     } catch (error) {
-      if (error.name === "TokenExpiredError") {
-        throw new AppError("Token has expired", 401, "UNAUTHORIZED");
+      if (error.name === 'TokenExpiredError') {
+        throw new AppError('Token has expired', 401, 'UNAUTHORIZED');
       }
-      if (error.name === "JsonWebTokenError") {
-        throw new AppError("Invalid token", 401, "UNAUTHORIZED");
+      if (error.name === 'JsonWebTokenError') {
+        throw new AppError('Invalid token', 401, 'UNAUTHORIZED');
       }
       throw error;
     }
@@ -140,16 +140,16 @@ class DevAuthStrategy extends AuthStrategy {
       }
 
       if (!user) {
-        throw new AppError("User not found", 404, "NOT_FOUND");
+        throw new AppError('User not found', 404, 'NOT_FOUND');
       }
 
       // Return complete user object (matches DB schema exactly)
       return {
         ...user,
-        name: `${user.first_name} ${user.last_name}`.trim() || "User",
+        name: `${user.first_name} ${user.last_name}`.trim() || 'User',
       };
     } catch (error) {
-      logger.error("Error getting user profile:", error);
+      logger.error('Error getting user profile:', error);
       throw error;
     }
   }
@@ -159,7 +159,7 @@ class DevAuthStrategy extends AuthStrategy {
    * @param {string} role - User role ('technician', 'admin', etc.)
    * @returns {string} JWT token
    */
-  generateTestToken(role = "technician") {
+  generateTestToken(role = 'technician') {
     const user =
       Object.values(TEST_USERS).find((u) => u.role === role) ||
       Object.values(TEST_USERS)[0];
@@ -169,7 +169,7 @@ class DevAuthStrategy extends AuthStrategy {
         auth0_id: user.auth0_id,
         email: user.email,
         role: user.role,
-        provider: "development",
+        provider: 'development',
       },
       this.jwtSecret,
       { expiresIn: this.tokenExpiry },
@@ -181,7 +181,7 @@ class DevAuthStrategy extends AuthStrategy {
    * @param {string} role - User role
    * @returns {Object} User data
    */
-  getTestUser(role = "technician") {
+  getTestUser(role = 'technician') {
     return (
       Object.values(TEST_USERS).find((u) => u.role === role) ||
       Object.values(TEST_USERS)[0]

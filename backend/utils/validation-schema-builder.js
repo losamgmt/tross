@@ -30,15 +30,15 @@
  *   const { error, value } = schema.validate(req.body);
  */
 
-const Joi = require("joi");
+const Joi = require('joi');
 const {
   loadValidationRules,
   buildFieldSchema,
-} = require("./validation-loader");
+} = require('./validation-loader');
 const {
   hasFieldPermission,
   normalizeRoleName,
-} = require("./field-access-controller");
+} = require('./field-access-controller');
 
 // Cache for built schemas (entityName:operation:role -> Joi schema)
 // Role is included in cache key for role-aware schemas
@@ -53,17 +53,17 @@ const schemaCache = new Map();
  */
 const SYSTEM_MANAGED_FIELDS = new Set([
   // System-managed (no user input)
-  "auth0_id",
-  "paid_at",
-  "created_at",
-  "updated_at",
+  'auth0_id',
+  'paid_at',
+  'created_at',
+  'updated_at',
 
   // Free text (no specific validation)
-  "billing_address",
-  "service_address",
-  "terms",
-  "notes",
-  "description", // Generic description - entity-specific ones use entityFields
+  'billing_address',
+  'service_address',
+  'terms',
+  'notes',
+  'description', // Generic description - entity-specific ones use entityFields
 ]);
 
 /**
@@ -72,16 +72,16 @@ const SYSTEM_MANAGED_FIELDS = new Set([
  */
 function getStatusRuleKey(entityName) {
   const statusMap = {
-    user: "user_status",
-    role: "role_status",
-    customer: "customer_status",
-    technician: "technician_status",
-    work_order: "work_order_status",
-    invoice: "invoice_status",
-    contract: "contract_status",
-    inventory: "inventory_status",
+    user: 'user_status',
+    role: 'role_status',
+    customer: 'customer_status',
+    technician: 'technician_status',
+    work_order: 'work_order_status',
+    invoice: 'invoice_status',
+    contract: 'contract_status',
+    inventory: 'inventory_status',
   };
-  return statusMap[entityName] || "status";
+  return statusMap[entityName] || 'status';
 }
 
 /**
@@ -141,7 +141,7 @@ function deriveCreatableFields(metadata, userRole) {
   const fieldAccess = metadata.fieldAccess || {};
   return Object.keys(fieldAccess).filter((field) => {
     const access = fieldAccess[field];
-    if (!access || !access.create || access.create === "none") {
+    if (!access || !access.create || access.create === 'none') {
       return false;
     }
     // If userRole provided, check if user's role meets the minimum requirement
@@ -171,7 +171,7 @@ function deriveUpdateableFields(metadata, userRole) {
       return false;
     }
     const access = fieldAccess[field];
-    if (!access || !access.update || access.update === "none") {
+    if (!access || !access.update || access.update === 'none') {
       return false;
     }
     // If userRole provided, check if user's role meets the minimum requirement
@@ -218,7 +218,7 @@ function buildEntitySchema(entityName, operation, metadata, userRole) {
   const rules = loadValidationRules();
   const schemaFields = {};
 
-  if (operation === "create") {
+  if (operation === 'create') {
     // Derive creatable fields - role-aware if userRole provided
     const createableFields =
       metadata.createableFields ||
@@ -261,7 +261,7 @@ function buildEntitySchema(entityName, operation, metadata, userRole) {
         schemaFields[field] = fieldSchema;
       }
     }
-  } else if (operation === "update") {
+  } else if (operation === 'update') {
     // Derive updateable fields - role-aware if userRole provided
     const updateableFields =
       metadata.updateableFields ||

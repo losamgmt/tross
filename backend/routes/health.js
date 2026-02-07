@@ -20,18 +20,18 @@
  * - Logger for structured logging
  */
 
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const axios = require("axios");
-const db = require("../db/connection");
-const { authenticateToken, requireMinimumRole } = require("../middleware/auth");
-const { logger } = require("../config/logger");
-const { HEALTH } = require("../config/constants");
-const { TIMEOUTS } = require("../config/timeouts");
-const auth0Config = require("../config/auth0");
-const ResponseFormatter = require("../utils/response-formatter");
-const { asyncHandler } = require("../middleware/utils");
-const { storageService } = require("../services/storage-service");
+const axios = require('axios');
+const db = require('../db/connection');
+const { authenticateToken, requireMinimumRole } = require('../middleware/auth');
+const { logger } = require('../config/logger');
+const { HEALTH } = require('../config/constants');
+const { TIMEOUTS } = require('../config/timeouts');
+const auth0Config = require('../config/auth0');
+const ResponseFormatter = require('../utils/response-formatter');
+const { asyncHandler } = require('../middleware/utils');
+const { storageService } = require('../services/storage-service');
 // ServiceUnavailableError available if needed: const { ServiceUnavailableError } = require('../utils/errors');
 
 // ============================================================================
@@ -73,7 +73,7 @@ function clearCache() {
  * @returns {string} Safe error message
  */
 function sanitizeErrorMessage(error) {
-  const isProduction = process.env.NODE_ENV === "production";
+  const isProduction = process.env.NODE_ENV === 'production';
 
   if (!isProduction) {
     // In dev/test, show full error for debugging
@@ -81,18 +81,18 @@ function sanitizeErrorMessage(error) {
   }
 
   // In production, only expose safe categories
-  const msg = error.message?.toLowerCase() || "";
-  if (msg.includes("timeout") || msg.includes("timed out")) {
-    return "Connection timeout";
+  const msg = error.message?.toLowerCase() || '';
+  if (msg.includes('timeout') || msg.includes('timed out')) {
+    return 'Connection timeout';
   }
-  if (msg.includes("connection") || msg.includes("connect")) {
-    return "Connection failed";
+  if (msg.includes('connection') || msg.includes('connect')) {
+    return 'Connection failed';
   }
-  if (msg.includes("authentication") || msg.includes("auth")) {
-    return "Authentication error";
+  if (msg.includes('authentication') || msg.includes('auth')) {
+    return 'Authentication error';
   }
   // Generic fallback - never expose raw error
-  return "Service unavailable";
+  return 'Service unavailable';
 }
 
 // ============================================================================
@@ -107,10 +107,10 @@ async function checkDatabase() {
   const start = Date.now();
   try {
     await Promise.race([
-      db.query("SELECT 1"),
+      db.query('SELECT 1'),
       new Promise((_, reject) =>
         setTimeout(
-          () => reject(new Error("Database timeout")),
+          () => reject(new Error('Database timeout')),
           TIMEOUTS.SERVICES.HEALTH_CHECK_MS,
         ),
       ),
@@ -179,7 +179,7 @@ async function checkAuth0() {
     return {
       configured: false,
       status: HEALTH.STATUS.HEALTHY,
-      message: "Auth0 not configured (development mode)",
+      message: 'Auth0 not configured (development mode)',
     };
   }
 
@@ -197,7 +197,7 @@ async function checkAuth0() {
       responseTime: Date.now() - start,
     };
   } catch (error) {
-    logger.warn("Auth0 health check failed", {
+    logger.warn('Auth0 health check failed', {
       domain: auth0Config.domain,
       error: error.message,
     });
@@ -261,9 +261,9 @@ async function checkStorage() {
 
   // Map storage status to HEALTH.STATUS constants
   let status;
-  if (result.status === "healthy") {
+  if (result.status === 'healthy') {
     status = HEALTH.STATUS.HEALTHY;
-  } else if (result.status === "unconfigured") {
+  } else if (result.status === 'unconfigured') {
     status = HEALTH.STATUS.DEGRADED;
   } else {
     status = HEALTH.STATUS.CRITICAL;
@@ -311,7 +311,7 @@ function determineOverallStatus(...statuses) {
  *         description: Service is unhealthy
  */
 router.get(
-  "/",
+  '/',
   asyncHandler(async (req, res) => {
     // Check cache first
     if (healthCache.liveness && isCacheValid(healthCache.livenessTimestamp)) {
@@ -353,7 +353,7 @@ router.get(
     if (overallStatus === HEALTH.STATUS.CRITICAL) {
       return ResponseFormatter.serviceUnavailable(
         res,
-        "Service health critical",
+        'Service health critical',
         response,
       );
     }
@@ -383,7 +383,7 @@ router.get(
  *         description: Service is not ready
  */
 router.get(
-  "/ready",
+  '/ready',
   asyncHandler(async (req, res) => {
     // Run checks in parallel (uncached - always live)
     const [database, auth0] = await Promise.all([
@@ -425,7 +425,7 @@ router.get(
     if (!ready) {
       return ResponseFormatter.serviceUnavailable(
         res,
-        "Service not ready",
+        'Service not ready',
         response,
       );
     }
@@ -456,15 +456,15 @@ router.get(
  *         description: Admin access required
  */
 router.get(
-  "/databases",
+  '/databases',
   authenticateToken,
-  requireMinimumRole("admin"),
+  requireMinimumRole('admin'),
   asyncHandler(async (req, res) => {
     const database = await checkDatabase();
 
     const databases = [
       {
-        name: "PostgreSQL (Main)",
+        name: 'PostgreSQL (Main)',
         status: database.status,
         responseTime: database.responseTime,
         connectionCount: database.connectionCount,
@@ -510,9 +510,9 @@ router.get(
  *         description: Storage is not reachable or not configured
  */
 router.get(
-  "/storage",
+  '/storage',
   authenticateToken,
-  requireMinimumRole("admin"),
+  requireMinimumRole('admin'),
   asyncHandler(async (req, res) => {
     const storage = await checkStorage();
 
@@ -521,7 +521,7 @@ router.get(
         configured: storage.configured,
         reachable: storage.reachable,
         bucket: storage.bucket,
-        provider: process.env.STORAGE_PROVIDER || "none",
+        provider: process.env.STORAGE_PROVIDER || 'none',
         status: storage.status,
         responseTime: storage.responseTime,
         message: storage.message,
@@ -533,7 +533,7 @@ router.get(
     if (storage.configured && !storage.reachable) {
       return ResponseFormatter.serviceUnavailable(
         res,
-        "Storage not reachable",
+        'Storage not reachable',
         response,
       );
     }
@@ -542,7 +542,7 @@ router.get(
     if (!storage.configured) {
       return ResponseFormatter.serviceUnavailable(
         res,
-        "Storage not configured",
+        'Storage not configured',
         response,
       );
     }

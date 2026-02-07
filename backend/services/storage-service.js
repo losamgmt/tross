@@ -23,23 +23,23 @@ const {
   DeleteObjectCommand,
   HeadObjectCommand,
   HeadBucketCommand,
-} = require("@aws-sdk/client-s3");
-const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
-const { v4: uuidv4 } = require("uuid");
-const path = require("path");
-const { logger } = require("../config/logger");
-const AppError = require("../utils/app-error");
+} = require('@aws-sdk/client-s3');
+const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
+const { v4: uuidv4 } = require('uuid');
+const path = require('path');
+const { logger } = require('../config/logger');
+const AppError = require('../utils/app-error');
 
 // Initialize S3 client for R2
 const getS3Client = () => {
   const endpoint = process.env.STORAGE_ENDPOINT;
   const accessKey = process.env.STORAGE_ACCESS_KEY;
   const secretKey = process.env.STORAGE_SECRET_KEY;
-  const region = process.env.STORAGE_REGION || "auto";
+  const region = process.env.STORAGE_REGION || 'auto';
 
   if (!endpoint || !accessKey || !secretKey) {
     logger.warn(
-      "Storage service not configured - missing environment variables",
+      'Storage service not configured - missing environment variables',
     );
     return null;
   }
@@ -87,7 +87,7 @@ class StorageService {
     const configured = this.isConfigured();
     return {
       configured,
-      provider: process.env.STORAGE_PROVIDER || "none",
+      provider: process.env.STORAGE_PROVIDER || 'none',
       bucket: configured ? getBucket() : null,
     };
   }
@@ -109,8 +109,8 @@ class StorageService {
         reachable: false,
         bucket: null,
         responseTime: 0,
-        status: "unconfigured",
-        message: "Storage not configured (missing environment variables)",
+        status: 'unconfigured',
+        message: 'Storage not configured (missing environment variables)',
       };
     }
 
@@ -131,14 +131,14 @@ class StorageService {
       clearTimeout(timeoutId);
       const responseTime = Date.now() - start;
 
-      logger.debug("Storage health check passed", { bucket, responseTime });
+      logger.debug('Storage health check passed', { bucket, responseTime });
 
       return {
         configured: true,
         reachable: true,
         bucket,
         responseTime,
-        status: "healthy",
+        status: 'healthy',
       };
     } catch (error) {
       if (timeoutId) {
@@ -147,22 +147,22 @@ class StorageService {
       const responseTime = Date.now() - start;
 
       // Determine error type for appropriate messaging
-      let message = "Storage connectivity failed";
-      let status = "critical";
+      let message = 'Storage connectivity failed';
+      let status = 'critical';
 
-      if (error.name === "AbortError" || error.message?.includes("aborted")) {
+      if (error.name === 'AbortError' || error.message?.includes('aborted')) {
         message = `Storage check timed out after ${timeoutMs}ms`;
-        status = "timeout";
+        status = 'timeout';
       } else if (
-        error.name === "AccessDenied" ||
+        error.name === 'AccessDenied' ||
         error.$metadata?.httpStatusCode === 403
       ) {
-        message = "Storage access denied (check credentials)";
+        message = 'Storage access denied (check credentials)';
       } else if (error.$metadata?.httpStatusCode === 404) {
         message = `Bucket "${bucket}" not found`;
       }
 
-      logger.warn("Storage health check failed", {
+      logger.warn('Storage health check failed', {
         bucket,
         error: error.message,
         responseTime,
@@ -189,7 +189,7 @@ class StorageService {
    * @returns {string} Storage key
    */
   generateStorageKey(entityType, entityId, originalFilename) {
-    const ext = path.extname(originalFilename).toLowerCase() || ".bin";
+    const ext = path.extname(originalFilename).toLowerCase() || '.bin';
     const uuid = uuidv4();
     return `${entityType}/${entityId}/${uuid}${ext}`;
   }
@@ -208,9 +208,9 @@ class StorageService {
     const client = getClient();
     if (!client) {
       throw new AppError(
-        "Storage service not configured",
+        'Storage service not configured',
         503,
-        "SERVICE_UNAVAILABLE",
+        'SERVICE_UNAVAILABLE',
       );
     }
 
@@ -228,7 +228,7 @@ class StorageService {
 
       await client.send(command);
 
-      logger.info("File uploaded successfully", {
+      logger.info('File uploaded successfully', {
         storageKey,
         size: buffer.length,
         mimeType,
@@ -240,7 +240,7 @@ class StorageService {
         size: buffer.length,
       };
     } catch (error) {
-      logger.error("Failed to upload file", {
+      logger.error('Failed to upload file', {
         storageKey,
         error: error.message,
       });
@@ -260,9 +260,9 @@ class StorageService {
     const client = getClient();
     if (!client) {
       throw new AppError(
-        "Storage service not configured",
+        'Storage service not configured',
         503,
-        "SERVICE_UNAVAILABLE",
+        'SERVICE_UNAVAILABLE',
       );
     }
 
@@ -274,14 +274,14 @@ class StorageService {
 
       const url = await getSignedUrl(client, command, { expiresIn });
 
-      logger.debug("Generated signed download URL", {
+      logger.debug('Generated signed download URL', {
         storageKey,
         expiresIn,
       });
 
       return url;
     } catch (error) {
-      logger.error("Failed to generate signed URL", {
+      logger.error('Failed to generate signed URL', {
         storageKey,
         error: error.message,
       });
@@ -299,9 +299,9 @@ class StorageService {
     const client = getClient();
     if (!client) {
       throw new AppError(
-        "Storage service not configured",
+        'Storage service not configured',
         503,
-        "SERVICE_UNAVAILABLE",
+        'SERVICE_UNAVAILABLE',
       );
     }
 
@@ -313,11 +313,11 @@ class StorageService {
 
       await client.send(command);
 
-      logger.info("File deleted successfully", { storageKey });
+      logger.info('File deleted successfully', { storageKey });
 
       return { success: true };
     } catch (error) {
-      logger.error("Failed to delete file", {
+      logger.error('Failed to delete file', {
         storageKey,
         error: error.message,
       });
@@ -335,9 +335,9 @@ class StorageService {
     const client = getClient();
     if (!client) {
       throw new AppError(
-        "Storage service not configured",
+        'Storage service not configured',
         503,
-        "SERVICE_UNAVAILABLE",
+        'SERVICE_UNAVAILABLE',
       );
     }
 
@@ -351,7 +351,7 @@ class StorageService {
       return true;
     } catch (error) {
       if (
-        error.name === "NotFound" ||
+        error.name === 'NotFound' ||
         error.$metadata?.httpStatusCode === 404
       ) {
         return false;
@@ -370,9 +370,9 @@ class StorageService {
     const client = getClient();
     if (!client) {
       throw new AppError(
-        "Storage service not configured",
+        'Storage service not configured',
         503,
-        "SERVICE_UNAVAILABLE",
+        'SERVICE_UNAVAILABLE',
       );
     }
 
@@ -391,7 +391,7 @@ class StorageService {
         metadata: response.Metadata,
       };
     } catch (error) {
-      logger.error("Failed to get file metadata", {
+      logger.error('Failed to get file metadata', {
         storageKey,
         error: error.message,
       });

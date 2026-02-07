@@ -16,28 +16,28 @@
  *
  * All handlers use GenericEntityService + ResponseFormatter for consistent responses.
  */
-const express = require("express");
-const { authenticateToken, requirePermission } = require("../middleware/auth");
-const { enforceRLS } = require("../middleware/row-level-security");
-const { genericValidateBody } = require("../middleware/generic-entity");
+const express = require('express');
+const { authenticateToken, requirePermission } = require('../middleware/auth');
+const { enforceRLS } = require('../middleware/row-level-security');
+const { genericValidateBody } = require('../middleware/generic-entity');
 const {
   validatePagination,
   validateIdParam,
   validateQuery,
-} = require("../validators");
-const GenericEntityService = require("../services/generic-entity-service");
-const ResponseFormatter = require("../utils/response-formatter");
-const { filterDataByRole } = require("../utils/field-access-controller");
+} = require('../validators');
+const GenericEntityService = require('../services/generic-entity-service');
+const ResponseFormatter = require('../utils/response-formatter');
+const { filterDataByRole } = require('../utils/field-access-controller');
 const {
   buildRlsContext,
   buildAuditContext,
-} = require("../utils/request-context");
+} = require('../utils/request-context');
 const {
   handleDbError,
   buildDbErrorConfig,
-} = require("../utils/db-error-handler");
-const { logger } = require("../config/logger");
-const AppError = require("../utils/app-error");
+} = require('../utils/db-error-handler');
+const { logger } = require('../config/logger');
+const AppError = require('../utils/app-error');
 
 // =============================================================================
 // ASYNC HANDLER WRAPPER
@@ -82,11 +82,11 @@ function toDisplayName(entityName) {
   return (
     entityName
       // Split on underscores
-      .replace(/_/g, " ")
+      .replace(/_/g, ' ')
       // Capitalize each word
-      .split(" ")
+      .split(' ')
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ")
+      .join(' ')
   );
 }
 
@@ -123,10 +123,10 @@ function createEntityRouter(entityName, _options = {}) {
   // =============================================================================
 
   router.get(
-    "/",
+    '/',
     authenticateToken,
     attachEntity,
-    requirePermission("read"),
+    requirePermission('read'),
     enforceRLS,
     validatePagination({ maxLimit: 200 }),
     (req, res, next) => validateQuery(metadata)(req, res, next),
@@ -152,7 +152,7 @@ function createEntityRouter(entityName, _options = {}) {
         result.data,
         metadata,
         req.dbUser.role,
-        "read",
+        'read',
       );
 
       return ResponseFormatter.list(res, {
@@ -169,10 +169,10 @@ function createEntityRouter(entityName, _options = {}) {
   // =============================================================================
 
   router.get(
-    "/:id",
+    '/:id',
     authenticateToken,
     attachEntity,
-    requirePermission("read"),
+    requirePermission('read'),
     enforceRLS,
     validateIdParam(),
     asyncHandler(async (req, res) => {
@@ -193,7 +193,7 @@ function createEntityRouter(entityName, _options = {}) {
         entity,
         metadata,
         req.dbUser.role,
-        "read",
+        'read',
       );
 
       return ResponseFormatter.get(res, sanitizedData);
@@ -205,11 +205,11 @@ function createEntityRouter(entityName, _options = {}) {
   // =============================================================================
 
   router.post(
-    "/",
+    '/',
     authenticateToken,
     attachEntity,
-    requirePermission("create"),
-    genericValidateBody("create"),
+    requirePermission('create'),
+    genericValidateBody('create'),
     asyncHandler(async (req, res) => {
       const validatedBody = req.validated.body;
       const auditContext = buildAuditContext(req);
@@ -224,7 +224,7 @@ function createEntityRouter(entityName, _options = {}) {
         throw new AppError(
           `${displayName} creation failed unexpectedly`,
           500,
-          "INTERNAL_ERROR",
+          'INTERNAL_ERROR',
         );
       }
 
@@ -233,7 +233,7 @@ function createEntityRouter(entityName, _options = {}) {
         created,
         metadata,
         req.dbUser.role,
-        "read",
+        'read',
       );
 
       return ResponseFormatter.created(
@@ -249,13 +249,13 @@ function createEntityRouter(entityName, _options = {}) {
   // =============================================================================
 
   router.patch(
-    "/:id",
+    '/:id',
     authenticateToken,
     attachEntity,
-    requirePermission("update"),
+    requirePermission('update'),
     enforceRLS,
     validateIdParam(),
-    genericValidateBody("update"),
+    genericValidateBody('update'),
     asyncHandler(async (req, res) => {
       const validatedBody = req.validated.body;
       const entityId = req.validated.id;
@@ -288,7 +288,7 @@ function createEntityRouter(entityName, _options = {}) {
         updated,
         metadata,
         req.dbUser.role,
-        "read",
+        'read',
       );
 
       return ResponseFormatter.updated(
@@ -304,10 +304,10 @@ function createEntityRouter(entityName, _options = {}) {
   // =============================================================================
 
   router.delete(
-    "/:id",
+    '/:id',
     authenticateToken,
     attachEntity,
-    requirePermission("delete"),
+    requirePermission('delete'),
     enforceRLS,
     validateIdParam(),
     asyncHandler(async (req, res) => {
@@ -340,7 +340,7 @@ function createEntityRouter(entityName, _options = {}) {
  * Dynamically generate routers for all entities with routeConfig.useGenericRouter: true
  * This replaces hardcoded router declarations with metadata-driven generation.
  */
-const allMetadata = require("../config/models");
+const allMetadata = require('../config/models');
 
 // Derive uncountable entity names from metadata at load time (no hardcoding!)
 const UNCOUNTABLE_ENTITIES = Object.entries(allMetadata)
@@ -365,11 +365,11 @@ function toRouterName(entityName) {
   }
 
   // Simple pluralization: 'y' -> 'ies' for consonant+y, otherwise add 's'
-  const vowels = ["a", "e", "i", "o", "u"];
+  const vowels = ['a', 'e', 'i', 'o', 'u'];
   const plural =
-    camelCase.endsWith("y") && !vowels.includes(camelCase.slice(-2, -1))
-      ? camelCase.slice(0, -1) + "ies"
-      : camelCase + "s";
+    camelCase.endsWith('y') && !vowels.includes(camelCase.slice(-2, -1))
+      ? camelCase.slice(0, -1) + 'ies'
+      : camelCase + 's';
   return `${plural}Router`;
 }
 

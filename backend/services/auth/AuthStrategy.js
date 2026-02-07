@@ -1,4 +1,4 @@
-const AppError = require("../../utils/app-error");
+const AppError = require('../../utils/app-error');
 
 /**
  * Authentication Strategy Interface
@@ -17,9 +17,9 @@ class AuthStrategy {
    */
   async authenticate(_credentials) {
     throw new AppError(
-      "authenticate() must be implemented by subclass",
+      'authenticate() must be implemented by subclass',
       500,
-      "INTERNAL_ERROR",
+      'INTERNAL_ERROR',
     );
   }
 
@@ -31,9 +31,9 @@ class AuthStrategy {
    */
   async verifyToken(_token) {
     throw new AppError(
-      "verifyToken() must be implemented by subclass",
+      'verifyToken() must be implemented by subclass',
       500,
-      "INTERNAL_ERROR",
+      'INTERNAL_ERROR',
     );
   }
 
@@ -45,9 +45,9 @@ class AuthStrategy {
    */
   async getUserProfile(_tokenOrUserId) {
     throw new AppError(
-      "getUserProfile() must be implemented by subclass",
+      'getUserProfile() must be implemented by subclass',
       500,
-      "INTERNAL_ERROR",
+      'INTERNAL_ERROR',
     );
   }
 
@@ -58,9 +58,9 @@ class AuthStrategy {
    */
   getProviderName() {
     throw new AppError(
-      "getProviderName() must be implemented by subclass",
+      'getProviderName() must be implemented by subclass',
       500,
-      "INTERNAL_ERROR",
+      'INTERNAL_ERROR',
     );
   }
 
@@ -72,9 +72,9 @@ class AuthStrategy {
   async refreshToken(_refreshToken) {
     // Default: not supported
     throw new AppError(
-      "Token refresh not supported by this provider",
+      'Token refresh not supported by this provider',
       400,
-      "BAD_REQUEST",
+      'BAD_REQUEST',
     );
   }
 

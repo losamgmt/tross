@@ -19,8 +19,8 @@
  * @module config/models
  */
 
-const fs = require("fs");
-const path = require("path");
+const fs = require('fs');
+const path = require('path');
 
 /**
  * Auto-discover and load all metadata files in this directory
@@ -34,7 +34,7 @@ function loadAllMetadata() {
   // Find all *-metadata.js files (excluding index.js)
   const metadataFiles = fs
     .readdirSync(metadataDir)
-    .filter((file) => file.endsWith("-metadata.js"));
+    .filter((file) => file.endsWith('-metadata.js'));
 
   for (const file of metadataFiles) {
     // Load the metadata module
@@ -46,7 +46,7 @@ function loadAllMetadata() {
     if (!entityKey) {
       throw new Error(
         `Metadata file '${file}' missing required 'entityKey' property. ` +
-          "Each metadata file must explicitly define its entityKey.",
+          'Each metadata file must explicitly define its entityKey.',
       );
     }
 
@@ -65,7 +65,7 @@ const allMetadata = loadAllMetadata();
  */
 function validateMetadataOnLoad() {
   // Skip validation in production for performance
-  if (process.env.NODE_ENV === "production") {
+  if (process.env.NODE_ENV === 'production') {
     return;
   }
 
@@ -75,11 +75,11 @@ function validateMetadataOnLoad() {
   }
 
   try {
-    const { validateAllMetadata } = require("../entity-metadata-validator");
+    const { validateAllMetadata } = require('../entity-metadata-validator');
     validateAllMetadata(allMetadata, { throwOnError: true });
   } catch (error) {
     // If the validator throws, re-throw to fail fast
-    if (error.message?.includes("Entity metadata validation failed")) {
+    if (error.message?.includes('Entity metadata validation failed')) {
       throw error;
     }
     // If validator module doesn't exist yet (during initial setup), skip silently

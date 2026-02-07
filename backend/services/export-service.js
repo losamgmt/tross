@@ -16,12 +16,12 @@
  * - Extensible for future formats (Excel, JSON, etc.)
  */
 
-const allMetadata = require("../config/models");
-const { logger } = require("../config/logger");
-const db = require("../db/connection");
-const QueryBuilderService = require("./query-builder-service");
-const { buildRLSFilter } = require("../db/helpers/rls-filter-helper");
-const AppError = require("../utils/app-error");
+const allMetadata = require('../config/models');
+const { logger } = require('../config/logger');
+const db = require('../db/connection');
+const QueryBuilderService = require('./query-builder-service');
+const { buildRLSFilter } = require('../db/helpers/rls-filter-helper');
+const AppError = require('../utils/app-error');
 
 /**
  * Escape a value for CSV format
@@ -30,17 +30,17 @@ const AppError = require("../utils/app-error");
  */
 function escapeCSVValue(value) {
   if (value === null || value === undefined) {
-    return "";
+    return '';
   }
 
   const str = String(value);
 
   // Check if escaping is needed
   if (
-    str.includes(",") ||
+    str.includes(',') ||
     str.includes('"') ||
-    str.includes("\n") ||
-    str.includes("\r")
+    str.includes('\n') ||
+    str.includes('\r')
   ) {
     // Escape quotes by doubling them and wrap in quotes
     return `"${str.replace(/"/g, '""')}"`;
@@ -55,11 +55,11 @@ function escapeCSVValue(value) {
 function convertToCSV(rows, columns) {
   if (!rows || rows.length === 0) {
     // Return headers only
-    return columns.map((col) => escapeCSVValue(col.label)).join(",") + "\n";
+    return columns.map((col) => escapeCSVValue(col.label)).join(',') + '\n';
   }
 
   // Header row
-  const header = columns.map((col) => escapeCSVValue(col.label)).join(",");
+  const header = columns.map((col) => escapeCSVValue(col.label)).join(',');
 
   // Data rows
   const dataRows = rows.map((row) => {
@@ -68,10 +68,10 @@ function convertToCSV(rows, columns) {
         const value = row[col.field];
         return escapeCSVValue(value);
       })
-      .join(",");
+      .join(',');
   });
 
-  return [header, ...dataRows].join("\n") + "\n";
+  return [header, ...dataRows].join('\n') + '\n';
 }
 
 class ExportService {
@@ -93,7 +93,7 @@ class ExportService {
     const metadata = allMetadata[entityName];
 
     if (!metadata) {
-      throw new AppError(`Unknown entity: ${entityName}`, 404, "NOT_FOUND");
+      throw new AppError(`Unknown entity: ${entityName}`, 404, 'NOT_FOUND');
     }
 
     const {
@@ -101,7 +101,7 @@ class ExportService {
       searchableFields = [],
       filterableFields = [],
       sortableFields = [],
-      defaultSort = { field: "id", order: "ASC" },
+      defaultSort = { field: 'id', order: 'ASC' },
       exportableFields = null, // Explicit export list, or derive from fields
       fields = {},
     } = metadata;
@@ -110,19 +110,19 @@ class ExportService {
     const fieldsArray = Array.isArray(fields)
       ? fields
       : Object.entries(fields).map(([name, def]) => ({
-          name,
-          label: this._formatLabel(name),
-          ...def,
-        }));
+        name,
+        label: this._formatLabel(name),
+        ...def,
+      }));
 
     // Determine which fields to export
     // Priority: selectedFields param > metadata.exportableFields > all non-sensitive fields
     let columnsToExport;
     const sensitiveFields = new Set([
-      "auth0_id",
-      "refresh_token",
-      "api_key",
-      "password",
+      'auth0_id',
+      'refresh_token',
+      'api_key',
+      'password',
     ]);
 
     if (selectedFields && selectedFields.length > 0) {
@@ -132,9 +132,9 @@ class ExportService {
           const fieldDef = fieldsArray.find((f) => f.name === fieldName);
           return fieldDef
             ? {
-                field: fieldName,
-                label: fieldDef.label || this._formatLabel(fieldName),
-              }
+              field: fieldName,
+              label: fieldDef.label || this._formatLabel(fieldName),
+            }
             : null;
         })
         .filter(Boolean);
@@ -145,9 +145,9 @@ class ExportService {
           const fieldDef = fieldsArray.find((f) => f.name === fieldName);
           return fieldDef
             ? {
-                field: fieldName,
-                label: fieldDef.label || this._formatLabel(fieldName),
-              }
+              field: fieldName,
+              label: fieldDef.label || this._formatLabel(fieldName),
+            }
             : null;
         })
         .filter(Boolean);
@@ -162,7 +162,7 @@ class ExportService {
       throw new AppError(
         `No exportable fields found for entity: ${entityName}`,
         400,
-        "BAD_REQUEST",
+        'BAD_REQUEST',
       );
     }
 
@@ -199,7 +199,7 @@ class ExportService {
         params.push(...rlsFilter.params);
       }
 
-      logger.debug("[ExportService] RLS applied", {
+      logger.debug('[ExportService] RLS applied', {
         entity: entityName,
         policy: rlsContext.policy,
         applied: rlsFilter.applied,
@@ -207,7 +207,7 @@ class ExportService {
     }
 
     const whereClause =
-      whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
+      whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
 
     const sortClause = QueryBuilderService.buildSortClause(
       options.sortBy,
@@ -220,7 +220,7 @@ class ExportService {
     // Select only the fields we're exporting
     const selectFields = columnsToExport
       .map((c) => `${tableName}.${c.field}`)
-      .join(", ");
+      .join(', ');
 
     // Query without LIMIT - get all matching records
     const query = `
@@ -230,10 +230,10 @@ class ExportService {
       ORDER BY ${sortClause}
     `;
 
-    logger.info("[ExportService] Executing export query", {
+    logger.info('[ExportService] Executing export query', {
       entity: entityName,
       columns: columnsToExport.length,
-      whereClause: whereClause || "(none)",
+      whereClause: whereClause || '(none)',
     });
 
     const result = await db.query(query, params);
@@ -245,7 +245,7 @@ class ExportService {
     const timestamp = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
     const filename = `${entityName}_export_${timestamp}.csv`;
 
-    logger.info("[ExportService] Export complete", {
+    logger.info('[ExportService] Export complete', {
       entity: entityName,
       rowCount: result.rows.length,
       filename,
@@ -267,25 +267,25 @@ class ExportService {
     const metadata = allMetadata[entityName];
 
     if (!metadata) {
-      throw new AppError(`Unknown entity: ${entityName}`, 404, "NOT_FOUND");
+      throw new AppError(`Unknown entity: ${entityName}`, 404, 'NOT_FOUND');
     }
 
     const { fields = {}, exportableFields = null } = metadata;
     const sensitiveFields = new Set([
-      "auth0_id",
-      "refresh_token",
-      "api_key",
-      "password",
+      'auth0_id',
+      'refresh_token',
+      'api_key',
+      'password',
     ]);
 
     // Normalize fields to array format
     const fieldsArray = Array.isArray(fields)
       ? fields
       : Object.entries(fields).map(([name, def]) => ({
-          name,
-          label: this._formatLabel(name),
-          ...def,
-        }));
+        name,
+        label: this._formatLabel(name),
+        ...def,
+      }));
 
     if (exportableFields && exportableFields.length > 0) {
       return exportableFields
@@ -293,9 +293,9 @@ class ExportService {
           const fieldDef = fieldsArray.find((f) => f.name === fieldName);
           return fieldDef
             ? {
-                field: fieldName,
-                label: fieldDef.label || this._formatLabel(fieldName),
-              }
+              field: fieldName,
+              label: fieldDef.label || this._formatLabel(fieldName),
+            }
             : null;
         })
         .filter(Boolean);
@@ -312,9 +312,9 @@ class ExportService {
    */
   static _formatLabel(fieldName) {
     return fieldName
-      .split("_")
+      .split('_')
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ");
+      .join(' ');
   }
 }
 

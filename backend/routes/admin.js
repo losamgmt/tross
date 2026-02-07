@@ -25,29 +25,29 @@
  * SECURITY: Admin-only access enforced via requireMinimumRole('admin')
  */
 
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const path = require("path");
-const fs = require("fs");
+const path = require('path');
+const fs = require('fs');
 
-const { authenticateToken, requireMinimumRole } = require("../middleware/auth");
-const ResponseFormatter = require("../utils/response-formatter");
-const systemSettingsService = require("../services/system-settings-service");
-const sessionsService = require("../services/sessions-service");
-const EntityMetadataService = require("../services/entity-metadata-service");
-const AuditService = require("../services/audit-service");
+const { authenticateToken, requireMinimumRole } = require('../middleware/auth');
+const ResponseFormatter = require('../utils/response-formatter');
+const systemSettingsService = require('../services/system-settings-service');
+const sessionsService = require('../services/sessions-service');
+const EntityMetadataService = require('../services/entity-metadata-service');
+const AuditService = require('../services/audit-service');
 // Logger available if needed: const { logger } = require('../config/logger');
-const { validateIdParam } = require("../validators");
-const { getClientIp, getUserAgent } = require("../utils/request-helpers");
-const { asyncHandler } = require("../middleware/utils");
-const AppError = require("../utils/app-error");
-const allMetadata = require("../config/models");
+const { validateIdParam } = require('../validators');
+const { getClientIp, getUserAgent } = require('../utils/request-helpers');
+const { asyncHandler } = require('../middleware/utils');
+const AppError = require('../utils/app-error');
+const allMetadata = require('../config/models');
 
 // ============================================================================
 // MIDDLEWARE: All admin routes require authentication + admin role
 // ============================================================================
 router.use(authenticateToken);
-router.use(requireMinimumRole("admin"));
+router.use(requireMinimumRole('admin'));
 
 // ============================================================================
 // SYSTEM: SETTINGS
@@ -58,7 +58,7 @@ router.use(requireMinimumRole("admin"));
  * Get all system settings
  */
 router.get(
-  "/system/settings",
+  '/system/settings',
   asyncHandler(async (req, res) => {
     const settings = await systemSettingsService.getAllSettings();
     return ResponseFormatter.success(res, settings);
@@ -70,7 +70,7 @@ router.get(
  * Get a specific system setting
  */
 router.get(
-  "/system/settings/:key",
+  '/system/settings/:key',
   asyncHandler(async (req, res) => {
     const { key } = req.params;
     const setting = await systemSettingsService.getSetting(key);
@@ -88,13 +88,13 @@ router.get(
  * Update a specific system setting
  */
 router.put(
-  "/system/settings/:key",
+  '/system/settings/:key',
   asyncHandler(async (req, res) => {
     const { key } = req.params;
     const { value } = req.body;
 
     if (value === undefined) {
-      return ResponseFormatter.badRequest(res, "Value is required");
+      return ResponseFormatter.badRequest(res, 'Value is required');
     }
 
     const updated = await systemSettingsService.updateSetting(
@@ -105,8 +105,8 @@ router.put(
 
     // Log the action
     await AuditService.log({
-      action: "update",
-      resourceType: "system_settings",
+      action: 'update',
+      resourceType: 'system_settings',
       resourceId: key,
       userId: req.dbUser.id,
       oldValues: null, // Could fetch old value first if needed
@@ -130,7 +130,7 @@ router.put(
  * Get current maintenance mode status
  */
 router.get(
-  "/system/maintenance",
+  '/system/maintenance',
   asyncHandler(async (req, res) => {
     const mode = await systemSettingsService.getMaintenanceMode();
     return ResponseFormatter.success(res, mode);
@@ -144,12 +144,12 @@ router.get(
  * Body: { enabled: boolean, message?: string, allowed_roles?: string[], estimated_end?: string }
  */
 router.put(
-  "/system/maintenance",
+  '/system/maintenance',
   asyncHandler(async (req, res) => {
     const { enabled, message, allowed_roles, estimated_end } = req.body;
 
-    if (typeof enabled !== "boolean") {
-      return ResponseFormatter.badRequest(res, "enabled (boolean) is required");
+    if (typeof enabled !== 'boolean') {
+      return ResponseFormatter.badRequest(res, 'enabled (boolean) is required');
     }
 
     let result;
@@ -166,9 +166,9 @@ router.put(
 
     // Log the action
     await AuditService.log({
-      action: enabled ? "maintenance_enabled" : "maintenance_disabled",
-      resourceType: "system_settings",
-      resourceId: "maintenance_mode",
+      action: enabled ? 'maintenance_enabled' : 'maintenance_disabled',
+      resourceType: 'system_settings',
+      resourceId: 'maintenance_mode',
       userId: req.dbUser.id,
       newValues: result.value,
       ipAddress: getClientIp(req),
@@ -177,8 +177,8 @@ router.put(
 
     return ResponseFormatter.success(res, result.value, {
       message: enabled
-        ? "Maintenance mode enabled"
-        : "Maintenance mode disabled",
+        ? 'Maintenance mode enabled'
+        : 'Maintenance mode disabled',
     });
   }),
 );
@@ -193,7 +193,7 @@ router.put(
  * Returns: Array of sessions with user name, role, login time, IP, user agent
  */
 router.get(
-  "/system/sessions",
+  '/system/sessions',
   asyncHandler(async (req, res) => {
     const sessions = await sessionsService.getActiveSessions();
     return ResponseFormatter.success(res, sessions);
@@ -206,8 +206,8 @@ router.get(
  * Body: { reason?: string }
  */
 router.post(
-  "/system/sessions/:userId/force-logout",
-  validateIdParam({ paramName: "userId" }),
+  '/system/sessions/:userId/force-logout',
+  validateIdParam({ paramName: 'userId' }),
   asyncHandler(async (req, res) => {
     const userId = req.validated.userId;
     const reason = req.body?.reason || null;
@@ -220,11 +220,11 @@ router.post(
 
     // Log the action
     await AuditService.log({
-      action: "account_locked",
-      resourceType: "users",
+      action: 'account_locked',
+      resourceType: 'users',
       resourceId: userId,
       userId: req.dbUser.id,
-      newValues: { status: "suspended", reason },
+      newValues: { status: 'suspended', reason },
       ipAddress: getClientIp(req),
       userAgent: getUserAgent(req),
     });
@@ -240,8 +240,8 @@ router.post(
  * Reactivate a suspended user
  */
 router.post(
-  "/system/sessions/:userId/reactivate",
-  validateIdParam({ paramName: "userId" }),
+  '/system/sessions/:userId/reactivate',
+  validateIdParam({ paramName: 'userId' }),
   asyncHandler(async (req, res) => {
     const userId = req.validated.userId;
 
@@ -249,11 +249,11 @@ router.post(
 
     // Log the action
     await AuditService.log({
-      action: "account_unlocked",
-      resourceType: "users",
+      action: 'account_unlocked',
+      resourceType: 'users',
       resourceId: userId,
       userId: req.dbUser.id,
-      newValues: { status: "active" },
+      newValues: { status: 'active' },
       ipAddress: getClientIp(req),
       userAgent: getUserAgent(req),
     });
@@ -269,8 +269,8 @@ router.post(
  * Revoke a specific session without suspending user
  */
 router.delete(
-  "/system/sessions/:sessionId",
-  validateIdParam({ paramName: "sessionId" }),
+  '/system/sessions/:sessionId',
+  validateIdParam({ paramName: 'sessionId' }),
   asyncHandler(async (req, res) => {
     const sessionId = req.validated.sessionId;
     const result = await sessionsService.revokeSession(
@@ -278,7 +278,7 @@ router.delete(
       req.dbUser.id,
     );
     return ResponseFormatter.success(res, result, {
-      message: "Session revoked successfully",
+      message: 'Session revoked successfully',
     });
   }),
 );
@@ -292,7 +292,7 @@ router.delete(
  * Query params: page, limit, userId, resourceType, action, startDate, endDate, search
  */
 router.get(
-  "/system/logs/data",
+  '/system/logs/data',
   asyncHandler(async (req, res) => {
     const {
       page = 1,
@@ -326,7 +326,7 @@ router.get(
  * Query params: page, limit, userId, action, result, startDate, endDate, search
  */
 router.get(
-  "/system/logs/auth",
+  '/system/logs/auth',
   asyncHandler(async (req, res) => {
     const {
       page = 1,
@@ -360,9 +360,9 @@ router.get(
  * Query params: period (day, week, month)
  */
 router.get(
-  "/system/logs/summary",
+  '/system/logs/summary',
   asyncHandler(async (req, res) => {
-    const { period = "day" } = req.query;
+    const { period = 'day' } = req.query;
     const summary = await AuditService.getLogSummary(period);
     return ResponseFormatter.success(res, summary);
   }),
@@ -377,13 +377,13 @@ router.get(
  * View the permissions.json configuration (raw)
  */
 router.get(
-  "/system/config/permissions",
+  '/system/config/permissions',
   asyncHandler(async (req, res) => {
     const permissionsPath = path.join(
       __dirname,
-      "../../config/permissions.json",
+      '../../config/permissions.json',
     );
-    const permissions = JSON.parse(fs.readFileSync(permissionsPath, "utf8"));
+    const permissions = JSON.parse(fs.readFileSync(permissionsPath, 'utf8'));
     return ResponseFormatter.success(res, permissions);
   }),
 );
@@ -396,12 +396,12 @@ router.get(
  * This replaces the old validation-rules.json file.
  */
 router.get(
-  "/system/config/validation",
+  '/system/config/validation',
   asyncHandler(async (req, res) => {
     // Build validation from entity metadata (SSOT)
     const validation = {
-      source: "entity-metadata",
-      description: "Validation rules derived from *-metadata.js files",
+      source: 'entity-metadata',
+      description: 'Validation rules derived from *-metadata.js files',
       entities: {},
     };
 
@@ -431,13 +431,13 @@ router.get(
  * List all available entities with basic metadata
  */
 router.get(
-  "/entities",
+  '/entities',
   asyncHandler(async (req, res) => {
     const entities = Object.keys(allMetadata).map((name) => ({
       name,
       tableName: allMetadata[name].tableName || name,
-      primaryKey: allMetadata[name].primaryKey || "id",
-      displayName: allMetadata[name].displayName || name.replace(/_/g, " "),
+      primaryKey: allMetadata[name].primaryKey || 'id',
+      displayName: allMetadata[name].displayName || name.replace(/_/g, ' '),
     }));
     return ResponseFormatter.success(res, entities);
   }),
@@ -449,13 +449,13 @@ router.get(
  * Includes: RLS matrix, field access matrix, validation rules, displayColumns
  */
 router.get(
-  "/:entity",
+  '/:entity',
   asyncHandler(async (req, res) => {
     const { entity } = req.params;
     const metadata = EntityMetadataService.getEntityMetadata(entity);
 
     if (!metadata) {
-      throw new AppError(`Entity '${entity}' not found`, 404, "NOT_FOUND");
+      throw new AppError(`Entity '${entity}' not found`, 404, 'NOT_FOUND');
     }
 
     return ResponseFormatter.success(res, metadata);
@@ -467,12 +467,12 @@ router.get(
  * Get raw metadata file for entity (for advanced debugging)
  */
 router.get(
-  "/:entity/raw",
+  '/:entity/raw',
   asyncHandler(async (req, res) => {
     const { entity } = req.params;
 
     if (!allMetadata[entity]) {
-      throw new AppError(`Entity '${entity}' not found`, 404, "NOT_FOUND");
+      throw new AppError(`Entity '${entity}' not found`, 404, 'NOT_FOUND');
     }
 
     return ResponseFormatter.success(res, allMetadata[entity]);

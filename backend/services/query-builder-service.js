@@ -55,13 +55,13 @@ class QueryBuilderService {
     }
 
     // Build ILIKE clause for each field (with optional table prefix)
-    const prefix = tablePrefix ? `${tablePrefix}.` : "";
+    const prefix = tablePrefix ? `${tablePrefix}.` : '';
     const conditions = searchableFields.map((field, index) => {
       return `${prefix}${field} ILIKE $${index + 1}`;
     });
 
     // Combine with OR (match ANY field)
-    const clause = `(${conditions.join(" OR ")})`;
+    const clause = `(${conditions.join(' OR ')})`;
 
     // All params are '%searchTerm%' (case-insensitive partial match)
     const params = searchableFields.map(() => `%${sanitized}%`);
@@ -121,7 +121,7 @@ class QueryBuilderService {
     const conditions = [];
     const params = [];
     let currentOffset = paramOffset;
-    const prefix = tablePrefix ? `${tablePrefix}.` : "";
+    const prefix = tablePrefix ? `${tablePrefix}.` : '';
 
     // Process each filter
     for (const [field, value] of Object.entries(filters)) {
@@ -131,14 +131,14 @@ class QueryBuilderService {
       }
 
       // Handle operator-based filters (e.g., priority[gt]=5)
-      if (typeof value === "object" && value !== null) {
+      if (typeof value === 'object' && value !== null) {
         const operators = {
-          gt: ">",
-          gte: ">=",
-          lt: "<",
-          lte: "<=",
-          not: "!=",
-          in: "IN",
+          gt: '>',
+          gte: '>=',
+          lt: '<',
+          lte: '<=',
+          not: '!=',
+          in: 'IN',
         };
 
         for (const [operator, operatorValue] of Object.entries(value)) {
@@ -150,15 +150,15 @@ class QueryBuilderService {
           currentOffset++;
 
           // Special handling for IN operator (expects array)
-          if (operator === "in") {
+          if (operator === 'in') {
             // Parse comma-separated values
             const values = Array.isArray(operatorValue)
               ? operatorValue
-              : operatorValue.split(",").map((v) => v.trim());
+              : operatorValue.split(',').map((v) => v.trim());
 
             const placeholders = values
               .map((_, i) => `$${currentOffset + i}`)
-              .join(", ");
+              .join(', ');
             conditions.push(`${prefix}${field} IN (${placeholders})`);
             params.push(...values);
             currentOffset += values.length - 1; // Adjust for multiple params
@@ -183,7 +183,7 @@ class QueryBuilderService {
     }
 
     // Combine with AND (match ALL filters)
-    const clause = conditions.join(" AND ");
+    const clause = conditions.join(' AND ');
 
     return {
       clause,
@@ -221,24 +221,24 @@ class QueryBuilderService {
     const isValidField = sortableFields.includes(sortBy);
     const field = isValidField
       ? sortBy
-      : defaultSort.field || sortableFields[0] || "id";
+      : defaultSort.field || sortableFields[0] || 'id';
 
     // If using default field, use default order too (tied together)
     // Otherwise, validate the requested order
     let order;
     if (!isValidField && defaultSort.field) {
       // Using default field → use default order
-      order = (defaultSort.order || "ASC").toUpperCase();
+      order = (defaultSort.order || 'ASC').toUpperCase();
     } else {
       // Using requested field → validate requested order
       order =
-        sortOrder?.toUpperCase() === "ASC" ||
-        sortOrder?.toUpperCase() === "DESC"
+        sortOrder?.toUpperCase() === 'ASC' ||
+        sortOrder?.toUpperCase() === 'DESC'
           ? sortOrder.toUpperCase()
-          : (defaultSort.order || "ASC").toUpperCase();
+          : (defaultSort.order || 'ASC').toUpperCase();
     }
 
-    const prefix = tablePrefix ? `${tablePrefix}.` : "";
+    const prefix = tablePrefix ? `${tablePrefix}.` : '';
     return `${prefix}${field} ${order}`;
   }
 
@@ -265,7 +265,7 @@ class QueryBuilderService {
     }
 
     // Combine with AND
-    return validClauses.join(" AND ");
+    return validClauses.join(' AND ');
   }
 
   /**

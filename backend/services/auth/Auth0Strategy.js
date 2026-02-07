@@ -4,20 +4,20 @@
  * Production OAuth2/OIDC authentication using Auth0.
  * Implements AuthStrategy interface for the Strategy Pattern.
  */
-const jwt = require("jsonwebtoken");
-const jwksClient = require("jwks-rsa");
-const axios = require("axios");
-const { AuthenticationClient, ManagementClient } = require("auth0");
-const AuthStrategy = require("./AuthStrategy");
-const { logger } = require("../../config/logger");
-const UserDataService = require("../user-data");
-const auth0Config = require("../../config/auth0");
-const { toSafeString, toSafeEmail } = require("../../validators");
-const AppError = require("../../utils/app-error");
+const jwt = require('jsonwebtoken');
+const jwksClient = require('jwks-rsa');
+const axios = require('axios');
+const { AuthenticationClient, ManagementClient } = require('auth0');
+const AuthStrategy = require('./AuthStrategy');
+const { logger } = require('../../config/logger');
+const UserDataService = require('../user-data');
+const auth0Config = require('../../config/auth0');
+const { toSafeString, toSafeEmail } = require('../../validators');
+const AppError = require('../../utils/app-error');
 
 // JWT Secret - MUST be set in production (validated by env-validator.js on startup)
 // Fallback only exists for local development convenience
-const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-key";
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key';
 
 class Auth0Strategy extends AuthStrategy {
   constructor() {
@@ -35,7 +35,7 @@ class Auth0Strategy extends AuthStrategy {
       domain: this.config.domain,
       clientId: this.config.managementClientId,
       clientSecret: this.config.managementClientSecret,
-      scope: "read:users create:users update:users",
+      scope: 'read:users create:users update:users',
     });
 
     // JWKS client for token verification
@@ -55,7 +55,7 @@ class Auth0Strategy extends AuthStrategy {
    * @returns {string}
    */
   getProviderName() {
-    return "auth0";
+    return 'auth0';
   }
 
   /**
@@ -69,20 +69,20 @@ class Auth0Strategy extends AuthStrategy {
     try {
       if (!credentials.code) {
         throw new AppError(
-          "Authorization code is required",
+          'Authorization code is required',
           400,
-          "BAD_REQUEST",
+          'BAD_REQUEST',
         );
       }
 
       const redirectUri = credentials.redirect_uri || this.config.callbackUrl;
 
       // Exchange authorization code for tokens using direct HTTP (Auth0 SDK method doesn't exist)
-      logger.info("🔐 Auth0: Exchanging authorization code for tokens");
+      logger.info('🔐 Auth0: Exchanging authorization code for tokens');
       const tokenResponse = await axios.post(
         `https://${this.config.domain}/oauth/token`,
         {
-          grant_type: "authorization_code",
+          grant_type: 'authorization_code',
           client_id: this.config.clientId,
           client_secret: this.config.clientSecret,
           code: credentials.code,
@@ -97,7 +97,7 @@ class Auth0Strategy extends AuthStrategy {
 
       // Get user info from Auth0
       const userInfo = await this.authClient.users.getInfo(tokens.access_token);
-      logger.info("🔐 Auth0: Retrieved user info", { email: userInfo.email });
+      logger.info('🔐 Auth0: Retrieved user info', { email: userInfo.email });
 
       // Map and create/update user in local database
       const mappedProfile = this._mapUserProfile(userInfo);
@@ -109,7 +109,7 @@ class Auth0Strategy extends AuthStrategy {
         mappedProfile.auth0_id,
       );
 
-      logger.info("🔐 Auth0: Authentication successful", {
+      logger.info('🔐 Auth0: Authentication successful', {
         userId: localUser.id,
         email: localUser.email,
         role: localUser.role,
@@ -127,14 +127,14 @@ class Auth0Strategy extends AuthStrategy {
         },
       };
     } catch (error) {
-      logger.error("🔐 Auth0: Authentication failed", {
+      logger.error('🔐 Auth0: Authentication failed', {
         error: error.message,
         response: error.response?.data,
       });
       throw new AppError(
         `Auth0 authentication failed: ${error.message}`,
         401,
-        "UNAUTHORIZED",
+        'UNAUTHORIZED',
       );
     }
   }
@@ -168,13 +168,13 @@ class Auth0Strategy extends AuthStrategy {
       const userInfo = await this.authClient.users.getInfo(accessToken);
       return this._mapUserProfile(userInfo);
     } catch (error) {
-      logger.error("🔐 Auth0: Failed to get user profile", {
+      logger.error('🔐 Auth0: Failed to get user profile', {
         error: error.message,
       });
       throw new AppError(
         `Failed to get user profile: ${error.message}`,
         401,
-        "UNAUTHORIZED",
+        'UNAUTHORIZED',
       );
     }
   }
@@ -189,7 +189,7 @@ class Auth0Strategy extends AuthStrategy {
       const response = await axios.post(
         `https://${this.config.domain}/oauth/token`,
         {
-          grant_type: "refresh_token",
+          grant_type: 'refresh_token',
           client_id: this.config.clientId,
           client_secret: this.config.clientSecret,
           refresh_token: refreshToken,
@@ -197,7 +197,7 @@ class Auth0Strategy extends AuthStrategy {
       );
 
       const tokens = response.data;
-      logger.info("🔐 Auth0: Token refreshed successfully");
+      logger.info('🔐 Auth0: Token refreshed successfully');
 
       return {
         token: tokens.access_token,
@@ -205,12 +205,12 @@ class Auth0Strategy extends AuthStrategy {
         id_token: tokens.id_token,
       };
     } catch (error) {
-      logger.error("🔐 Auth0: Token refresh failed", { error: error.message });
+      logger.error('🔐 Auth0: Token refresh failed', { error: error.message });
       // Use "expired" in message to trigger 401 in global error handler
       throw new AppError(
         `Refresh token expired or unauthorized: ${error.message}`,
         401,
-        "UNAUTHORIZED",
+        'UNAUTHORIZED',
       );
     }
   }
@@ -223,22 +223,22 @@ class Auth0Strategy extends AuthStrategy {
   async logout(_token) {
     try {
       const returnToUrl =
-        process.env.AUTH0_LOGOUT_URL || "http://localhost:8080";
+        process.env.AUTH0_LOGOUT_URL || 'http://localhost:8080';
       const logoutUrl = `https://${this.config.domain}/v2/logout?client_id=${this.config.clientId}&returnTo=${encodeURIComponent(returnToUrl)}`;
 
-      logger.info("🔐 Auth0: Logout URL generated", { returnToUrl });
+      logger.info('🔐 Auth0: Logout URL generated', { returnToUrl });
 
       return {
         success: true,
         logoutUrl,
-        message: "Redirect to logout URL to complete Auth0 logout",
+        message: 'Redirect to logout URL to complete Auth0 logout',
       };
     } catch (error) {
-      logger.error("🔐 Auth0: Logout failed", { error: error.message });
+      logger.error('🔐 Auth0: Logout failed', { error: error.message });
       throw new AppError(
         `Logout failed: ${error.message}`,
         500,
-        "INTERNAL_ERROR",
+        'INTERNAL_ERROR',
       );
     }
   }
@@ -274,7 +274,7 @@ class Auth0Strategy extends AuthStrategy {
         mappedProfile.auth0_id,
       );
 
-      logger.info("🔐 Auth0: ID token validated successfully", {
+      logger.info('🔐 Auth0: ID token validated successfully', {
         userId: localUser.id,
         email: localUser.email,
       });
@@ -285,13 +285,13 @@ class Auth0Strategy extends AuthStrategy {
         auth0Id: mappedProfile.auth0_id, // Pass separately for token generation (filtered from user)
       };
     } catch (error) {
-      logger.error("🔐 Auth0: ID token validation failed", {
+      logger.error('🔐 Auth0: ID token validation failed', {
         error: error.message,
       });
       throw new AppError(
         `ID token validation failed: ${error.message}`,
         401,
-        "UNAUTHORIZED",
+        'UNAUTHORIZED',
       );
     }
   }
@@ -313,18 +313,18 @@ class Auth0Strategy extends AuthStrategy {
     return jwt.sign(
       {
         // REGISTERED CLAIMS (RFC 7519 Standard)
-        iss: process.env.API_URL || "https://api.tross.dev", // Issuer
+        iss: process.env.API_URL || 'https://api.tross.dev', // Issuer
         sub: auth0Id, // Subject (validated Auth0 user ID)
-        aud: process.env.API_URL || "https://api.tross.dev", // Audience
+        aud: process.env.API_URL || 'https://api.tross.dev', // Audience
 
         // PRIVATE CLAIMS (Application-specific)
         email: localUser.email,
         role: localUser.role,
-        provider: "auth0",
+        provider: 'auth0',
         userId: localUser.id, // Database ID
       },
       JWT_SECRET, // Use module constant for consistency with middleware
-      { expiresIn: "24h" },
+      { expiresIn: '24h' },
     );
   }
 
@@ -345,11 +345,11 @@ class Auth0Strategy extends AuthStrategy {
         {
           audience,
           issuer: `https://${this.config.domain}/`,
-          algorithms: ["RS256"],
+          algorithms: ['RS256'],
         },
         (err, decoded) => {
           if (err) {
-            logger.error("🔐 Auth0: Token verification failed", {
+            logger.error('🔐 Auth0: Token verification failed', {
               error: err.message,
             });
             return reject(
@@ -373,7 +373,7 @@ class Auth0Strategy extends AuthStrategy {
   _getSigningKey(header, callback) {
     this.jwksClient.getSigningKey(header.kid, (err, key) => {
       if (err) {
-        logger.error("🔐 Auth0: Failed to get signing key", {
+        logger.error('🔐 Auth0: Failed to get signing key', {
           error: err.message,
         });
         return callback(err);
@@ -395,18 +395,18 @@ class Auth0Strategy extends AuthStrategy {
    */
   _mapUserProfile(userInfo) {
     // VALIDATE: All Auth0 external API response data
-    const sub = toSafeString(userInfo.sub, "auth0.sub", { minLength: 1 });
-    const email = toSafeEmail(userInfo.email, "auth0.email");
-    const name = toSafeString(userInfo.name, "auth0.name", { allowNull: true });
-    const given_name = toSafeString(userInfo.given_name, "auth0.given_name", {
+    const sub = toSafeString(userInfo.sub, 'auth0.sub', { minLength: 1 });
+    const email = toSafeEmail(userInfo.email, 'auth0.email');
+    const name = toSafeString(userInfo.name, 'auth0.name', { allowNull: true });
+    const given_name = toSafeString(userInfo.given_name, 'auth0.given_name', {
       allowNull: true,
     });
     const family_name = toSafeString(
       userInfo.family_name,
-      "auth0.family_name",
+      'auth0.family_name',
       { allowNull: true },
     );
-    const picture = toSafeString(userInfo.picture, "auth0.picture", {
+    const picture = toSafeString(userInfo.picture, 'auth0.picture', {
       allowNull: true,
     });
 
@@ -415,9 +415,9 @@ class Auth0Strategy extends AuthStrategy {
     let last_name = family_name;
 
     if (!first_name && name) {
-      const parts = name.split(" ");
+      const parts = name.split(' ');
       first_name = parts[0] || null;
-      last_name = parts.length > 1 ? parts.slice(1).join(" ") : null;
+      last_name = parts.length > 1 ? parts.slice(1).join(' ') : null;
     }
 
     return {
@@ -428,7 +428,7 @@ class Auth0Strategy extends AuthStrategy {
       last_name,
       picture,
       email_verified: userInfo.email_verified === true, // Coerce to boolean
-      provider: "auth0",
+      provider: 'auth0',
     };
   }
 }

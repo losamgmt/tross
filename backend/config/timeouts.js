@@ -123,7 +123,7 @@ const TIMEOUTS = Object.freeze({
  * @returns {Object} Environment-specific timeout configuration
  */
 function getTimeoutConfig(environment = process.env.NODE_ENV) {
-  const isTest = environment === "test";
+  const isTest = environment === 'test';
 
   return {
     server: TIMEOUTS.SERVER,
@@ -131,11 +131,11 @@ function getTimeoutConfig(environment = process.env.NODE_ENV) {
     database: isTest
       ? TIMEOUTS.DATABASE.TEST
       : {
-          statementTimeoutMs: TIMEOUTS.DATABASE.STATEMENT_TIMEOUT_MS,
-          queryTimeoutMs: TIMEOUTS.DATABASE.QUERY_TIMEOUT_MS,
-          connectionTimeoutMs: TIMEOUTS.DATABASE.CONNECTION_TIMEOUT_MS,
-          idleTimeoutMs: TIMEOUTS.DATABASE.IDLE_TIMEOUT_MS,
-        },
+        statementTimeoutMs: TIMEOUTS.DATABASE.STATEMENT_TIMEOUT_MS,
+        queryTimeoutMs: TIMEOUTS.DATABASE.QUERY_TIMEOUT_MS,
+        connectionTimeoutMs: TIMEOUTS.DATABASE.CONNECTION_TIMEOUT_MS,
+        idleTimeoutMs: TIMEOUTS.DATABASE.IDLE_TIMEOUT_MS,
+      },
     services: TIMEOUTS.SERVICES,
     monitoring: TIMEOUTS.MONITORING,
   };
@@ -151,11 +151,11 @@ function validateTimeoutHierarchy() {
 
   // Database < Request < Server
   if (TIMEOUTS.DATABASE.STATEMENT_TIMEOUT_MS >= TIMEOUTS.REQUEST.DEFAULT_MS) {
-    errors.push("Database timeout must be less than request timeout");
+    errors.push('Database timeout must be less than request timeout');
   }
 
   if (TIMEOUTS.REQUEST.DEFAULT_MS >= TIMEOUTS.SERVER.REQUEST_TIMEOUT_MS) {
-    errors.push("Request timeout must be less than server timeout");
+    errors.push('Request timeout must be less than server timeout');
   }
 
   // Keep-alive > Request
@@ -163,7 +163,7 @@ function validateTimeoutHierarchy() {
     TIMEOUTS.SERVER.KEEP_ALIVE_TIMEOUT_MS <= TIMEOUTS.SERVER.REQUEST_TIMEOUT_MS
   ) {
     errors.push(
-      "Keep-alive timeout must be greater than server request timeout",
+      'Keep-alive timeout must be greater than server request timeout',
     );
   }
 
@@ -171,17 +171,17 @@ function validateTimeoutHierarchy() {
   if (
     TIMEOUTS.SERVER.HEADERS_TIMEOUT_MS <= TIMEOUTS.SERVER.KEEP_ALIVE_TIMEOUT_MS
   ) {
-    errors.push("Headers timeout must be greater than keep-alive timeout");
+    errors.push('Headers timeout must be greater than keep-alive timeout');
   }
 
   // Health check < Request
   if (TIMEOUTS.SERVICES.HEALTH_CHECK_MS >= TIMEOUTS.REQUEST.DEFAULT_MS) {
-    errors.push("Health check timeout must be less than request timeout");
+    errors.push('Health check timeout must be less than request timeout');
   }
 
   if (errors.length > 0) {
     throw new Error(
-      `Timeout hierarchy validation failed:\n${errors.join("\n")}`,
+      `Timeout hierarchy validation failed:\n${errors.join('\n')}`,
     );
   }
 }

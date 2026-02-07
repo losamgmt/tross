@@ -1,28 +1,28 @@
 // Clean authentication routes
-const express = require("express");
-const jwt = require("jsonwebtoken");
-const { authenticateToken, requirePermission } = require("../middleware/auth");
-const { attachEntity } = require("../middleware/generic-entity");
-const { refreshLimiter } = require("../middleware/rate-limit");
-const ResponseFormatter = require("../utils/response-formatter");
+const express = require('express');
+const jwt = require('jsonwebtoken');
+const { authenticateToken, requirePermission } = require('../middleware/auth');
+const { attachEntity } = require('../middleware/generic-entity');
+const { refreshLimiter } = require('../middleware/rate-limit');
+const ResponseFormatter = require('../utils/response-formatter');
 // User model removed - using GenericEntityService (strangler-fig Phase 4)
-const tokenService = require("../services/token-service");
-const auditService = require("../services/audit-service");
+const tokenService = require('../services/token-service');
+const auditService = require('../services/audit-service');
 const {
   AuditActions,
   ResourceTypes,
   AuditResults,
-} = require("../services/audit-constants");
+} = require('../services/audit-constants');
 const {
   validateProfileUpdate,
   validateRefreshToken,
-} = require("../validators/body-validators");
-const { validateIdParam } = require("../validators");
-const { logger } = require("../config/logger");
-const { getClientIp, getUserAgent } = require("../utils/request-helpers");
-const { asyncHandler } = require("../middleware/utils");
-const GenericEntityService = require("../services/generic-entity-service");
-const AppError = require("../utils/app-error");
+} = require('../validators/body-validators');
+const { validateIdParam } = require('../validators');
+const { logger } = require('../config/logger');
+const { getClientIp, getUserAgent } = require('../utils/request-helpers');
+const { asyncHandler } = require('../middleware/utils');
+const GenericEntityService = require('../services/generic-entity-service');
+const AppError = require('../utils/app-error');
 
 const router = express.Router();
 
@@ -68,7 +68,7 @@ const router = express.Router();
  *               $ref: '#/components/schemas/Error'
  */
 router.get(
-  "/me",
+  '/me',
   authenticateToken,
   asyncHandler(async (req, res) => {
     // req.dbUser is already populated by authenticateToken middleware
@@ -78,7 +78,7 @@ router.get(
     // Format user data for frontend with consistent field names
     const formattedUser = {
       ...user,
-      name: `${user.first_name || ""} ${user.last_name || ""}`.trim() || "User",
+      name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'User',
       // Ensure role fields are present (normalize from JOIN field names)
       role: user.role || user.role_name,
       role_priority: user.role_priority,
@@ -135,26 +135,26 @@ router.get(
  *         description: User not found
  */
 router.put(
-  "/me",
+  '/me',
   authenticateToken,
   validateProfileUpdate,
   asyncHandler(async (req, res) => {
     // Use GenericEntityService instead of User.findByAuth0Id
     const dbUser = await GenericEntityService.findByField(
-      "user",
-      "auth0_id",
+      'user',
+      'auth0_id',
       req.user.sub,
     );
     if (!dbUser) {
       throw new AppError(
         `User not found for Auth0 ID: ${req.user.sub}`,
         404,
-        "NOT_FOUND",
+        'NOT_FOUND',
       );
     }
 
     // Only allow updating certain fields
-    const allowedUpdates = ["first_name", "last_name"];
+    const allowedUpdates = ['first_name', 'last_name'];
     const updates = {};
 
     allowedUpdates.forEach((field) => {
@@ -164,12 +164,12 @@ router.put(
     });
 
     if (Object.keys(updates).length === 0) {
-      throw new AppError("No valid fields to update", 400, "BAD_REQUEST");
+      throw new AppError('No valid fields to update', 400, 'BAD_REQUEST');
     }
 
     // Use GenericEntityService instead of User.update
     const updatedUser = await GenericEntityService.update(
-      "user",
+      'user',
       dbUser.id,
       updates,
     );
@@ -177,7 +177,7 @@ router.put(
     return ResponseFormatter.updated(
       res,
       updatedUser,
-      "Profile updated successfully",
+      'Profile updated successfully',
     );
   }),
 );
@@ -227,7 +227,7 @@ router.put(
  *         description: Token expired
  */
 router.post(
-  "/refresh",
+  '/refresh',
   refreshLimiter,
   validateRefreshToken,
   asyncHandler(async (req, res) => {
@@ -283,7 +283,7 @@ router.post(
  *         description: Unauthorized
  */
 router.post(
-  "/logout",
+  '/logout',
   authenticateToken,
   asyncHandler(async (req, res) => {
     const { refreshToken } = req.body;
@@ -293,7 +293,7 @@ router.post(
     if (refreshToken) {
       const decoded = jwt.decode(refreshToken);
       if (decoded && decoded.tokenId) {
-        await tokenService.revokeToken(decoded.tokenId, "logout");
+        await tokenService.revokeToken(decoded.tokenId, 'logout');
       }
     }
 
@@ -309,7 +309,7 @@ router.post(
       userAgent,
     });
 
-    return ResponseFormatter.deleted(res, "Logged out successfully");
+    return ResponseFormatter.deleted(res, 'Logged out successfully');
   }),
 );
 
@@ -347,12 +347,12 @@ router.post(
  *         description: Unauthorized
  */
 router.post(
-  "/logout-all",
+  '/logout-all',
   authenticateToken,
   asyncHandler(async (req, res) => {
     const count = await tokenService.revokeAllUserTokens(
       req.user.userId,
-      "logout_all",
+      'logout_all',
     );
     const ipAddress = getClientIp(req);
     const userAgent = getUserAgent(req);
@@ -405,7 +405,7 @@ router.post(
  *         description: Unauthorized
  */
 router.get(
-  "/sessions",
+  '/sessions',
   authenticateToken,
   asyncHandler(async (req, res) => {
     const tokens = await tokenService.getUserTokens(req.user.userId);
@@ -482,22 +482,22 @@ router.get(
  *         description: User not found
  */
 router.post(
-  "/admin/revoke-user-sessions/:userId",
+  '/admin/revoke-user-sessions/:userId',
   authenticateToken,
-  attachEntity("user"),
-  requirePermission("delete"),
-  validateIdParam({ paramName: "userId" }),
+  attachEntity('user'),
+  requirePermission('delete'),
+  validateIdParam({ paramName: 'userId' }),
   asyncHandler(async (req, res) => {
     const targetUserId = req.validated.userId;
-    const reason = req.body?.reason || "admin_revocation";
+    const reason = req.body?.reason || 'admin_revocation';
 
     // Verify target user exists
     const targetUser = await GenericEntityService.findById(
-      "user",
+      'user',
       targetUserId,
     );
     if (!targetUser) {
-      throw new AppError("User not found", 404, "NOT_FOUND");
+      throw new AppError('User not found', 404, 'NOT_FOUND');
     }
 
     // Revoke all tokens for the target user
@@ -522,7 +522,7 @@ router.post(
       result: AuditResults.SUCCESS,
     });
 
-    logger.info("Admin revoked user sessions", {
+    logger.info('Admin revoked user sessions', {
       adminId: req.dbUser.id,
       targetUserId,
       sessionsRevoked: count,

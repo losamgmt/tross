@@ -11,23 +11,23 @@
  * For generic parent-entity checks, see middleware/sub-entity.js
  */
 
-const AppError = require("../utils/app-error");
-const { FILE_ATTACHMENTS } = require("../config/constants");
+const AppError = require('../utils/app-error');
+const { FILE_ATTACHMENTS } = require('../config/constants');
 
 /**
  * Middleware: Validate file upload headers
  * Validates Content-Type is allowed and sets normalized values on req.fileUpload
  */
 function validateFileHeaders(req, res, next) {
-  const mimeType = req.headers["content-type"];
+  const mimeType = req.headers['content-type'];
 
   // Validate MIME type is allowed
   if (!mimeType || !FILE_ATTACHMENTS.ALLOWED_MIME_TYPES.includes(mimeType)) {
     return next(
       new AppError(
-        `File type ${mimeType || "unknown"} not allowed. Allowed: ${FILE_ATTACHMENTS.ALLOWED_MIME_TYPES.join(", ")}`,
+        `File type ${mimeType || 'unknown'} not allowed. Allowed: ${FILE_ATTACHMENTS.ALLOWED_MIME_TYPES.join(', ')}`,
         400,
-        "BAD_REQUEST",
+        'BAD_REQUEST',
       ),
     );
   }
@@ -35,9 +35,9 @@ function validateFileHeaders(req, res, next) {
   // Set normalized upload info on request
   req.fileUpload = {
     mimeType,
-    originalFilename: req.headers["x-filename"] || "unnamed",
-    category: req.headers["x-category"] || "attachment",
-    description: req.headers["x-description"] || null,
+    originalFilename: req.headers['x-filename'] || 'unnamed',
+    category: req.headers['x-category'] || 'attachment',
+    description: req.headers['x-description'] || null,
   };
 
   next();
@@ -53,9 +53,9 @@ function validateFileBody(req, res, next) {
   if (!Buffer.isBuffer(buffer) || buffer.length === 0) {
     return next(
       new AppError(
-        "No file data received. Send raw binary body.",
+        'No file data received. Send raw binary body.',
         400,
-        "BAD_REQUEST",
+        'BAD_REQUEST',
       ),
     );
   }
@@ -66,7 +66,7 @@ function validateFileBody(req, res, next) {
       new AppError(
         `File too large. Maximum size: ${maxMB}MB`,
         400,
-        "BAD_REQUEST",
+        'BAD_REQUEST',
       ),
     );
   }

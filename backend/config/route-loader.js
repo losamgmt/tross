@@ -19,9 +19,9 @@
  * - Entity extensions (roles-extensions) - these are entity-specific customizations
  */
 
-const allMetadata = require("./models");
-const entityRouters = require("../routes/entities");
-const { createFileSubRouter } = require("../routes/file-sub-router");
+const allMetadata = require('./models');
+const entityRouters = require('../routes/entities');
+const { createFileSubRouter } = require('../routes/file-sub-router');
 
 // Derive uncountable entity names from metadata at load time (no hardcoding!)
 const UNCOUNTABLE_ENTITIES = Object.entries(allMetadata)
@@ -49,11 +49,11 @@ function toRouterName(entityName) {
   }
 
   // Simple pluralization: 'y' -> 'ies' for consonant+y, otherwise add 's'
-  const vowels = ["a", "e", "i", "o", "u"];
+  const vowels = ['a', 'e', 'i', 'o', 'u'];
   const plural =
-    camelCase.endsWith("y") && !vowels.includes(camelCase.slice(-2, -1))
-      ? camelCase.slice(0, -1) + "ies"
-      : camelCase + "s";
+    camelCase.endsWith('y') && !vowels.includes(camelCase.slice(-2, -1))
+      ? camelCase.slice(0, -1) + 'ies'
+      : camelCase + 's';
 
   return `${plural}Router`;
 }
@@ -108,7 +108,7 @@ function loadEntityRoutes() {
  * @returns {string} Formatted summary
  */
 function getRouteSummary(routes) {
-  return routes.map((r) => `  ${r.path} (${r.entityName})`).join("\n");
+  return routes.map((r) => `  ${r.path} (${r.entityName})`).join('\n');
 }
 
 /**
@@ -150,7 +150,7 @@ function loadFileSubRoutes() {
  * @returns {string} Formatted summary
  */
 function getFileRouteSummary(routes) {
-  return routes.map((r) => `  ${r.path} (${r.entityName})`).join("\n");
+  return routes.map((r) => `  ${r.path} (${r.entityName})`).join('\n');
 }
 
 module.exports = {

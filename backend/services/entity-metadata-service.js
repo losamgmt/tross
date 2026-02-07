@@ -12,23 +12,23 @@
  * - Uses Node.js require() caching for config files (no singleton needed)
  */
 
-const path = require("path");
-const { logger } = require("../config/logger");
+const path = require('path');
+const { logger } = require('../config/logger');
 
 // Load entity metadata registry
-const entityMetadata = require("../config/models");
+const entityMetadata = require('../config/models');
 
 // Validation is now derived from entity metadata (SSOT pattern)
 const {
   deriveValidationRules,
   clearCache: clearValidationCache,
-} = require("../config/validation-deriver");
+} = require('../config/validation-deriver');
 
 // Config file paths for reload support
-const _permissionsPath = path.join(__dirname, "../../config/permissions.json");
+const _permissionsPath = path.join(__dirname, '../../config/permissions.json');
 
 // Initial load via require() - Node.js caches permissions automatically
-let permissions = require("../../config/permissions.json");
+let permissions = require('../../config/permissions.json');
 
 // Validation rules derived from metadata (cached internally by validation-deriver)
 let validationRules = deriveValidationRules();
@@ -59,18 +59,18 @@ class EntityMetadataService {
   static reloadConfigs() {
     try {
       // Bust require cache for permissions
-      delete require.cache[require.resolve("../../config/permissions.json")];
+      delete require.cache[require.resolve('../../config/permissions.json')];
 
       // Reload permissions
-      permissions = require("../../config/permissions.json");
+      permissions = require('../../config/permissions.json');
 
       // Clear validation cache and re-derive from metadata
       clearValidationCache();
       validationRules = deriveValidationRules();
 
-      logger.info("EntityMetadataService configs reloaded");
+      logger.info('EntityMetadataService configs reloaded');
     } catch (error) {
-      logger.error("Failed to reload config files", { error: error.message });
+      logger.error('Failed to reload config files', { error: error.message });
       throw error;
     }
   }
@@ -88,7 +88,7 @@ class EntityMetadataService {
         tableName: metadata.tableName,
         primaryKey: metadata.primaryKey,
         identityField: metadata.identityField,
-        nameType: metadata.nameType || "system",
+        nameType: metadata.nameType || 'system',
         rlsResource: metadata.rlsResource || name,
       });
     }
@@ -153,10 +153,10 @@ class EntityMetadataService {
     const roles = Object.entries(rolesObj).map(([name, config]) => ({
       name,
       level: config.priority || 0,
-      description: config.description || "",
+      description: config.description || '',
     }));
 
-    const operations = ["create", "read", "update", "delete"];
+    const operations = ['create', 'read', 'update', 'delete'];
 
     // Build matrix rows (one per role)
     const rows = roles.map((role) => {
@@ -180,7 +180,7 @@ class EntityMetadataService {
     });
 
     return {
-      title: "RLS Permissions",
+      title: 'RLS Permissions',
       description: `Role-based access control for ${rlsResource}`,
       columns: operations,
       rows: rows.sort((a, b) => b.roleLevel - a.roleLevel), // Sort by level descending
@@ -207,8 +207,8 @@ class EntityMetadataService {
 
     if (fields.length === 0) {
       return {
-        title: "Field Access",
-        description: "No field-level access control defined",
+        title: 'Field Access',
+        description: 'No field-level access control defined',
         columns: [],
         rows: [],
       };
@@ -216,14 +216,14 @@ class EntityMetadataService {
 
     // Access level definitions
     const accessLevels = {
-      SYSTEM_ONLY: { label: "System Only", level: 0 },
-      ADMIN_FULL: { label: "Admin Full", level: 1 },
-      ADMIN_READ: { label: "Admin Read", level: 2 },
-      MANAGER_FULL: { label: "Manager Full", level: 3 },
-      MANAGER_READ: { label: "Manager Read", level: 4 },
-      USER_FULL: { label: "User Full", level: 5 },
-      USER_READ: { label: "User Read", level: 6 },
-      PUBLIC_READ: { label: "Public Read", level: 7 },
+      SYSTEM_ONLY: { label: 'System Only', level: 0 },
+      ADMIN_FULL: { label: 'Admin Full', level: 1 },
+      ADMIN_READ: { label: 'Admin Read', level: 2 },
+      MANAGER_FULL: { label: 'Manager Full', level: 3 },
+      MANAGER_READ: { label: 'Manager Read', level: 4 },
+      USER_FULL: { label: 'User Full', level: 5 },
+      USER_READ: { label: 'User Read', level: 6 },
+      PUBLIC_READ: { label: 'Public Read', level: 7 },
     };
 
     // Role level mapping
@@ -266,7 +266,7 @@ class EntityMetadataService {
     });
 
     return {
-      title: "Field Access",
+      title: 'Field Access',
       description: `Field-level permissions for ${entityName}`,
       columns: fields,
       columnAliases: metadata.fieldAliases || {},
@@ -332,7 +332,7 @@ class EntityMetadataService {
       }
 
       // Entity-prefixed match (e.g., customer_status for customers entity)
-      const prefix = entityName.replace(/s$/, ""); // Remove trailing 's'
+      const prefix = entityName.replace(/s$/, ''); // Remove trailing 's'
       const prefixedField = `${prefix}_${field}`;
       if (validationRules?.fields?.[prefixedField]) {
         mapping[field] = prefixedField;
@@ -341,15 +341,15 @@ class EntityMetadataService {
 
       // Common field mappings
       const commonMappings = {
-        email: "email",
-        phone: "phone",
-        address: "address",
-        city: "city",
-        state: "state",
-        zip_code: "zip_code",
-        notes: "notes",
-        description: "description",
-        amount: "amount",
+        email: 'email',
+        phone: 'phone',
+        address: 'address',
+        city: 'city',
+        state: 'state',
+        zip_code: 'zip_code',
+        notes: 'notes',
+        description: 'description',
+        amount: 'amount',
         created_at: null, // System fields, no validation
         updated_at: null,
         id: null,
@@ -391,13 +391,13 @@ class EntityMetadataService {
       constraints.push(`format: ${rule.format}`);
     }
     if (rule.enum) {
-      constraints.push(`values: ${rule.enum.join(", ")}`);
+      constraints.push(`values: ${rule.enum.join(', ')}`);
     }
     if (rule.trim) {
-      constraints.push("trimmed");
+      constraints.push('trimmed');
     }
     if (rule.lowercase) {
-      constraints.push("lowercase");
+      constraints.push('lowercase');
     }
 
     return constraints;
@@ -421,7 +421,7 @@ class EntityMetadataService {
     return Object.entries(rolesObj).map(([name, config]) => ({
       name,
       level: config.priority || 0,
-      description: config.description || "",
+      description: config.description || '',
     }));
   }
 }
