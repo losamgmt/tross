@@ -134,9 +134,68 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
 
-      - name: Audit npm dependencies
-        run: npm audit --audit-level=high || echo "::warning::Security vulnerabilities found - please review"
+      - name: Audit root dependencies
+        id: root-audit
+        run: |
+          echo "## 📦 Root Package Audit" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Run audit and capture output
+          if npm audit --audit-level=high 2>&1 | tee audit-root.txt; then
+            echo "✅ No high/critical vulnerabilities found" >> $GITHUB_STEP_SUMMARY
+            echo "root_clean=true" >> $GITHUB_OUTPUT
+          else
+            echo "::warning::Root package has security vulnerabilities"
+            echo "root_clean=false" >> $GITHUB_OUTPUT
+            
+            # Extract vulnerability details for summary
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat audit-root.txt >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
         continue-on-error: true
+
+      - name: Audit backend dependencies
+        id: backend-audit
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 🔧 Backend Package Audit" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          cd backend
+          if npm audit --audit-level=high 2>&1 | tee ../audit-backend.txt; then
+            echo "✅ No high/critical vulnerabilities found" >> $GITHUB_STEP_SUMMARY
+            echo "backend_clean=true" >> $GITHUB_OUTPUT
+          else
+            echo "::warning::Backend package has security vulnerabilities"
+            echo "backend_clean=false" >> $GITHUB_OUTPUT
+            
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat ../audit-backend.txt >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+        continue-on-error: true
+
+      - name: Generate remediation summary
+        if: steps.root-audit.outputs.root_clean == 'false' || steps.backend-audit.outputs.backend_clean == 'false'
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 🔨 Remediation Steps" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Run the following commands locally to fix vulnerabilities:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "# Fix root package vulnerabilities" >> $GITHUB_STEP_SUMMARY
+          echo "npm audit fix" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "# Fix backend package vulnerabilities" >> $GITHUB_STEP_SUMMARY
+          echo "cd backend && npm audit fix" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "For breaking changes that require manual review:" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "npm audit fix --force  # Use with caution - may introduce breaking changes" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
 
       - name: Dependency review (PRs only)
         if: github.event_name == 'pull_request'
