@@ -507,37 +507,48 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
       includeActions: hasActions,
     );
 
-    // Add bottom padding to prevent scrollbar from overlaying table content
-    return Padding(
-      padding: EdgeInsets.only(bottom: StyleConstants.scrollbarThickness + 4),
-      child: Scrollbar(
+    // Standard table layout with nested scrollbars
+    // Vertical scroll wraps horizontal scroll for 2D scrolling
+    return Scrollbar(
+      controller: verticalScrollController,
+      thumbVisibility: true,
+      trackVisibility: true,
+      thickness: StyleConstants.scrollbarThickness,
+      radius: Radius.circular(StyleConstants.scrollbarRadius),
+      child: SingleChildScrollView(
         controller: verticalScrollController,
-        thumbVisibility: true,
-        trackVisibility: true,
-        thickness: StyleConstants.scrollbarThickness,
-        radius: Radius.circular(StyleConstants.scrollbarRadius),
-        child: SingleChildScrollView(
-          controller: verticalScrollController,
-          scrollDirection: Axis.vertical,
-          child: widget.autoSizeColumns
-              // Auto-size: table stretches to fill container, no horizontal scroll
-              ? tableWidget
-              // Fixed widths: horizontal scroll for overflow
-              : Scrollbar(
+        scrollDirection: Axis.vertical,
+        child: widget.autoSizeColumns
+            // Auto-size: table stretches to fill container, no horizontal scroll
+            // Add bottom padding only for vertical scrollbar track
+            ? Padding(
+                padding: EdgeInsets.only(
+                  bottom: StyleConstants.scrollbarThickness + 4,
+                ),
+                child: tableWidget,
+              )
+            // Fixed widths: horizontal scroll for overflow
+            // Add bottom padding inside scroll area so horizontal scrollbar
+            // doesn't overlay table content
+            : Scrollbar(
+                controller: horizontalScrollController,
+                thumbVisibility: true,
+                trackVisibility: true,
+                thickness: StyleConstants.scrollbarThickness,
+                radius: Radius.circular(StyleConstants.scrollbarRadius),
+                notificationPredicate: (notification) =>
+                    notification.depth == 0,
+                child: SingleChildScrollView(
                   controller: horizontalScrollController,
-                  thumbVisibility: true,
-                  trackVisibility: true,
-                  thickness: StyleConstants.scrollbarThickness,
-                  radius: Radius.circular(StyleConstants.scrollbarRadius),
-                  notificationPredicate: (notification) =>
-                      notification.depth == 0,
-                  child: SingleChildScrollView(
-                    controller: horizontalScrollController,
-                    scrollDirection: Axis.horizontal,
+                  scrollDirection: Axis.horizontal,
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      bottom: StyleConstants.scrollbarThickness + 4,
+                    ),
                     child: tableWidget,
                   ),
                 ),
-        ),
+              ),
       ),
     );
   }
@@ -626,59 +637,66 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
         // Calculate pinned section width (capped at 40% of available width)
         final maxPinnedWidth = constraints.maxWidth * 0.4;
 
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: StyleConstants.scrollbarThickness + 4,
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Pinned section (frozen)
-              Container(
-                constraints: BoxConstraints(maxWidth: maxPinnedWidth),
-                decoration: BoxDecoration(
-                  border: Border(
-                    right: BorderSide(
-                      color: theme.colorScheme.outline.withValues(alpha: 0.3),
-                      width: 2,
-                    ),
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Pinned section (frozen)
+            Container(
+              constraints: BoxConstraints(maxWidth: maxPinnedWidth),
+              decoration: BoxDecoration(
+                border: Border(
+                  right: BorderSide(
+                    color: theme.colorScheme.outline.withValues(alpha: 0.3),
+                    width: 2,
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: theme.colorScheme.shadow.withValues(alpha: 0.1),
-                      blurRadius: 4,
-                      offset: const Offset(2, 0),
-                    ),
-                  ],
                 ),
-                child: SingleChildScrollView(
-                  controller: pinnedVerticalController,
-                  physics: PlatformUtilities.scrollPhysics,
+                boxShadow: [
+                  BoxShadow(
+                    color: theme.colorScheme.shadow.withValues(alpha: 0.1),
+                    blurRadius: 4,
+                    offset: const Offset(2, 0),
+                  ),
+                ],
+              ),
+              child: SingleChildScrollView(
+                controller: pinnedVerticalController,
+                physics: PlatformUtilities.scrollPhysics,
+                // Add bottom padding to clear horizontal scrollbar in scrollable section
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    bottom: StyleConstants.scrollbarThickness + 4,
+                  ),
                   child: pinnedTable,
                 ),
               ),
+            ),
 
-              // Scrollable section
-              Expanded(
-                child: Scrollbar(
+            // Scrollable section
+            Expanded(
+              child: Scrollbar(
+                controller: horizontalScrollController,
+                thumbVisibility: true,
+                thickness: StyleConstants.scrollbarThickness,
+                radius: Radius.circular(StyleConstants.scrollbarRadius),
+                child: SingleChildScrollView(
                   controller: horizontalScrollController,
-                  thumbVisibility: true,
-                  thickness: StyleConstants.scrollbarThickness,
-                  radius: Radius.circular(StyleConstants.scrollbarRadius),
+                  scrollDirection: Axis.horizontal,
+                  physics: PlatformUtilities.scrollPhysics,
                   child: SingleChildScrollView(
-                    controller: horizontalScrollController,
-                    scrollDirection: Axis.horizontal,
+                    controller: scrollableVerticalController,
                     physics: PlatformUtilities.scrollPhysics,
-                    child: SingleChildScrollView(
-                      controller: scrollableVerticalController,
-                      physics: PlatformUtilities.scrollPhysics,
+                    // Add bottom padding inside scroll area for horizontal scrollbar
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        bottom: StyleConstants.scrollbarThickness + 4,
+                      ),
                       child: scrollableTable,
                     ),
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         );
       },
     );

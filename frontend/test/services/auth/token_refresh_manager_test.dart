@@ -121,7 +121,8 @@ void main() {
 
           final manager = TokenRefreshManager(
             tokenService: tokenService,
-            onTokenRefreshed: (token, refresh, exp) => callbackTriggered = true,
+            onTokenRefreshed: (token, refresh, exp, user, provider) =>
+                callbackTriggered = true,
             onRefreshFailed: () => callbackTriggered = true,
           );
 
@@ -231,7 +232,8 @@ TokenRefreshManager _createManager(
 }) {
   return TokenRefreshManager(
     tokenService: tokenService,
-    onTokenRefreshed: onRefreshed ?? (token, refresh, exp) {},
+    onTokenRefreshed:
+        onRefreshed ?? (token, refresh, exp, user, provider) {},
     onRefreshFailed: onFailed ?? () {},
     refreshBuffer: buffer,
   );

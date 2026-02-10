@@ -51,7 +51,6 @@ import '../../../config/app_colors.dart';
 import '../../../config/app_sizes.dart';
 import '../../../config/app_spacing.dart';
 import '../../../config/app_typography.dart';
-import '../interactions/touch_target.dart';
 
 class CheckboxInput extends StatelessWidget {
   /// Current checked value (null = indeterminate if tristate)
@@ -101,62 +100,65 @@ class CheckboxInput extends StatelessWidget {
         : theme.textTheme.bodyMedium;
     final descStyle = theme.textTheme.bodySmall;
 
-    return TouchTarget(
-      onTap: enabled ? () => _handleTap() : null,
+    return Semantics(
+      label: label,
+      checked: value,
       enabled: enabled,
-      semanticLabel: label,
-      child: Padding(
-        padding: EdgeInsets.symmetric(vertical: spacing.xxs),
-        child: Row(
-          crossAxisAlignment: description != null
-              ? CrossAxisAlignment.start
-              : CrossAxisAlignment.center,
-          children: [
-            SizedBox(
-              width: checkboxSize,
-              height: checkboxSize,
-              child: Checkbox(
-                value: value,
-                onChanged: enabled ? onChanged : null,
-                tristate: tristate,
-                materialTapTargetSize: compact
-                    ? MaterialTapTargetSize.shrinkWrap
-                    : MaterialTapTargetSize.padded,
+      child: InkWell(
+        onTap: enabled ? () => _handleTap() : null,
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: spacing.xxs),
+          child: Row(
+            crossAxisAlignment: description != null
+                ? CrossAxisAlignment.start
+                : CrossAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: checkboxSize,
+                height: checkboxSize,
+                child: Checkbox(
+                  value: value,
+                  onChanged: enabled ? onChanged : null,
+                  tristate: tristate,
+                  materialTapTargetSize: compact
+                      ? MaterialTapTargetSize.shrinkWrap
+                      : MaterialTapTargetSize.padded,
+                ),
               ),
-            ),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    label,
-                    style: labelStyle?.copyWith(
-                      fontWeight: isChecked
-                          ? AppTypography.medium
-                          : AppTypography.regular,
-                      color: enabled
-                          ? theme.colorScheme.onSurface
-                          : theme.colorScheme.onSurface.withValues(
-                              alpha: AppColors.opacityHint,
-                            ),
-                    ),
-                  ),
-                  if (description != null) ...[
-                    SizedBox(height: spacing.xxs / 2),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                     Text(
-                      description!,
-                      style: descStyle?.copyWith(
-                        color: theme.colorScheme.onSurface.withValues(
-                          alpha: AppColors.opacitySecondary,
-                        ),
+                      label,
+                      style: labelStyle?.copyWith(
+                        fontWeight: isChecked
+                            ? AppTypography.medium
+                            : AppTypography.regular,
+                        color: enabled
+                            ? theme.colorScheme.onSurface
+                            : theme.colorScheme.onSurface.withValues(
+                                alpha: AppColors.opacityHint,
+                              ),
                       ),
                     ),
+                    if (description != null) ...[
+                      SizedBox(height: spacing.xxs / 2),
+                      Text(
+                        description!,
+                        style: descStyle?.copyWith(
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: AppColors.opacitySecondary,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

@@ -16,8 +16,19 @@ import 'auth_token_service.dart';
 import '../error_service.dart';
 
 /// Callback type for when token is refreshed
+/// [newToken] - The new access token
+/// [newRefreshToken] - The new refresh token (null for dev mode)
+/// [expiresAt] - Token expiry timestamp in seconds
+/// [user] - Updated user profile
+/// [provider] - Auth provider (auth0 or development)
 typedef OnTokenRefreshed =
-    void Function(String newToken, String? newRefreshToken, int? expiresAt);
+    void Function(
+      String newToken,
+      String? newRefreshToken,
+      int? expiresAt,
+      Map<String, dynamic>? user,
+      String? provider,
+    );
 
 /// Callback type for when refresh fails and logout is needed
 typedef OnRefreshFailed = void Function();
@@ -157,9 +168,11 @@ class TokenRefreshManager with WidgetsBindingObserver {
         final newToken = result['token'] as String;
         final newRefreshToken = result['refreshToken'] as String?;
         final expiresAt = result['expiresAt'] as int?;
+        final user = result['user'] as Map<String, dynamic>?;
+        final provider = result['provider'] as String?;
 
-        // Notify caller of new tokens
-        _onTokenRefreshed(newToken, newRefreshToken, expiresAt);
+        // Notify caller of new tokens and user data
+        _onTokenRefreshed(newToken, newRefreshToken, expiresAt, user, provider);
 
         // Schedule next refresh
         await scheduleRefresh();

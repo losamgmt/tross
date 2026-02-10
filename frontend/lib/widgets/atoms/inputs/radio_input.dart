@@ -49,7 +49,6 @@ import '../../../config/app_colors.dart';
 import '../../../config/app_sizes.dart';
 import '../../../config/app_spacing.dart';
 import '../../../config/app_typography.dart';
-import '../interactions/touch_target.dart';
 
 class RadioInput<T> extends StatelessWidget {
   /// This radio button's value
@@ -98,62 +97,65 @@ class RadioInput<T> extends StatelessWidget {
         ? sizes.buttonHeightSmall
         : sizes.buttonHeightMedium;
 
-    return TouchTarget(
-      onTap: onChanged != null ? () => onChanged(value) : null,
-      enabled: onChanged != null,
-      semanticLabel: label,
-      child: Padding(
-        padding: EdgeInsets.symmetric(vertical: spacing.xxs),
-        child: Row(
-          crossAxisAlignment: description != null
-              ? CrossAxisAlignment.start
-              : CrossAxisAlignment.center,
-          children: [
-            SizedBox(
-              width: radioSize,
-              height: radioSize,
-              // Flutter 3.32+: Radio gets groupValue/onChanged from RadioGroup ancestor
-              child: Radio<T>(
-                value: value,
-                toggleable: false,
-                materialTapTargetSize: compact
-                    ? MaterialTapTargetSize.shrinkWrap
-                    : MaterialTapTargetSize.padded,
+    return Semantics(
+      label: label,
+      selected: isSelected,
+      enabled: enabled,
+      child: InkWell(
+        onTap: onChanged != null ? () => onChanged(value) : null,
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: spacing.xxs),
+          child: Row(
+            crossAxisAlignment: description != null
+                ? CrossAxisAlignment.start
+                : CrossAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: radioSize,
+                height: radioSize,
+                // Flutter 3.32+: Radio gets groupValue/onChanged from RadioGroup ancestor
+                child: Radio<T>(
+                  value: value,
+                  toggleable: false,
+                  materialTapTargetSize: compact
+                      ? MaterialTapTargetSize.shrinkWrap
+                      : MaterialTapTargetSize.padded,
+                ),
               ),
-            ),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    label,
-                    style: labelStyle?.copyWith(
-                      fontWeight: isSelected
-                          ? AppTypography.medium
-                          : AppTypography.regular,
-                      color: enabled
-                          ? theme.colorScheme.onSurface
-                          : theme.colorScheme.onSurface.withValues(
-                              alpha: AppColors.opacityHint,
-                            ),
-                    ),
-                  ),
-                  if (description != null) ...[
-                    SizedBox(height: spacing.xxs / 2),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                     Text(
-                      description!,
-                      style: descStyle?.copyWith(
-                        color: theme.colorScheme.onSurface.withValues(
-                          alpha: AppColors.opacitySecondary,
-                        ),
+                      label,
+                      style: labelStyle?.copyWith(
+                        fontWeight: isSelected
+                            ? AppTypography.medium
+                            : AppTypography.regular,
+                        color: enabled
+                            ? theme.colorScheme.onSurface
+                            : theme.colorScheme.onSurface.withValues(
+                                alpha: AppColors.opacityHint,
+                              ),
                       ),
                     ),
+                    if (description != null) ...[
+                      SizedBox(height: spacing.xxs / 2),
+                      Text(
+                        description!,
+                        style: descStyle?.copyWith(
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: AppColors.opacitySecondary,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

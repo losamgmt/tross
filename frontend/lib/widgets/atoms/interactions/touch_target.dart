@@ -11,10 +11,10 @@
 ///
 /// // Icon button replacement
 /// TouchTarget.icon(icon: Icons.refresh, onTap: _refresh, tooltip: 'Refresh')
-///
-/// // Input suffix icon (for InputDecoration.suffixIcon)
-/// suffixIcon: TouchTarget.suffix(icon: Icons.clear, onTap: _clear)
 /// ```
+///
+/// **Note:** Do NOT use TouchTarget.icon for TextField suffixIcon on web.
+/// Use standard IconButton instead - TouchTarget causes layout issues.
 library;
 
 import 'package:flutter/material.dart';

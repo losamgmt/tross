@@ -66,8 +66,16 @@ class AuthTokenService {
 
   /// Refresh access token via backend /api/auth/refresh endpoint
   /// Uses our backend's token rotation for security (revokes old, issues new)
+  /// For development mode: re-requests a dev token with the same role
   Future<Map<String, dynamic>?> refreshTokenViaBackend() async {
     try {
+      // Check if this is a development token - handle differently
+      final provider = await TokenManager.getStoredProvider();
+      if (provider == 'development') {
+        return await _refreshDevToken();
+      }
+
+      // Auth0/production flow: use refresh token
       final refreshToken = await TokenManager.getStoredRefreshToken();
       if (refreshToken == null) {
         ErrorService.logInfo('No refresh token available for backend refresh');
@@ -87,7 +95,14 @@ class AuthTokenService {
         final newAccessToken = data['accessToken'] as String?;
         final newRefreshToken = data['refreshToken'] as String?;
 
-        if (newAccessToken != null) {
+        if (newAccessToken != null && newRefreshToken != null) {
+          // CRITICAL: Store the new refresh token IMMEDIATELY
+          // The backend has already revoked the old one via token rotation.
+          // If we don't store the new one now and something fails later,
+          // the user would be locked out.
+          await TokenManager.storeRefreshToken(newRefreshToken);
+          ErrorService.logInfo('New refresh token stored immediately');
+
           // Parse expiry from new access token
           final expiresAt = getTokenExpiry(newAccessToken);
 
@@ -99,8 +114,21 @@ class AuthTokenService {
             return {
               'token': newAccessToken,
               'user': profile,
-              'refreshToken': newRefreshToken ?? refreshToken,
+              'refreshToken': newRefreshToken,
               'expiresAt': expiresAt,
+              'provider': 'auth0',
+            };
+          } else {
+            // Profile fetch failed but we have valid tokens
+            // Return what we have - caller should handle missing profile
+            ErrorService.logWarning(
+              'Token refresh succeeded but profile fetch failed',
+            );
+            return {
+              'token': newAccessToken,
+              'refreshToken': newRefreshToken,
+              'expiresAt': expiresAt,
+              'provider': 'auth0',
             };
           }
         }
@@ -110,6 +138,50 @@ class AuthTokenService {
       return null;
     } catch (e) {
       ErrorService.logError('Backend token refresh failed', error: e);
+      return null;
+    }
+  }
+
+  /// Refresh development token by requesting a new one with the same role
+  Future<Map<String, dynamic>?> _refreshDevToken() async {
+    try {
+      final role = await TokenManager.getStoredUserRole();
+      if (role == null) {
+        ErrorService.logWarning('Cannot refresh dev token - no role stored');
+        return null;
+      }
+
+      ErrorService.logInfo(
+        'Refreshing dev token',
+        context: {'role': role},
+      );
+
+      // Request a new dev token with the same role
+      final newToken = await _apiClient.getTestToken(role: role);
+      if (newToken == null) {
+        ErrorService.logWarning('Dev token refresh failed - no token returned');
+        return null;
+      }
+
+      // Parse expiry from new token
+      final expiresAt = getTokenExpiry(newToken);
+
+      // Get user profile with new token
+      final profile = await _apiClient.getUserProfile(newToken);
+
+      if (profile != null) {
+        ErrorService.logInfo('Dev token refresh successful');
+        return {
+          'token': newToken,
+          'user': profile,
+          'expiresAt': expiresAt,
+          'provider': 'development',
+        };
+      }
+
+      return null;
+    } catch (e) {
+      ErrorService.logError('Dev token refresh failed', error: e);
       return null;
     }
   }

@@ -122,6 +122,41 @@ class TokenManager {
     }
   }
 
+  /// Store refresh token (for immediate storage during token rotation)
+  static Future<void> storeRefreshToken(String refreshToken) async {
+    try {
+      await _secureStorage.write(key: _refreshTokenKey, value: refreshToken);
+      ErrorService.logDebug('Refresh token stored');
+    } catch (e) {
+      ErrorService.logError('Failed to store refresh token', error: e);
+      rethrow;
+    }
+  }
+
+  /// Get stored auth provider (auth0 or development)
+  static Future<String?> getStoredProvider() async {
+    try {
+      return await _secureStorage.read(key: _providerKey);
+    } catch (e) {
+      ErrorService.logError('Failed to get stored provider', error: e);
+      return null;
+    }
+  }
+
+  /// Get stored user role from user JSON (for dev mode re-authentication)
+  static Future<String?> getStoredUserRole() async {
+    try {
+      final userJson = await _secureStorage.read(key: _userKey);
+      if (userJson == null) return null;
+
+      final user = json.decode(userJson) as Map<String, dynamic>;
+      return user['role'] as String?;
+    } catch (e) {
+      ErrorService.logError('Failed to get stored user role', error: e);
+      return null;
+    }
+  }
+
   /// Get stored token expiry time as DateTime
   /// Returns null if no expiry is stored or if parsing fails
   static Future<DateTime?> getTokenExpiry() async {

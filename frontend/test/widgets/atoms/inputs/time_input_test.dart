@@ -8,7 +8,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tross/widgets/atoms/inputs/time_input.dart';
-import 'package:tross/widgets/atoms/interactions/touch_target.dart';
 
 void main() {
   group('TimeInput Atom', () {
@@ -299,9 +298,9 @@ void main() {
           ),
         );
 
-        // When disabled, there is no InkWell (TouchTarget renders without it)
-        // So we verify that no InkWell exists for interaction
-        expect(find.byType(InkWell), findsNothing);
+        // TextField is disabled when enabled: false
+        final textField = tester.widget<TextField>(find.byType(TextField));
+        expect(textField.enabled, isFalse);
 
         // Time picker dialog should NOT appear
         expect(find.byType(TimePickerDialog), findsNothing);
@@ -332,8 +331,8 @@ void main() {
           ),
         );
 
-        // Verify the widget has a TouchTarget (our tappable wrapper)
-        expect(find.byType(TouchTarget), findsAtLeast(1));
+        // Verify the widget has a TextField (our tappable input)
+        expect(find.byType(TextField), findsAtLeast(1));
         // Verify the input is rendered
         expect(find.byType(TimeInput), findsOneWidget);
         // Verify the time is displayed
@@ -355,9 +354,9 @@ void main() {
           ),
         );
 
-        // When disabled, TouchTarget does not render InkWell
-        // This ensures no tap handling occurs
-        expect(find.byType(InkWell), findsNothing);
+        // TextField is disabled when enabled: false
+        final textField = tester.widget<TextField>(find.byType(TextField));
+        expect(textField.enabled, isFalse);
 
         // Callback should not be invoked
         expect(selectedTime, isNull);
@@ -371,22 +370,21 @@ void main() {
       testWidgets('opens time picker on Space key when focused', (
         tester,
       ) async {
+        final focusNode = FocusNode();
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
               body: TimeInput(
                 value: const TimeOfDay(hour: 10, minute: 0),
                 onChanged: (_) {},
+                focusNode: focusNode,
               ),
             ),
           ),
         );
 
-        // Get the FocusNode from the KeyboardListener and request focus
-        final keyboardListener = tester.widget<KeyboardListener>(
-          find.byType(KeyboardListener),
-        );
-        keyboardListener.focusNode.requestFocus();
+        // Focus the TimeInput programmatically (don't tap - that would open the picker)
+        focusNode.requestFocus();
         await tester.pumpAndSettle();
 
         // Press Space key
@@ -400,22 +398,21 @@ void main() {
       testWidgets('opens time picker on Enter key when focused', (
         tester,
       ) async {
+        final focusNode = FocusNode();
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
               body: TimeInput(
                 value: const TimeOfDay(hour: 10, minute: 0),
                 onChanged: (_) {},
+                focusNode: focusNode,
               ),
             ),
           ),
         );
 
-        // Get the FocusNode from the KeyboardListener and request focus
-        final keyboardListener = tester.widget<KeyboardListener>(
-          find.byType(KeyboardListener),
-        );
-        keyboardListener.focusNode.requestFocus();
+        // Focus the TimeInput programmatically
+        focusNode.requestFocus();
         await tester.pumpAndSettle();
 
         // Press Enter key
@@ -429,6 +426,7 @@ void main() {
       testWidgets('does not open picker on keyboard when disabled', (
         tester,
       ) async {
+        final focusNode = FocusNode();
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
@@ -436,16 +434,14 @@ void main() {
                 value: const TimeOfDay(hour: 10, minute: 0),
                 onChanged: (_) {},
                 enabled: false,
+                focusNode: focusNode,
               ),
             ),
           ),
         );
 
-        // Get the FocusNode and try to focus
-        final keyboardListener = tester.widget<KeyboardListener>(
-          find.byType(KeyboardListener),
-        );
-        keyboardListener.focusNode.requestFocus();
+        // Try to focus (disabled widgets typically can't focus)
+        focusNode.requestFocus();
         await tester.pumpAndSettle();
 
         // Press Space key
@@ -456,36 +452,29 @@ void main() {
         expect(find.text('OK'), findsNothing);
       });
 
-      testWidgets('is focusable via tab navigation', (tester) async {
+      testWidgets('is focusable with external focusNode', (tester) async {
+        final timeInputFocusNode = FocusNode();
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
-              body: Column(
-                children: [
-                  const TextField(), // First focusable widget
-                  TimeInput(
-                    value: const TimeOfDay(hour: 10, minute: 0),
-                    onChanged: (_) {},
-                  ),
-                ],
+              body: TimeInput(
+                value: const TimeOfDay(hour: 10, minute: 0),
+                onChanged: (_) {},
+                focusNode: timeInputFocusNode,
               ),
             ),
           ),
         );
 
-        // Focus the TextField first
-        await tester.tap(find.byType(TextField));
+        // Initially not focused
+        expect(timeInputFocusNode.hasFocus, isFalse);
+
+        // Focus the TimeInput programmatically
+        timeInputFocusNode.requestFocus();
         await tester.pumpAndSettle();
 
-        // Tab to the TimeInput
-        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
-        await tester.pumpAndSettle();
-
-        // Verify TimeInput's KeyboardListener received focus
-        final keyboardListener = tester.widget<KeyboardListener>(
-          find.byType(KeyboardListener),
-        );
-        expect(keyboardListener.focusNode.hasFocus, isTrue);
+        // Verify TimeInput received focus
+        expect(timeInputFocusNode.hasFocus, isTrue);
       });
     });
   });

@@ -129,9 +129,39 @@ class AuthService {
     String newToken,
     String? newRefreshToken,
     int? expiresAt,
+    Map<String, dynamic>? user,
+    String? provider,
   ) {
-    ErrorService.logInfo('Proactive token refresh - updating auth state');
+    ErrorService.logInfo(
+      'Proactive token refresh - updating auth state',
+      context: {'provider': provider},
+    );
+
+    // Update in-memory state
     _token = newToken;
+    if (user != null) {
+      _user = user;
+    }
+    if (provider != null) {
+      _provider = provider;
+    }
+
+    // Persist the updated tokens (user may be from refresh or existing)
+    if (_user != null) {
+      _tokenService.storeAuthData(
+        token: newToken,
+        user: _user!,
+        refreshToken: newRefreshToken,
+        provider: _provider,
+        expiresAt: expiresAt,
+      );
+    } else {
+      // No user data - at minimum store the tokens
+      ErrorService.logWarning(
+        'Token refresh completed but no user data available',
+      );
+    }
+
     // Notify provider of state change
     onAuthStateChanged?.call();
   }
@@ -394,12 +424,17 @@ class AuthService {
         _token = result['token'];
         _user = result['user'];
         final expiresAt = result['expiresAt'] as int?;
+        final provider = result['provider'] as String?;
+        if (provider != null) {
+          _provider = provider;
+        }
 
-        // Update stored data with new expiry
+        // Update stored data with new expiry and provider
         await _tokenService.storeAuthData(
           token: _token!,
           user: _user!,
           refreshToken: result['refreshToken'],
+          provider: _provider,
           expiresAt: expiresAt,
         );
 

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../config/app_spacing.dart';
 import '../../../utils/helpers/helpers.dart';
-import '../interactions/touch_target.dart';
 
 /// Generic date input atom for ANY date field on ANY model
 ///
@@ -15,7 +14,6 @@ import '../interactions/touch_target.dart';
 /// - Prefix/suffix icons
 /// - Disabled state
 /// - Clear button
-/// - **Keyboard shortcuts** - Space/Enter to open picker when focused
 /// - Tab navigation support
 ///
 /// **SRP: Pure Input Rendering**
@@ -47,6 +45,7 @@ class DateInput extends StatefulWidget {
   final IconData? suffixIcon;
   final String dateFormat;
   final bool showClearButton;
+  final FocusNode? focusNode;
 
   const DateInput({
     super.key,
@@ -63,6 +62,7 @@ class DateInput extends StatefulWidget {
     this.suffixIcon,
     this.dateFormat = 'MMM d, yyyy',
     this.showClearButton = true,
+    this.focusNode,
   });
 
   @override
@@ -70,35 +70,36 @@ class DateInput extends StatefulWidget {
 }
 
 class _DateInputState extends State<DateInput> {
-  late final FocusNode _focusNode;
-  bool _isFocused = false;
+  FocusNode? _internalFocusNode;
+  FocusNode get _focusNode =>
+      widget.focusNode ?? (_internalFocusNode ??= FocusNode());
+  late final TextEditingController _controller;
 
   @override
   void initState() {
     super.initState();
-    _focusNode = FocusNode();
-    _focusNode.addListener(_handleFocusChange);
+    _controller = TextEditingController(text: _formatValue());
+  }
+
+  @override
+  void didUpdateWidget(DateInput oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.value != widget.value) {
+      _controller.text = _formatValue();
+    }
   }
 
   @override
   void dispose() {
-    _focusNode.removeListener(_handleFocusChange);
-    _focusNode.dispose();
+    _internalFocusNode?.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
-  void _handleFocusChange() {
-    setState(() => _isFocused = _focusNode.hasFocus);
-  }
-
-  void _handleKeyEvent(KeyEvent event) {
-    if (event is KeyDownEvent && widget.enabled) {
-      // Open picker on Space or Enter
-      if (event.logicalKey == LogicalKeyboardKey.space ||
-          event.logicalKey == LogicalKeyboardKey.enter) {
-        _selectDate(context);
-      }
-    }
+  String _formatValue() {
+    return widget.value != null
+        ? DateTimeHelpers.formatDate(widget.value!)
+        : '';
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -121,49 +122,43 @@ class _DateInputState extends State<DateInput> {
   @override
   Widget build(BuildContext context) {
     final spacing = context.spacing;
-    final theme = Theme.of(context);
 
-    // Pure input rendering: Just the date input field
-    return KeyboardListener(
+    return Focus(
       focusNode: _focusNode,
-      onKeyEvent: _handleKeyEvent,
-      child: TouchTarget(
-        onTap: widget.enabled ? () => _selectDate(context) : null,
+      onKeyEvent: (node, event) {
+        if (widget.enabled &&
+            event is KeyDownEvent &&
+            (event.logicalKey == LogicalKeyboardKey.space ||
+                event.logicalKey == LogicalKeyboardKey.enter)) {
+          _selectDate(context);
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: TextField(
+        controller: _controller,
+        readOnly: true,
         enabled: widget.enabled,
-        semanticLabel: 'Select date',
-        child: InputDecorator(
-          isFocused: _isFocused,
-          decoration: InputDecoration(
-            hintText: widget.placeholder ?? 'Select date',
-            errorText: widget.errorText,
-            helperText: widget.helperText,
-            prefixIcon: widget.prefixIcon != null
-                ? Icon(widget.prefixIcon)
-                : const Icon(Icons.calendar_today),
-            suffixIcon:
-                widget.value != null && widget.showClearButton && widget.enabled
-                ? TouchTarget.icon(
-                    icon: Icons.clear,
-                    onTap: _clearDate,
-                    tooltip: 'Clear date',
-                  )
-                : (widget.suffixIcon != null ? Icon(widget.suffixIcon) : null),
-            border: const OutlineInputBorder(),
-            contentPadding: EdgeInsets.symmetric(
-              horizontal: spacing.sm,
-              vertical: spacing.md,
-            ),
-            enabled: widget.enabled,
-          ),
-          child: Text(
-            widget.value != null
-                ? DateTimeHelpers.formatDate(widget.value!)
-                : '',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: widget.enabled
-                  ? theme.colorScheme.onSurface
-                  : theme.colorScheme.onSurface.withValues(alpha: 0.38),
-            ),
+        onTap: widget.enabled ? () => _selectDate(context) : null,
+        decoration: InputDecoration(
+          hintText: widget.placeholder ?? 'Select date',
+          errorText: widget.errorText,
+          helperText: widget.helperText,
+          prefixIcon: widget.prefixIcon != null
+              ? Icon(widget.prefixIcon)
+              : const Icon(Icons.calendar_today),
+          suffixIcon:
+              widget.value != null && widget.showClearButton && widget.enabled
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: _clearDate,
+                      tooltip: 'Clear date',
+                    )
+                  : (widget.suffixIcon != null ? Icon(widget.suffixIcon) : null),
+          border: const OutlineInputBorder(),
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: spacing.md,
+            vertical: spacing.sm,
           ),
         ),
       ),

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../config/app_spacing.dart';
-import '../interactions/touch_target.dart';
 
 /// Generic time input atom for ANY time field on ANY model
 ///
@@ -13,7 +12,6 @@ import '../interactions/touch_target.dart';
 /// - Prefix/suffix icons
 /// - Disabled state
 /// - Clear button
-/// - **Keyboard shortcuts** - Space/Enter to open picker when focused
 /// - Tab navigation support
 ///
 /// **SRP: Pure Input Rendering**
@@ -41,6 +39,7 @@ class TimeInput extends StatefulWidget {
   final IconData? suffixIcon;
   final bool use24HourFormat;
   final bool showClearButton;
+  final FocusNode? focusNode;
 
   const TimeInput({
     super.key,
@@ -55,6 +54,7 @@ class TimeInput extends StatefulWidget {
     this.suffixIcon,
     this.use24HourFormat = false,
     this.showClearButton = true,
+    this.focusNode,
   });
 
   @override
@@ -62,35 +62,35 @@ class TimeInput extends StatefulWidget {
 }
 
 class _TimeInputState extends State<TimeInput> {
-  late final FocusNode _focusNode;
-  bool _isFocused = false;
+  FocusNode? _internalFocusNode;
+  FocusNode get _focusNode =>
+      widget.focusNode ?? (_internalFocusNode ??= FocusNode());
+  late final TextEditingController _controller;
 
   @override
   void initState() {
     super.initState();
-    _focusNode = FocusNode();
-    _focusNode.addListener(_handleFocusChange);
+    _controller = TextEditingController(text: _formatValue());
+  }
+
+  @override
+  void didUpdateWidget(TimeInput oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.value != widget.value) {
+      _controller.text = _formatValue();
+    }
   }
 
   @override
   void dispose() {
-    _focusNode.removeListener(_handleFocusChange);
-    _focusNode.dispose();
+    _internalFocusNode?.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
-  void _handleFocusChange() {
-    setState(() => _isFocused = _focusNode.hasFocus);
-  }
-
-  void _handleKeyEvent(KeyEvent event) {
-    if (event is KeyDownEvent && widget.enabled) {
-      // Open picker on Space or Enter
-      if (event.logicalKey == LogicalKeyboardKey.space ||
-          event.logicalKey == LogicalKeyboardKey.enter) {
-        _selectTime(context);
-      }
-    }
+  String _formatValue() {
+    if (widget.value == null) return '';
+    return _formatTime(widget.value!);
   }
 
   Future<void> _selectTime(BuildContext context) async {
@@ -99,9 +99,8 @@ class _TimeInputState extends State<TimeInput> {
       initialTime: widget.value ?? TimeOfDay.now(),
       builder: (context, child) {
         return MediaQuery(
-          data: MediaQuery.of(
-            context,
-          ).copyWith(alwaysUse24HourFormat: widget.use24HourFormat),
+          data: MediaQuery.of(context)
+              .copyWith(alwaysUse24HourFormat: widget.use24HourFormat),
           child: child!,
         );
       },
@@ -130,49 +129,43 @@ class _TimeInputState extends State<TimeInput> {
   @override
   Widget build(BuildContext context) {
     final spacing = context.spacing;
-    final theme = Theme.of(context);
 
-    // Pure input rendering: Just the time input field
-    return KeyboardListener(
+    return Focus(
       focusNode: _focusNode,
-      onKeyEvent: _handleKeyEvent,
-      child: TouchTarget(
-        onTap: widget.enabled ? () => _selectTime(context) : null,
+      onKeyEvent: (node, event) {
+        if (widget.enabled &&
+            event is KeyDownEvent &&
+            (event.logicalKey == LogicalKeyboardKey.space ||
+                event.logicalKey == LogicalKeyboardKey.enter)) {
+          _selectTime(context);
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: TextField(
+        controller: _controller,
+        readOnly: true,
         enabled: widget.enabled,
-        semanticLabel: 'Select time',
-        child: InputDecorator(
-          isFocused: _isFocused,
-          decoration: InputDecoration(
-            hintText: widget.placeholder ?? 'Select time',
-            errorText: widget.errorText,
-            helperText: widget.helperText,
-            prefixIcon: widget.prefixIcon != null
-                ? Icon(widget.prefixIcon)
-                : const Icon(Icons.access_time),
-            suffixIcon:
-                widget.value != null && widget.showClearButton && widget.enabled
-                ? TouchTarget.icon(
-                    icon: Icons.clear,
-                    onTap: _clearTime,
-                    tooltip: 'Clear',
-                  )
-                : (widget.suffixIcon != null ? Icon(widget.suffixIcon) : null),
-            enabled: widget.enabled,
-            contentPadding: EdgeInsets.symmetric(
-              horizontal: spacing.md,
-              vertical: spacing.sm,
-            ),
-            border: OutlineInputBorder(borderRadius: spacing.radiusSM),
-          ),
-          child: Text(
-            widget.value != null
-                ? _formatTime(widget.value!)
-                : widget.placeholder ?? 'Select time',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: widget.value != null
-                  ? theme.colorScheme.onSurface
-                  : theme.colorScheme.onSurface.withValues(alpha: 0.6),
-            ),
+        onTap: widget.enabled ? () => _selectTime(context) : null,
+        decoration: InputDecoration(
+          hintText: widget.placeholder ?? 'Select time',
+          errorText: widget.errorText,
+          helperText: widget.helperText,
+          prefixIcon: widget.prefixIcon != null
+              ? Icon(widget.prefixIcon)
+              : const Icon(Icons.access_time),
+          suffixIcon:
+              widget.value != null && widget.showClearButton && widget.enabled
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: _clearTime,
+                      tooltip: 'Clear time',
+                    )
+                  : (widget.suffixIcon != null ? Icon(widget.suffixIcon) : null),
+          border: const OutlineInputBorder(),
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: spacing.md,
+            vertical: spacing.sm,
           ),
         ),
       ),

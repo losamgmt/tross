@@ -16,7 +16,6 @@ import 'package:flutter/services.dart';
 import '../../../config/app_borders.dart';
 import '../../../config/app_colors.dart';
 import '../../../config/app_spacing.dart';
-import '../interactions/touch_target.dart';
 
 class BooleanToggle extends StatefulWidget {
   /// Current boolean value
@@ -173,10 +172,9 @@ class _BooleanToggleState extends State<BooleanToggle> {
         child: KeyboardListener(
           focusNode: _focusNode,
           onKeyEvent: _handleKeyEvent,
-          child: TouchTarget(
+          child: InkWell(
             onTap: widget.onToggle,
-            enabled: widget.onToggle != null,
-            hapticFeedback: true,
+            borderRadius: spacing.radiusSM,
             child: Container(
               width: size,
               height: size,
