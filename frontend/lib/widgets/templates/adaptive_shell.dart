@@ -44,7 +44,7 @@ import '../organisms/navigation/nav_menu_item.dart';
 import '../organisms/navigation/notification_tray.dart';
 
 /// Responsive layout shell with sidebar/drawer navigation
-class AdaptiveShell extends StatelessWidget {
+class AdaptiveShell extends StatefulWidget {
   /// The main body content
   final Widget body;
 
@@ -88,6 +88,19 @@ class AdaptiveShell extends StatelessWidget {
   });
 
   @override
+  State<AdaptiveShell> createState() => _AdaptiveShellState();
+}
+
+class _AdaptiveShellState extends State<AdaptiveShell> {
+  bool _sidebarCollapsed = false;
+
+  void _toggleSidebarCollapse() {
+    setState(() {
+      _sidebarCollapsed = !_sidebarCollapsed;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
     final user = authProvider.user;
@@ -97,7 +110,7 @@ class AdaptiveShell extends StatelessWidget {
     // If somehow the router guard is bypassed, prevent rendering protected content
     // ══════════════════════════════════════════════════════════════════════
     final guardResult = RouteGuard.checkAccess(
-      route: currentRoute,
+      route: widget.currentRoute,
       isAuthenticated: authProvider.isAuthenticated,
       user: user,
     );
@@ -129,14 +142,16 @@ class AdaptiveShell extends StatelessWidget {
 
     // Get menu items: custom > strategy-based > default
     final sidebarItems = NavMenuBuilder.filterForUser(
-      sidebarMenuItems ??
-          (sidebarStrategy != null
-              ? NavMenuBuilder.buildSidebarItemsForStrategy(sidebarStrategy!)
-              : NavMenuBuilder.buildSidebarItemsForRoute(currentRoute)),
+      widget.sidebarMenuItems ??
+          (widget.sidebarStrategy != null
+              ? NavMenuBuilder.buildSidebarItemsForStrategy(
+                  widget.sidebarStrategy!,
+                )
+              : NavMenuBuilder.buildSidebarItemsForRoute(widget.currentRoute)),
       user,
     );
     final userItems = NavMenuBuilder.filterForUser(
-      userMenuItems ?? NavMenuBuilder.buildUserMenuItems(),
+      widget.userMenuItems ?? NavMenuBuilder.buildUserMenuItems(),
       user,
     );
 
@@ -153,7 +168,7 @@ class AdaptiveShell extends StatelessWidget {
 
         // HEADER-OUTER PATTERN: Full-width header, then sidebar + content below
         return Scaffold(
-          appBar: showAppBar
+          appBar: widget.showAppBar
               ? _buildGlobalAppBar(
                   context,
                   authProvider,
@@ -170,17 +185,18 @@ class AdaptiveShell extends StatelessWidget {
                   width: AppBreakpoints.sidebarWidth,
                   child: _SidebarContent(
                     items: sidebarItems,
-                    currentRoute: currentRoute,
+                    currentRoute: widget.currentRoute,
                     width: AppBreakpoints.sidebarWidth,
                     isDrawer: true,
                     showHeader: false, // Header is global now
                   ),
                 ),
           // Bottom nav only shown when mobileNavStyle is 'bottomNav'
-          bottomNavigationBar: !isWideScreen && showBottomNav && useBottomNav
+          bottomNavigationBar:
+              !isWideScreen && widget.showBottomNav && useBottomNav
               ? MobileNavBar.fromItems(
-                  allItems: mobileNavItems ?? sidebarItems,
-                  currentRoute: currentRoute,
+                  allItems: widget.mobileNavItems ?? sidebarItems,
+                  currentRoute: widget.currentRoute,
                   onItemTap: (item) {
                     if (item.route != null) {
                       context.go(item.route!);
@@ -196,16 +212,20 @@ class AdaptiveShell extends StatelessWidget {
                     // Persistent sidebar (no header - it's global)
                     _SidebarContent(
                       items: sidebarItems,
-                      currentRoute: currentRoute,
-                      width: AppBreakpoints.sidebarWidth,
+                      currentRoute: widget.currentRoute,
+                      width: _sidebarCollapsed
+                          ? 72
+                          : AppBreakpoints.sidebarWidth,
                       isDrawer: false,
                       showHeader: false, // Header is global now
+                      collapsed: _sidebarCollapsed,
+                      onToggleCollapse: _toggleSidebarCollapse,
                     ),
                     const VerticalDivider(width: 1, thickness: 1),
-                    Expanded(child: body),
+                    Expanded(child: widget.body),
                   ],
                 )
-              : body,
+              : widget.body,
         );
       },
     );
@@ -223,6 +243,7 @@ class AdaptiveShell extends StatelessWidget {
       backgroundColor: AppColors.brandPrimary,
       foregroundColor: AppColors.white,
       // Logo + App name as home link (always routes to business home)
+      // Hide app name on mobile to save space
       leading: isWideScreen
           ? null // No hamburger on wide screens
           : null, // Let automaticallyImplyLeading handle hamburger
@@ -239,20 +260,23 @@ class AdaptiveShell extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(Icons.home, color: AppColors.white, size: 28),
-                  const SizedBox(width: 8),
-                  Text(
-                    AppConstants.appName,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: AppColors.white,
-                      fontWeight: FontWeight.bold,
+                  // Only show app name on wide screens
+                  if (isWideScreen) ...[
+                    const SizedBox(width: 8),
+                    Text(
+                      AppConstants.appName,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: AppColors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
           ),
           // Separator and page title
-          if (pageTitle.isNotEmpty) ...[
+          if (widget.pageTitle.isNotEmpty) ...[
             const SizedBox(width: 16),
             Container(
               height: 24,
@@ -262,7 +286,7 @@ class AdaptiveShell extends StatelessWidget {
             const SizedBox(width: 16),
             Flexible(
               child: Text(
-                pageTitle,
+                widget.pageTitle,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: AppColors.white.withValues(alpha: 0.9),
                 ),
@@ -281,7 +305,7 @@ class AdaptiveShell extends StatelessWidget {
         _UserMenuButton(
           authProvider: authProvider,
           userItems: userItems,
-          currentRoute: currentRoute,
+          currentRoute: widget.currentRoute,
         ),
         const SizedBox(width: 8),
       ],
@@ -299,12 +323,15 @@ class AdaptiveShell extends StatelessWidget {
 /// - Scrollable content when items exceed viewport
 /// - Collapsible section headers with children
 /// - Regular nav items with active highlighting
+/// - Sidebar-wide collapse to icon-only mode
 class _SidebarContent extends StatefulWidget {
   final List<NavMenuItem> items;
   final String currentRoute;
   final double width;
   final bool isDrawer;
   final bool showHeader;
+  final bool collapsed;
+  final VoidCallback? onToggleCollapse;
 
   const _SidebarContent({
     required this.items,
@@ -312,6 +339,8 @@ class _SidebarContent extends StatefulWidget {
     required this.width,
     required this.isDrawer,
     this.showHeader = true,
+    this.collapsed = false,
+    this.onToggleCollapse,
   });
 
   @override
@@ -345,15 +374,20 @@ class _SidebarContentState extends State<_SidebarContent> {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
+    final theme = Theme.of(context);
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeInOut,
       width: widget.width,
       child: Material(
-        color: widget.isDrawer
-            ? null
-            : Theme.of(context).scaffoldBackgroundColor,
+        color: widget.isDrawer ? null : theme.scaffoldBackgroundColor,
         child: Column(
           children: [
             if (widget.showHeader) _buildHeader(context),
+            // Collapse toggle (only for persistent sidebar)
+            if (!widget.isDrawer && widget.onToggleCollapse != null)
+              _buildCollapseToggle(context),
             Expanded(
               child: ListView(
                 padding: EdgeInsets.zero,
@@ -363,6 +397,30 @@ class _SidebarContentState extends State<_SidebarContent> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCollapseToggle(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: Align(
+        alignment: widget.collapsed ? Alignment.center : Alignment.centerRight,
+        child: TouchTarget(
+          onTap: widget.onToggleCollapse,
+          semanticLabel: widget.collapsed
+              ? 'Expand sidebar'
+              : 'Collapse sidebar',
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Icon(
+              widget.collapsed ? Icons.chevron_right : Icons.chevron_left,
+              size: 20,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
         ),
       ),
     );
@@ -397,15 +455,28 @@ class _SidebarContentState extends State<_SidebarContent> {
       return const Divider();
     }
 
-    // Section header with children - collapsible
+    // Section header with children
     if (item.isSectionHeader &&
         item.children != null &&
         item.children!.isNotEmpty) {
+      // In sidebar mode (not drawer): flatten - render children directly
+      // This shows actual entity icons instead of folder icons
+      if (!widget.isDrawer) {
+        return Column(
+          children: item.children!
+              .map((child) => _buildNavItem(context, child))
+              .toList(),
+        );
+      }
+      // In drawer mode: use collapsible sections
       return _buildCollapsibleSection(context, item);
     }
 
-    // Section header without children - just a label
+    // Section header without children - skip in sidebar mode, show label in drawer
     if (item.isSectionHeader) {
+      if (!widget.isDrawer) {
+        return const SizedBox.shrink();
+      }
       return _buildSectionLabel(context, item);
     }
 
@@ -416,6 +487,27 @@ class _SidebarContentState extends State<_SidebarContent> {
   Widget _buildCollapsibleSection(BuildContext context, NavMenuItem item) {
     final isExpanded = _expandedSections.contains(item.id);
     final theme = Theme.of(context);
+
+    // Collapsed mode - show icon only, hide children
+    if (widget.collapsed) {
+      if (item.icon != null) {
+        return Tooltip(
+          message: item.label,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Center(
+              child: Icon(
+                item.icon,
+                size: 18,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        );
+      }
+      // No icon, show nothing in collapsed mode
+      return const SizedBox.shrink();
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -478,6 +570,27 @@ class _SidebarContentState extends State<_SidebarContent> {
 
   Widget _buildSectionLabel(BuildContext context, NavMenuItem item) {
     final theme = Theme.of(context);
+
+    // Collapsed mode - show icon only or hide
+    if (widget.collapsed) {
+      if (item.icon != null) {
+        return Tooltip(
+          message: item.label,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Center(
+              child: Icon(
+                item.icon,
+                size: 16,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        );
+      }
+      return const SizedBox.shrink();
+    }
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: Row(
@@ -506,6 +619,25 @@ class _SidebarContentState extends State<_SidebarContent> {
   Widget _buildNavItem(BuildContext context, NavMenuItem item) {
     final isActive = _isItemActive(item);
 
+    // Collapsed mode - icon only with tooltip
+    if (widget.collapsed) {
+      return Tooltip(
+        message: item.label,
+        child: InkWell(
+          onTap: () => _handleTap(context, item),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            alignment: Alignment.center,
+            child: Icon(
+              item.icon ?? Icons.circle,
+              color: isActive ? AppColors.brandPrimary : null,
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Expanded mode - full ListTile
     return ListTile(
       leading: item.icon != null
           ? Icon(item.icon, color: isActive ? AppColors.brandPrimary : null)

@@ -1,6 +1,9 @@
 /// Generic Table Action Builders - Metadata-driven row/toolbar actions
 ///
-/// **SOLE RESPONSIBILITY:** Build action buttons for ANY entity using metadata
+/// **SOLE RESPONSIBILITY:** Build action data for ANY entity using metadata
+///
+/// Returns ActionItem data, not widgets. This allows components to render
+/// actions appropriately for different contexts (inline, dropdown, etc.)
 ///
 /// Pure composition: Uses GenericModal + GenericForm directly.
 /// No wrappers. No indulgence.
@@ -16,7 +19,7 @@ import '../services/metadata_field_config_factory.dart';
 import '../services/navigation_coordinator.dart';
 import '../services/error_service.dart';
 import '../services/export_service.dart';
-import '../widgets/atoms/atoms.dart';
+import '../widgets/molecules/menus/action_item.dart';
 import '../widgets/organisms/modals/generic_modal.dart';
 import '../widgets/organisms/forms/generic_form.dart';
 import '../widgets/molecules/forms/field_config.dart' hide FieldType;
@@ -26,8 +29,71 @@ import 'crud_handlers.dart';
 class GenericTableActionBuilders {
   GenericTableActionBuilders._();
 
-  /// Build per-row actions for any entity
-  static List<Widget> buildRowActions(
+  // ============================================================================
+  // ACTION ITEM DATA BUILDERS
+  // ============================================================================
+
+  /// Build toolbar action items as DATA for any entity
+  ///
+  /// Returns ActionItem data that components can render appropriately.
+  /// This is the preferred approach - allows inline, overflow, or hybrid display.
+  static List<ActionItem> buildToolbarActionItems(
+    BuildContext context, {
+    required String entityName,
+    required String? userRole,
+    required VoidCallback onRefresh,
+  }) {
+    final items = <ActionItem>[];
+    final metadata = EntityMetadataRegistry.get(entityName);
+    final resource = metadata.rlsResource;
+
+    // Refresh action
+    items.add(
+      ActionItem.refresh(
+        onTap: onRefresh,
+        label: 'Refresh ${metadata.displayNamePlural.toLowerCase()}',
+      ),
+    );
+
+    // Create action
+    if (PermissionService.hasPermission(
+      userRole,
+      resource,
+      CrudOperation.create,
+    )) {
+      items.add(
+        ActionItem.create(
+          onTap: () => _showEntityForm(
+            context,
+            entityName: entityName,
+            onSuccess: onRefresh,
+          ),
+          label: 'Create',
+          tooltip: 'Create new ${metadata.displayName.toLowerCase()}',
+        ),
+      );
+    }
+
+    // Export action - always visible for read permission
+    if (PermissionService.hasPermission(
+      userRole,
+      resource,
+      CrudOperation.read,
+    )) {
+      items.add(
+        ActionItem.export(
+          onTapAsync: (ctx) => _handleExport(ctx, entityName),
+          label: 'Export',
+          tooltip: 'Export ${metadata.displayNamePlural.toLowerCase()} to CSV',
+        ),
+      );
+    }
+
+    return items;
+  }
+
+  /// Build per-row action items as DATA for any entity
+  static List<ActionItem> buildRowActionItems(
     BuildContext context, {
     required String entityName,
     required Map<String, dynamic> entity,
@@ -36,7 +102,7 @@ class GenericTableActionBuilders {
     String? currentUserId,
     List<VoidCallback>? additionalRefreshCallbacks,
   }) {
-    final actions = <Widget>[];
+    final items = <ActionItem>[];
     final metadata = EntityMetadataRegistry.get(entityName);
     final resource = metadata.rlsResource;
 
@@ -46,18 +112,15 @@ class GenericTableActionBuilders {
       resource,
       CrudOperation.update,
     )) {
-      actions.add(
-        AppButton(
-          icon: Icons.edit_outlined,
-          tooltip: 'Edit',
-          style: AppButtonStyle.secondary,
-          compact: true,
-          onPressed: () => _showEntityForm(
+      items.add(
+        ActionItem.edit(
+          onTap: () => _showEntityForm(
             context,
             entityName: entityName,
             entity: entity,
             onSuccess: onRefresh,
           ),
+          label: 'Edit',
         ),
       );
     }
@@ -77,91 +140,75 @@ class GenericTableActionBuilders {
           currentUserId != null &&
           entity['id'].toString() == currentUserId;
 
-      actions.add(
-        AppButton(
-          icon: Icons.delete_outline,
+      items.add(
+        ActionItem.delete(
+          onTap: () async {
+            await CrudHandlers.handleDelete(
+              context: context,
+              entityType: metadata.displayName.toLowerCase(),
+              entityName: entityDisplayName,
+              deleteOperation: () async {
+                final entityService = context.read<GenericEntityService>();
+                await entityService.delete(entityName, entity['id'] as int);
+                return true;
+              },
+              onSuccess: onRefresh,
+              additionalRefreshCallbacks: additionalRefreshCallbacks,
+            );
+          },
+          label: 'Delete',
           tooltip: isSelf
               ? 'Cannot delete your own account'
               : 'Delete ${metadata.displayName.toLowerCase()}',
-          style: AppButtonStyle.danger,
-          compact: true,
-          onPressed: isSelf
-              ? null
-              : () async {
-                  await CrudHandlers.handleDelete(
-                    context: context,
-                    entityType: metadata.displayName.toLowerCase(),
-                    entityName: entityDisplayName,
-                    deleteOperation: () async {
-                      final entityService = context
-                          .read<GenericEntityService>();
-                      await entityService.delete(
-                        entityName,
-                        entity['id'] as int,
-                      );
-                      return true;
-                    },
-                    onSuccess: onRefresh,
-                    additionalRefreshCallbacks: additionalRefreshCallbacks,
-                  );
-                },
+          isDisabled: isSelf,
         ),
       );
     }
 
-    return actions;
+    return items;
   }
 
-  /// Build toolbar actions for any entity
-  static List<Widget> buildToolbarActions(
-    BuildContext context, {
-    required String entityName,
-    required String? userRole,
-    required VoidCallback onRefresh,
-  }) {
-    final actions = <Widget>[];
-    final metadata = EntityMetadataRegistry.get(entityName);
-    final resource = metadata.rlsResource;
+  /// Handle export with proper error handling
+  static Future<void> _handleExport(
+    BuildContext context,
+    String entityName,
+  ) async {
+    try {
+      final exportService = context.read<ExportService>();
+      final success = await exportService.exportToCsv(entityName: entityName);
 
-    // Refresh action
-    actions.add(
-      TouchTarget.icon(
-        icon: Icons.refresh,
-        tooltip: 'Refresh ${metadata.displayNamePlural.toLowerCase()}',
-        onTap: onRefresh,
-      ),
-    );
-
-    // Create action
-    if (PermissionService.hasPermission(
-      userRole,
-      resource,
-      CrudOperation.create,
-    )) {
-      actions.add(
-        TouchTarget.icon(
-          icon: Icons.add,
-          tooltip: 'Create new ${metadata.displayName.toLowerCase()}',
-          onTap: () => _showEntityForm(
-            context,
-            entityName: entityName,
-            onSuccess: onRefresh,
+      if (success && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Export downloaded successfully'),
+            behavior: SnackBarBehavior.floating,
           ),
-        ),
+        );
+      }
+    } catch (e) {
+      ErrorService.logError(
+        'Export failed',
+        error: e,
+        context: {'entity': entityName},
       );
-    }
 
-    // Export action - always visible for read permission
-    if (PermissionService.hasPermission(
-      userRole,
-      resource,
-      CrudOperation.read,
-    )) {
-      actions.add(_ExportButton(entityName: entityName));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Export failed: ${e.toString().replaceFirst('Exception: ', '')}',
+            ),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
     }
-
-    return actions;
   }
+
+  // ============================================================================
+  // PRIVATE HELPERS
+  // ============================================================================
 
   /// Pure composition: GenericModal + GenericForm
   /// No wrapper classes. Direct composition.
@@ -378,89 +425,6 @@ class _EntityFormDialogState extends State<_EntityFormDialog> {
               : Text(widget.isEdit ? 'Save' : 'Create'),
         ),
       ],
-    );
-  }
-}
-
-/// Export button with loading state
-class _ExportButton extends StatefulWidget {
-  final String entityName;
-
-  const _ExportButton({required this.entityName});
-
-  @override
-  State<_ExportButton> createState() => _ExportButtonState();
-}
-
-class _ExportButtonState extends State<_ExportButton> {
-  bool _isExporting = false;
-
-  Future<void> _handleExport() async {
-    if (_isExporting) return;
-
-    setState(() => _isExporting = true);
-
-    try {
-      final exportService = context.read<ExportService>();
-      final success = await exportService.exportToCsv(
-        entityName: widget.entityName,
-      );
-
-      if (success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Export downloaded successfully'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } catch (e) {
-      ErrorService.logError(
-        'Export failed',
-        error: e,
-        context: {'entity': widget.entityName},
-      );
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Export failed: ${e.toString().replaceFirst('Exception: ', '')}',
-            ),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isExporting = false);
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final metadata = EntityMetadataRegistry.get(widget.entityName);
-
-    if (_isExporting) {
-      return const SizedBox(
-        width: 48,
-        height: 48,
-        child: Center(
-          child: SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
-        ),
-      );
-    }
-
-    return TouchTarget.icon(
-      icon: Icons.download,
-      tooltip: 'Export ${metadata.displayNamePlural.toLowerCase()} to CSV',
-      onTap: _handleExport,
     );
   }
 }

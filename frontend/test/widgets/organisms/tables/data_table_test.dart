@@ -7,6 +7,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tross/widgets/organisms/tables/data_table.dart';
+import 'package:tross/widgets/molecules/menus/action_item.dart';
 import 'package:tross/config/table_column.dart';
 import 'package:tross/widgets/molecules/feedback/empty_state.dart';
 import 'package:tross/widgets/atoms/indicators/loading_indicator.dart';
@@ -218,8 +219,13 @@ void main() {
               body: AppDataTable<TestUser>(
                 columns: userColumns,
                 data: testUsers,
-                actionsBuilder: (user) => [
-                  IconButton(icon: const Icon(Icons.edit), onPressed: () {}),
+                rowActionItems: (user) => [
+                  ActionItem(
+                    id: 'edit',
+                    label: 'Edit',
+                    icon: Icons.edit,
+                    onTap: () {},
+                  ),
                 ],
               ),
             ),
@@ -244,10 +250,12 @@ void main() {
               body: AppDataTable<TestUser>(
                 columns: userColumns,
                 data: testUsers,
-                actionsBuilder: (user) => [
-                  IconButton(
-                    icon: const Icon(Icons.edit),
-                    onPressed: () => editedUser = user,
+                rowActionItems: (user) => [
+                  ActionItem(
+                    id: 'edit',
+                    label: 'Edit',
+                    icon: Icons.edit,
+                    onTap: () => editedUser = user,
                   ),
                 ],
               ),

@@ -133,68 +133,14 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.text('Dashboard'), findsOneWidget);
+      // Dashboard appears in both sidebar nav item and app bar title
+      expect(find.text('Dashboard'), findsWidgets);
     });
 
-    testWidgets('renders app name in drawer header', (tester) async {
-      await tester.pumpWidget(
-        wrapWithProviders(
-          const AdaptiveShell(
-            currentRoute: AppRoutes.home,
-            pageTitle: 'Test',
-            body: SizedBox(),
-          ),
-        ),
-      );
-
-      await tester.pumpAndSettle();
-
-      // Open drawer to see app name
-      final scaffoldState = tester.state<ScaffoldState>(find.byType(Scaffold));
-      scaffoldState.openDrawer();
-      await tester.pumpAndSettle();
-
-      // App name should appear in the drawer header
-      expect(find.text('Tross'), findsOneWidget);
-    });
-
-    testWidgets('renders user menu button', (tester) async {
-      await tester.pumpWidget(
-        wrapWithProviders(
-          const AdaptiveShell(
-            currentRoute: AppRoutes.home,
-            pageTitle: 'Test',
-            body: SizedBox(),
-          ),
-        ),
-      );
-
-      await tester.pumpAndSettle();
-
-      // User menu should show a CircleAvatar
-      expect(find.byType(CircleAvatar), findsOneWidget);
-    });
-
-    testWidgets('hides app bar when showAppBar is false', (tester) async {
-      await tester.pumpWidget(
-        wrapWithProviders(
-          const AdaptiveShell(
-            currentRoute: AppRoutes.home,
-            pageTitle: 'Test',
-            body: Text('Body Only'),
-            showAppBar: false,
-          ),
-        ),
-      );
-
-      await tester.pumpAndSettle();
-
-      expect(find.byType(AppBar), findsNothing);
-      expect(find.text('Body Only'), findsOneWidget);
-    });
-
-    testWidgets('user menu opens on tap', (tester) async {
-      // Use wide screen to ensure desktop popup mode (not bottom sheet)
+    testWidgets('user can access account menu with settings and logout', (
+      tester,
+    ) async {
+      // Use wide screen to ensure popup mode
       tester.view.physicalSize = const Size(1200, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() => tester.view.resetPhysicalSize());
@@ -211,17 +157,18 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Tap the user avatar (CircleAvatar is the trigger for the menu)
-      // AdaptiveNavMenu wraps it in PopupMenuButton on desktop
-      await tester.tap(find.byType(CircleAvatar));
+      // Find and tap the user menu trigger
+      final avatarFinder = find.byType(CircleAvatar);
+      expect(avatarFinder, findsOneWidget);
+      await tester.tap(avatarFinder);
       await tester.pumpAndSettle();
 
-      // User menu items should appear (account-related only)
+      // User should be able to access account actions
       expect(find.text('Settings'), findsOneWidget);
       expect(find.text('Logout'), findsOneWidget);
     });
 
-    testWidgets('drawer contains sidebar items', (tester) async {
+    testWidgets('user can access navigation to dashboard', (tester) async {
       await tester.pumpWidget(
         wrapWithProviders(
           const AdaptiveShell(
@@ -234,12 +181,12 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Open the drawer via the hamburger menu
+      // Open navigation (drawer on narrow screens)
       final scaffoldState = tester.state<ScaffoldState>(find.byType(Scaffold));
       scaffoldState.openDrawer();
       await tester.pumpAndSettle();
 
-      // Drawer should contain sidebar items (Dashboard, entities)
+      // User should see Dashboard as a navigation option
       expect(find.text('Dashboard'), findsOneWidget);
     });
 

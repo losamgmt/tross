@@ -149,8 +149,8 @@ class AppBreakpoints {
   // ============================================================================
 
   /// Sidebar/navigation breakpoint (show persistent sidebar)
-  /// Same as desktop - this is THE breakpoint for nav behavior
-  static const double sidebarBreakpoint = desktop;
+  /// Using mobile threshold - sidebar appears at 600px+, bottom nav only below 600px
+  static const double sidebarBreakpoint = mobile;
 
   /// Master-detail layout breakpoint (side-by-side vs stacked)
   /// Same as desktop for consistency with sidebar

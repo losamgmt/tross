@@ -129,15 +129,13 @@ class _EntityScreenState extends State<EntityScreen> {
 
             return DashboardCard(
               child: organisms.FilterableDataTable<Map<String, dynamic>>(
-                // Filter bar props
-                searchValue: _searchQuery,
+                // Search
                 onSearchChanged: (value) {
                   setState(() => _searchQuery = value);
                 },
                 searchPlaceholder:
                     'Search ${metadata.displayNamePlural.toLowerCase()}...',
                 // Data table props
-                title: metadata.displayNamePlural,
                 entityName: widget.entityName,
                 columns: MetadataTableColumnFactory.forEntity(
                   context,
@@ -155,14 +153,15 @@ class _EntityScreenState extends State<EntityScreen> {
                 emptyMessage: _searchQuery.isEmpty
                     ? 'No ${metadata.displayNamePlural} found'
                     : 'No results for "$_searchQuery"',
-                toolbarActions: GenericTableActionBuilders.buildToolbarActions(
-                  context,
-                  entityName: widget.entityName,
-                  userRole: userRole,
-                  onRefresh: _refreshTable,
-                ),
-                actionsBuilder: (entity) =>
-                    GenericTableActionBuilders.buildRowActions(
+                toolbarActions:
+                    GenericTableActionBuilders.buildToolbarActionItems(
+                      context,
+                      entityName: widget.entityName,
+                      userRole: userRole,
+                      onRefresh: _refreshTable,
+                    ),
+                rowActionItems: (entity) =>
+                    GenericTableActionBuilders.buildRowActionItems(
                       context,
                       entityName: widget.entityName,
                       entity: entity,

@@ -22,6 +22,8 @@
 ///   WidgetTestFactory.generateRenderTests();
 /// }
 /// ```
+///
+/// Tests ActionItem-based action builders for all entities.
 library;
 
 import 'package:flutter/material.dart';
@@ -30,7 +32,8 @@ import 'package:provider/provider.dart';
 import 'package:tross/services/generic_entity_service.dart';
 import 'package:tross/services/permission_service_dynamic.dart';
 import 'package:tross/utils/generic_table_action_builders.dart';
-import 'package:tross/widgets/atoms/buttons/app_button.dart';
+import 'package:tross/widgets/molecules/menus/action_item.dart';
+import 'package:tross/widgets/molecules/menus/action_menu.dart';
 import 'package:tross/widgets/organisms/forms/form_field.dart';
 import 'package:tross/services/metadata_field_config_factory.dart';
 import 'package:tross/widgets/atoms/inputs/boolean_toggle.dart';
@@ -84,10 +87,12 @@ abstract final class WidgetTestFactory {
               ),
             );
 
-            // Admin should have access to actions (widgets rendered, not empty)
-            final row = tester.widget<Row>(find.byType(Row));
+            // Admin should have access to actions (ActionMenu rendered with items)
+            final actionMenu = tester.widget<ActionMenu>(
+              find.byType(ActionMenu),
+            );
             expect(
-              row.children,
+              actionMenu.actions,
               isNotEmpty,
               reason: 'Admin should have access to actions for $entityName',
             );
@@ -111,8 +116,10 @@ abstract final class WidgetTestFactory {
                 userRole: 'admin',
               ),
             );
-            final adminRow = tester.widget<Row>(find.byType(Row));
-            final adminActionCount = adminRow.children.length;
+            final adminMenu = tester.widget<ActionMenu>(
+              find.byType(ActionMenu),
+            );
+            final adminActionCount = adminMenu.actions.length;
 
             // Get customer action count
             await tester.pumpWidget(
@@ -122,8 +129,10 @@ abstract final class WidgetTestFactory {
                 userRole: 'customer',
               ),
             );
-            final customerRow = tester.widget<Row>(find.byType(Row));
-            final customerActionCount = customerRow.children.length;
+            final customerMenu = tester.widget<ActionMenu>(
+              find.byType(ActionMenu),
+            );
+            final customerActionCount = customerMenu.actions.length;
 
             // Admin should have >= actions as customer (higher privilege = more access)
             expect(
@@ -149,17 +158,16 @@ abstract final class WidgetTestFactory {
           ),
         );
 
-        // Find delete action and verify it's disabled
-        final deleteButtons = find.byWidgetPredicate(
-          (widget) =>
-              widget is AppButton && widget.style == AppButtonStyle.danger,
-        );
+        // Find the ActionMenu and check for disabled delete action
+        final actionMenu = tester.widget<ActionMenu>(find.byType(ActionMenu));
+        final deleteAction = actionMenu.actions
+            .where((a) => a.id == 'delete' && a.style == ActionStyle.danger)
+            .toList();
 
-        if (deleteButtons.evaluate().isNotEmpty) {
-          final deleteButton = tester.widget<AppButton>(deleteButtons.first);
+        if (deleteAction.isNotEmpty) {
           expect(
-            deleteButton.onPressed,
-            isNull,
+            deleteAction.first.isDisabled,
+            isTrue,
             reason: 'User should not be able to delete themselves',
           );
         }
@@ -353,15 +361,19 @@ abstract final class WidgetTestFactory {
           ],
           child: Builder(
             builder: (context) {
-              final actions = GenericTableActionBuilders.buildRowActions(
-                context,
-                entityName: entityName,
-                entity: entity,
-                userRole: userRole,
-                currentUserId: currentUserId,
-                onRefresh: () {},
+              final actionItems =
+                  GenericTableActionBuilders.buildRowActionItems(
+                    context,
+                    entityName: entityName,
+                    entity: entity,
+                    userRole: userRole,
+                    currentUserId: currentUserId,
+                    onRefresh: () {},
+                  );
+              return ActionMenu(
+                actions: actionItems,
+                mode: ActionMenuMode.inline,
               );
-              return Row(children: actions);
             },
           ),
         ),
@@ -384,13 +396,17 @@ abstract final class WidgetTestFactory {
           ],
           child: Builder(
             builder: (context) {
-              final actions = GenericTableActionBuilders.buildToolbarActions(
-                context,
-                entityName: entityName,
-                userRole: userRole,
-                onRefresh: () {},
+              final actionItems =
+                  GenericTableActionBuilders.buildToolbarActionItems(
+                    context,
+                    entityName: entityName,
+                    userRole: userRole,
+                    onRefresh: () {},
+                  );
+              return ActionMenu(
+                actions: actionItems,
+                mode: ActionMenuMode.inline,
               );
-              return Row(children: actions);
             },
           ),
         ),

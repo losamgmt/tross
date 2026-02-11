@@ -58,6 +58,8 @@ export 'layout/page_toolbar.dart';
 export 'layout/refreshable_section.dart';
 
 // Menus
+export 'menus/action_item.dart'; // Action data model for toolbar actions
+export 'menus/action_menu.dart'; // Action menu renderer (inline/overflow/hybrid)
 export 'menus/adaptive_nav_menu.dart'; // PRIMARY: Unified nav menu (popup/bottom sheet)
 export 'menus/dropdown_menu.dart'; // DEPRECATED: Use adaptive_nav_menu.dart instead
 

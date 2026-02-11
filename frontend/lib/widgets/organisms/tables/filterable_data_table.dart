@@ -1,24 +1,25 @@
-/// FilterableDataTable - Organism composing FilterBar + AppDataTable
+/// FilterableDataTable - Organism composing filters with AppDataTable
 ///
-/// **SOLE RESPONSIBILITY:** Compose FilterBar molecule with AppDataTable organism
+/// **SOLE RESPONSIBILITY:** Compose filter widgets with AppDataTable organism
 /// - Pure composition - ZERO business logic
-/// - FilterBar handles search/filter UI
+/// - All filtering happens in ONE toolbar row
 /// - AppDataTable handles table rendering
 /// - Parent manages all state and callbacks
 ///
 /// GENERIC: Works for any filterable table context
 ///
+/// Layout (single row):
+/// [Search...........................][Filters][Actions][Customize]
+///
 /// Features:
 /// - Search input with debouncing handled by parent
-/// - Multiple filter dropdowns
+/// - Filter dropdowns (rendered inline with actions)
 /// - Full AppDataTable functionality (sorting, pagination, actions)
-/// - Consistent spacing between filter bar and table
 ///
 /// Usage:
 /// ```dart
 /// FilterableDataTable<User>(
-///   // Filter bar props
-///   searchValue: searchQuery,
+///   // Search props
 ///   onSearchChanged: (value) => setState(() => searchQuery = value),
 ///   searchPlaceholder: 'Search users...',
 ///   filters: [
@@ -33,22 +34,19 @@
 ///   columns: userColumns,
 ///   data: filteredUsers,
 ///   onRowTap: (user) => showDetails(user),
-///   actionsBuilder: (user) => [EditButton(user), DeleteButton(user)],
+///   rowActionItems: (user) => [ActionItem.edit(...), ActionItem.delete(...)],
 /// )
 /// ```
 library;
 
 import 'package:flutter/material.dart';
-import '../../../config/app_spacing.dart';
 import '../../../config/table_column.dart';
 import '../../molecules/forms/filter_bar.dart';
+import '../../molecules/menus/action_item.dart';
 import 'data_table.dart';
 
 class FilterableDataTable<T> extends StatelessWidget {
-  // ===== Filter Bar Props =====
-
-  /// Current search query
-  final String? searchValue;
+  // ===== Search/Filter Props =====
 
   /// Callback when search query changes
   final ValueChanged<String>? onSearchChanged;
@@ -56,17 +54,8 @@ class FilterableDataTable<T> extends StatelessWidget {
   /// Placeholder text for search input
   final String searchPlaceholder;
 
-  /// Filter configurations
+  /// Filter configurations (rendered as trailing widgets)
   final List<FilterConfig> filters;
-
-  /// Whether the filter bar is enabled
-  final bool filterBarEnabled;
-
-  /// Whether to show the filter bar at all
-  final bool showFilterBar;
-
-  /// Custom trailing widget for filter bar
-  final Widget? filterBarTrailing;
 
   // ===== Data Table Props =====
 
@@ -85,17 +74,11 @@ class FilterableDataTable<T> extends StatelessWidget {
   /// Callback when row is tapped
   final void Function(T item)? onRowTap;
 
-  /// Builder for row actions
-  final List<Widget> Function(T item)? actionsBuilder;
+  /// Builder for row action items
+  final List<ActionItem> Function(T item)? rowActionItems;
 
-  /// Table title
-  final String? title;
-
-  /// Custom title widget
-  final Widget? titleWidget;
-
-  /// Toolbar actions
-  final List<Widget>? toolbarActions;
+  /// Toolbar action items (data-driven, rendered by ActionMenu)
+  final List<ActionItem>? toolbarActions;
 
   /// Whether pagination is enabled
   final bool paginated;
@@ -120,23 +103,17 @@ class FilterableDataTable<T> extends StatelessWidget {
 
   const FilterableDataTable({
     super.key,
-    // Filter bar
-    this.searchValue,
+    // Search/filter
     this.onSearchChanged,
     this.searchPlaceholder = 'Search...',
     this.filters = const [],
-    this.filterBarEnabled = true,
-    this.showFilterBar = true,
-    this.filterBarTrailing,
     // Data table
     required this.columns,
     this.data = const [],
     this.state = AppDataTableState.loaded,
     this.errorMessage,
     this.onRowTap,
-    this.actionsBuilder,
-    this.title,
-    this.titleWidget,
+    this.rowActionItems,
     this.toolbarActions,
     this.paginated = false,
     this.itemsPerPage = 10,
@@ -149,45 +126,23 @@ class FilterableDataTable<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final spacing = context.spacing;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Filter Bar
-        if (showFilterBar && onSearchChanged != null) ...[
-          FilterBar(
-            searchValue: searchValue ?? '',
-            onSearchChanged: onSearchChanged!,
-            searchPlaceholder: searchPlaceholder,
-            filters: filters,
-            enabled: filterBarEnabled,
-            trailing: filterBarTrailing,
-          ),
-          SizedBox(height: spacing.md),
-        ],
-        // Data Table
-        Expanded(
-          child: AppDataTable<T>(
-            columns: columns,
-            data: data,
-            state: state,
-            errorMessage: errorMessage,
-            onRowTap: onRowTap,
-            actionsBuilder: actionsBuilder,
-            title: title,
-            titleWidget: titleWidget,
-            toolbarActions: toolbarActions,
-            paginated: paginated,
-            itemsPerPage: itemsPerPage,
-            totalItems: totalItems,
-            emptyMessage: emptyMessage,
-            emptyAction: emptyAction,
-            showCustomizationMenu: showCustomizationMenu,
-            entityName: entityName,
-          ),
-        ),
-      ],
+    // Pass everything to AppDataTable - it handles the unified toolbar
+    return AppDataTable<T>(
+      columns: columns,
+      data: data,
+      state: state,
+      errorMessage: errorMessage,
+      onRowTap: onRowTap,
+      rowActionItems: rowActionItems,
+      onSearch: onSearchChanged,
+      toolbarActions: toolbarActions,
+      paginated: paginated,
+      itemsPerPage: itemsPerPage,
+      totalItems: totalItems,
+      emptyMessage: emptyMessage,
+      emptyAction: emptyAction,
+      showCustomizationMenu: showCustomizationMenu,
+      entityName: entityName,
     );
   }
 }

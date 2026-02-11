@@ -125,18 +125,22 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
         .where((item) => item.isVisibleFor(user))
         .toList();
 
+    // Hide app name on mobile to save space
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = AppBreakpoints.isMobile(screenWidth);
+
     return AppBar(
       backgroundColor: AppColors.brandPrimary,
       foregroundColor: AppColors.white,
       elevation: 2,
       leading: AppButton(
         icon: Icons.home,
-        label: 'Tross',
+        label: isMobile ? null : 'Tross',
         tooltip: 'Home',
         style: AppButtonStyle.ghost,
         onPressed: onLogoPressed ?? () => navigateTo('/'),
       ),
-      leadingWidth: 120,
+      leadingWidth: isMobile ? 56 : 120,
       title: Text(
         pageTitle,
         style: theme.textTheme.titleMedium?.copyWith(

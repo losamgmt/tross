@@ -44,7 +44,6 @@ void main() {
       Widget Function(_TestItem, String, String)? editWidgetBuilder,
       InlineEditTrigger editTrigger = InlineEditTrigger.doubleTap,
       bool showEditHints = true,
-      String? title,
     }) {
       return MaterialApp(
         home: Scaffold(
@@ -61,7 +60,6 @@ void main() {
               editWidgetBuilder: editWidgetBuilder,
               editTrigger: editTrigger,
               showEditHints: showEditHints,
-              title: title,
             ),
           ),
         ),
@@ -85,13 +83,6 @@ void main() {
 
         expect(find.text('Name'), findsOneWidget);
         expect(find.text('Email'), findsOneWidget);
-      });
-
-      testWidgets('shows title when provided', (tester) async {
-        await tester.pumpWidget(buildTestWidget(title: 'Test Table'));
-        await tester.pumpAndSettle();
-
-        expect(find.text('Test Table'), findsOneWidget);
       });
     });
 

@@ -24,11 +24,22 @@ class FieldGroup {
   /// Example: [['city', 'state', 'postal_code']] puts those 3 fields on one row
   final List<List<String>> rows;
 
+  /// Group name to copy field values FROM when "Same as" button is clicked
+  /// The fields must have matching suffixes (e.g., billing_city -> service_city)
+  /// Example: service_address.copyFrom = 'billing_address'
+  final String? copyFrom;
+
+  /// Label for the copy button (e.g., "Same as Billing")
+  /// Defaults to "Same as [source group label]"
+  final String? copyFromLabel;
+
   const FieldGroup({
     required this.label,
     required this.fields,
     required this.order,
     this.rows = const [],
+    this.copyFrom,
+    this.copyFromLabel,
   });
 
   factory FieldGroup.fromJson(Map<String, dynamic> json) {
@@ -41,6 +52,8 @@ class FieldGroup {
               ?.map((row) => (row as List<dynamic>).cast<String>())
               .toList() ??
           [],
+      copyFrom: json['copyFrom'] as String?,
+      copyFromLabel: json['copyFromLabel'] as String?,
     );
   }
 

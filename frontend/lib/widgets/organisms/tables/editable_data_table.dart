@@ -47,6 +47,7 @@ library;
 import 'package:flutter/material.dart';
 import '../../../config/table_column.dart';
 import '../../molecules/display/inline_edit_cell.dart';
+import '../../molecules/menus/action_item.dart';
 import 'data_table.dart';
 
 /// Position of a cell being edited
@@ -132,17 +133,11 @@ class EditableDataTable<T> extends StatelessWidget {
   /// Callback when row is tapped
   final void Function(T item)? onRowTap;
 
-  /// Builder for row actions
-  final List<Widget> Function(T item)? actionsBuilder;
+  /// Builder for row action items
+  final List<ActionItem> Function(T item)? rowActionItems;
 
-  /// Table title
-  final String? title;
-
-  /// Custom title widget
-  final Widget? titleWidget;
-
-  /// Toolbar actions
-  final List<Widget>? toolbarActions;
+  /// Toolbar action items (data-driven, rendered by ActionMenu)
+  final List<ActionItem>? toolbarActions;
 
   /// Whether pagination is enabled
   final bool paginated;
@@ -181,9 +176,7 @@ class EditableDataTable<T> extends StatelessWidget {
     this.state = AppDataTableState.loaded,
     this.errorMessage,
     this.onRowTap,
-    this.actionsBuilder,
-    this.title,
-    this.titleWidget,
+    this.rowActionItems,
     this.toolbarActions,
     this.paginated = false,
     this.itemsPerPage = 10,
@@ -259,9 +252,7 @@ class EditableDataTable<T> extends StatelessWidget {
       state: state,
       errorMessage: errorMessage,
       onRowTap: onRowTap,
-      actionsBuilder: actionsBuilder,
-      title: title,
-      titleWidget: titleWidget,
+      rowActionItems: rowActionItems,
       toolbarActions: toolbarActions,
       paginated: paginated,
       itemsPerPage: itemsPerPage,

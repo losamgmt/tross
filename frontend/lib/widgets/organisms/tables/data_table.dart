@@ -26,29 +26,27 @@
 ///   ],
 ///   data: users,
 ///   onRowTap: (user) => showDetails(user),
-///   actionsBuilder: (user) => [
-///     IconButton(icon: Icon(Icons.edit), onPressed: () => edit(user)),
+///   rowActionItems: (user) => [
+///     ActionItem.edit(onTap: () => edit(user)),
+///     ActionItem.delete(onTap: () => delete(user)),
 ///   ],
 /// )
 /// ```
 library;
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../../../config/app_spacing.dart';
 import '../../../config/platform_utilities.dart';
 import '../../../config/table_column.dart';
 import '../../../config/table_config.dart';
 import '../../../config/constants.dart';
-import '../../../services/saved_view_service.dart';
 import '../../../utils/helpers/pagination_helper.dart';
-import '../../../models/saved_view.dart';
-import '../../../services/error_service.dart';
 import '../../atoms/interactions/resize_handle.dart';
 import '../../atoms/interactions/touch_target.dart';
 import '../../atoms/typography/column_header.dart';
 import '../../molecules/feedback/empty_state.dart';
-import '../../molecules/menus/table_customization_menu.dart';
+import '../../molecules/menus/action_item.dart';
+import '../../molecules/menus/action_menu.dart';
 import '../../molecules/pagination/pagination_display.dart';
 import 'table_toolbar.dart';
 import '../../atoms/indicators/loading_indicator.dart';
@@ -66,14 +64,15 @@ class AppDataTable<T> extends StatefulWidget {
 
   // Interactions
   final void Function(T item)? onRowTap;
-  final List<Widget> Function(T item)? actionsBuilder; // Row-level actions
+
+  /// Row-level action items (data-driven, rendered via ActionMenu)
+  final List<ActionItem> Function(T item)? rowActionItems;
 
   // Toolbar
-  final String? title;
-  final Widget?
-  titleWidget; // Custom title widget (e.g., entity selector dropdown)
   final void Function(String query)? onSearch;
-  final List<Widget>? toolbarActions;
+
+  /// Toolbar action data - rendered appropriately for screen size
+  final List<ActionItem>? toolbarActions;
 
   // Pagination
   final bool paginated;
@@ -108,9 +107,7 @@ class AppDataTable<T> extends StatefulWidget {
     this.state = AppDataTableState.loaded,
     this.errorMessage,
     this.onRowTap,
-    this.actionsBuilder,
-    this.title,
-    this.titleWidget,
+    this.rowActionItems,
     this.onSearch,
     this.toolbarActions,
     this.paginated = false,
@@ -139,14 +136,10 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
   final Map<String, double> _columnWidths = {};
 
   /// Hidden column IDs (session-only, not persisted)
-  Set<String> _hiddenColumnIds = {};
+  final Set<String> _hiddenColumnIds = {};
 
   /// Table density (session-only, not persisted)
   TableDensity _density = TableDensity.standard;
-
-  /// Saved views (loaded on demand for dialog)
-  List<SavedView>? _savedViews;
-  bool _savedViewsLoading = false;
 
   /// Get visible columns (filtered by hidden state)
   List<TableColumn<T>> get _visibleColumns =>
@@ -157,96 +150,97 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
     super.initState();
   }
 
-  /// Load saved views for the entity
-  Future<void> _loadSavedViews() async {
-    if (widget.entityName == null) return;
+  /// Show customization options in a bottom sheet
+  void _showCustomizationSheet(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Customize Table',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
 
-    setState(() => _savedViewsLoading = true);
+                    // Density selection
+                    Text(
+                      'Density',
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    const SizedBox(height: 8),
+                    SegmentedButton<TableDensity>(
+                      segments: TableDensity.values.map((d) {
+                        return ButtonSegment(
+                          value: d,
+                          label: Text(
+                            d.name[0].toUpperCase() + d.name.substring(1),
+                          ),
+                        );
+                      }).toList(),
+                      selected: {_density},
+                      onSelectionChanged: (selected) {
+                        setState(() => _density = selected.first);
+                        setSheetState(() {});
+                      },
+                    ),
+                    const SizedBox(height: 16),
 
-    try {
-      final savedViewService = context.read<SavedViewService>();
-      final views = await savedViewService.getForEntity(widget.entityName!);
-      if (mounted) {
-        setState(() {
-          _savedViews = views;
-          _savedViewsLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _savedViewsLoading = false);
-      }
-    }
-  }
-
-  /// Save current view
-  Future<void> _saveView(String viewName) async {
-    if (widget.entityName == null) return;
-
-    try {
-      final savedViewService = context.read<SavedViewService>();
-      await savedViewService.create(
-        entityName: widget.entityName!,
-        viewName: viewName,
-        settings: SavedViewSettings(
-          hiddenColumns: _hiddenColumnIds.toList(),
-          density: _density.name,
-        ),
-      );
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('View "$viewName" saved'),
-            behavior: SnackBarBehavior.floating,
-          ),
+                    // Column visibility
+                    Text(
+                      'Columns',
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    const SizedBox(height: 8),
+                    ...widget.columns.map((col) {
+                      final isHidden = _hiddenColumnIds.contains(col.id);
+                      return CheckboxListTile(
+                        title: Text(col.label),
+                        value: !isHidden,
+                        onChanged: (checked) {
+                          setState(() {
+                            if (checked == true) {
+                              _hiddenColumnIds.remove(col.id);
+                            } else {
+                              _hiddenColumnIds.add(col.id);
+                            }
+                          });
+                          setSheetState(() {});
+                        },
+                        dense: true,
+                        controlAffinity: ListTileControlAffinity.leading,
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            );
+          },
         );
-        // Refresh views list
-        _loadSavedViews();
-      }
-    } catch (e) {
-      ErrorService.logError('Failed to save view', error: e);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Failed to save view: ${e.toString().replaceFirst("Exception: ", "")}',
-            ),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-      }
-    }
-  }
-
-  /// Delete a saved view
-  Future<void> _deleteView(SavedView view) async {
-    try {
-      final savedViewService = context.read<SavedViewService>();
-      await savedViewService.delete(view.id);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('View "${view.viewName}" deleted'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-        // Refresh views list
-        _loadSavedViews();
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Failed to delete view'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-      }
-    }
+      },
+    );
   }
 
   @override
@@ -324,37 +318,16 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
   Widget build(BuildContext context) {
     final spacing = context.spacing;
 
-    // Build combined toolbar actions (user actions + customization menu)
-    final List<Widget> combinedActions = [
-      ...?widget.toolbarActions,
+    // Build toolbar actions including customization
+    final allToolbarActions = <ActionItem>[
+      if (widget.toolbarActions != null) ...widget.toolbarActions!,
       if (widget.showCustomizationMenu)
-        TableCustomizationMenu<T>(
-          columns: widget.columns,
-          hiddenColumnIds: _hiddenColumnIds,
-          density: _density,
-          onHiddenColumnsChanged: (hidden) {
-            setState(() => _hiddenColumnIds = hidden);
-          },
-          onDensityChanged: (density) {
-            setState(() => _density = density);
-          },
-          entityName: widget.entityName,
-          savedViews: _savedViews,
-          savedViewsLoading: _savedViewsLoading,
-          onSaveView: _saveView,
-          onLoadView: (settings) {
-            setState(() {
-              _hiddenColumnIds = settings.hiddenColumns.toSet();
-              _density = TableDensity.values.firstWhere(
-                (d) => d.name == settings.density,
-                orElse: () => TableDensity.standard,
-              );
-            });
-          },
-          onDeleteView: _deleteView,
-          onRefreshViews: _loadSavedViews,
-        ),
+        ActionItem.customize(onTap: () => _showCustomizationSheet(context)),
     ];
+
+    // Determine if we have any toolbar content
+    final hasToolbarContent =
+        widget.onSearch != null || allToolbarActions.isNotEmpty;
 
     // No container - let the parent (DashboardCard) handle borders/shadows
     // This widget focuses purely on table layout and functionality
@@ -372,26 +345,13 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Toolbar (with padding)
-              if (widget.title != null ||
-                  widget.titleWidget != null ||
-                  widget.onSearch != null ||
-                  combinedActions.isNotEmpty)
-                Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    spacing.md,
-                    spacing.md,
-                    spacing.md,
-                    spacing.md,
-                  ),
-                  child: TableToolbar(
-                    title: widget.title,
-                    titleWidget: widget.titleWidget,
-                    onSearch: widget.onSearch,
-                    actions: combinedActions.isNotEmpty
-                        ? combinedActions
-                        : null,
-                  ),
+              // Toolbar - single row: search left, actions right
+              if (hasToolbarContent)
+                TableToolbar(
+                  onSearch: widget.onSearch,
+                  actionItems: allToolbarActions.isEmpty
+                      ? null
+                      : allToolbarActions,
                 ),
 
               // Table content (NO padding - extends to edges!)
@@ -478,7 +438,7 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
   /// Supports pinned columns for mobile viewing.
   Widget _buildNativeTable() {
     final theme = Theme.of(context);
-    final hasActions = widget.actionsBuilder != null;
+    final hasActions = widget.rowActionItems != null;
     final data = _sortedAndPaginatedData;
 
     // Determine effective pinned columns count
@@ -792,12 +752,14 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
         ),
         children: columns.map((col) {
           if (col == '__actions__') {
+            final actionItems = widget.rowActionItems?.call(item) ?? [];
             return _buildDataCell(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: widget.actionsBuilder?.call(item) ?? [],
-              ),
+              child: actionItems.isNotEmpty
+                  ? ActionMenu(
+                      actions: actionItems,
+                      mode: ActionMenuMode.inline,
+                    )
+                  : const SizedBox.shrink(),
               spacing: spacing,
             );
           } else {
@@ -927,12 +889,14 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
         ),
         children: columnsToRender.map((col) {
           if (col == '__actions__') {
+            final actionItems = widget.rowActionItems?.call(item) ?? [];
             return _buildDataCell(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: widget.actionsBuilder?.call(item) ?? [],
-              ),
+              child: actionItems.isNotEmpty
+                  ? ActionMenu(
+                      actions: actionItems,
+                      mode: ActionMenuMode.inline,
+                    )
+                  : const SizedBox.shrink(),
               spacing: spacing,
             );
           } else {

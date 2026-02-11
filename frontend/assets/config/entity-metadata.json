@@ -262,6 +262,8 @@
           "service_country"
         ],
         "rows": [["service_city", "service_state", "service_postal_code"]],
+        "copyFrom": "billing_address",
+        "copyFromLabel": "Same as Billing",
         "order": 4
       }
     },

@@ -97,28 +97,6 @@ void main() {
       });
     });
 
-    group('Content Display', () {
-      testWidgets('shows welcome banner', (tester) async {
-        final provider = _TestDashboardProvider(lastUpdated: DateTime.now());
-
-        await tester.pumpWidget(createTestWidget(dashboardProvider: provider));
-        await tester.pumpAndSettle();
-
-        expect(find.textContaining('Welcome back'), findsOneWidget);
-      });
-
-      testWidgets('shows personalized greeting with username', (tester) async {
-        final provider = _TestDashboardProvider(lastUpdated: DateTime.now());
-
-        await tester.pumpWidget(
-          createTestWidget(dashboardProvider: provider, userName: 'John Doe'),
-        );
-        await tester.pumpAndSettle();
-
-        expect(find.textContaining('John'), findsOneWidget);
-      });
-    });
-
     group('Entity Charts', () {
       testWidgets('displays charts based on visible entities', (tester) async {
         final provider = _TestDashboardProvider(

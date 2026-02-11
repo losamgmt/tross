@@ -6,13 +6,18 @@
 /// Features:
 /// - Label header with consistent styling
 /// - Optional divider between sections
+/// - Optional trailing action widget (e.g., "Same as Billing" button)
 /// - Responsive spacing using AppSpacing
 /// - No business logic - pure presentation
 ///
 /// Usage:
 /// ```dart
 /// FormSection(
-///   label: 'Billing Address',
+///   label: 'Service Address',
+///   trailing: TextButton(
+///     onPressed: onCopyFromBilling,
+///     child: Text('Same as Billing'),
+///   ),
 ///   children: [
 ///     GenericFormField(config: line1Config, ...),
 ///     GenericFormField(config: cityConfig, ...),
@@ -39,12 +44,16 @@ class FormSection extends StatelessWidget {
   /// Optional icon to display next to label
   final IconData? icon;
 
+  /// Optional trailing widget (e.g., "Same as Billing" button)
+  final Widget? trailing;
+
   const FormSection({
     super.key,
     required this.label,
     required this.children,
     this.showDivider = true,
     this.icon,
+    this.trailing,
   });
 
   @override
@@ -66,7 +75,7 @@ class FormSection extends StatelessWidget {
             ),
           ),
 
-        // Section header
+        // Section header with optional trailing action
         Padding(
           padding: EdgeInsets.only(bottom: spacing.sm),
           child: Row(
@@ -82,6 +91,7 @@ class FormSection extends StatelessWidget {
                   color: theme.colorScheme.primary,
                 ),
               ),
+              if (trailing != null) ...[const Spacer(), trailing!],
             ],
           ),
         ),

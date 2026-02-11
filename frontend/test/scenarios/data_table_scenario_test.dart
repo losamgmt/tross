@@ -28,7 +28,6 @@ void main() {
     for (final entityName in allKnownEntities) {
       testWidgets('$entityName - renders table with data', (tester) async {
         final testData = entityName.testDataList(count: 3);
-        final metadata = EntityTestRegistry.get(entityName);
 
         // Build columns using factory (requires context for provider access)
         late List<TableColumn<Map<String, dynamic>>> columns;
@@ -44,23 +43,20 @@ void main() {
               return AppDataTable<Map<String, dynamic>>(
                 columns: columns,
                 data: testData,
-                title: metadata.displayName,
               );
             },
           ),
           withProviders: true,
         );
 
-        // Table should render with title
-        expect(find.text(metadata.displayName), findsWidgets);
+        // Table should render data
+        expect(find.byType(AppDataTable<Map<String, dynamic>>), findsOneWidget);
 
         // Should not show loading or error
         expect(find.byType(CircularProgressIndicator), findsNothing);
       });
 
       testWidgets('$entityName - shows loading state', (tester) async {
-        final metadata = EntityTestRegistry.get(entityName);
-
         await pumpTestWidget(
           tester,
           Builder(
@@ -73,7 +69,6 @@ void main() {
                 columns: columns,
                 data: const [],
                 state: AppDataTableState.loading,
-                title: metadata.displayName,
               );
             },
           ),
@@ -98,7 +93,6 @@ void main() {
                 columns: columns,
                 data: const [],
                 state: AppDataTableState.empty,
-                title: metadata.displayName,
                 emptyMessage: 'No ${metadata.displayName} found',
               );
             },
@@ -110,7 +104,6 @@ void main() {
       });
 
       testWidgets('$entityName - shows error state', (tester) async {
-        final metadata = EntityTestRegistry.get(entityName);
         const errorMessage = 'Failed to load data';
 
         await pumpTestWidget(
@@ -126,7 +119,6 @@ void main() {
                 data: const [],
                 state: AppDataTableState.error,
                 errorMessage: errorMessage,
-                title: metadata.displayName,
               );
             },
           ),

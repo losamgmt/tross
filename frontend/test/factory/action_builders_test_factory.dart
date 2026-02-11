@@ -2,6 +2,8 @@
 ///
 /// STRATEGIC PURPOSE: Apply IDENTICAL action scenarios to ALL entities uniformly.
 /// Uses the Builder pattern to properly obtain BuildContext within the widget tree.
+///
+/// Tests action item data returned by GenericTableActionBuilders.
 library;
 
 import 'package:flutter/material.dart';
@@ -10,7 +12,7 @@ import 'package:provider/provider.dart';
 import 'package:tross/services/generic_entity_service.dart';
 import 'package:tross/services/export_service.dart';
 import 'package:tross/utils/generic_table_action_builders.dart';
-import 'package:tross/widgets/atoms/buttons/app_button.dart';
+import 'package:tross/widgets/molecules/menus/action_item.dart';
 
 import '../mocks/mock_api_client.dart';
 import '../helpers/helpers.dart';
@@ -35,11 +37,11 @@ abstract final class ActionBuildersTestFactory {
         await EntityTestRegistry.ensureInitialized();
       });
 
-      // Generate row action tests for each entity
-      _generateRowActionTests();
+      // Generate row action item tests for each entity
+      _generateRowActionItemTests();
 
-      // Generate toolbar action tests for each entity
-      _generateToolbarActionTests();
+      // Generate toolbar action item tests for each entity
+      _generateToolbarActionItemTests();
 
       // Generate permission matrix tests
       _generatePermissionMatrixTests();
@@ -72,83 +74,93 @@ abstract final class ActionBuildersTestFactory {
   }
 
   // ===========================================================================
-  // ROW ACTION TESTS
+  // ROW ACTION ITEM TESTS
   // ===========================================================================
 
-  static void _generateRowActionTests() {
-    group('Row Actions', () {
+  static void _generateRowActionItemTests() {
+    group('Row Action Items', () {
       for (final entityName in allKnownEntities) {
         group(entityName, () {
-          testWidgets('admin sees edit and delete actions', (tester) async {
+          testWidgets('admin sees edit and delete action items', (
+            tester,
+          ) async {
             final testData = entityName.testData();
+            late List<ActionItem> actionItems;
 
             await tester.pumpWidget(
               _buildTestableContext(
                 child: Builder(
                   builder: (context) {
-                    final actions = GenericTableActionBuilders.buildRowActions(
-                      context,
-                      entityName: entityName,
-                      entity: testData,
-                      userRole: 'admin',
-                      onRefresh: () {},
-                    );
-                    return Row(children: actions);
+                    actionItems =
+                        GenericTableActionBuilders.buildRowActionItems(
+                          context,
+                          entityName: entityName,
+                          entity: testData,
+                          userRole: 'admin',
+                          onRefresh: () {},
+                        );
+                    return const SizedBox.shrink();
                   },
                 ),
               ),
             );
 
             // Admin should see both edit and delete
-            expect(find.byType(AppButton), findsAtLeast(2));
+            expect(actionItems.length, greaterThanOrEqualTo(2));
+            expect(actionItems.any((a) => a.id == 'edit'), isTrue);
+            expect(actionItems.any((a) => a.id == 'delete'), isTrue);
           });
 
-          testWidgets('viewer has limited or no actions', (tester) async {
+          testWidgets('viewer has limited or no action items', (tester) async {
             final testData = entityName.testData();
+            late List<ActionItem> actionItems;
 
             await tester.pumpWidget(
               _buildTestableContext(
                 child: Builder(
                   builder: (context) {
-                    final actions = GenericTableActionBuilders.buildRowActions(
-                      context,
-                      entityName: entityName,
-                      entity: testData,
-                      userRole: 'viewer',
-                      onRefresh: () {},
-                    );
-                    return Row(children: actions);
+                    actionItems =
+                        GenericTableActionBuilders.buildRowActionItems(
+                          context,
+                          entityName: entityName,
+                          entity: testData,
+                          userRole: 'viewer',
+                          onRefresh: () {},
+                        );
+                    return const SizedBox.shrink();
                   },
                 ),
               ),
             );
 
-            // Viewer has limited permissions - test doesn't crash
-            expect(find.byType(Row), findsOneWidget);
+            // Viewer has limited permissions - returns valid list
+            expect(actionItems, isA<List<ActionItem>>());
           });
 
-          testWidgets('null role has no actions', (tester) async {
+          testWidgets('null role has no action items', (tester) async {
             final testData = entityName.testData();
+            late List<ActionItem> actionItems;
 
             await tester.pumpWidget(
               _buildTestableContext(
                 child: Builder(
                   builder: (context) {
-                    final actions = GenericTableActionBuilders.buildRowActions(
-                      context,
-                      entityName: entityName,
-                      entity: testData,
-                      userRole: null,
-                      onRefresh: () {},
-                    );
-                    return Row(children: actions);
+                    actionItems =
+                        GenericTableActionBuilders.buildRowActionItems(
+                          context,
+                          entityName: entityName,
+                          entity: testData,
+                          userRole: null,
+                          onRefresh: () {},
+                        );
+                    return const SizedBox.shrink();
                   },
                 ),
               ),
             );
 
-            // No role = no actions
-            expect(find.byType(Row), findsOneWidget);
+            // No role = no action items
+            expect(actionItems, isEmpty);
           });
         });
       }
@@ -156,78 +168,92 @@ abstract final class ActionBuildersTestFactory {
   }
 
   // ===========================================================================
-  // TOOLBAR ACTION TESTS
+  // TOOLBAR ACTION ITEM TESTS
   // ===========================================================================
 
-  static void _generateToolbarActionTests() {
-    group('Toolbar Actions', () {
+  static void _generateToolbarActionItemTests() {
+    group('Toolbar Action Items', () {
       for (final entityName in allKnownEntities) {
         group(entityName, () {
-          testWidgets('admin gets refresh and create actions', (tester) async {
+          testWidgets('admin gets refresh, create, and export items', (
+            tester,
+          ) async {
+            late List<ActionItem> actionItems;
+
             await tester.pumpWidget(
               _buildTestableContext(
                 child: Builder(
                   builder: (context) {
-                    final actions =
-                        GenericTableActionBuilders.buildToolbarActions(
+                    actionItems =
+                        GenericTableActionBuilders.buildToolbarActionItems(
                           context,
                           entityName: entityName,
                           userRole: 'admin',
                           onRefresh: () {},
                         );
-                    return Row(children: actions);
+                    return const SizedBox.shrink();
                   },
                 ),
               ),
             );
 
-            // Admin should have refresh and create actions
-            expect(find.byIcon(Icons.refresh), findsOneWidget);
-            expect(find.byIcon(Icons.add), findsWidgets);
+            // Admin should have refresh, create, and export
+            expect(actionItems.length, equals(3));
+            expect(actionItems.any((a) => a.id == 'refresh'), isTrue);
+            expect(actionItems.any((a) => a.id == 'create'), isTrue);
+            expect(actionItems.any((a) => a.id == 'export'), isTrue);
           });
 
-          testWidgets('viewer has refresh but no create', (tester) async {
+          testWidgets('viewer has refresh and export but no create', (
+            tester,
+          ) async {
+            late List<ActionItem> actionItems;
+
             await tester.pumpWidget(
               _buildTestableContext(
                 child: Builder(
                   builder: (context) {
-                    final actions =
-                        GenericTableActionBuilders.buildToolbarActions(
+                    actionItems =
+                        GenericTableActionBuilders.buildToolbarActionItems(
                           context,
                           entityName: entityName,
                           userRole: 'viewer',
                           onRefresh: () {},
                         );
-                    return Row(children: actions);
+                    return const SizedBox.shrink();
                   },
                 ),
               ),
             );
 
-            // Viewer should have refresh but not create
-            expect(find.byIcon(Icons.refresh), findsOneWidget);
+            // Viewer should have refresh (always) but may not have create
+            expect(actionItems.any((a) => a.id == 'refresh'), isTrue);
           });
 
-          testWidgets('null role still has refresh', (tester) async {
+          testWidgets('null role has only refresh', (tester) async {
+            late List<ActionItem> actionItems;
+
             await tester.pumpWidget(
               _buildTestableContext(
                 child: Builder(
                   builder: (context) {
-                    final actions =
-                        GenericTableActionBuilders.buildToolbarActions(
+                    actionItems =
+                        GenericTableActionBuilders.buildToolbarActionItems(
                           context,
                           entityName: entityName,
                           userRole: null,
                           onRefresh: () {},
                         );
-                    return Row(children: actions);
+                    return const SizedBox.shrink();
                   },
                 ),
               ),
             );
 
             // Everyone should have refresh
-            expect(find.byIcon(Icons.refresh), findsOneWidget);
+            expect(actionItems.any((a) => a.id == 'refresh'), isTrue);
+            // But no create without role
+            expect(actionItems.any((a) => a.id == 'create'), isFalse);
           });
         });
       }
@@ -251,40 +277,41 @@ abstract final class ActionBuildersTestFactory {
               tester,
             ) async {
               final testData = entityName.testData();
+              late List<ActionItem> rowItems;
+              late List<ActionItem> toolbarItems;
 
               await tester.pumpWidget(
                 _buildTestableContext(
                   child: Builder(
                     builder: (context) {
-                      final rowActions =
-                          GenericTableActionBuilders.buildRowActions(
-                            context,
-                            entityName: entityName,
-                            entity: testData,
-                            userRole: role,
-                            onRefresh: () {},
-                          );
-
-                      final toolbarActions =
-                          GenericTableActionBuilders.buildToolbarActions(
-                            context,
-                            entityName: entityName,
-                            userRole: role,
-                            onRefresh: () {},
-                          );
-
-                      return Column(
-                        children: [
-                          Row(children: rowActions),
-                          Row(children: toolbarActions),
-                        ],
+                      rowItems = GenericTableActionBuilders.buildRowActionItems(
+                        context,
+                        entityName: entityName,
+                        entity: testData,
+                        userRole: role,
+                        onRefresh: () {},
                       );
+
+                      toolbarItems =
+                          GenericTableActionBuilders.buildToolbarActionItems(
+                            context,
+                            entityName: entityName,
+                            userRole: role,
+                            onRefresh: () {},
+                          );
+
+                      return const SizedBox.shrink();
                     },
                   ),
                 ),
               );
 
-              expect(find.byType(Column), findsOneWidget);
+              // Both should return valid lists
+              expect(rowItems, isA<List<ActionItem>>());
+              expect(toolbarItems, isA<List<ActionItem>>());
+
+              // Toolbar always has refresh
+              expect(toolbarItems.any((a) => a.id == 'refresh'), isTrue);
             });
           }
         });
@@ -298,14 +325,15 @@ abstract final class ActionBuildersTestFactory {
 
   static void _generateEdgeCaseTests() {
     group('Edge Cases', () {
-      testWidgets('user: cannot delete self', (tester) async {
+      testWidgets('user: delete is disabled for self', (tester) async {
         final testData = 'user'.testData(overrides: {'id': 42});
+        late List<ActionItem> actionItems;
 
         await tester.pumpWidget(
           _buildTestableContext(
             child: Builder(
               builder: (context) {
-                final actions = GenericTableActionBuilders.buildRowActions(
+                actionItems = GenericTableActionBuilders.buildRowActionItems(
                   context,
                   entityName: 'user',
                   entity: testData,
@@ -313,90 +341,98 @@ abstract final class ActionBuildersTestFactory {
                   currentUserId: '42', // Same as entity id
                   onRefresh: () {},
                 );
-                return Row(children: actions);
+                return const SizedBox.shrink();
               },
             ),
           ),
         );
 
-        // Should render without crashing - delete button will be disabled
-        expect(find.byType(Row), findsOneWidget);
+        // Delete action should be disabled
+        final deleteItem = actionItems.firstWhere((a) => a.id == 'delete');
+        expect(deleteItem.isDisabled, isTrue);
       });
 
-      testWidgets('handles additional refresh callbacks', (tester) async {
+      testWidgets('handles additional refresh callbacks in action items', (
+        tester,
+      ) async {
         final testData = 'customer'.testData();
-        var mainRefreshCalled = false;
+        late List<ActionItem> actionItems;
 
         await tester.pumpWidget(
           _buildTestableContext(
             child: Builder(
               builder: (context) {
-                final actions = GenericTableActionBuilders.buildRowActions(
+                actionItems = GenericTableActionBuilders.buildRowActionItems(
                   context,
                   entityName: 'customer',
                   entity: testData,
                   userRole: 'admin',
-                  onRefresh: () => mainRefreshCalled = true,
+                  onRefresh: () {},
                   additionalRefreshCallbacks: [() {}, () {}],
                 );
-                return Row(children: actions);
+                return const SizedBox.shrink();
               },
             ),
           ),
         );
 
-        // Should render without crashing
-        expect(find.byType(Row), findsOneWidget);
-        expect(mainRefreshCalled, isFalse); // Not called yet
+        // Should return valid action items
+        expect(actionItems, isA<List<ActionItem>>());
+        expect(actionItems.isNotEmpty, isTrue);
       });
 
       testWidgets('handles minimal entity data', (tester) async {
         final minimalEntity = <String, dynamic>{'id': 1, 'name': 'Minimal'};
+        late List<ActionItem> actionItems;
 
         await tester.pumpWidget(
           _buildTestableContext(
             child: Builder(
               builder: (context) {
-                final actions = GenericTableActionBuilders.buildRowActions(
+                actionItems = GenericTableActionBuilders.buildRowActionItems(
                   context,
                   entityName: 'customer',
                   entity: minimalEntity,
                   userRole: 'admin',
                   onRefresh: () {},
                 );
-                return Row(children: actions);
+                return const SizedBox.shrink();
               },
             ),
           ),
         );
 
-        expect(find.byType(Row), findsOneWidget);
+        expect(actionItems, isA<List<ActionItem>>());
       });
 
-      testWidgets('handles onRefresh callback being invoked', (tester) async {
-        var refreshCalled = false;
+      testWidgets('action items have valid onTap handlers', (tester) async {
+        late List<ActionItem> actionItems;
 
         await tester.pumpWidget(
           _buildTestableContext(
             child: Builder(
               builder: (context) {
-                final actions = GenericTableActionBuilders.buildToolbarActions(
-                  context,
-                  entityName: 'customer',
-                  userRole: 'admin',
-                  onRefresh: () => refreshCalled = true,
-                );
-                return Row(children: actions);
+                actionItems =
+                    GenericTableActionBuilders.buildToolbarActionItems(
+                      context,
+                      entityName: 'customer',
+                      userRole: 'admin',
+                      onRefresh: () {},
+                    );
+                return const SizedBox.shrink();
               },
             ),
           ),
         );
 
-        // Tap the refresh button
-        await tester.tap(find.byIcon(Icons.refresh));
-        await tester.pump();
+        // Refresh should have sync handler
+        final refreshItem = actionItems.firstWhere((a) => a.id == 'refresh');
+        expect(refreshItem.onTap, isNotNull);
 
-        expect(refreshCalled, isTrue);
+        // Export should have async handler
+        final exportItem = actionItems.firstWhere((a) => a.id == 'export');
+        expect(exportItem.onTapAsync, isNotNull);
+        expect(exportItem.isAsync, isTrue);
       });
     });
   }

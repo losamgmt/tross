@@ -13,6 +13,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tross/widgets/molecules/menus/action_item.dart';
 import 'package:tross/widgets/organisms/tables/filterable_data_table.dart';
 import 'package:tross/widgets/organisms/tables/data_table.dart';
 import 'package:tross/services/metadata_table_column_factory.dart';
@@ -151,7 +152,6 @@ void main() {
               return FilterableDataTable<Map<String, dynamic>>(
                 columns: columns,
                 data: testData,
-                showFilterBar: false,
               );
             },
           ),
@@ -220,35 +220,8 @@ void main() {
     }
   });
 
-  group('FilterableDataTable - Title and Toolbar', () {
+  group('FilterableDataTable - Toolbar', () {
     for (final entityName in allKnownEntities) {
-      testWidgets('$entityName - displays title when provided', (tester) async {
-        final metadata = EntityTestRegistry.get(entityName);
-        final testData = entityName.testDataList(count: 2);
-
-        await pumpTestWidget(
-          tester,
-          Builder(
-            builder: (context) {
-              final columns = MetadataTableColumnFactory.forEntity(
-                context,
-                entityName,
-              );
-              return FilterableDataTable<Map<String, dynamic>>(
-                columns: columns,
-                data: testData,
-                title: metadata.displayName,
-                onSearchChanged: (_) {},
-              );
-            },
-          ),
-          withProviders: true,
-        );
-
-        // Title should be visible
-        expect(find.text(metadata.displayName), findsWidgets);
-      });
-
       testWidgets('$entityName - supports toolbar actions', (tester) async {
         final testData = entityName.testDataList(count: 2);
 
@@ -265,10 +238,11 @@ void main() {
                 data: testData,
                 onSearchChanged: (_) {},
                 toolbarActions: [
-                  IconButton(
-                    key: const Key('test-action'),
-                    icon: const Icon(Icons.add),
-                    onPressed: () {},
+                  ActionItem(
+                    id: 'test-action',
+                    label: 'Add',
+                    icon: Icons.add,
+                    onTap: () {},
                   ),
                 ],
               );
@@ -277,8 +251,8 @@ void main() {
           withProviders: true,
         );
 
-        // Toolbar action should be visible
-        expect(find.byKey(const Key('test-action')), findsOneWidget);
+        // Toolbar action should be visible (rendered via ActionMenu)
+        expect(find.byIcon(Icons.add), findsOneWidget);
       });
     }
   });

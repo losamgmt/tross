@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:tross/models/entity_metadata.dart'
-    show FieldGroup, FormLayout;
+import 'package:tross/models/entity_metadata.dart' show FieldGroup, FormLayout;
 import 'package:tross/widgets/molecules/forms/field_config.dart';
 import 'package:tross/widgets/molecules/containers/form_section.dart';
 import 'package:tross/widgets/organisms/forms/form_field.dart';
+import 'package:tross/widgets/atoms/buttons/copy_fields_button.dart';
 import 'package:tross/config/app_spacing.dart';
 import 'package:tross/services/error_service.dart';
 
@@ -189,6 +189,15 @@ class GenericFormState<T> extends State<GenericForm<T>> {
       fieldIndexMap[fieldName] = i;
     }
 
+    // Build a map of group name (derived from label) to group for copyFrom lookup
+    // We need to find source groups by their identifier
+    final groupMap = <String, FieldGroup>{};
+    for (final group in groups) {
+      // Use lowercase underscore version of label as key
+      final key = _labelToFieldName(group.label);
+      groupMap[key] = group;
+    }
+
     // Track all fields in groups
     final fieldsInGroups = <String>{};
     for (final group in groups) {
@@ -249,12 +258,31 @@ class GenericFormState<T> extends State<GenericForm<T>> {
       }
 
       if (fieldWidgets.isNotEmpty) {
+        // Build copy button if this group has copyFrom defined
+        Widget? copyButton;
+        if (group.copyFrom != null && widget.enabled) {
+          final sourceGroup = groupMap[group.copyFrom];
+          if (sourceGroup != null) {
+            final copyLabel =
+                group.copyFromLabel ?? 'Same as ${sourceGroup.label}';
+            copyButton = CopyFieldsButton(
+              label: copyLabel,
+              onPressed: () => _copyFieldsFromGroup(
+                sourceGroup: sourceGroup,
+                targetGroup: group,
+                fieldIndexMap: fieldIndexMap,
+              ),
+            );
+          }
+        }
+
         sections.add(
           Padding(
             padding: EdgeInsets.only(top: groupIdx > 0 ? spacing.lg : 0),
             child: FormSection(
               label: group.label,
               showDivider: groupIdx > 0,
+              trailing: copyButton,
               children: fieldWidgets,
             ),
           ),
@@ -293,6 +321,60 @@ class GenericFormState<T> extends State<GenericForm<T>> {
       physics: const NeverScrollableScrollPhysics(),
       children: sections,
     );
+  }
+
+  /// Copy field values from source group to target group
+  /// Matches fields by suffix (e.g., billing_city -> service_city)
+  void _copyFieldsFromGroup({
+    required FieldGroup sourceGroup,
+    required FieldGroup targetGroup,
+    required Map<String, int> fieldIndexMap,
+  }) {
+    // Extract prefix from source fields (e.g., "billing" from "billing_city")
+    String? sourcePrefix;
+    if (sourceGroup.fields.isNotEmpty) {
+      final firstField = sourceGroup.fields.first;
+      final underscoreIdx = firstField.indexOf('_');
+      if (underscoreIdx > 0) {
+        sourcePrefix = firstField.substring(0, underscoreIdx);
+      }
+    }
+
+    // Extract prefix from target fields (e.g., "service" from "service_city")
+    String? targetPrefix;
+    if (targetGroup.fields.isNotEmpty) {
+      final firstField = targetGroup.fields.first;
+      final underscoreIdx = firstField.indexOf('_');
+      if (underscoreIdx > 0) {
+        targetPrefix = firstField.substring(0, underscoreIdx);
+      }
+    }
+
+    if (sourcePrefix == null || targetPrefix == null) return;
+
+    // Build new value with copied fields
+    var newValue = _currentValue;
+    if (newValue is Map<String, dynamic>) {
+      final updatedMap = Map<String, dynamic>.from(newValue);
+
+      for (final sourceField in sourceGroup.fields) {
+        // Get suffix after prefix (e.g., "_city" from "billing_city")
+        if (!sourceField.startsWith('${sourcePrefix}_')) continue;
+        final suffix = sourceField.substring(sourcePrefix.length);
+
+        // Build target field name (e.g., "service_city")
+        final targetField = '$targetPrefix$suffix';
+
+        // Copy value if target field exists
+        if (targetGroup.fields.contains(targetField)) {
+          updatedMap[targetField] = updatedMap[sourceField];
+        }
+      }
+
+      newValue = updatedMap as T;
+    }
+
+    _handleFieldChange(newValue);
   }
 
   /// Build a single field widget
