@@ -72,7 +72,7 @@ class MetadataTableColumnFactory {
   /// Shows ALL fields from metadata, minus system fields (id, created_at, updated_at)
   /// Tables should show everything by default; filtering is done via visibleFields param
   static List<String> _getDefaultVisibleFields(EntityMetadata metadata) {
-    final systemFields = {'created_at', 'updated_at'};
+    final systemFields = {'id', 'created_at', 'updated_at'};
     return metadata.fields.keys
         .where((f) => !systemFields.contains(f))
         .toList();

@@ -157,9 +157,9 @@ void main() {
           withProviders: true,
         );
 
-        // Columns should be generated (minus system fields: created_at, updated_at)
+        // Columns should be generated (minus system fields: id, created_at, updated_at)
         final expectedFields = metadata.fields.keys
-            .where((f) => !{'created_at', 'updated_at'}.contains(f))
+            .where((f) => !{'id', 'created_at', 'updated_at'}.contains(f))
             .length;
 
         expect(columns.length, equals(expectedFields));
