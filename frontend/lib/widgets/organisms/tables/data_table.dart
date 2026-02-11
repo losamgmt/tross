@@ -886,9 +886,6 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
       final item = entry.value;
       final isEvenRow = index % 2 == 0;
       final isHovered = _hoveredRowIndex == index;
-      final rowColor = isEvenRow
-          ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.05)
-          : theme.colorScheme.surface;
 
       // Only show actions in scrollable (non-pinned) section
       final actionItems = !isPinned
@@ -1032,9 +1029,6 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
       final item = entry.value;
       final isEvenRow = index % 2 == 0;
       final isHovered = _hoveredRowIndex == index;
-      final rowColor = isEvenRow
-          ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.05)
-          : theme.colorScheme.surface;
       final actionItems = includeActions
           ? (widget.rowActionItems?.call(item) ?? [])
           : <ActionItem>[];
