@@ -1,7 +1,12 @@
-/// AppDataTable Organism Integration Tests ✅ LAYOUT FIXED, READY FOR FULL MIGRATION
+/// AppDataTable Organism Integration Tests
 ///
 /// Comprehensive tests for the complete AppDataTable organism
-/// Tests end-to-end functionality with real User and Role data
+/// Tests end-to-end functionality including:
+/// - Data rendering
+/// - Sorting
+/// - Row interactions (tap, long-press for actions)
+/// - Loading/error/empty states
+/// - Role-based data
 library;
 
 import 'package:flutter/material.dart';
@@ -212,11 +217,11 @@ void main() {
         expect(tappedUser?.name, 'Bob Technician');
       });
 
-      testWidgets('renders action overflow button on touch devices', (
+      testWidgets('long-press shows action bottom sheet on touch devices', (
         tester,
       ) async {
         // Tests run as Android (touch) by default - no platform override needed
-        // Touch devices show overflow button immediately
+        // Touch devices use long-press to reveal actions in a bottom sheet
         tester.view.physicalSize = const Size(2000, 1000);
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.reset);
@@ -240,11 +245,18 @@ void main() {
           ),
         );
 
-        // Overflow menu button should be visible for each row
-        expect(find.byIcon(Icons.more_vert), findsNWidgets(testUsers.length));
+        // Actions are not visible by default on touch devices
+        expect(find.byIcon(Icons.edit), findsNothing);
+
+        // Long-press on first row to reveal action bottom sheet
+        await tester.longPress(find.text('Alice Admin'));
+        await tester.pumpAndSettle();
+
+        // Bottom sheet should now show the Edit action
+        expect(find.text('Edit'), findsOneWidget);
       });
 
-      testWidgets('action menu triggers callback when tapped', (tester) async {
+      testWidgets('action triggers callback from bottom sheet', (tester) async {
         TestUser? editedUser;
 
         // Tests run as Android (touch) by default
@@ -271,12 +283,12 @@ void main() {
           ),
         );
 
-        // Tap the first row's overflow button to open menu
-        await tester.tap(find.byIcon(Icons.more_vert).first);
+        // Long-press on first row to open bottom sheet
+        await tester.longPress(find.text('Alice Admin'));
         await tester.pumpAndSettle();
 
-        // Tap the Edit action in the popup menu
-        await tester.tap(find.byIcon(Icons.edit).first);
+        // Tap the Edit action in the bottom sheet
+        await tester.tap(find.text('Edit'));
         await tester.pumpAndSettle();
 
         expect(editedUser, isNotNull);
