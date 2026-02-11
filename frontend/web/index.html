@@ -53,12 +53,19 @@
       /* Prevent overscroll from triggering browser back/forward navigation */
       html,
       body {
-        overscroll-behavior: none;
+        overscroll-behavior-x: none;
+        overscroll-behavior-y: auto;
         overflow: hidden;
         margin: 0;
         padding: 0;
         width: 100%;
         height: 100%;
+      }
+
+      /* Prevent horizontal swipe gestures from triggering navigation */
+      flt-glass-pane {
+        touch-action: pan-y pinch-zoom;
+        overscroll-behavior-x: none;
       }
 
       /* Ensure smooth scrolling within app content */

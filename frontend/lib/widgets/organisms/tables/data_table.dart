@@ -620,30 +620,32 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
         ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.05)
         : theme.colorScheme.surface;
 
-    return Stack(
-      children: [
-        scrollContent,
-        // Action overlay positioned at viewport right edge, following hovered row vertically
-        Positioned(
-          right: StyleConstants.scrollbarThickness + 4, // Account for scrollbar
-          top: 0,
-          bottom: 0,
-          child: IgnorePointer(
-            ignoring: false,
-            child: CompositedTransformFollower(
-              link: _hoveredRowLink,
-              targetAnchor: Alignment.centerRight,
-              followerAnchor: Alignment.centerLeft,
-              showWhenUnlinked: false,
-              child: _buildRowActionOverlay(
-                _hoveredRowActions!,
-                rowColor,
-                spacing,
+    return ClipRect(
+      child: Stack(
+        children: [
+          scrollContent,
+          // Action overlay positioned at viewport right edge, following hovered row vertically
+          Positioned(
+            right:
+                StyleConstants.scrollbarThickness + 4, // Account for scrollbar
+            child: IgnorePointer(
+              ignoring: false,
+              child: CompositedTransformFollower(
+                link: _hoveredRowLink,
+                targetAnchor: Alignment.centerRight,
+                followerAnchor: Alignment.centerLeft,
+                showWhenUnlinked: false,
+                child: _buildRowActionOverlay(
+                  _hoveredRowActions!,
+                  rowColor,
+                  spacing,
+                  _density.rowHeight,
+                ),
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -798,30 +800,31 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
         ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.05)
         : theme.colorScheme.surface;
 
-    return Stack(
-      children: [
-        content,
-        // Action overlay positioned at viewport right edge, following hovered row vertically
-        Positioned(
-          right: StyleConstants.scrollbarThickness + 4,
-          top: 0,
-          bottom: 0,
-          child: IgnorePointer(
-            ignoring: false,
-            child: CompositedTransformFollower(
-              link: _hoveredRowLink,
-              targetAnchor: Alignment.centerRight,
-              followerAnchor: Alignment.centerLeft,
-              showWhenUnlinked: false,
-              child: _buildRowActionOverlay(
-                _hoveredRowActions!,
-                rowColor,
-                spacing,
+    return ClipRect(
+      child: Stack(
+        children: [
+          content,
+          // Action overlay positioned at viewport right edge, following hovered row vertically
+          Positioned(
+            right: StyleConstants.scrollbarThickness + 4,
+            child: IgnorePointer(
+              ignoring: false,
+              child: CompositedTransformFollower(
+                link: _hoveredRowLink,
+                targetAnchor: Alignment.centerRight,
+                followerAnchor: Alignment.centerLeft,
+                showWhenUnlinked: false,
+                child: _buildRowActionOverlay(
+                  _hoveredRowActions!,
+                  rowColor,
+                  spacing,
+                  _density.rowHeight,
+                ),
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -1116,31 +1119,35 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
     List<ActionItem> actions,
     Color backgroundColor,
     AppSpacing spacing,
+    double rowHeight,
   ) {
     return MouseRegion(
       // Keep hover active when moving to actions
       onEnter: (_) {},
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-            colors: [
-              backgroundColor.withValues(alpha: 0.0),
-              backgroundColor.withValues(alpha: 0.9),
-              backgroundColor,
-            ],
-            stops: const [0.0, 0.3, 0.5],
+      child: SizedBox(
+        height: rowHeight,
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+              colors: [
+                backgroundColor.withValues(alpha: 0.0),
+                backgroundColor.withValues(alpha: 0.9),
+                backgroundColor,
+              ],
+              stops: const [0.0, 0.3, 0.5],
+            ),
           ),
-        ),
-        padding: EdgeInsets.only(left: spacing.xl, right: spacing.sm),
-        child: Center(
-          child: ActionMenu(
-            actions: actions,
-            mode: actions.length <= 3
-                ? ActionMenuMode.inline
-                : ActionMenuMode.hybrid,
-            maxInline: 3,
+          padding: EdgeInsets.only(left: spacing.xl, right: spacing.sm),
+          child: Center(
+            child: ActionMenu(
+              actions: actions,
+              mode: actions.length <= 3
+                  ? ActionMenuMode.inline
+                  : ActionMenuMode.hybrid,
+              maxInline: 3,
+            ),
           ),
         ),
       ),
