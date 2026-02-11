@@ -137,6 +137,12 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
   /// Currently hovered row index (for action overlay)
   int? _hoveredRowIndex;
 
+  /// Action items for the currently hovered row (cached for overlay)
+  List<ActionItem>? _hoveredRowActions;
+
+  /// LayerLink for connecting hovered row to action overlay
+  final LayerLink _hoveredRowLink = LayerLink();
+
   /// Tracks user-resized column widths by column id
   /// Columns not in this map use default width
   final Map<String, double> _columnWidths = {};
@@ -522,6 +528,7 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
   /// Supports pinned columns for mobile viewing.
   Widget _buildNativeTable() {
     final theme = Theme.of(context);
+    final spacing = context.spacing;
     final hasActions = widget.rowActionItems != null;
     final data = _sortedAndPaginatedData;
 
@@ -553,7 +560,7 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
 
     // Standard table layout with nested scrollbars
     // Vertical scroll wraps horizontal scroll for 2D scrolling
-    return Scrollbar(
+    final scrollContent = Scrollbar(
       controller: verticalScrollController,
       thumbVisibility: true,
       trackVisibility: true,
@@ -594,6 +601,49 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
                 ),
               ),
       ),
+    );
+
+    // Wrap in Stack with viewport-anchored action overlay for pointer devices
+    // The CompositedTransformFollower positions the overlay relative to the hovered row
+    // but renders it outside the scroll views so it stays anchored to viewport edge
+    final hasPointer = _hasPointerCapability(context);
+    if (!hasPointer ||
+        _hoveredRowActions == null ||
+        _hoveredRowActions!.isEmpty) {
+      return scrollContent;
+    }
+
+    // Get row background color for the hovered row
+    final hoveredIndex = _hoveredRowIndex ?? 0;
+    final isEvenRow = hoveredIndex % 2 == 0;
+    final rowColor = isEvenRow
+        ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.05)
+        : theme.colorScheme.surface;
+
+    return Stack(
+      children: [
+        scrollContent,
+        // Action overlay positioned at viewport right edge, following hovered row vertically
+        Positioned(
+          right: StyleConstants.scrollbarThickness + 4, // Account for scrollbar
+          top: 0,
+          bottom: 0,
+          child: IgnorePointer(
+            ignoring: false,
+            child: CompositedTransformFollower(
+              link: _hoveredRowLink,
+              targetAnchor: Alignment.centerRight,
+              followerAnchor: Alignment.centerLeft,
+              showWhenUnlinked: false,
+              child: _buildRowActionOverlay(
+                _hoveredRowActions!,
+                rowColor,
+                spacing,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -664,7 +714,7 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
       isPinned: false,
     );
 
-    return LayoutBuilder(
+    final content = LayoutBuilder(
       builder: (context, constraints) {
         // Calculate pinned section width (capped at 40% of available width)
         final maxPinnedWidth = constraints.maxWidth * 0.4;
@@ -731,6 +781,47 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
           ],
         );
       },
+    );
+
+    // Wrap in Stack with viewport-anchored action overlay for pointer devices
+    final hasPointer = _hasPointerCapability(context);
+    if (!hasPointer ||
+        _hoveredRowActions == null ||
+        _hoveredRowActions!.isEmpty) {
+      return content;
+    }
+
+    // Get row background color for the hovered row
+    final hoveredIndex = _hoveredRowIndex ?? 0;
+    final isEvenRow = hoveredIndex % 2 == 0;
+    final rowColor = isEvenRow
+        ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.05)
+        : theme.colorScheme.surface;
+
+    return Stack(
+      children: [
+        content,
+        // Action overlay positioned at viewport right edge, following hovered row vertically
+        Positioned(
+          right: StyleConstants.scrollbarThickness + 4,
+          top: 0,
+          bottom: 0,
+          child: IgnorePointer(
+            ignoring: false,
+            child: CompositedTransformFollower(
+              link: _hoveredRowLink,
+              targetAnchor: Alignment.centerRight,
+              followerAnchor: Alignment.centerLeft,
+              showWhenUnlinked: false,
+              child: _buildRowActionOverlay(
+                _hoveredRowActions!,
+                rowColor,
+                spacing,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -818,27 +909,20 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
         children: columns.asMap().entries.map((colEntry) {
           final colIndex = colEntry.key;
           final column = colEntry.value as TableColumn<T>;
-          final isLastColumn = colIndex == columns.length - 1;
+          final isFirstColumn = colIndex == 0;
 
           Widget cellContent = column.cellBuilder(item);
 
-          // Pointer devices: add hover-reveal action overlay to last column in scrollable section
+          // Pointer devices: first cell of hovered row gets CompositedTransformTarget
+          // (in scrollable section only) for viewport-anchored action overlay
           if (!isPinned &&
               hasPointer &&
-              isLastColumn &&
+              isFirstColumn &&
               actionItems.isNotEmpty &&
               isHovered) {
-            cellContent = Stack(
-              clipBehavior: Clip.none,
-              children: [
-                cellContent,
-                Positioned(
-                  right: 0,
-                  top: 0,
-                  bottom: 0,
-                  child: _buildRowActionOverlay(actionItems, rowColor, spacing),
-                ),
-              ],
+            cellContent = CompositedTransformTarget(
+              link: _hoveredRowLink,
+              child: cellContent,
             );
           }
 
@@ -849,7 +933,10 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
                 ? () => widget.onRowTap!(item)
                 : null,
             onHover: !isPinned && hasPointer
-                ? () => setState(() => _hoveredRowIndex = index)
+                ? () => setState(() {
+                    _hoveredRowIndex = index;
+                    _hoveredRowActions = actionItems;
+                  })
                 : null,
             // Touch devices: long-press shows action bottom sheet (scrollable section only)
             onLongPress: !isPinned && !hasPointer && actionItems.isNotEmpty
@@ -872,7 +959,10 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
     // Wrap scrollable section in MouseRegion to clear hover on exit
     if (!isPinned) {
       return MouseRegion(
-        onExit: (_) => setState(() => _hoveredRowIndex = null),
+        onExit: (_) => setState(() {
+          _hoveredRowIndex = null;
+          _hoveredRowActions = null;
+        }),
         child: table,
       );
     }
@@ -963,26 +1053,19 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
         children: visibleCols.asMap().entries.map((colEntry) {
           final colIndex = colEntry.key;
           final column = colEntry.value;
-          final isLastColumn = colIndex == visibleCols.length - 1;
+          final isFirstColumn = colIndex == 0;
 
           Widget cellContent = column.cellBuilder(item);
 
-          // Pointer devices: add hover-reveal action overlay to the last column
+          // Pointer devices: first cell of hovered row gets CompositedTransformTarget
+          // This allows the action overlay to follow the row's position
           if (hasPointer &&
-              isLastColumn &&
-              actionItems.isNotEmpty &&
-              isHovered) {
-            cellContent = Stack(
-              clipBehavior: Clip.none,
-              children: [
-                cellContent,
-                Positioned(
-                  right: 0,
-                  top: 0,
-                  bottom: 0,
-                  child: _buildRowActionOverlay(actionItems, rowColor, spacing),
-                ),
-              ],
+              isFirstColumn &&
+              isHovered &&
+              actionItems.isNotEmpty) {
+            cellContent = CompositedTransformTarget(
+              link: _hoveredRowLink,
+              child: cellContent,
             );
           }
 
@@ -993,7 +1076,10 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
                 ? () => widget.onRowTap!(item)
                 : null,
             onHover: hasPointer
-                ? () => setState(() => _hoveredRowIndex = index)
+                ? () => setState(() {
+                    _hoveredRowIndex = index;
+                    _hoveredRowActions = actionItems;
+                  })
                 : null,
             // Touch devices: long-press shows action bottom sheet
             onLongPress: !hasPointer && actionItems.isNotEmpty
@@ -1006,7 +1092,10 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
 
     // Single unified table - header and data rows together for perfect column alignment
     final unifiedTable = MouseRegion(
-      onExit: (_) => setState(() => _hoveredRowIndex = null),
+      onExit: (_) => setState(() {
+        _hoveredRowIndex = null;
+        _hoveredRowActions = null;
+      }),
       child: Table(
         columnWidths: columnWidths,
         defaultVerticalAlignment: TableCellVerticalAlignment.middle,
