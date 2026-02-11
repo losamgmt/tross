@@ -6,7 +6,9 @@
 ///
 /// Key Features:
 /// - Native Table widget for responsive column widths (IntrinsicColumnWidth)
-/// - Hover-reveal actions overlay on right edge (no dedicated actions column)
+/// - Platform-adaptive row actions:
+///   - Desktop/Web (pointer): Hover reveals actions with gradient fade
+///   - Mobile (touch): Long-press shows action bottom sheet
 /// - Sortable columns
 /// - Pagination support
 /// - Loading/error/empty states
@@ -150,7 +152,8 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
       widget.columns.where((c) => !_hiddenColumnIds.contains(c.id)).toList();
 
   /// Check if device has pointer (mouse) capability
-  /// Touch devices always show overflow button; pointer devices use hover
+  /// Touch devices: long-press shows action bottom sheet
+  /// Pointer devices: hover reveals action overlay
   bool _hasPointerCapability(BuildContext context) {
     // Web: assume pointer capability (desktop browsers)
     if (kIsWeb) return true;
@@ -163,9 +166,72 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
         platform == TargetPlatform.linux;
   }
 
-  @override
-  void initState() {
-    super.initState();
+  /// Show action bottom sheet for touch devices (long-press pattern)
+  void _showActionBottomSheet(BuildContext context, List<ActionItem> actions) {
+    final theme = Theme.of(context);
+    final spacing = context.spacing;
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: theme.colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: spacing.md),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Drag handle
+                Container(
+                  width: 32,
+                  height: 4,
+                  margin: EdgeInsets.only(bottom: spacing.md),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.onSurfaceVariant.withValues(
+                      alpha: 0.4,
+                    ),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                // Action list
+                ...actions.map((action) {
+                  final isDestructive = action.style == ActionStyle.danger;
+                  return ListTile(
+                    leading: action.icon != null
+                        ? Icon(
+                            action.icon,
+                            color: isDestructive
+                                ? theme.colorScheme.error
+                                : theme.colorScheme.onSurface,
+                          )
+                        : null,
+                    title: Text(
+                      action.label,
+                      style: TextStyle(
+                        color: isDestructive
+                            ? theme.colorScheme.error
+                            : theme.colorScheme.onSurface,
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.of(sheetContext).pop();
+                      if (action.onTapAsync != null) {
+                        action.onTapAsync!(context);
+                      } else if (action.onTap != null) {
+                        action.onTap!();
+                      }
+                    },
+                  );
+                }),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   /// Show customization options in a bottom sheet
@@ -722,7 +788,7 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
     );
 
     // Build data rows with hover/touch detection for scrollable section
-    // Touch devices always show overflow button; pointer devices use hover
+    // Touch devices: long-press to show actions; Pointer devices: hover reveals actions
     final hasPointer = _hasPointerCapability(context);
     final dataRows = data.asMap().entries.map((entry) {
       final index = entry.key;
@@ -737,9 +803,6 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
       final actionItems = !isPinned
           ? (widget.rowActionItems?.call(item) ?? [])
           : <ActionItem>[];
-
-      // Show actions if: touch device (always) or hovered (pointer device)
-      final showActions = !hasPointer || isHovered;
 
       return TableRow(
         decoration: BoxDecoration(
@@ -759,24 +822,22 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
 
           Widget cellContent = column.cellBuilder(item);
 
-          // Add action overlay to last column in scrollable section
-          if (!isPinned && isLastColumn && actionItems.isNotEmpty) {
+          // Pointer devices: add hover-reveal action overlay to last column in scrollable section
+          if (!isPinned &&
+              hasPointer &&
+              isLastColumn &&
+              actionItems.isNotEmpty &&
+              isHovered) {
             cellContent = Stack(
               clipBehavior: Clip.none,
               children: [
                 cellContent,
-                if (showActions)
-                  Positioned(
-                    right: 0,
-                    top: 0,
-                    bottom: 0,
-                    child: _buildRowActionOverlay(
-                      actionItems,
-                      rowColor,
-                      spacing,
-                      hasPointer: hasPointer,
-                    ),
-                  ),
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
+                  child: _buildRowActionOverlay(actionItems, rowColor, spacing),
+                ),
               ],
             );
           }
@@ -789,6 +850,10 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
                 : null,
             onHover: !isPinned && hasPointer
                 ? () => setState(() => _hoveredRowIndex = index)
+                : null,
+            // Touch devices: long-press shows action bottom sheet (scrollable section only)
+            onLongPress: !isPinned && !hasPointer && actionItems.isNotEmpty
+                ? () => _showActionBottomSheet(context, actionItems)
                 : null,
           );
         }).toList(),
@@ -870,7 +935,7 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
     );
 
     // Build data rows with hover detection for action overlay
-    // Touch devices always show overflow button; pointer devices use hover
+    // Touch devices: long-press to show actions; Pointer devices: hover reveals actions
     final hasPointer = _hasPointerCapability(context);
     final dataRows = data.asMap().entries.map((entry) {
       final index = entry.key;
@@ -883,9 +948,6 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
       final actionItems = includeActions
           ? (widget.rowActionItems?.call(item) ?? [])
           : <ActionItem>[];
-
-      // Show actions if: touch device (always) or hovered (pointer device)
-      final showActions = !hasPointer || isHovered;
 
       return TableRow(
         decoration: BoxDecoration(
@@ -905,24 +967,21 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
 
           Widget cellContent = column.cellBuilder(item);
 
-          // Add action overlay to the last column
-          if (isLastColumn && actionItems.isNotEmpty) {
+          // Pointer devices: add hover-reveal action overlay to the last column
+          if (hasPointer &&
+              isLastColumn &&
+              actionItems.isNotEmpty &&
+              isHovered) {
             cellContent = Stack(
               clipBehavior: Clip.none,
               children: [
                 cellContent,
-                if (showActions)
-                  Positioned(
-                    right: 0,
-                    top: 0,
-                    bottom: 0,
-                    child: _buildRowActionOverlay(
-                      actionItems,
-                      rowColor,
-                      spacing,
-                      hasPointer: hasPointer,
-                    ),
-                  ),
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
+                  child: _buildRowActionOverlay(actionItems, rowColor, spacing),
+                ),
               ],
             );
           }
@@ -935,6 +994,10 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
                 : null,
             onHover: hasPointer
                 ? () => setState(() => _hoveredRowIndex = index)
+                : null,
+            // Touch devices: long-press shows action bottom sheet
+            onLongPress: !hasPointer && actionItems.isNotEmpty
+                ? () => _showActionBottomSheet(context, actionItems)
                 : null,
           );
         }).toList(),
@@ -964,26 +1027,13 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
     );
   }
 
-  /// Build the row action overlay
-  /// - Touch devices: Always visible overflow button (compact)
-  /// - Pointer devices: Hover-reveal with gradient and inline/hybrid actions
+  /// Build the row action overlay for pointer devices (hover-reveal)
+  /// Shows gradient fade with inline/hybrid actions
   Widget _buildRowActionOverlay(
     List<ActionItem> actions,
     Color backgroundColor,
-    AppSpacing spacing, {
-    bool hasPointer = true,
-  }) {
-    // Touch devices: compact overflow button, no gradient
-    if (!hasPointer) {
-      return Container(
-        padding: EdgeInsets.only(right: spacing.sm),
-        child: Center(
-          child: ActionMenu(actions: actions, mode: ActionMenuMode.overflow),
-        ),
-      );
-    }
-
-    // Pointer devices: gradient reveal with inline/hybrid actions
+    AppSpacing spacing,
+  ) {
     return MouseRegion(
       // Keep hover active when moving to actions
       onEnter: (_) {},
@@ -1071,6 +1121,7 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
     required AppSpacing spacing,
     VoidCallback? onTap,
     VoidCallback? onHover,
+    VoidCallback? onLongPress,
   }) {
     // Calculate padding based on density
     final verticalPadding = switch (_density) {
@@ -1098,10 +1149,12 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
       ),
     );
 
-    if (onTap != null) {
-      content = TouchTarget(
+    // Handle tap and long-press interactions
+    if (onTap != null || onLongPress != null) {
+      content = GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        semanticLabel: 'Select row',
+        onLongPress: onLongPress,
         child: content,
       );
     }
