@@ -34,6 +34,7 @@
 /// ```
 library;
 
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
 import '../../../config/app_spacing.dart';
 import '../../../config/platform_utilities.dart';
@@ -147,6 +148,20 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
   /// Get visible columns (filtered by hidden state)
   List<TableColumn<T>> get _visibleColumns =>
       widget.columns.where((c) => !_hiddenColumnIds.contains(c.id)).toList();
+
+  /// Check if device has pointer (mouse) capability
+  /// Touch devices always show overflow button; pointer devices use hover
+  bool _hasPointerCapability(BuildContext context) {
+    // Web: assume pointer capability (desktop browsers)
+    if (kIsWeb) return true;
+
+    // Native: desktop platforms have pointer, mobile doesn't
+    // Use defaultTargetPlatform for test compatibility
+    final platform = defaultTargetPlatform;
+    return platform == TargetPlatform.macOS ||
+        platform == TargetPlatform.windows ||
+        platform == TargetPlatform.linux;
+  }
 
   @override
   void initState() {
@@ -706,7 +721,9 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
       }).toList(),
     );
 
-    // Build data rows with hover detection for scrollable section
+    // Build data rows with hover/touch detection for scrollable section
+    // Touch devices always show overflow button; pointer devices use hover
+    final hasPointer = _hasPointerCapability(context);
     final dataRows = data.asMap().entries.map((entry) {
       final index = entry.key;
       final item = entry.value;
@@ -720,6 +737,9 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
       final actionItems = !isPinned
           ? (widget.rowActionItems?.call(item) ?? [])
           : <ActionItem>[];
+
+      // Show actions if: touch device (always) or hovered (pointer device)
+      final showActions = !hasPointer || isHovered;
 
       return TableRow(
         decoration: BoxDecoration(
@@ -739,21 +759,13 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
 
           Widget cellContent = column.cellBuilder(item);
 
-          // Add hover detection for scrollable section
-          if (!isPinned) {
-            cellContent = MouseRegion(
-              onEnter: (_) => setState(() => _hoveredRowIndex = index),
-              child: cellContent,
-            );
-          }
-
           // Add action overlay to last column in scrollable section
           if (!isPinned && isLastColumn && actionItems.isNotEmpty) {
             cellContent = Stack(
               clipBehavior: Clip.none,
               children: [
                 cellContent,
-                if (isHovered)
+                if (showActions)
                   Positioned(
                     right: 0,
                     top: 0,
@@ -762,6 +774,7 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
                       actionItems,
                       rowColor,
                       spacing,
+                      hasPointer: hasPointer,
                     ),
                   ),
               ],
@@ -773,6 +786,9 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
             spacing: spacing,
             onTap: widget.onRowTap != null
                 ? () => widget.onRowTap!(item)
+                : null,
+            onHover: !isPinned && hasPointer
+                ? () => setState(() => _hoveredRowIndex = index)
                 : null,
           );
         }).toList(),
@@ -854,6 +870,8 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
     );
 
     // Build data rows with hover detection for action overlay
+    // Touch devices always show overflow button; pointer devices use hover
+    final hasPointer = _hasPointerCapability(context);
     final dataRows = data.asMap().entries.map((entry) {
       final index = entry.key;
       final item = entry.value;
@@ -865,6 +883,9 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
       final actionItems = includeActions
           ? (widget.rowActionItems?.call(item) ?? [])
           : <ActionItem>[];
+
+      // Show actions if: touch device (always) or hovered (pointer device)
+      final showActions = !hasPointer || isHovered;
 
       return TableRow(
         decoration: BoxDecoration(
@@ -884,19 +905,13 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
 
           Widget cellContent = column.cellBuilder(item);
 
-          // Wrap in MouseRegion for hover detection
-          cellContent = MouseRegion(
-            onEnter: (_) => setState(() => _hoveredRowIndex = index),
-            child: cellContent,
-          );
-
           // Add action overlay to the last column
           if (isLastColumn && actionItems.isNotEmpty) {
             cellContent = Stack(
               clipBehavior: Clip.none,
               children: [
                 cellContent,
-                if (isHovered)
+                if (showActions)
                   Positioned(
                     right: 0,
                     top: 0,
@@ -905,6 +920,7 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
                       actionItems,
                       rowColor,
                       spacing,
+                      hasPointer: hasPointer,
                     ),
                   ),
               ],
@@ -916,6 +932,9 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
             spacing: spacing,
             onTap: widget.onRowTap != null
                 ? () => widget.onRowTap!(item)
+                : null,
+            onHover: hasPointer
+                ? () => setState(() => _hoveredRowIndex = index)
                 : null,
           );
         }).toList(),
@@ -945,12 +964,26 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
     );
   }
 
-  /// Build the row action overlay that appears on hover
+  /// Build the row action overlay
+  /// - Touch devices: Always visible overflow button (compact)
+  /// - Pointer devices: Hover-reveal with gradient and inline/hybrid actions
   Widget _buildRowActionOverlay(
     List<ActionItem> actions,
     Color backgroundColor,
-    AppSpacing spacing,
-  ) {
+    AppSpacing spacing, {
+    bool hasPointer = true,
+  }) {
+    // Touch devices: compact overflow button, no gradient
+    if (!hasPointer) {
+      return Container(
+        padding: EdgeInsets.only(right: spacing.sm),
+        child: Center(
+          child: ActionMenu(actions: actions, mode: ActionMenuMode.overflow),
+        ),
+      );
+    }
+
+    // Pointer devices: gradient reveal with inline/hybrid actions
     return MouseRegion(
       // Keep hover active when moving to actions
       onEnter: (_) {},
@@ -1037,6 +1070,7 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
     required Widget child,
     required AppSpacing spacing,
     VoidCallback? onTap,
+    VoidCallback? onHover,
   }) {
     // Calculate padding based on density
     final verticalPadding = switch (_density) {
@@ -1070,6 +1104,11 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
         semanticLabel: 'Select row',
         child: content,
       );
+    }
+
+    // Wrap in MouseRegion for hover detection (pointer devices)
+    if (onHover != null) {
+      content = MouseRegion(onEnter: (_) => onHover(), child: content);
     }
 
     return TableCell(

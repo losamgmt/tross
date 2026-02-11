@@ -4,8 +4,6 @@
 /// Tests end-to-end functionality with real User and Role data
 library;
 
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tross/widgets/organisms/tables/data_table.dart';
@@ -214,8 +212,11 @@ void main() {
         expect(tappedUser?.name, 'Bob Technician');
       });
 
-      testWidgets('renders action buttons when row is hovered', (tester) async {
-        // Set larger viewport to accommodate wide table
+      testWidgets('renders action overflow button on touch devices', (
+        tester,
+      ) async {
+        // Tests run as Android (touch) by default - no platform override needed
+        // Touch devices show overflow button immediately
         tester.view.physicalSize = const Size(2000, 1000);
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.reset);
@@ -239,31 +240,14 @@ void main() {
           ),
         );
 
-        // Actions are hidden by default (hover-based)
-        expect(find.byIcon(Icons.edit), findsNothing);
-
-        // Hover over first data row to reveal actions
-        final firstCell = find.text('Alice Admin');
-        expect(firstCell, findsOneWidget);
-
-        final gesture = await tester.createGesture(
-          kind: PointerDeviceKind.mouse,
-        );
-        await gesture.addPointer(location: Offset.zero);
-        addTearDown(gesture.removePointer);
-        await tester.pump();
-
-        await gesture.moveTo(tester.getCenter(firstCell));
-        await tester.pumpAndSettle();
-
-        // Now action buttons should be visible
-        expect(find.byIcon(Icons.edit), findsOneWidget);
+        // Overflow menu button should be visible for each row
+        expect(find.byIcon(Icons.more_vert), findsNWidgets(testUsers.length));
       });
 
-      testWidgets('action buttons are clickable on hover', (tester) async {
+      testWidgets('action menu triggers callback when tapped', (tester) async {
         TestUser? editedUser;
 
-        // Set larger viewport to accommodate wide table
+        // Tests run as Android (touch) by default
         tester.view.physicalSize = const Size(2000, 1000);
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.reset);
@@ -287,21 +271,13 @@ void main() {
           ),
         );
 
-        // Hover over first data row to reveal actions
-        final firstCell = find.text('Alice Admin');
-        final gesture = await tester.createGesture(
-          kind: PointerDeviceKind.mouse,
-        );
-        await gesture.addPointer(location: Offset.zero);
-        addTearDown(gesture.removePointer);
-        await tester.pump();
-
-        await gesture.moveTo(tester.getCenter(firstCell));
+        // Tap the first row's overflow button to open menu
+        await tester.tap(find.byIcon(Icons.more_vert).first);
         await tester.pumpAndSettle();
 
-        // Tap the edit button
+        // Tap the Edit action in the popup menu
         await tester.tap(find.byIcon(Icons.edit).first);
-        await tester.pump();
+        await tester.pumpAndSettle();
 
         expect(editedUser, isNotNull);
         expect(editedUser?.name, 'Alice Admin');
