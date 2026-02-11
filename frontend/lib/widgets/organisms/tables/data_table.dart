@@ -6,7 +6,7 @@
 ///
 /// Key Features:
 /// - Native Table widget for responsive column widths (IntrinsicColumnWidth)
-/// - Actions as first column (always visible, perfect height alignment)
+/// - Hover-reveal actions overlay on right edge (no dedicated actions column)
 /// - Sortable columns
 /// - Pagination support
 /// - Loading/error/empty states
@@ -130,6 +130,9 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
   SortDirection _sortDirection = SortDirection.none;
   int _currentPage = 1;
   final ScrollController _dataScrollController = ScrollController();
+
+  /// Currently hovered row index (for action overlay)
+  int? _hoveredRowIndex;
 
   /// Tracks user-resized column widths by column id
   /// Columns not in this map use default width
@@ -521,15 +524,8 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
     // Explicit value provided
     if (widget.pinnedColumns != null) return widget.pinnedColumns!;
 
-    // Auto behavior: pin 1 column on compact screens, none on wider
-    final isCompact = PlatformUtilities.breakpointAdaptive<bool>(
-      context: context,
-      compact: true,
-      medium: false,
-      expanded: false,
-    );
-
-    return isCompact ? 1 : 0;
+    // Default: no pinning - full horizontal scroll
+    return 0;
   }
 
   /// Build table with pinned columns (split into frozen left + scrollable right)
@@ -563,16 +559,11 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
     });
 
     // Split columns into pinned and scrollable
-    final allCols = hasActions
-        ? ['__actions__', ..._visibleColumns]
-        : _visibleColumns.cast<dynamic>();
+    // Split columns into pinned and scrollable (no special actions handling)
+    final allCols = _visibleColumns.cast<dynamic>();
 
-    final pinnedCols = allCols
-        .take(pinnedCount + (hasActions ? 1 : 0))
-        .toList();
-    final scrollableCols = allCols
-        .skip(pinnedCount + (hasActions ? 1 : 0))
-        .toList();
+    final pinnedCols = allCols.take(pinnedCount).toList();
+    final scrollableCols = allCols.skip(pinnedCount).toList();
 
     // Build pinned section
     final pinnedTable = _buildTableSection(
@@ -663,6 +654,7 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
   }
 
   /// Build a table section (for pinned columns layout)
+  /// Actions overlay appears in scrollable section only (not pinned)
   Widget _buildTableSection({
     required ThemeData theme,
     required List<T> data,
@@ -676,15 +668,11 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
       alpha: 0.5,
     );
 
-    // Column widths
+    // Column widths (no special actions column)
     final columnWidths = <int, TableColumnWidth>{};
     for (var i = 0; i < columns.length; i++) {
       final col = columns[i];
-      if (col == '__actions__') {
-        columnWidths[i] = const FixedColumnWidth(
-          TableConfig.actionsColumnWidth,
-        );
-      } else if (widget.autoSizeColumns) {
+      if (widget.autoSizeColumns) {
         columnWidths[i] = const IntrinsicColumnWidth(flex: 1.0);
       } else {
         final column = col as TableColumn<T>;
@@ -701,82 +689,97 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
         border: Border(bottom: BorderSide(color: headerBorderColor, width: 2)),
       ),
       children: columns.map((col) {
-        if (col == '__actions__') {
-          return _buildHeaderCell(
-            child: Text(
-              'Actions',
-              style: theme.textTheme.labelLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            spacing: spacing,
-          );
-        } else {
-          final column = col as TableColumn<T>;
-          final isCurrentSort = _sortColumnId == column.id;
-          return _buildHeaderCell(
-            child: ColumnHeader(
-              label: column.label,
-              sortable: column.sortable,
-              sortDirection: isCurrentSort
-                  ? _sortDirection
-                  : SortDirection.none,
-              onSort: column.sortable ? () => _handleSort(column.id) : null,
-              textAlign: column.alignment,
-            ),
-            spacing: spacing,
-            onTap: column.sortable ? () => _handleSort(column.id) : null,
-            columnId: isPinned
-                ? null
-                : column.id, // Only scrollable columns are resizable
-          );
-        }
+        final column = col as TableColumn<T>;
+        final isCurrentSort = _sortColumnId == column.id;
+        return _buildHeaderCell(
+          child: ColumnHeader(
+            label: column.label,
+            sortable: column.sortable,
+            sortDirection: isCurrentSort ? _sortDirection : SortDirection.none,
+            onSort: column.sortable ? () => _handleSort(column.id) : null,
+            textAlign: column.alignment,
+          ),
+          spacing: spacing,
+          onTap: column.sortable ? () => _handleSort(column.id) : null,
+          columnId: isPinned ? null : column.id,
+        );
       }).toList(),
     );
 
-    // Build data rows
+    // Build data rows with hover detection for scrollable section
     final dataRows = data.asMap().entries.map((entry) {
       final index = entry.key;
       final item = entry.value;
       final isEvenRow = index % 2 == 0;
+      final isHovered = _hoveredRowIndex == index;
+      final rowColor = isEvenRow
+          ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.05)
+          : theme.colorScheme.surface;
+
+      // Only show actions in scrollable (non-pinned) section
+      final actionItems = !isPinned
+          ? (widget.rowActionItems?.call(item) ?? [])
+          : <ActionItem>[];
 
       return TableRow(
         decoration: BoxDecoration(
-          color: isEvenRow
-              ? theme.colorScheme.surfaceContainerHighest.withValues(
-                  alpha: 0.05,
-                )
-              : null,
+          color: isHovered && !isPinned
+              ? theme.colorScheme.primaryContainer.withValues(alpha: 0.1)
+              : (isEvenRow
+                    ? theme.colorScheme.surfaceContainerHighest.withValues(
+                        alpha: 0.05,
+                      )
+                    : null),
           border: Border(bottom: BorderSide(color: borderColor, width: 1)),
         ),
-        children: columns.map((col) {
-          if (col == '__actions__') {
-            final actionItems = widget.rowActionItems?.call(item) ?? [];
-            return _buildDataCell(
-              child: actionItems.isNotEmpty
-                  ? ActionMenu(
-                      actions: actionItems,
-                      mode: ActionMenuMode.inline,
-                    )
-                  : const SizedBox.shrink(),
-              spacing: spacing,
-            );
-          } else {
-            final column = col as TableColumn<T>;
-            return _buildDataCell(
-              child: column.cellBuilder(item),
-              spacing: spacing,
-              onTap: widget.onRowTap != null
-                  ? () => widget.onRowTap!(item)
-                  : null,
+        children: columns.asMap().entries.map((colEntry) {
+          final colIndex = colEntry.key;
+          final column = colEntry.value as TableColumn<T>;
+          final isLastColumn = colIndex == columns.length - 1;
+
+          Widget cellContent = column.cellBuilder(item);
+
+          // Add hover detection for scrollable section
+          if (!isPinned) {
+            cellContent = MouseRegion(
+              onEnter: (_) => setState(() => _hoveredRowIndex = index),
+              child: cellContent,
             );
           }
+
+          // Add action overlay to last column in scrollable section
+          if (!isPinned && isLastColumn && actionItems.isNotEmpty) {
+            cellContent = Stack(
+              clipBehavior: Clip.none,
+              children: [
+                cellContent,
+                if (isHovered)
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    bottom: 0,
+                    child: _buildRowActionOverlay(
+                      actionItems,
+                      rowColor,
+                      spacing,
+                    ),
+                  ),
+              ],
+            );
+          }
+
+          return _buildDataCell(
+            child: cellContent,
+            spacing: spacing,
+            onTap: widget.onRowTap != null
+                ? () => widget.onRowTap!(item)
+                : null,
+          );
         }).toList(),
       );
     }).toList();
 
-    return Table(
+    final table = Table(
       columnWidths: columnWidths,
       defaultVerticalAlignment: TableCellVerticalAlignment.middle,
       border: TableBorder(
@@ -784,6 +787,16 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
       ),
       children: [headerRow, ...dataRows],
     );
+
+    // Wrap scrollable section in MouseRegion to clear hover on exit
+    if (!isPinned) {
+      return MouseRegion(
+        onExit: (_) => setState(() => _hoveredRowIndex = null),
+        child: table,
+      );
+    }
+
+    return table;
   }
 
   /// Builds a unified table with sticky header + scrollable body
@@ -802,30 +815,15 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
     // Use visible columns (respects hidden state)
     final visibleCols = _visibleColumns;
 
-    // Determine which columns to render
-    final List<dynamic> columnsToRender;
-    if (includeActions) {
-      columnsToRender = ['__actions__', ...visibleCols];
-    } else {
-      columnsToRender = visibleCols;
-    }
-
-    // Column widths: Use tracked widths (resizable) or defaults
-    // Actions column gets fixed width; data columns are resizable or auto-sized
+    // Column widths: data columns are resizable or auto-sized
+    // No dedicated actions column - actions overlay on hover
     final columnWidths = <int, TableColumnWidth>{};
-    for (var i = 0; i < columnsToRender.length; i++) {
-      final col = columnsToRender[i];
-      if (col == '__actions__') {
-        columnWidths[i] = const FixedColumnWidth(
-          TableConfig.actionsColumnWidth,
-        );
-      } else if (widget.autoSizeColumns) {
+    for (var i = 0; i < visibleCols.length; i++) {
+      if (widget.autoSizeColumns) {
         // Auto-size: columns size to content but stretch to fill container
-        // flex: 1.0 distributes remaining space proportionally among columns
         columnWidths[i] = const IntrinsicColumnWidth(flex: 1.0);
       } else {
-        final column = col as TableColumn<T>;
-        // Use user-resized width if set, otherwise default
+        final column = visibleCols[i];
         final width =
             _columnWidths[column.id] ?? TableConfig.defaultColumnWidth;
         columnWidths[i] = FixedColumnWidth(width);
@@ -838,90 +836,103 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
         color: headerColor,
         border: Border(bottom: BorderSide(color: headerBorderColor, width: 2)),
       ),
-      children: columnsToRender.map((col) {
-        if (col == '__actions__') {
-          return _buildHeaderCell(
-            child: Text(
-              'Actions',
-              style: theme.textTheme.labelLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            spacing: spacing,
-            // Actions column is not resizable
-          );
-        } else {
-          final column = col as TableColumn<T>;
-          final isCurrentSort = _sortColumnId == column.id;
-          return _buildHeaderCell(
-            child: ColumnHeader(
-              label: column.label,
-              sortable: column.sortable,
-              sortDirection: isCurrentSort
-                  ? _sortDirection
-                  : SortDirection.none,
-              onSort: column.sortable ? () => _handleSort(column.id) : null,
-              textAlign: column.alignment,
-            ),
-            spacing: spacing,
-            onTap: column.sortable ? () => _handleSort(column.id) : null,
-            columnId: column.id, // Enable resize for this column
-          );
-        }
+      children: visibleCols.map((column) {
+        final isCurrentSort = _sortColumnId == column.id;
+        return _buildHeaderCell(
+          child: ColumnHeader(
+            label: column.label,
+            sortable: column.sortable,
+            sortDirection: isCurrentSort ? _sortDirection : SortDirection.none,
+            onSort: column.sortable ? () => _handleSort(column.id) : null,
+            textAlign: column.alignment,
+          ),
+          spacing: spacing,
+          onTap: column.sortable ? () => _handleSort(column.id) : null,
+          columnId: column.id,
+        );
       }).toList(),
     );
 
-    // Build data rows
+    // Build data rows with hover detection for action overlay
     final dataRows = data.asMap().entries.map((entry) {
       final index = entry.key;
       final item = entry.value;
       final isEvenRow = index % 2 == 0;
+      final isHovered = _hoveredRowIndex == index;
+      final rowColor = isEvenRow
+          ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.05)
+          : theme.colorScheme.surface;
+      final actionItems = includeActions
+          ? (widget.rowActionItems?.call(item) ?? [])
+          : <ActionItem>[];
 
       return TableRow(
         decoration: BoxDecoration(
-          color: isEvenRow
-              ? theme.colorScheme.surfaceContainerHighest.withValues(
-                  alpha: 0.05,
-                )
-              : null,
+          color: isHovered
+              ? theme.colorScheme.primaryContainer.withValues(alpha: 0.1)
+              : (isEvenRow
+                    ? theme.colorScheme.surfaceContainerHighest.withValues(
+                        alpha: 0.05,
+                      )
+                    : null),
           border: Border(bottom: BorderSide(color: borderColor, width: 1)),
         ),
-        children: columnsToRender.map((col) {
-          if (col == '__actions__') {
-            final actionItems = widget.rowActionItems?.call(item) ?? [];
-            return _buildDataCell(
-              child: actionItems.isNotEmpty
-                  ? ActionMenu(
-                      actions: actionItems,
-                      mode: ActionMenuMode.inline,
-                    )
-                  : const SizedBox.shrink(),
-              spacing: spacing,
-            );
-          } else {
-            final column = col as TableColumn<T>;
-            return _buildDataCell(
-              child: column.cellBuilder(item),
-              spacing: spacing,
-              onTap: widget.onRowTap != null
-                  ? () => widget.onRowTap!(item)
-                  : null,
+        children: visibleCols.asMap().entries.map((colEntry) {
+          final colIndex = colEntry.key;
+          final column = colEntry.value;
+          final isLastColumn = colIndex == visibleCols.length - 1;
+
+          Widget cellContent = column.cellBuilder(item);
+
+          // Wrap in MouseRegion for hover detection
+          cellContent = MouseRegion(
+            onEnter: (_) => setState(() => _hoveredRowIndex = index),
+            child: cellContent,
+          );
+
+          // Add action overlay to the last column
+          if (isLastColumn && actionItems.isNotEmpty) {
+            cellContent = Stack(
+              clipBehavior: Clip.none,
+              children: [
+                cellContent,
+                if (isHovered)
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    bottom: 0,
+                    child: _buildRowActionOverlay(
+                      actionItems,
+                      rowColor,
+                      spacing,
+                    ),
+                  ),
+              ],
             );
           }
+
+          return _buildDataCell(
+            child: cellContent,
+            spacing: spacing,
+            onTap: widget.onRowTap != null
+                ? () => widget.onRowTap!(item)
+                : null,
+          );
         }).toList(),
       );
     }).toList();
 
     // Single unified table - header and data rows together for perfect column alignment
-    // This ensures IntrinsicColumnWidth measures ALL content (header + data) together
-    final unifiedTable = Table(
-      columnWidths: columnWidths,
-      defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-      border: TableBorder(
-        verticalInside: BorderSide(color: borderColor, width: 1),
+    final unifiedTable = MouseRegion(
+      onExit: (_) => setState(() => _hoveredRowIndex = null),
+      child: Table(
+        columnWidths: columnWidths,
+        defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+        border: TableBorder(
+          verticalInside: BorderSide(color: borderColor, width: 1),
+        ),
+        children: [headerRow, ...dataRows],
       ),
-      children: [headerRow, ...dataRows],
     );
 
     // Wrap in constrained scrollable container for vertical scroll when needed
@@ -930,6 +941,42 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
       child: SingleChildScrollView(
         controller: _dataScrollController,
         child: unifiedTable,
+      ),
+    );
+  }
+
+  /// Build the row action overlay that appears on hover
+  Widget _buildRowActionOverlay(
+    List<ActionItem> actions,
+    Color backgroundColor,
+    AppSpacing spacing,
+  ) {
+    return MouseRegion(
+      // Keep hover active when moving to actions
+      onEnter: (_) {},
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [
+              backgroundColor.withValues(alpha: 0.0),
+              backgroundColor.withValues(alpha: 0.9),
+              backgroundColor,
+            ],
+            stops: const [0.0, 0.3, 0.5],
+          ),
+        ),
+        padding: EdgeInsets.only(left: spacing.xl, right: spacing.sm),
+        child: Center(
+          child: ActionMenu(
+            actions: actions,
+            mode: actions.length <= 3
+                ? ActionMenuMode.inline
+                : ActionMenuMode.hybrid,
+            maxInline: 3,
+          ),
+        ),
       ),
     );
   }

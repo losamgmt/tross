@@ -4,6 +4,8 @@
 /// Tests end-to-end functionality with real User and Role data
 library;
 
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tross/widgets/organisms/tables/data_table.dart';
@@ -212,7 +214,12 @@ void main() {
         expect(tappedUser?.name, 'Bob Technician');
       });
 
-      testWidgets('renders action buttons when provided', (tester) async {
+      testWidgets('renders action buttons when row is hovered', (tester) async {
+        // Set larger viewport to accommodate wide table
+        tester.view.physicalSize = const Size(2000, 1000);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
@@ -232,11 +239,28 @@ void main() {
           ),
         );
 
-        // Each user should have action buttons available
-        expect(find.byIcon(Icons.edit), findsWidgets);
+        // Actions are hidden by default (hover-based)
+        expect(find.byIcon(Icons.edit), findsNothing);
+
+        // Hover over first data row to reveal actions
+        final firstCell = find.text('Alice Admin');
+        expect(firstCell, findsOneWidget);
+
+        final gesture = await tester.createGesture(
+          kind: PointerDeviceKind.mouse,
+        );
+        await gesture.addPointer(location: Offset.zero);
+        addTearDown(gesture.removePointer);
+        await tester.pump();
+
+        await gesture.moveTo(tester.getCenter(firstCell));
+        await tester.pumpAndSettle();
+
+        // Now action buttons should be visible
+        expect(find.byIcon(Icons.edit), findsOneWidget);
       });
 
-      testWidgets('action buttons are clickable', (tester) async {
+      testWidgets('action buttons are clickable on hover', (tester) async {
         TestUser? editedUser;
 
         // Set larger viewport to accommodate wide table
@@ -263,7 +287,19 @@ void main() {
           ),
         );
 
-        // Tap the first edit button
+        // Hover over first data row to reveal actions
+        final firstCell = find.text('Alice Admin');
+        final gesture = await tester.createGesture(
+          kind: PointerDeviceKind.mouse,
+        );
+        await gesture.addPointer(location: Offset.zero);
+        addTearDown(gesture.removePointer);
+        await tester.pump();
+
+        await gesture.moveTo(tester.getCenter(firstCell));
+        await tester.pumpAndSettle();
+
+        // Tap the edit button
         await tester.tap(find.byIcon(Icons.edit).first);
         await tester.pump();
 

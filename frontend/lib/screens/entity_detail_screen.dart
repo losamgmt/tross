@@ -90,8 +90,11 @@ class _EntityDetailScreenState extends State<EntityDetailScreen> {
         _entity = entity;
         _isLoading = false;
       });
-      // Load files after entity loads successfully
-      _loadFiles();
+      // Load files after entity loads successfully (if entity supports attachments)
+      final metadata = EntityMetadataRegistry.get(widget.entityName);
+      if (metadata.supportsFileAttachments) {
+        _loadFiles();
+      }
     } catch (e) {
       ErrorService.logError(
         'Failed to load ${widget.entityName} #${widget.entityId}',
@@ -474,19 +477,20 @@ class _EntityDetailScreenState extends State<EntityDetailScreen> {
 
           SizedBox(height: spacing.lg),
 
-          // File attachments section
-          EntityFileAttachments(
-            files: _files,
-            loading: _filesLoading,
-            error: _filesError,
-            uploading: _filesUploading,
-            readOnly: !canUpdate,
-            title: 'Attachments',
-            onUpload: _handleFileUpload,
-            onDownload: _handleFileDownload,
-            onDelete: _handleFileDelete,
-            onRetry: _loadFiles,
-          ),
+          // File attachments section (only for entities that support it)
+          if (metadata.supportsFileAttachments)
+            EntityFileAttachments(
+              files: _files,
+              loading: _filesLoading,
+              error: _filesError,
+              uploading: _filesUploading,
+              readOnly: !canUpdate,
+              title: 'Attachments',
+              onUpload: _handleFileUpload,
+              onDownload: _handleFileDownload,
+              onDelete: _handleFileDelete,
+              onRetry: _loadFiles,
+            ),
         ],
       ),
     );
