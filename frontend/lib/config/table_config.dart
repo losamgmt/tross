@@ -27,7 +27,6 @@ class TableConfig {
   static const double cellMinWidth = 80.0;
   static const double cellMaxWidth = 300.0;
   static const double defaultColumnWidth = 150.0;
-  static const double actionsColumnWidth = 120.0;
 
   // Resize handle (platform-aware)
   static double get resizeHandleWidth =>

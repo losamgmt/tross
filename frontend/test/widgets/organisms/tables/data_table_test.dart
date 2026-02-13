@@ -245,15 +245,19 @@ void main() {
           ),
         );
 
-        // Actions are not visible by default on touch devices
-        expect(find.byIcon(Icons.edit), findsNothing);
+        // Actions are visible in dedicated column (inline on desktop-width screens)
+        // At 2000px width, this is desktop breakpoint so actions show inline
+        expect(find.byIcon(Icons.edit), findsWidgets);
 
-        // Long-press on first row to reveal action bottom sheet
+        // Long-press on first row to reveal action bottom sheet (alternative access)
         await tester.longPress(find.text('Alice Admin'));
         await tester.pumpAndSettle();
 
         // Bottom sheet should now show the Edit action
-        expect(find.text('Edit'), findsOneWidget);
+        expect(
+          find.text('Edit'),
+          findsWidgets,
+        ); // Multiple: inline + bottom sheet
       });
 
       testWidgets('action triggers callback from bottom sheet', (tester) async {

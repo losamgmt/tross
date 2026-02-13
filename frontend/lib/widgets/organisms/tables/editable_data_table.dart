@@ -136,6 +136,9 @@ class EditableDataTable<T> extends StatelessWidget {
   /// Builder for row action items
   final List<ActionItem> Function(T item)? rowActionItems;
 
+  /// Maximum row actions for geometric width calculation (from SSOT)
+  final int maxRowActions;
+
   /// Toolbar action items (data-driven, rendered by ActionMenu)
   final List<ActionItem>? toolbarActions;
 
@@ -177,6 +180,7 @@ class EditableDataTable<T> extends StatelessWidget {
     this.errorMessage,
     this.onRowTap,
     this.rowActionItems,
+    this.maxRowActions = 2,
     this.toolbarActions,
     this.paginated = false,
     this.itemsPerPage = 10,
@@ -253,6 +257,7 @@ class EditableDataTable<T> extends StatelessWidget {
       errorMessage: errorMessage,
       onRowTap: onRowTap,
       rowActionItems: rowActionItems,
+      maxRowActions: maxRowActions,
       toolbarActions: toolbarActions,
       paginated: paginated,
       itemsPerPage: itemsPerPage,

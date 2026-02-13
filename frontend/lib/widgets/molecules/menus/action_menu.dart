@@ -16,6 +16,7 @@ library;
 
 import 'package:flutter/material.dart';
 import '../../../config/app_spacing.dart';
+import '../../../config/platform_utilities.dart';
 import '../../atoms/atoms.dart';
 import 'action_item.dart';
 
@@ -42,11 +43,17 @@ class ActionMenu extends StatelessWidget {
   /// Max inline actions in hybrid mode (default: 2)
   final int maxInline;
 
+  /// Button size for inline/hybrid modes (square buttons)
+  /// When null, uses platform-aware default from TouchTarget
+  /// When in a table, this should be set to row height for geometric alignment
+  final double? buttonSize;
+
   const ActionMenu({
     super.key,
     required this.actions,
     this.mode = ActionMenuMode.inline,
     this.maxInline = 2,
+    this.buttonSize,
   });
 
   bool _isLoading(String actionId) =>
@@ -99,38 +106,51 @@ class ActionMenu extends StatelessWidget {
   /// All actions in overflow popup
   Widget _buildOverflowMenu(BuildContext context) {
     final theme = Theme.of(context);
+    final size = buttonSize ?? 32.0;
+    final iconSize = (size * 0.5).clamp(16.0, 24.0);
 
-    return PopupMenuButton<String>(
-      icon: Icon(Icons.more_vert, color: theme.colorScheme.onSurface),
-      tooltip: 'More actions',
-      position: PopupMenuPosition.under,
-      onSelected: (actionId) {
-        final action = actions.firstWhere(
-          (a) => a.id == actionId,
-          orElse: () => actions.first,
-        );
-        _handleTap(context, action);
-      },
-      itemBuilder: (ctx) => [
-        PopupMenuItem<String>(
-          enabled: false,
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: actions.indexed.expand((indexed) {
-              final (index, action) = indexed;
-              return [
-                _CompactButton(
-                  action: action,
-                  isLoading: _isLoading(action.id),
-                  onTap: () => Navigator.of(ctx).pop(action.id),
-                ),
-                if (index < actions.length - 1) const SizedBox(width: 4),
-              ];
-            }).toList(),
-          ),
+    // Constrained overflow button - uses buttonSize for geometric alignment
+    return SizedBox(
+      width: size,
+      height: size,
+      child: PopupMenuButton<String>(
+        iconSize: iconSize,
+        padding: EdgeInsets.zero,
+        icon: Icon(
+          Icons.more_vert,
+          size: iconSize,
+          color: theme.colorScheme.onSurface,
         ),
-      ],
+        tooltip: 'More actions',
+        position: PopupMenuPosition.under,
+        onSelected: (actionId) {
+          final action = actions.firstWhere(
+            (a) => a.id == actionId,
+            orElse: () => actions.first,
+          );
+          _handleTap(context, action);
+        },
+        itemBuilder: (ctx) => [
+          PopupMenuItem<String>(
+            enabled: false,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: actions.indexed.expand((indexed) {
+                final (index, action) = indexed;
+                return [
+                  _CompactButton(
+                    action: action,
+                    isLoading: _isLoading(action.id),
+                    onTap: () => Navigator.of(ctx).pop(action.id),
+                  ),
+                  if (index < actions.length - 1) const SizedBox(width: 4),
+                ];
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -157,25 +177,49 @@ class ActionMenu extends StatelessWidget {
             actions: overflowActions,
             onTap: (action) => _handleTap(context, action),
             isLoading: _isLoading,
+            buttonSize: buttonSize,
           ),
       ],
     );
   }
 
   /// Build single action as icon button
+  /// Uses buttonSize if provided (geometric sizing from table row height),
+  /// otherwise falls back to platform-aware TouchTarget defaults
   Widget _buildActionButton(BuildContext context, ActionItem action) {
     final isLoading = _isLoading(action.id);
+    final size = buttonSize ?? PlatformUtilities.minInteractiveSize;
+    // Icon is 60% of button size for visual balance
+    final iconSize = (size * 0.6).clamp(16.0, 24.0);
 
     if (isLoading) {
-      return const SizedBox(
-        width: 40,
-        height: 40,
+      return SizedBox(
+        width: size,
+        height: size,
         child: Center(
           child: SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(strokeWidth: 2),
+            width: iconSize,
+            height: iconSize,
+            child: const CircularProgressIndicator(strokeWidth: 2),
           ),
+        ),
+      );
+    }
+
+    // When buttonSize is provided, render with exact sizing
+    // Otherwise use TouchTarget for platform-aware sizing
+    if (buttonSize != null) {
+      return SizedBox(
+        width: size,
+        height: size,
+        child: IconButton(
+          icon: Icon(action.icon ?? Icons.circle, size: iconSize),
+          tooltip: action.effectiveTooltip,
+          onPressed: action.isInteractive
+              ? () => _handleTap(context, action)
+              : null,
+          padding: EdgeInsets.zero,
+          constraints: BoxConstraints(maxWidth: size, maxHeight: size),
         ),
       );
     }
@@ -193,59 +237,78 @@ class _ActionOverflowButton extends StatelessWidget {
   final List<ActionItem> actions;
   final void Function(ActionItem action) onTap;
   final bool Function(String actionId) isLoading;
+  final double? buttonSize;
 
   const _ActionOverflowButton({
     required this.actions,
     required this.onTap,
     required this.isLoading,
+    this.buttonSize,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final size = buttonSize ?? 32.0;
+    final iconSize = (size * 0.5).clamp(16.0, 24.0);
 
-    return PopupMenuButton<String>(
-      icon: Icon(Icons.more_vert, color: theme.colorScheme.onSurface),
-      tooltip: 'More actions',
-      position: PopupMenuPosition.under,
-      onSelected: (actionId) {
-        final action = actions.firstWhere(
-          (a) => a.id == actionId,
-          orElse: () => actions.first,
-        );
-        onTap(action);
-      },
-      itemBuilder: (ctx) => [
-        PopupMenuItem<String>(
-          enabled: false,
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: actions.indexed.expand((indexed) {
-              final (index, action) = indexed;
-              return [
-                _CompactButton(
-                  action: action,
-                  isLoading: isLoading(action.id),
-                  onTap: () {
-                    Navigator.of(ctx).pop(action.id);
-                  },
-                ),
-                if (index < actions.length - 1) const SizedBox(width: 4),
-              ];
-            }).toList(),
-          ),
+    // Constrained overflow button - uses buttonSize for geometric alignment
+    return SizedBox(
+      width: size,
+      height: size,
+      child: PopupMenuButton<String>(
+        iconSize: iconSize,
+        padding: EdgeInsets.zero,
+        icon: Icon(
+          Icons.more_vert,
+          size: iconSize,
+          color: theme.colorScheme.onSurface,
         ),
-      ],
+        tooltip: 'More actions',
+        position: PopupMenuPosition.under,
+        onSelected: (actionId) {
+          final action = actions.firstWhere(
+            (a) => a.id == actionId,
+            orElse: () => actions.first,
+          );
+          onTap(action);
+        },
+        itemBuilder: (ctx) => [
+          PopupMenuItem<String>(
+            enabled: false,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: actions.indexed.expand((indexed) {
+                final (index, action) = indexed;
+                return [
+                  _CompactButton(
+                    action: action,
+                    isLoading: isLoading(action.id),
+                    onTap: () {
+                      Navigator.of(ctx).pop(action.id);
+                    },
+                  ),
+                  if (index < actions.length - 1) const SizedBox(width: 4),
+                ];
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
-/// Compact button for overflow menu
+/// Compact button for overflow menu (used in popup, not constrained by table row)
 class _CompactButton extends StatelessWidget {
   final ActionItem action;
   final bool isLoading;
   final VoidCallback? onTap;
+
+  // Compact buttons in popup use fixed 40x40 sizing
+  static const double _buttonSize = 40.0;
+  static const double _iconSize = 24.0;
 
   const _CompactButton({
     required this.action,
@@ -266,8 +329,8 @@ class _CompactButton extends StatelessWidget {
 
     if (isLoading) {
       return SizedBox(
-        width: 40,
-        height: 40,
+        width: _buttonSize,
+        height: _buttonSize,
         child: Center(
           child: SizedBox(
             width: 16,
@@ -287,7 +350,7 @@ class _CompactButton extends StatelessWidget {
           padding: const EdgeInsets.all(8),
           child: Icon(
             action.icon ?? Icons.circle,
-            size: 24,
+            size: _iconSize,
             color: isInteractive ? color : color.withValues(alpha: 0.5),
           ),
         ),

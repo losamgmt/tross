@@ -169,6 +169,7 @@ class _EntityScreenState extends State<EntityScreen> {
                       currentUserId: currentUserId,
                       onRefresh: _refreshTable,
                     ),
+                maxRowActions: GenericTableActionBuilders.maxRowActionCount,
                 onRowTap: (entity) {
                   final id = entity['id'];
                   if (id != null) {

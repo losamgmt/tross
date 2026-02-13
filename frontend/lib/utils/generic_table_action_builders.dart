@@ -168,6 +168,13 @@ class GenericTableActionBuilders {
     return items;
   }
 
+  /// Returns the maximum number of row actions (SSOT for geometric layout)
+  ///
+  /// This is the count of all POSSIBLE row actions regardless of permissions.
+  /// Used by DataTable to compute action column width geometrically.
+  /// Currently: edit + delete = 2
+  static int get maxRowActionCount => 2;
+
   /// Handle export with proper error handling
   static Future<void> _handleExport(
     BuildContext context,

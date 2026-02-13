@@ -1,19 +1,33 @@
 /// AppDataTable - Generic table organism using Flutter's native Table widget
 ///
-/// A clean, composable table component following atomic design principles
-/// Uses Flutter's native Table widget for optimal column sizing and rendering
-/// Type-safe, sortable, filterable, with loading/error/empty states
+/// A clean, composable table component following atomic design principles.
+/// Uses Flutter's native Table widget for optimal column sizing and rendering.
+/// Type-safe, sortable, filterable, with loading/error/empty states.
 ///
 /// Key Features:
 /// - Native Table widget for responsive column widths (IntrinsicColumnWidth)
-/// - Platform-adaptive row actions:
-///   - Desktop/Web (pointer): Hover reveals actions with gradient fade
-///   - Mobile (touch): Long-press shows action bottom sheet
-/// - Sortable columns
+/// - Right-pinned actions column visible during horizontal scroll
+/// - Responsive action modes: inline (desktop), hybrid (tablet), overflow (mobile)
+/// - Touch devices: Long-press shows action bottom sheet
+/// - Sortable columns with visual indicators
 /// - Pagination support
 /// - Loading/error/empty states
-/// - Pinned columns for mobile (auto-pins first column on compact screens)
+/// - Column visibility and density customization
+/// - Left-pinned columns support for wide tables
 /// - Fully generic and type-safe
+///
+/// Architecture ("Burger Layout"):
+/// - TOP BUN: Header row spans full width (no actions cell)
+/// - INSIDES: Data rows + right-pinned actions (vertically scroll-synced)
+/// - BOTTOM BUN: Horizontal scrollbar extends under actions area
+///
+/// This ensures actions only appear alongside data rows, not as a full-height
+/// column with its own header. The horizontal scrollbar properly spans beneath
+/// the actions for a clean, professional appearance.
+///
+/// Utilities:
+/// - [ScrollSyncGroup] for coordinated scrolling between table sections
+/// - [TableColors] for centralized, theme-aware styling
 ///
 /// Usage:
 /// ```dart
@@ -40,9 +54,11 @@ import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
 import '../../../config/app_spacing.dart';
 import '../../../config/platform_utilities.dart';
+import '../../../config/table_colors.dart';
 import '../../../config/table_column.dart';
 import '../../../config/table_config.dart';
 import '../../../config/constants.dart';
+import '../../../utils/scroll_sync_group.dart';
 import '../../../utils/helpers/pagination_helper.dart';
 import '../../atoms/interactions/resize_handle.dart';
 import '../../atoms/interactions/touch_target.dart';
@@ -70,6 +86,11 @@ class AppDataTable<T> extends StatefulWidget {
 
   /// Row-level action items (data-driven, rendered via ActionMenu)
   final List<ActionItem> Function(T item)? rowActionItems;
+
+  /// Maximum number of row actions for geometric width calculation
+  /// Should match the SSOT (e.g., GenericTableActionBuilders.maxRowActionCount)
+  /// Defaults to 2 (edit + delete) if not specified
+  final int maxRowActions;
 
   // Toolbar
   final void Function(String query)? onSearch;
@@ -111,6 +132,7 @@ class AppDataTable<T> extends StatefulWidget {
     this.errorMessage,
     this.onRowTap,
     this.rowActionItems,
+    this.maxRowActions = 2,
     this.onSearch,
     this.toolbarActions,
     this.paginated = false,
@@ -132,16 +154,25 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
   String? _sortColumnId;
   SortDirection _sortDirection = SortDirection.none;
   int _currentPage = 1;
-  final ScrollController _dataScrollController = ScrollController();
 
-  /// Currently hovered row index (for action overlay)
-  int? _hoveredRowIndex;
+  // Scroll sync groups for coordinated scrolling between table sections
+  final ScrollSyncGroup _verticalSync = ScrollSyncGroup();
+  final ScrollSyncGroup _horizontalSync = ScrollSyncGroup();
 
-  /// Action items for the currently hovered row (cached for overlay)
-  List<ActionItem>? _hoveredRowActions;
+  // Pre-created controllers - all vertical controllers sync together
+  late final ScrollController _dataScrollController = _verticalSync
+      .createController();
+  late final ScrollController _actionsScrollController = _verticalSync
+      .createController();
+  late final ScrollController _pinnedLeftScrollController = _verticalSync
+      .createController();
 
-  /// LayerLink for connecting hovered row to action overlay
-  final LayerLink _hoveredRowLink = LayerLink();
+  // Horizontal scroll controllers - header and data sync together
+  // Separate controllers needed because each ScrollView needs its own
+  late final ScrollController _headerHorizontalScrollController =
+      _horizontalSync.createController();
+  late final ScrollController _dataHorizontalScrollController = _horizontalSync
+      .createController();
 
   /// Tracks user-resized column widths by column id
   /// Columns not in this map use default width
@@ -159,7 +190,7 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
 
   /// Check if device has pointer (mouse) capability
   /// Touch devices: long-press shows action bottom sheet
-  /// Pointer devices: hover reveals action overlay
+  /// Pointer devices: inline actions in dedicated column
   bool _hasPointerCapability(BuildContext context) {
     // Web: assume pointer capability (desktop browsers)
     if (kIsWeb) return true;
@@ -170,6 +201,63 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
     return platform == TargetPlatform.macOS ||
         platform == TargetPlatform.windows ||
         platform == TargetPlatform.linux;
+  }
+
+  /// Get responsive action menu mode based on screen size
+  /// Mobile: overflow menu (single "more" button)
+  /// Tablet: hybrid (2 inline + overflow)
+  /// Desktop: inline (all actions visible)
+  ActionMenuMode _getRowActionMode(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    if (AppBreakpoints.isMobile(width)) return ActionMenuMode.overflow;
+    if (AppBreakpoints.isTablet(width)) return ActionMenuMode.hybrid;
+    return ActionMenuMode.inline;
+  }
+
+  /// Shared vertical padding calculator for action cells
+  /// Matches _buildDataCell padding for consistent row heights
+  double _actionVerticalPadding(AppSpacing spacing) => switch (_density) {
+    TableDensity.compact => spacing.xs,
+    TableDensity.standard => spacing.sm,
+    TableDensity.comfortable => spacing.md,
+  };
+
+  /// Shared horizontal padding calculator for action cells
+  /// Desktop inline: zero padding - buttons ARE the content and fill edge-to-edge
+  /// Mobile overflow: minimal padding for visual breathing room
+  double _actionHorizontalPadding(
+    AppSpacing spacing,
+    ActionMenuMode actionMode,
+  ) => actionMode == ActionMenuMode.inline
+      ? 0.0 // Desktop: buttons fill cell, no extra padding needed
+      : spacing.xxs; // Mobile/hybrid: minimal padding
+
+  /// ACTION BUTTON SIZE fits WITHIN the row content area (geometric truth)
+  /// Buttons are squares that fit inside the row's padded content area.
+  /// This ensures action rows have the same height as data rows.
+  double _actionButtonSize(AppSpacing spacing) {
+    final vPadding = _actionVerticalPadding(spacing);
+    return _density.rowHeight - 2 * vPadding;
+  }
+
+  /// Computed action cell width based on geometry
+  /// Width = (buttons × buttonSize) + gaps + padding
+  double _actionCellWidth(ActionMenuMode mode, AppSpacing spacing) {
+    final buttonSize = _actionButtonSize(spacing);
+    final gap = spacing.sm;
+    final hPadding = _actionHorizontalPadding(spacing, mode);
+
+    return switch (mode) {
+      // Overflow: 1 button + padding
+      ActionMenuMode.overflow => buttonSize + 2 * hPadding,
+      // Inline: N buttons + (N-1) gaps + padding
+      ActionMenuMode.inline =>
+        widget.maxRowActions * buttonSize +
+            (widget.maxRowActions - 1) * gap +
+            2 * hPadding,
+      // Hybrid: 2 inline + 1 overflow = 3 buttons + 2 gaps + padding
+      ActionMenuMode.hybrid => 3 * buttonSize + 2 * gap + 2 * hPadding,
+    };
   }
 
   /// Show action bottom sheet for touch devices (long-press pattern)
@@ -335,7 +423,8 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
 
   @override
   void dispose() {
-    _dataScrollController.dispose();
+    _verticalSync.dispose();
+    _horizontalSync.dispose();
     super.dispose();
   }
 
@@ -521,14 +610,15 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
     }
   }
 
-  /// Builds the table using Flutter's native Table widget
+  /// Builds the table using Flutter's native Table widget ("Burger Layout")
   ///
-  /// Uses IntrinsicColumnWidth so columns size to their content naturally.
-  /// Horizontal and vertical scroll enabled when content exceeds viewport.
-  /// Supports pinned columns for mobile viewing.
+  /// Structure:
+  /// - TOP BUN: Header row (horizontal scroll synced, no actions cell)
+  /// - INSIDES: Data rows + actions column (vertically scroll-synced)
+  /// - BOTTOM BUN: Horizontal scrollbar (spans full width including under actions)
+  ///
+  /// When pinnedColumns > 0, delegates to [_buildPinnedColumnsTable] instead.
   Widget _buildNativeTable() {
-    final theme = Theme.of(context);
-    final spacing = context.spacing;
     final hasActions = widget.rowActionItems != null;
     final data = _sortedAndPaginatedData;
 
@@ -539,112 +629,169 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
     if (effectivePinnedColumns > 0 &&
         _visibleColumns.length > effectivePinnedColumns) {
       return _buildPinnedColumnsTable(
-        theme,
+        Theme.of(context),
         data,
         hasActions,
         effectivePinnedColumns,
       );
     }
 
-    // Standard single table (no pinning)
-    final horizontalScrollController = ScrollController();
-    final verticalScrollController = ScrollController();
+    // === BURGER LAYOUT ===
+    // Top bun: Header row (full width, no actions)
+    // Insides: Data rows + Actions (height-matched via IntrinsicHeight)
+    // Bottom bun: Horizontal scrollbar (full width, extends under actions)
 
-    // When autoSizeColumns is true, table fills container width (no horizontal scroll)
-    // When false, horizontal scroll allows wider tables to overflow
-    final tableWidget = _buildUnifiedTable(
-      theme,
-      data,
-      includeActions: hasActions,
-    );
+    // Build header table (just header row, no actions)
+    final headerTable = _buildHeaderOnlyTable();
 
-    // Standard table layout with nested scrollbars
-    // Vertical scroll wraps horizontal scroll for 2D scrolling
-    final scrollContent = Scrollbar(
-      controller: verticalScrollController,
+    // Simple case: no horizontal scroll needed (auto-size columns)
+    if (widget.autoSizeColumns) {
+      // When actions are present, use unified builder for exact height alignment
+      // Otherwise just build data rows table
+      final dataContent = hasActions
+          ? _buildDataRowsWithActions(data)
+          : _buildDataRowsOnlyTable(data);
+
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // TOP BUN: Header (fixed, no scroll)
+          headerTable,
+
+          // INSIDES: Unified data rows with actions (perfect height alignment)
+          Expanded(
+            child: Scrollbar(
+              controller: _dataScrollController,
+              thumbVisibility: true,
+              trackVisibility: true,
+              thickness: StyleConstants.scrollbarThickness,
+              radius: Radius.circular(StyleConstants.scrollbarRadius),
+              child: SingleChildScrollView(
+                controller: _dataScrollController,
+                physics: PlatformUtilities.scrollPhysics,
+                child: dataContent,
+              ),
+            ),
+          ),
+
+          // Bottom padding for scrollbar clearance
+          SizedBox(height: StyleConstants.scrollbarThickness + 4),
+        ],
+      );
+    }
+
+    // Full case: horizontal scroll with burger layout
+    // Actions are pinned right (outside horizontal scroll), synced vertically
+    final dataRowsTable = _buildDataRowsOnlyTable(data);
+    final actionsTable = hasActions
+        ? _buildActionsTable(
+            theme: Theme.of(context),
+            data: data,
+            spacing: context.spacing,
+            scrollController: _actionsScrollController,
+          )
+        : null;
+
+    // Data section: horizontally scrollable, vertically scrollable
+    final dataSection = Scrollbar(
+      controller: _dataScrollController,
       thumbVisibility: true,
       trackVisibility: true,
       thickness: StyleConstants.scrollbarThickness,
       radius: Radius.circular(StyleConstants.scrollbarRadius),
       child: SingleChildScrollView(
-        controller: verticalScrollController,
-        scrollDirection: Axis.vertical,
-        child: widget.autoSizeColumns
-            // Auto-size: table stretches to fill container, no horizontal scroll
-            // Add bottom padding only for vertical scrollbar track
-            ? Padding(
-                padding: EdgeInsets.only(
-                  bottom: StyleConstants.scrollbarThickness + 4,
-                ),
-                child: tableWidget,
-              )
-            // Fixed widths: horizontal scroll for overflow
-            // Add bottom padding inside scroll area so horizontal scrollbar
-            // doesn't overlay table content
-            : Scrollbar(
-                controller: horizontalScrollController,
-                thumbVisibility: true,
-                trackVisibility: true,
-                thickness: StyleConstants.scrollbarThickness,
-                radius: Radius.circular(StyleConstants.scrollbarRadius),
-                notificationPredicate: (notification) =>
-                    notification.depth == 0,
-                child: SingleChildScrollView(
-                  controller: horizontalScrollController,
-                  scrollDirection: Axis.horizontal,
-                  child: Padding(
-                    padding: EdgeInsets.only(
-                      bottom: StyleConstants.scrollbarThickness + 4,
-                    ),
-                    child: tableWidget,
-                  ),
-                ),
+        controller: _dataScrollController,
+        physics: PlatformUtilities.scrollPhysics,
+        child: Scrollbar(
+          controller: _dataHorizontalScrollController,
+          thumbVisibility: true,
+          trackVisibility: true,
+          thickness: StyleConstants.scrollbarThickness,
+          radius: Radius.circular(StyleConstants.scrollbarRadius),
+          notificationPredicate: (notification) => notification.depth == 0,
+          child: SingleChildScrollView(
+            controller: _dataHorizontalScrollController,
+            scrollDirection: Axis.horizontal,
+            child: Padding(
+              padding: EdgeInsets.only(
+                bottom: StyleConstants.scrollbarThickness + 4,
               ),
+              child: dataRowsTable,
+            ),
+          ),
+        ),
       ),
     );
 
-    // Wrap in Stack with viewport-anchored action overlay for pointer devices
-    // The CompositedTransformFollower positions the overlay relative to the hovered row
-    // but renders it outside the scroll views so it stays anchored to viewport edge
-    final hasPointer = _hasPointerCapability(context);
-    if (!hasPointer ||
-        _hoveredRowActions == null ||
-        _hoveredRowActions!.isEmpty) {
-      return scrollContent;
-    }
-
-    // Get row background color for the hovered row
-    final hoveredIndex = _hoveredRowIndex ?? 0;
-    final isEvenRow = hoveredIndex % 2 == 0;
-    final rowColor = isEvenRow
-        ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.05)
-        : theme.colorScheme.surface;
-
-    return ClipRect(
-      child: Stack(
-        children: [
-          scrollContent,
-          // Action overlay positioned at viewport right edge, following hovered row vertically
-          Positioned(
-            right:
-                StyleConstants.scrollbarThickness + 4, // Account for scrollbar
-            child: IgnorePointer(
-              ignoring: false,
-              child: CompositedTransformFollower(
-                link: _hoveredRowLink,
-                targetAnchor: Alignment.centerRight,
-                followerAnchor: Alignment.centerLeft,
-                showWhenUnlinked: false,
-                child: _buildRowActionOverlay(
-                  _hoveredRowActions!,
-                  rowColor,
-                  spacing,
-                  _density.rowHeight,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // TOP BUN: Header (horizontal scroll synced, no vertical scroll)
+        // Use IntrinsicHeight to ensure header and actions header match height
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Header scrolls horizontally (synced with data)
+              Expanded(
+                child: SingleChildScrollView(
+                  controller: _headerHorizontalScrollController,
+                  scrollDirection: Axis.horizontal,
+                  physics: const ClampingScrollPhysics(),
+                  child: headerTable,
                 ),
               ),
-            ),
+              // Actions header placeholder (matches data header height via IntrinsicHeight)
+              if (hasActions) _buildActionsHeaderPlaceholder(context.spacing),
+            ],
           ),
-        ],
+        ),
+
+        // INSIDES: Data + Actions side by side
+        Expanded(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Data section (scrolls horizontally and vertically)
+              Expanded(child: dataSection),
+              // Actions section (pinned right, syncs vertically)
+              if (actionsTable != null) actionsTable,
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Build a placeholder for the actions header to maintain alignment
+  /// Must match the width of action data cells and height of data header row
+  Widget _buildActionsHeaderPlaceholder(AppSpacing spacing) {
+    final colors = TableColors.of(context);
+    final actionMode = _getRowActionMode(context);
+    final leftBorder = Border(
+      left: BorderSide(color: colors.headerBorder, width: 1),
+    );
+
+    // Use shared helpers for consistent sizing
+    final horizontalPadding = _actionHorizontalPadding(spacing, actionMode);
+
+    return Container(
+      decoration: colors.headerDecoration,
+      // Constrain width to match action data cells
+      constraints: BoxConstraints(
+        minWidth: _actionCellWidth(actionMode, spacing),
+      ),
+      child: Container(
+        decoration: BoxDecoration(border: leftBorder),
+        // Header uses spacing.md vertical padding (matches _buildHeaderCell)
+        padding: EdgeInsets.symmetric(
+          horizontal: horizontalPadding,
+          vertical: spacing.md,
+        ),
+        // Empty content - just need the space
+        child: const SizedBox.shrink(),
       ),
     );
   }
@@ -661,7 +808,7 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
     return 0;
   }
 
-  /// Build table with pinned columns (split into frozen left + scrollable right)
+  /// Build table with pinned columns (split into frozen left + scrollable middle + actions right)
   Widget _buildPinnedColumnsTable(
     ThemeData theme,
     List<T> data,
@@ -670,35 +817,13 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
   ) {
     final spacing = context.spacing;
 
-    // Synchronize vertical scroll between pinned and scrollable sections
-    final pinnedVerticalController = ScrollController();
-    final scrollableVerticalController = ScrollController();
-    final horizontalScrollController = ScrollController();
+    // Using pre-created controllers from ScrollSyncGroup - sync is automatic
 
-    bool isSyncing = false;
+    // Split columns into pinned and scrollable (actions handled separately)
+    final pinnedCols = _visibleColumns.take(pinnedCount).toList();
+    final scrollableCols = _visibleColumns.skip(pinnedCount).toList();
 
-    void syncScroll(ScrollController source, ScrollController target) {
-      if (isSyncing) return;
-      isSyncing = true;
-      target.jumpTo(source.offset);
-      isSyncing = false;
-    }
-
-    pinnedVerticalController.addListener(() {
-      syncScroll(pinnedVerticalController, scrollableVerticalController);
-    });
-    scrollableVerticalController.addListener(() {
-      syncScroll(scrollableVerticalController, pinnedVerticalController);
-    });
-
-    // Split columns into pinned and scrollable
-    // Split columns into pinned and scrollable (no special actions handling)
-    final allCols = _visibleColumns.cast<dynamic>();
-
-    final pinnedCols = allCols.take(pinnedCount).toList();
-    final scrollableCols = allCols.skip(pinnedCount).toList();
-
-    // Build pinned section
+    // Build pinned section (no actions)
     final pinnedTable = _buildTableSection(
       theme: theme,
       data: data,
@@ -707,45 +832,42 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
       isPinned: true,
     );
 
-    // Build scrollable section
+    // Build scrollable section (no actions)
     final scrollableTable = _buildTableSection(
       theme: theme,
       data: data,
       columns: scrollableCols,
       spacing: spacing,
-      isPinned: false,
+      isPinned: true, // Treat as pinned to exclude actions
     );
 
-    final content = LayoutBuilder(
+    // Build right-pinned actions table (unified table with per-cell borders)
+    final actionsTable = hasActions
+        ? _buildActionsTable(
+            theme: theme,
+            data: data,
+            spacing: spacing,
+            scrollController: _actionsScrollController,
+          )
+        : null;
+
+    return LayoutBuilder(
       builder: (context, constraints) {
         // Calculate pinned section width (capped at 40% of available width)
         final maxPinnedWidth = constraints.maxWidth * 0.4;
+        final colors = TableColors.of(context);
 
-        return Row(
+        // Build the left-pinned + scrollable middle layout
+        final dataLayout = Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Pinned section (frozen)
+            // Left pinned section (frozen)
             Container(
               constraints: BoxConstraints(maxWidth: maxPinnedWidth),
-              decoration: BoxDecoration(
-                border: Border(
-                  right: BorderSide(
-                    color: theme.colorScheme.outline.withValues(alpha: 0.3),
-                    width: 2,
-                  ),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: theme.colorScheme.shadow.withValues(alpha: 0.1),
-                    blurRadius: 4,
-                    offset: const Offset(2, 0),
-                  ),
-                ],
-              ),
+              decoration: colors.leftPinnedDecoration,
               child: SingleChildScrollView(
-                controller: pinnedVerticalController,
+                controller: _pinnedLeftScrollController,
                 physics: PlatformUtilities.scrollPhysics,
-                // Add bottom padding to clear horizontal scrollbar in scrollable section
                 child: Padding(
                   padding: EdgeInsets.only(
                     bottom: StyleConstants.scrollbarThickness + 4,
@@ -755,21 +877,20 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
               ),
             ),
 
-            // Scrollable section
+            // Scrollable middle section
             Expanded(
               child: Scrollbar(
-                controller: horizontalScrollController,
+                controller: _dataHorizontalScrollController,
                 thumbVisibility: true,
                 thickness: StyleConstants.scrollbarThickness,
                 radius: Radius.circular(StyleConstants.scrollbarRadius),
                 child: SingleChildScrollView(
-                  controller: horizontalScrollController,
+                  controller: _dataHorizontalScrollController,
                   scrollDirection: Axis.horizontal,
                   physics: PlatformUtilities.scrollPhysics,
                   child: SingleChildScrollView(
-                    controller: scrollableVerticalController,
+                    controller: _dataScrollController,
                     physics: PlatformUtilities.scrollPhysics,
-                    // Add bottom padding inside scroll area for horizontal scrollbar
                     child: Padding(
                       padding: EdgeInsets.only(
                         bottom: StyleConstants.scrollbarThickness + 4,
@@ -782,75 +903,46 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
             ),
           ],
         );
+
+        // If no actions, return simple Row layout
+        if (actionsTable == null) {
+          return dataLayout;
+        }
+
+        // Add actions table (per-cell borders, no column container)
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Data layout (left-pinned + scrollable middle)
+            Expanded(child: dataLayout),
+
+            // Right-pinned actions table
+            actionsTable,
+          ],
+        );
       },
-    );
-
-    // Wrap in Stack with viewport-anchored action overlay for pointer devices
-    final hasPointer = _hasPointerCapability(context);
-    if (!hasPointer ||
-        _hoveredRowActions == null ||
-        _hoveredRowActions!.isEmpty) {
-      return content;
-    }
-
-    // Get row background color for the hovered row
-    final hoveredIndex = _hoveredRowIndex ?? 0;
-    final isEvenRow = hoveredIndex % 2 == 0;
-    final rowColor = isEvenRow
-        ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.05)
-        : theme.colorScheme.surface;
-
-    return ClipRect(
-      child: Stack(
-        children: [
-          content,
-          // Action overlay positioned at viewport right edge, following hovered row vertically
-          Positioned(
-            right: StyleConstants.scrollbarThickness + 4,
-            child: IgnorePointer(
-              ignoring: false,
-              child: CompositedTransformFollower(
-                link: _hoveredRowLink,
-                targetAnchor: Alignment.centerRight,
-                followerAnchor: Alignment.centerLeft,
-                showWhenUnlinked: false,
-                child: _buildRowActionOverlay(
-                  _hoveredRowActions!,
-                  rowColor,
-                  spacing,
-                  _density.rowHeight,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
   /// Build a table section (for pinned columns layout)
-  /// Actions overlay appears in scrollable section only (not pinned)
+  /// Data columns only - actions are in a separate right-pinned column
   Widget _buildTableSection({
     required ThemeData theme,
     required List<T> data,
-    required List<dynamic> columns,
+    required List<TableColumn<T>> columns,
     required AppSpacing spacing,
     required bool isPinned,
   }) {
-    final borderColor = theme.colorScheme.outline.withValues(alpha: 0.1);
-    final headerBorderColor = theme.colorScheme.outline.withValues(alpha: 0.2);
-    final headerColor = theme.colorScheme.surfaceContainerHighest.withValues(
-      alpha: 0.5,
-    );
+    final colors = TableColors.of(context);
+    final hasPointer = _hasPointerCapability(context);
 
-    // Column widths (no special actions column)
+    // Column widths for data columns only
     final columnWidths = <int, TableColumnWidth>{};
     for (var i = 0; i < columns.length; i++) {
-      final col = columns[i];
+      final column = columns[i];
       if (widget.autoSizeColumns) {
         columnWidths[i] = const IntrinsicColumnWidth(flex: 1.0);
       } else {
-        final column = col as TableColumn<T>;
         final width =
             _columnWidths[column.id] ?? TableConfig.defaultColumnWidth;
         columnWidths[i] = FixedColumnWidth(width);
@@ -858,140 +950,170 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
     }
 
     // Build header row
-    final headerRow = TableRow(
-      decoration: BoxDecoration(
-        color: headerColor,
-        border: Border(bottom: BorderSide(color: headerBorderColor, width: 2)),
-      ),
-      children: columns.map((col) {
-        final column = col as TableColumn<T>;
-        final isCurrentSort = _sortColumnId == column.id;
-        return _buildHeaderCell(
-          child: ColumnHeader(
-            label: column.label,
-            sortable: column.sortable,
-            sortDirection: isCurrentSort ? _sortDirection : SortDirection.none,
-            onSort: column.sortable ? () => _handleSort(column.id) : null,
-            textAlign: column.alignment,
-          ),
-          spacing: spacing,
-          onTap: column.sortable ? () => _handleSort(column.id) : null,
-          columnId: isPinned ? null : column.id,
-        );
-      }).toList(),
-    );
-
-    // Build data rows with hover/touch detection for scrollable section
-    // Touch devices: long-press to show actions; Pointer devices: hover reveals actions
-    final hasPointer = _hasPointerCapability(context);
-    final dataRows = data.asMap().entries.map((entry) {
-      final index = entry.key;
-      final item = entry.value;
-      final isEvenRow = index % 2 == 0;
-      final isHovered = _hoveredRowIndex == index;
-
-      // Only show actions in scrollable (non-pinned) section
-      final actionItems = !isPinned
-          ? (widget.rowActionItems?.call(item) ?? [])
-          : <ActionItem>[];
-
-      return TableRow(
-        decoration: BoxDecoration(
-          color: isHovered && !isPinned
-              ? theme.colorScheme.primaryContainer.withValues(alpha: 0.1)
-              : (isEvenRow
-                    ? theme.colorScheme.surfaceContainerHighest.withValues(
-                        alpha: 0.05,
-                      )
-                    : null),
-          border: Border(bottom: BorderSide(color: borderColor, width: 1)),
+    final headerChildren = columns.map((column) {
+      final isCurrentSort = _sortColumnId == column.id;
+      return _buildHeaderCell(
+        child: ColumnHeader(
+          label: column.label,
+          sortable: column.sortable,
+          sortDirection: isCurrentSort ? _sortDirection : SortDirection.none,
+          onSort: column.sortable ? () => _handleSort(column.id) : null,
+          textAlign: column.alignment,
         ),
-        children: columns.asMap().entries.map((colEntry) {
-          final colIndex = colEntry.key;
-          final column = colEntry.value as TableColumn<T>;
-          final isFirstColumn = colIndex == 0;
-
-          Widget cellContent = column.cellBuilder(item);
-
-          // Pointer devices: first cell of hovered row gets CompositedTransformTarget
-          // (in scrollable section only) for viewport-anchored action overlay
-          if (!isPinned &&
-              hasPointer &&
-              isFirstColumn &&
-              actionItems.isNotEmpty &&
-              isHovered) {
-            cellContent = CompositedTransformTarget(
-              link: _hoveredRowLink,
-              child: cellContent,
-            );
-          }
-
-          return _buildDataCell(
-            child: cellContent,
-            spacing: spacing,
-            onTap: widget.onRowTap != null
-                ? () => widget.onRowTap!(item)
-                : null,
-            onHover: !isPinned && hasPointer
-                ? () => setState(() {
-                    _hoveredRowIndex = index;
-                    _hoveredRowActions = actionItems;
-                  })
-                : null,
-            // Touch devices: long-press shows action bottom sheet (scrollable section only)
-            onLongPress: !isPinned && !hasPointer && actionItems.isNotEmpty
-                ? () => _showActionBottomSheet(context, actionItems)
-                : null,
-          );
-        }).toList(),
+        spacing: spacing,
+        onTap: column.sortable ? () => _handleSort(column.id) : null,
+        columnId: isPinned ? null : column.id,
       );
     }).toList();
 
-    final table = Table(
+    final headerRow = TableRow(
+      decoration: colors.headerDecoration,
+      children: headerChildren,
+    );
+
+    // Build data rows
+    final dataRows = data.asMap().entries.map((entry) {
+      final index = entry.key;
+      final item = entry.value;
+
+      // Get action items for long-press support
+      final actionItems = widget.rowActionItems?.call(item) ?? <ActionItem>[];
+
+      // Build data cells for each column
+      final cellChildren = columns.map((column) {
+        final cellContent = column.cellBuilder(item);
+
+        return _buildDataCell(
+          child: cellContent,
+          spacing: spacing,
+          onTap: widget.onRowTap != null ? () => widget.onRowTap!(item) : null,
+          // Touch devices: long-press shows action bottom sheet
+          onLongPress: !hasPointer && actionItems.isNotEmpty
+              ? () => _showActionBottomSheet(context, actionItems)
+              : null,
+        );
+      }).toList();
+
+      return TableRow(
+        decoration: colors.dataRowDecoration(index),
+        children: cellChildren,
+      );
+    }).toList();
+
+    return Table(
       columnWidths: columnWidths,
       defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-      border: TableBorder(
-        verticalInside: BorderSide(color: borderColor, width: 1),
-      ),
+      border: colors.tableBorder,
       children: [headerRow, ...dataRows],
     );
-
-    // Wrap scrollable section in MouseRegion to clear hover on exit
-    if (!isPinned) {
-      return MouseRegion(
-        onExit: (_) => setState(() {
-          _hoveredRowIndex = null;
-          _hoveredRowActions = null;
-        }),
-        child: table,
-      );
-    }
-
-    return table;
   }
 
-  /// Builds a unified table with sticky header + scrollable body
-  Widget _buildUnifiedTable(
-    ThemeData theme,
-    List<T> data, {
-    bool includeActions = false,
+  /// Build the right-pinned actions table (data rows only, no header)
+  /// Header is handled separately by _buildActionsHeaderPlaceholder
+  /// Uses per-cell borders for clean visual separation - no column-level container
+  Widget _buildActionsTable({
+    required ThemeData theme,
+    required List<T> data,
+    required AppSpacing spacing,
+    required ScrollController scrollController,
   }) {
-    final spacing = context.spacing;
-    final borderColor = theme.colorScheme.outline.withValues(alpha: 0.1);
-    final headerBorderColor = theme.colorScheme.outline.withValues(alpha: 0.2);
-    final headerColor = theme.colorScheme.surfaceContainerHighest.withValues(
-      alpha: 0.5,
+    final colors = TableColors.of(context);
+    final actionMode = _getRowActionMode(context);
+
+    // Single column width (intrinsic for tight fit)
+    final columnWidths = <int, TableColumnWidth>{
+      0: const IntrinsicColumnWidth(),
+    };
+
+    // Left border applied to cells for visual separation from data columns
+    final leftBorder = Border(
+      left: BorderSide(color: colors.headerBorder, width: 1),
     );
 
-    // Use visible columns (respects hidden state)
-    final visibleCols = _visibleColumns;
+    // Build data rows with actions (NO header - header handled separately)
+    final dataRows = data.asMap().entries.map((entry) {
+      final index = entry.key;
+      final item = entry.value;
+      final actionItems = widget.rowActionItems?.call(item) ?? <ActionItem>[];
 
-    // Column widths: data columns are resizable or auto-sized
-    // No dedicated actions column - actions overlay on hover
+      return TableRow(
+        decoration: colors.dataRowDecoration(index),
+        children: [
+          _buildActionCell(
+            child: actionItems.isNotEmpty
+                ? ActionMenu(
+                    actions: actionItems,
+                    mode: actionMode,
+                    maxInline: 2,
+                    buttonSize: _actionButtonSize(spacing),
+                  )
+                : const SizedBox.shrink(),
+            spacing: spacing,
+            actionMode: actionMode,
+            leftBorder: leftBorder,
+          ),
+        ],
+      );
+    }).toList();
+
+    // Data rows only (header is separate)
+    final actionsTable = Table(
+      columnWidths: columnWidths,
+      defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+      children: dataRows,
+    );
+
+    // Scrollable, synced with data section
+    return SingleChildScrollView(
+      controller: scrollController,
+      physics: PlatformUtilities.scrollPhysics,
+      child: Padding(
+        padding: EdgeInsets.only(bottom: StyleConstants.scrollbarThickness + 4),
+        child: actionsTable,
+      ),
+    );
+  }
+
+  /// Build an action cell with compact padding for actions column
+  /// Uses shared helpers for consistent sizing across all action cell builders
+  /// Per-cell leftBorder provides visual separation without column-level container
+  Widget _buildActionCell({
+    required Widget child,
+    required AppSpacing spacing,
+    required ActionMenuMode actionMode,
+    Border? leftBorder,
+  }) {
+    // Use shared helpers for consistent sizing
+    final verticalPadding = _actionVerticalPadding(spacing);
+    final horizontalPadding = _actionHorizontalPadding(spacing, actionMode);
+
+    Widget content = Container(
+      // Per-cell border for clean visual separation (no column-level container)
+      decoration: leftBorder != null ? BoxDecoration(border: leftBorder) : null,
+      constraints: BoxConstraints(
+        minHeight: _density.rowHeight,
+        minWidth: _actionCellWidth(actionMode, spacing),
+      ),
+      padding: EdgeInsets.symmetric(
+        horizontal: horizontalPadding,
+        vertical: verticalPadding,
+      ),
+      child: Center(child: child),
+    );
+
+    return TableCell(
+      verticalAlignment: TableCellVerticalAlignment.middle,
+      child: content,
+    );
+  }
+
+  /// Builds the column widths map for visible columns
+  /// Shared between header and data table builders to ensure alignment
+  Map<int, TableColumnWidth> _buildColumnWidths() {
+    final visibleCols = _visibleColumns;
     final columnWidths = <int, TableColumnWidth>{};
     for (var i = 0; i < visibleCols.length; i++) {
       if (widget.autoSizeColumns) {
-        // Auto-size: columns size to content but stretch to fill container
         columnWidths[i] = const IntrinsicColumnWidth(flex: 1.0);
       } else {
         final column = visibleCols[i];
@@ -1000,157 +1122,192 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
         columnWidths[i] = FixedColumnWidth(width);
       }
     }
+    return columnWidths;
+  }
+
+  /// Builds ONLY the header row as a Table (no data rows)
+  /// This is the "top bun" of the burger layout - spans full width, no actions
+  Widget _buildHeaderOnlyTable() {
+    final spacing = context.spacing;
+    final colors = TableColors.of(context);
+    final visibleCols = _visibleColumns;
+    final columnWidths = _buildColumnWidths();
 
     // Build header row
-    final headerRow = TableRow(
-      decoration: BoxDecoration(
-        color: headerColor,
-        border: Border(bottom: BorderSide(color: headerBorderColor, width: 2)),
-      ),
-      children: visibleCols.map((column) {
-        final isCurrentSort = _sortColumnId == column.id;
-        return _buildHeaderCell(
-          child: ColumnHeader(
-            label: column.label,
-            sortable: column.sortable,
-            sortDirection: isCurrentSort ? _sortDirection : SortDirection.none,
-            onSort: column.sortable ? () => _handleSort(column.id) : null,
-            textAlign: column.alignment,
-          ),
-          spacing: spacing,
-          onTap: column.sortable ? () => _handleSort(column.id) : null,
-          columnId: column.id,
-        );
-      }).toList(),
-    );
-
-    // Build data rows with hover detection for action overlay
-    // Touch devices: long-press to show actions; Pointer devices: hover reveals actions
-    final hasPointer = _hasPointerCapability(context);
-    final dataRows = data.asMap().entries.map((entry) {
-      final index = entry.key;
-      final item = entry.value;
-      final isEvenRow = index % 2 == 0;
-      final isHovered = _hoveredRowIndex == index;
-      final actionItems = includeActions
-          ? (widget.rowActionItems?.call(item) ?? [])
-          : <ActionItem>[];
-
-      return TableRow(
-        decoration: BoxDecoration(
-          color: isHovered
-              ? theme.colorScheme.primaryContainer.withValues(alpha: 0.1)
-              : (isEvenRow
-                    ? theme.colorScheme.surfaceContainerHighest.withValues(
-                        alpha: 0.05,
-                      )
-                    : null),
-          border: Border(bottom: BorderSide(color: borderColor, width: 1)),
+    final headerChildren = visibleCols.map((column) {
+      final isCurrentSort = _sortColumnId == column.id;
+      return _buildHeaderCell(
+        child: ColumnHeader(
+          label: column.label,
+          sortable: column.sortable,
+          sortDirection: isCurrentSort ? _sortDirection : SortDirection.none,
+          onSort: column.sortable ? () => _handleSort(column.id) : null,
+          textAlign: column.alignment,
         ),
-        children: visibleCols.asMap().entries.map((colEntry) {
-          final colIndex = colEntry.key;
-          final column = colEntry.value;
-          final isFirstColumn = colIndex == 0;
-
-          Widget cellContent = column.cellBuilder(item);
-
-          // Pointer devices: first cell of hovered row gets CompositedTransformTarget
-          // This allows the action overlay to follow the row's position
-          if (hasPointer &&
-              isFirstColumn &&
-              isHovered &&
-              actionItems.isNotEmpty) {
-            cellContent = CompositedTransformTarget(
-              link: _hoveredRowLink,
-              child: cellContent,
-            );
-          }
-
-          return _buildDataCell(
-            child: cellContent,
-            spacing: spacing,
-            onTap: widget.onRowTap != null
-                ? () => widget.onRowTap!(item)
-                : null,
-            onHover: hasPointer
-                ? () => setState(() {
-                    _hoveredRowIndex = index;
-                    _hoveredRowActions = actionItems;
-                  })
-                : null,
-            // Touch devices: long-press shows action bottom sheet
-            onLongPress: !hasPointer && actionItems.isNotEmpty
-                ? () => _showActionBottomSheet(context, actionItems)
-                : null,
-          );
-        }).toList(),
+        spacing: spacing,
+        onTap: column.sortable ? () => _handleSort(column.id) : null,
+        columnId: column.id,
       );
     }).toList();
 
-    // Single unified table - header and data rows together for perfect column alignment
-    final unifiedTable = MouseRegion(
-      onExit: (_) => setState(() {
-        _hoveredRowIndex = null;
-        _hoveredRowActions = null;
-      }),
-      child: Table(
-        columnWidths: columnWidths,
-        defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-        border: TableBorder(
-          verticalInside: BorderSide(color: borderColor, width: 1),
-        ),
-        children: [headerRow, ...dataRows],
-      ),
+    final headerRow = TableRow(
+      decoration: colors.headerDecoration,
+      children: headerChildren,
     );
 
-    // Wrap in constrained scrollable container for vertical scroll when needed
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxHeight: TableConfig.maxBodyHeight),
-      child: SingleChildScrollView(
-        controller: _dataScrollController,
-        child: unifiedTable,
-      ),
+    return Table(
+      columnWidths: columnWidths,
+      defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+      border: colors.tableBorder,
+      children: [headerRow],
     );
   }
 
-  /// Build the row action overlay for pointer devices (hover-reveal)
-  /// Shows gradient fade with inline/hybrid actions
-  Widget _buildRowActionOverlay(
-    List<ActionItem> actions,
-    Color backgroundColor,
-    AppSpacing spacing,
-    double rowHeight,
-  ) {
-    return MouseRegion(
-      // Keep hover active when moving to actions
-      onEnter: (_) {},
-      child: SizedBox(
-        height: rowHeight,
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-              colors: [
-                backgroundColor.withValues(alpha: 0.0),
-                backgroundColor.withValues(alpha: 0.9),
-                backgroundColor,
-              ],
-              stops: const [0.0, 0.3, 0.5],
-            ),
+  /// Builds ONLY the data rows as a Table (no header row)
+  /// This is part of the "insides" of the burger layout
+  Widget _buildDataRowsOnlyTable(List<T> data) {
+    final spacing = context.spacing;
+    final colors = TableColors.of(context);
+    final visibleCols = _visibleColumns;
+    final hasPointer = _hasPointerCapability(context);
+    final columnWidths = _buildColumnWidths();
+
+    // Build data rows only (no header)
+    final dataRows = data.asMap().entries.map((entry) {
+      final index = entry.key;
+      final item = entry.value;
+      final actionItems = widget.rowActionItems?.call(item) ?? <ActionItem>[];
+
+      final cellChildren = visibleCols.map((column) {
+        final cellContent = column.cellBuilder(item);
+        return _buildDataCell(
+          child: cellContent,
+          spacing: spacing,
+          onTap: widget.onRowTap != null ? () => widget.onRowTap!(item) : null,
+          onLongPress: !hasPointer && actionItems.isNotEmpty
+              ? () => _showActionBottomSheet(context, actionItems)
+              : null,
+        );
+      }).toList();
+
+      return TableRow(
+        decoration: colors.dataRowDecoration(index),
+        children: cellChildren,
+      );
+    }).toList();
+
+    return Table(
+      columnWidths: columnWidths,
+      defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+      border: colors.tableBorder,
+      children: dataRows,
+    );
+  }
+
+  /// Builds unified data rows WITH actions - each row uses IntrinsicHeight
+  /// for perfect height alignment between data table and action cell.
+  /// This is the "insides" of the burger layout.
+  Widget _buildDataRowsWithActions(List<T> data) {
+    final spacing = context.spacing;
+    final colors = TableColors.of(context);
+    final visibleCols = _visibleColumns;
+    final hasPointer = _hasPointerCapability(context);
+    final columnWidths = _buildColumnWidths();
+    final actionMode = _getRowActionMode(context);
+
+    // Left border for action cells
+    final leftBorder = Border(
+      left: BorderSide(color: colors.headerBorder, width: 1),
+    );
+
+    // Build each row as IntrinsicHeight(Row[DataTable + ActionCell])
+    // This guarantees exact height alignment
+    final rows = data.asMap().entries.map((entry) {
+      final index = entry.key;
+      final item = entry.value;
+      final actionItems = widget.rowActionItems?.call(item) ?? <ActionItem>[];
+
+      // Build single-row Table for this data row
+      final cellChildren = visibleCols.map((column) {
+        final cellContent = column.cellBuilder(item);
+        return _buildDataCell(
+          child: cellContent,
+          spacing: spacing,
+          onTap: widget.onRowTap != null ? () => widget.onRowTap!(item) : null,
+          onLongPress: !hasPointer && actionItems.isNotEmpty
+              ? () => _showActionBottomSheet(context, actionItems)
+              : null,
+        );
+      }).toList();
+
+      final dataRowTable = Table(
+        columnWidths: columnWidths,
+        defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+        border: colors.tableBorder,
+        children: [
+          TableRow(
+            decoration: colors.dataRowDecoration(index),
+            children: cellChildren,
           ),
-          padding: EdgeInsets.only(left: spacing.xl, right: spacing.sm),
-          child: Center(
-            child: ActionMenu(
-              actions: actions,
-              mode: actions.length <= 3
-                  ? ActionMenuMode.inline
-                  : ActionMenuMode.hybrid,
-              maxInline: 3,
-            ),
-          ),
+        ],
+      );
+
+      // Build action cell for this row
+      final actionCell = Container(
+        decoration: colors.dataRowDecoration(index),
+        child: _buildActionCellContent(
+          child: actionItems.isNotEmpty
+              ? ActionMenu(
+                  actions: actionItems,
+                  mode: actionMode,
+                  maxInline: 2,
+                  buttonSize: _actionButtonSize(spacing),
+                )
+              : const SizedBox.shrink(),
+          spacing: spacing,
+          actionMode: actionMode,
+          leftBorder: leftBorder,
         ),
+      );
+
+      // IntrinsicHeight ensures both children have the same height
+      // Don't use Expanded - let the Table size naturally (works in unbounded contexts)
+      return IntrinsicHeight(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [dataRowTable, actionCell],
+        ),
+      );
+    }).toList();
+
+    return Column(mainAxisSize: MainAxisSize.min, children: rows);
+  }
+
+  /// Builds ONLY the action cells as a Column (no header)
+  /// Build action cell content with proper padding (used by unified row builder)
+  Widget _buildActionCellContent({
+    required Widget child,
+    required AppSpacing spacing,
+    required ActionMenuMode actionMode,
+    Border? leftBorder,
+  }) {
+    // Use shared helpers for consistent sizing with other action cell builders
+    final verticalPadding = _actionVerticalPadding(spacing);
+    final horizontalPadding = _actionHorizontalPadding(spacing, actionMode);
+
+    return Container(
+      decoration: leftBorder != null ? BoxDecoration(border: leftBorder) : null,
+      // Constrain width to match action header and other action cells
+      constraints: BoxConstraints(
+        minWidth: _actionCellWidth(actionMode, spacing),
+        minHeight: _density.rowHeight,
       ),
+      padding: EdgeInsets.symmetric(
+        horizontal: horizontalPadding,
+        vertical: verticalPadding,
+      ),
+      child: Center(child: child),
     );
   }
 
@@ -1210,7 +1367,6 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
     required Widget child,
     required AppSpacing spacing,
     VoidCallback? onTap,
-    VoidCallback? onHover,
     VoidCallback? onLongPress,
   }) {
     // Calculate padding based on density
@@ -1247,11 +1403,6 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
         onLongPress: onLongPress,
         child: content,
       );
-    }
-
-    // Wrap in MouseRegion for hover detection (pointer devices)
-    if (onHover != null) {
-      content = MouseRegion(onEnter: (_) => onHover(), child: content);
     }
 
     return TableCell(
