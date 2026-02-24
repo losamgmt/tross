@@ -69,9 +69,14 @@ class MetadataTableColumnFactory {
 
   /// Get default visible fields for an entity
   ///
-  /// Shows ALL fields from metadata, minus system fields (id, created_at, updated_at)
-  /// Tables should show everything by default; filtering is done via visibleFields param
+  /// Uses displayColumns from metadata if configured, otherwise shows all
+  /// non-system fields. Tables can further filter via visibleFields param.
   static List<String> _getDefaultVisibleFields(EntityMetadata metadata) {
+    // Use explicit displayColumns if configured
+    if (metadata.displayColumns?.isNotEmpty ?? false) {
+      return metadata.displayColumns!;
+    }
+    // Fallback: all fields minus system fields
     final systemFields = {'id', 'created_at', 'updated_at'};
     return metadata.fields.keys
         .where((f) => !systemFields.contains(f))
@@ -91,7 +96,7 @@ class MetadataTableColumnFactory {
 
     return TableColumn<Map<String, dynamic>>(
       id: fieldName,
-      label: _fieldToLabel(fieldName),
+      label: _fieldToLabel(fieldName, metadata),
       sortable: isSortable,
       width: _getColumnWidth(fieldDef?.type, fieldName),
       cellBuilder:
@@ -109,9 +114,21 @@ class MetadataTableColumnFactory {
 
   /// Convert field name to display label
   ///
-  /// 'first_name' -> 'First Name'
-  static String _fieldToLabel(String fieldName) {
-    return fieldName
+  /// Uses fieldAliases from metadata if configured, otherwise generates
+  /// from field name: 'first_name' -> 'First Name'
+  static String _fieldToLabel(String fieldName, EntityMetadata metadata) {
+    // Use explicit alias if configured
+    final alias = metadata.fieldAliases?[fieldName];
+    if (alias != null) return alias;
+
+    // Generate from field name
+    return _snakeToTitleCase(fieldName);
+  }
+
+  /// Convert snake_case to Title Case
+  /// Simple conversion without metadata lookup
+  static String _snakeToTitleCase(String text) {
+    return text
         .split('_')
         .map(
           (word) => word.isEmpty
@@ -203,7 +220,7 @@ class MetadataTableColumnFactory {
     GenericEntityService entityService,
     VoidCallback? onEntityUpdated,
   ) {
-    final displayName = _fieldToLabel(entityName);
+    final displayName = _snakeToTitleCase(entityName);
     return TableCellBuilders.editableBooleanCell<Map<String, dynamic>>(
       item: item,
       value: value,

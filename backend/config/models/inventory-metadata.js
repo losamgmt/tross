@@ -17,6 +17,7 @@ const {
 const { NAME_TYPES } = require('../entity-types');
 const { FIELD } = require('../field-type-standards');
 
+/** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
   // Entity key (singular, for API params and lookups)
   entityKey: 'inventory',
@@ -145,9 +146,8 @@ module.exports = {
   displayColumns: [
     'sku',
     'name',
-    'category',
     'quantity',
-    'unit_price',
+    'unit_cost',
     'status',
   ],
 

@@ -29,6 +29,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:tross/models/permission.dart';
 import 'package:tross/services/generic_entity_service.dart';
 import 'package:tross/services/permission_service_dynamic.dart';
 import 'package:tross/utils/generic_table_action_builders.dart';
@@ -75,6 +76,29 @@ abstract final class WidgetTestFactory {
             final metadata = EntityTestRegistry.tryGet(entityName);
             if (metadata != null && !metadata.rlsResource.isRealResource) {
               return; // Skip test
+            }
+
+            // Skip read-only entities where admin can't update OR delete
+            // (e.g., audit_log is system-only)
+            final resourceType = ResourceType.fromString(
+              metadata?.rlsResource.toBackendString() ?? entityName,
+            );
+            // Skip if resource type is not recognized
+            if (resourceType == null) {
+              return;
+            }
+            final canUpdate = PermissionService.hasPermission(
+              'admin',
+              resourceType,
+              CrudOperation.update,
+            );
+            final canDelete = PermissionService.hasPermission(
+              'admin',
+              resourceType,
+              CrudOperation.delete,
+            );
+            if (!canUpdate && !canDelete) {
+              return; // Skip read-only entities
             }
 
             final entity = EntityDataGenerator.create(entityName);

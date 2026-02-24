@@ -237,8 +237,8 @@ class MetadataFieldConfigFactory {
     GenericEntityService? entityService,
     bool readOnly = false,
   }) {
-    // Generate label from field name
-    final label = _fieldNameToLabel(fieldName);
+    // Generate label from field name (with alias lookup)
+    final label = _fieldNameToLabel(fieldName, metadata);
 
     // Build validator
     final validator = _buildValidator(fieldDef, metadata);
@@ -310,7 +310,16 @@ class MetadataFieldConfigFactory {
   }
 
   /// Convert field_name to "Field Name"
-  static String _fieldNameToLabel(String fieldName) {
+  /// Uses fieldAliases from metadata if configured
+  static String _fieldNameToLabel(
+    String fieldName,
+    meta.EntityMetadata? metadata,
+  ) {
+    // Use explicit alias if configured
+    final alias = metadata?.fieldAliases?[fieldName];
+    if (alias != null) return alias;
+
+    // Generate from field name
     return fieldName
         .split('_')
         .map(
@@ -332,7 +341,7 @@ class MetadataFieldConfigFactory {
     if (fieldDef.required || metadata.isRequired(fieldDef.name)) {
       validators.add((value) {
         if (value == null || (value is String && value.trim().isEmpty)) {
-          return '${_fieldNameToLabel(fieldDef.name)} is required';
+          return '${_fieldNameToLabel(fieldDef.name, metadata)} is required';
         }
         return null;
       });
@@ -613,7 +622,7 @@ class MetadataFieldConfigFactory {
       required: fieldDef.required,
       readOnly: readOnly,
       selectItems: items,
-      displayText: (item) => _fieldNameToLabel(item.toString()),
+      displayText: (item) => _fieldNameToLabel(item.toString(), null),
       allowEmpty: !fieldDef.required,
     );
   }

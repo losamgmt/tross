@@ -161,6 +161,21 @@ class EntityMetadata {
   /// Used by forms to organize fields into logical sections
   final Map<String, FieldGroup> fieldGroups;
 
+  /// Default columns to display in table views
+  /// If empty/null, all non-system fields are shown
+  final List<String>? displayColumns;
+
+  /// UI label overrides for fields
+  /// Maps field name to custom label (e.g., {'name': 'Title'})
+  final Map<String, String>? fieldAliases;
+
+  /// Entity naming pattern type
+  /// - 'human': Uses first_name + last_name (user, customer, technician)
+  /// - 'simple': Has direct name field (role, inventory)
+  /// - 'computed': Auto-generated ID (work_order, invoice)
+  /// - null: System table (notification, audit_log)
+  final String? nameType;
+
   const EntityMetadata({
     required this.entityKey,
     required this.tableName,
@@ -181,6 +196,9 @@ class EntityMetadata {
     required this.displayNamePlural,
     this.preferenceSchema,
     this.fieldGroups = const {},
+    this.displayColumns,
+    this.fieldAliases,
+    this.nameType,
   });
 
   factory EntityMetadata.fromJson(String name, Map<String, dynamic> json) {
@@ -245,6 +263,12 @@ class EntityMetadata {
       displayNamePlural: displayNamePlural,
       preferenceSchema: _parsePreferenceSchema(json['preferenceSchema']),
       fieldGroups: _parseFieldGroups(json['fieldGroups']),
+      displayColumns: (json['displayColumns'] as List<dynamic>?)
+          ?.cast<String>(),
+      fieldAliases: (json['fieldAliases'] as Map<String, dynamic>?)?.map(
+        (k, v) => MapEntry(k, v as String),
+      ),
+      nameType: json['nameType'] as String?,
     );
   }
 

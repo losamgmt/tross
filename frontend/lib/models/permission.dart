@@ -27,6 +27,10 @@
 /// Last synced: 2025-11-07 (Added permission enforcement documentation)
 library;
 
+// Re-export generated ResourceType enum (SSOT from backend metadata)
+// To regenerate: npm run generate:resource-types
+export '../generated/resource_type.dart' show ResourceType;
+
 /// CRUD Operations
 /// Standard operations for all resources
 enum CrudOperation {
@@ -47,61 +51,6 @@ enum CrudOperation {
 
   @override
   String toString() => name;
-}
-
-/// System Resources
-/// All resources that can be permission-controlled
-/// Must match backend permissions.json resources
-enum ResourceType {
-  users,
-  roles,
-  workOrders('work_orders'),
-  auditLogs('audit_logs'),
-  contracts,
-  customers,
-  inventory,
-  invoices,
-  technicians,
-  preferences,
-  savedViews('saved_views'),
-  notifications,
-  // Synthetic resources (nav visibility, not entity CRUD)
-  dashboard,
-  adminPanel('admin_panel'),
-  // System-managed resources (not directly editable via UI)
-  systemSettings('system_settings'),
-  // Special marker: polymorphic entities derive permissions from parent context
-  // This is NOT a real resource - used only in entity metadata to indicate
-  // that the entity doesn't have its own RLS policy (e.g., file_attachment)
-  parentDerived('_parent_derived');
-
-  final String? _value;
-  const ResourceType([this._value]);
-
-  /// Whether this is a real permission resource (vs a marker like parentDerived)
-  bool get isRealResource => this != parentDerived;
-
-  /// Get backend-compatible string (snake_case)
-  String toBackendString() => _value ?? name;
-
-  /// Get ResourceType from string (handles both camelCase and snake_case)
-  static ResourceType? fromString(String? resource) {
-    if (resource == null || resource.isEmpty) return null;
-    final lower = resource.toLowerCase();
-    return ResourceType.values.cast<ResourceType?>().firstWhere(
-      (r) =>
-          r?.name.toLowerCase() == lower ||
-          r?.toBackendString().toLowerCase() == lower,
-      orElse: () => null,
-    );
-  }
-
-  /// Get all real resources (excludes markers like parentDerived)
-  static List<ResourceType> get realResources =>
-      values.where((r) => r.isRealResource).toList();
-
-  @override
-  String toString() => _value ?? name;
 }
 
 /// User Roles (matches backend hierarchy)

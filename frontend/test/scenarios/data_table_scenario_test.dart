@@ -157,12 +157,17 @@ void main() {
           withProviders: true,
         );
 
-        // Columns should be generated (minus system fields: id, created_at, updated_at)
-        final expectedFields = metadata.fields.keys
-            .where((f) => !{'id', 'created_at', 'updated_at'}.contains(f))
-            .length;
+        // Use displayColumns if configured, otherwise all fields minus system fields
+        final int expectedCount;
+        if (metadata.displayColumns?.isNotEmpty ?? false) {
+          expectedCount = metadata.displayColumns!.length;
+        } else {
+          expectedCount = metadata.fields.keys
+              .where((f) => !{'id', 'created_at', 'updated_at'}.contains(f))
+              .length;
+        }
 
-        expect(columns.length, equals(expectedFields));
+        expect(columns.length, equals(expectedCount));
       });
 
       testWidgets('$entityName - column ids match field names', (tester) async {
