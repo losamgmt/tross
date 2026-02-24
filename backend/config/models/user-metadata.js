@@ -17,6 +17,7 @@ const {
 const { NAME_TYPES } = require('../entity-types');
 const { FIELD } = require('../field-type-standards');
 
+/** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
   // Entity key (singular, for API params and lookups)
   entityKey: 'user',
@@ -170,7 +171,7 @@ module.exports = {
     'first_name',
     'last_name',
     'email',
-    'role',
+    'role_id',
     'status',
     'created_at',
   ],

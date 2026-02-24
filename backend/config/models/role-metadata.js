@@ -18,6 +18,7 @@ const { getRoleHierarchy } = require('../role-hierarchy-loader');
 const { NAME_TYPES } = require('../entity-types');
 const { FIELD } = require('../field-type-standards');
 
+/** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
   // Entity key (singular, for API params and lookups)
   entityKey: 'role',

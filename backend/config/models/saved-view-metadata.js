@@ -16,6 +16,7 @@
 const { FIELD_ACCESS_LEVELS: FAL } = require('../constants');
 const { FIELD } = require('../field-type-standards');
 
+/** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
   // Entity key (singular, for API params and lookups)
   entityKey: 'saved_view',

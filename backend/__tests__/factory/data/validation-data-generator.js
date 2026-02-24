@@ -354,11 +354,45 @@ function generateFromConstraints(fieldDef, fieldName, uniqueId, uniqueSuffix) {
       const numMin = fieldDef.min ?? 0;
       return numMin + counterPart * 10.5;
 
+    case "decimal":
+      // Decimal with precision (e.g., 123.45)
+      const decMin = fieldDef.min ?? 0;
+      const decMax = fieldDef.max ?? 10000;
+      const precision = fieldDef.precision ?? 2;
+      const value = Math.min(decMin + counterPart * 1.5, decMax);
+      return Number(value.toFixed(precision));
+
+    case "currency":
+      // Currency stored as integer cents (e.g., 1234 = $12.34)
+      const currMin = fieldDef.min ?? 0;
+      const currMax = fieldDef.max ?? 999999;
+      return Math.min(currMin + counterPart * 100, currMax);
+
     case "boolean":
       return true;
 
     case "date":
       return new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+
+    case "timestamp":
+      // Full ISO timestamp with time
+      return new Date().toISOString();
+
+    case "text":
+      // Long-form text content
+      return `Test content for ${fieldName}. Generated with ID: ${uniqueId}. This is sample text.`;
+
+    case "email":
+      // Email format
+      return `test_${uniqueId}@example.com`;
+
+    case "uuid":
+      // UUID v4 format with counter for uniqueness
+      return `00000000-0000-4000-8000-${String(counterPart).padStart(12, "0")}`;
+
+    case "foreignKey":
+      // Foreign key - return a valid ID (assumes related record exists)
+      return counterPart;
 
     case "enum":
       // Pick a valid enum value (cycle through based on counter)
@@ -391,7 +425,8 @@ function generateFromConstraints(fieldDef, fieldName, uniqueId, uniqueSuffix) {
       // but throw here as a safety net
       throw new Error(
         `Unknown field type '${fieldDef.type}' for field '${fieldName}'. ` +
-          `Supported types: string, integer, number, boolean, date, enum, json, jsonb, array, phone. ` +
+          `Supported types: string, text, integer, number, decimal, currency, boolean, ` +
+          `date, timestamp, email, uuid, enum, foreignKey, json, jsonb, array, phone. ` +
           `Add support in validation-data-generator.js or fix the field metadata.`,
       );
   }

@@ -652,32 +652,43 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
           ? _buildDataRowsWithActions(data)
           : _buildDataRowsOnlyTable(data);
 
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // TOP BUN: Header (fixed, no scroll)
-          headerTable,
+      // Wrap in LayoutBuilder to detect bounded vs unbounded height
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final hasFiniteHeight = constraints.maxHeight.isFinite;
 
-          // INSIDES: Unified data rows with actions (perfect height alignment)
-          Expanded(
-            child: Scrollbar(
+          final scrollableContent = Scrollbar(
+            controller: _dataScrollController,
+            thumbVisibility: true,
+            trackVisibility: true,
+            thickness: StyleConstants.scrollbarThickness,
+            radius: Radius.circular(StyleConstants.scrollbarRadius),
+            child: SingleChildScrollView(
               controller: _dataScrollController,
-              thumbVisibility: true,
-              trackVisibility: true,
-              thickness: StyleConstants.scrollbarThickness,
-              radius: Radius.circular(StyleConstants.scrollbarRadius),
-              child: SingleChildScrollView(
-                controller: _dataScrollController,
-                physics: PlatformUtilities.scrollPhysics,
-                child: dataContent,
-              ),
+              physics: PlatformUtilities.scrollPhysics,
+              child: dataContent,
             ),
-          ),
+          );
 
-          // Bottom padding for scrollbar clearance
-          SizedBox(height: StyleConstants.scrollbarThickness + 4),
-        ],
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // TOP BUN: Header (fixed, no scroll)
+              headerTable,
+
+              // INSIDES: Unified data rows with actions (perfect height alignment)
+              // Use Expanded only when we have finite height constraints
+              if (hasFiniteHeight)
+                Expanded(child: scrollableContent)
+              else
+                scrollableContent,
+
+              // Bottom padding for scrollbar clearance
+              SizedBox(height: StyleConstants.scrollbarThickness + 4),
+            ],
+          );
+        },
       );
     }
 
@@ -724,44 +735,56 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
       ),
     );
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // TOP BUN: Header (horizontal scroll synced, no vertical scroll)
-        // Use IntrinsicHeight to ensure header and actions header match height
-        IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Header scrolls horizontally (synced with data)
-              Expanded(
-                child: SingleChildScrollView(
-                  controller: _headerHorizontalScrollController,
-                  scrollDirection: Axis.horizontal,
-                  physics: const ClampingScrollPhysics(),
-                  child: headerTable,
-                ),
-              ),
-              // Actions header placeholder (matches data header height via IntrinsicHeight)
-              if (hasActions) _buildActionsHeaderPlaceholder(context.spacing),
-            ],
-          ),
-        ),
+    // Wrap in LayoutBuilder to detect bounded vs unbounded height
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final hasFiniteHeight = constraints.maxHeight.isFinite;
 
-        // INSIDES: Data + Actions side by side
-        Expanded(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Data section (scrolls horizontally and vertically)
-              Expanded(child: dataSection),
-              // Actions section (pinned right, syncs vertically)
-              if (actionsTable != null) actionsTable,
-            ],
-          ),
-        ),
-      ],
+        final dataAndActionsRow = Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Data section (scrolls horizontally and vertically)
+            Expanded(child: dataSection),
+            // Actions section (pinned right, syncs vertically)
+            if (actionsTable != null) actionsTable,
+          ],
+        );
+
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // TOP BUN: Header (horizontal scroll synced, no vertical scroll)
+            // Use IntrinsicHeight to ensure header and actions header match height
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Header scrolls horizontally (synced with data)
+                  Expanded(
+                    child: SingleChildScrollView(
+                      controller: _headerHorizontalScrollController,
+                      scrollDirection: Axis.horizontal,
+                      physics: const ClampingScrollPhysics(),
+                      child: headerTable,
+                    ),
+                  ),
+                  // Actions header placeholder (matches data header height via IntrinsicHeight)
+                  if (hasActions)
+                    _buildActionsHeaderPlaceholder(context.spacing),
+                ],
+              ),
+            ),
+
+            // INSIDES: Data + Actions side by side
+            // Use Expanded only when we have finite height constraints
+            if (hasFiniteHeight)
+              Expanded(child: dataAndActionsRow)
+            else
+              dataAndActionsRow,
+          ],
+        );
+      },
     );
   }
 

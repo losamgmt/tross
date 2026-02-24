@@ -29,23 +29,8 @@ let cachedPermissions = null;
 // Synthetic resources not backed by entity metadata
 // These are UI navigation resources or system resources
 const SYNTHETIC_RESOURCES = {
-  audit_logs: {
-    description: 'System audit trail and security events',
-    rlsPolicy: {
-      customer: 'deny_all',
-      technician: 'deny_all',
-      dispatcher: 'deny_all',
-      manager: 'deny_all',
-      admin: 'all_records',
-    },
-    // Entity-level permissions (no fieldAccess to derive from)
-    entityPermissions: {
-      create: 'customer', // System auto-creates
-      read: 'admin',
-      update: 'admin',
-      delete: 'admin',
-    },
-  },
+  // NOTE: audit_logs is NOT here - it's a real entity with its own metadata
+  // See: backend/config/models/audit-log-metadata.js
   dashboard: {
     description: 'Main dashboard view - role-driven overview',
     rlsPolicy: {

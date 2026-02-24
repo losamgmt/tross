@@ -4,7 +4,7 @@
   "title": "Tross Permission Configuration",
   "description": "Single source of truth for role-based access control (RBAC). AUTO-GENERATED from entity metadata - run sync-permissions.js to regenerate.",
   "version": "4.0.0-derived",
-  "lastModified": "2026-01-28",
+  "lastModified": "2026-02-24",
   "roles": {
     "customer": {
       "priority": 1,
@@ -103,7 +103,7 @@
       }
     },
     "audit_logs": {
-      "description": "System audit trail and security events",
+      "description": "audit_logs resource",
       "rowLevelSecurity": {
         "customer": "deny_all",
         "technician": "deny_all",
@@ -113,24 +113,27 @@
       },
       "permissions": {
         "create": {
-          "minimumRole": "customer",
-          "minimumPriority": 1,
-          "description": "Synthetic resource - create permission"
+          "minimumRole": null,
+          "minimumPriority": 0,
+          "description": "Operation disabled - create is system-only (not available via API)",
+          "disabled": true
         },
         "read": {
           "minimumRole": "admin",
           "minimumPriority": 5,
-          "description": "Synthetic resource - read permission"
+          "description": "Entity-level override - read requires admin"
         },
         "update": {
-          "minimumRole": "admin",
-          "minimumPriority": 5,
-          "description": "Synthetic resource - update permission"
+          "minimumRole": null,
+          "minimumPriority": 0,
+          "description": "Operation disabled - update is system-only (not available via API)",
+          "disabled": true
         },
         "delete": {
-          "minimumRole": "admin",
-          "minimumPriority": 5,
-          "description": "Synthetic resource - delete permission"
+          "minimumRole": null,
+          "minimumPriority": 0,
+          "description": "Operation disabled - delete is system-only (not available via API)",
+          "disabled": true
         }
       },
       "navVisibility": {

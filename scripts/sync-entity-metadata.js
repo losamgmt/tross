@@ -18,12 +18,16 @@
 const fs = require("fs");
 const path = require("path");
 
-// Paths
-const BACKEND_MODELS_DIR = path.join(__dirname, "../backend/config/models");
-const FRONTEND_METADATA_PATH = path.join(
-  __dirname,
-  "../frontend/assets/config/entity-metadata.json",
-);
+// Shared utilities - DRY compliance
+const {
+  BACKEND_MODELS_DIR,
+  ENTITY_METADATA_JSON,
+} = require("./lib/paths");
+const {
+  snakeToTitleCase,
+  camelToTitleCase,
+  capitalize,
+} = require("./lib/string-utils");
 
 // Import all backend metadata
 const backendModels = require(path.join(BACKEND_MODELS_DIR, "index.js"));
@@ -72,6 +76,28 @@ function getPluralForm(singular) {
 }
 
 /**
+ * Get entity key from table name using actual metadata lookup.
+ * This is much more robust than naive ".replace(/s$/, "")" de-pluralization.
+ *
+ * @param {string} tableName - Table name (e.g., 'roles', 'work_orders', 'inventory')
+ * @param {object} allModels - All backend models for lookup
+ * @returns {string} Entity key (e.g., 'role', 'work_order', 'inventory')
+ */
+function getEntityKeyFromTable(tableName, allModels) {
+  // First try: direct lookup by tableName in metadata
+  for (const [entityKey, meta] of Object.entries(allModels || {})) {
+    if (meta.tableName === tableName) {
+      return entityKey;
+    }
+  }
+
+  // Fallback: naive de-pluralization (handles regular plurals)
+  // This is only used if table isn't in our metadata (external tables)
+  const naive = tableName.replace(/s$/, "");
+  return naive;
+}
+
+/**
  * Transform backend field definition to frontend format
  */
 function transformField(
@@ -115,14 +141,14 @@ function transformField(
 
     // Determine related entity from relationship or FK config
     if (relConfig) {
-      // Convert table name to entity name (e.g., 'roles' -> 'role')
-      result.relatedEntity = relConfig.table.replace(/s$/, "");
+      // Use metadata lookup to get proper entity key (handles 'inventory' etc.)
+      result.relatedEntity = getEntityKeyFromTable(relConfig.table, allModels);
       // Use first non-id field as display field, or default to entity's identityField
       const displayFields = relConfig.fields?.filter((f) => f !== "id") || [];
       result.displayField =
         displayFields[0] || getDisplayFieldForEntity(result.relatedEntity);
     } else if (fkConfig) {
-      result.relatedEntity = fkConfig.table.replace(/s$/, "");
+      result.relatedEntity = getEntityKeyFromTable(fkConfig.table, allModels);
       result.displayField = getDisplayFieldForEntity(result.relatedEntity);
     }
   }
@@ -136,13 +162,29 @@ function transformField(
   if (fieldDef.min !== undefined) result.min = fieldDef.min;
   if (fieldDef.max !== undefined) result.max = fieldDef.max;
   if (fieldDef.default !== undefined) result.default = fieldDef.default;
-  if (fieldDef.values) result.values = fieldDef.values;
   if (fieldDef.pattern) result.pattern = fieldDef.pattern;
 
-  // Merge enum values from enums definition
-  // Note: Frontend FieldDefinition.fromJson reads 'values' not 'enumValues'
-  if (fieldDef.type === "enum" && enums?.[fieldName]?.values) {
-    result.values = enums[fieldName].values;
+  // Handle enum values with optional colors
+  // Frontend supports: values as array OR object with color info
+  // Output format: { "value1": { "color": "success" }, "value2": null }
+  if (fieldDef.type === "enum") {
+    const enumDef = enums?.[fieldName];
+    const values = enumDef?.values || fieldDef.values || [];
+    const colors = enumDef?.colors || {};
+
+    // Check if any colors are defined
+    const hasColors = Object.keys(colors).length > 0;
+
+    if (hasColors) {
+      // Object format with colors: { "completed": { "color": "success" }, "pending": null }
+      result.values = {};
+      for (const val of values) {
+        result.values[val] = colors[val] ? { color: colors[val] } : null;
+      }
+    } else {
+      // Array format (no colors): ["pending", "completed"]
+      result.values = values;
+    }
   }
 
   return result;
@@ -150,15 +192,19 @@ function transformField(
 
 /**
  * Transform relationships for frontend format
+ * @param {object} foreignKeys - Foreign key configs from metadata
+ * @param {object} relationships - Relationship configs from metadata
+ * @param {object} allModels - All backend models for entity key lookup
  */
-function transformRelationships(foreignKeys, relationships) {
+function transformRelationships(foreignKeys, relationships, allModels) {
   const result = {};
 
   // Process relationships first (more complete info)
   for (const [relName, relConfig] of Object.entries(relationships || {})) {
     const fkField = relConfig.foreignKey;
     if (fkField) {
-      const entityName = relConfig.table.replace(/s$/, "");
+      // Use metadata lookup to get proper entity key (handles 'inventory' etc.)
+      const entityName = getEntityKeyFromTable(relConfig.table, allModels);
       const displayFields = relConfig.fields?.filter((f) => f !== "id") || [];
 
       result[fkField] = {
@@ -173,7 +219,7 @@ function transformRelationships(foreignKeys, relationships) {
   for (const [fkField, fkConfig] of Object.entries(foreignKeys || {})) {
     if (!result[fkField]) {
       result[fkField] = {
-        relatedEntity: fkConfig.table.replace(/s$/, ""),
+        relatedEntity: getEntityKeyFromTable(fkConfig.table, allModels),
         displayField: fkConfig.displayField || "name",
         type: "belongsTo",
       };
@@ -195,12 +241,7 @@ function transformPreferenceSchema(schema) {
     result[key] = {
       ...def,
       // Generate label from camelCase key if not provided
-      label:
-        def.label ||
-        key
-          .replace(/([A-Z])/g, " $1")
-          .replace(/^./, (s) => s.toUpperCase())
-          .trim(),
+      label: def.label || camelToTitleCase(key),
       // Add order if not specified
       order: def.order !== undefined ? def.order : order++,
     };
@@ -209,11 +250,10 @@ function transformPreferenceSchema(schema) {
     if (def.type === "enum" && def.values && !def.displayLabels) {
       result[key].displayLabels = {};
       for (const val of def.values) {
-        // Convert value to display label (e.g., 'system' -> 'System')
-        result[key].displayLabels[val] = val
-          .replace(/([A-Z])/g, " $1")
-          .replace(/^./, (s) => s.toUpperCase())
-          .trim();
+        // Convert value to display label (e.g., 'system' -> 'System', 'in_progress' -> 'In Progress')
+        result[key].displayLabels[val] = val.includes("_")
+          ? snakeToTitleCase(val)
+          : capitalize(val);
       }
     }
   }
@@ -248,12 +288,8 @@ function transformModel(entityName, backendMeta, allModels) {
     result.displayField = backendMeta.displayField;
   }
 
-  // Display names
-  const displayName = entityName
-    .split(/(?=[A-Z])/)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ")
-    .replace("_", " ");
+  // Display names - convert snake_case entity name to Title Case
+  const displayName = snakeToTitleCase(entityName);
   result.displayName = displayName;
   result.displayNamePlural = getPluralForm(displayName);
 
@@ -279,6 +315,25 @@ function transformModel(entityName, backendMeta, allModels) {
     result.defaultSort = backendMeta.defaultSort;
   }
 
+  // Display columns for table views (ordered list of default visible columns)
+  if (backendMeta.displayColumns?.length) {
+    result.displayColumns = backendMeta.displayColumns;
+  }
+
+  // Field aliases for UI labels (e.g., { name: 'Title' })
+  if (
+    backendMeta.fieldAliases &&
+    Object.keys(backendMeta.fieldAliases).length > 0
+  ) {
+    result.fieldAliases = backendMeta.fieldAliases;
+  }
+
+  // Name type for entity category (human, simple, computed, null)
+  // Determines how entity names are displayed/computed
+  if (backendMeta.nameType !== undefined) {
+    result.nameType = backendMeta.nameType;
+  }
+
   // System protected (for roles)
   if (backendMeta.systemProtected) {
     result.systemProtected = backendMeta.systemProtected;
@@ -292,6 +347,7 @@ function transformModel(entityName, backendMeta, allModels) {
   const relationships = transformRelationships(
     backendMeta.foreignKeys,
     backendMeta.relationships,
+    allModels,
   );
   if (relationships) {
     result.relationships = relationships;
@@ -376,10 +432,10 @@ function syncMetadata() {
 
   // Write output
   const output = JSON.stringify(frontendMetadata, null, 2);
-  fs.writeFileSync(FRONTEND_METADATA_PATH, output);
+  fs.writeFileSync(ENTITY_METADATA_JSON, output);
 
   console.log(`\n✅ Synced ${entities.length} entities to:`);
-  console.log(`   ${FRONTEND_METADATA_PATH}`);
+  console.log(`   ${ENTITY_METADATA_JSON}`);
   console.log(`\nEntities: ${entities.join(", ")}`);
 
   return frontendMetadata;
@@ -390,6 +446,7 @@ function syncMetadata() {
 // ============================================================================
 module.exports = {
   getPluralForm,
+  getEntityKeyFromTable,
   transformField,
   transformRelationships,
   transformPreferenceSchema,

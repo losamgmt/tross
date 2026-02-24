@@ -12,6 +12,7 @@
  * - No RLS filtering - admins see all, others see nothing
  */
 
+/** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
   // Entity key (singular, for API params and lookups)
   entityKey: 'audit_log',
@@ -72,7 +73,7 @@ module.exports = {
    * Only admin can read audit logs. No create/update/delete via API.
    * This is the SSOT for "admin only" access control.
    */
-  permissionOverrides: {
+  entityPermissions: {
     read: 'admin',
     create: null,
     update: null,
