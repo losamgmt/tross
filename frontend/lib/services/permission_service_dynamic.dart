@@ -343,16 +343,23 @@ class PermissionService {
 
   /// Get row-level security policy for user's role and resource
   ///
-  /// Returns policy like 'own_record_only', 'all_records', 'assigned_only', etc.
+  /// Returns ADR-008 filter config:
+  /// - `null` → all records (no filtering)
+  /// - `false` → deny all access
+  /// - `'$parent'` → sub-entity uses parent's RLS
+  /// - `'fieldName'` → filter by field using userId
+  /// - `{ 'field': '...', 'value': '...' }` → explicit field/value config
   ///
   /// Example:
   /// ```dart
-  /// final policy = PermissionService.getRowLevelSecurity('customer', ResourceType.users);
-  /// if (policy == 'own_record_only') {
-  ///   // Filter users WHERE id = currentUserId
+  /// final policy = PermissionService.getRowLevelSecurity('customer', ResourceType.workOrders);
+  /// if (policy == false) {
+  ///   // Deny access
+  /// } else if (policy is Map) {
+  ///   // Filter by policy['field'] using context value policy['value']
   /// }
   /// ```
-  static String? getRowLevelSecurity(String? roleName, ResourceType resource) {
+  static dynamic getRowLevelSecurity(String? roleName, ResourceType resource) {
     if (roleName == null || roleName.isEmpty) {
       return null;
     }

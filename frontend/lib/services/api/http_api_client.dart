@@ -404,22 +404,16 @@ class HttpApiClient implements ApiClient {
   /// Build API endpoint from entity name using metadata
   ///
   /// Uses EntityMetadataRegistry for tableName lookup (single source of truth).
-  /// Falls back to pluralization if metadata unavailable or entity unknown.
+  /// ADR-006: Explicit naming only - no derivation or pluralization fallback.
   String _entityEndpoint(String entityName) {
-    // Try metadata first (preferred - single source of truth)
     final metadata = EntityMetadataRegistry.tryGet(entityName);
-    if (metadata != null) {
-      return '/${metadata.tableName}';
+    if (metadata == null) {
+      throw StateError(
+        'Entity "$entityName" not found in metadata registry. '
+        'Ensure EntityMetadataRegistry.initialize() completed and entity exists.',
+      );
     }
-
-    // Fallback: pluralize entity name for API endpoint
-    // Only used when metadata isn't loaded (shouldn't happen in production)
-    final plural = entityName.endsWith('y')
-        ? '${entityName.substring(0, entityName.length - 1)}ies'
-        : entityName.endsWith('s')
-        ? entityName
-        : '${entityName}s';
-    return '/$plural';
+    return '/${metadata.tableName}';
   }
 
   @override

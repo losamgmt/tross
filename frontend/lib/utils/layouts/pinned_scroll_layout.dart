@@ -240,9 +240,9 @@ class _PinnedScrollLayoutState extends State<PinnedScrollLayout> {
     Widget horizontalLayout = Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (leftRegion != null) leftRegion,
+        ?leftRegion,
         Expanded(child: centerContent),
-        if (rightRegion != null) rightRegion,
+        ?rightRegion,
       ],
     );
 
@@ -251,9 +251,9 @@ class _PinnedScrollLayoutState extends State<PinnedScrollLayout> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (topRegion != null) topRegion,
+          ?topRegion,
           Expanded(child: horizontalLayout),
-          if (bottomRegion != null) bottomRegion,
+          ?bottomRegion,
         ],
       );
     }

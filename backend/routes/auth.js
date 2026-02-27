@@ -1,6 +1,6 @@
 // Clean authentication routes
 const express = require('express');
-const jwt = require('jsonwebtoken');
+const { decodeJwt } = require('../utils/jwt-helper');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
 const { attachEntity } = require('../middleware/generic-entity');
 const { refreshLimiter } = require('../middleware/rate-limit');
@@ -244,7 +244,7 @@ router.post(
     );
 
     // Log the refresh
-    const decoded = jwt.decode(refreshToken);
+    const decoded = decodeJwt(refreshToken);
     await auditService.log({
       userId: decoded.userId,
       action: AuditActions.TOKEN_REFRESH,
@@ -291,7 +291,7 @@ router.post(
     const userAgent = getUserAgent(req);
 
     if (refreshToken) {
-      const decoded = jwt.decode(refreshToken);
+      const decoded = decodeJwt(refreshToken);
       if (decoded && decoded.tokenId) {
         await tokenService.revokeToken(decoded.tokenId, 'logout');
       }

@@ -147,7 +147,7 @@ class TestDataBuilders {
     return {
       'token': token ?? devToken(),
       'user': user ?? technicianUser(),
-      if (refreshToken != null) 'refreshToken': refreshToken,
+      'refreshToken': ?refreshToken,
     };
   }
 
@@ -219,7 +219,7 @@ class TestDataBuilders {
     return {
       'statusCode': statusCode,
       'data': data,
-      if (message != null) 'message': message,
+      'message': ?message,
       'timestamp': DateTime.now().toIso8601String(),
     };
   }

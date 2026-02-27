@@ -16,6 +16,8 @@ const {
 } = require('../constants');
 const { NAME_TYPES } = require('../entity-types');
 const {
+  FIELD,
+  ENUM,
   createAddressFields,
   createAddressFieldAccess,
 } = require('../field-type-standards');
@@ -80,13 +82,14 @@ module.exports = {
   /**
    * Row-Level Security policy per role
    * Customers see own work orders, technicians see assigned, dispatcher+ see all
+   * Values: null (all records), false (deny), field string, or { field, value } object
    */
   rlsPolicy: {
-    customer: 'own_work_orders_only',
-    technician: 'assigned_work_orders_only',
-    dispatcher: 'all_records',
-    manager: 'all_records',
-    admin: 'all_records',
+    customer: { field: 'customer_id', value: 'customerProfileId' },
+    technician: { field: 'assigned_technician_id', value: 'technicianProfileId' },
+    dispatcher: null,
+    manager: null,
+    admin: null,
   },
 
   /**
@@ -284,6 +287,15 @@ module.exports = {
   },
 
   // ============================================================================
+  // ENUM DEFINITIONS (for consistent UI colors)
+  // ============================================================================
+
+  enums: {
+    status: ENUM.WORK_ORDER_STATUS,
+    priority: ENUM.PRIORITY,
+  },
+
+  // ============================================================================
   // FOREIGN KEY CONFIGURATION (for db-error-handler.js)
   // ============================================================================
 
@@ -420,9 +432,8 @@ module.exports = {
     // TIER 1: Universal Entity Contract Fields
     id: { type: 'integer', readonly: true },
     work_order_number: {
-      type: 'string',
+      ...FIELD.IDENTIFIER,
       readonly: true, // Auto-generated: WO-YYYY-NNNN
-      maxLength: 100,
       pattern: '^WO-[0-9]{4}-[0-9]+$',
       errorMessages: {
         pattern: 'Work order number must be in format WO-YYYY-NNNN',
@@ -435,19 +446,19 @@ module.exports = {
     // TIER 2: Entity-Specific Lifecycle Field
     status: {
       type: 'enum',
-      values: ['pending', 'assigned', 'in_progress', 'completed', 'cancelled'],
+      values: ENUM.WORK_ORDER_STATUS.values,
       default: 'pending',
     },
 
     // COMPUTED entity name field (aliased as "Title" in UI)
     // Optional because it's computed from template: {customer}: {summary}: {work_order_number}
-    name: { type: 'string', maxLength: 255 },
-    summary: { type: 'string', maxLength: 255 },
+    name: FIELD.NAME,
+    summary: FIELD.SUMMARY,
 
     // Entity-specific fields
     priority: {
       type: 'enum',
-      values: ['low', 'normal', 'high', 'urgent'],
+      values: ENUM.PRIORITY.values,
       default: 'normal',
     },
     customer_id: {

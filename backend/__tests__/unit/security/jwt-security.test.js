@@ -11,7 +11,7 @@
 
 const request = require("supertest");
 const express = require("express");
-const jwt = require("jsonwebtoken");
+const { signJwt } = require("../../../utils/jwt-helper");
 const { authenticateToken } = require("../../../middleware/auth");
 
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-key";
@@ -63,7 +63,7 @@ describe("JWT Security", () => {
 
   describe("Token Expiration", () => {
     test("should reject expired token", async () => {
-      const expiredToken = jwt.sign(
+      const expiredToken = await signJwt(
         {
           sub: "dev|admin001",
           email: "admin@tross.dev",
@@ -83,7 +83,7 @@ describe("JWT Security", () => {
     });
 
     test("should accept token with future expiration", async () => {
-      const validToken = jwt.sign(
+      const validToken = await signJwt(
         {
           sub: "dev|admin001",
           email: "admin@tross.dev",
@@ -104,7 +104,7 @@ describe("JWT Security", () => {
 
   describe("Signature Verification", () => {
     test("should reject token signed with wrong secret", async () => {
-      const wrongSecretToken = jwt.sign(
+      const wrongSecretToken = await signJwt(
         {
           sub: "dev|admin001",
           email: "admin@tross.dev",
@@ -125,7 +125,7 @@ describe("JWT Security", () => {
 
     test("should reject token with tampered payload", async () => {
       // Create a valid token
-      const validToken = jwt.sign(
+      const validToken = await signJwt(
         {
           sub: "dev|admin001",
           email: "admin@tross.dev",
@@ -161,7 +161,7 @@ describe("JWT Security", () => {
     });
 
     test("should reject token with missing signature", async () => {
-      const validToken = jwt.sign(
+      const validToken = await signJwt(
         { sub: "dev|admin001", provider: "development" },
         JWT_SECRET,
       );
@@ -180,7 +180,7 @@ describe("JWT Security", () => {
 
   describe("Required Claims Validation", () => {
     test('should reject token without "sub" claim', async () => {
-      const tokenWithoutSub = jwt.sign(
+      const tokenWithoutSub = await signJwt(
         {
           email: "admin@tross.dev",
           role: "admin",
@@ -199,7 +199,7 @@ describe("JWT Security", () => {
     });
 
     test('should reject token without "provider" claim', async () => {
-      const tokenWithoutProvider = jwt.sign(
+      const tokenWithoutProvider = await signJwt(
         {
           sub: "dev|admin001",
           email: "admin@tross.dev",
@@ -219,7 +219,7 @@ describe("JWT Security", () => {
     });
 
     test("should reject token with invalid provider", async () => {
-      const tokenWithInvalidProvider = jwt.sign(
+      const tokenWithInvalidProvider = await signJwt(
         {
           sub: "dev|admin001",
           email: "admin@tross.dev",
@@ -239,7 +239,7 @@ describe("JWT Security", () => {
     });
 
     test('should accept token with valid "development" provider', async () => {
-      const validToken = jwt.sign(
+      const validToken = await signJwt(
         {
           sub: "dev|admin001",
           email: "admin@tross.dev",
@@ -261,7 +261,7 @@ describe("JWT Security", () => {
       // Note: auth0 tokens require database user lookup
       // In unit tests without DB mock, this will fail at DB level
       // This is expected behavior - auth0 users must exist in DB
-      const validToken = jwt.sign(
+      const validToken = await signJwt(
         {
           sub: "auth0|123456",
           email: "user@example.com",
@@ -310,7 +310,7 @@ describe("JWT Security", () => {
     test("should handle very long tokens gracefully", async () => {
       // Create a token with an extremely long payload
       const longData = "x".repeat(10000);
-      const longToken = jwt.sign(
+      const longToken = await signJwt(
         {
           sub: "dev|admin001",
           provider: "development",

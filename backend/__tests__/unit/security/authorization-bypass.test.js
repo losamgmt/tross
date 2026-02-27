@@ -14,7 +14,7 @@
 
 const request = require("supertest");
 const express = require("express");
-const jwt = require("jsonwebtoken");
+const { signJwt } = require("../../../utils/jwt-helper");
 const {
   authenticateToken,
   requireMinimumRole,
@@ -46,7 +46,7 @@ const attachTestEntity = (resource) => (req, res, next) => {
 };
 
 // Helper to create DEV tokens (read-only access)
-const createToken = (role, overrides = {}) => {
+const createToken = async (role, overrides = {}) => {
   const roleToAuth0Id = {
     admin: "dev|admin001",
     manager: "dev|mgr001",
@@ -55,7 +55,7 @@ const createToken = (role, overrides = {}) => {
     customer: "dev|cust001",
   };
 
-  return jwt.sign(
+  return await signJwt(
     {
       sub: roleToAuth0Id[role] || `dev|${role}001`,
       email: `${role}@tross.dev`,
@@ -70,8 +70,8 @@ const createToken = (role, overrides = {}) => {
 
 // Helper to create AUTH0 tokens (full read/write access)
 // Use this for tests that need to verify write permissions
-const createAuth0Token = (role) => {
-  return jwt.sign(
+const createAuth0Token = async (role) => {
+  return await signJwt(
     {
       sub: `auth0|${role}-test-123`,
       email: `${role}@auth0.test`,
@@ -160,7 +160,7 @@ describe("Authorization Bypass Prevention", () => {
 
   describe("Role Hierarchy Enforcement", () => {
     test("admin should access admin-only endpoint", async () => {
-      const token = createToken("admin");
+      const token = await createToken("admin");
       const response = await request(app)
         .get("/api/admin/settings")
         .set("Authorization", `Bearer ${token}`);
@@ -170,7 +170,7 @@ describe("Authorization Bypass Prevention", () => {
     });
 
     test("manager should NOT access admin-only endpoint", async () => {
-      const token = createToken("manager");
+      const token = await createToken("manager");
       const response = await request(app)
         .get("/api/admin/settings")
         .set("Authorization", `Bearer ${token}`);
@@ -179,7 +179,7 @@ describe("Authorization Bypass Prevention", () => {
     });
 
     test("dispatcher should NOT access admin-only endpoint", async () => {
-      const token = createToken("dispatcher");
+      const token = await createToken("dispatcher");
       const response = await request(app)
         .get("/api/admin/settings")
         .set("Authorization", `Bearer ${token}`);
@@ -188,7 +188,7 @@ describe("Authorization Bypass Prevention", () => {
     });
 
     test("technician should NOT access admin-only endpoint", async () => {
-      const token = createToken("technician");
+      const token = await createToken("technician");
       const response = await request(app)
         .get("/api/admin/settings")
         .set("Authorization", `Bearer ${token}`);
@@ -197,7 +197,7 @@ describe("Authorization Bypass Prevention", () => {
     });
 
     test("customer should NOT access admin-only endpoint", async () => {
-      const token = createToken("customer");
+      const token = await createToken("customer");
       const response = await request(app)
         .get("/api/admin/settings")
         .set("Authorization", `Bearer ${token}`);
@@ -208,7 +208,7 @@ describe("Authorization Bypass Prevention", () => {
 
   describe("Privilege Escalation Prevention", () => {
     test("should reject token with non-existent role", async () => {
-      const token = createToken("superadmin"); // Fake elevated role
+      const token = await createToken("superadmin"); // Fake elevated role
 
       const response = await request(app)
         .get("/api/admin/settings")
@@ -218,7 +218,7 @@ describe("Authorization Bypass Prevention", () => {
     });
 
     test("should reject token with empty role", async () => {
-      const token = jwt.sign(
+      const token = await signJwt(
         {
           sub: "dev|hacker001",
           email: "hacker@test.com",
@@ -237,7 +237,7 @@ describe("Authorization Bypass Prevention", () => {
     });
 
     test("should reject token with null role", async () => {
-      const token = jwt.sign(
+      const token = await signJwt(
         {
           sub: "dev|hacker001",
           email: "hacker@test.com",
@@ -256,7 +256,7 @@ describe("Authorization Bypass Prevention", () => {
     });
 
     test("should reject role as array (bypass attempt)", async () => {
-      const token = jwt.sign(
+      const token = await signJwt(
         {
           sub: "dev|hacker001",
           email: "hacker@test.com",
@@ -275,7 +275,7 @@ describe("Authorization Bypass Prevention", () => {
     });
 
     test("should reject role with special characters", async () => {
-      const token = createToken("admin; DROP TABLE users;--");
+      const token = await createToken("admin; DROP TABLE users;--");
 
       const response = await request(app)
         .get("/api/admin/settings")
@@ -285,7 +285,7 @@ describe("Authorization Bypass Prevention", () => {
     });
 
     test("should reject role with case manipulation (ADMIN vs admin)", async () => {
-      const token = createToken("ADMIN"); // Uppercase attempt
+      const token = await createToken("ADMIN"); // Uppercase attempt
 
       const response = await request(app)
         .get("/api/admin/settings")
@@ -300,7 +300,7 @@ describe("Authorization Bypass Prevention", () => {
     test("admin should have users:delete permission", async () => {
       // Use Auth0 token for write operations (dev tokens are read-only)
       mockAuth0User("admin");
-      const token = createAuth0Token("admin");
+      const token = await createAuth0Token("admin");
 
       const response = await request(app)
         .delete("/api/users/123")
@@ -310,7 +310,7 @@ describe("Authorization Bypass Prevention", () => {
     });
 
     test("customer should NOT have users:delete permission", async () => {
-      const token = createToken("customer");
+      const token = await createToken("customer");
       const response = await request(app)
         .delete("/api/users/123")
         .set("Authorization", `Bearer ${token}`);
@@ -319,7 +319,7 @@ describe("Authorization Bypass Prevention", () => {
     });
 
     test("technician should NOT have users:create permission", async () => {
-      const token = createToken("technician");
+      const token = await createToken("technician");
       const response = await request(app)
         .post("/api/users")
         .set("Authorization", `Bearer ${token}`)
@@ -331,7 +331,7 @@ describe("Authorization Bypass Prevention", () => {
 
   describe("Multi-Role Boundary Tests", () => {
     test("manager can access dispatcher-level endpoints", async () => {
-      const token = createToken("manager");
+      const token = await createToken("manager");
       const response = await request(app)
         .get("/api/dispatch")
         .set("Authorization", `Bearer ${token}`);
@@ -340,7 +340,7 @@ describe("Authorization Bypass Prevention", () => {
     });
 
     test("dispatcher cannot access manager-level endpoints", async () => {
-      const token = createToken("dispatcher");
+      const token = await createToken("dispatcher");
       const response = await request(app)
         .get("/api/reports")
         .set("Authorization", `Bearer ${token}`);
@@ -349,7 +349,7 @@ describe("Authorization Bypass Prevention", () => {
     });
 
     test("admin can access all role levels", async () => {
-      const token = createToken("admin");
+      const token = await createToken("admin");
 
       const adminResponse = await request(app)
         .get("/api/admin/settings")
@@ -370,8 +370,8 @@ describe("Authorization Bypass Prevention", () => {
 
   describe("Header Manipulation Prevention", () => {
     test("should reject multiple Authorization headers", async () => {
-      const customerToken = createToken("customer");
-      const adminToken = createToken("admin");
+      const customerToken = await createToken("customer");
+      const adminToken = await createToken("admin");
 
       // Note: supertest might combine these, but server should handle
       const response = await request(app)
@@ -384,8 +384,8 @@ describe("Authorization Bypass Prevention", () => {
     });
 
     test("should ignore token in query parameter", async () => {
-      const adminToken = createToken("admin");
-      const customerToken = createToken("customer");
+      const adminToken = await createToken("admin");
+      const customerToken = await createToken("customer");
 
       const response = await request(app)
         .get(`/api/admin/settings?token=${adminToken}`)
@@ -396,8 +396,8 @@ describe("Authorization Bypass Prevention", () => {
     });
 
     test("should ignore token in request body", async () => {
-      const adminToken = createToken("admin");
-      const customerToken = createToken("customer");
+      const adminToken = await createToken("admin");
+      const customerToken = await createToken("customer");
 
       const response = await request(app)
         .post("/api/users")

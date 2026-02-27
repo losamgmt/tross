@@ -22,7 +22,7 @@ const {
 } = require("../../../middleware/auth");
 const { validateProfileUpdate } = require("../../../validators");
 const { getClientIp, getUserAgent } = require("../../../utils/request-helpers");
-const jwt = require("jsonwebtoken");
+const { decodeJwt } = require("../../../utils/jwt-helper");
 const GenericEntityService = require("../../../services/generic-entity-service");
 const {
   createRouteTestApp,
@@ -40,7 +40,7 @@ jest.mock("../../../middleware/auth", () => ({
   requireMinimumRole: jest.fn(() => (req, res, next) => next()),
 }));
 jest.mock("../../../utils/request-helpers");
-jest.mock("jsonwebtoken");
+jest.mock("../../../utils/jwt-helper");
 jest.mock("../../../services/generic-entity-service");
 
 // Mock validators with proper factory functions
@@ -127,7 +127,7 @@ describe("routes/auth.js - Session Management", () => {
       };
 
       tokenService.refreshAccessToken.mockResolvedValue(newTokens);
-      jwt.decode.mockReturnValue({ userId: 1 });
+      decodeJwt.mockReturnValue({ userId: 1 });
       auditService.log.mockResolvedValue(true);
 
       // Act
@@ -159,7 +159,7 @@ describe("routes/auth.js - Session Management", () => {
         accessToken: "token",
         refreshToken: "token",
       });
-      jwt.decode.mockReturnValue({ userId: 1 });
+      decodeJwt.mockReturnValue({ userId: 1 });
       auditService.log.mockResolvedValue(true);
 
       // Act
@@ -180,7 +180,7 @@ describe("routes/auth.js - Session Management", () => {
     test("should logout successfully with refresh token", async () => {
       // Arrange
       const refreshToken = "valid-refresh-token";
-      jwt.decode.mockReturnValue({ tokenId: "token-123", userId: 1 });
+      decodeJwt.mockReturnValue({ tokenId: "token-123", userId: 1 });
       tokenService.revokeToken.mockResolvedValue(true);
       auditService.log.mockResolvedValue(true);
 

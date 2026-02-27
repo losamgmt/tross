@@ -2,23 +2,19 @@
  * Row-Level Security (RLS) Middleware
  *
  * Enforces data-driven row-level access control policies.
- * Works with permissions.json configuration and model-level filtering.
+ * Works with entity metadata rlsPolicy and model-level filtering.
  *
  * SECURITY: This is Level 2 of the multi-tier access control system:
  * - Level 1: Resource permissions (requirePermission) - WHO can access WHAT
  * - Level 2: Row-Level Security (enforceRLS) - WHICH RECORDS can be accessed
  * - Level 3: Field-Level Security (future) - WHICH FIELDS can be seen/modified
  *
- * RLS POLICY TYPES (defined in permissions.json):
- * - all_records: No filtering - role can see all records (applied: false)
- * - own_record_only: Filter by user ID - user sees only their own record (applied: true)
- * - own_work_orders_only: Filter by customer_id - customers see their work orders (applied: true)
- * - assigned_work_orders_only: Filter by assigned_technician_id - technicians see assigned work orders (applied: true)
- * - own_invoices_only: Filter by customer_id - customers see their invoices (applied: true)
- * - own_contracts_only: Filter by customer_id - customers see their contracts (applied: true)
- * - public_resource: No filtering - resource is public to all authorized users (applied: false)
- * - deny_all: Deny all access - role cannot access any records (applied: true, returns 1=0 SQL)
- * - admin_only: Admin-only resource - non-admins get deny_all (applied: varies by role)
+ * RLS POLICY VALUES (ADR-008):
+ * - null: No filtering - role can see all records
+ * - false: Deny all access - role cannot access any records
+ * - '$parent': Access controlled by parent entity
+ * - 'field_name': Filter: WHERE table.field_name = $userId (shorthand)
+ * - { field, value }: Full config - WHERE table.field = $rlsContext[value]
  *
  * USAGE:
  * Apply AFTER authenticateToken and requirePermission:
@@ -39,8 +35,8 @@ const { ERROR_CODES } = require('../utils/response-formatter');
 /**
  * Enforce Row-Level Security for a resource
  *
- * Attaches RLS policy to request object for model-level filtering.
- * Models use this policy in their buildRLSQuery() method.
+ * Attaches RLS filter configuration to request object for model-level filtering.
+ * Models use this in their buildRLSQuery() method.
  *
  * UNIFIED PATTERN: Resource is ALWAYS read from req.entityMetadata.rlsResource
  * Routes must attach entity metadata via middleware BEFORE this runs.
@@ -55,7 +51,7 @@ const { ERROR_CODES } = require('../utils/response-formatter');
  *   requirePermission('read'),
  *   enforceRLS,
  *   async (req, res) => {
- *     // req.rlsPolicy is now available for filtering
+ *     // req.rlsContext is now available for filtering
  *     const customers = await Customer.findAll(req);
  *   }
  * );
@@ -96,26 +92,31 @@ const enforceRLS = (req, res, next) => {
     );
   }
 
-  // Get RLS policy from permissions.json
-  const rlsPolicy = getRLSRule(userRole, resource);
+  // Get RLS filter configuration from permissions (via entity metadata)
+  // ADR-008: filterConfig is the rlsPolicy value for this role
+  const filterConfig = getRLSRule(userRole, resource);
 
-  // RLS policy can be:
-  // - string: Policy name that model will interpret (e.g., 'all_records', 'own_record_only', 'deny_all', 'public_resource')
-  // - null/undefined: No RLS policy defined (falls back to permission-based access control)
-  //
-  // Note: Models handle policy interpretation. See permissions.json _comments.rlsPolicies for full policy definitions.
-  req.rlsPolicy = rlsPolicy;
-  req.rlsResource = resource;
-  req.rlsUserId = userId;
+  // Build RLS context with all available filter values
+  // ADR-008: Different entities may filter by different profile IDs
+  req.rlsContext = {
+    filterConfig, // null | false | '$parent' | string | { field, value }
+    userId,
+    customerProfileId: req.dbUser?.customer_profile_id || null,
+    technicianProfileId: req.dbUser?.technician_profile_id || null,
+    role: userRole,
+    resource,
+  };
 
   // Debug log only - RLS application is routine, not a security concern
-  // Use logger.debug directly to avoid cluttering warn logs
-  logger.debug('RLS policy applied', {
+  logger.debug('RLS context attached', {
     url: req.url,
     userId,
     userRole,
     resource,
-    policy: rlsPolicy,
+    filterConfig:
+      typeof filterConfig === 'object'
+        ? JSON.stringify(filterConfig)
+        : filterConfig,
   });
 
   next();
@@ -145,28 +146,31 @@ const enforceRLS = (req, res, next) => {
  * );
  */
 const validateRLSApplied = (req, result) => {
-  if (!req.rlsResource) {
+  if (!req.rlsContext?.resource) {
     return; // No RLS enforcement on this route
   }
 
-  if (req.rlsPolicy === null) {
+  if (req.rlsContext.filterConfig === null) {
     return; // No RLS filtering required
   }
 
   // Result should have metadata indicating RLS was applied
   if (!result || !result.rlsApplied) {
     const error = new Error(
-      `RLS validation failed for ${req.rlsResource}: ` +
-        `Model did not apply RLS filtering (policy: ${req.rlsPolicy})`,
+      `RLS validation failed for ${req.rlsContext.resource}: ` +
+        'Model did not apply RLS filtering',
     );
     logSecurityEvent('RLS_VALIDATION_FAILED', {
       ip: getClientIp(req),
       userAgent: getUserAgent(req),
       url: req.url,
-      userId: req.rlsUserId,
-      userRole: req.dbUser?.role,
-      resource: req.rlsResource,
-      policy: req.rlsPolicy,
+      userId: req.rlsContext.userId,
+      userRole: req.rlsContext.role,
+      resource: req.rlsContext.resource,
+      filterConfig:
+        typeof req.rlsContext.filterConfig === 'object'
+          ? JSON.stringify(req.rlsContext.filterConfig)
+          : req.rlsContext.filterConfig,
       severity: 'CRITICAL',
     });
     throw error;

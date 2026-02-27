@@ -1,7 +1,6 @@
-// UUID wrapper for compatibility with both CommonJS and ESM
-// The uuid package v10+ is ESM-only, but we can use v9's CommonJS dist
-// This wrapper provides a stable interface regardless of uuid version
+// UUID wrapper using Node.js native crypto.randomUUID()
+// No external dependency needed - Node 14.17+ has native UUID v4 support
 
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 
-module.exports = { v4: uuidv4 };
+module.exports = { v4: () => crypto.randomUUID() };

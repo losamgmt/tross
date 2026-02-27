@@ -86,7 +86,7 @@ class TestData {
     return {
       'success': success,
       'data': data,
-      if (message != null) 'message': message,
+      'message': ?message,
       'timestamp': DateTime.now().toIso8601String(),
     };
   }
@@ -101,7 +101,7 @@ class TestData {
       'success': false,
       'error': error ?? 'Test Error',
       'message': message ?? 'An error occurred during testing',
-      if (statusCode != null) 'statusCode': statusCode,
+      'statusCode': ?statusCode,
       'timestamp': DateTime.now().toIso8601String(),
     };
   }

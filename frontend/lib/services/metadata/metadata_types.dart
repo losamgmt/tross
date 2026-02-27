@@ -24,9 +24,14 @@ class PermissionMatrix {
   /// Example: permissions['admin']['create'] = true
   final Map<String, Map<String, bool>> permissions;
 
-  /// Role-level security policies per role
-  /// Example: rowLevelSecurity['customer'] = 'own_record_only'
-  final Map<String, String> rowLevelSecurity;
+  /// Role-level security policies per role (ADR-008 format)
+  /// Values can be:
+  /// - null: all records (no filtering)
+  /// - false: deny all access
+  /// - '$parent': sub-entity inherits parent access
+  /// - String: field name shorthand (filter by that field using userId)
+  /// - Map: { 'field': 'x', 'value': 'contextKey' }
+  final Map<String, dynamic> rowLevelSecurity;
 
   const PermissionMatrix({
     required this.entity,
@@ -50,7 +55,7 @@ class PermissionMatrix {
   }) {
     final operations = <String>[];
     final permissions = <String, Map<String, bool>>{};
-    final rowLevelSecurity = <String, String>{};
+    final rowLevelSecurity = <String, dynamic>{};
 
     // Extract operations and minimum priorities
     final permissionsJson =
@@ -70,13 +75,16 @@ class PermissionMatrix {
       }
     }
 
-    // Extract RLS policies
-    final rlsJson = resourceJson['rowLevelSecurity'] as Map<String, dynamic>?;
-    if (rlsJson != null) {
-      for (final entry in rlsJson.entries) {
-        rowLevelSecurity[entry.key] = entry.value as String;
+    // Extract RLS policies (ADR-008 format - values can be null/false/string/object)
+    final rlsValue = resourceJson['rowLevelSecurity'];
+    if (rlsValue is Map<String, dynamic>) {
+      for (final entry in rlsValue.entries) {
+        // Preserve the value as-is: null, false, String, or Map
+        rowLevelSecurity[entry.key] = entry.value;
       }
     }
+    // Note: if rlsValue is null at resource level, rowLevelSecurity stays empty
+    // which means "no RLS restrictions" (all records for everyone)
 
     return PermissionMatrix(
       entity: entity,

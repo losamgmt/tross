@@ -5,7 +5,6 @@
 
 const request = require("supertest");
 const express = require("express");
-const jwt = require("jsonwebtoken");
 const { AuthProvider } = require("../../services/auth");
 const { HTTP_STATUS, USER_ROLES } = require("../../config/constants");
 const {
@@ -26,10 +25,12 @@ jest.mock("../../services/user-data", () => ({
   }),
 }));
 
-// Mock JWT verification
-jest.mock("jsonwebtoken", () => ({
-  sign: jest.requireActual("jsonwebtoken").sign,
-  verify: jest.fn(),
+// Mock JWT verification (jwt-helper)
+const mockVerifyJwt = jest.fn();
+jest.mock("../../utils/jwt-helper", () => ({
+  signJwt: jest.requireActual("../../utils/jwt-helper").signJwt,
+  verifyJwt: (...args) => mockVerifyJwt(...args),
+  decodeJwt: jest.requireActual("../../utils/jwt-helper").decodeJwt,
 }));
 
 describe("Authentication Flow Integration", () => {
@@ -41,20 +42,16 @@ describe("Authentication Flow Integration", () => {
     // Reset mocks
     jest.clearAllMocks();
 
-    // Mock JWT verification for valid tokens
-    jwt.verify.mockImplementation((token, secret) => {
+    // Mock JWT verification for valid tokens (async - uses jose)
+    mockVerifyJwt.mockImplementation(async (token, secret) => {
       // Simple mock - return payload for test tokens
       try {
-        const decoded =
-          jwt.sign === jest.fn()
-            ? {
-                // Mock payload
-                sub: "auth0|test123",
-                email: "test@tross.com",
-                role: "technician",
-                provider: "development",
-              }
-            : jest.requireActual("jsonwebtoken").verify(token, secret);
+        // Use actual jwt-helper to decode and verify format
+        const { signJwt, decodeJwt } = jest.requireActual("../../utils/jwt-helper");
+        const decoded = decodeJwt(token);
+        if (!decoded) {
+          throw new Error("Invalid token");
+        }
         return decoded;
       } catch (error) {
         throw new Error("Invalid token");
@@ -65,8 +62,8 @@ describe("Authentication Flow Integration", () => {
     app = express();
     app.use(express.json());
 
-    // Mock auth middleware for testing
-    const mockAuthMiddleware = (req, res, next) => {
+    // Mock auth middleware for testing (async for jose)
+    const mockAuthMiddleware = async (req, res, next) => {
       const authHeader = req.headers.authorization;
       const token = authHeader?.startsWith("Bearer ")
         ? authHeader.substring(7)
@@ -81,7 +78,8 @@ describe("Authentication Flow Integration", () => {
       }
 
       try {
-        const decoded = jwt.verify(token, "test-secret-key");
+        const jwtHelper = require("../../utils/jwt-helper");
+        const decoded = await jwtHelper.verifyJwt(token, "test-secret-key");
         req.user = decoded;
         req.dbUser = { id: 1, role: decoded.role };
         next();
@@ -170,7 +168,7 @@ describe("Authentication Flow Integration", () => {
     });
 
     test("should allow access with valid token", async () => {
-      const token = generateTestToken("technician");
+      const token = await generateTestToken("technician");
 
       const response = await request(app)
         .get("/protected")
@@ -190,14 +188,14 @@ describe("Authentication Flow Integration", () => {
   describe("Role-Based Access Control", () => {
     test("should allow admin access to admin endpoint", async () => {
       // Mock admin token verification
-      jwt.verify.mockImplementationOnce(() => ({
+      mockVerifyJwt.mockResolvedValueOnce({
         sub: "auth0|admin123",
         email: "admin@tross.com",
         role: USER_ROLES.ADMIN,
         provider: "development",
-      }));
+      });
 
-      const adminToken = generateTestToken("admin");
+      const adminToken = await generateTestToken("admin");
 
       const response = await request(app)
         .get("/admin-only")
@@ -212,14 +210,14 @@ describe("Authentication Flow Integration", () => {
 
     test("should deny non-admin access to admin endpoint", async () => {
       // Mock technician token verification
-      jwt.verify.mockImplementationOnce(() => ({
+      mockVerifyJwt.mockResolvedValueOnce({
         sub: "auth0|tech123",
         email: "tech@tross.com",
         role: USER_ROLES.TECHNICIAN,
         provider: "development",
-      }));
+      });
 
-      const techToken = generateTestToken("technician");
+      const techToken = await generateTestToken("technician");
 
       const response = await request(app)
         .get("/admin-only")
@@ -256,9 +254,7 @@ describe("Authentication Flow Integration", () => {
   describe("Token Validation", () => {
     test("should validate token expiration", async () => {
       // Mock expired token verification to throw error
-      jwt.verify.mockImplementationOnce(() => {
-        throw new Error("Token expired");
-      });
+      mockVerifyJwt.mockRejectedValueOnce(new Error("Token expired"));
 
       const expiredToken = "expired.jwt.token";
 
@@ -281,14 +277,14 @@ describe("Authentication Flow Integration", () => {
 
       for (const role of roles) {
         // Mock token verification for each role
-        jwt.verify.mockImplementationOnce(() => ({
+        mockVerifyJwt.mockResolvedValueOnce({
           sub: `auth0|${role}123`,
           email: `${role}@tross.com`,
           role: USER_ROLES[role.toUpperCase()],
           provider: "development",
-        }));
+        });
 
-        const token = generateTestToken(role);
+        const token = await generateTestToken(role);
 
         const response = await request(app)
           .get("/protected")

@@ -55,8 +55,8 @@ class StatsService {
     const metadata = this._getMetadata(entityName);
     const { tableName, filterableFields = [] } = metadata;
 
-    // Build RLS filter
-    const rlsResult = buildRLSFilter(req, metadata, 0);
+    // Build RLS filter - ADR-008: use rlsContext from request
+    const rlsResult = buildRLSFilter(req.rlsContext, metadata, 0);
     const paramOffset = rlsResult.params.length;
 
     // Build filter clause
@@ -120,8 +120,8 @@ class StatsService {
       );
     }
 
-    // Build RLS filter
-    const rlsResult = buildRLSFilter(req, metadata, 0);
+    // Build RLS filter - ADR-008: use rlsContext from request
+    const rlsResult = buildRLSFilter(req.rlsContext, metadata, 0);
     const paramOffset = rlsResult.params.length;
 
     // Build filter clause
@@ -196,8 +196,8 @@ class StatsService {
     const safeField = sanitizeIdentifier(field, 'field');
     const safeTable = sanitizeIdentifier(tableName, 'table');
 
-    // Build RLS filter
-    const rlsResult = buildRLSFilter(req, metadata, 0);
+    // Build RLS filter - ADR-008: use rlsContext from request
+    const rlsResult = buildRLSFilter(req.rlsContext, metadata, 0);
     const paramOffset = rlsResult.params.length;
 
     // Build filter clause

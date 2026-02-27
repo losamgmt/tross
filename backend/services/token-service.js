@@ -1,4 +1,4 @@
-const jwt = require('jsonwebtoken');
+const { signJwt, verifyJwt } = require('../utils/jwt-helper');
 const { v4: uuidv4 } = require('../utils/uuid'); // Use CommonJS wrapper for Jest compatibility
 const bcrypt = require('bcrypt');
 const db = require('../db/connection');
@@ -38,7 +38,7 @@ class TokenService {
       // for internal operations. The auth middleware uses auth0_id to find/create users.
       // IMPORTANT: auth0Id is passed explicitly because user object may have auth0_id filtered out
       const subClaim = auth0Id || user.auth0_id || user.id.toString();
-      const accessToken = jwt.sign(
+      const accessToken = await signJwt(
         {
           sub: subClaim, // Auth0 ID for user lookup
           userId: user.id, // Database ID for internal operations
@@ -53,7 +53,7 @@ class TokenService {
 
       // Generate long-lived refresh token (7 days)
       const refreshTokenId = uuidv4();
-      const refreshTokenValue = jwt.sign(
+      const refreshTokenValue = await signJwt(
         {
           userId: user.id,
           tokenId: refreshTokenId,
@@ -108,7 +108,7 @@ class TokenService {
   ) {
     try {
       // Verify and decode refresh token
-      const decoded = jwt.verify(refreshToken, JWT_SECRET);
+      const decoded = await verifyJwt(refreshToken, JWT_SECRET);
 
       if (decoded.type !== 'refresh') {
         throw new AppError('Invalid token type', 401, 'UNAUTHORIZED');

@@ -113,8 +113,21 @@
 // ============================================================================
 
 /**
- * Row-level security policy values.
- * @typedef {'all' | 'all_records' | 'own_record_only' | 'own_or_assigned' | 'own_work_orders_only' | 'assigned_work_orders_only' | 'own_invoices_only' | 'own_contracts_only' | 'public_resource' | 'parent_entity_access' | 'none' | 'deny_all'} RLSPolicyValue
+ * Row-level security filter configuration object.
+ * Used when the filter value comes from a profile ID rather than userId.
+ * @typedef {Object} RLSFilterConfig
+ * @property {string} field - Database column to filter on
+ * @property {string} value - Context key to get filter value from: 'userId', 'customerProfileId', 'technicianProfileId'
+ */
+
+/**
+ * Row-level security policy values (ADR-008).
+ * - null: All records (no filter)
+ * - false: Deny all access
+ * - '$parent': Access controlled by parent entity
+ * - string: Field name (shorthand for { field: string, value: 'userId' })
+ * - RLSFilterConfig: Full config with field and context value key
+ * @typedef {null | false | '$parent' | string | RLSFilterConfig} RLSPolicyValue
  */
 
 /**
@@ -253,14 +266,13 @@
  *
  * @property {string[]} [requiredFields] - Fields required on CREATE
  * @property {string[]} [immutableFields] - Fields that cannot be updated
- * @property {string[]} [sensitiveFields] - Fields excluded from API responses
+ * @property {string[]} [sensitiveFields] - Fields excluded from API responses (blacklist)
  * @property {string[]} [searchableFields] - Fields for text search (ILIKE)
  * @property {string[]} [filterableFields] - Fields for WHERE clauses
  * @property {string[]} [sortableFields] - Fields for ORDER BY
  * @property {SortConfig} [defaultSort] - Default sort configuration
  * @property {string[]} [displayColumns] - Default columns for table views
  * @property {string[]} [exportableFields] - Fields included in CSV exports
- * @property {string[]} [outputFields] - Fields included in API responses (whitelist)
  *
  * @property {string} [displayName] - Human-readable entity name (singular)
  * @property {string} [displayNamePlural] - Human-readable entity name (plural)

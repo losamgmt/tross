@@ -25,7 +25,7 @@ const {
   HeadBucketCommand,
 } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 const path = require('path');
 const { logger } = require('../config/logger');
 const AppError = require('../utils/app-error');
@@ -190,7 +190,7 @@ class StorageService {
    */
   generateStorageKey(entityType, entityId, originalFilename) {
     const ext = path.extname(originalFilename).toLowerCase() || '.bin';
-    const uuid = uuidv4();
+    const uuid = crypto.randomUUID();
     return `${entityType}/${entityId}/${uuid}${ext}`;
   }
 

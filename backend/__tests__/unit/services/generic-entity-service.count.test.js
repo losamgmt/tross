@@ -129,9 +129,11 @@ describe("GenericEntityService.count()", () => {
     test("should apply RLS filter when context provided", async () => {
       db.query.mockResolvedValueOnce({ rows: [{ total: "3" }] });
 
+      // ADR-008: Full filterConfig object for customer filtering work orders
       const rlsContext = {
-        policy: "own_work_orders_only",
+        filterConfig: { field: 'customer_id', value: 'customerProfileId' },
         userId: 1,
+        customerProfileId: 1,
       };
 
       const result = await GenericEntityService.count(
@@ -149,9 +151,11 @@ describe("GenericEntityService.count()", () => {
     test("should combine filters with RLS", async () => {
       db.query.mockResolvedValueOnce({ rows: [{ total: "2" }] });
 
+      // ADR-008: filterConfig with profile ID
       const rlsContext = {
-        policy: "own_work_orders_only",
+        filterConfig: { field: 'customer_id', value: 'customerProfileId' },
         userId: 1,
+        customerProfileId: 1,
       };
 
       await GenericEntityService.count(

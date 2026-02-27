@@ -4,7 +4,7 @@
  */
 
 const express = require("express");
-const jwt = require("jsonwebtoken");
+const { signJwt } = require("../../utils/jwt-helper");
 const { AUTH } = require("../../config/constants");
 const { TEST_USERS, JWT_PAYLOADS } = require("../fixtures/test-data");
 
@@ -30,31 +30,37 @@ function createTestApp(options = {}) {
 }
 
 /**
- * Generate valid JWT token for testing
+ * Generate valid JWT token for testing (async - uses jose)
  * @param {string} userType - Type of user (admin, technician, etc.)
  * @param {Object} overrides - Payload overrides
- * @returns {string} JWT token
+ * @returns {Promise<string>} JWT token
  */
-function generateTestToken(userType = "technician", overrides = {}) {
+async function generateTestToken(userType = "technician", overrides = {}) {
   const payload = {
     ...JWT_PAYLOADS[userType],
     ...overrides,
   };
 
   const secret = process.env.JWT_SECRET || "test-secret-key";
-  return jwt.sign(payload, secret);
+  return signJwt(payload, secret, { expiresIn: "24h" });
 }
 
 /**
- * Generate expired JWT token for testing
+ * Generate expired JWT token for testing (async - uses jose)
  * @param {string} userType - Type of user
- * @returns {string} Expired JWT token
+ * @returns {Promise<string>} Expired JWT token
  */
-function generateExpiredToken(userType = "technician") {
-  return generateTestToken(userType, {
+async function generateExpiredToken(userType = "technician") {
+  // For expired tokens, we use a very short expiration and pre-expired iat
+  const payload = {
+    ...JWT_PAYLOADS[userType],
     iat: Math.floor(Date.now() / 1000) - 7200, // 2 hours ago
     exp: Math.floor(Date.now() / 1000) - 3600, // 1 hour ago (expired)
-  });
+  };
+
+  const secret = process.env.JWT_SECRET || "test-secret-key";
+  // Sign without additional expiration (already in payload)
+  return signJwt(payload, secret);
 }
 
 /**
@@ -99,13 +105,14 @@ function mockUserDataService(user = TEST_USERS.technician) {
 }
 
 /**
- * Mock JWT verification
+ * Mock JWT verification (mocks the jwt-helper verifyJwt function)
  * @param {Object} payload - Payload to return when verifying
+ * @returns {Object} Reference to jwt-helper module for further mocking
  */
 function mockJwtVerify(payload = JWT_PAYLOADS.technician) {
-  const jwt = require("jsonwebtoken");
-  jwt.verify = jest.fn().mockReturnValue(payload);
-  return jwt;
+  const jwtHelper = require("../../utils/jwt-helper");
+  jwtHelper.verifyJwt = jest.fn().mockResolvedValue(payload);
+  return jwtHelper;
 }
 
 /**
@@ -140,9 +147,11 @@ function mockAuth0Service(options = {}) {
  * @returns {Object} Mocked DevAuth service
  */
 function mockDevAuthService(options = {}) {
+  // Use a static mock token since this is for mocking only
+  const mockToken = options.token || "mock-dev-jwt-token";
   return {
     authenticate: jest.fn().mockResolvedValue({
-      token: generateTestToken(),
+      token: mockToken,
       user: options.user || TEST_USERS.technician,
     }),
     verifyToken: jest

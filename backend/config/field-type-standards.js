@@ -253,6 +253,112 @@ const FIELD = Object.freeze({
 });
 
 // ============================================================================
+// STANDARD ENUM DEFINITIONS
+// ============================================================================
+
+/**
+ * Standard enum definitions with optional colors for UI rendering.
+ * Colors supported: success, warning, error, info, primary, secondary
+ *
+ * @example
+ * // In metadata file:
+ * const { ENUM } = require('../field-type-standards');
+ * module.exports = {
+ *   fields: { status: { type: 'enum', values: ENUM.PERSON_STATUS.values } },
+ *   enums: { status: ENUM.PERSON_STATUS },
+ * };
+ */
+const ENUM = Object.freeze({
+  // Lifecycle statuses
+  PERSON_STATUS: Object.freeze({
+    values: ['pending', 'active', 'suspended'],
+    colors: { pending: 'warning', active: 'success', suspended: 'error' },
+  }),
+
+  ROLE_STATUS: Object.freeze({
+    values: ['active', 'disabled'],
+    colors: { active: 'success', disabled: 'error' },
+  }),
+
+  WORK_ORDER_STATUS: Object.freeze({
+    values: ['pending', 'assigned', 'in_progress', 'completed', 'cancelled'],
+    colors: {
+      pending: 'warning',
+      assigned: 'info',
+      in_progress: 'primary',
+      completed: 'success',
+      cancelled: 'error',
+    },
+  }),
+
+  INVOICE_STATUS: Object.freeze({
+    values: ['draft', 'sent', 'paid', 'overdue', 'cancelled', 'void'],
+    colors: {
+      draft: 'secondary',
+      sent: 'primary',
+      paid: 'success',
+      overdue: 'warning',
+      cancelled: 'error',
+      void: 'error',
+    },
+  }),
+
+  CONTRACT_STATUS: Object.freeze({
+    values: ['draft', 'active', 'expired', 'cancelled', 'terminated'],
+    colors: {
+      draft: 'secondary',
+      active: 'success',
+      expired: 'warning',
+      cancelled: 'error',
+      terminated: 'error',
+    },
+  }),
+
+  INVENTORY_STATUS: Object.freeze({
+    values: ['in_stock', 'low_stock', 'out_of_stock', 'discontinued'],
+    colors: {
+      in_stock: 'success',
+      low_stock: 'warning',
+      out_of_stock: 'error',
+      discontinued: 'secondary',
+    },
+  }),
+
+  // Operational enums
+  PRIORITY: Object.freeze({
+    values: ['low', 'normal', 'high', 'urgent'],
+    colors: { low: 'info', normal: 'primary', high: 'warning', urgent: 'error' },
+  }),
+
+  AVAILABILITY: Object.freeze({
+    values: ['available', 'on_job', 'off_duty'],
+    colors: { available: 'success', on_job: 'primary', off_duty: 'secondary' },
+  }),
+
+  BILLING_CYCLE: Object.freeze({
+    values: ['monthly', 'quarterly', 'annually', 'one_time'],
+    colors: { monthly: 'info', quarterly: 'info', annually: 'info', one_time: 'secondary' },
+  }),
+
+  NOTIFICATION_TYPE: Object.freeze({
+    values: ['info', 'success', 'warning', 'error', 'assignment', 'reminder'],
+    colors: {
+      info: 'info',
+      success: 'success',
+      warning: 'warning',
+      error: 'error',
+      assignment: 'primary',
+      reminder: 'warning',
+    },
+  }),
+
+  // Settings (no colors)
+  THEME: Object.freeze({ values: ['system', 'light', 'dark'] }),
+  TABLE_DENSITY: Object.freeze({ values: ['compact', 'standard', 'comfortable'] }),
+  SORT_DIRECTION: Object.freeze({ values: ['asc', 'desc'] }),
+});
+
+// ============================================================================
 // ADDRESS FIELD GENERATORS
 // ============================================================================
 
@@ -419,6 +525,9 @@ function hasCompleteAddress(fieldNames, prefix) {
 module.exports = {
   // Standard field definitions
   FIELD,
+
+  // Standard enum definitions
+  ENUM,
 
   // Address constants
   ADDRESS_SUFFIXES,

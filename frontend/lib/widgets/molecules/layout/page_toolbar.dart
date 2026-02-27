@@ -127,7 +127,7 @@ class PageToolbar extends StatelessWidget {
         mainAxisAlignment: mainAxisAlignment,
         crossAxisAlignment: crossAxisAlignment,
         children: [
-          if (leading != null) leading!,
+          ?leading,
           if (center != null) ...[
             if (leading != null) SizedBox(width: spacing.sm),
             Expanded(child: center!),
@@ -135,7 +135,7 @@ class PageToolbar extends StatelessWidget {
           ] else if (leading != null && trailing != null) ...[
             const Spacer(),
           ],
-          if (trailing != null) trailing!,
+          ?trailing,
         ],
       ),
     );

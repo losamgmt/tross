@@ -9,7 +9,7 @@
 
 const request = require("supertest");
 const express = require("express");
-const jwt = require("jsonwebtoken");
+const { signJwt } = require("../../utils/jwt-helper");
 const {
   authenticateToken,
   requireMinimumRole,
@@ -94,7 +94,7 @@ describe("Authentication Middleware - Security", () => {
       // This should always pass in test environment
       expect(AppConfig.devAuthEnabled).toBe(true);
 
-      const token = jwt.sign(
+      const token = await signJwt(
         {
           sub: "dev|tech001",
           email: "technician@tross.dev",
@@ -115,7 +115,7 @@ describe("Authentication Middleware - Security", () => {
     });
 
     test("development token should have null database ID", async () => {
-      const token = jwt.sign(
+      const token = await signJwt(
         {
           sub: "dev|tech001",
           email: "technician@tross.dev",
@@ -139,7 +139,7 @@ describe("Authentication Middleware - Security", () => {
       // This is a theoretical test - in production, devAuthEnabled would be false
       // We're testing the logic even though it won't execute in our test environment
 
-      const token = jwt.sign(
+      const token = await signJwt(
         {
           sub: "dev-tech-001",
           email: "tech@test.com",
@@ -178,7 +178,7 @@ describe("Authentication Middleware - Security", () => {
       };
       mockUserDataServiceFindOrCreateUser(UserDataService, mockUser);
 
-      const token = jwt.sign(
+      const token = await signJwt(
         {
           sub: "auth0|12345",
           email: "user@auth0.com",
@@ -201,7 +201,7 @@ describe("Authentication Middleware - Security", () => {
 
   describe("Token Validation", () => {
     test("should reject token without provider", async () => {
-      const token = jwt.sign(
+      const token = await signJwt(
         {
           sub: "user-123",
           email: "user@test.com",
@@ -221,7 +221,7 @@ describe("Authentication Middleware - Security", () => {
     });
 
     test("should reject token with invalid provider", async () => {
-      const token = jwt.sign(
+      const token = await signJwt(
         {
           sub: "user-123",
           email: "user@test.com",
@@ -241,7 +241,7 @@ describe("Authentication Middleware - Security", () => {
     });
 
     test("should reject token without sub claim", async () => {
-      const token = jwt.sign(
+      const token = await signJwt(
         {
           // Missing sub field
           email: "user@test.com",
@@ -261,7 +261,7 @@ describe("Authentication Middleware - Security", () => {
     });
 
     test("should reject expired token", async () => {
-      const token = jwt.sign(
+      const token = await signJwt(
         {
           sub: "user-123",
           email: "user@test.com",
@@ -300,7 +300,7 @@ describe("Authentication Middleware - Security", () => {
 
   describe("Role-Based Access Control", () => {
     test("admin endpoint should accept admin token", async () => {
-      const token = jwt.sign(
+      const token = await signJwt(
         {
           sub: "dev|admin001",
           email: "admin@tross.dev",
@@ -320,7 +320,7 @@ describe("Authentication Middleware - Security", () => {
     });
 
     test("admin endpoint should reject non-admin token", async () => {
-      const token = jwt.sign(
+      const token = await signJwt(
         {
           sub: "dev|tech001",
           email: "technician@tross.dev",
@@ -345,7 +345,7 @@ describe("Authentication Middleware - Security", () => {
   describe("Permission-Based Access Control", () => {
     test("should allow access when user has required permission", async () => {
       // Admin has users:read permission
-      const token = jwt.sign(
+      const token = await signJwt(
         {
           sub: "dev|admin001",
           email: "admin@tross.dev",
@@ -366,7 +366,7 @@ describe("Authentication Middleware - Security", () => {
 
     test("should deny access when user lacks permission", async () => {
       // Customer does not have users:create permission (only admin can create users)
-      const token = jwt.sign(
+      const token = await signJwt(
         {
           sub: "dev|customer001",
           email: "customer@tross.dev",
@@ -393,7 +393,7 @@ describe("Authentication Middleware - Security", () => {
 
     test("should reject user with no role", async () => {
       // Token without a role
-      const token = jwt.sign(
+      const token = await signJwt(
         {
           sub: "dev|norole001",
           email: "norole@tross.dev",
@@ -466,8 +466,8 @@ describe("Authentication Middleware - Security", () => {
       });
     });
 
-    const generateDevToken = (role = "admin") => {
-      return jwt.sign(
+    const generateDevToken = async (role = "admin") => {
+      return await signJwt(
         {
           sub: `dev|${role}001`,
           email: `${role}@tross.dev`,
@@ -480,7 +480,7 @@ describe("Authentication Middleware - Security", () => {
     };
 
     test("dev user should be allowed to GET (read)", async () => {
-      const token = generateDevToken("admin");
+      const token = await generateDevToken("admin");
 
       const response = await request(writeApp)
         .get("/api/data")
@@ -492,7 +492,7 @@ describe("Authentication Middleware - Security", () => {
     });
 
     test("dev user should be BLOCKED from POST (create)", async () => {
-      const token = generateDevToken("admin");
+      const token = await generateDevToken("admin");
 
       const response = await request(writeApp)
         .post("/api/data")
@@ -505,7 +505,7 @@ describe("Authentication Middleware - Security", () => {
     });
 
     test("dev user should be BLOCKED from PUT (update)", async () => {
-      const token = generateDevToken("admin");
+      const token = await generateDevToken("admin");
 
       const response = await request(writeApp)
         .put("/api/data")
@@ -518,7 +518,7 @@ describe("Authentication Middleware - Security", () => {
     });
 
     test("dev user should be BLOCKED from PATCH (partial update)", async () => {
-      const token = generateDevToken("admin");
+      const token = await generateDevToken("admin");
 
       const response = await request(writeApp)
         .patch("/api/data")
@@ -531,7 +531,7 @@ describe("Authentication Middleware - Security", () => {
     });
 
     test("dev user should be BLOCKED from DELETE", async () => {
-      const token = generateDevToken("admin");
+      const token = await generateDevToken("admin");
 
       const response = await request(writeApp)
         .delete("/api/data")
@@ -552,7 +552,7 @@ describe("Authentication Middleware - Security", () => {
       ];
 
       for (const role of roles) {
-        const token = generateDevToken(role);
+        const token = await generateDevToken(role);
 
         const response = await request(writeApp)
           .post("/api/data")
@@ -579,7 +579,7 @@ describe("Authentication Middleware - Security", () => {
       };
       mockUserDataServiceFindOrCreateUser(UserDataService, mockUser);
 
-      const token = jwt.sign(
+      const token = await signJwt(
         {
           sub: "auth0|write-test-123",
           email: "writer@auth0.com",
@@ -601,7 +601,7 @@ describe("Authentication Middleware - Security", () => {
     });
 
     test("error message should guide user to Auth0", async () => {
-      const token = generateDevToken("admin");
+      const token = await generateDevToken("admin");
 
       const response = await request(writeApp)
         .post("/api/data")

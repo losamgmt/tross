@@ -151,28 +151,142 @@ router.get('/api/customers',
 
 **Purpose:** Filter data by ownership
 
-**Implementation:**
+**Implementation (ADR-008):**
 
-- SQL queries add ownership filters via RLS policies
-- Technicians see only assigned work orders (`assigned_work_orders_only`)
-- Customers see only own data (`own_record_only`, `own_work_orders_only`)
-- Admins bypass RLS via `all_records` policy
+- RLS policy value IS the filter configuration (data-driven, no code)
+- SQL queries add ownership filters based on filterConfig
+- Middleware attaches `req.rlsContext` with filter configuration and profile IDs
+
+**Filter Config Semantics:**
+
+| Value | Meaning |
+|-------|--------|
+| `null` | No filter (all records visible) |
+| `false` | Deny all access |
+| `'$parent'` | Sub-entity: access controlled by parent |
+| `'field_name'` | Shorthand for `{ field: 'field_name', value: 'userId' }` |
+| `{ field, value }` | Filter: `WHERE table.field = $rlsContext[value]` |
 
 **Architecture:**
 
 ```javascript
 // RLS policies defined in backend/config/models/*-metadata.js
 rlsPolicy: {
-  customer: 'own_work_orders_only',    // Filter by customer_id
-  technician: 'assigned_work_orders_only', // Filter by assigned_technician_id
-  dispatcher: 'all_records',            // No filtering
-  manager: 'all_records',
-  admin: 'all_records',
+  customer: { field: 'customer_id', value: 'customerProfileId' },
+  technician: { field: 'assigned_technician_id', value: 'technicianProfileId' },
+  dispatcher: null,  // All records
+  manager: null,
+  admin: null,
 },
 
 // RLS filter applied by db/helpers/rls-filter-helper.js
 // Middleware: middleware/row-level-security.js
 ```
+
+#### Context Values Available
+
+| Value Key | Source | Description |
+|-----------|--------|-------------|
+| `userId` | `users.id` | Current user's ID |
+| `customerProfileId` | `users.customer_profile_id` | User's customer profile ID |
+| `technicianProfileId` | `users.technician_profile_id` | User's technician profile ID |
+
+#### Unknown Config Handling
+
+Invalid filterConfig defaults to deny (fail closed):
+
+```javascript
+// db/helpers/rls-filter-helper.js
+if (!config || typeof config !== 'object' || !config.field) {
+  return { clause: '1=0', params: [], applied: true }; // Deny access
+}
+```
+
+---
+
+### Sub-Entity Security (Parent-Derived Access)
+
+**Purpose:** Secure child resources that belong to parent entities
+
+**Pattern:** Sub-entities inherit access control from their parent entity.
+
+**Examples:**
+- `/work_orders/:id/files` - Files belong to work orders
+- `/customers/:id/contacts` - Contacts belong to customers
+- `/invoices/:id/line_items` - Line items belong to invoices
+
+#### Architecture
+
+Sub-entities use a different security pattern than top-level entities:
+
+```
+Request: GET /work_orders/42/files
+           ↓
+1. Authenticate (Tier 1)
+           ↓
+2. Check permission on PARENT entity (work_orders:read)
+           ↓
+3. Verify parent exists (work_order 42 must exist)
+           ↓
+4. Parent's RLS applies (user must be able to read work_order 42)
+           ↓
+Return child records
+```
+
+#### Metadata Configuration
+
+Sub-entities declare `parent_entity_access` in their RLS policy:
+
+```javascript
+// backend/config/models/file-attachment-metadata.js
+rlsPolicy: {
+  customer: 'parent_entity_access',
+  technician: 'parent_entity_access',
+  dispatcher: 'parent_entity_access',
+  manager: 'parent_entity_access',
+  admin: 'all_records',
+},
+```
+
+This is a declarative marker. The actual enforcement happens in middleware.
+
+#### Middleware Enforcement
+
+Sub-entity routes use `sub-entity.js` middleware:
+
+```javascript
+// middleware/sub-entity.js
+function requireParentPermission(operation) {
+  return (req, res, next) => {
+    const { rlsResource } = req.parentMetadata;
+    
+    // Check permission on PARENT entity, not sub-entity
+    if (!req.permissions.hasPermission(rlsResource, operation)) {
+      return next(new AppError('Forbidden', 403));
+    }
+    next();
+  };
+}
+```
+
+**Key Insight:** The sub-entity itself has no separate RLS resource in `permissions.json`.
+Access is derived entirely from the parent entity's permissions.
+
+#### Why This Pattern?
+
+1. **Simplicity** - No explosion of `files:read_on_work_orders` permissions
+2. **Consistency** - If you can read a work order, you can read its files
+3. **Security** - Parent's RLS still applies (customer can't read another customer's work order files)
+4. **Maintainability** - Adding a new sub-entity doesn't require updating permissions.json
+
+#### Implementation Checklist
+
+To add a new sub-entity:
+
+1. Create metadata with `rlsPolicy: { *: 'parent_entity_access' }`
+2. Set `routeConfig.useGenericRouter: false` (custom routes required)
+3. Create sub-router using `middleware/sub-entity.js` helpers
+4. Mount via `route-loader.js` or `createFileSubRouter()` pattern
 
 ---
 
@@ -424,3 +538,48 @@ npm update
 ```
 
 **Review:** Security patches should be applied within 24 hours of disclosure.
+
+### Known Transitive Vulnerabilities
+
+**AWS SDK / fast-xml-parser (Low Severity)**
+
+`npm audit` reports 20 low-severity vulnerabilities in `fast-xml-parser@5.3.6`, a transitive dependency of `@aws-sdk/client-s3`. This is **accepted and tracked**.
+
+**Why we don't override:**
+- AWS SDK explicitly pins `"fast-xml-parser": "5.3.6"` (exact version, not semver range)
+- AWS has tested their SDK against this specific version
+- Forcing a different version could cause subtle XML parsing issues in S3 operations
+- The vulnerability (GHSA-fj3w-jwp8-x2g3: stack overflow in `XMLBuilder` with `preserveOrder`) requires specific conditions our code doesn't trigger
+
+**Our usage is safe because:**
+- We don't use `XMLBuilder` directly
+- Our S3 operations are simple file CRUD (`PutObject`, `GetObject`, `DeleteObject`, `HeadObject`)
+- No deeply nested XML parsing from untrusted sources
+
+**Action:** Monitor AWS SDK releases. When `@aws-sdk/xml-builder` updates its `fast-xml-parser` pin, upgrade via `npm update`.
+
+*Last reviewed: 2026-02-27*
+
+---
+
+### Pinned Dependencies
+
+**jose v4.15.9 (JWT Library)**
+
+`npm outdated` shows jose v6+ available, but we stay on v4. This is **intentional and tracked**.
+
+**Why we don't upgrade:**
+- jose v5+ is ESM-only (pure ES modules)
+- Our backend uses CommonJS (`require()`)
+- auth0 v5 also depends on jose v4
+- Migration requires converting to ESM or adding dual-module compatibility
+
+**Path to v6:**
+1. Convert backend to ESM (`"type": "module"` in package.json)
+2. Change all `require()` → `import`
+3. Update Jest config for ESM support
+4. Then upgrade jose
+
+**Current state:** Not blocking — jose v4 is fully secure and maintained.
+
+*Last reviewed: 2026-02-27*

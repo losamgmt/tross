@@ -255,9 +255,11 @@ class GenericEntityService {
    *
    * @param {string} entityName - Entity name (e.g., 'user', 'role', 'customer')
    * @param {number|string} id - Primary key value
-   * @param {Object} [rlsContext] - RLS context from middleware
-   * @param {string} [rlsContext.policy] - RLS policy name (e.g., 'own_record_only')
+   * @param {Object} [rlsContext] - RLS context from middleware (ADR-008)
+   * @param {*} [rlsContext.filterConfig] - Filter config: null | false | '$parent' | string | { field, value }
    * @param {number} [rlsContext.userId] - User ID for RLS filtering
+   * @param {number} [rlsContext.customerProfileId] - Customer profile ID
+   * @param {number} [rlsContext.technicianProfileId] - Technician profile ID
    * @returns {Promise<Object|null>} Entity record or null if not found/not authorized
    * @throws {Error} If entityName is invalid or id cannot be coerced to integer
    *
@@ -267,9 +269,9 @@ class GenericEntityService {
    *   // Returns: { id: 123, email: 'test@example.com', ... } or null
    *
    * @example
-   *   // With RLS (API endpoints)
+   *   // With RLS (API endpoints) - ADR-008 format
    *   const user = await GenericEntityService.findById('user', 123, {
-   *     policy: 'own_record_only',
+   *     filterConfig: 'id', // Filter users.id = userId
    *     userId: 123
    *   });
    *   // Returns user if authorized, null if not
@@ -307,9 +309,11 @@ class GenericEntityService {
    * @param {Object} [options.filters] - Filters (e.g., { priority[gte]: 50 })
    * @param {string} [options.sortBy] - Field to sort by (validated against sortableFields)
    * @param {string} [options.sortOrder] - 'ASC' or 'DESC'
-   * @param {Object} [rlsContext] - RLS context from middleware
-   * @param {string} [rlsContext.policy] - RLS policy name (e.g., 'own_work_orders_only')
+   * @param {Object} [rlsContext] - RLS context from middleware (ADR-008)
+   * @param {*} [rlsContext.filterConfig] - Filter config: null | false | '$parent' | string | { field, value }
    * @param {number} [rlsContext.userId] - User ID for RLS filtering
+   * @param {number} [rlsContext.customerProfileId] - Customer profile ID
+   * @param {number} [rlsContext.technicianProfileId] - Technician profile ID
    * @returns {Promise<Object>} { data: Entity[], pagination: {...}, appliedFilters: {...} }
    *
    * @example
@@ -318,12 +322,13 @@ class GenericEntityService {
    *   // Returns: { data: [...], pagination: { page: 1, limit: 10, total: 100, ... } }
    *
    * @example
-   *   // With RLS (API endpoints - customer viewing their work orders)
+   *   // With RLS (API endpoints - customer viewing their work orders) - ADR-008 format
    *   const result = await GenericEntityService.findAll('work_order', { page: 1 }, {
-   *     policy: 'own_work_orders_only',
-   *     userId: customerId
+   *     filterConfig: { field: 'customer_id', value: 'customerProfileId' },
+   *     userId: 42,
+   *     customerProfileId: 100
    *   });
-   *   // Returns only work orders where customer_id = customerId
+   *   // Returns only work orders where customer_id = 100
    */
   static async findAll(entityName, options = {}, rlsContext = null) {
     // Get metadata (throws if invalid entityName)
@@ -404,7 +409,9 @@ class GenericEntityService {
 
       logger.debug('GenericEntityService.findAll with RLS', {
         entity: entityName,
-        policy: rlsContext.policy,
+        filterConfig: typeof rlsContext.filterConfig === 'object'
+          ? JSON.stringify(rlsContext.filterConfig)
+          : rlsContext.filterConfig,
         rlsApplied: rlsFilter.applied,
         rlsClause: rlsFilter.clause || '(none)',
       });

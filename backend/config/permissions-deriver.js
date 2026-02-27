@@ -33,13 +33,9 @@ const SYNTHETIC_RESOURCES = {
   // See: backend/config/models/audit-log-metadata.js
   dashboard: {
     description: 'Main dashboard view - role-driven overview',
-    rlsPolicy: {
-      customer: 'own_record_only',
-      technician: 'own_record_only',
-      dispatcher: 'all_records',
-      manager: 'all_records',
-      admin: 'all_records',
-    },
+    // Dashboard is UI-only (no database table) - RLS not applicable
+    // Row filtering happens on the underlying entities (work_orders, etc.)
+    rlsPolicy: null,
     entityPermissions: {
       create: 'admin',
       read: 'customer',
@@ -49,13 +45,8 @@ const SYNTHETIC_RESOURCES = {
   },
   admin_panel: {
     description: 'Admin control center - system health, sessions, audit logs',
-    rlsPolicy: {
-      customer: 'deny_all',
-      technician: 'deny_all',
-      dispatcher: 'deny_all',
-      manager: 'deny_all',
-      admin: 'all_records',
-    },
+    // Admin-only resource - no row filtering needed
+    rlsPolicy: null,
     entityPermissions: {
       create: 'admin',
       read: 'admin',
@@ -65,13 +56,8 @@ const SYNTHETIC_RESOURCES = {
   },
   system_settings: {
     description: 'System-wide configuration (maintenance mode, feature flags)',
-    rlsPolicy: {
-      customer: 'deny_all',
-      technician: 'deny_all',
-      dispatcher: 'deny_all',
-      manager: 'deny_all',
-      admin: 'all_records',
-    },
+    // Admin-only resource - no row filtering needed
+    rlsPolicy: null,
     entityPermissions: {
       create: 'admin',
       read: 'admin',

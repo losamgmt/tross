@@ -9,7 +9,7 @@
 ### What's Working ✅
 
 - Full authentication flow (Auth0 + dev login)
-- Role-based access control (viewer, user, manager, admin)
+- Role-based access control (customer, technician, dispatcher, manager, admin)
 - Generic entity CRUD (metadata-driven)
 - Dashboard with role-based entity charts
 - Admin system health monitoring

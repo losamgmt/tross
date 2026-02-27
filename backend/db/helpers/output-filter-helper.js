@@ -41,10 +41,11 @@ const ALWAYS_SENSITIVE = [
 /**
  * Filter sensitive fields from a single entity record
  *
+ * Uses blacklist approach: removes sensitiveFields + ALWAYS_SENSITIVE from output.
+ *
  * @param {Object} record - Entity record from database
  * @param {Object} metadata - Entity metadata from config/models
  * @param {string[]} [metadata.sensitiveFields] - Additional fields to exclude
- * @param {string[]} [metadata.outputFields] - Whitelist of fields to include (if set, only these are returned)
  * @returns {Object} Filtered record with sensitive fields removed
  *
  * @example
@@ -54,14 +55,6 @@ const ALWAYS_SENSITIVE = [
  *     { tableName: 'users' }
  *   );
  *   // Returns: { id: 1, email: 'test@example.com' }
- *
- * @example
- *   // Use outputFields whitelist
- *   const publicUser = filterOutput(
- *     { id: 1, email: 'test@example.com', phone: '555-1234', internal_notes: 'VIP' },
- *     { outputFields: ['id', 'email', 'phone'] }
- *   );
- *   // Returns: { id: 1, email: 'test@example.com', phone: '555-1234' }
  */
 function filterOutput(record, metadata = {}) {
   // Handle null/undefined input gracefully
@@ -75,26 +68,11 @@ function filterOutput(record, metadata = {}) {
     return filterOutputArray(record, metadata);
   }
 
-  const { sensitiveFields = [], outputFields = null } = metadata;
+  const { sensitiveFields = [] } = metadata;
 
   // Combine default sensitive fields with metadata-defined ones
   const fieldsToExclude = new Set([...ALWAYS_SENSITIVE, ...sensitiveFields]);
 
-  // If outputFields whitelist is defined, use it (more restrictive)
-  if (outputFields && Array.isArray(outputFields) && outputFields.length > 0) {
-    const filtered = {};
-    for (const field of outputFields) {
-      if (Object.prototype.hasOwnProperty.call(record, field)) {
-        // Double-check: don't include even whitelisted fields if they're sensitive
-        if (!fieldsToExclude.has(field)) {
-          filtered[field] = record[field];
-        }
-      }
-    }
-    return filtered;
-  }
-
-  // Otherwise, use blacklist approach (exclude sensitive fields)
   const filtered = {};
   for (const [key, value] of Object.entries(record)) {
     if (!fieldsToExclude.has(key)) {

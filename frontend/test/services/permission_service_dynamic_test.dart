@@ -535,7 +535,7 @@ void main() {
       }
     });
 
-    test('RLS policies are null or valid strings', () {
+    test('RLS policies are valid ADR-008 filter configs', () {
       for (final role in UserRole.values) {
         for (final resource in ResourceType.values) {
           final policy = PermissionService.getRowLevelSecurity(
@@ -543,9 +543,17 @@ void main() {
             resource,
           );
 
-          // Policy must be null or a non-empty string
-          if (policy != null) {
-            expect(policy, isNot(isEmpty));
+          // ADR-008: Policy must be null, false, '$parent', String, or Map
+          if (policy == null || policy == false) {
+            // Valid: null (all records) or false (deny all)
+          } else if (policy is String) {
+            // Valid: '$parent' or field name shorthand
+            expect(policy, isNotEmpty);
+          } else if (policy is Map) {
+            // Valid: { field, value } object config
+            expect(policy.containsKey('field'), isTrue);
+          } else {
+            fail('Invalid RLS policy type: ${policy.runtimeType}');
           }
         }
       }

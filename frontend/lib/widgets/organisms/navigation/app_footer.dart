@@ -166,7 +166,7 @@ class AppFooter extends StatelessWidget {
         ],
 
         // Custom content
-        if (customContent != null) customContent!,
+        ?customContent,
       ],
     );
   }

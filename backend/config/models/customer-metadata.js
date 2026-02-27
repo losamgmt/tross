@@ -13,6 +13,8 @@
 const { UNIVERSAL_FIELD_ACCESS } = require('../constants');
 const { NAME_TYPES } = require('../entity-types');
 const {
+  FIELD,
+  ENUM,
   createAddressFields,
   createAddressFieldAccess,
 } = require('../field-type-standards');
@@ -72,13 +74,14 @@ module.exports = {
   /**
    * Row-Level Security policy per role
    * Customers see own record only, technician+ see all
+   * Values: null (all records), false (deny), field string, or { field, value } object
    */
   rlsPolicy: {
-    customer: 'own_record_only',
-    technician: 'all_records',
-    dispatcher: 'all_records',
-    manager: 'all_records',
-    admin: 'all_records',
+    customer: { field: 'id', value: 'customerProfileId' }, // Filter customers.id = customerProfileId
+    technician: null,
+    dispatcher: null,
+    manager: null,
+    admin: null,
   },
 
   /**
@@ -239,6 +242,14 @@ module.exports = {
   },
 
   // ============================================================================
+  // ENUM DEFINITIONS (for consistent UI colors)
+  // ============================================================================
+
+  enums: {
+    status: ENUM.PERSON_STATUS,
+  },
+
+  // ============================================================================
   // RELATIONSHIPS (for JOIN queries)
   // ============================================================================
 
@@ -362,26 +373,25 @@ module.exports = {
   fields: {
     // TIER 1: Universal Entity Contract Fields
     id: { type: 'integer', readonly: true },
-    email: { type: 'email', required: true, maxLength: 255 },
+    email: { ...FIELD.EMAIL, required: true },
     is_active: { type: 'boolean', default: true },
     created_at: { type: 'timestamp', readonly: true },
     updated_at: { type: 'timestamp', readonly: true },
 
     // TIER 2: Entity-Specific Lifecycle Field
-    // SSOT: Must match User and Technician status values
     status: {
       type: 'enum',
-      values: ['pending', 'active', 'suspended'],
+      values: ENUM.PERSON_STATUS.values,
       default: 'pending',
     },
 
     // HUMAN entity name fields
-    first_name: { type: 'string', required: true, maxLength: 100 },
-    last_name: { type: 'string', required: true, maxLength: 100 },
+    first_name: { ...FIELD.FIRST_NAME, required: true },
+    last_name: { ...FIELD.LAST_NAME, required: true },
 
     // Entity-specific fields
-    phone: { type: 'phone', maxLength: 50 },
-    organization_name: { type: 'string', maxLength: 255 },
+    phone: FIELD.PHONE,
+    organization_name: FIELD.NAME,
 
     // Flat address fields (using field-type-standards generators)
     ...createAddressFields('billing'),

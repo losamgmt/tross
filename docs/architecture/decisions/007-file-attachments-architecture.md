@@ -89,6 +89,7 @@ File permissions derive from the **parent entity**, not a separate permission:
 - Simpler permission model - if you can edit the work order, you can manage its files
 - No permission explosion (13 entities × 4 operations = 52 new permissions avoided)
 - Matches user mental model - "I'm editing this work order"
+- See [Sub-Entity Security](../../reference/SECURITY.md#sub-entity-security-parent-derived-access) for implementation details
 
 ---
 

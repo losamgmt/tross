@@ -86,10 +86,16 @@ jest.mock("../../../middleware/auth", () => {
 });
 
 jest.mock("../../../middleware/row-level-security", () => {
-  // Unified signature: enforceRLS is a middleware function (no args)
+  // ADR-008: enforceRLS sets rlsContext with filterConfig-based format
   const rlsMiddleware = (req, res, next) => {
-    req.rlsPolicy = "all_records";
-    req.rlsUserId = 1;
+    req.rlsContext = {
+      filterConfig: null, // All records
+      userId: 1,
+      customerProfileId: null,
+      technicianProfileId: null,
+      role: req.dbUser?.role || "admin",
+      resource: req.entityMetadata?.rlsResource,
+    };
     next();
   };
   return {

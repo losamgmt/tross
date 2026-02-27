@@ -1,30 +1,30 @@
 /**
  * RLS Filter Helper
  *
- * SRP LITERALISM: ONLY builds RLS WHERE clauses based on policy and metadata
+ * SRP LITERALISM: ONLY builds RLS WHERE clauses based on filter configuration
+ *
+ * ARCHITECTURE: ADR-008 - Row-Level Security Field-Based Filtering
  *
  * PHILOSOPHY:
- * - METADATA-DRIVEN: Uses entity metadata to determine filter field
- * - POLICY-AWARE: Implements all RLS policies from permissions.json
- * - COMPOSABLE: Returns clause/params that can be combined with other WHERE conditions
- * - SECURE: Defaults to deny (1=0) for unknown policies
+ * - DATA-DRIVEN: Filter configuration IS the data (field name, value key)
+ * - ZERO DUPLICATION: One handler for all entities
+ * - FAIL-CLOSED: Unknown/missing values deny access
+ * - COMPOSABLE: Returns clause/params combinable with other WHERE conditions
  *
- * EXTRACTED FROM:
- *   Legacy models (User.js, Customer.js, WorkOrder.js, Invoice.js, Contract.js)
- *   all had _buildRLSFilter() with identical switch logic - now centralized here.
+ * FILTER CONFIG VALUES (from rlsPolicy in entity metadata):
+ *   - null: No filtering (all records)
+ *   - false: Deny all access
+ *   - '$parent': Access derived from parent entity (sub-entities)
+ *   - 'field_name': Filter by field using userId (shorthand)
+ *   - { field, value }: Filter by field using rlsContext[value]
  *
- * RLS POLICIES (from config/permissions.json):
- *   - all_records: No filtering (admin/manager view)
- *   - own_record_only: Filter by user's own ID (users viewing themselves)
- *   - own_work_orders_only: Filter work orders by customer_id
- *   - assigned_work_orders_only: Filter work orders by assigned_technician_id
- *   - own_invoices_only: Filter invoices by customer_id
- *   - own_contracts_only: Filter contracts by customer_id
- *   - public_resource: No filtering (e.g., roles)
- *   - deny_all: Block all access (1=0)
+ * CONTEXT VALUES AVAILABLE:
+ *   - userId: Current user's ID (users.id)
+ *   - customerProfileId: User's customer profile (users.customer_profile_id)
+ *   - technicianProfileId: User's technician profile (users.technician_profile_id)
  *
  * USAGE:
- *   const { clause, params, applied } = buildRLSFilter(req, metadata, paramOffset);
+ *   const { clause, params, applied } = buildRLSFilter(rlsContext, metadata, paramOffset);
  *   // clause: 'customer_id = $3' or '' or '1=0'
  *   // params: [userId] or []
  *   // applied: true if RLS was processed
@@ -33,145 +33,33 @@
 const { logger } = require('../../config/logger');
 
 /**
- * RLS policy implementations
- *
- * Each policy returns { clause, params } for the given context.
- * The clause uses $RLS_OFFSET as a placeholder for the parameter position.
- *
- * @private
- */
-const POLICY_HANDLERS = {
-  /**
-   * all_records: Full access, no filtering needed
-   * applied: false because no actual filtering occurs
-   */
-  all_records: () => ({
-    clause: '',
-    params: [],
-    noFilter: true, // Flag to indicate no filtering was applied
-  }),
-
-  /**
-   * public_resource: Same as all_records (e.g., roles table)
-   * applied: false because no actual filtering occurs
-   */
-  public_resource: () => ({
-    clause: '',
-    params: [],
-    noFilter: true,
-  }),
-
-  /**
-   * own_record_only: User can only see their own record
-   * Uses metadata.rlsFilterConfig.ownRecordField or defaults to 'id'
-   */
-  own_record_only: (userId, metadata, paramOffset) => {
-    const field = metadata.rlsFilterConfig?.ownRecordField || 'id';
-    return {
-      clause: `${field} = $${paramOffset + 1}`,
-      params: [userId],
-    };
-  },
-
-  /**
-   * own_work_orders_only: Customer sees only their work orders
-   * Filter by customer_id (or metadata.rlsFilterConfig.customerField)
-   */
-  own_work_orders_only: (userId, metadata, paramOffset) => {
-    const field = metadata.rlsFilterConfig?.customerField || 'customer_id';
-    return {
-      clause: `${field} = $${paramOffset + 1}`,
-      params: [userId],
-    };
-  },
-
-  /**
-   * assigned_work_orders_only: Technician sees only assigned work orders
-   * Filter by assigned_technician_id (or metadata.rlsFilterConfig.assignedField)
-   */
-  assigned_work_orders_only: (userId, metadata, paramOffset) => {
-    const field =
-      metadata.rlsFilterConfig?.assignedField || 'assigned_technician_id';
-    return {
-      clause: `${field} = $${paramOffset + 1}`,
-      params: [userId],
-    };
-  },
-
-  /**
-   * own_invoices_only: Customer sees only their invoices
-   * Filter by customer_id (or metadata.rlsFilterConfig.customerField)
-   */
-  own_invoices_only: (userId, metadata, paramOffset) => {
-    const field = metadata.rlsFilterConfig?.customerField || 'customer_id';
-    return {
-      clause: `${field} = $${paramOffset + 1}`,
-      params: [userId],
-    };
-  },
-
-  /**
-   * own_contracts_only: Customer sees only their contracts
-   * Filter by customer_id (or metadata.rlsFilterConfig.customerField)
-   */
-  own_contracts_only: (userId, metadata, paramOffset) => {
-    const field = metadata.rlsFilterConfig?.customerField || 'customer_id';
-    return {
-      clause: `${field} = $${paramOffset + 1}`,
-      params: [userId],
-    };
-  },
-
-  /**
-   * deny_all: Block all access (security failsafe)
-   */
-  deny_all: () => ({
-    clause: '1=0',
-    params: [],
-  }),
-};
-
-/**
  * Build RLS filter clause based on request context and entity metadata
  *
+ * ADR-008: Single generic handler interprets filterConfig as data.
+ *
  * @param {Object} rlsContext - RLS context from middleware
- * @param {string} rlsContext.policy - RLS policy name (from permissions.json)
- * @param {number} rlsContext.userId - User ID for filtering
+ * @param {*} rlsContext.filterConfig - Filter configuration (null | false | string | object)
+ * @param {number} rlsContext.userId - User's ID
+ * @param {number|null} rlsContext.customerProfileId - User's customer profile ID
+ * @param {number|null} rlsContext.technicianProfileId - User's technician profile ID
  * @param {Object} metadata - Entity metadata from config/models
- * @param {Object} [metadata.rlsFilterConfig] - RLS filter configuration
+ * @param {string} metadata.tableName - Table name for prefixing columns
  * @param {number} [paramOffset=0] - Starting parameter offset (for $N placeholders)
  * @returns {Object} { clause: string, params: array, applied: boolean }
  *
  * @example
- *   // Customer viewing work orders
- *   const filter = buildRLSFilter(
- *     { policy: 'own_work_orders_only', userId: 42 },
- *     workOrderMetadata,
- *     2  // Already have $1 and $2 from search/filter
- *   );
- *   // Returns: { clause: 'customer_id = $3', params: [42], applied: true }
+ *   // Customer viewing work orders - filterConfig: { field: 'customer_id', value: 'customerProfileId' }
+ *   const filter = buildRLSFilter(rlsContext, workOrderMetadata, 2);
+ *   // Returns: { clause: 'work_orders.customer_id = $3', params: [45], applied: true }
  *
  * @example
- *   // Admin viewing anything
- *   const filter = buildRLSFilter(
- *     { policy: 'all_records', userId: 1 },
- *     userMetadata,
- *     0
- *   );
+ *   // Admin viewing anything - filterConfig: null
+ *   const filter = buildRLSFilter(rlsContext, userMetadata, 0);
  *   // Returns: { clause: '', params: [], applied: true }
- *
- * @example
- *   // Technician trying to view invoices (deny_all)
- *   const filter = buildRLSFilter(
- *     { policy: 'deny_all', userId: 5 },
- *     invoiceMetadata,
- *     0
- *   );
- *   // Returns: { clause: '1=0', params: [], applied: true }
  */
 function buildRLSFilter(rlsContext, metadata, paramOffset = 0) {
   // If no RLS context, return unapplied (caller must decide if this is OK)
-  if (!rlsContext || !rlsContext.policy) {
+  if (!rlsContext) {
     logger.debug('buildRLSFilter: No RLS context provided', {
       entity: metadata?.tableName,
     });
@@ -182,17 +70,26 @@ function buildRLSFilter(rlsContext, metadata, paramOffset = 0) {
     };
   }
 
-  const { policy, userId } = rlsContext;
+  const { filterConfig } = rlsContext;
+  const tableName = metadata?.tableName || '';
 
-  // Get the handler for this policy
-  const handler = POLICY_HANDLERS[policy];
+  // Handle null: All records (no filter)
+  if (filterConfig === null) {
+    logger.debug('buildRLSFilter: All records (filterConfig=null)', {
+      entity: tableName,
+    });
+    return {
+      clause: '',
+      params: [],
+      applied: true,
+      noFilter: true,
+    };
+  }
 
-  if (!handler) {
-    // Unknown policy = deny access (security failsafe)
-    logger.warn('buildRLSFilter: Unknown RLS policy, denying access', {
-      policy,
-      entity: metadata?.tableName,
-      userId,
+  // Handle false: Deny all access
+  if (filterConfig === false) {
+    logger.debug('buildRLSFilter: Deny all (filterConfig=false)', {
+      entity: tableName,
     });
     return {
       clause: '1=0',
@@ -201,23 +98,58 @@ function buildRLSFilter(rlsContext, metadata, paramOffset = 0) {
     };
   }
 
-  // Policies that require a valid userId for filtering
-  const policiesRequiringUserId = [
-    'own_record_only',
-    'own_work_orders_only',
-    'assigned_work_orders_only',
-    'own_invoices_only',
-    'own_contracts_only',
-  ];
+  // Handle '$parent': Parent entity access (sub-entity pattern)
+  // This should only reach here if misconfigured - sub-entities use custom middleware
+  // Fail closed for security
+  if (filterConfig === '$parent') {
+    logger.warn(
+      'buildRLSFilter: $parent policy reached generic filter - denying (misconfiguration)',
+      { entity: tableName },
+    );
+    return {
+      clause: '1=0',
+      params: [],
+      applied: true,
+    };
+  }
 
-  // If userId is null and the policy requires user-specific filtering, deny access
-  // This handles dev users with null userId trying to access user-filtered resources
-  if (userId === null && policiesRequiringUserId.includes(policy)) {
+  // Normalize shorthand string to object form
+  // 'user_id' → { field: 'user_id', value: 'userId' }
+  const config =
+    typeof filterConfig === 'string'
+      ? { field: filterConfig, value: 'userId' }
+      : filterConfig;
+
+  // Validate config shape
+  if (!config || typeof config !== 'object' || !config.field) {
+    logger.warn('buildRLSFilter: Invalid filterConfig, denying access', {
+      entity: tableName,
+      filterConfig,
+    });
+    return {
+      clause: '1=0',
+      params: [],
+      applied: true,
+    };
+  }
+
+  const { field, value = 'userId' } = config;
+
+  // Get the actual filter value from context
+  const filterValue = rlsContext[value];
+
+  // If filter value is undefined or null, deny access (fail closed)
+  // This handles cases like technicians without technician_profile_id
+  if (filterValue === undefined || filterValue === null) {
     logger.debug(
-      'buildRLSFilter: Denying access - null userId with user-specific policy',
+      'buildRLSFilter: Missing filter value in context, denying access',
       {
-        policy,
-        entity: metadata?.tableName,
+        entity: tableName,
+        field,
+        valueKey: value,
+        availableKeys: Object.keys(rlsContext).filter(
+          (k) => rlsContext[k] !== null,
+        ),
       },
     );
     return {
@@ -227,25 +159,21 @@ function buildRLSFilter(rlsContext, metadata, paramOffset = 0) {
     };
   }
 
-  // Execute the policy handler
-  const result = handler(userId, metadata, paramOffset);
+  // Build the WHERE clause
+  const prefix = tableName ? `${tableName}.` : '';
+  const clause = `${prefix}${field} = $${paramOffset + 1}`;
 
-  // Determine if RLS actually filtered anything
-  // 'applied' = true only when actual row filtering occurred
-  // 'applied' = false for all_records/public_resource (full access, no restriction)
-  const actuallyFiltered = !result.noFilter && (result.clause || false);
-
-  logger.debug('buildRLSFilter: Applied RLS filter', {
-    policy,
-    entity: metadata?.tableName,
-    clause: result.clause || '(none)',
-    hasParams: result.params.length > 0,
+  logger.debug('buildRLSFilter: Applied field filter', {
+    entity: tableName,
+    field,
+    valueKey: value,
+    clause,
   });
 
   return {
-    clause: result.clause,
-    params: result.params,
-    applied: !!actuallyFiltered,
+    clause,
+    params: [filterValue],
+    applied: true,
   };
 }
 
@@ -261,44 +189,53 @@ function buildRLSFilter(rlsContext, metadata, paramOffset = 0) {
  * @returns {Object} { clause: string, params: array, applied: boolean }
  *
  * @example
- *   // Customer accessing their own user record
- *   const filter = buildRLSFilterForFindById(
- *     { policy: 'own_record_only', userId: 42 },
- *     userMetadata
- *   );
- *   // Final query: SELECT * FROM users WHERE id = $1 AND id = $2
- *   // With params: [requestedId, 42]
+ *   // Customer accessing their own customer record
+ *   // filterConfig: { field: 'id', value: 'customerProfileId' }
+ *   const filter = buildRLSFilterForFindById(rlsContext, customerMetadata);
+ *   // Final query: SELECT * FROM customers WHERE id = $1 AND id = $2
+ *   // With params: [requestedId, 45]
  */
 function buildRLSFilterForFindById(rlsContext, metadata, paramOffset = 1) {
   return buildRLSFilter(rlsContext, metadata, paramOffset);
 }
 
 /**
- * Check if an RLS policy allows access to any records
+ * Check if an RLS filter config allows access to any records
  *
- * Utility function to quickly check if a policy will deny all access.
+ * Utility function to quickly check if a config will deny all access.
  *
- * @param {string} policy - RLS policy name
- * @returns {boolean} True if policy allows any access, false if deny_all
+ * @param {*} filterConfig - RLS filter configuration
+ * @returns {boolean} True if config allows any access, false if deny_all
  */
-function policyAllowsAccess(policy) {
-  return policy !== 'deny_all' && POLICY_HANDLERS[policy] !== undefined;
+function filterConfigAllowsAccess(filterConfig) {
+  // false explicitly denies
+  if (filterConfig === false) {return false;}
+  // null allows all
+  if (filterConfig === null) {return true;}
+  // String or object config may allow (depends on context values)
+  return true;
 }
 
 /**
- * Get list of supported RLS policies
+ * Get description of filter config for logging/debugging
  *
- * @returns {string[]} Array of policy names
+ * @param {*} filterConfig - RLS filter configuration
+ * @returns {string} Human-readable description
  */
-function getSupportedPolicies() {
-  return Object.keys(POLICY_HANDLERS);
+function describeFilterConfig(filterConfig) {
+  if (filterConfig === null) {return 'all_records';}
+  if (filterConfig === false) {return 'deny_all';}
+  if (filterConfig === '$parent') {return 'parent_entity_access';}
+  if (typeof filterConfig === 'string') {return `filter_by_${filterConfig}`;}
+  if (filterConfig?.field) {
+    return `filter_by_${filterConfig.field}_via_${filterConfig.value || 'userId'}`;
+  }
+  return 'unknown';
 }
 
 module.exports = {
   buildRLSFilter,
   buildRLSFilterForFindById,
-  policyAllowsAccess,
-  getSupportedPolicies,
-  // Exported for testing only
-  _POLICY_HANDLERS: POLICY_HANDLERS,
+  filterConfigAllowsAccess,
+  describeFilterConfig,
 };

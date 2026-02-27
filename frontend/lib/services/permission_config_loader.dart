@@ -142,7 +142,8 @@ class PermissionConfig {
   }
 
   /// Get row-level security policy for role and resource
-  String? getRowLevelSecurity(String? roleName, String resource) {
+  /// Returns null (no RLS), false (deny), String (field), or Map (object config)
+  dynamic getRowLevelSecurity(String? roleName, String resource) {
     if (roleName == null || roleName.isEmpty) return null;
 
     final resourceConfig = resources[resource];
@@ -173,7 +174,10 @@ class RoleConfig {
 /// Resource Configuration
 class ResourceConfig {
   final String description;
-  final Map<String, String>? rowLevelSecurity;
+
+  /// Row-level security per role (ADR-008 format)
+  /// Values can be: null (all), false (deny), String (field), Map (object config)
+  final Map<String, dynamic>? rowLevelSecurity;
   final Map<String, PermissionDetail> permissions;
   final NavVisibility? navVisibility;
 
@@ -193,10 +197,11 @@ class ResourceConfig {
       );
     }
 
-    Map<String, String>? rlsMap;
-    if (json['rowLevelSecurity'] != null) {
-      final rlsJson = json['rowLevelSecurity'] as Map<String, dynamic>;
-      rlsMap = rlsJson.map((k, v) => MapEntry(k, v as String));
+    Map<String, dynamic>? rlsMap;
+    final rlsValue = json['rowLevelSecurity'];
+    if (rlsValue is Map<String, dynamic>) {
+      // Preserve values as-is: null, false, String, or Map
+      rlsMap = Map<String, dynamic>.from(rlsValue);
     }
 
     NavVisibility? navVis;

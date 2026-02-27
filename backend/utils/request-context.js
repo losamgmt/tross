@@ -15,24 +15,26 @@ const { getClientIp, getUserAgent } = require('./request-helpers');
 /**
  * Build RLS (Row-Level Security) context from request middleware
  *
- * Used by GenericEntityService.findAll/findById to apply row-level filtering
+ * Used by GenericEntityService.findAll/findById to apply row-level filtering.
+ * ADR-008: Returns filterConfig-based context for field-based filtering.
  *
  * @param {Object} req - Express request object (with RLS middleware applied)
- * @returns {Object|null} RLS context { policy, userId } or null if no RLS applies
+ * @returns {Object|null} RLS context or null if no RLS applies
+ *
+ * Context properties:
+ *   - filterConfig: null | false | string | { field, value }
+ *   - userId: User's ID
+ *   - customerProfileId: User's customer profile ID (if applicable)
+ *   - technicianProfileId: User's technician profile ID (if applicable)
+ *   - role: User's role
+ *   - resource: Resource being accessed
  *
  * @example
  *   const rlsContext = buildRlsContext(req);
  *   const result = await GenericEntityService.findAll('invoice', options, rlsContext);
  */
 function buildRlsContext(req) {
-  if (!req.rlsPolicy) {
-    return null;
-  }
-
-  return {
-    policy: req.rlsPolicy,
-    userId: req.rlsUserId,
-  };
+  return req.rlsContext || null;
 }
 
 /**

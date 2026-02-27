@@ -11,12 +11,12 @@
  */
 
 const {
-  FIELD_ACCESS_LEVELS: FAL,
+  FIELD_ACCESS_LEVELS: _FAL,
   UNIVERSAL_FIELD_ACCESS,
 } = require('../constants');
 const { getRoleHierarchy } = require('../role-hierarchy-loader');
 const { NAME_TYPES } = require('../entity-types');
-const { FIELD } = require('../field-type-standards');
+const { FIELD, ENUM } = require('../field-type-standards');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -74,13 +74,14 @@ module.exports = {
   /**
    * Row-Level Security policy per role
    * Roles are a public resource - all authenticated users can read
+   * Values: null (all records), false (deny), field string, or { field, value } object
    */
   rlsPolicy: {
-    customer: 'public_resource',
-    technician: 'public_resource',
-    dispatcher: 'public_resource',
-    manager: 'public_resource',
-    admin: 'public_resource',
+    customer: null,
+    technician: null,
+    dispatcher: null,
+    manager: null,
+    admin: null,
   },
 
   /**
@@ -176,9 +177,14 @@ module.exports = {
       update: 'admin',
       delete: 'none',
     },
+  },
 
-    // Is system role flag - read-only indicator
-    is_system_role: FAL.PUBLIC_READONLY,
+  // ============================================================================
+  // ENUM DEFINITIONS (for consistent UI colors)
+  // ============================================================================
+
+  enums: {
+    status: ENUM.ROLE_STATUS,
   },
 
   // ============================================================================
@@ -210,7 +216,6 @@ module.exports = {
    * Enforcement layers (defense in depth):
    *   1. Route layer: Fast-fail for UX (check before calling service)
    *   2. Service layer: GenericEntityService checks before DB operations
-   *   3. Database layer: Trigger + is_system_role column (last line of defense)
    *
    * Protected roles are fundamental to the RBAC system and must not be
    * accidentally deleted or have their hierarchy (priority) changed.
@@ -389,7 +394,7 @@ module.exports = {
     // TIER 2: Lifecycle status
     status: {
       type: 'enum',
-      values: ['active', 'disabled'],
+      values: ENUM.ROLE_STATUS.values,
       default: 'active',
       description:
         'Role lifecycle state - disabled roles cannot be newly assigned',

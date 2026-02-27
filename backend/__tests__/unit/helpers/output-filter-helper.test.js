@@ -9,7 +9,7 @@
  * - isSensitiveField() - Field sensitivity check
  * - getAlwaysSensitiveFields() - List of default sensitive fields
  * - Edge cases (null, undefined, arrays, nested objects)
- * - Metadata-driven configuration (sensitiveFields, outputFields)
+ * - Metadata-driven configuration (sensitiveFields blacklist)
  */
 
 const {
@@ -143,62 +143,6 @@ describe("Output Filter Helper", () => {
 
         expect(result.auth0_id).toBeUndefined(); // Always sensitive
         expect(result.ssn).toBeUndefined(); // Metadata sensitive
-        expect(result.email).toBe("test@example.com");
-      });
-    });
-
-    describe("metadata.outputFields (whitelist mode)", () => {
-      it("should only include whitelisted fields", () => {
-        const record = {
-          id: 1,
-          email: "test@example.com",
-          first_name: "John",
-          last_name: "Doe",
-          internal_data: "secret",
-          created_at: "2025-01-01",
-        };
-
-        const metadata = {
-          outputFields: ["id", "email", "first_name", "last_name"],
-        };
-
-        const result = filterOutput(record, metadata);
-
-        expect(result).toEqual({
-          id: 1,
-          email: "test@example.com",
-          first_name: "John",
-          last_name: "Doe",
-        });
-        expect(result.internal_data).toBeUndefined();
-        expect(result.created_at).toBeUndefined();
-      });
-
-      it("should still strip always-sensitive even if whitelisted", () => {
-        const record = {
-          id: 1,
-          email: "test@example.com",
-          auth0_id: "auth0|123",
-        };
-
-        const metadata = {
-          outputFields: ["id", "email", "auth0_id"], // Whitelist includes auth0_id
-        };
-
-        const result = filterOutput(record, metadata);
-
-        expect(result.id).toBe(1);
-        expect(result.email).toBe("test@example.com");
-        expect(result.auth0_id).toBeUndefined(); // Still stripped - security trumps whitelist
-      });
-
-      it("should handle empty whitelist", () => {
-        const record = { id: 1, email: "test@example.com" };
-
-        const result = filterOutput(record, { outputFields: [] });
-
-        // Empty whitelist falls back to blacklist mode
-        expect(result.id).toBe(1);
         expect(result.email).toBe("test@example.com");
       });
     });

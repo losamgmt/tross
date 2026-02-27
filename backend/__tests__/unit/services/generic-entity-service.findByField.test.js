@@ -172,8 +172,9 @@ describe("GenericEntityService.findByField()", () => {
       const mockUser = { id: 1, email: "test@example.com" };
       db.query.mockResolvedValueOnce({ rows: [mockUser] });
 
+      // ADR-008: filterConfig 'id' is shorthand for { field: 'id', value: 'userId' }
       const rlsContext = {
-        policy: "own_record_only",
+        filterConfig: 'id',
         userId: 1,
       };
 

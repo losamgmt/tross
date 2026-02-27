@@ -19,7 +19,7 @@ const {
   createTestUser,
 } = require("../../helpers/test-db");
 const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
+const { decodeJwt } = require("../../../utils/jwt-helper");
 
 describe("TokenService - Integration Tests (Real DB)", () => {
   let testUser;
@@ -142,7 +142,7 @@ describe("TokenService - Integration Tests (Real DB)", () => {
       const tokens = await TokenService.generateTokenPair(testUser);
       validRefreshToken = tokens.refreshToken;
 
-      const decoded = jwt.decode(validRefreshToken);
+      const decoded = decodeJwt(validRefreshToken);
       tokenId = decoded.tokenId;
     });
 
@@ -251,7 +251,7 @@ describe("TokenService - Integration Tests (Real DB)", () => {
   describe("revokeToken()", () => {
     test("should set revoked_at timestamp in database", async () => {
       const { refreshToken } = await TokenService.generateTokenPair(testUser);
-      const decoded = jwt.decode(refreshToken);
+      const decoded = decodeJwt(refreshToken);
 
       await TokenService.revokeToken(decoded.tokenId, "user_logout");
 
@@ -310,7 +310,7 @@ describe("TokenService - Integration Tests (Real DB)", () => {
 
       // Create a token and manually expire it
       const { refreshToken } = await TokenService.generateTokenPair(testUser);
-      const decoded = jwt.decode(refreshToken);
+      const decoded = decodeJwt(refreshToken);
 
       await pool.query(
         `UPDATE refresh_tokens 
