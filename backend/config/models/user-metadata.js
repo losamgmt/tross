@@ -15,7 +15,7 @@ const {
   UNIVERSAL_FIELD_ACCESS,
 } = require('../constants');
 const { NAME_TYPES } = require('../entity-types');
-const { FIELD } = require('../field-type-standards');
+const { FIELD, ENUM } = require('../field-type-standards');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -67,13 +67,14 @@ module.exports = {
   /**
    * Row-Level Security policy per role
    * Defines what records each role can access
+   * Values: null (all records), false (deny), field string, or { field, value } object
    */
   rlsPolicy: {
-    customer: 'own_record_only',
-    technician: 'all_records',
-    dispatcher: 'all_records',
-    manager: 'all_records',
-    admin: 'all_records',
+    customer: 'id', // Filter users.id = userId (their own record)
+    technician: null,
+    dispatcher: null,
+    manager: null,
+    admin: null,
   },
 
   /**
@@ -222,6 +223,14 @@ module.exports = {
     // Profile links - admin managed (set via profile creation flows)
     customer_profile_id: FAL.ADMIN_ONLY,
     technician_profile_id: FAL.ADMIN_ONLY,
+  },
+
+  // ============================================================================
+  // ENUM DEFINITIONS (for consistent UI colors)
+  // ============================================================================
+
+  enums: {
+    status: ENUM.PERSON_STATUS,
   },
 
   // ============================================================================
@@ -422,10 +431,9 @@ module.exports = {
     updated_at: { type: 'timestamp', readonly: true },
 
     // TIER 2: Entity-Specific Lifecycle Field
-    // SSOT: Must match Customer and Technician status values
     status: {
       type: 'enum',
-      values: ['pending', 'active', 'suspended'],
+      values: ENUM.PERSON_STATUS.values,
       default: 'pending',
     },
 

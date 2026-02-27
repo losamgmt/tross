@@ -48,13 +48,14 @@ module.exports = {
   /**
    * Row-Level Security policy per role
    * Only admin can access audit logs
+   * Values: null (all records), false (deny), field string, or { field, value } object
    */
   rlsPolicy: {
-    customer: 'deny_all',
-    technician: 'deny_all',
-    dispatcher: 'deny_all',
-    manager: 'deny_all',
-    admin: 'all_records',
+    customer: false,
+    technician: false,
+    dispatcher: false,
+    manager: false,
+    admin: null,
   },
 
   /**

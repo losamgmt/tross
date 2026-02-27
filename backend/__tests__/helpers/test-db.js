@@ -206,7 +206,7 @@ function getTestPool() {
  * @returns {Promise<{user: Object, token: string}>}
  */
 async function createTestUser(userData = {}) {
-  const jwt = require("jsonwebtoken");
+  const { signJwt } = require("../../utils/jwt-helper");
   const pool = getTestPool();
 
   // Handle both createTestUser('admin') and createTestUser({ role: 'admin' })
@@ -248,7 +248,7 @@ async function createTestUser(userData = {}) {
   // CRITICAL: Use 'auth0' provider since these are REAL database users
   // 'development' provider is for in-memory test-users.js only (no DB)
   const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-key";
-  const token = jwt.sign(
+  const token = await signJwt(
     {
       // REGISTERED CLAIMS (RFC 7519 Standard) - REQUIRED by auth middleware
       iss: process.env.API_URL || "https://api.tross.dev", // Issuer

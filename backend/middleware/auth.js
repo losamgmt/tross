@@ -7,7 +7,7 @@
  * SECURITY: Development tokens are ONLY accepted in development/test mode.
  * Production mode ONLY accepts Auth0 tokens.
  */
-const jwt = require('jsonwebtoken');
+const { verifyJwt } = require('../utils/jwt-helper');
 const UserDataService = require('../services/user-data');
 const {
   hasPermission,
@@ -43,7 +43,7 @@ const authenticateToken = async (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = await verifyJwt(token, JWT_SECRET);
 
     // Validate required standard claims (RFC 7519)
     if (!decoded.sub) {

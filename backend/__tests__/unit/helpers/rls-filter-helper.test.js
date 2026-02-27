@@ -3,22 +3,23 @@
  *
  * Tests for: backend/db/helpers/rls-filter-helper.js
  *
+ * ADR-008: Row-Level Security Field-Based Filtering
+ *
  * Coverage:
- * - All RLS policies (all_records, own_record_only, own_*_only, assigned_*, deny_all, public_resource)
- * - Edge cases (no context, unknown policy, missing userId)
+ * - Filter config semantics (null, false, '$parent', string, object)
+ * - Context value resolution (userId, customerProfileId, technicianProfileId)
+ * - Edge cases (no context, invalid config, missing values)
  * - Parameter offset handling
- * - Metadata-driven field configuration
  */
 
 const {
   buildRLSFilter,
   buildRLSFilterForFindById,
-  policyAllowsAccess,
-  getSupportedPolicies,
-  _POLICY_HANDLERS,
+  filterConfigAllowsAccess,
+  describeFilterConfig,
 } = require("../../../db/helpers/rls-filter-helper");
 
-describe("RLS Filter Helper", () => {
+describe("RLS Filter Helper (ADR-008)", () => {
   // ============================================================================
   // TEST FIXTURES
   // ============================================================================
@@ -26,292 +27,351 @@ describe("RLS Filter Helper", () => {
   const userMetadata = {
     tableName: "users",
     primaryKey: "id",
-    // Uses default rlsFilterConfig (ownRecordField: 'id')
   };
 
   const workOrderMetadata = {
     tableName: "work_orders",
     primaryKey: "id",
-    // Uses default rlsFilterConfig (customerField: 'customer_id', assignedField: 'assigned_technician_id')
   };
 
   const invoiceMetadata = {
     tableName: "invoices",
     primaryKey: "id",
-    // Uses default customerField
   };
 
-  const customMetadata = {
-    tableName: "custom_entities",
+  const notificationMetadata = {
+    tableName: "notifications",
     primaryKey: "id",
-    rlsFilterConfig: {
-      ownRecordField: "owner_id",
-      customerField: "client_id",
-      assignedField: "responsible_user_id",
-    },
+  };
+
+  // Standard context with all profile IDs available
+  const fullContext = {
+    filterConfig: null, // Will be overridden per test
+    userId: 42,
+    customerProfileId: 100,
+    technicianProfileId: 200,
+    role: "customer",
+    resource: "work_orders",
   };
 
   // ============================================================================
-  // buildRLSFilter() TESTS
+  // buildRLSFilter() TESTS - filterConfig: null (all records)
   // ============================================================================
 
-  describe("buildRLSFilter()", () => {
-    describe("all_records policy", () => {
-      it("should return empty clause for all_records (admin view)", () => {
+  describe("buildRLSFilter() - filterConfig: null (all records)", () => {
+    it("should return empty clause for null filterConfig", () => {
+      const result = buildRLSFilter(
+        { ...fullContext, filterConfig: null },
+        userMetadata,
+      );
+
+      expect(result).toEqual({
+        clause: "",
+        params: [],
+        applied: true,
+        noFilter: true,
+      });
+    });
+
+    it("should work regardless of userId", () => {
+      const result = buildRLSFilter(
+        { filterConfig: null, userId: null },
+        userMetadata,
+      );
+
+      expect(result.clause).toBe("");
+      expect(result.applied).toBe(true);
+    });
+  });
+
+  // ============================================================================
+  // buildRLSFilter() TESTS - filterConfig: false (deny all)
+  // ============================================================================
+
+  describe("buildRLSFilter() - filterConfig: false (deny all)", () => {
+    it("should return 1=0 to block all access", () => {
+      const result = buildRLSFilter(
+        { ...fullContext, filterConfig: false },
+        invoiceMetadata,
+      );
+
+      expect(result).toEqual({
+        clause: "1=0",
+        params: [],
+        applied: true,
+      });
+    });
+
+    it("should work regardless of metadata", () => {
+      const result = buildRLSFilter(
+        { filterConfig: false, userId: 1 },
+        null,
+      );
+
+      expect(result.clause).toBe("1=0");
+    });
+  });
+
+  // ============================================================================
+  // buildRLSFilter() TESTS - filterConfig: '$parent' (sub-entity)
+  // ============================================================================
+
+  describe("buildRLSFilter() - filterConfig: '$parent' (sub-entity)", () => {
+    it("should deny access when used with generic router (fail closed)", () => {
+      // $parent is for sub-entities using custom routes
+      // If it reaches rls-filter-helper, it's a configuration error
+      // Secure default: deny access
+      const result = buildRLSFilter(
+        { ...fullContext, filterConfig: "$parent" },
+        { tableName: "file_attachments" },
+      );
+
+      expect(result).toEqual({
+        clause: "1=0",
+        params: [],
+        applied: true,
+      });
+    });
+  });
+
+  // ============================================================================
+  // buildRLSFilter() TESTS - filterConfig: string (shorthand field name)
+  // ============================================================================
+
+  describe("buildRLSFilter() - filterConfig: string (shorthand)", () => {
+    it("should filter by field using userId (shorthand for { field, value: 'userId' })", () => {
+      const result = buildRLSFilter(
+        { ...fullContext, filterConfig: "user_id", userId: 42 },
+        notificationMetadata,
+      );
+
+      expect(result).toEqual({
+        clause: "notifications.user_id = $1",
+        params: [42],
+        applied: true,
+      });
+    });
+
+    it("should filter by 'id' for users table (customer viewing own record)", () => {
+      const result = buildRLSFilter(
+        { ...fullContext, filterConfig: "id", userId: 42 },
+        userMetadata,
+      );
+
+      expect(result).toEqual({
+        clause: "users.id = $1",
+        params: [42],
+        applied: true,
+      });
+    });
+
+    it("should apply correct parameter offset", () => {
+      const result = buildRLSFilter(
+        { ...fullContext, filterConfig: "user_id", userId: 42 },
+        notificationMetadata,
+        2, // Already have $1 and $2
+      );
+
+      expect(result.clause).toBe("notifications.user_id = $3");
+      expect(result.params).toEqual([42]);
+    });
+
+    it("should deny access if userId is null with string shorthand", () => {
+      const result = buildRLSFilter(
+        { filterConfig: "user_id", userId: null },
+        notificationMetadata,
+      );
+
+      expect(result.clause).toBe("1=0");
+      expect(result.applied).toBe(true);
+    });
+  });
+
+  // ============================================================================
+  // buildRLSFilter() TESTS - filterConfig: { field, value } (full object)
+  // ============================================================================
+
+  describe("buildRLSFilter() - filterConfig: { field, value } (object)", () => {
+    it("should filter work_orders by customer_id using customerProfileId", () => {
+      const result = buildRLSFilter(
+        {
+          ...fullContext,
+          filterConfig: { field: "customer_id", value: "customerProfileId" },
+          customerProfileId: 100,
+        },
+        workOrderMetadata,
+      );
+
+      expect(result).toEqual({
+        clause: "work_orders.customer_id = $1",
+        params: [100],
+        applied: true,
+      });
+    });
+
+    it("should filter work_orders by assigned_technician_id using technicianProfileId", () => {
+      const result = buildRLSFilter(
+        {
+          ...fullContext,
+          filterConfig: {
+            field: "assigned_technician_id",
+            value: "technicianProfileId",
+          },
+          technicianProfileId: 200,
+        },
+        workOrderMetadata,
+      );
+
+      expect(result).toEqual({
+        clause: "work_orders.assigned_technician_id = $1",
+        params: [200],
+        applied: true,
+      });
+    });
+
+    it("should filter invoices by customer_id using customerProfileId", () => {
+      const result = buildRLSFilter(
+        {
+          ...fullContext,
+          filterConfig: { field: "customer_id", value: "customerProfileId" },
+          customerProfileId: 100,
+        },
+        invoiceMetadata,
+      );
+
+      expect(result).toEqual({
+        clause: "invoices.customer_id = $1",
+        params: [100],
+        applied: true,
+      });
+    });
+
+    it("should filter customers table by id using customerProfileId", () => {
+      const result = buildRLSFilter(
+        {
+          ...fullContext,
+          filterConfig: { field: "id", value: "customerProfileId" },
+          customerProfileId: 100,
+        },
+        { tableName: "customers" },
+      );
+
+      expect(result).toEqual({
+        clause: "customers.id = $1",
+        params: [100],
+        applied: true,
+      });
+    });
+
+    it("should default value to 'userId' if not specified", () => {
+      const result = buildRLSFilter(
+        {
+          ...fullContext,
+          filterConfig: { field: "user_id" }, // No value specified
+          userId: 42,
+        },
+        notificationMetadata,
+      );
+
+      expect(result.params).toEqual([42]);
+    });
+
+    it("should deny access if referenced profile ID is null", () => {
+      // Technician without technician_profile_id trying to access work orders
+      const result = buildRLSFilter(
+        {
+          filterConfig: {
+            field: "assigned_technician_id",
+            value: "technicianProfileId",
+          },
+          userId: 42,
+          technicianProfileId: null,
+        },
+        workOrderMetadata,
+      );
+
+      expect(result.clause).toBe("1=0");
+      expect(result.applied).toBe(true);
+    });
+
+    it("should deny access if referenced profile ID is undefined", () => {
+      const result = buildRLSFilter(
+        {
+          filterConfig: { field: "customer_id", value: "customerProfileId" },
+          userId: 42,
+          // customerProfileId not provided
+        },
+        invoiceMetadata,
+      );
+
+      expect(result.clause).toBe("1=0");
+    });
+  });
+
+  // ============================================================================
+  // EDGE CASES
+  // ============================================================================
+
+  describe("edge cases", () => {
+    it("should return unapplied when no RLS context provided", () => {
+      const result = buildRLSFilter(null, userMetadata);
+
+      expect(result).toEqual({
+        clause: "",
+        params: [],
+        applied: false,
+      });
+    });
+
+    it("should return unapplied when RLS context is undefined", () => {
+      const result = buildRLSFilter(undefined, userMetadata);
+
+      expect(result).toEqual({
+        clause: "",
+        params: [],
+        applied: false,
+      });
+    });
+
+    it("should deny access for invalid filterConfig object (no field)", () => {
+      const result = buildRLSFilter(
+        { filterConfig: { value: "userId" }, userId: 42 }, // Missing field
+        userMetadata,
+      );
+
+      expect(result.clause).toBe("1=0");
+    });
+
+    it("should deny access for invalid filterConfig type (number)", () => {
+      const result = buildRLSFilter(
+        { filterConfig: 123, userId: 42 },
+        userMetadata,
+      );
+
+      expect(result.clause).toBe("1=0");
+    });
+
+    it("should handle various parameter offsets correctly", () => {
+      const offsets = [0, 1, 5, 10, 100];
+
+      offsets.forEach((offset) => {
         const result = buildRLSFilter(
-          { policy: "all_records", userId: 1 },
+          { filterConfig: "id", userId: 42 },
           userMetadata,
+          offset,
         );
 
-        // applied: false because no actual filtering occurs (full access)
-        expect(result).toEqual({
-          clause: "",
-          params: [],
-          applied: false,
-        });
-      });
-
-      it("should work regardless of userId", () => {
-        const result = buildRLSFilter(
-          { policy: "all_records", userId: null },
-          userMetadata,
-        );
-
-        expect(result.clause).toBe("");
-        // applied: false because no actual filtering occurs
-        expect(result.applied).toBe(false);
+        expect(result.clause).toBe(`users.id = $${offset + 1}`);
       });
     });
 
-    describe("public_resource policy", () => {
-      it("should return empty clause for public_resource (e.g., roles)", () => {
-        const result = buildRLSFilter(
-          { policy: "public_resource", userId: 5 },
-          { tableName: "roles" },
-        );
+    it("should handle empty tableName", () => {
+      const result = buildRLSFilter(
+        { filterConfig: "user_id", userId: 42 },
+        { tableName: "" },
+      );
 
-        // applied: false because no actual filtering occurs (public access)
-        expect(result).toEqual({
-          clause: "",
-          params: [],
-          applied: false,
-        });
-      });
-    });
-
-    describe("own_record_only policy", () => {
-      it("should filter by id field (default)", () => {
-        const result = buildRLSFilter(
-          { policy: "own_record_only", userId: 42 },
-          userMetadata,
-          0,
-        );
-
-        expect(result).toEqual({
-          clause: "id = $1",
-          params: [42],
-          applied: true,
-        });
-      });
-
-      it("should respect custom ownRecordField from metadata", () => {
-        const result = buildRLSFilter(
-          { policy: "own_record_only", userId: 42 },
-          customMetadata,
-          0,
-        );
-
-        expect(result).toEqual({
-          clause: "owner_id = $1",
-          params: [42],
-          applied: true,
-        });
-      });
-
-      it("should apply correct parameter offset", () => {
-        const result = buildRLSFilter(
-          { policy: "own_record_only", userId: 42 },
-          userMetadata,
-          2, // Already have $1 and $2
-        );
-
-        expect(result.clause).toBe("id = $3");
-        expect(result.params).toEqual([42]);
-      });
-    });
-
-    describe("own_work_orders_only policy", () => {
-      it("should filter by customer_id (default)", () => {
-        const result = buildRLSFilter(
-          { policy: "own_work_orders_only", userId: 100 },
-          workOrderMetadata,
-          0,
-        );
-
-        expect(result).toEqual({
-          clause: "customer_id = $1",
-          params: [100],
-          applied: true,
-        });
-      });
-
-      it("should respect custom customerField from metadata", () => {
-        const result = buildRLSFilter(
-          { policy: "own_work_orders_only", userId: 100 },
-          customMetadata,
-          0,
-        );
-
-        expect(result).toEqual({
-          clause: "client_id = $1",
-          params: [100],
-          applied: true,
-        });
-      });
-    });
-
-    describe("assigned_work_orders_only policy", () => {
-      it("should filter by assigned_technician_id (default)", () => {
-        const result = buildRLSFilter(
-          { policy: "assigned_work_orders_only", userId: 50 },
-          workOrderMetadata,
-          0,
-        );
-
-        expect(result).toEqual({
-          clause: "assigned_technician_id = $1",
-          params: [50],
-          applied: true,
-        });
-      });
-
-      it("should respect custom assignedField from metadata", () => {
-        const result = buildRLSFilter(
-          { policy: "assigned_work_orders_only", userId: 50 },
-          customMetadata,
-          0,
-        );
-
-        expect(result).toEqual({
-          clause: "responsible_user_id = $1",
-          params: [50],
-          applied: true,
-        });
-      });
-    });
-
-    describe("own_invoices_only policy", () => {
-      it("should filter by customer_id", () => {
-        const result = buildRLSFilter(
-          { policy: "own_invoices_only", userId: 75 },
-          invoiceMetadata,
-          0,
-        );
-
-        expect(result).toEqual({
-          clause: "customer_id = $1",
-          params: [75],
-          applied: true,
-        });
-      });
-    });
-
-    describe("own_contracts_only policy", () => {
-      it("should filter by customer_id", () => {
-        const result = buildRLSFilter(
-          { policy: "own_contracts_only", userId: 80 },
-          { tableName: "contracts" },
-          0,
-        );
-
-        expect(result).toEqual({
-          clause: "customer_id = $1",
-          params: [80],
-          applied: true,
-        });
-      });
-    });
-
-    describe("deny_all policy", () => {
-      it("should return 1=0 to block all access", () => {
-        const result = buildRLSFilter(
-          { policy: "deny_all", userId: 99 },
-          invoiceMetadata,
-          0,
-        );
-
-        expect(result).toEqual({
-          clause: "1=0",
-          params: [],
-          applied: true,
-        });
-      });
-
-      it("should work regardless of metadata", () => {
-        const result = buildRLSFilter(
-          { policy: "deny_all", userId: 1 },
-          null, // Even with null metadata
-          0,
-        );
-
-        expect(result.clause).toBe("1=0");
-      });
-    });
-
-    describe("edge cases", () => {
-      it("should return unapplied when no RLS context provided", () => {
-        const result = buildRLSFilter(null, userMetadata);
-
-        expect(result).toEqual({
-          clause: "",
-          params: [],
-          applied: false,
-        });
-      });
-
-      it("should return unapplied when RLS context has no policy", () => {
-        const result = buildRLSFilter({ userId: 1 }, userMetadata);
-
-        expect(result).toEqual({
-          clause: "",
-          params: [],
-          applied: false,
-        });
-      });
-
-      it("should deny access for unknown policy (security failsafe)", () => {
-        const result = buildRLSFilter(
-          { policy: "nonexistent_policy", userId: 1 },
-          userMetadata,
-        );
-
-        expect(result).toEqual({
-          clause: "1=0",
-          params: [],
-          applied: true,
-        });
-      });
-
-      it("should handle empty string policy as unknown", () => {
-        const result = buildRLSFilter({ policy: "", userId: 1 }, userMetadata);
-
-        // Empty string is falsy, so should return unapplied
-        expect(result.applied).toBe(false);
-      });
-
-      it("should handle various parameter offsets correctly", () => {
-        const offsets = [0, 1, 5, 10, 100];
-
-        offsets.forEach((offset) => {
-          const result = buildRLSFilter(
-            { policy: "own_record_only", userId: 1 },
-            userMetadata,
-            offset,
-          );
-
-          expect(result.clause).toBe(`id = $${offset + 1}`);
-        });
-      });
+      expect(result.clause).toBe("user_id = $1");
     });
   });
 
@@ -322,176 +382,145 @@ describe("RLS Filter Helper", () => {
   describe("buildRLSFilterForFindById()", () => {
     it("should use paramOffset of 1 by default (for id = $1)", () => {
       const result = buildRLSFilterForFindById(
-        { policy: "own_record_only", userId: 42 },
+        { filterConfig: "id", userId: 42 },
         userMetadata,
       );
 
-      expect(result.clause).toBe("id = $2");
+      expect(result.clause).toBe("users.id = $2");
       expect(result.params).toEqual([42]);
     });
 
     it("should respect custom paramOffset", () => {
       const result = buildRLSFilterForFindById(
-        { policy: "own_record_only", userId: 42 },
+        { filterConfig: "id", userId: 42 },
         userMetadata,
         3,
       );
 
-      expect(result.clause).toBe("id = $4");
+      expect(result.clause).toBe("users.id = $4");
     });
 
-    it("should work with all policies", () => {
+    it("should work with null filterConfig (all records)", () => {
       const result = buildRLSFilterForFindById(
-        { policy: "all_records", userId: 1 },
+        { filterConfig: null, userId: 1 },
         userMetadata,
       );
 
       expect(result.clause).toBe("");
-      // applied: false because no actual filtering occurs (full access)
-      expect(result.applied).toBe(false);
+      expect(result.applied).toBe(true);
     });
   });
 
   // ============================================================================
-  // policyAllowsAccess() TESTS
+  // filterConfigAllowsAccess() TESTS
   // ============================================================================
 
-  describe("policyAllowsAccess()", () => {
-    it("should return true for all_records", () => {
-      expect(policyAllowsAccess("all_records")).toBe(true);
+  describe("filterConfigAllowsAccess()", () => {
+    it("should return true for null (all records)", () => {
+      expect(filterConfigAllowsAccess(null)).toBe(true);
     });
 
-    it("should return true for own_record_only", () => {
-      expect(policyAllowsAccess("own_record_only")).toBe(true);
+    it("should return false for false (deny all)", () => {
+      expect(filterConfigAllowsAccess(false)).toBe(false);
     });
 
-    it("should return true for own_work_orders_only", () => {
-      expect(policyAllowsAccess("own_work_orders_only")).toBe(true);
+    it("should return true for string field name", () => {
+      expect(filterConfigAllowsAccess("user_id")).toBe(true);
     });
 
-    it("should return true for public_resource", () => {
-      expect(policyAllowsAccess("public_resource")).toBe(true);
-    });
-
-    it("should return false for deny_all", () => {
-      expect(policyAllowsAccess("deny_all")).toBe(false);
-    });
-
-    it("should return false for unknown policies", () => {
-      expect(policyAllowsAccess("unknown_policy")).toBe(false);
-    });
-
-    it("should return false for undefined", () => {
-      expect(policyAllowsAccess(undefined)).toBe(false);
+    it("should return true for object config", () => {
+      expect(
+        filterConfigAllowsAccess({ field: "customer_id", value: "userId" }),
+      ).toBe(true);
     });
   });
 
   // ============================================================================
-  // getSupportedPolicies() TESTS
+  // describeFilterConfig() TESTS
   // ============================================================================
 
-  describe("getSupportedPolicies()", () => {
-    it("should return array of all supported policy names", () => {
-      const policies = getSupportedPolicies();
-
-      expect(Array.isArray(policies)).toBe(true);
-      expect(policies).toContain("all_records");
-      expect(policies).toContain("public_resource");
-      expect(policies).toContain("own_record_only");
-      expect(policies).toContain("own_work_orders_only");
-      expect(policies).toContain("assigned_work_orders_only");
-      expect(policies).toContain("own_invoices_only");
-      expect(policies).toContain("own_contracts_only");
-      expect(policies).toContain("deny_all");
+  describe("describeFilterConfig()", () => {
+    it("should describe null as 'all_records'", () => {
+      expect(describeFilterConfig(null)).toBe("all_records");
     });
 
-    it("should have 8 supported policies", () => {
-      expect(getSupportedPolicies().length).toBe(8);
-    });
-  });
-
-  // ============================================================================
-  // POLICY HANDLER COVERAGE
-  // ============================================================================
-
-  describe("_POLICY_HANDLERS (internal)", () => {
-    it("should have handlers for all documented policies", () => {
-      const expectedPolicies = [
-        "all_records",
-        "public_resource",
-        "own_record_only",
-        "own_work_orders_only",
-        "assigned_work_orders_only",
-        "own_invoices_only",
-        "own_contracts_only",
-        "deny_all",
-      ];
-
-      expectedPolicies.forEach((policy) => {
-        expect(_POLICY_HANDLERS[policy]).toBeDefined();
-        expect(typeof _POLICY_HANDLERS[policy]).toBe("function");
-      });
+    it("should describe false as 'deny_all'", () => {
+      expect(describeFilterConfig(false)).toBe("deny_all");
     });
 
-    it("should not have any extra undocumented handlers", () => {
-      const handlerCount = Object.keys(_POLICY_HANDLERS).length;
-      expect(handlerCount).toBe(8);
+    it("should describe '$parent' as 'parent_entity_access'", () => {
+      expect(describeFilterConfig("$parent")).toBe("parent_entity_access");
+    });
+
+    it("should describe string field as 'filter_by_<field>'", () => {
+      expect(describeFilterConfig("user_id")).toBe("filter_by_user_id");
+    });
+
+    it("should describe object config fully", () => {
+      expect(
+        describeFilterConfig({ field: "customer_id", value: "customerProfileId" }),
+      ).toBe("filter_by_customer_id_via_customerProfileId");
     });
   });
 
   // ============================================================================
-  // INTEGRATION SCENARIOS
+  // REAL-WORLD INTEGRATION SCENARIOS
   // ============================================================================
 
   describe("Real-world integration scenarios", () => {
     describe("Customer viewing their work orders", () => {
-      it("should generate correct filter for own_work_orders_only", () => {
-        const customerId = 42;
+      it("should filter by customer_id using customerProfileId", () => {
         const result = buildRLSFilter(
-          { policy: "own_work_orders_only", userId: customerId },
+          {
+            filterConfig: { field: "customer_id", value: "customerProfileId" },
+            userId: 42,
+            customerProfileId: 100,
+          },
           workOrderMetadata,
           2, // Assume we have search ($1) and is_active ($2) already
         );
 
-        // Result should be: WHERE ... AND customer_id = $3
-        expect(result.clause).toBe("customer_id = $3");
-        expect(result.params).toEqual([42]);
+        expect(result.clause).toBe("work_orders.customer_id = $3");
+        expect(result.params).toEqual([100]);
       });
     });
 
     describe("Technician viewing assigned work orders", () => {
-      it("should generate correct filter for assigned_work_orders_only", () => {
-        const technicianId = 15;
+      it("should filter by assigned_technician_id using technicianProfileId", () => {
         const result = buildRLSFilter(
-          { policy: "assigned_work_orders_only", userId: technicianId },
+          {
+            filterConfig: {
+              field: "assigned_technician_id",
+              value: "technicianProfileId",
+            },
+            userId: 42,
+            technicianProfileId: 15,
+          },
           workOrderMetadata,
-          0,
         );
 
-        expect(result.clause).toBe("assigned_technician_id = $1");
+        expect(result.clause).toBe("work_orders.assigned_technician_id = $1");
         expect(result.params).toEqual([15]);
       });
     });
 
-    describe("Customer trying to view invoices", () => {
-      it("should filter invoices by customer_id", () => {
+    describe("User viewing their notifications", () => {
+      it("should filter by user_id using userId (string shorthand)", () => {
         const result = buildRLSFilter(
-          { policy: "own_invoices_only", userId: 99 },
-          invoiceMetadata,
-          0,
+          { filterConfig: "user_id", userId: 99 },
+          notificationMetadata,
         );
 
-        expect(result.clause).toBe("customer_id = $1");
+        expect(result.clause).toBe("notifications.user_id = $1");
         expect(result.params).toEqual([99]);
       });
     });
 
-    describe("Technician trying to view invoices (deny_all)", () => {
-      it("should block all access", () => {
+    describe("Technician denied access to invoices", () => {
+      it("should block all access with filterConfig: false", () => {
         const result = buildRLSFilter(
-          { policy: "deny_all", userId: 15 },
+          { filterConfig: false, userId: 15 },
           invoiceMetadata,
-          0,
         );
 
         expect(result.clause).toBe("1=0");
@@ -499,10 +528,10 @@ describe("RLS Filter Helper", () => {
       });
     });
 
-    describe("Admin viewing users (all_records)", () => {
-      it("should not add any filter", () => {
+    describe("Admin viewing all users (all_records)", () => {
+      it("should not add any filter with filterConfig: null", () => {
         const result = buildRLSFilter(
-          { policy: "all_records", userId: 1 },
+          { filterConfig: null, userId: 1 },
           userMetadata,
           5,
         );
@@ -512,17 +541,19 @@ describe("RLS Filter Helper", () => {
       });
     });
 
-    describe("User viewing their own profile", () => {
-      it("should filter by user id", () => {
-        const userId = 123;
+    describe("Customer viewing their own customer record", () => {
+      it("should filter customers.id by customerProfileId", () => {
         const result = buildRLSFilter(
-          { policy: "own_record_only", userId },
-          userMetadata,
-          0,
+          {
+            filterConfig: { field: "id", value: "customerProfileId" },
+            userId: 42,
+            customerProfileId: 100,
+          },
+          { tableName: "customers" },
         );
 
-        expect(result.clause).toBe("id = $1");
-        expect(result.params).toEqual([123]);
+        expect(result.clause).toBe("customers.id = $1");
+        expect(result.params).toEqual([100]);
       });
     });
   });

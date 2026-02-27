@@ -254,24 +254,33 @@ describe("Permission System - Data-Driven Tests", () => {
   });
 
   describe("getRowLevelSecurity()", () => {
-    test("should return RLS policy for valid role/resource", () => {
-      // Should return a policy or null (both are valid)
-      const policy = getRowLevelSecurity("client", "users");
-      expect(policy === null || typeof policy === "string").toBe(true);
+    test("should return RLS filterConfig for valid role/resource", () => {
+      // ADR-008: Returns filterConfig (null, false, string, or object)
+      const filterConfig = getRowLevelSecurity("customer", "users");
+      // 'id' string shorthand or { field: 'id', value: 'userId' }
+      expect(
+        filterConfig === null ||
+          filterConfig === false ||
+          typeof filterConfig === "string" ||
+          (typeof filterConfig === "object" &&
+            filterConfig.field &&
+            filterConfig.value),
+      ).toBe(true);
     });
 
-    test("should return null for resources without RLS", () => {
-      const policy = getRowLevelSecurity("admin", "audit_logs");
-      expect(policy === null || typeof policy === "string").toBe(true);
+    test("should return null for admin on audit_logs (all records)", () => {
+      // Admin can see all audit logs - null means no filter
+      const filterConfig = getRowLevelSecurity("admin", "audit_logs");
+      expect(filterConfig).toBeNull();
     });
 
     test("should be case-insensitive for role names", () => {
-      const policy1 = getRowLevelSecurity("client", "users");
-      const policy2 = getRowLevelSecurity("CLIENT", "users");
-      const policy3 = getRowLevelSecurity("Client", "users");
+      const policy1 = getRowLevelSecurity("customer", "users");
+      const policy2 = getRowLevelSecurity("CUSTOMER", "users");
+      const policy3 = getRowLevelSecurity("Customer", "users");
 
-      expect(policy1).toBe(policy2);
-      expect(policy2).toBe(policy3);
+      expect(policy1).toEqual(policy2);
+      expect(policy2).toEqual(policy3);
     });
 
     test("should return null for unknown roles", () => {
@@ -289,47 +298,54 @@ describe("Permission System - Data-Driven Tests", () => {
       );
     });
 
-    test("should return deny_all for technician access to contracts", () => {
-      // Technicians should have NO access to contracts (explicit deny_all, not null)
-      expect(getRowLevelSecurity("technician", "contracts")).toBe("deny_all");
-      expect(getRLSRule("technician", "contracts")).toBe("deny_all");
+    test("should return false for technician access to contracts", () => {
+      // ADR-008: false = deny access (no records returned)
+      expect(getRowLevelSecurity("technician", "contracts")).toBe(false);
+      expect(getRLSRule("technician", "contracts")).toBe(false);
     });
 
-    test('should return "assigned_work_orders_only" for technician work_orders', () => {
-      // Technicians should only see assigned work orders, not available ones
-      expect(getRowLevelSecurity("technician", "work_orders")).toBe(
-        "assigned_work_orders_only",
-      );
-      expect(getRLSRule("technician", "work_orders")).toBe(
-        "assigned_work_orders_only",
-      );
+    test("should return filterConfig object for technician work_orders", () => {
+      // ADR-008: { field, value } format for technician accessing work_orders
+      const filterConfig = getRowLevelSecurity("technician", "work_orders");
+      expect(filterConfig).toEqual({
+        field: "assigned_technician_id",
+        value: "technicianProfileId",
+      });
+      expect(getRLSRule("technician", "work_orders")).toEqual(filterConfig);
     });
 
-    test("should validate all RLS rules match expected patterns", () => {
+    test("should validate all RLS rules match expected ADR-008 patterns", () => {
+      // ADR-008: filterConfig can be:
+      // - null: all records
+      // - false: deny access
+      // - '$parent': inherit from parent entity
+      // - string: field name shorthand (e.g., 'user_id')
+      // - { field, value }: explicit field + context value
       const config = loadPermissions();
-      const validPatterns = [
-        "own_record_only",
-        "own_work_orders_only",
-        "own_invoices_only",
-        "own_contracts_only",
-        "assigned_work_orders_only",
-        "all_records",
-        "deny_all",
-        "public_resource",
-        "parent_entity_access", // For polymorphic entities like file_attachments
-        null,
-      ];
+
+      function isValidFilterConfig(filterConfig) {
+        if (filterConfig === null || filterConfig === false) return true;
+        if (typeof filterConfig === "string") return true; // '$parent' or field name
+        if (
+          typeof filterConfig === "object" &&
+          filterConfig.field &&
+          filterConfig.value
+        ) {
+          return true;
+        }
+        return false;
+      }
 
       for (const [resourceName, resourceConfig] of Object.entries(
         config.resources,
       )) {
         if (resourceConfig.rowLevelSecurity) {
-          // rowLevelSecurity must ALWAYS be an object with per-role policies (no string shorthand)
+          // rowLevelSecurity must ALWAYS be an object with per-role policies
           expect(typeof resourceConfig.rowLevelSecurity).toBe("object");
-          for (const [roleName, rlsRule] of Object.entries(
+          for (const [roleName, filterConfig] of Object.entries(
             resourceConfig.rowLevelSecurity,
           )) {
-            expect(validPatterns).toContain(rlsRule);
+            expect(isValidFilterConfig(filterConfig)).toBe(true);
           }
         }
       }

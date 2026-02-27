@@ -15,7 +15,7 @@ const {
   UNIVERSAL_FIELD_ACCESS,
 } = require('../constants');
 const { NAME_TYPES } = require('../entity-types');
-const { FIELD } = require('../field-type-standards');
+const { FIELD, ENUM } = require('../field-type-standards');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -77,13 +77,14 @@ module.exports = {
   /**
    * Row-Level Security policy per role
    * Customers see own invoices, technicians denied, dispatcher+ see all
+   * Values: null (all records), false (deny), field string, or { field, value } object
    */
   rlsPolicy: {
-    customer: 'own_invoices_only',
-    technician: 'deny_all',
-    dispatcher: 'all_records',
-    manager: 'all_records',
-    admin: 'all_records',
+    customer: { field: 'customer_id', value: 'customerProfileId' },
+    technician: false,
+    dispatcher: null,
+    manager: null,
+    admin: null,
   },
 
   /**
@@ -260,6 +261,14 @@ module.exports = {
   },
 
   // ============================================================================
+  // ENUM DEFINITIONS (for consistent UI colors)
+  // ============================================================================
+
+  enums: {
+    status: ENUM.INVOICE_STATUS,
+  },
+
+  // ============================================================================
   // FOREIGN KEY CONFIGURATION (for db-error-handler.js)
   // ============================================================================
 
@@ -417,7 +426,7 @@ module.exports = {
     // TIER 2: Entity-Specific Lifecycle Field
     status: {
       type: 'enum',
-      values: ['draft', 'sent', 'paid', 'overdue', 'cancelled', 'void'],
+      values: ENUM.INVOICE_STATUS.values,
       default: 'draft',
     },
 

@@ -64,13 +64,14 @@ module.exports = {
   /**
    * Row-Level Security policy per role
    * Access controlled by parent entity - admin can see all
+   * Values: null (all records), false (deny), '$parent', field string, or { field, value } object
    */
   rlsPolicy: {
-    customer: 'parent_entity_access',
-    technician: 'parent_entity_access',
-    dispatcher: 'parent_entity_access',
-    manager: 'parent_entity_access',
-    admin: 'all_records',
+    customer: '$parent',
+    technician: '$parent',
+    dispatcher: '$parent',
+    manager: '$parent',
+    admin: null,
   },
 
   /**

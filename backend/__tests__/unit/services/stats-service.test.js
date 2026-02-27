@@ -27,10 +27,10 @@ describe("StatsService", () => {
       // Mock DB response
       db.query.mockResolvedValue({ rows: [{ count: "42" }] });
 
-      // Mock request with RLS context
+      // Mock request with RLS context - ADR-008: filterConfig: null means all records
       const mockReq = {
         user: { role: "admin", userId: 1 },
-        rlsPolicy: "all_records",
+        rlsContext: { filterConfig: null, userId: 1 },
       };
 
       const result = await StatsService.count("work_order", mockReq);
@@ -46,7 +46,7 @@ describe("StatsService", () => {
 
       const mockReq = {
         user: { role: "admin", userId: 1 },
-        rlsPolicy: "all_records",
+        rlsContext: { filterConfig: null, userId: 1 },
       };
 
       const result = await StatsService.count("work_order", mockReq, {
@@ -77,7 +77,7 @@ describe("StatsService", () => {
 
       const mockReq = {
         user: { role: "admin", userId: 1 },
-        rlsPolicy: "all_records",
+        rlsContext: { filterConfig: null, userId: 1 },
       };
 
       const result = await StatsService.countGrouped(
@@ -96,7 +96,7 @@ describe("StatsService", () => {
     it("should throw for non-filterable group field", async () => {
       const mockReq = {
         user: { role: "admin", userId: 1 },
-        rlsPolicy: "all_records",
+        rlsContext: { filterConfig: null, userId: 1 },
       };
 
       await expect(
@@ -113,7 +113,7 @@ describe("StatsService", () => {
 
       const mockReq = {
         user: { role: "admin", userId: 1 },
-        rlsPolicy: "all_records",
+        rlsContext: { filterConfig: null, userId: 1 },
       };
 
       const result = await StatsService.sum("invoice", mockReq, "total");
@@ -125,7 +125,7 @@ describe("StatsService", () => {
     it("should throw for non-numeric field", async () => {
       const mockReq = {
         user: { role: "admin", userId: 1 },
-        rlsPolicy: "all_records",
+        rlsContext: { filterConfig: null, userId: 1 },
       };
 
       await expect(
@@ -146,7 +146,7 @@ describe("StatsService", () => {
 
       const mockReq = {
         user: { role: "admin", userId: 1 },
-        rlsPolicy: "all_records",
+        rlsContext: { filterConfig: null, userId: 1 },
       };
 
       const result = await StatsService.sum("invoice", mockReq, "total", {
@@ -162,7 +162,7 @@ describe("StatsService", () => {
 
       const mockReq = {
         user: { role: "admin", userId: 1 },
-        rlsPolicy: "all_records",
+        rlsContext: { filterConfig: null, userId: 1 },
       };
 
       const result = await StatsService.sum("invoice", mockReq, "total", {
@@ -181,7 +181,7 @@ describe("StatsService", () => {
 
       const mockReq = {
         user: { role: "admin", userId: 1 },
-        rlsPolicy: "all_records",
+        rlsContext: { filterConfig: null, userId: 1 },
       };
 
       const result = await StatsService.countGrouped(
@@ -208,9 +208,14 @@ describe("StatsService", () => {
     it("should apply RLS filter for non-admin users in count", async () => {
       db.query.mockResolvedValue({ rows: [{ count: "2" }] });
 
+      // ADR-008: Technician sees work orders by assigned_technician_id
       const mockReq = {
         user: { role: "technician", userId: 5, id: 5 },
-        rlsPolicy: "own_records",
+        rlsContext: {
+          filterConfig: { field: 'assigned_technician_id', value: 'technicianProfileId' },
+          userId: 5,
+          technicianProfileId: 5,
+        },
       };
 
       const result = await StatsService.count("work_order", mockReq);
@@ -227,7 +232,11 @@ describe("StatsService", () => {
 
       const mockReq = {
         user: { role: "technician", userId: 5, id: 5 },
-        rlsPolicy: "own_records",
+        rlsContext: {
+          filterConfig: { field: 'assigned_technician_id', value: 'technicianProfileId' },
+          userId: 5,
+          technicianProfileId: 5,
+        },
       };
 
       const result = await StatsService.countGrouped(
@@ -243,9 +252,14 @@ describe("StatsService", () => {
     it("should apply RLS filter for non-admin users in sum", async () => {
       db.query.mockResolvedValue({ rows: [{ total: "100.00" }] });
 
+      // ADR-008: Customer sees invoices by customer_id
       const mockReq = {
-        user: { role: "technician", userId: 5, id: 5 },
-        rlsPolicy: "own_records",
+        user: { role: "customer", userId: 5, id: 5 },
+        rlsContext: {
+          filterConfig: { field: 'customer_id', value: 'customerProfileId' },
+          userId: 5,
+          customerProfileId: 5,
+        },
       };
 
       const result = await StatsService.sum("invoice", mockReq, "total");

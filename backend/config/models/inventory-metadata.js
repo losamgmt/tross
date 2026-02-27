@@ -15,7 +15,7 @@ const {
   UNIVERSAL_FIELD_ACCESS,
 } = require('../constants');
 const { NAME_TYPES } = require('../entity-types');
-const { FIELD } = require('../field-type-standards');
+const { FIELD, ENUM } = require('../field-type-standards');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -81,13 +81,14 @@ module.exports = {
   /**
    * Row-Level Security policy per role
    * Inventory is a public resource - all authorized users can read
+   * Values: null (all records), false (deny), field string, or { field, value } object
    */
   rlsPolicy: {
-    customer: 'public_resource',
-    technician: 'public_resource',
-    dispatcher: 'public_resource',
-    manager: 'public_resource',
-    admin: 'public_resource',
+    customer: null,
+    technician: null,
+    dispatcher: null,
+    manager: null,
+    admin: null,
   },
 
   /**
@@ -223,6 +224,14 @@ module.exports = {
   },
 
   // ============================================================================
+  // ENUM DEFINITIONS (for consistent UI colors)
+  // ============================================================================
+
+  enums: {
+    status: ENUM.INVENTORY_STATUS,
+  },
+
+  // ============================================================================
   // RELATIONSHIPS (for JOIN queries)
   // ============================================================================
 
@@ -332,7 +341,7 @@ module.exports = {
     // TIER 2: Entity-Specific Lifecycle Field
     status: {
       type: 'enum',
-      values: ['in_stock', 'low_stock', 'out_of_stock', 'discontinued'],
+      values: ENUM.INVENTORY_STATUS.values,
       default: 'in_stock',
     },
 

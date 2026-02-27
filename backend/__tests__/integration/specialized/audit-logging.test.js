@@ -14,7 +14,7 @@ const {
 const { getUniqueValues } = require("../../helpers/test-helpers");
 const GenericEntityService = require("../../../services/generic-entity-service");
 const db = require("../../../db/connection");
-const jwt = require("jsonwebtoken");
+const { verifyJwt } = require("../../../utils/jwt-helper");
 
 describe("Audit Logging - Specialized Tests", () => {
   let adminUser;
@@ -33,7 +33,7 @@ describe("Audit Logging - Specialized Tests", () => {
    * Helper to get authenticated user from token
    */
   async function getAuthenticatedUserId(token) {
-    const decoded = jwt.verify(
+    const decoded = await verifyJwt(
       token,
       process.env.JWT_SECRET || "dev-secret-key",
     );

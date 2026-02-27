@@ -12,6 +12,7 @@
  */
 
 const { getRoleHierarchy } = require('./role-hierarchy-loader');
+const { RLS_CONTEXT_VALUES } = require('./constants');
 
 /**
  * All supported field types that the data generator can handle.
@@ -237,6 +238,21 @@ function validateForeignKeys(meta, errors, allMetadata) {
 
 /**
  * Validate RLS policy uses valid values
+ *
+ * ADR-008: Field-Based Filtering
+ * Policy value IS the filter configuration (pure data, no code).
+ *
+ * Valid filterConfig values:
+ * - null: All records (no filter applied)
+ * - false: Deny access (returns empty result)
+ * - '$parent': Sub-entity inherits parent entity's RLS
+ * - string: Shorthand for { field: string, value: 'userId' }
+ * - { field, value }: Explicit field + context value mapping
+ *
+ * Valid context values for { field, value }.value:
+ * - 'userId': user's id
+ * - 'customerProfileId': user's customer_profile_id
+ * - 'technicianProfileId': user's technician_profile_id
  */
 function validateRlsPolicy(meta, errors) {
   const rlsPolicy = meta.rlsPolicy;
@@ -244,39 +260,54 @@ function validateRlsPolicy(meta, errors) {
     return; // Optional
   }
 
-  // All valid RLS policy values used in the codebase
-  const validPolicies = new Set([
-    // Core patterns
-    'all', // Full access to all records
-    'all_records', // Same as 'all' (legacy/verbose)
-    'own_record_only', // Can only access own records (by user_id)
-    'own_or_assigned', // Own records or assigned to them
-    'none', // No access
-    'deny_all', // No access (legacy/verbose)
-
-    // Entity-specific patterns
-    'own_work_orders_only', // Customer sees their work orders
-    'assigned_work_orders_only', // Technician sees assigned work orders
-    'own_contracts_only', // Customer sees their contracts
-    'own_invoices_only', // Customer sees their invoices
-
-    // Resource patterns
-    'public_resource', // Readable by all authenticated users
-    'parent_entity_access', // Access based on parent entity permissions
-  ]);
+  // Valid context values from SSOT constant (ADR-008)
+  const validContextValues = new Set(RLS_CONTEXT_VALUES);
 
   const validAccessValues = getValidAccessValues();
-  for (const [role, policy] of Object.entries(rlsPolicy)) {
+  for (const [role, filterConfig] of Object.entries(rlsPolicy)) {
     if (!validAccessValues.has(role) && role !== 'all_roles') {
       errors.add(`rlsPolicy.${role}`, `Unknown role '${role}'`);
     }
 
-    if (!validPolicies.has(policy)) {
-      errors.add(
-        `rlsPolicy.${role}`,
-        `Invalid policy '${policy}'. Valid: ${[...validPolicies].join(', ')}`,
-      );
+    // Validate filterConfig value
+    if (filterConfig === null || filterConfig === false) {
+      // Valid: null = all records, false = deny
+      continue;
     }
+
+    if (typeof filterConfig === 'string') {
+      // Valid: '$parent' or field name shorthand
+      // Field names are validated elsewhere (could be any column)
+      continue;
+    }
+
+    if (typeof filterConfig === 'object') {
+      // Must be { field, value } format
+      if (!filterConfig.field || typeof filterConfig.field !== 'string') {
+        errors.add(
+          `rlsPolicy.${role}`,
+          'Object filterConfig must have \'field\' string property',
+        );
+      }
+      if (!filterConfig.value || typeof filterConfig.value !== 'string') {
+        errors.add(
+          `rlsPolicy.${role}`,
+          'Object filterConfig must have \'value\' string property',
+        );
+      } else if (!validContextValues.has(filterConfig.value)) {
+        errors.add(
+          `rlsPolicy.${role}`,
+          `Invalid context value '${filterConfig.value}'. Valid: ${[...validContextValues].join(', ')}`,
+        );
+      }
+      continue;
+    }
+
+    // Invalid type
+    errors.add(
+      `rlsPolicy.${role}`,
+      'Invalid filterConfig type. Must be null, false, string, or { field, value } object',
+    );
   }
 }
 

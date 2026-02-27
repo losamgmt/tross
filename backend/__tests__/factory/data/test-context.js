@@ -64,23 +64,10 @@ function buildTestContext(app, db) {
     if (user.token) {
       return { Authorization: `Bearer ${user.token}` };
     }
-    // Fallback: generate token (shouldn't normally happen)
-    const jwt = require("jsonwebtoken");
-    const secret = process.env.JWT_SECRET || "dev-secret-key";
-    const token = jwt.sign(
-      {
-        iss: process.env.API_URL || "https://api.tross.dev",
-        sub: user.auth0_id || `auth0|${user.id}`,
-        aud: process.env.API_URL || "https://api.tross.dev",
-        email: user.email,
-        role: user.role || "customer",
-        provider: "auth0",
-        userId: user.id,
-      },
-      secret,
-      { expiresIn: "1h" },
+    // No fallback token generation - users must have tokens from createTestUser
+    throw new Error(
+      "User object missing token. Use createTestUser() which returns { user, token }",
     );
-    return { Authorization: `Bearer ${token}` };
   }
 
   // Created entities cache for cleanup
@@ -158,17 +145,32 @@ function buildTestContext(app, db) {
       const createDisabled = meta.entityPermissions?.create === null;
 
       if (createDisabled) {
-        // SYSTEMIC FIX: For entities with own_record_only RLS, set the owner field
+        // ADR-008: For entities with user-based RLS, set the owner field
         // to the admin test user's ID so the record is accessible via API.
-        // This uses rlsFilterConfig.ownRecordField to find the owner field.
-        const ownRecordField = meta.rlsFilterConfig?.ownRecordField;
-        const isOwnRecordOnly = Object.values(meta.rlsPolicy || {}).some(
-          (policy) => policy === "own_record_only",
-        );
+        //
+        // Detect user-owned entities by checking rlsPolicy values:
+        // - String shorthand (e.g., 'user_id') defaults to value: 'userId'
+        // - Object with { value: 'userId' } is explicit user-based RLS
+        let ownerField = null;
+        for (const filterConfig of Object.values(meta.rlsPolicy || {})) {
+          if (typeof filterConfig === "string" && filterConfig !== "$parent") {
+            // String shorthand like 'user_id' defaults to value: 'userId'
+            ownerField = filterConfig;
+            break;
+          }
+          if (
+            filterConfig &&
+            typeof filterConfig === "object" &&
+            filterConfig.value === "userId"
+          ) {
+            ownerField = filterConfig.field;
+            break;
+          }
+        }
 
-        if (isOwnRecordOnly && ownRecordField && !overrides[ownRecordField]) {
+        if (ownerField && !overrides[ownerField]) {
           const { user } = await getTestUser("admin");
-          payload[ownRecordField] = user.id;
+          payload[ownerField] = user.id;
         }
 
         // Insert directly to database (bypassing API)

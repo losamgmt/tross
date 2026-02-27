@@ -23,14 +23,10 @@ process.env.AUTH0_CALLBACK_URL =
 const Auth0Strategy = require("../../services/auth/Auth0Strategy");
 const UserDataService = require("../../services/user-data");
 const auth0Config = require("../../config/auth0");
-const jwt = require("jsonwebtoken");
 
-// Mock Auth0 SDK clients
+// Mock Auth0 SDK clients (auth0 v5 API)
 jest.mock("auth0", () => ({
   AuthenticationClient: jest.fn().mockImplementation(() => ({
-    users: {
-      getInfo: jest.fn(),
-    },
     oauth: {
       refreshToken: jest.fn(),
     },
@@ -39,14 +35,16 @@ jest.mock("auth0", () => ({
     createUser: jest.fn(),
     updateUser: jest.fn(),
   })),
+  UserInfoClient: jest.fn().mockImplementation(() => ({
+    getUserInfo: jest.fn(),
+  })),
 }));
 
-// Mock jwks-rsa for token verification
-jest.mock("jwks-rsa", () =>
-  jest.fn(() => ({
-    getSigningKey: jest.fn(),
-  })),
-);
+// Mock jose for token verification
+jest.mock("jose", () => ({
+  createRemoteJWKSet: jest.fn(() => jest.fn()),
+  jwtVerify: jest.fn(),
+}));
 
 // Mock axios for token exchange
 jest.mock("axios");
@@ -59,6 +57,7 @@ describe("Auth0Strategy Integration Tests", () => {
   let auth0Strategy;
   let mockAuthClient;
   let mockManagementClient;
+  let mockUserInfoClient;
   let originalEnv;
 
   beforeAll(() => {
@@ -75,6 +74,7 @@ describe("Auth0Strategy Integration Tests", () => {
     auth0Strategy = new Auth0Strategy();
     mockAuthClient = auth0Strategy.authClient;
     mockManagementClient = auth0Strategy.managementClient;
+    mockUserInfoClient = auth0Strategy.userInfoClient;
 
     // Clear all mocks
     jest.clearAllMocks();
@@ -128,7 +128,7 @@ describe("Auth0Strategy Integration Tests", () => {
       axios.post.mockResolvedValue(mockTokenResponse);
 
       // Mock user info retrieval
-      mockAuthClient.users.getInfo.mockResolvedValue(mockUserInfo);
+      mockUserInfoClient.getUserInfo.mockResolvedValue(mockUserInfo);
 
       // Mock local user creation/retrieval
       UserDataService.findOrCreateUser.mockResolvedValue(mockLocalUser);
@@ -159,7 +159,7 @@ describe("Auth0Strategy Integration Tests", () => {
       );
 
       // Verify user info was retrieved
-      expect(mockAuthClient.users.getInfo).toHaveBeenCalledWith(
+      expect(mockUserInfoClient.getUserInfo).toHaveBeenCalledWith(
         "mock-access-token",
       );
 
@@ -202,7 +202,7 @@ describe("Auth0Strategy Integration Tests", () => {
     });
 
     test("should handle user info retrieval failure", async () => {
-      mockAuthClient.users.getInfo.mockRejectedValue(
+      mockUserInfoClient.getUserInfo.mockRejectedValue(
         new Error("Failed to get user info"),
       );
 
@@ -242,26 +242,18 @@ describe("Auth0Strategy Integration Tests", () => {
       exp: Math.floor(Date.now() / 1000) + 3600,
     };
 
+    // Get jose mock
+    const { jwtVerify } = require("jose");
+
     beforeEach(() => {
       // Reset to use actual verifyToken (not mocked)
       auth0Strategy = new Auth0Strategy();
-
-      // Mock jwks client getSigningKey
-      auth0Strategy.jwksClient.getSigningKey = jest.fn((kid, callback) => {
-        callback(null, {
-          publicKey: "mock-public-key",
-          rsaPublicKey: "mock-rsa-public-key",
-        });
-      });
+      jest.clearAllMocks();
     });
 
     test("should verify valid Auth0 token", async () => {
-      // Mock jwt.verify to return decoded payload
-      jest
-        .spyOn(jwt, "verify")
-        .mockImplementation((token, getKey, options, callback) => {
-          callback(null, mockDecodedToken);
-        });
+      // Mock jwtVerify to return decoded payload
+      jwtVerify.mockResolvedValue({ payload: mockDecodedToken });
 
       const decoded = await auth0Strategy.verifyToken(validToken);
 
@@ -272,11 +264,7 @@ describe("Auth0Strategy Integration Tests", () => {
     });
 
     test("should reject expired token", async () => {
-      jest
-        .spyOn(jwt, "verify")
-        .mockImplementation((token, getKey, options, callback) => {
-          callback(new Error("jwt expired"), null);
-        });
+      jwtVerify.mockRejectedValue(new Error("jwt expired"));
 
       await expect(auth0Strategy.verifyToken(validToken)).rejects.toThrow(
         "jwt expired",
@@ -284,11 +272,7 @@ describe("Auth0Strategy Integration Tests", () => {
     });
 
     test("should reject token with invalid signature", async () => {
-      jest
-        .spyOn(jwt, "verify")
-        .mockImplementation((token, getKey, options, callback) => {
-          callback(new Error("invalid signature"), null);
-        });
+      jwtVerify.mockRejectedValue(new Error("invalid signature"));
 
       await expect(auth0Strategy.verifyToken(validToken)).rejects.toThrow(
         "invalid signature",
@@ -296,11 +280,7 @@ describe("Auth0Strategy Integration Tests", () => {
     });
 
     test("should reject token with wrong audience", async () => {
-      jest
-        .spyOn(jwt, "verify")
-        .mockImplementation((token, getKey, options, callback) => {
-          callback(new Error("jwt audience invalid"), null);
-        });
+      jwtVerify.mockRejectedValue(new Error("jwt audience invalid"));
 
       await expect(auth0Strategy.verifyToken(validToken)).rejects.toThrow(
         "jwt audience invalid",
@@ -439,7 +419,7 @@ describe("Auth0Strategy Integration Tests", () => {
         family_name: "Doe",
       };
 
-      mockAuthClient.users.getInfo.mockResolvedValue(mockUserInfo);
+      mockUserInfoClient.getUserInfo.mockResolvedValue(mockUserInfo);
 
       const profile = await auth0Strategy.getUserProfile("access-token");
 
@@ -449,7 +429,7 @@ describe("Auth0Strategy Integration Tests", () => {
         first_name: "John",
         last_name: "Doe",
       });
-      expect(mockAuthClient.users.getInfo).toHaveBeenCalledWith("access-token");
+      expect(mockUserInfoClient.getUserInfo).toHaveBeenCalledWith("access-token");
     });
   });
 
@@ -477,7 +457,7 @@ describe("Auth0Strategy Integration Tests", () => {
         given_name: "Test",
       };
 
-      mockAuthClient.users.getInfo.mockResolvedValue(invalidUserInfo);
+      mockUserInfoClient.getUserInfo.mockResolvedValue(invalidUserInfo);
       axios.post.mockResolvedValue({
         data: {
           access_token: "token",

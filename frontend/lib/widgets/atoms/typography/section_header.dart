@@ -41,7 +41,7 @@ class SectionHeader extends StatelessWidget {
           SizedBox(width: spacing.sm),
         ],
         Expanded(child: Text(text, style: style ?? defaultStyle)),
-        if (action != null) action!,
+        ?action,
       ],
     );
 

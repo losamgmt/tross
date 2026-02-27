@@ -123,30 +123,45 @@ class EntityMetadataRegistry {
     );
   }
 
-  /// Create default metadata for an entity
-  EntityMetadata _createDefaultMetadata(String name) {
-    // Try to find ResourceType by name directly first, then with 's' suffix
-    ResourceType? rlsResource = ResourceType.fromString(name);
-    rlsResource ??= ResourceType.fromString('${name}s');
+  /// ADR-006 EXPLICIT MAPPINGS: No derivation allowed - all values explicit
+  /// These map entityKey → (tableName, rlsResource) for fallback mode
+  static const _explicitTableNames = {
+    'user': 'users',
+    'role': 'roles',
+    'customer': 'customers',
+    'technician': 'technicians',
+    'contract': 'contracts',
+    'invoice': 'invoices',
+    'inventory': 'inventory', // Note: uncountable noun, not "inventories"
+    'work_order': 'work_orders',
+  };
 
-    if (rlsResource == null) {
+  /// Create default metadata for an entity
+  /// ADR-006: Uses explicit mappings only - no derivation or pluralization
+  EntityMetadata _createDefaultMetadata(String name) {
+    // ADR-006: Explicit tableName lookup - no derivation
+    final tableName = _explicitTableNames[name];
+    if (tableName == null) {
       throw ArgumentError(
         'Cannot create default metadata for unknown entity "$name". '
-        'No matching ResourceType found for "$name" or "${name}s".',
+        'Add explicit mapping to _explicitTableNames.',
       );
     }
 
-    // Convert camelCase to snake_case for table name
-    final tableName = name.replaceAllMapped(
-      RegExp(r'([A-Z])'),
-      (m) => '_${m.group(1)!.toLowerCase()}',
-    );
+    // ADR-006: Explicit rlsResource lookup using tableName
+    final rlsResource = ResourceType.fromString(tableName);
+    if (rlsResource == null) {
+      throw ArgumentError(
+        'No ResourceType found for tableName "$tableName". '
+        'Ensure ResourceType enum includes this value.',
+      );
+    }
 
     final identityField = _getDefaultIdentityField(name);
 
     return EntityMetadata(
       entityKey: name,
-      tableName: '${tableName}s',
+      tableName: tableName, // ADR-006: Explicit from _explicitTableNames
       primaryKey: 'id',
       identityField: identityField,
       displayField: _getDefaultDisplayField(name) ?? identityField,

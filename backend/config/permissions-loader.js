@@ -277,9 +277,12 @@ function hasMinimumRole(userRole, requiredRole) {
 
 /**
  * Get row-level security policy for role and resource
+ *
+ * ADR-008: Returns filterConfig (null | false | string | { field, value })
+ *
  * @param {string} roleName - User's role name
  * @param {string} resource - Resource name
- * @returns {string|null} RLS policy ('own_record_only', 'all_records', etc.) or null
+ * @returns {*} RLS filterConfig or null if not defined
  */
 function getRowLevelSecurity(roleName, resource) {
   const config = loadPermissions();
@@ -290,7 +293,10 @@ function getRowLevelSecurity(roleName, resource) {
   }
 
   const normalized = roleName.toLowerCase();
-  return resourceConfig.rowLevelSecurity[normalized] || null;
+  const filterConfig = resourceConfig.rowLevelSecurity[normalized];
+
+  // Return undefined as null, but preserve false and other falsy values
+  return filterConfig === undefined ? null : filterConfig;
 }
 
 /**

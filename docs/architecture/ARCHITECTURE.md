@@ -328,7 +328,7 @@ This is field-level metadata describing how the name is constructed—like a val
 ```javascript
 req.dbUser; // Authenticated user (from authenticateToken)
 req.entityMetadata; // Entity metadata (from attachEntity/extractEntity)
-req.rlsPolicy; // RLS policy for this user+resource (from enforceRLS)
+req.rlsContext; // RLS context for filtering (from enforceRLS) - ADR-008
 req.validated = {
   body, // Validated request body
   query, // Validated query params

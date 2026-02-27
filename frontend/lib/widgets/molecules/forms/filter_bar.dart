@@ -270,7 +270,7 @@ class FilterBar extends StatelessWidget {
         ),
 
         // Trailing widget
-        if (trailing != null) trailing!,
+        ?trailing,
       ],
     );
   }

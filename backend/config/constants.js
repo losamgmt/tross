@@ -220,6 +220,22 @@ const ENTITY_FIELDS = Object.freeze({
 });
 
 // ============================================================================
+// RLS (ROW-LEVEL SECURITY) CONSTANTS - ADR-008
+// ============================================================================
+/**
+ * Valid context value keys for RLS { field, value } configurations.
+ * These map to properties on the rlsContext object built by RLS middleware.
+ *
+ * SSOT: This is the single source of truth for valid context values.
+ * Used by entity-metadata-validator.js to validate rlsPolicy configurations.
+ */
+const RLS_CONTEXT_VALUES = Object.freeze([
+  'userId', // users.id - the current user's ID
+  'customerProfileId', // users.customer_profile_id - user's customer profile FK
+  'technicianProfileId', // users.technician_profile_id - user's technician profile FK
+]);
+
+// ============================================================================
 // FIELD ACCESS LEVELS (for field-level CRUD permissions)
 // ============================================================================
 // Role hierarchy (lowest to highest): customer < technician < dispatcher < manager < admin
@@ -564,6 +580,7 @@ module.exports = Object.freeze({
   ROLE_DESCRIPTIONS,
   FIELD_ACCESS_LEVELS,
   UNIVERSAL_FIELD_ACCESS,
+  RLS_CONTEXT_VALUES,
   HEALTH,
   API_ENDPOINTS,
   MODEL_ERRORS,

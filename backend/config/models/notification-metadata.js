@@ -15,7 +15,7 @@
  */
 
 const { FIELD_ACCESS_LEVELS: FAL } = require('../constants');
-const { FIELD } = require('../field-type-standards');
+const { FIELD, ENUM } = require('../field-type-standards');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -53,13 +53,14 @@ module.exports = {
   /**
    * Row-Level Security policy per role
    * Users can only access their own notifications
+   * Values: null (all records), false (deny), field string, or { field, value } object
    */
   rlsPolicy: {
-    customer: 'own_record_only',
-    technician: 'own_record_only',
-    dispatcher: 'own_record_only',
-    manager: 'own_record_only',
-    admin: 'own_record_only', // Even admins only see their own notifications
+    customer: 'user_id',
+    technician: 'user_id',
+    dispatcher: 'user_id',
+    manager: 'user_id',
+    admin: 'user_id', // Even admins only see their own notifications
   },
 
   /**
@@ -94,9 +95,7 @@ module.exports = {
 
   fieldGroups: {},
 
-  rlsFilterConfig: {
-    ownRecordField: 'user_id',
-  },
+  // rlsFilterConfig removed - ADR-008: filter field now in rlsPolicy directly
 
   // ============================================================================
   // ENTITY CATEGORY
@@ -213,22 +212,11 @@ module.exports = {
   },
 
   // ============================================================================
-  // ENUM DEFINITIONS
+  // ENUM DEFINITIONS (for consistent UI colors)
   // ============================================================================
 
   enums: {
-    type: {
-      values: ['info', 'success', 'warning', 'error', 'assignment', 'reminder'],
-      default: 'info',
-      labels: {
-        info: 'Info',
-        success: 'Success',
-        warning: 'Warning',
-        error: 'Error',
-        assignment: 'Assignment',
-        reminder: 'Reminder',
-      },
-    },
+    type: ENUM.NOTIFICATION_TYPE,
   },
 
   // ============================================================================
@@ -316,6 +304,7 @@ module.exports = {
     },
     type: {
       type: 'enum',
+      values: ENUM.NOTIFICATION_TYPE.values,
       required: true,
       readonly: true,
       description: 'Notification type for UI styling',

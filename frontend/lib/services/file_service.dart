@@ -128,7 +128,7 @@ class FileService {
         'Content-Type': mimeType,
         'X-Filename': filename,
         'X-Category': category,
-        if (description != null) 'X-Description': description,
+        'X-Description': ?description,
       },
       body: bytes,
     );

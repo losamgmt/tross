@@ -10,7 +10,7 @@
 
 const request = require("supertest");
 const express = require("express");
-const jwt = require("jsonwebtoken");
+const { signJwt } = require("../../../utils/jwt-helper");
 const {
   sanitizeInput,
   securityHeaders,
@@ -22,8 +22,8 @@ describe("Input Sanitization Security", () => {
   let app;
   let validToken;
 
-  beforeAll(() => {
-    validToken = jwt.sign(
+  beforeAll(async () => {
+    validToken = await signJwt(
       {
         sub: "dev|admin001",
         email: "admin@tross.dev",

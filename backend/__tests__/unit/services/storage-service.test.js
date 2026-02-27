@@ -26,11 +26,14 @@
 // Shared mock functions that can be accessed across module reloads
 const mockSend = jest.fn();
 const mockGetSignedUrl = jest.fn();
-const mockUuidV4 = jest.fn(() => "test-uuid-1234");
 
 // =============================================================================
 // MOCKS - Using shared mock functions
 // =============================================================================
+
+// Mock crypto.randomUUID for predictable keys
+const mockRandomUUID = jest.fn(() => "test-uuid-1234");
+jest.spyOn(require("crypto"), "randomUUID").mockImplementation(mockRandomUUID);
 
 // Mock logger
 jest.mock("../../../config/logger", () => ({
@@ -40,11 +43,6 @@ jest.mock("../../../config/logger", () => ({
     error: jest.fn(),
     debug: jest.fn(),
   },
-}));
-
-// Mock uuid for predictable keys
-jest.mock("uuid", () => ({
-  v4: mockUuidV4,
 }));
 
 // Mock AWS SDK S3 Client - use the shared mockSend function
@@ -81,7 +79,7 @@ describe("StorageService", () => {
     jest.clearAllMocks();
     mockSend.mockReset();
     mockGetSignedUrl.mockReset();
-    mockUuidV4.mockReturnValue("test-uuid-1234");
+    mockRandomUUID.mockReturnValue("test-uuid-1234");
 
     // Set up environment for storage
     process.env = {

@@ -4,7 +4,7 @@
  * JWT-based authentication using local test users for development and testing.
  * Implements AuthStrategy interface for the Strategy Pattern.
  */
-const jwt = require('jsonwebtoken');
+const { signJwt, verifyJwt } = require('../../utils/jwt-helper');
 const AuthStrategy = require('./AuthStrategy');
 const AppError = require('../../utils/app-error');
 const { TEST_USERS } = require('../../config/test-users');
@@ -58,7 +58,7 @@ class DevAuthStrategy extends AuthStrategy {
       }
 
       // Generate JWT token with RFC 7519 standard claims
-      const token = jwt.sign(
+      const token = await signJwt(
         {
           // REGISTERED CLAIMS (RFC 7519 Standard)
           iss: process.env.API_URL || 'https://api.tross.dev', // Issuer
@@ -104,7 +104,7 @@ class DevAuthStrategy extends AuthStrategy {
    */
   async verifyToken(token) {
     try {
-      const decoded = jwt.verify(token, this.jwtSecret);
+      const decoded = await verifyJwt(token, this.jwtSecret);
 
       // Ensure this is a development token
       if (decoded.provider !== 'development') {
@@ -157,14 +157,14 @@ class DevAuthStrategy extends AuthStrategy {
   /**
    * Generate token for quick testing (convenience method)
    * @param {string} role - User role ('technician', 'admin', etc.)
-   * @returns {string} JWT token
+   * @returns {Promise<string>} JWT token
    */
-  generateTestToken(role = 'technician') {
+  async generateTestToken(role = 'technician') {
     const user =
       Object.values(TEST_USERS).find((u) => u.role === role) ||
       Object.values(TEST_USERS)[0];
 
-    return jwt.sign(
+    return signJwt(
       {
         auth0_id: user.auth0_id,
         email: user.email,

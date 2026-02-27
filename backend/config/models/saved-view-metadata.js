@@ -14,7 +14,7 @@
  */
 
 const { FIELD_ACCESS_LEVELS: FAL } = require('../constants');
-const { FIELD } = require('../field-type-standards');
+const { FIELD, ENUM } = require('../field-type-standards');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -53,13 +53,14 @@ module.exports = {
   /**
    * Row-Level Security policy per role
    * Users can only access their own saved views, admin can see all
+   * Values: null (all records), false (deny), field string, or { field, value } object
    */
   rlsPolicy: {
-    customer: 'own_record_only',
-    technician: 'own_record_only',
-    dispatcher: 'own_record_only',
-    manager: 'own_record_only',
-    admin: 'all_records',
+    customer: 'user_id',
+    technician: 'user_id',
+    dispatcher: 'user_id',
+    manager: 'user_id',
+    admin: null,
   },
 
   /**
@@ -91,9 +92,7 @@ module.exports = {
 
   fieldGroups: {},
 
-  rlsFilterConfig: {
-    ownRecordField: 'user_id',
-  },
+  // rlsFilterConfig removed - ADR-008: filter field now in rlsPolicy directly
 
   // ============================================================================
   // ENTITY CATEGORY
@@ -282,7 +281,7 @@ module.exports = {
     },
     density: {
       type: 'enum',
-      values: ['compact', 'standard', 'comfortable'],
+      values: ENUM.TABLE_DENSITY.values,
       default: 'standard',
       description: 'Table row density',
     },
@@ -294,7 +293,7 @@ module.exports = {
       type: 'object',
       properties: {
         field: { type: 'string' },
-        direction: { type: 'enum', values: ['asc', 'desc'] },
+        direction: { type: 'enum', values: ENUM.SORT_DIRECTION.values },
       },
       description: 'Sort configuration',
     },

@@ -14,6 +14,7 @@
  */
 const Joi = require('joi');
 const ResponseFormatter = require('../utils/response-formatter');
+const { FIELD } = require('../config/field-type-standards');
 
 /**
  * Helper function to create validation middleware
@@ -52,16 +53,24 @@ const createValidator = (schema) => (req, res, next) => {
  */
 const validateProfileUpdate = createValidator(
   Joi.object({
-    first_name: Joi.string().trim().min(1).max(100).messages({
-      'string.empty': 'First name cannot be empty',
-      'string.min': 'First name must be at least 1 character',
-      'string.max': 'First name cannot exceed 100 characters',
-    }),
-    last_name: Joi.string().trim().min(1).max(100).messages({
-      'string.empty': 'Last name cannot be empty',
-      'string.min': 'Last name must be at least 1 character',
-      'string.max': 'Last name cannot exceed 100 characters',
-    }),
+    first_name: Joi.string()
+      .trim()
+      .min(1)
+      .max(FIELD.FIRST_NAME.maxLength)
+      .messages({
+        'string.empty': 'First name cannot be empty',
+        'string.min': 'First name must be at least 1 character',
+        'string.max': `First name cannot exceed ${FIELD.FIRST_NAME.maxLength} characters`,
+      }),
+    last_name: Joi.string()
+      .trim()
+      .min(1)
+      .max(FIELD.LAST_NAME.maxLength)
+      .messages({
+        'string.empty': 'Last name cannot be empty',
+        'string.min': 'Last name must be at least 1 character',
+        'string.max': `Last name cannot exceed ${FIELD.LAST_NAME.maxLength} characters`,
+      }),
   })
     .min(1)
     .messages({

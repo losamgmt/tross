@@ -4,7 +4,7 @@
   "title": "Tross Permission Configuration",
   "description": "Single source of truth for role-based access control (RBAC). AUTO-GENERATED from entity metadata - run sync-permissions.js to regenerate.",
   "version": "4.0.0-derived",
-  "lastModified": "2026-02-24",
+  "lastModified": "2026-02-27",
   "roles": {
     "customer": {
       "priority": 1,
@@ -31,11 +31,11 @@
     "_parent_derived": {
       "description": "_parent_derived resource",
       "rowLevelSecurity": {
-        "customer": "parent_entity_access",
-        "technician": "parent_entity_access",
-        "dispatcher": "parent_entity_access",
-        "manager": "parent_entity_access",
-        "admin": "all_records"
+        "customer": "$parent",
+        "technician": "$parent",
+        "dispatcher": "$parent",
+        "manager": "$parent",
+        "admin": null
       },
       "permissions": {
         "create": {
@@ -67,13 +67,7 @@
     },
     "admin_panel": {
       "description": "Admin control center - system health, sessions, audit logs",
-      "rowLevelSecurity": {
-        "customer": "deny_all",
-        "technician": "deny_all",
-        "dispatcher": "deny_all",
-        "manager": "deny_all",
-        "admin": "all_records"
-      },
+      "rowLevelSecurity": null,
       "permissions": {
         "create": {
           "minimumRole": "admin",
@@ -105,11 +99,11 @@
     "audit_logs": {
       "description": "audit_logs resource",
       "rowLevelSecurity": {
-        "customer": "deny_all",
-        "technician": "deny_all",
-        "dispatcher": "deny_all",
-        "manager": "deny_all",
-        "admin": "all_records"
+        "customer": false,
+        "technician": false,
+        "dispatcher": false,
+        "manager": false,
+        "admin": null
       },
       "permissions": {
         "create": {
@@ -145,11 +139,14 @@
     "contracts": {
       "description": "contracts resource",
       "rowLevelSecurity": {
-        "customer": "own_contracts_only",
-        "technician": "deny_all",
-        "dispatcher": "all_records",
-        "manager": "all_records",
-        "admin": "all_records"
+        "customer": {
+          "field": "customer_id",
+          "value": "customerProfileId"
+        },
+        "technician": false,
+        "dispatcher": null,
+        "manager": null,
+        "admin": null
       },
       "permissions": {
         "create": {
@@ -182,11 +179,14 @@
     "customers": {
       "description": "customers resource",
       "rowLevelSecurity": {
-        "customer": "own_record_only",
-        "technician": "all_records",
-        "dispatcher": "all_records",
-        "manager": "all_records",
-        "admin": "all_records"
+        "customer": {
+          "field": "id",
+          "value": "customerProfileId"
+        },
+        "technician": null,
+        "dispatcher": null,
+        "manager": null,
+        "admin": null
       },
       "permissions": {
         "create": {
@@ -218,13 +218,7 @@
     },
     "dashboard": {
       "description": "Main dashboard view - role-driven overview",
-      "rowLevelSecurity": {
-        "customer": "own_record_only",
-        "technician": "own_record_only",
-        "dispatcher": "all_records",
-        "manager": "all_records",
-        "admin": "all_records"
-      },
+      "rowLevelSecurity": null,
       "permissions": {
         "create": {
           "minimumRole": "admin",
@@ -256,11 +250,11 @@
     "inventory": {
       "description": "inventory resource",
       "rowLevelSecurity": {
-        "customer": "public_resource",
-        "technician": "public_resource",
-        "dispatcher": "public_resource",
-        "manager": "public_resource",
-        "admin": "public_resource"
+        "customer": null,
+        "technician": null,
+        "dispatcher": null,
+        "manager": null,
+        "admin": null
       },
       "permissions": {
         "create": {
@@ -293,11 +287,14 @@
     "invoices": {
       "description": "invoices resource",
       "rowLevelSecurity": {
-        "customer": "own_invoices_only",
-        "technician": "deny_all",
-        "dispatcher": "all_records",
-        "manager": "all_records",
-        "admin": "all_records"
+        "customer": {
+          "field": "customer_id",
+          "value": "customerProfileId"
+        },
+        "technician": false,
+        "dispatcher": null,
+        "manager": null,
+        "admin": null
       },
       "permissions": {
         "create": {
@@ -330,11 +327,11 @@
     "notifications": {
       "description": "notifications resource",
       "rowLevelSecurity": {
-        "customer": "own_record_only",
-        "technician": "own_record_only",
-        "dispatcher": "own_record_only",
-        "manager": "own_record_only",
-        "admin": "own_record_only"
+        "customer": "user_id",
+        "technician": "user_id",
+        "dispatcher": "user_id",
+        "manager": "user_id",
+        "admin": "user_id"
       },
       "permissions": {
         "create": {
@@ -368,11 +365,11 @@
     "preferences": {
       "description": "preferences resource",
       "rowLevelSecurity": {
-        "customer": "own_record_only",
-        "technician": "own_record_only",
-        "dispatcher": "own_record_only",
-        "manager": "own_record_only",
-        "admin": "all_records"
+        "customer": "user_id",
+        "technician": "user_id",
+        "dispatcher": "user_id",
+        "manager": "user_id",
+        "admin": null
       },
       "permissions": {
         "create": {
@@ -405,11 +402,11 @@
     "roles": {
       "description": "roles resource",
       "rowLevelSecurity": {
-        "customer": "public_resource",
-        "technician": "public_resource",
-        "dispatcher": "public_resource",
-        "manager": "public_resource",
-        "admin": "public_resource"
+        "customer": null,
+        "technician": null,
+        "dispatcher": null,
+        "manager": null,
+        "admin": null
       },
       "permissions": {
         "create": {
@@ -442,11 +439,11 @@
     "saved_views": {
       "description": "saved_views resource",
       "rowLevelSecurity": {
-        "customer": "own_record_only",
-        "technician": "own_record_only",
-        "dispatcher": "own_record_only",
-        "manager": "own_record_only",
-        "admin": "all_records"
+        "customer": "user_id",
+        "technician": "user_id",
+        "dispatcher": "user_id",
+        "manager": "user_id",
+        "admin": null
       },
       "permissions": {
         "create": {
@@ -478,13 +475,7 @@
     },
     "system_settings": {
       "description": "System-wide configuration (maintenance mode, feature flags)",
-      "rowLevelSecurity": {
-        "customer": "deny_all",
-        "technician": "deny_all",
-        "dispatcher": "deny_all",
-        "manager": "deny_all",
-        "admin": "all_records"
-      },
+      "rowLevelSecurity": null,
       "permissions": {
         "create": {
           "minimumRole": "admin",
@@ -516,11 +507,11 @@
     "technicians": {
       "description": "technicians resource",
       "rowLevelSecurity": {
-        "customer": "all_records",
-        "technician": "all_records",
-        "dispatcher": "all_records",
-        "manager": "all_records",
-        "admin": "all_records"
+        "customer": null,
+        "technician": null,
+        "dispatcher": null,
+        "manager": null,
+        "admin": null
       },
       "permissions": {
         "create": {
@@ -553,11 +544,11 @@
     "users": {
       "description": "users resource",
       "rowLevelSecurity": {
-        "customer": "own_record_only",
-        "technician": "all_records",
-        "dispatcher": "all_records",
-        "manager": "all_records",
-        "admin": "all_records"
+        "customer": "id",
+        "technician": null,
+        "dispatcher": null,
+        "manager": null,
+        "admin": null
       },
       "permissions": {
         "create": {
@@ -590,11 +581,17 @@
     "work_orders": {
       "description": "work_orders resource",
       "rowLevelSecurity": {
-        "customer": "own_work_orders_only",
-        "technician": "assigned_work_orders_only",
-        "dispatcher": "all_records",
-        "manager": "all_records",
-        "admin": "all_records"
+        "customer": {
+          "field": "customer_id",
+          "value": "customerProfileId"
+        },
+        "technician": {
+          "field": "assigned_technician_id",
+          "value": "technicianProfileId"
+        },
+        "dispatcher": null,
+        "manager": null,
+        "admin": null
       },
       "permissions": {
         "create": {

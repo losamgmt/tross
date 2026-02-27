@@ -746,7 +746,7 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
             // Data section (scrolls horizontally and vertically)
             Expanded(child: dataSection),
             // Actions section (pinned right, syncs vertically)
-            if (actionsTable != null) actionsTable,
+            ?actionsTable,
           ],
         );
 

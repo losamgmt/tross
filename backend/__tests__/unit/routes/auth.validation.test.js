@@ -19,7 +19,7 @@ const auditService = require("../../../services/audit-service");
 const { authenticateToken } = require("../../../middleware/auth");
 const { validateProfileUpdate } = require("../../../validators");
 const { getClientIp, getUserAgent } = require("../../../utils/request-helpers");
-const jwt = require("jsonwebtoken");
+const jwtHelper = require("../../../utils/jwt-helper");
 const {
   createRouteTestApp,
   setupRouteMocks,
@@ -37,7 +37,7 @@ jest.mock("../../../middleware/auth", () => ({
   requireMinimumRole: jest.fn(() => (req, res, next) => next()),
 }));
 jest.mock("../../../utils/request-helpers");
-jest.mock("jsonwebtoken");
+jest.mock("../../../utils/jwt-helper");
 
 // Mock validators with proper factory functions
 jest.mock("../../../validators", () => {
@@ -256,7 +256,7 @@ describe("routes/auth.js - Validation & Error Handling", () => {
     test("should handle missing tokenId in decoded token", async () => {
       // Arrange
       const refreshToken = "token-without-id";
-      jwt.decode.mockReturnValue({ userId: 1 }); // No tokenId
+      jwtHelper.decodeJwt.mockReturnValue({ userId: 1 }); // No tokenId
       auditService.log.mockResolvedValue(true);
 
       // Act
@@ -272,7 +272,7 @@ describe("routes/auth.js - Validation & Error Handling", () => {
     test("should handle invalid refresh token gracefully", async () => {
       // Arrange
       const refreshToken = "invalid-token";
-      jwt.decode.mockReturnValue(null);
+      jwtHelper.decodeJwt.mockReturnValue(null);
       auditService.log.mockResolvedValue(true);
 
       // Act

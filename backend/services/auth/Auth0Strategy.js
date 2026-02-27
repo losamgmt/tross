@@ -4,10 +4,10 @@
  * Production OAuth2/OIDC authentication using Auth0.
  * Implements AuthStrategy interface for the Strategy Pattern.
  */
-const jwt = require('jsonwebtoken');
-const jwksClient = require('jwks-rsa');
+const { signJwt } = require('../../utils/jwt-helper');
+const { createRemoteJWKSet, jwtVerify } = require('jose');
 const axios = require('axios');
-const { AuthenticationClient, ManagementClient } = require('auth0');
+const { AuthenticationClient, ManagementClient, UserInfoClient } = require('auth0');
 const AuthStrategy = require('./AuthStrategy');
 const { logger } = require('../../config/logger');
 const UserDataService = require('../user-data');
@@ -24,7 +24,7 @@ class Auth0Strategy extends AuthStrategy {
     super();
     this.config = auth0Config;
 
-    // Auth0 SDK clients
+    // Auth0 SDK clients (auth0 v5 API)
     this.authClient = new AuthenticationClient({
       domain: this.config.domain,
       clientId: this.config.clientId,
@@ -35,19 +35,17 @@ class Auth0Strategy extends AuthStrategy {
       domain: this.config.domain,
       clientId: this.config.managementClientId,
       clientSecret: this.config.managementClientSecret,
-      scope: 'read:users create:users update:users',
     });
 
-    // JWKS client for token verification
-    this.jwksClient = jwksClient({
-      jwksUri: `https://${this.config.domain}/.well-known/jwks.json`,
-      requestHeaders: {},
-      timeout: 30000,
-      cache: true,
-      rateLimit: true,
-      jwksRequestsPerMinute: 5,
-      jwksRequestsPerHour: 20,
+    // UserInfo client for fetching user profile (auth0 v5 API)
+    this.userInfoClient = new UserInfoClient({
+      domain: this.config.domain,
     });
+
+    // JWKS remote key set for token verification (jose library)
+    this.jwks = createRemoteJWKSet(
+      new URL(`https://${this.config.domain}/.well-known/jwks.json`),
+    );
   }
 
   /**
@@ -95,8 +93,8 @@ class Auth0Strategy extends AuthStrategy {
       // Verify the access token
       const _decodedToken = await this.verifyToken(tokens.access_token);
 
-      // Get user info from Auth0
-      const userInfo = await this.authClient.users.getInfo(tokens.access_token);
+      // Get user info from Auth0 (auth0 v5 API: UserInfoClient)
+      const userInfo = await this.userInfoClient.getUserInfo(tokens.access_token);
       logger.info('🔐 Auth0: Retrieved user info', { email: userInfo.email });
 
       // Map and create/update user in local database
@@ -104,7 +102,7 @@ class Auth0Strategy extends AuthStrategy {
       const localUser = await UserDataService.findOrCreateUser(mappedProfile);
 
       // Generate application JWT token (DRY helper)
-      const appToken = this._generateAppToken(
+      const appToken = await this._generateAppToken(
         localUser,
         mappedProfile.auth0_id,
       );
@@ -165,7 +163,8 @@ class Auth0Strategy extends AuthStrategy {
    */
   async getUserProfile(accessToken) {
     try {
-      const userInfo = await this.authClient.users.getInfo(accessToken);
+      // Auth0 v5 API: UserInfoClient.getUserInfo
+      const userInfo = await this.userInfoClient.getUserInfo(accessToken);
       return this._mapUserProfile(userInfo);
     } catch (error) {
       logger.error('🔐 Auth0: Failed to get user profile', {
@@ -269,7 +268,7 @@ class Auth0Strategy extends AuthStrategy {
       const localUser = await UserDataService.findOrCreateUser(mappedProfile);
 
       // Generate application JWT token (DRY helper)
-      const appToken = this._generateAppToken(
+      const appToken = await this._generateAppToken(
         localUser,
         mappedProfile.auth0_id,
       );
@@ -307,10 +306,10 @@ class Auth0Strategy extends AuthStrategy {
    * @private
    * @param {Object} localUser - Local user from database
    * @param {string} auth0Id - Validated Auth0 user ID (sub claim)
-   * @returns {string} Signed JWT token
+   * @returns {Promise<string>} Signed JWT token
    */
-  _generateAppToken(localUser, auth0Id) {
-    return jwt.sign(
+  async _generateAppToken(localUser, auth0Id) {
+    return signJwt(
       {
         // REGISTERED CLAIMS (RFC 7519 Standard)
         iss: process.env.API_URL || 'https://api.tross.dev', // Issuer
@@ -331,56 +330,27 @@ class Auth0Strategy extends AuthStrategy {
   /**
    * Verify JWT token with JWKS (unified for access tokens and ID tokens)
    * Centralized verification logic with flexible audience parameter
+   * Uses jose library for modern JWT verification with automatic JWKS fetching
    *
    * @private
    * @param {string} token - JWT token to verify
    * @param {string} audience - Expected audience (API audience or clientId)
-   * @returns {Promise<Object>} Decoded token
+   * @returns {Promise<Object>} Decoded token payload
    */
-  _verifyJwtToken(token, audience) {
-    return new Promise((resolve, reject) => {
-      jwt.verify(
-        token,
-        this._getSigningKey.bind(this),
-        {
-          audience,
-          issuer: `https://${this.config.domain}/`,
-          algorithms: ['RS256'],
-        },
-        (err, decoded) => {
-          if (err) {
-            logger.error('🔐 Auth0: Token verification failed', {
-              error: err.message,
-            });
-            return reject(
-              new Error(`Token verification failed: ${err.message}`),
-            );
-          }
-          resolve(decoded);
-        },
-      );
-    });
-  }
-
-  /**
-   * Get signing key from JWKS for token verification
-   * Centralized JWKS key retrieval callback
-   *
-   * @private
-   * @param {Object} header - JWT header
-   * @param {Function} callback - Callback(err, key)
-   */
-  _getSigningKey(header, callback) {
-    this.jwksClient.getSigningKey(header.kid, (err, key) => {
-      if (err) {
-        logger.error('🔐 Auth0: Failed to get signing key', {
-          error: err.message,
-        });
-        return callback(err);
-      }
-      const signingKey = key.publicKey || key.rsaPublicKey;
-      callback(null, signingKey);
-    });
+  async _verifyJwtToken(token, audience) {
+    try {
+      const { payload } = await jwtVerify(token, this.jwks, {
+        audience,
+        issuer: `https://${this.config.domain}/`,
+        algorithms: ['RS256'],
+      });
+      return payload;
+    } catch (err) {
+      logger.error('🔐 Auth0: Token verification failed', {
+        error: err.message,
+      });
+      throw new Error(`Token verification failed: ${err.message}`);
+    }
   }
 
   /**

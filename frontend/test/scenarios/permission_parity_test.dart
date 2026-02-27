@@ -248,7 +248,10 @@ void main() {
       }
     });
 
-    test('all resources have rowLevelSecurity for all roles', () {
+    test('all resources have rowLevelSecurity key (ADR-008 format)', () {
+      // ADR-008: rowLevelSecurity can be:
+      // - null at resource level: no filtering for anyone
+      // - Map with role keys: per-role filtering (values can be null/false/string/object)
       final resources = permissionsConfig['resources'] as Map<String, dynamic>?;
       if (resources == null) return;
 
@@ -259,24 +262,23 @@ void main() {
         expect(
           resourceConfig.containsKey('rowLevelSecurity'),
           isTrue,
-          reason: 'Resource "$resourceName" should have rowLevelSecurity',
+          reason: 'Resource "$resourceName" should have rowLevelSecurity key',
         );
 
-        final rls = resourceConfig['rowLevelSecurity'] as Map<String, dynamic>?;
-        expect(
-          rls,
-          isNotNull,
-          reason: '$resourceName rowLevelSecurity should not be null',
-        );
+        final rls = resourceConfig['rowLevelSecurity'];
 
-        // Every role should have RLS defined
-        for (final role in UserRole.values) {
-          expect(
-            rls!.containsKey(role.name),
-            isTrue,
-            reason: '$resourceName rowLevelSecurity should define ${role.name}',
-          );
+        // If RLS is a map (per-role config), verify all roles are defined
+        if (rls is Map<String, dynamic>) {
+          for (final role in UserRole.values) {
+            expect(
+              rls.containsKey(role.name),
+              isTrue,
+              reason:
+                  '$resourceName rowLevelSecurity should define ${role.name}',
+            );
+          }
         }
+        // If rls is null at resource level, that's valid (means no RLS for anyone)
       }
     });
   });

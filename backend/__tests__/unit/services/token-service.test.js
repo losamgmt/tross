@@ -16,7 +16,7 @@ const TokenService = require("../../../services/token-service");
 const db = require("../../../db/connection");
 const logger = require("../../../config/logger");
 const { setTestEnv } = require("../../helpers/test-helpers");
-const jwt = require("jsonwebtoken");
+const { decodeJwt } = require("../../../utils/jwt-helper");
 const bcrypt = require("bcrypt");
 
 describe("TokenService", () => {
@@ -90,8 +90,8 @@ describe("TokenService", () => {
       const result = await TokenService.generateTokenPair(testUser);
 
       // Decode tokens without verification to check expiration
-      const accessPayload = jwt.decode(result.accessToken);
-      const refreshPayload = jwt.decode(result.refreshToken);
+      const accessPayload = decodeJwt(result.accessToken);
+      const refreshPayload = decodeJwt(result.refreshToken);
 
       // Access token should expire in ~15 minutes (900 seconds)
       const accessExpiry = accessPayload.exp - accessPayload.iat;
@@ -110,7 +110,7 @@ describe("TokenService", () => {
       const result = await TokenService.generateTokenPair(testUser);
 
       // Decode without verification (signature is valid, but secret may be cached from module load)
-      const payload = jwt.decode(result.accessToken);
+      const payload = decodeJwt(result.accessToken);
 
       expect(payload.userId).toBe(testUser.id);
       expect(payload.email).toBe(testUser.email);
@@ -152,7 +152,7 @@ describe("TokenService", () => {
       validRefreshToken = tokens.refreshToken;
 
       // Decode to get token ID
-      const payload = jwt.decode(validRefreshToken);
+      const payload = decodeJwt(validRefreshToken);
       tokenId = payload.tokenId;
 
       jest.clearAllMocks();

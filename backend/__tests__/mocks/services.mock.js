@@ -333,13 +333,12 @@ function createMockAuth0Service() {
     getLogoutUrl: jest.fn(),
     createAdminUser: jest.fn(),
     authClient: {
-      users: {
-        getInfo: jest.fn(),
-      },
-      buildAuthorizeUrl: jest.fn(),
       oauth: {
         refreshToken: jest.fn(),
       },
+    },
+    userInfoClient: {
+      getUserInfo: jest.fn(),
     },
     managementClient: {
       createUser: jest.fn(),
@@ -362,8 +361,7 @@ function resetAuth0ServiceMocks(auth0Service) {
   auth0Service.getAuthorizationUrl.mockReset();
   auth0Service.getLogoutUrl.mockReset();
   auth0Service.createAdminUser.mockReset();
-  auth0Service.authClient.users.getInfo.mockReset();
-  auth0Service.authClient.buildAuthorizeUrl.mockReset();
+  auth0Service.userInfoClient.getUserInfo.mockReset();
   auth0Service.authClient.oauth.refreshToken.mockReset();
   auth0Service.managementClient.createUser.mockReset();
 }
