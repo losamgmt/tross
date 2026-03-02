@@ -161,7 +161,7 @@ Tross is deployed on Railway. The platform auto-detects the Node.js backend and 
 
 1. Push to `main` branch
 2. Railway auto-deploys via GitHub integration
-3. Health checks verify deployment: `https://tross-api-production.up.railway.app/api/health`
+3. Health checks verify deployment: `<your-backend-url>/api/health`
 
 ---
 
@@ -171,7 +171,7 @@ For self-hosted deployments, use Docker Compose.
 
 ### Example Production Docker Compose
 
-> **Note:** Create a `docker-compose.prod.yml` based on this template if self-hosting.
+> **Note:** Create a `docker-compose.prod.yml` based on this template if self-hosting. Adjust ports to match your `config/ports.js` configuration.
 
 ```yaml
 version: "3.8"
@@ -180,14 +180,14 @@ services:
   backend:
     build: ./backend
     ports:
-      - "3001:3001"
+      - "<BACKEND_PORT>:<BACKEND_PORT>"
     environment:
       - NODE_ENV=production
       - DATABASE_URL=${DATABASE_URL}
       - JWT_SECRET=${JWT_SECRET}
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/api/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:<BACKEND_PORT>/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -227,8 +227,8 @@ docker-compose -f docker-compose.prod.yml run --rm backend npm run migrate
 # 5. Start services
 docker-compose -f docker-compose.prod.yml up -d
 
-# 6. Verify health
-curl http://localhost:3001/api/health
+# 6. Verify health (see config/ports.js for port)
+curl http://localhost:<BACKEND_PORT>/api/health
 ```
 
 **Update deployment:**
@@ -240,8 +240,8 @@ docker-compose -f docker-compose.prod.yml pull
 # Restart services (zero-downtime with health checks)
 docker-compose -f docker-compose.prod.yml up -d
 
-# Verify
-curl http://localhost:3001/api/health
+# Verify (see config/ports.js for port)
+curl http://localhost:<BACKEND_PORT>/api/health
 ```
 
 ---
@@ -347,23 +347,24 @@ docker-compose -f docker-compose.prod.yml run --rm backend npm run migrate:statu
 
 ### Health Endpoints
 
+> **Note:** Replace `<BACKEND_PORT>` with your actual port. See `config/ports.js`.
+
 **Application health:**
 
 ```bash
-curl http://localhost:3001/api/health
+curl http://localhost:<BACKEND_PORT>/api/health
 
 {
   "status": "healthy",
-  "timestamp": "2025-11-19T10:30:00Z",
-  "database": "connected",
-  "version": "1.0.0"
+  "timestamp": "<ISO-8601-timestamp>",
+  "database": "connected"
 }
 ```
 
 **Database health:**
 
 ```bash
-curl http://localhost:3001/api/health/db
+curl http://localhost:<BACKEND_PORT>/api/health/db
 
 {
   "status": "connected",

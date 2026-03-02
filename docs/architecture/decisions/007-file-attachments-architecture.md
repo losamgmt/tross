@@ -61,7 +61,7 @@ Every file response includes a ready-to-use signed URL:
 **Why absolute expiry:**
 
 - `expires_in: 3600` requires frontend to track when it received the response
-- `expires_at: "2026-02-01T11:30:00Z"` is unambiguous, can be compared directly
+- `expires_at: "<ISO-8601-timestamp>"` is unambiguous, can be compared directly
 
 **Frontend refresh pattern:**
 

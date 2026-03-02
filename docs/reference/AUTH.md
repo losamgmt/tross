@@ -397,24 +397,26 @@ npm run dev
 
 ```
 Allowed Callback URLs:
-http://localhost:8080/callback
-https://trossapp.vercel.app/callback
-https://*-zarika-ambers-projects.vercel.app/callback
+http://localhost:<FRONTEND_PORT>/callback
+https://<your-production-domain>/callback
+https://*.<your-preview-domain>/callback
 
 Allowed Logout URLs:
-http://localhost:8080
-https://trossapp.vercel.app
-https://*-zarika-ambers-projects.vercel.app
+http://localhost:<FRONTEND_PORT>
+https://<your-production-domain>
+https://*.<your-preview-domain>
 
 Allowed Web Origins:
-http://localhost:8080
-https://trossapp.vercel.app
-https://*-zarika-ambers-projects.vercel.app
+http://localhost:<FRONTEND_PORT>
+https://<your-production-domain>
+https://*.<your-preview-domain>
 
 Allowed Origins (CORS):
-http://localhost:8080
-https://trossapp.vercel.app
-https://*-zarika-ambers-projects.vercel.app
+http://localhost:<FRONTEND_PORT>
+https://<your-production-domain>
+https://*.<your-preview-domain>
+
+> **Note:** Replace placeholders with your actual domains. See `config/ports.js` for local port.
 ```
 
 **3. Configure Branding (Optional)**
@@ -432,10 +434,12 @@ Go to Branding → Universal Login → Settings:
 AUTH0_DOMAIN=your-tenant.auth0.com
 AUTH0_CLIENT_ID=your-client-id
 AUTH0_CLIENT_SECRET=your-client-secret
-AUTH0_CALLBACK_URL=http://localhost:3001/api/auth0/callback
+AUTH0_CALLBACK_URL=<backend-url>/api/auth0/callback
 ```
 
-**4. Restart Backend**
+> **Note:** Replace `<backend-url>` with your local backend URL. See `config/ports.js` for port.
+
+**5. Restart Backend**
 
 ```bash
 cd backend
@@ -494,7 +498,7 @@ app.use("/api/auth/login", loginLimiter);
 
 - Check `NODE_ENV=development`
 - Verify dev routes are registered at `/api/dev/*`
-- Test with: `curl "http://localhost:3001/api/dev/token?role=admin"`
+- Test with: `curl "<backend-url>/api/dev/token?role=admin"` (see `config/ports.js` for port)
 
 ### Permission denied (403)
 

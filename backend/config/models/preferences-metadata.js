@@ -28,12 +28,13 @@ module.exports = {
   /**
    * Row-Level Security policy per role
    * Values: null (all records), false (deny), field string, or { field, value } object
+   * Note: preferences uses shared-PK pattern where preferences.id = users.id
    */
   rlsPolicy: {
-    customer: 'user_id',
-    technician: 'user_id',
-    dispatcher: 'user_id',
-    manager: 'user_id',
+    customer: 'id',
+    technician: 'id',
+    dispatcher: 'id',
+    manager: 'id',
     admin: null,
   },
 

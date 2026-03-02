@@ -12,10 +12,9 @@ Add this configuration to your R2 bucket in Cloudflare Dashboard:
 [
   {
     "AllowedOrigins": [
-      "http://localhost:8080",
-      "http://localhost:3000",
-      "https://trossapp.vercel.app",
-      "https://*.vercel.app"
+      "http://localhost:<FRONTEND_PORT>",
+      "https://<your-production-domain>",
+      "https://*.<your-preview-domain>"
     ],
     "AllowedMethods": ["GET", "HEAD"],
     "AllowedHeaders": ["*"],
@@ -23,6 +22,8 @@ Add this configuration to your R2 bucket in Cloudflare Dashboard:
   }
 ]
 ```
+
+> **Note:** Replace placeholders with your actual domains. See `config/ports.js` for local port values.
 
 ## Why This Is Needed
 
@@ -35,11 +36,11 @@ The browser enforces CORS. Without the `Access-Control-Allow-Origin` header from
 
 ## Environments
 
-| Environment     | Origins                                          |
-| --------------- | ------------------------------------------------ |
-| Local dev       | `http://localhost:8080`, `http://localhost:3000` |
-| Production      | `https://trossapp.vercel.app`                    |
-| Vercel previews | `https://*.vercel.app`                           |
+| Environment      | Origins                                       |
+| ---------------- | --------------------------------------------- |
+| Local dev        | Your localhost + port from `config/ports.js`  |
+| Production       | Your production frontend domain               |
+| Preview deploys  | Wildcard for your preview domain pattern      |
 
 ## Troubleshooting
 
@@ -84,11 +85,11 @@ Set these in Railway dashboard for the backend service:
 
 ### Verifying Configuration
 
-After setting env vars, restart the Railway service and check:
+After setting env vars, restart your backend service and check:
 
 ```bash
 # Health check should show storage as configured
-curl https://your-backend.railway.app/api/health
+curl <your-backend-url>/api/health
 
 # Should return: { "storage": { "configured": true, ... } }
 ```

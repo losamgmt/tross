@@ -21,9 +21,9 @@ RESTful API design patterns and conventions.
 > **Port configuration:** See [`config/ports.js`](../config/ports.js) for local port.
 
 **Development:** `http://localhost:<BACKEND_PORT>`  
-**Production:** `https://tross-api-production.up.railway.app`
+**Production:** Your deployed backend URL (e.g., `https://<your-app>.up.railway.app`)
 
-**Live Documentation:** `http://localhost:<BACKEND_PORT>/api-docs` (Swagger UI)
+**Live Documentation:** `<backend-url>/api-docs` (Swagger UI)
 
 ---
 
@@ -212,9 +212,8 @@ GET /api/health
 ```json
 {
   "status": "healthy",
-  "timestamp": "2025-11-19T10:30:00Z",
-  "database": "connected",
-  "version": "1.0.0"
+  "timestamp": "<ISO-8601-timestamp>",
+  "database": "connected"
 }
 ```
 
@@ -611,7 +610,7 @@ X-RateLimit-Reset: 1700000000
 
 ## CORS
 
-**Allowed Origins:** `http://localhost:8080` (dev), `https://trossapp.vercel.app` (prod)  
+**Allowed Origins:** Configured via `ALLOWED_ORIGINS` environment variable (see deployment config)
 **Allowed Methods:** GET, POST, PUT, PATCH, DELETE  
 **Allowed Headers:** Content-Type, Authorization  
 **Credentials:** Supported
@@ -620,7 +619,7 @@ X-RateLimit-Reset: 1700000000
 
 ## OpenAPI/Swagger
 
-**Interactive Documentation:** http://localhost:3001/api-docs
+**Interactive Documentation:** `http://localhost:<BACKEND_PORT>/api-docs` (see `config/ports.js`)
 
 **Features:**
 
@@ -629,7 +628,7 @@ X-RateLimit-Reset: 1700000000
 - View authentication requirements
 - Download OpenAPI spec
 
-**OpenAPI Spec:** http://localhost:3001/api-docs.json
+**OpenAPI Spec:** `<backend-url>/api-docs.json`
 
 ---
 
@@ -678,27 +677,29 @@ Import OpenAPI spec into Postman:
 
 1. Open Postman
 2. File → Import
-3. URL: http://localhost:3001/api-docs.json
+3. URL: `<backend-url>/api-docs.json`
 
 ### cURL Examples
+
+> **Note:** Replace `<backend-url>` with your local backend URL. See `config/ports.js` for port.
 
 **Get dev token:**
 
 ```bash
-curl "http://localhost:3001/api/dev/token?role=admin"
+curl "<backend-url>/api/dev/token?role=admin"
 ```
 
 **List customers:**
 
 ```bash
-curl http://localhost:3001/api/customers \
+curl <backend-url>/api/customers \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
 **Create customer:**
 
 ```bash
-curl -X POST http://localhost:3001/api/customers \
+curl -X POST <backend-url>/api/customers \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"name":"Acme Corp","email":"contact@acme.com"}'

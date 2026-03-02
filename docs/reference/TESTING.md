@@ -504,27 +504,25 @@ npx playwright test --ui
 
 **Local vs CI:**
 
-- **Local:** Runs against `http://localhost:3001` (start backend first)
-- **CI:** Runs against deployed Railway URL via `BACKEND_URL` env var
+- **Local:** Runs against your local backend (start backend first, see `config/ports.js` for port)
+- **CI:** Runs against deployed backend URL via `BACKEND_URL` env var
 
 ---
 
 ### E2E in CI/CD
 
-E2E tests run **after** unit and integration tests pass, and target the **real Railway deployment**:
+E2E tests run **after** unit and integration tests pass, and target the **real production deployment**:
 
 ```
 Push to main
     ├─► Unit Tests ─────────────┐
     │                           ├─► E2E ─► Deploy Notify
-    ├─► Integration Tests ──────┘   against Railway
+    ├─► Integration Tests ──────┘   against Production
     │
-    └─► Railway auto-deploys (parallel)
+    └─► Platform auto-deploys (parallel)
 ```
 
-**Required GitHub Secret:** `RAILWAY_BACKEND_URL`
-
-- Example: `https://tross-api-production.up.railway.app`
+**Required GitHub Secret:** `BACKEND_URL` (your production backend URL)
 
 ---
 

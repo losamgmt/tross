@@ -1,7 +1,6 @@
 # Notification System Design
 
-> **Status:** Phase 3 Complete (Frontend Implemented)
-> **Last Updated:** 2026-01-21
+> **Status:** Implemented
 > **Pattern:** Follows `saved_views` - metadata + generic router, NO custom code
 
 ## Table of Contents

@@ -151,9 +151,9 @@ E2E waits for Railway to be healthy, then runs against the production URL.
 
 ### Required GitHub Secrets
 
-| Secret                | Value                    | Example                                       |
-| --------------------- | ------------------------ | --------------------------------------------- |
-| `RAILWAY_BACKEND_URL` | Your Railway backend URL | `https://tross-api-production.up.railway.app` |
+| Secret        | Value                     | Example                              |
+| ------------- | ------------------------- | ------------------------------------ |
+| `BACKEND_URL` | Your production backend URL | `https://<your-app>.up.railway.app` |
 
 ### Running Tests
 
@@ -165,7 +165,7 @@ npm run test:all
 npm run test:e2e
 
 # E2E against production (set BACKEND_URL)
-BACKEND_URL=https://tross-api-production.up.railway.app npm run test:e2e
+BACKEND_URL=<your-backend-url> npm run test:e2e
 ```
 
 ---
@@ -250,8 +250,8 @@ PR merged → Vercel builds → Production deploy
 **Preview URLs:**
 
 ```
-Production: https://trossapp.vercel.app
-Preview: https://tross-pr-123.vercel.app
+Production: <your-frontend-url>
+Preview: <your-preview-url>
 ```
 
 ### Backend (Railway)
@@ -288,7 +288,7 @@ JWT_SECRET=...
 AUTH0_DOMAIN=...
 AUTH0_AUDIENCE=...
 AUTH0_ISSUER=...
-FRONTEND_URL=https://trossapp.vercel.app
+FRONTEND_URL=<your-frontend-url>
 ```
 
 Railway automatically provides `DATABASE_URL` when you provision a PostgreSQL database. The deployment adapter handles the rest.
@@ -296,9 +296,9 @@ Railway automatically provides `DATABASE_URL` when you provision a PostgreSQL da
 **URLs:**
 
 ```
-Production: https://tross-api-production.up.railway.app
-Health: https://tross-api-production.up.railway.app/api/health
-API Docs: https://tross-api-production.up.railway.app/api-docs
+Production: <your-backend-url>
+Health: <your-backend-url>/api/health
+API Docs: <your-backend-url>/api-docs
 ```
 
 ---
