@@ -168,10 +168,11 @@ AUTH0_AUDIENCE=https://api.yourapp.com
 
 ```env
 # Add all frontend origins (comma-separated)
-ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8080,https://yourapp.com
+# Use your actual localhost port and production domain
+ALLOWED_ORIGINS=http://localhost:<FRONTEND_PORT>,https://<your-production-domain>
 ```
 
-**Note**: Don't use `*` in production - explicitly list allowed origins.
+> **Note:** See `config/ports.js` for local port values. Don't use `*` in production.
 
 ---
 

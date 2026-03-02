@@ -50,6 +50,8 @@ cp backend/.env.example backend/.env
 
 ### CORS & Security
 
+> **Note:** Default values shown are for development. In production, configure these explicitly.
+
 | Variable          | Description                    | Default                 | Required |
 | ----------------- | ------------------------------ | ----------------------- | -------- |
 | `ALLOWED_ORIGINS` | Comma-separated CORS origins   | `http://localhost:3000` | No       |

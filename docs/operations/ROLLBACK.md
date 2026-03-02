@@ -298,8 +298,8 @@ Next Steps: [Plan for fix and redeployment]
 2. **Check your DNS:**
 
    ```bash
-   nslookup trossapp.vercel.app
-   dig tross-api-production.up.railway.app
+   nslookup <your-frontend-domain>
+   dig <your-backend-domain>
    ```
 
 3. **Emergency contact:**

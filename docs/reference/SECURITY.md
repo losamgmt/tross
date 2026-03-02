@@ -381,13 +381,15 @@ app.use(
 // backend/server.js
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:8080",
+    origin: process.env.FRONTEND_URL,
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
   }),
 );
 ```
+
+> **Note:** `FRONTEND_URL` must be set in all environments. See [Environment Variables](../operations/ENVIRONMENT_VARIABLES.md).
 
 ---
 
@@ -556,30 +558,19 @@ npm update
 - Our S3 operations are simple file CRUD (`PutObject`, `GetObject`, `DeleteObject`, `HeadObject`)
 - No deeply nested XML parsing from untrusted sources
 
-**Action:** Monitor AWS SDK releases. When `@aws-sdk/xml-builder` updates its `fast-xml-parser` pin, upgrade via `npm update`.
+**Action:** Monitor AWS SDK releases. When the SDK updates its `fast-xml-parser` dependency, upgrade via `npm update`.
 
-*Last reviewed: 2026-02-27*
+> **Note:** Run `npm audit` to check current vulnerability status. These notes capture point-in-time decisions that may change.
 
 ---
 
 ### Pinned Dependencies
 
-**jose v4.15.9 (JWT Library)**
+Some dependencies are intentionally pinned to older major versions due to compatibility requirements (e.g., ESM vs CommonJS). Run `npm outdated` to see current pinning status.
 
-`npm outdated` shows jose v6+ available, but we stay on v4. This is **intentional and tracked**.
+**When evaluating upgrades:**
+1. Check if the dependency has breaking changes (ESM-only, API changes)
+2. Verify compatibility with our module system (currently CommonJS)
+3. Test thoroughly before upgrading major versions
 
-**Why we don't upgrade:**
-- jose v5+ is ESM-only (pure ES modules)
-- Our backend uses CommonJS (`require()`)
-- auth0 v5 also depends on jose v4
-- Migration requires converting to ESM or adding dual-module compatibility
-
-**Path to v6:**
-1. Convert backend to ESM (`"type": "module"` in package.json)
-2. Change all `require()` → `import`
-3. Update Jest config for ESM support
-4. Then upgrade jose
-
-**Current state:** Not blocking — jose v4 is fully secure and maintained.
-
-*Last reviewed: 2026-02-27*
+> **Note:** Run `npm outdated` to see which dependencies are pinned and why. Check package.json comments for rationale.

@@ -84,7 +84,7 @@ Actually pings the R2 bucket using `HeadBucket`. Requires admin authentication.
 
 **Endpoints:**
 
-- Railway (Production): `https://tross-api-production.up.railway.app/api/health`
+- Production: `<your-backend-url>/api/health`
 - Local: `http://localhost:<BACKEND_PORT>/api/health` (see [`config/ports.js`](../config/ports.js))
 
 ---
@@ -111,14 +111,14 @@ Railway automatically checks `/api/health` every 30 seconds (configured in `rail
 **Quick Check (Command Line):**
 
 ```bash
-# Backend
-curl https://tross-api-production.up.railway.app/api/health
+# Backend (replace with your URLs)
+curl <your-backend-url>/api/health
 
 # Frontend
-curl https://trossapp.vercel.app
+curl <your-frontend-url>
 
 # Check response time
-curl -w "@curl-format.txt" -o /dev/null -s https://tross-api-production.up.railway.app/api/health
+curl -w "@curl-format.txt" -o /dev/null -s <your-backend-url>/api/health
 ```
 
 **Create `curl-format.txt`:**
@@ -150,10 +150,10 @@ time_total:  %{time_total}\n
 1. Sign up at https://uptimerobot.com
 2. Create new monitor:
    - Type: HTTP(s)
-   - URL: `https://tross-api-production.up.railway.app/api/health`
+   - URL: `<your-backend-url>/api/health`
    - Interval: 5 minutes
 3. Add alert contacts (email, SMS, Slack)
-4. Repeat for frontend: `https://trossapp.vercel.app`
+4. Repeat for frontend: `<your-frontend-url>`
 
 **Recommended Settings:**
 
@@ -230,7 +230,8 @@ Create `scripts/health-check.sh`:
 ```bash
 #!/bin/bash
 
-BACKEND_URL="https://tross-api-production.up.railway.app/api/health"
+# Replace with your actual backend URL
+BACKEND_URL="<your-backend-url>/api/health"
 RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" $BACKEND_URL)
 
 if [ $RESPONSE -eq 200 ]; then
@@ -358,8 +359,8 @@ railway logs -f
 1. Click "Add New Monitor"
 2. Configure:
    - **Monitor Type:** HTTP(s)
-   - **Friendly Name:** Tross API Health
-   - **URL:** `https://tross-api-production.up.railway.app/api/health`
+   - **Friendly Name:** API Health
+   - **URL:** `<your-backend-url>/api/health`
    - **Monitoring Interval:** 5 minutes
 3. Click "Create Monitor"
 
@@ -368,8 +369,8 @@ railway logs -f
 1. Click "Add New Monitor" again
 2. Configure:
    - **Monitor Type:** HTTP(s)
-   - **Friendly Name:** Tross Frontend
-   - **URL:** `https://trossapp.vercel.app`
+   - **Friendly Name:** Frontend
+   - **URL:** `<your-frontend-url>`
    - **Monitoring Interval:** 5 minutes
 3. Click "Create Monitor"
 

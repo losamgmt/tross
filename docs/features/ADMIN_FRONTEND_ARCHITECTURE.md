@@ -51,8 +51,10 @@ All test suites should pass before making changes. Run `npm run test:all` to ver
 
 ### Base URLs
 
-- **Development**: `http://localhost:3001/api`
-- **Production**: `https://tross-api-production.up.railway.app/api`
+> **See `config/ports.js` for local ports. Production URL is your deployed backend.**
+
+- **Development**: `http://localhost:<BACKEND_PORT>/api`
+- **Production**: `<your-backend-url>/api`
 - **Frontend baseUrl**: Already includes `/api` - endpoints use relative paths
 
 ### Business Layer (`/api/...`)

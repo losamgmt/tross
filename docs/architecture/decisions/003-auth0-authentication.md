@@ -251,13 +251,13 @@ module.exports = {
 ```dart
 // frontend/lib/config/auth0_config.dart
 class Auth0Config {
-  static const String domain = 'tross.us.auth0.com';
-  static const String clientId = 'YOUR_CLIENT_ID';
-  static const String audience = 'https://api.tross.com';
+  static const String domain = '<YOUR_AUTH0_DOMAIN>';
+  static const String clientId = '<YOUR_CLIENT_ID>';
+  static const String audience = '<YOUR_API_AUDIENCE>';
 
   static const String redirectUri = kIsWeb
-      ? 'http://localhost:5000/auth/callback'
-      : 'com.tross://callback';
+      ? 'http://localhost:<FRONTEND_PORT>/auth/callback'
+      : 'com.yourapp://callback';
 }
 ```
 
