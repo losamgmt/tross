@@ -14,13 +14,12 @@ const {
   FIELD_ACCESS_LEVELS: _FAL,
   UNIVERSAL_FIELD_ACCESS,
 } = require('../constants');
-const { NAME_TYPES } = require('../entity-types');
 const {
   FIELD,
-  ENUM,
+  NAME_PATTERNS,
   createAddressFields,
   createAddressFieldAccess,
-} = require('../field-type-standards');
+} = require('../field-types');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -41,10 +40,9 @@ module.exports = {
   // ============================================================================
 
   /**
-   * Entity category: COMPUTED entities have auto-generated identifiers
-   * and computed name from template: "{customer.fullName}: {summary}: {identifier}"
+   * Name pattern: COMPUTED uses auto-generated identifier
    */
-  nameType: NAME_TYPES.COMPUTED,
+  namePattern: NAME_PATTERNS.COMPUTED,
 
   /**
    * Display field for UI rendering
@@ -287,12 +285,23 @@ module.exports = {
   },
 
   // ============================================================================
-  // ENUM DEFINITIONS (for consistent UI colors)
+  // ENUM DEFINITIONS (SSOT - values are object keys)
   // ============================================================================
 
   enums: {
-    status: ENUM.WORK_ORDER_STATUS,
-    priority: ENUM.PRIORITY,
+    status: {
+      pending: { color: 'warning', label: 'Pending' },
+      assigned: { color: 'info', label: 'Assigned' },
+      in_progress: { color: 'primary', label: 'In Progress' },
+      completed: { color: 'success', label: 'Completed' },
+      cancelled: { color: 'error', label: 'Cancelled' },
+    },
+    priority: {
+      low: { color: 'info', label: 'Low' },
+      normal: { color: 'primary', label: 'Normal' },
+      high: { color: 'warning', label: 'High' },
+      urgent: { color: 'error', label: 'Urgent' },
+    },
   },
 
   // ============================================================================
@@ -446,7 +455,7 @@ module.exports = {
     // TIER 2: Entity-Specific Lifecycle Field
     status: {
       type: 'enum',
-      values: ENUM.WORK_ORDER_STATUS.values,
+      enumKey: 'status',
       default: 'pending',
     },
 
@@ -458,7 +467,7 @@ module.exports = {
     // Entity-specific fields
     priority: {
       type: 'enum',
-      values: ENUM.PRIORITY.values,
+      enumKey: 'priority',
       default: 'normal',
     },
     customer_id: {
@@ -478,7 +487,7 @@ module.exports = {
     scheduled_end: { type: 'timestamp' },
     completed_at: { type: 'timestamp' },
 
-    // Flat address fields for work location (using field-type-standards generators)
+    // Flat address fields for work location (using field-types generators)
     ...createAddressFields('location'),
   },
 };

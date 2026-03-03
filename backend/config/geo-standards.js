@@ -2,7 +2,7 @@
  * Geographic Standards - SINGLE SOURCE OF TRUTH for country/state data
  *
  * This module defines supported countries and their subdivisions (states/provinces).
- * Used by field-type-standards.js for address field validation.
+ * Used by field-types.js for address field validation.
  *
  * EXTENSIBILITY:
  * To add a new country:

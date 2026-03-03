@@ -1,33 +1,30 @@
 /**
- * Field Type Standards - SINGLE SOURCE OF TRUTH for reusable field patterns
+ * Field Types - SINGLE SOURCE OF TRUTH for reusable field patterns
  *
- * This module defines standard field definitions and generators for consistent
- * field handling across all entities.
+ * This module defines standard field TYPE definitions and generators.
+ * Enum VALUES are NOT defined here - they belong in entity metadata (SSOT).
  *
  * USAGE in metadata files:
  * ```javascript
- * const {
- *   FIELD,
- *   createAddressFields,
- *   createAddressFieldAccess,
- * } = require('../field-type-standards');
+ * const { FIELD, NAME_PATTERNS, createAddressFields } = require('../field-types');
  *
  * module.exports = {
+ *   namePattern: NAME_PATTERNS.HUMAN,
  *   fields: {
  *     email: FIELD.EMAIL,
  *     phone: FIELD.PHONE,
- *     first_name: FIELD.FIRST_NAME,
- *     ...createAddressFields('location'),
- *     ...createAddressFields('billing', { required: true }),
+ *     ...createAddressFields('billing'),
  *   },
- *   fieldAccess: {
- *     email: FIELD_ACCESS_LEVELS.CUSTOMER_EDITABLE,
- *     ...createAddressFieldAccess('location', 'customer'),
+ *   enums: {
+ *     status: {
+ *       active: { color: 'success' },
+ *       inactive: { color: 'warning' },
+ *     },
  *   },
  * };
  * ```
  *
- * @module config/field-type-standards
+ * @module config/field-types
  */
 
 const {
@@ -36,12 +33,15 @@ const {
   ALL_SUBDIVISIONS,
 } = require('./geo-standards');
 
+// Re-export NAME_PATTERNS for convenience (single import in metadata files)
+const { NAME_PATTERNS } = require('./name-patterns');
+
 // ============================================================================
 // STANDARD SINGLE-FIELD DEFINITIONS
 // ============================================================================
 
 /**
- * Standard field definitions for common field types
+ * Standard field definitions for common field types.
  * Use these in metadata files: `email: FIELD.EMAIL`
  */
 const FIELD = Object.freeze({
@@ -94,7 +94,7 @@ const FIELD = Object.freeze({
   // ---- Generic Text Fields ----
 
   /**
-   * Standard name field (for non-HUMAN entities)
+   * Standard name field (for SIMPLE name pattern entities)
    * - Max length: 255
    */
   NAME: Object.freeze({
@@ -196,7 +196,7 @@ const FIELD = Object.freeze({
   }),
 
   // ---- Address Component Fields ----
-  // These are used internally by createAddressFields()
+  // Used internally by createAddressFields()
   // Exposed here for custom address scenarios
 
   /**
@@ -225,7 +225,7 @@ const FIELD = Object.freeze({
 
   /**
    * State/Province code (ISO 3166-2)
-   * Enum-validated against ALL_SUBDIVISIONS
+   * Enum-validated against ALL_SUBDIVISIONS from geo-standards
    */
   ADDRESS_STATE: Object.freeze({
     type: 'enum',
@@ -253,118 +253,12 @@ const FIELD = Object.freeze({
 });
 
 // ============================================================================
-// STANDARD ENUM DEFINITIONS
-// ============================================================================
-
-/**
- * Standard enum definitions with optional colors for UI rendering.
- * Colors supported: success, warning, error, info, primary, secondary
- *
- * @example
- * // In metadata file:
- * const { ENUM } = require('../field-type-standards');
- * module.exports = {
- *   fields: { status: { type: 'enum', values: ENUM.PERSON_STATUS.values } },
- *   enums: { status: ENUM.PERSON_STATUS },
- * };
- */
-const ENUM = Object.freeze({
-  // Lifecycle statuses
-  PERSON_STATUS: Object.freeze({
-    values: ['pending', 'active', 'suspended'],
-    colors: { pending: 'warning', active: 'success', suspended: 'error' },
-  }),
-
-  ROLE_STATUS: Object.freeze({
-    values: ['active', 'disabled'],
-    colors: { active: 'success', disabled: 'error' },
-  }),
-
-  WORK_ORDER_STATUS: Object.freeze({
-    values: ['pending', 'assigned', 'in_progress', 'completed', 'cancelled'],
-    colors: {
-      pending: 'warning',
-      assigned: 'info',
-      in_progress: 'primary',
-      completed: 'success',
-      cancelled: 'error',
-    },
-  }),
-
-  INVOICE_STATUS: Object.freeze({
-    values: ['draft', 'sent', 'paid', 'overdue', 'cancelled', 'void'],
-    colors: {
-      draft: 'secondary',
-      sent: 'primary',
-      paid: 'success',
-      overdue: 'warning',
-      cancelled: 'error',
-      void: 'error',
-    },
-  }),
-
-  CONTRACT_STATUS: Object.freeze({
-    values: ['draft', 'active', 'expired', 'cancelled', 'terminated'],
-    colors: {
-      draft: 'secondary',
-      active: 'success',
-      expired: 'warning',
-      cancelled: 'error',
-      terminated: 'error',
-    },
-  }),
-
-  INVENTORY_STATUS: Object.freeze({
-    values: ['in_stock', 'low_stock', 'out_of_stock', 'discontinued'],
-    colors: {
-      in_stock: 'success',
-      low_stock: 'warning',
-      out_of_stock: 'error',
-      discontinued: 'secondary',
-    },
-  }),
-
-  // Operational enums
-  PRIORITY: Object.freeze({
-    values: ['low', 'normal', 'high', 'urgent'],
-    colors: { low: 'info', normal: 'primary', high: 'warning', urgent: 'error' },
-  }),
-
-  AVAILABILITY: Object.freeze({
-    values: ['available', 'on_job', 'off_duty'],
-    colors: { available: 'success', on_job: 'primary', off_duty: 'secondary' },
-  }),
-
-  BILLING_CYCLE: Object.freeze({
-    values: ['monthly', 'quarterly', 'annually', 'one_time'],
-    colors: { monthly: 'info', quarterly: 'info', annually: 'info', one_time: 'secondary' },
-  }),
-
-  NOTIFICATION_TYPE: Object.freeze({
-    values: ['info', 'success', 'warning', 'error', 'assignment', 'reminder'],
-    colors: {
-      info: 'info',
-      success: 'success',
-      warning: 'warning',
-      error: 'error',
-      assignment: 'primary',
-      reminder: 'warning',
-    },
-  }),
-
-  // Settings (no colors)
-  THEME: Object.freeze({ values: ['system', 'light', 'dark'] }),
-  TABLE_DENSITY: Object.freeze({ values: ['compact', 'standard', 'comfortable'] }),
-  SORT_DIRECTION: Object.freeze({ values: ['asc', 'desc'] }),
-});
-
-// ============================================================================
 // ADDRESS FIELD GENERATORS
 // ============================================================================
 
 /**
- * Address field suffixes in standard order
- * This order is used for form rendering
+ * Address field suffixes in standard order.
+ * This order is used for form rendering.
  */
 const ADDRESS_SUFFIXES = Object.freeze([
   'line1',
@@ -376,7 +270,7 @@ const ADDRESS_SUFFIXES = Object.freeze([
 ]);
 
 /**
- * Generate address fields with a given prefix
+ * Generate address fields with a given prefix.
  *
  * @param {string} prefix - Field name prefix (e.g., 'location', 'billing')
  * @param {Object} [options={}] - Configuration options
@@ -385,19 +279,11 @@ const ADDRESS_SUFFIXES = Object.freeze([
  * @returns {Object} Object with 6 address field definitions
  *
  * @example
- * // Basic usage
  * fields: {
  *   ...createAddressFields('location'),
  * }
  * // Produces: location_line1, location_line2, location_city,
  * //           location_state, location_postal_code, location_country
- *
- * @example
- * // With required fields
- * fields: {
- *   ...createAddressFields('billing', { required: true }),
- * }
- * // Same fields, but line1 and city have required: true
  */
 function createAddressFields(prefix, options = {}) {
   const { required = false, defaultCountry = DEFAULT_COUNTRY } = options;
@@ -428,13 +314,13 @@ function createAddressFields(prefix, options = {}) {
 }
 
 /**
- * Generate field access rules for address fields
+ * Generate field access rules for address fields.
  *
  * @param {string} prefix - Field name prefix (e.g., 'location', 'billing')
  * @param {string} minRole - Minimum role for create (e.g., 'customer', 'dispatcher')
  * @param {Object} [options={}] - Configuration options
  * @param {string} [options.readRole='customer'] - Minimum role for read access
- * @param {string} [options.updateRole] - Minimum role for update access (defaults to minRole)
+ * @param {string} [options.updateRole] - Minimum role for update (defaults to minRole)
  * @returns {Object} Object with 6 field access definitions
  *
  * @example
@@ -442,18 +328,6 @@ function createAddressFields(prefix, options = {}) {
  *   ...createAddressFieldAccess('location', 'customer'),
  * }
  * // All 6 fields get: { create: 'customer', read: 'customer', update: 'customer', delete: 'none' }
- *
- * @example
- * // Dispatcher-editable, customer-readable
- * fieldAccess: {
- *   ...createAddressFieldAccess('billing', 'dispatcher', { readRole: 'customer' }),
- * }
- *
- * @example
- * // Customer creates, dispatcher updates
- * fieldAccess: {
- *   ...createAddressFieldAccess('location', 'customer', { updateRole: 'dispatcher' }),
- * }
  */
 function createAddressFieldAccess(prefix, minRole, options = {}) {
   const { readRole = 'customer', updateRole = minRole } = options;
@@ -472,14 +346,13 @@ function createAddressFieldAccess(prefix, minRole, options = {}) {
 }
 
 /**
- * Get all field names for an address prefix
- * Useful for includeFields/excludeFields arrays
+ * Get all field names for an address prefix.
  *
  * @param {string} prefix - Field name prefix
  * @returns {string[]} Array of 6 field names
  *
  * @example
- * const locationFields = getAddressFieldNames('location');
+ * getAddressFieldNames('location');
  * // ['location_line1', 'location_line2', 'location_city',
  * //  'location_state', 'location_postal_code', 'location_country']
  */
@@ -488,14 +361,14 @@ function getAddressFieldNames(prefix) {
 }
 
 /**
- * Check if a field name is part of an address group
+ * Check if a field name is part of an address group.
  *
  * @param {string} fieldName - Field name to check
  * @returns {string|null} The prefix if it's an address field, null otherwise
  *
  * @example
- * getAddressPrefix('location_city')    // 'location'
- * getAddressPrefix('customer_id')      // null
+ * getAddressPrefix('location_city')  // 'location'
+ * getAddressPrefix('customer_id')    // null
  */
 function getAddressPrefix(fieldName) {
   for (const suffix of ADDRESS_SUFFIXES) {
@@ -507,7 +380,7 @@ function getAddressPrefix(fieldName) {
 }
 
 /**
- * Check if a set of fields contains a complete address group
+ * Check if a set of fields contains a complete address group.
  *
  * @param {string[]} fieldNames - Array of field names
  * @param {string} prefix - Address prefix to check for
@@ -518,16 +391,32 @@ function hasCompleteAddress(fieldNames, prefix) {
   return required.every((name) => fieldNames.includes(name));
 }
 
+/**
+ * Extract enum values from the new enum structure.
+ * Enums are defined as: { value1: { color: '...' }, value2: { ... } }
+ * Values are the object keys.
+ *
+ * @param {Object} enumDef - Enum definition object
+ * @returns {string[]} Array of enum values
+ *
+ * @example
+ * const statusEnum = { active: { color: 'success' }, inactive: { color: 'warning' } };
+ * getEnumValues(statusEnum); // ['active', 'inactive']
+ */
+function getEnumValues(enumDef) {
+  return Object.keys(enumDef);
+}
+
 // ============================================================================
 // EXPORTS
 // ============================================================================
 
 module.exports = {
+  // Name patterns (re-exported for convenience)
+  NAME_PATTERNS,
+
   // Standard field definitions
   FIELD,
-
-  // Standard enum definitions
-  ENUM,
 
   // Address constants
   ADDRESS_SUFFIXES,
@@ -540,4 +429,7 @@ module.exports = {
   getAddressFieldNames,
   getAddressPrefix,
   hasCompleteAddress,
+
+  // Enum utilities
+  getEnumValues,
 };

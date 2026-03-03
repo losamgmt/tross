@@ -8,7 +8,7 @@
  * be auto-generated on creation, not manually provided by the client.
  *
  * DETECTION: Uses identifierPrefix + identityField from metadata
- * Applies to: work_order, invoice, contract (COMPUTED nameType entities)
+ * Applies to: work_order, invoice, contract (COMPUTED namePattern entities)
  */
 
 const { getCapabilities } = require("./scenario-helpers");

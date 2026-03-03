@@ -522,7 +522,7 @@ CREATE TABLE IF NOT EXISTS customers (
     phone VARCHAR(50),
     organization_name VARCHAR(255),  -- Optional company/org they represent
     
-    -- Billing Address (flat fields per field-type-standards)
+    -- Billing Address (flat fields per field-types)
     billing_line1 VARCHAR(255),
     billing_line2 VARCHAR(255),
     billing_city VARCHAR(100),
@@ -530,7 +530,7 @@ CREATE TABLE IF NOT EXISTS customers (
     billing_postal_code VARCHAR(20),
     billing_country VARCHAR(2) DEFAULT 'US',
     
-    -- Service Address (flat fields per field-type-standards)
+    -- Service Address (flat fields per field-types)
     service_line1 VARCHAR(255),
     service_line2 VARCHAR(255),
     service_city VARCHAR(100),
@@ -619,7 +619,7 @@ CREATE TABLE IF NOT EXISTS work_orders (
     customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE RESTRICT,
     assigned_technician_id INTEGER REFERENCES technicians(id) ON DELETE SET NULL,
     
-    -- Location Address (where work is performed - flat fields per field-type-standards)
+    -- Location Address (where work is performed - flat fields per field-types)
     location_line1 VARCHAR(255),
     location_line2 VARCHAR(255),
     location_city VARCHAR(100),

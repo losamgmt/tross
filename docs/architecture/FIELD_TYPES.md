@@ -20,7 +20,7 @@ Tross uses semantic field types rather than formatted strings. An email field ha
 | Purpose | File Path |
 |---------|-----------|
 | Geographic SSOT | `backend/config/geo-standards.js` |
-| Field Type SSOT | `backend/config/field-type-standards.js` |
+| Field Type SSOT | `backend/config/field-types.js` |
 | Entity Metadata | `backend/config/models/*-metadata.js` |
 | Validation Deriver | `backend/config/validation-deriver.js` |
 | Frontend Sync Script | `scripts/sync-entity-metadata.js` |
@@ -29,7 +29,7 @@ Tross uses semantic field types rather than formatted strings. An email field ha
 
 ## Type Reference
 
-For definitive field definitions, see `backend/config/field-type-standards.js`.
+For definitive field definitions, see `backend/config/field-types.js`.
 
 ### Supported Types
 
@@ -66,7 +66,7 @@ JSONB is **only** for truly dynamic user-defined data:
 Addresses use composable field generators:
 
 ```javascript
-const { createAddressFields, createAddressFieldAccess } = require('../field-type-standards');
+const { createAddressFields, createAddressFieldAccess } = require('../field-types');
 
 // Generates: billing_line1, billing_line2, billing_city, billing_state, billing_postal_code, billing_country
 fields: {
@@ -74,7 +74,7 @@ fields: {
 }
 ```
 
-See `backend/config/field-type-standards.js` for full generator API.
+See `backend/config/field-types.js` for full generator API.
 
 ---
 
@@ -82,5 +82,5 @@ See `backend/config/field-type-standards.js` for full generator API.
 
 - [Database Architecture](DATABASE_ARCHITECTURE.md) - Entity Contract and database patterns
 - [Validation Architecture](VALIDATION_ARCHITECTURE.md) - How types flow to Joi validation
-- `backend/config/field-type-standards.js` - Definitive field type definitions
+- `backend/config/field-types.js` - Definitive field type definitions
 - `backend/config/geo-standards.js` - State/province/country enums

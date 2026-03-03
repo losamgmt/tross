@@ -1,7 +1,7 @@
 /**
- * Field Type Standards Unit Tests
+ * Field Types Unit Tests
  *
- * Tests for field-type-standards.js - field definitions and address generators
+ * Tests for field-types.js - field definitions and address generators
  */
 
 const {
@@ -12,7 +12,7 @@ const {
   getAddressFieldNames,
   getAddressPrefix,
   hasCompleteAddress,
-} = require("../../../config/field-type-standards");
+} = require("../../../config/field-types");
 
 const {
   SUPPORTED_COUNTRIES,
@@ -20,7 +20,7 @@ const {
   ALL_SUBDIVISIONS,
 } = require("../../../config/geo-standards");
 
-describe("field-type-standards", () => {
+describe("field-types", () => {
   // ==========================================================================
   // FIELD DEFINITIONS
   // ==========================================================================

@@ -174,7 +174,7 @@ class EntityMetadata {
   /// - 'simple': Has direct name field (role, inventory)
   /// - 'computed': Auto-generated ID (work_order, invoice)
   /// - null: System table (notification, audit_log)
-  final String? nameType;
+  final String? namePattern;
 
   const EntityMetadata({
     required this.entityKey,
@@ -198,7 +198,7 @@ class EntityMetadata {
     this.fieldGroups = const {},
     this.displayColumns,
     this.fieldAliases,
-    this.nameType,
+    this.namePattern,
   });
 
   factory EntityMetadata.fromJson(String name, Map<String, dynamic> json) {
@@ -268,7 +268,7 @@ class EntityMetadata {
       fieldAliases: (json['fieldAliases'] as Map<String, dynamic>?)?.map(
         (k, v) => MapEntry(k, v as String),
       ),
-      nameType: json['nameType'] as String?,
+      namePattern: json['namePattern'] as String?,
     );
   }
 

@@ -96,9 +96,18 @@ function convertMetadataToFieldDef(metaField, fieldName, entityMeta = {}) {
     case "enum":
       // Keep type as 'enum' so generateFromConstraints handles it correctly
       fieldDef.type = "enum";
-      // Look up enum values: field.values > entityMeta.enums[fieldName].values
-      fieldDef.enum =
-        metaField.values || entityMeta.enums?.[fieldName]?.values || [];
+      // Look up enum values using new enumKey pattern or legacy patterns
+      // New pattern: enumKey references entityMeta.enums[enumKey] - values are Object.keys()
+      // Legacy: field.values or entityMeta.enums[fieldName].values array
+      const enumKey = metaField.enumKey || fieldName;
+      const enumDef = entityMeta.enums?.[enumKey];
+      if (enumDef) {
+        // New pattern: values are keys of the enum definition object
+        fieldDef.enum = Object.keys(enumDef);
+      } else {
+        // Legacy pattern: values array
+        fieldDef.enum = metaField.values || [];
+      }
       break;
     case "email":
       fieldDef.type = "string";

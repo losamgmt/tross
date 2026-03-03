@@ -11,13 +11,12 @@
  */
 
 const { UNIVERSAL_FIELD_ACCESS } = require('../constants');
-const { NAME_TYPES } = require('../entity-types');
 const {
   FIELD,
-  ENUM,
+  NAME_PATTERNS,
   createAddressFields,
   createAddressFieldAccess,
-} = require('../field-type-standards');
+} = require('../field-types');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -38,10 +37,9 @@ module.exports = {
   // ============================================================================
 
   /**
-   * Entity category: HUMAN entities use first_name + last_name
-   * Display name computed as fullName = "{first_name} {last_name}"
+   * Name pattern: HUMAN uses first_name + last_name for display
    */
-  nameType: NAME_TYPES.HUMAN,
+  namePattern: NAME_PATTERNS.HUMAN,
 
   /**
    * Display fields for UI rendering
@@ -242,11 +240,15 @@ module.exports = {
   },
 
   // ============================================================================
-  // ENUM DEFINITIONS (for consistent UI colors)
+  // ENUM DEFINITIONS (SSOT - values are object keys)
   // ============================================================================
 
   enums: {
-    status: ENUM.PERSON_STATUS,
+    status: {
+      pending: { color: 'warning', label: 'Pending' },
+      active: { color: 'success', label: 'Active' },
+      suspended: { color: 'error', label: 'Suspended' },
+    },
   },
 
   // ============================================================================
@@ -381,7 +383,7 @@ module.exports = {
     // TIER 2: Entity-Specific Lifecycle Field
     status: {
       type: 'enum',
-      values: ENUM.PERSON_STATUS.values,
+      enumKey: 'status',
       default: 'pending',
     },
 
@@ -393,7 +395,7 @@ module.exports = {
     phone: FIELD.PHONE,
     organization_name: FIELD.NAME,
 
-    // Flat address fields (using field-type-standards generators)
+    // Flat address fields
     ...createAddressFields('billing'),
     ...createAddressFields('service'),
   },

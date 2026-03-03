@@ -18,7 +18,7 @@ const {
 } = require("../../../utils/validation-loader");
 
 // FIELD definitions - the SSOT for field standards
-const { FIELD } = require("../../../config/field-type-standards");
+const { FIELD } = require("../../../config/field-types");
 
 // Also need to clear the deriver's cache for proper isolation
 const {

@@ -83,6 +83,11 @@ module.exports = {
 
   fieldGroups: {},
 
+  /**
+   * Entity category: N/A - system table, not a business entity
+   */
+  namePattern: null,
+
   // Field definitions
 
   fields: {

@@ -102,13 +102,16 @@ function validateFieldTypes(meta, errors) {
       );
     }
 
-    // Enum fields must have values defined (either in field or in enums)
+    // Enum fields must have values defined via enumKey referencing enums object
     if (fieldDef.type === 'enum') {
-      const enumValues = fieldDef.values || meta.enums?.[fieldName]?.values;
+      const enumKey = fieldDef.enumKey || fieldName;
+      const enumDef = meta.enums?.[enumKey];
+      // New pattern: enum values are the keys of the enum definition object
+      const enumValues = enumDef ? Object.keys(enumDef) : fieldDef.values;
       if (!enumValues || !enumValues.length) {
         errors.add(
           `fields.${fieldName}`,
-          'Enum field must have values defined in field.values or enums.[fieldName].values',
+          'Enum field must have enumKey referencing enums.[key] or legacy field.values',
         );
       }
     }
