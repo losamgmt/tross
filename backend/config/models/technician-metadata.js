@@ -14,8 +14,7 @@ const {
   FIELD_ACCESS_LEVELS: FAL,
   UNIVERSAL_FIELD_ACCESS,
 } = require('../constants');
-const { NAME_TYPES } = require('../entity-types');
-const { FIELD, ENUM } = require('../field-type-standards');
+const { FIELD, NAME_PATTERNS } = require('../field-types');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -36,10 +35,9 @@ module.exports = {
   // ============================================================================
 
   /**
-   * Entity category: HUMAN entities use first_name + last_name
-   * Display name computed as fullName = "{first_name} {last_name}"
+   * Name pattern: HUMAN uses first_name + last_name for display
    */
-  nameType: NAME_TYPES.HUMAN,
+  namePattern: NAME_PATTERNS.HUMAN,
 
   /**
    * Display fields for UI rendering
@@ -201,12 +199,20 @@ module.exports = {
   },
 
   // ============================================================================
-  // ENUM DEFINITIONS (for consistent UI colors)
+  // ENUM DEFINITIONS (SSOT - values are object keys)
   // ============================================================================
 
   enums: {
-    status: ENUM.PERSON_STATUS,
-    availability: ENUM.AVAILABILITY,
+    status: {
+      pending: { color: 'warning', label: 'Pending' },
+      active: { color: 'success', label: 'Active' },
+      suspended: { color: 'error', label: 'Suspended' },
+    },
+    availability: {
+      available: { color: 'success', label: 'Available' },
+      on_job: { color: 'primary', label: 'On Job' },
+      off_duty: { color: 'secondary', label: 'Off Duty' },
+    },
   },
 
   // ============================================================================
@@ -315,14 +321,14 @@ module.exports = {
     // TIER 2: Entity-Specific Lifecycle Field
     status: {
       type: 'enum',
-      values: ENUM.PERSON_STATUS.values,
+      enumKey: 'status',
       default: 'pending',
     },
 
     // Operational availability (separate from lifecycle status)
     availability: {
       type: 'enum',
-      values: ENUM.AVAILABILITY.values,
+      enumKey: 'availability',
       default: 'available',
     },
 

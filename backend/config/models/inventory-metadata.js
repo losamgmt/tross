@@ -14,8 +14,7 @@ const {
   FIELD_ACCESS_LEVELS: FAL,
   UNIVERSAL_FIELD_ACCESS,
 } = require('../constants');
-const { NAME_TYPES } = require('../entity-types');
-const { FIELD, ENUM } = require('../field-type-standards');
+const { FIELD, NAME_PATTERNS } = require('../field-types');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -46,10 +45,9 @@ module.exports = {
   // ============================================================================
 
   /**
-   * Entity category: SIMPLE entities have a direct name field
-   * and a unique identifier field (sku for inventory)
+   * Name pattern: SIMPLE uses a direct name field
    */
-  nameType: NAME_TYPES.SIMPLE,
+  namePattern: NAME_PATTERNS.SIMPLE,
 
   // ============================================================================
   // IDENTITY CONFIGURATION (Entity Contract v2.0)
@@ -224,11 +222,16 @@ module.exports = {
   },
 
   // ============================================================================
-  // ENUM DEFINITIONS (for consistent UI colors)
+  // ENUM DEFINITIONS (SSOT - values are object keys)
   // ============================================================================
 
   enums: {
-    status: ENUM.INVENTORY_STATUS,
+    status: {
+      in_stock: { color: 'success', label: 'In Stock' },
+      low_stock: { color: 'warning', label: 'Low Stock' },
+      out_of_stock: { color: 'error', label: 'Out of Stock' },
+      discontinued: { color: 'secondary', label: 'Discontinued' },
+    },
   },
 
   // ============================================================================
@@ -341,7 +344,7 @@ module.exports = {
     // TIER 2: Entity-Specific Lifecycle Field
     status: {
       type: 'enum',
-      values: ENUM.INVENTORY_STATUS.values,
+      enumKey: 'status',
       default: 'in_stock',
     },
 

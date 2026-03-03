@@ -14,7 +14,7 @@
  */
 const Joi = require('joi');
 const ResponseFormatter = require('../utils/response-formatter');
-const { FIELD } = require('../config/field-type-standards');
+const { FIELD } = require('../config/field-types');
 
 /**
  * Helper function to create validation middleware

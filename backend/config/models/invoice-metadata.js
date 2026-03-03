@@ -14,8 +14,7 @@ const {
   FIELD_ACCESS_LEVELS: _FAL,
   UNIVERSAL_FIELD_ACCESS,
 } = require('../constants');
-const { NAME_TYPES } = require('../entity-types');
-const { FIELD, ENUM } = require('../field-type-standards');
+const { FIELD, NAME_PATTERNS } = require('../field-types');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -36,10 +35,9 @@ module.exports = {
   // ============================================================================
 
   /**
-   * Entity category: COMPUTED entities have auto-generated identifiers
-   * and computed name from template: "{customer.fullName}: {summary}: {identifier}"
+   * Name pattern: COMPUTED uses auto-generated identifier
    */
-  nameType: NAME_TYPES.COMPUTED,
+  namePattern: NAME_PATTERNS.COMPUTED,
 
   /**
    * Display field for UI rendering
@@ -261,11 +259,18 @@ module.exports = {
   },
 
   // ============================================================================
-  // ENUM DEFINITIONS (for consistent UI colors)
+  // ENUM DEFINITIONS (SSOT - values are object keys)
   // ============================================================================
 
   enums: {
-    status: ENUM.INVOICE_STATUS,
+    status: {
+      draft: { color: 'secondary', label: 'Draft' },
+      sent: { color: 'primary', label: 'Sent' },
+      paid: { color: 'success', label: 'Paid' },
+      overdue: { color: 'warning', label: 'Overdue' },
+      cancelled: { color: 'error', label: 'Cancelled' },
+      void: { color: 'error', label: 'Void' },
+    },
   },
 
   // ============================================================================
@@ -426,7 +431,7 @@ module.exports = {
     // TIER 2: Entity-Specific Lifecycle Field
     status: {
       type: 'enum',
-      values: ENUM.INVOICE_STATUS.values,
+      enumKey: 'status',
       default: 'draft',
     },
 

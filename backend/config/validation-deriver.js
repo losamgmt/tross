@@ -17,7 +17,7 @@
  */
 
 const allMetadata = require('./models');
-const { FIELD, ADDRESS_SUFFIXES } = require('./field-type-standards');
+const { FIELD, ADDRESS_SUFFIXES } = require('./field-types');
 const { ALL_SUBDIVISIONS, SUPPORTED_COUNTRIES } = require('./geo-standards');
 
 // ============================================================================
@@ -28,7 +28,7 @@ const { ALL_SUBDIVISIONS, SUPPORTED_COUNTRIES } = require('./geo-standards');
  * Shared field definitions used across multiple entities.
  * These provide consistent validation for common patterns.
  *
- * ARCHITECTURE: Base constraints come from FIELD (field-type-standards.js).
+ * ARCHITECTURE: Base constraints come from FIELD (field-types.js).
  * Validation-specific properties (trim, lowercase, errorMessages) are added here.
  * This ensures constraints stay in sync while validation adds its own concerns.
  */
@@ -248,10 +248,10 @@ function toPascalCase(str) {
  *
  * @param {string} fieldName - Field name
  * @param {Object} fieldDef - Field definition from metadata
- * @param {string} entityName - Entity name for context
+ * @param {Object} entityEnums - Entity's enums object for enumKey resolution
  * @returns {Object} Validation rule definition
  */
-function deriveFieldValidation(fieldName, fieldDef, _entityName) {
+function deriveFieldValidation(fieldName, fieldDef, entityEnums) {
   // Check for shared field definition first
   if (SHARED_FIELD_DEFS[fieldName]) {
     const shared = { ...SHARED_FIELD_DEFS[fieldName] };
@@ -304,14 +304,21 @@ function deriveFieldValidation(fieldName, fieldDef, _entityName) {
     validation.max = fieldDef.max;
   }
 
-  // Enum handling
-  if (fieldDef.type === 'enum' && fieldDef.values) {
-    validation.type = 'string';
-    validation.enum = fieldDef.values;
-    validation.errorMessages = generateEnumErrorMessages(
-      fieldName,
-      fieldDef.values,
-    );
+  // Enum handling - supports both new enumKey pattern and legacy values
+  if (fieldDef.type === 'enum') {
+    // Resolve enum values: enumKey lookup OR direct values array
+    const enumKey = fieldDef.enumKey || fieldName;
+    const enumDef = entityEnums?.[enumKey];
+    const enumValues = enumDef ? Object.keys(enumDef) : fieldDef.values;
+
+    if (enumValues && enumValues.length > 0) {
+      validation.type = 'string';
+      validation.enum = enumValues;
+      validation.errorMessages = generateEnumErrorMessages(
+        fieldName,
+        enumValues,
+      );
+    }
   }
 
   // Foreign key handling
@@ -524,11 +531,12 @@ function deriveValidationRules() {
 
     // Store entity-specific field definitions
     rules.entityFields[entityName] = {};
+    const entityEnums = metadata.enums || {};
     for (const [fieldName, fieldDef] of Object.entries(fields)) {
       rules.entityFields[entityName][fieldName] = deriveFieldValidation(
         fieldName,
         fieldDef,
-        entityName,
+        entityEnums,
       );
     }
 

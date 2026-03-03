@@ -88,7 +88,7 @@ class EntityMetadataService {
         tableName: metadata.tableName,
         primaryKey: metadata.primaryKey,
         identityField: metadata.identityField,
-        nameType: metadata.nameType || 'system',
+        namePattern: metadata.namePattern || 'system',
         rlsResource: metadata.rlsResource || name,
       });
     }
@@ -113,7 +113,7 @@ class EntityMetadataService {
       tableName: metadata.tableName,
       primaryKey: metadata.primaryKey,
       identityField: metadata.identityField,
-      nameType: metadata.nameType,
+      namePattern: metadata.namePattern,
       rlsResource: metadata.rlsResource || entityName,
 
       // Permission matrices

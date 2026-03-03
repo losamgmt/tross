@@ -42,8 +42,8 @@ const {
 } = require('../db/helpers/audit-helper');
 const {
   ENTITY_FIELDS,
-  NAME_TYPES,
-  NAME_TYPE_MAP,
+  NAME_PATTERNS,
+  NAME_PATTERN_MAP,
 } = require('../config/constants');
 const { sanitizeData } = require('../utils/data-hygiene');
 const {
@@ -719,8 +719,8 @@ class GenericEntityService {
     // COMPUTED entities (work_order, invoice, contract) have auto-generated
     // identifiers in the format PREFIX-YYYY-NNNN (e.g., WO-2025-0001)
     // =========================================================================
-    const nameType = NAME_TYPE_MAP[entityName];
-    if (nameType === NAME_TYPES.COMPUTED) {
+    const namePattern = NAME_PATTERN_MAP[entityName];
+    if (namePattern === NAME_PATTERNS.COMPUTED) {
       const identifierField = IDENTIFIER_FIELDS[entityName];
       if (identifierField && !cleanData[identifierField]) {
         cleanData[identifierField] = await generateIdentifier(entityName);

@@ -8,16 +8,16 @@
  * - Automatic updates when metadata changes
  *
  * ARCHITECTURE:
- * - entity-types.js: Base types (no dependencies)
- * - models/*-metadata.js: Import from entity-types.js
+ * - name-patterns.js: Base patterns (no dependencies)
+ * - models/*-metadata.js: Import from name-patterns.js
  * - derived-constants.js: Loads metadata, derives maps (THIS FILE)
  * - constants.js: Re-exports everything for convenience
  */
 
-const { NAME_TYPES } = require('./entity-types');
+const { NAME_PATTERNS } = require('./name-patterns');
 
 // Lazy-load to avoid circular dependencies at module load time
-let _nameTypeMap = null;
+let _namePatternMap = null;
 let _allMetadata = null;
 
 /**
@@ -33,17 +33,17 @@ function getAllMetadata() {
 }
 
 /**
- * Build NAME_TYPE_MAP from metadata.nameType
- * @returns {Object} Frozen map of entityName → nameType
+ * Build NAME_PATTERN_MAP from metadata.namePattern
+ * @returns {Object} Frozen map of entityName → namePattern
  */
-function buildNameTypeMap() {
+function buildNamePatternMap() {
   const metadata = getAllMetadata();
   const map = {};
 
   for (const [entityName, entityMetadata] of Object.entries(metadata)) {
-    // Only include entities with a defined nameType
-    if (entityMetadata.nameType) {
-      map[entityName] = entityMetadata.nameType;
+    // Only include entities with a defined namePattern
+    if (entityMetadata.namePattern) {
+      map[entityName] = entityMetadata.namePattern;
     }
   }
 
@@ -51,44 +51,44 @@ function buildNameTypeMap() {
 }
 
 /**
- * Get NAME_TYPE_MAP (lazy, cached)
- * @returns {Object} Frozen map of entityName → nameType
+ * Get NAME_PATTERN_MAP (lazy, cached)
+ * @returns {Object} Frozen map of entityName → namePattern
  */
-function getNameTypeMap() {
-  if (!_nameTypeMap) {
-    _nameTypeMap = buildNameTypeMap();
+function getNamePatternMap() {
+  if (!_namePatternMap) {
+    _namePatternMap = buildNamePatternMap();
   }
-  return _nameTypeMap;
+  return _namePatternMap;
 }
 
 /**
- * Get name type by entity name
+ * Get name pattern by entity name
  * @param {string} entityName - Entity name (e.g., 'user', 'work_order')
- * @returns {string|null} Name type or null if not found
+ * @returns {string|null} Name pattern or null if not found
  */
-function getNameType(entityName) {
-  return getNameTypeMap()[entityName] || null;
+function getNamePattern(entityName) {
+  return getNamePatternMap()[entityName] || null;
 }
 
 /**
- * Check if entity is of a specific name type
+ * Check if entity is of a specific name pattern
  * @param {string} entityName - Entity name
- * @param {string} nameType - Name type to check (from NAME_TYPES)
- * @returns {boolean} True if entity is of the specified name type
+ * @param {string} namePattern - Name pattern to check (from NAME_PATTERNS)
+ * @returns {boolean} True if entity is of the specified name pattern
  */
-function isNameType(entityName, nameType) {
-  return getNameType(entityName) === nameType;
+function isNamePattern(entityName, namePattern) {
+  return getNamePattern(entityName) === namePattern;
 }
 
 /**
- * Get all entities of a specific name type
- * @param {string} nameType - Name type to filter by
+ * Get all entities of a specific name pattern
+ * @param {string} namePattern - Name pattern to filter by
  * @returns {string[]} Array of entity names
  */
-function getEntitiesByNameType(nameType) {
-  const map = getNameTypeMap();
+function getEntitiesByNamePattern(namePattern) {
+  const map = getNamePatternMap();
   return Object.entries(map)
-    .filter(([, type]) => type === nameType)
+    .filter(([, type]) => type === namePattern)
     .map(([name]) => name);
 }
 
@@ -610,7 +610,7 @@ function getSwaggerEntitySchemas() {
  * Clear cache (for testing or hot reload)
  */
 function clearCache() {
-  _nameTypeMap = null;
+  _namePatternMap = null;
   _allMetadata = null;
   _entityPrefixes = null;
   _identifierFields = null;
@@ -623,13 +623,13 @@ function clearCache() {
 
 module.exports = {
   // Re-export base types
-  NAME_TYPES,
+  NAME_PATTERNS,
 
-  // Name type functions
-  getNameTypeMap,
-  getNameType,
-  isNameType,
-  getEntitiesByNameType,
+  // Name pattern functions
+  getNamePatternMap,
+  getNamePattern,
+  isNamePattern,
+  getEntitiesByNamePattern,
 
   // Identifier configuration functions
   getEntityPrefixes,
@@ -659,8 +659,8 @@ module.exports = {
   // For testing
   clearCache,
 
-  // Lazy-loaded NAME_TYPE_MAP
-  get NAME_TYPE_MAP() {
-    return getNameTypeMap();
+  // Lazy-loaded NAME_PATTERN_MAP
+  get NAME_PATTERN_MAP() {
+    return getNamePatternMap();
   },
 };

@@ -14,7 +14,7 @@
  */
 
 const { FIELD_ACCESS_LEVELS: FAL } = require('../constants');
-const { FIELD, ENUM } = require('../field-type-standards');
+const { FIELD } = require('../field-types');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -101,7 +101,7 @@ module.exports = {
   /**
    * Entity category: N/A - system table, not a business entity
    */
-  nameType: null,
+  namePattern: null,
 
   // ============================================================================
   // FIELD ALIASING
@@ -270,7 +270,23 @@ module.exports = {
   },
 
   // ============================================================================
-  // SETTINGS SCHEMA (Application-level documentation)
+  // ENUM DEFINITIONS (SSOT - values are object keys)
+  // ============================================================================
+
+  enums: {
+    density: {
+      compact: { label: 'Compact' },
+      standard: { label: 'Standard' },
+      comfortable: { label: 'Comfortable' },
+    },
+    sort_direction: {
+      asc: { label: 'Ascending' },
+      desc: { label: 'Descending' },
+    },
+  },
+
+  // ============================================================================
+  // SETTINGS SCHEMA (Application-level documentation for JSONB)
   // ============================================================================
 
   settingsSchema: {
@@ -281,7 +297,7 @@ module.exports = {
     },
     density: {
       type: 'enum',
-      values: ENUM.TABLE_DENSITY.values,
+      enumKey: 'density',
       default: 'standard',
       description: 'Table row density',
     },
@@ -293,7 +309,7 @@ module.exports = {
       type: 'object',
       properties: {
         field: { type: 'string' },
-        direction: { type: 'enum', values: ENUM.SORT_DIRECTION.values },
+        direction: { type: 'enum', enumKey: 'sort_direction' },
       },
       description: 'Sort configuration',
     },

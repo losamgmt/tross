@@ -21,9 +21,9 @@
 const {
   FIELD_ACCESS_LEVELS: FAL,
   RLS_RESOURCE_TYPES,
-  // No NAME_TYPES - this is a system table
+  // No NAME_PATTERNS - this is a system table
 } = require('../constants');
-const { FIELD } = require('../field-type-standards');
+const { FIELD } = require('../field-types');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -107,7 +107,7 @@ module.exports = {
 
   fieldGroups: {},
 
-  nameType: null,
+  namePattern: null,
 
   // ============================================================================
   // FIELD ALIASING (for UI display names)

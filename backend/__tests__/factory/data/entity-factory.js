@@ -109,7 +109,7 @@ function buildMinimal(entityName, overrides = {}) {
 
   // For COMPUTED entities, include the identity field (auto-generated in production)
   // These are NOT NULL in the database but not in requiredFields
-  if (meta.nameType === "computed" && meta.identityField) {
+  if (meta.namePattern === "computed" && meta.identityField) {
     if (!payload[meta.identityField] && !overrides[meta.identityField]) {
       payload[meta.identityField] = generateFieldValue(
         entityName,

@@ -15,8 +15,7 @@ const {
   UNIVERSAL_FIELD_ACCESS,
 } = require('../constants');
 const { getRoleHierarchy } = require('../role-hierarchy-loader');
-const { NAME_TYPES } = require('../entity-types');
-const { FIELD, ENUM } = require('../field-type-standards');
+const { FIELD, NAME_PATTERNS } = require('../field-types');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -37,10 +36,9 @@ module.exports = {
   // ============================================================================
 
   /**
-   * Entity category: SIMPLE entities have a direct name field
-   * and a unique identifier field (priority for roles)
+   * Name pattern: SIMPLE uses a direct name field
    */
-  nameType: NAME_TYPES.SIMPLE,
+  namePattern: NAME_PATTERNS.SIMPLE,
 
   // ============================================================================
   // IDENTITY CONFIGURATION (Entity Contract v2.0)
@@ -180,11 +178,14 @@ module.exports = {
   },
 
   // ============================================================================
-  // ENUM DEFINITIONS (for consistent UI colors)
+  // ENUM DEFINITIONS (SSOT - values are object keys)
   // ============================================================================
 
   enums: {
-    status: ENUM.ROLE_STATUS,
+    status: {
+      active: { color: 'success', label: 'Active' },
+      disabled: { color: 'error', label: 'Disabled' },
+    },
   },
 
   // ============================================================================
@@ -394,7 +395,7 @@ module.exports = {
     // TIER 2: Lifecycle status
     status: {
       type: 'enum',
-      values: ENUM.ROLE_STATUS.values,
+      enumKey: 'status',
       default: 'active',
       description:
         'Role lifecycle state - disabled roles cannot be newly assigned',

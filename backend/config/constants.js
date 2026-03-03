@@ -167,8 +167,8 @@ const FILE_ATTACHMENTS = Object.freeze({
 // These define universal rules for field handling across ALL entities.
 // Entity-specific overrides live in metadata files (e.g., role-metadata.js).
 
-// Import NAME_TYPES from single source of truth
-const { NAME_TYPES } = require('./entity-types');
+// Import NAME_PATTERNS from single source of truth
+const { NAME_PATTERNS } = require('./name-patterns');
 
 // ============================================================================
 // RLS (ROW-LEVEL SECURITY) RESOURCE TYPES
@@ -567,11 +567,11 @@ module.exports = Object.freeze({
   DATABASE,
   REDIS,
   FILE_ATTACHMENTS,
-  NAME_TYPES,
+  NAME_PATTERNS,
   RLS_RESOURCE_TYPES,
-  // NAME_TYPE_MAP is derived from metadata at runtime
-  get NAME_TYPE_MAP() {
-    return derivedConstants.NAME_TYPE_MAP;
+  // NAME_PATTERN_MAP is derived from metadata at runtime
+  get NAME_PATTERN_MAP() {
+    return derivedConstants.NAME_PATTERN_MAP;
   },
   ENTITY_FIELDS,
   ROLE_HIERARCHY,
@@ -585,8 +585,8 @@ module.exports = Object.freeze({
   API_ENDPOINTS,
   MODEL_ERRORS,
   // Also export helper functions from derived-constants
-  getNameTypeMap: derivedConstants.getNameTypeMap,
-  getNameType: derivedConstants.getNameType,
-  isNameType: derivedConstants.isNameType,
-  getEntitiesByNameType: derivedConstants.getEntitiesByNameType,
+  getNamePatternMap: derivedConstants.getNamePatternMap,
+  getNamePattern: derivedConstants.getNamePattern,
+  isNamePattern: derivedConstants.isNamePattern,
+  getEntitiesByNamePattern: derivedConstants.getEntitiesByNamePattern,
 });

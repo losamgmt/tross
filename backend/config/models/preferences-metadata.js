@@ -6,7 +6,6 @@
  */
 
 const { FIELD_ACCESS_LEVELS: FAL } = require('../constants');
-const { ENUM } = require('../field-type-standards');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -23,7 +22,7 @@ module.exports = {
   rlsResource: 'preferences',
   sharedPrimaryKey: true,
   uncountable: true, // 'preferences' doesn't pluralize to 'preferencess'
-  nameType: null,
+  namePattern: null,
 
   /**
    * Row-Level Security policy per role
@@ -133,12 +132,12 @@ module.exports = {
     },
     theme: {
       type: 'enum',
-      values: ENUM.THEME.values,
+      enumKey: 'theme',
       default: 'system',
     },
     density: {
       type: 'enum',
-      values: ENUM.TABLE_DENSITY.values,
+      enumKey: 'density',
       default: 'comfortable',
     },
     notifications_enabled: {
@@ -168,11 +167,19 @@ module.exports = {
   },
 
   // ============================================================================
-  // ENUM DEFINITIONS (for consistent UI)
+  // ENUM DEFINITIONS (SSOT - values are object keys)
   // ============================================================================
 
   enums: {
-    theme: ENUM.THEME,
-    density: ENUM.TABLE_DENSITY,
+    theme: {
+      system: { label: 'System' },
+      light: { label: 'Light' },
+      dark: { label: 'Dark' },
+    },
+    density: {
+      compact: { label: 'Compact' },
+      standard: { label: 'Standard' },
+      comfortable: { label: 'Comfortable' },
+    },
   },
 };

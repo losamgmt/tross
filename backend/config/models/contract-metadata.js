@@ -14,8 +14,7 @@ const {
   FIELD_ACCESS_LEVELS: FAL,
   UNIVERSAL_FIELD_ACCESS,
 } = require('../constants');
-const { NAME_TYPES } = require('../entity-types');
-const { FIELD, ENUM } = require('../field-type-standards');
+const { FIELD, NAME_PATTERNS } = require('../field-types');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -36,10 +35,9 @@ module.exports = {
   // ============================================================================
 
   /**
-   * Entity category: COMPUTED entities have auto-generated identifiers
-   * and computed name from template: "{customer.fullName}: {summary}: {identifier}"
+   * Name pattern: COMPUTED uses auto-generated identifier
    */
-  nameType: NAME_TYPES.COMPUTED,
+  namePattern: NAME_PATTERNS.COMPUTED,
 
   /**
    * Display field for UI rendering
@@ -230,12 +228,23 @@ module.exports = {
   },
 
   // ============================================================================
-  // ENUM DEFINITIONS (for consistent UI colors)
+  // ENUM DEFINITIONS (SSOT - values are object keys)
   // ============================================================================
 
   enums: {
-    status: ENUM.CONTRACT_STATUS,
-    billing_cycle: ENUM.BILLING_CYCLE,
+    status: {
+      draft: { color: 'secondary', label: 'Draft' },
+      active: { color: 'success', label: 'Active' },
+      expired: { color: 'warning', label: 'Expired' },
+      cancelled: { color: 'error', label: 'Cancelled' },
+      terminated: { color: 'error', label: 'Terminated' },
+    },
+    billing_cycle: {
+      monthly: { color: 'info', label: 'Monthly' },
+      quarterly: { color: 'info', label: 'Quarterly' },
+      annually: { color: 'info', label: 'Annually' },
+      one_time: { color: 'secondary', label: 'One Time' },
+    },
   },
 
   // ============================================================================
@@ -383,7 +392,7 @@ module.exports = {
     // TIER 2: Entity-Specific Lifecycle Field
     status: {
       type: 'enum',
-      values: ENUM.CONTRACT_STATUS.values,
+      enumKey: 'status',
       default: 'draft',
     },
 
@@ -403,7 +412,7 @@ module.exports = {
     value: FIELD.CURRENCY,
     billing_cycle: {
       type: 'enum',
-      values: ENUM.BILLING_CYCLE.values,
+      enumKey: 'billing_cycle',
     },
   },
 };

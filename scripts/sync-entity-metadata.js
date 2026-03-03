@@ -165,12 +165,35 @@ function transformField(
   if (fieldDef.pattern) result.pattern = fieldDef.pattern;
 
   // Handle enum values with optional colors
-  // Frontend supports: values as array OR object with color info
-  // Output format: { "value1": { "color": "success" }, "value2": null }
+  // NEW pattern: enumKey references enums.[enumKey] where values are object keys
+  // LEGACY pattern: fieldDef.values array OR enums.[fieldName].values
   if (fieldDef.type === "enum") {
-    const enumDef = enums?.[fieldName];
-    const values = enumDef?.values || fieldDef.values || [];
-    const colors = enumDef?.colors || {};
+    const enumKey = fieldDef.enumKey || fieldName;
+    const enumDef = enums?.[enumKey];
+    
+    let values = [];
+    let colors = {};
+    
+    if (enumDef && typeof enumDef === 'object') {
+      // New pattern: values are object keys, colors inside each value
+      // e.g., { active: { color: 'success' }, inactive: { color: 'warning' } }
+      if (!enumDef.values) {
+        // New format: keys are values
+        values = Object.keys(enumDef);
+        for (const val of values) {
+          if (enumDef[val]?.color) {
+            colors[val] = enumDef[val].color;
+          }
+        }
+      } else {
+        // Legacy format: { values: [...], colors: {...} }
+        values = enumDef.values;
+        colors = enumDef.colors || {};
+      }
+    } else if (fieldDef.values) {
+      // Direct values on field (legacy)
+      values = fieldDef.values;
+    }
 
     // Check if any colors are defined
     const hasColors = Object.keys(colors).length > 0;
@@ -328,10 +351,10 @@ function transformModel(entityName, backendMeta, allModels) {
     result.fieldAliases = backendMeta.fieldAliases;
   }
 
-  // Name type for entity category (human, simple, computed, null)
+  // Name pattern for entity category (human, simple, computed, null)
   // Determines how entity names are displayed/computed
-  if (backendMeta.nameType !== undefined) {
-    result.nameType = backendMeta.nameType;
+  if (backendMeta.namePattern !== undefined) {
+    result.namePattern = backendMeta.namePattern;
   }
 
   // System protected (for roles)

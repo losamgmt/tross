@@ -14,8 +14,7 @@ const {
   FIELD_ACCESS_LEVELS: FAL,
   UNIVERSAL_FIELD_ACCESS,
 } = require('../constants');
-const { NAME_TYPES } = require('../entity-types');
-const { FIELD, ENUM } = require('../field-type-standards');
+const { FIELD, NAME_PATTERNS } = require('../field-types');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -115,7 +114,7 @@ module.exports = {
     },
   },
 
-  nameType: NAME_TYPES.HUMAN,
+  namePattern: NAME_PATTERNS.HUMAN,
 
   /**
    * Display fields for UI rendering
@@ -226,11 +225,15 @@ module.exports = {
   },
 
   // ============================================================================
-  // ENUM DEFINITIONS (for consistent UI colors)
+  // ENUM DEFINITIONS (SSOT - values are object keys)
   // ============================================================================
 
   enums: {
-    status: ENUM.PERSON_STATUS,
+    status: {
+      pending: { color: 'warning', label: 'Pending' },
+      active: { color: 'success', label: 'Active' },
+      suspended: { color: 'error', label: 'Suspended' },
+    },
   },
 
   // ============================================================================
@@ -433,7 +436,7 @@ module.exports = {
     // TIER 2: Entity-Specific Lifecycle Field
     status: {
       type: 'enum',
-      values: ENUM.PERSON_STATUS.values,
+      enumKey: 'status',
       default: 'pending',
     },
 

@@ -49,10 +49,10 @@ const RLS_REQUIRED_FIELDS = [
 ];
 
 /**
- * Name types that are business entities (vs system tables).
+ * Name patterns that are business entities (vs system tables).
  * Business entities require full RLS testing.
  */
-const BUSINESS_NAME_TYPES = ["human", "simple", "computed"];
+const BUSINESS_NAME_PATTERNS = ["human", "simple", "computed"];
 
 // ============================================================================
 // ENTITY DISCOVERY
@@ -95,10 +95,10 @@ function isBusinessEntity(entityName) {
   const meta = allMetadata[entityName];
   if (!meta) return false;
 
-  // Has a business name type
+  // Has a business name pattern
   if (
-    meta.nameType &&
-    BUSINESS_NAME_TYPES.includes(meta.nameType.toLowerCase())
+    meta.namePattern &&
+    BUSINESS_NAME_PATTERNS.includes(meta.namePattern.toLowerCase())
   ) {
     return true;
   }
@@ -269,7 +269,7 @@ function getEntitiesByCategory() {
 
   for (const entityName of getAllEntityNames()) {
     const meta = allMetadata[entityName];
-    const category = meta.nameType?.toLowerCase() || "system";
+    const category = meta.namePattern?.toLowerCase() || "system";
 
     if (categories[category]) {
       categories[category].push(entityName);
@@ -335,6 +335,6 @@ module.exports = {
   // Constants (for reference)
   REQUIRED_FIELDS,
   RLS_REQUIRED_FIELDS,
-  BUSINESS_NAME_TYPES,
+  BUSINESS_NAME_PATTERNS,
   SPECIALIZED_ROUTE_ENTITIES,
 };

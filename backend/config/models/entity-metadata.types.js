@@ -59,7 +59,8 @@
  * @property {number} [max] - Maximum numeric value
  * @property {number} [precision] - Decimal precision
  * @property {*} [default] - Default value
- * @property {string[]} [values] - Allowed values for enum fields
+ * @property {string} [enumKey] - Key referencing enums.[enumKey] for enum values
+ * @property {string[]} [values] - DEPRECATED: Use enumKey. Direct enum values array
  * @property {string} [pattern] - Regex pattern for validation
  * @property {string} [description] - Field documentation
  * @property {string} [relatedEntity] - For foreignKey: target entity name
@@ -72,11 +73,18 @@
  */
 
 /**
- * Enum definition with labels and optional colors.
- * @typedef {Object} EnumDefinition
- * @property {string[]} values - Allowed enum values
- * @property {Object.<string, string>} [labels] - Display labels per value
- * @property {Object.<string, string>} [colors] - Badge color per value (success, warning, error, info)
+ * Enum value definition with display metadata.
+ * @typedef {Object} EnumValueDefinition
+ * @property {string} label - Display label for the value
+ * @property {string} [color] - Badge color (success, warning, error, info)
+ * @property {string} [icon] - Optional icon name
+ */
+
+/**
+ * Enum definition as value-keyed object.
+ * Values are derived from Object.keys(enumDef).
+ * Example: { active: { label: 'Active', color: 'success' }, inactive: { label: 'Inactive' } }
+ * @typedef {Object.<string, EnumValueDefinition>} EnumDefinition
  */
 
 // ============================================================================
@@ -223,7 +231,7 @@
  * - 'simple': Has direct name field with unique identity (role, inventory)
  * - 'computed': Auto-generated ID + computed name (work_order, invoice)
  * - null: System table, not a business entity (notification, audit_log)
- * @typedef {'human' | 'simple' | 'computed' | null} NameType
+ * @typedef {'human' | 'simple' | 'computed' | null} NamePattern
  */
 
 // ============================================================================
@@ -245,7 +253,7 @@
  * @property {string | null} navVisibility - REQUIRED: Min role for nav menu, or null for system tables
  * @property {boolean} supportsFileAttachments - REQUIRED: Whether entity supports file uploads
  *
- * @property {NameType} [nameType] - Entity naming pattern (HUMAN/SIMPLE/COMPUTED/null)
+ * @property {NamePattern} [namePattern] - Entity naming pattern (HUMAN/SIMPLE/COMPUTED/null)
  * @property {string} [identityField] - Human-readable unique field (e.g., 'email', 'work_order_number')
  * @property {boolean} [identityFieldUnique] - Whether identity field has UNIQUE constraint
  * @property {string} [displayField] - Field to show in FK dropdowns (defaults to identityField)

@@ -15,7 +15,7 @@
  */
 
 const { FIELD_ACCESS_LEVELS: FAL } = require('../constants');
-const { FIELD, ENUM } = require('../field-type-standards');
+const { FIELD } = require('../field-types');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -102,9 +102,9 @@ module.exports = {
   // ============================================================================
 
   /**
-   * Entity category: N/A - system table, not a business entity
+   * Name pattern: null for system tables
    */
-  nameType: null,
+  namePattern: null,
 
   // ============================================================================
   // FIELD ALIASING
@@ -212,11 +212,18 @@ module.exports = {
   },
 
   // ============================================================================
-  // ENUM DEFINITIONS (for consistent UI colors)
+  // ENUM DEFINITIONS (SSOT - values are object keys)
   // ============================================================================
 
   enums: {
-    type: ENUM.NOTIFICATION_TYPE,
+    type: {
+      info: { color: 'info', label: 'Info' },
+      success: { color: 'success', label: 'Success' },
+      warning: { color: 'warning', label: 'Warning' },
+      error: { color: 'error', label: 'Error' },
+      assignment: { color: 'primary', label: 'Assignment' },
+      reminder: { color: 'warning', label: 'Reminder' },
+    },
   },
 
   // ============================================================================
@@ -304,7 +311,7 @@ module.exports = {
     },
     type: {
       type: 'enum',
-      values: ENUM.NOTIFICATION_TYPE.values,
+      enumKey: 'type',
       required: true,
       readonly: true,
       description: 'Notification type for UI styling',
