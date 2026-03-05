@@ -13,6 +13,7 @@
 
 const { getRoleHierarchy } = require('./role-hierarchy-loader');
 const { RLS_CONTEXT_VALUES } = require('./constants');
+const { getForeignKeyFieldNames, extractForeignKeyFields } = require('./fk-helpers');
 
 /**
  * Valid navigation groups for menu placement.
@@ -206,11 +207,11 @@ function validateEntityPermissions(meta, errors) {
 function validateRequiredFields(meta, errors) {
   const requiredFields = meta.requiredFields || [];
   const fieldDefs = meta.fields || {};
-  const fkFields = Object.keys(meta.foreignKeys || {});
+  const fkFieldNames = getForeignKeyFieldNames(meta);
 
   for (const field of requiredFields) {
-    // FK fields are valid even if not in fields definition
-    if (fkFields.includes(field)) {
+    // FK fields are always valid (they exist in fields with type: 'foreignKey')
+    if (fkFieldNames.has(field)) {
       continue;
     }
 
@@ -225,21 +226,22 @@ function validateRequiredFields(meta, errors) {
 
 /**
  * Validate foreign keys reference valid entities
+ * FK fields are identified by type: 'foreignKey' with relatedEntity in fields section
  */
 function validateForeignKeys(meta, errors, allMetadata) {
-  const foreignKeys = meta.foreignKeys || {};
-  const allTables = new Set(Object.values(allMetadata).map((m) => m.tableName));
+  const fkFields = extractForeignKeyFields(meta);
+  const allEntityKeys = new Set(Object.keys(allMetadata));
 
-  for (const [fkField, fkDef] of Object.entries(foreignKeys)) {
-    if (!fkDef.table) {
-      errors.add(`foreignKeys.${fkField}`, 'Missing table property');
+  for (const [fkField, fkDef] of Object.entries(fkFields)) {
+    if (!fkDef.relatedEntity) {
+      errors.add(`fields.${fkField}`, 'FK field missing relatedEntity property');
       continue;
     }
 
-    if (!allTables.has(fkDef.table)) {
+    if (!allEntityKeys.has(fkDef.relatedEntity)) {
       errors.add(
-        `foreignKeys.${fkField}`,
-        `References unknown table '${fkDef.table}'`,
+        `fields.${fkField}`,
+        `References unknown entity '${fkDef.relatedEntity}'`,
       );
     }
   }

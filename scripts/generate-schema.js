@@ -124,7 +124,7 @@ function loadAllMetadata(modelsDir = BACKEND_MODELS_DIR) {
 
 /** Transform raw metadata into uniform Column[] structure */
 function normalizeEntity(raw) {
-  const { entityKey, tableName, namePattern, identityField, identityFieldUnique, isSystemTable, sharedPrimaryKey, foreignKeys } = raw;
+  const { entityKey, tableName, namePattern, identityField, identityFieldUnique, isSystemTable, sharedPrimaryKey } = raw;
   const columns = [];
   const indexes = [];
   const ORDER = CONFIG.COLUMN_ORDER;
@@ -139,10 +139,13 @@ function normalizeEntity(raw) {
     if (sharedPrimaryKey && skipForSharedPK.has(tier1.name)) continue;
     
     // For sharedPrimaryKey entities, replace SERIAL PRIMARY KEY with INTEGER PRIMARY KEY + FK
+    // FK reference is now in fields.id (type: 'foreignKey', relatedEntity: 'user')
     if (sharedPrimaryKey && tier1.name === 'id') {
-      const fkDef = foreignKeys?.id;
-      if (fkDef) {
-        const refTable = pluralizeTable(fkDef.table);
+      const idFieldDef = raw.fields?.id;
+      if (idFieldDef?.type === 'foreignKey' && idFieldDef.relatedEntity) {
+        // Get the related entity's table name from metadata
+        const relatedEntityMeta = require(`../backend/config/models`)[idFieldDef.relatedEntity];
+        const refTable = relatedEntityMeta?.tableName || pluralizeTable(idFieldDef.relatedEntity);
         columns.push({
           name: 'id',
           sqlType: 'INTEGER',

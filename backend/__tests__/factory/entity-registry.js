@@ -285,7 +285,7 @@ function getEntitiesByCategory() {
  * Get entities that have a specific metadata feature.
  * Useful for scenario selection.
  *
- * @param {string} featurePath - Dot-notation path to check (e.g., 'foreignKeys', 'searchableFields')
+ * @param {string} featurePath - Dot-notation path to check (e.g., 'fields', 'searchableFields')
  * @returns {string[]} Entity names that have the feature
  */
 function getEntitiesWithFeature(featurePath) {

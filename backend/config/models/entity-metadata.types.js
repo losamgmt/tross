@@ -279,8 +279,8 @@
  * @property {Object.<string, FieldAccessConfig>} [fieldAccess] - Per-field CRUD access levels
  *
  * @property {Object.<string, FieldDefinition>} [fields] - Field definitions with types/validation
+ *   FK fields use type: 'foreignKey' with relatedEntity, displayField, displayFields, displayTemplate
  * @property {Object.<string, EnumDefinition>} [enums] - Enum definitions with labels/colors
- * @property {Object.<string, ForeignKeyConfig>} [foreignKeys] - FK validation config
  * @property {Object.<string, RelationshipDefinition>} [relationships] - JOIN configuration
  * @property {string[]} [defaultIncludes] - Relationships to auto-include in queries
  *

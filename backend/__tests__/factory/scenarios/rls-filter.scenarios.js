@@ -10,6 +10,7 @@
  */
 
 const permissions = require("../../../../config/permissions.json");
+const { getForeignKeyFieldNames } = require("../../../config/fk-helpers");
 
 /**
  * Get the RLS policy for a role on a resource
@@ -24,10 +25,10 @@ function getRlsPolicy(resourceName, role) {
  * (has customer_id or similar FK that links to a customer)
  */
 function hasCustomerOwnership(meta) {
-  const { foreignKeys } = meta;
-  if (!foreignKeys) return false;
+  const fkFieldNames = getForeignKeyFieldNames(meta);
+  if (fkFieldNames.size === 0) return false;
 
-  return Object.keys(foreignKeys).some(
+  return [...fkFieldNames].some(
     (fk) => fk === "customer_id" || fk.endsWith("_customer_id"),
   );
 }
@@ -36,10 +37,10 @@ function hasCustomerOwnership(meta) {
  * Check if entity supports technician assignment filtering
  */
 function hasTechnicianAssignment(meta) {
-  const { foreignKeys } = meta;
-  if (!foreignKeys) return false;
+  const fkFieldNames = getForeignKeyFieldNames(meta);
+  if (fkFieldNames.size === 0) return false;
 
-  return Object.keys(foreignKeys).some(
+  return [...fkFieldNames].some(
     (fk) => fk === "assigned_technician_id" || fk.includes("technician"),
   );
 }

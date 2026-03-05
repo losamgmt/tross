@@ -2,20 +2,21 @@
  * Relationship Test Scenarios
  *
  * Pure functions testing foreign key relationships and cascades.
- * Driven by relationships and foreignKeys in metadata.
+ * Driven by FK fields (type: 'foreignKey') in metadata.
  */
+
+const { extractForeignKeyFields } = require('../../../config/fk-helpers');
 
 /**
  * Check if a FK field is settable during entity creation
- * Some FKs are read-only or set via separate workflows
+ * Uses fieldAccess to determine if the field can be set by users
  */
-function isFkSettableOnCreate(meta, fkField, fkDef) {
-  // Explicit metadata flag takes precedence
-  if (fkDef.settableOnCreate === false) return false;
-
-  // Check fieldAccess if available
+function isFkSettableOnCreate(meta, fkField) {
+  // Check fieldAccess - if not settable by users, skip
   const fieldAccess = meta.fieldAccess?.[fkField];
-  if (fieldAccess && fieldAccess.create === "none") return false;
+  if (fieldAccess && (fieldAccess.create === 'none' || fieldAccess.create === 'system')) {
+    return false;
+  }
 
   // Default: assume settable
   return true;
@@ -24,22 +25,23 @@ function isFkSettableOnCreate(meta, fkField, fkDef) {
 /**
  * Scenario: FK references valid parent
  *
- * Preconditions: Entity has foreignKeys defined AND the FK is settable on create
+ * Preconditions: Entity has FK fields (type: 'foreignKey') AND the FK is settable on create
  * Tests: FK to existing parent succeeds
  */
 function fkReferencesValidParent(meta, ctx) {
-  const { foreignKeys } = meta;
-  if (!foreignKeys) return;
+  const foreignKeyFields = extractForeignKeyFields(meta);
+  if (Object.keys(foreignKeyFields).length === 0) return;
 
-  for (const [fkField, fkDef] of Object.entries(foreignKeys)) {
+  for (const [fkField, fkDef] of Object.entries(foreignKeyFields)) {
     // Skip FKs that aren't settable during creation
-    if (!isFkSettableOnCreate(meta, fkField, fkDef)) continue;
+    if (!isFkSettableOnCreate(meta, fkField)) continue;
 
     ctx.it(
       `POST /api/${meta.tableName} - accepts valid ${fkField} reference`,
       async () => {
         // Create parent entity first (the one we're specifically testing)
-        const parentName = ctx.entityNameFromTable(fkDef.table);
+        // relatedEntity is the entity name directly - no conversion needed
+        const parentName = fkDef.relatedEntity;
         const parent = await ctx.factory.create(parentName);
         const auth = await ctx.authHeader("admin");
 

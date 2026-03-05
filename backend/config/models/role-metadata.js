@@ -326,17 +326,6 @@ module.exports = {
   restrictedFields: [],
 
   // ============================================================================
-  // FOREIGN KEY CONFIGURATION (for DB error handling)
-  // ============================================================================
-
-  /**
-   * Outbound foreign keys (this table references other tables)
-   * Used by buildDbErrorConfig() for user-friendly FK violation messages
-   * Roles don't reference other tables - they ARE the referenced table
-   */
-  foreignKeys: {},
-
-  // ============================================================================
   // RELATIONSHIPS (for JOIN queries)
   // ============================================================================
 

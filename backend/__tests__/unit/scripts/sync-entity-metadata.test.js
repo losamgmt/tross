@@ -7,7 +7,6 @@
 const {
   getPluralForm,
   transformField,
-  transformRelationships,
   transformPreferenceSchema,
   transformModel,
   PLURAL_OVERRIDES,
@@ -79,71 +78,53 @@ describe("sync-entity-metadata", () => {
       expect(result).toEqual({ type: "enum", values: ["active", "inactive"] });
     });
 
-    it("transforms foreign key fields", () => {
-      const foreignKeys = {
-        role_id: { table: "roles", column: "id" },
+    it("transforms foreignKey fields with relatedEntity", () => {
+      const allModels = {
+        role: {
+          tableName: "roles",
+          identityField: "name",
+        },
       };
       const result = transformField(
         "role_id",
-        { type: "integer" },
-        foreignKeys,
+        { type: "foreignKey", relatedEntity: "role" },
         {},
+        allModels,
       );
       expect(result.type).toBe("foreignKey");
       expect(result.relatedEntity).toBe("role");
+      expect(result.displayField).toBe("name");
     });
 
-    it("uses relationship displayField when available", () => {
-      const relationships = {
-        role: {
-          table: "roles",
-          foreignKey: "role_id",
-          fields: ["id", "name", "priority"],
+    it("uses explicit displayField when provided", () => {
+      const allModels = {
+        user: {
+          tableName: "users",
+          identityField: "email",
+          displayField: "full_name",
         },
       };
       const result = transformField(
-        "role_id",
-        { type: "integer" },
+        "user_id",
+        { type: "foreignKey", relatedEntity: "user", displayField: "email" },
         {},
-        relationships,
+        allModels,
       );
       expect(result.type).toBe("foreignKey");
-      expect(result.displayField).toBe("name");
-    });
-  });
-
-  describe("transformRelationships", () => {
-    it("returns undefined when no relationships", () => {
-      const result = transformRelationships({}, {});
-      expect(result).toBeUndefined();
+      expect(result.relatedEntity).toBe("user");
+      expect(result.displayField).toBe("email"); // Uses explicit over inferred
     });
 
-    it("transforms relationship with foreignKey", () => {
-      const relationships = {
-        role: { table: "roles", foreignKey: "role_id", fields: ["id", "name"] },
-      };
-      const result = transformRelationships({}, relationships);
-      expect(result).toEqual({
-        role_id: {
-          relatedEntity: "role",
-          displayField: "name",
-          type: "belongsTo",
-        },
-      });
-    });
-
-    it("merges foreignKeys not in relationships", () => {
-      const foreignKeys = {
-        customer_id: { table: "customers", column: "id" },
-      };
-      const result = transformRelationships(foreignKeys, {});
-      expect(result).toEqual({
-        customer_id: {
-          relatedEntity: "customer",
-          displayField: "name",
-          type: "belongsTo",
-        },
-      });
+    it("does not transform integer fields without relatedEntity as FK", () => {
+      // Integer fields stay as integers unless explicitly typed as foreignKey
+      const result = transformField(
+        "count",
+        { type: "integer" },
+        {},
+        {},
+      );
+      expect(result.type).toBe("integer");
+      expect(result.relatedEntity).toBeUndefined();
     });
   });
 

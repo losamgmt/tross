@@ -325,7 +325,7 @@ if (AppRoutes.requiresAdmin(route)) {  // Uses startsWith('/admin')
 
 | File                   | Purpose                                               | Used By                                           |
 | ---------------------- | ----------------------------------------------------- | ------------------------------------------------- |
-| `entity-metadata.json` | Entity definitions, fields, validation, relationships | GenericEntityService, forms, JsonMetadataProvider |
+| `entity-metadata.json` | Entity definitions, fields, validation, FK references | GenericEntityService, forms, JsonMetadataProvider |
 | `nav-config.json`      | Sidebar/menu structure, route strategies              | NavMenuBuilder, AdaptiveShell                     |
 | `permissions.json`     | RLS policies, role permissions                        | PermissionGate, backend                           |
 

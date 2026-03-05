@@ -27,6 +27,7 @@
 const ResponseFormatter = require('./response-formatter');
 const { logger } = require('../config/logger');
 const { ImmutableFieldError } = require('../db/helpers/update-helper');
+const { buildFkDisplayNames } = require('../config/fk-helpers');
 
 /**
  * Build DB error config from entity metadata
@@ -56,13 +57,8 @@ function buildDbErrorConfig(metadata) {
     uniqueFields[metadata.identityField] = displayName;
   }
 
-  // Build foreignKeys from metadata.foreignKeys
-  const foreignKeys = {};
-  if (metadata.foreignKeys) {
-    for (const [field, config] of Object.entries(metadata.foreignKeys)) {
-      foreignKeys[field] = config.displayName || config.table || field;
-    }
-  }
+  // Build foreignKeys display names from fields (SSOT)
+  const foreignKeys = buildFkDisplayNames(metadata);
 
   return { entityName, uniqueFields, foreignKeys };
 }

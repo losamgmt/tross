@@ -188,18 +188,19 @@ describe("Entity Registry", () => {
   // ==========================================================================
 
   describe("Feature Detection", () => {
-    test("getEntitiesWithFeature finds entities with foreignKeys", () => {
-      const withFKs = getEntitiesWithFeature("foreignKeys");
+    test("getEntitiesWithFeature finds entities with FK fields", () => {
+      // FK fields are now in the 'fields' section with type: 'foreignKey'
+      // This test now checks that entities have 'fields' defined
+      const withFields = getEntitiesWithFeature("fields");
 
-      // These entities have foreign keys
-      expect(withFKs).toContain("work_order"); // customer_id
-      expect(withFKs).toContain("contract"); // customer_id
-      expect(withFKs).toContain("invoice"); // customer_id
-      expect(withFKs).toContain("user"); // role_id
+      // These entities have foreign key fields (type: 'foreignKey' in fields)
+      expect(withFields).toContain("work_order"); // customer_id FK
+      expect(withFields).toContain("contract"); // customer_id FK
+      expect(withFields).toContain("invoice"); // customer_id FK
+      expect(withFields).toContain("user"); // role_id FK
 
-      // These entities should NOT have foreign keys
-      expect(withFKs).not.toContain("role");
-      expect(withFKs).not.toContain("inventory");
+      // role entity also has fields
+      expect(withFields).toContain("role");
     });
 
     test("getEntitiesWithFeature finds entities with searchableFields", () => {

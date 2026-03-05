@@ -67,9 +67,9 @@ describe("db-error-handler", () => {
       const metadata = {
         tableName: "contracts",
         identityField: "contract_number",
-        foreignKeys: {
-          customer_id: { table: "customers", displayName: "Customer" },
-          technician_id: { table: "technicians" },
+        fields: {
+          customer_id: { type: "foreignKey", relatedEntity: "customer" },
+          technician_id: { type: "foreignKey", relatedEntity: "technician" },
         },
       };
 
@@ -77,8 +77,9 @@ describe("db-error-handler", () => {
 
       expect(config.entityName).toBe("Contract");
       expect(config.uniqueFields.contract_number).toBe("Contract Number");
+      // Display names derived from relatedEntity (title-cased)
       expect(config.foreignKeys.customer_id).toBe("Customer");
-      expect(config.foreignKeys.technician_id).toBe("technicians");
+      expect(config.foreignKeys.technician_id).toBe("Technician");
     });
 
     it("handles metadata without tableName", () => {
@@ -95,8 +96,8 @@ describe("db-error-handler", () => {
       expect(config.uniqueFields).toEqual({});
     });
 
-    it("handles metadata without foreignKeys", () => {
-      const metadata = { tableName: "items" };
+    it("handles metadata without FK fields", () => {
+      const metadata = { tableName: "items", fields: {} };
       const config = buildDbErrorConfig(metadata);
 
       expect(config.foreignKeys).toEqual({});

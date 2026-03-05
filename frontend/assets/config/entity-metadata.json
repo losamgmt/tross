@@ -159,13 +159,6 @@
     ],
     "namePattern": "computed",
     "fieldGroups": {},
-    "relationships": {
-      "customer_id": {
-        "relatedEntity": "customer",
-        "displayField": "email",
-        "type": "belongsTo"
-      }
-    },
     "fields": {
       "id": {
         "type": "integer",
@@ -377,18 +370,6 @@
           ]
         ],
         "order": 4
-      }
-    },
-    "relationships": {
-      "customer_id": {
-        "relatedEntity": "contract",
-        "displayField": "contract_number",
-        "type": "hasMany"
-      },
-      "customer_profile_id": {
-        "relatedEntity": "user",
-        "displayField": "email",
-        "type": "hasOne"
       }
     },
     "fields": {
@@ -690,13 +671,6 @@
     ],
     "namePattern": "simple",
     "fieldGroups": {},
-    "relationships": {
-      "manager_id": {
-        "relatedEntity": "user",
-        "displayField": "first_name",
-        "type": "belongsTo"
-      }
-    },
     "fields": {
       "id": {
         "type": "integer",
@@ -1062,18 +1036,6 @@
     ],
     "namePattern": "computed",
     "fieldGroups": {},
-    "relationships": {
-      "customer_id": {
-        "relatedEntity": "customer",
-        "displayField": "email",
-        "type": "belongsTo"
-      },
-      "work_order_id": {
-        "relatedEntity": "work_order",
-        "displayField": "work_order_number",
-        "type": "belongsTo"
-      }
-    },
     "fields": {
       "id": {
         "type": "integer",
@@ -1223,13 +1185,6 @@
     },
     "namePattern": null,
     "fieldGroups": {},
-    "relationships": {
-      "user_id": {
-        "relatedEntity": "user",
-        "displayField": "email",
-        "type": "belongsTo"
-      }
-    },
     "fields": {
       "id": {
         "type": "integer",
@@ -1361,18 +1316,9 @@
         "order": 3
       }
     },
-    "relationships": {
-      "id": {
-        "relatedEntity": "user",
-        "displayField": "email",
-        "type": "belongsTo"
-      }
-    },
     "fields": {
       "id": {
-        "type": "foreignKey",
-        "relatedEntity": "user",
-        "displayField": "email",
+        "type": "integer",
         "required": true,
         "readonly": true
       },
@@ -1537,13 +1483,6 @@
       "preventDelete": true
     },
     "fieldGroups": {},
-    "relationships": {
-      "role_id": {
-        "relatedEntity": "user",
-        "displayField": "email",
-        "type": "hasMany"
-      }
-    },
     "fields": {
       "id": {
         "type": "integer",
@@ -1646,13 +1585,6 @@
     },
     "namePattern": null,
     "fieldGroups": {},
-    "relationships": {
-      "user_id": {
-        "relatedEntity": "user",
-        "displayField": "email",
-        "type": "belongsTo"
-      }
-    },
     "fields": {
       "id": {
         "type": "integer",
@@ -1761,18 +1693,6 @@
           "last_name"
         ],
         "order": 1
-      }
-    },
-    "relationships": {
-      "assigned_technician_id": {
-        "relatedEntity": "work_order",
-        "displayField": "work_order_number",
-        "type": "hasMany"
-      },
-      "technician_profile_id": {
-        "relatedEntity": "user",
-        "displayField": "email",
-        "type": "hasOne"
       }
     },
     "fields": {
@@ -1923,23 +1843,6 @@
           "last_name"
         ],
         "order": 1
-      }
-    },
-    "relationships": {
-      "role_id": {
-        "relatedEntity": "role",
-        "displayField": "name",
-        "type": "belongsTo"
-      },
-      "customer_profile_id": {
-        "relatedEntity": "customer",
-        "displayField": "email",
-        "type": "belongsTo"
-      },
-      "technician_profile_id": {
-        "relatedEntity": "technician",
-        "displayField": "email",
-        "type": "belongsTo"
       }
     },
     "fields": {
@@ -2225,23 +2128,6 @@
           ]
         ],
         "order": 4
-      }
-    },
-    "relationships": {
-      "customer_id": {
-        "relatedEntity": "customer",
-        "displayField": "email",
-        "type": "belongsTo"
-      },
-      "assigned_technician_id": {
-        "relatedEntity": "technician",
-        "displayField": "email",
-        "type": "belongsTo"
-      },
-      "work_order_id": {
-        "relatedEntity": "invoice",
-        "displayField": "invoice_number",
-        "type": "hasMany"
       }
     },
     "fields": {

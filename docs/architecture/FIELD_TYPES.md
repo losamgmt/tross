@@ -61,6 +61,22 @@ JSONB is **only** for truly dynamic user-defined data:
 
 ---
 
+## Foreign Key Pattern
+
+Foreign keys use `type: 'foreignKey'` with `relatedEntity`:
+
+```javascript
+manager_id: {
+  type: 'foreignKey',
+  relatedEntity: 'user',      // Required: target entity key (snake_case)
+  displayField: 'email',      // Optional: field shown in dropdowns
+}
+```
+
+The sync script reads `relatedEntity` to populate frontend metadata. Do **not** use `references` or other custom properties—they will be ignored.
+
+---
+
 ## Address Pattern
 
 Addresses use composable field generators:

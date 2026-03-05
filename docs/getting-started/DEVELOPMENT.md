@@ -235,85 +235,82 @@ flutter test --coverage         # With coverage
 
 ### Adding a New Entity
 
-**1. Database Migration**
+Entities use a SSOT (Single Source of Truth) pipeline. The metadata file IS the source; everything else derives from it.
 
-```bash
-cd backend
-npm run migrate:create add_entity_table
+**1. Create Entity Metadata** (`backend/config/models/{entity}-metadata.js`)
 
-# Edit migration file:
-# - Add TIER 1 fields (id, identity_field, is_active, created_at, updated_at)
-# - Add TIER 2 fields (status, if needed)
-# - Add indexes
-
-npm run migrate
-```
-
-**2. Create Entity Metadata** (`backend/config/models/entity-metadata.js`)
-
-Entity metadata is the SINGLE SOURCE OF TRUTH for entity configuration.
-See existing metadata files for the complete pattern.
+Copy an existing metadata file and modify. Key requirements:
 
 ```javascript
 module.exports = {
-  tableName: "entities",
-  primaryKey: "id",
-  identityField: "name",
-  rlsResource: "entities",
-  rlsPolicy: {
-    customer: "own_record_only",
-    admin: "all_records",
+  entityKey: 'your_entity',        // snake_case, unique
+  tableName: 'your_entities',      // Database table name
+  primaryKey: 'id',
+  identityField: 'name',           // Human-readable unique field
+  namePattern: 'SIMPLE',           // SIMPLE, HUMAN, or COMPUTED
+  
+  // For foreign keys, use relatedEntity (NOT references)
+  fields: {
+    id: { ...FIELD.ID },
+    name: { ...FIELD.TEXT_REQUIRED, maxLength: 100 },
+    manager_id: {
+      type: 'foreignKey',
+      relatedEntity: 'user',       // Target entity key
+      displayField: 'email',       // Field for dropdowns
+    },
+    ...createAuditFields(),
   },
-  routeConfig: { useGenericRouter: true },
-  // ... fields, validation, etc.
 };
 ```
 
-**3. Register in Index** (`backend/config/models/index.js`)
+**2. Create Database Migration**
 
-Add your entity to the metadata exports.
-
-**4. Create Routes** (automatic via generic router)
-
-```javascript
-router.get(
-  "/",
-  authenticateToken,
-  requirePermission("entities:read"),
-  async (req, res) => {
-    // GET /api/entities
-  },
-);
-
-router.post(
-  "/",
-  authenticateToken,
-  requirePermission("entities:create"),
-  async (req, res) => {
-    // POST /api/entities
-  },
-);
+```bash
+cd backend
+npm run migrate:create add_your_entity_table
+# Edit migration to match Entity Contract v2.0 (see DATABASE_ARCHITECTURE.md)
+npm run migrate
 ```
 
-**4. Add Tests**
+**3. Update Master Schema**
 
-- Unit: `__tests__/unit/models/Entity.crud.test.js`
-- Integration: `__tests__/integration/entities-api.test.js`
+Add table to `backend/schema.sql` matching the migration.
 
-**5. Frontend Model** (`frontend/lib/models/entity_model.dart`)
+**4. Sync & Verify** (Critical!)
 
+```bash
+npm run sync:metadata      # Backend → frontend JSON
+npm run sync:permissions   # Generate permissions
+npm run compose:schema     # Validate schema alignment
+npm run verify:entity -- --entity=your_entity  # Single entity check
+npm run verify:all         # Full pipeline verification
+```
+
+**5. Register in Frontend**
+
+Add to `frontend/lib/services/entity_metadata.dart`:
 ```dart
-class Entity {
-  final int id;
-  final String name;
-  final bool isActive;
-
-  Entity.fromJson(Map<String, dynamic> json)
-    : id = json['id'],
-      name = json['name'],
-      isActive = json['is_active'];
+enum EntityType {
+  // ... existing entities
+  yourEntity,  // camelCase
 }
 ```
+
+Add to `frontend/test/factory/entity_registry.dart`:
+```dart
+const allKnownEntities = <String>[
+  // ... existing entities
+  'your_entity',  // snake_case
+];
+```
+
+**6. Run Tests**
+
+```bash
+npm run test:all  # All backend + frontend tests
+```
+
+Routes are automatic via generic router—no route code needed.
 
 ---
 
