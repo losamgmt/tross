@@ -184,6 +184,10 @@
       "group": "people",
       "order": 1
     },
+    "department": {
+      "group": "admin",
+      "order": 2
+    },
     "inventory": {
       "group": "operations",
       "order": 2

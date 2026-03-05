@@ -644,6 +644,101 @@
       }
     }
   },
+  "department": {
+    "entityKey": "department",
+    "tableName": "departments",
+    "primaryKey": "id",
+    "identityField": "name",
+    "rlsResource": "departments",
+    "icon": "groups",
+    "supportsFileAttachments": false,
+    "displayField": "name",
+    "displayName": "Department",
+    "displayNamePlural": "Departments",
+    "requiredFields": [
+      "name"
+    ],
+    "searchableFields": [
+      "name",
+      "description"
+    ],
+    "filterableFields": [
+      "id",
+      "name",
+      "manager_id",
+      "is_active",
+      "status",
+      "created_at",
+      "updated_at"
+    ],
+    "sortableFields": [
+      "id",
+      "name",
+      "status",
+      "created_at",
+      "updated_at"
+    ],
+    "defaultSort": {
+      "field": "name",
+      "order": "ASC"
+    },
+    "displayColumns": [
+      "name",
+      "description",
+      "manager_id",
+      "status"
+    ],
+    "namePattern": "simple",
+    "fieldGroups": {},
+    "relationships": {
+      "manager_id": {
+        "relatedEntity": "user",
+        "displayField": "first_name",
+        "type": "belongsTo"
+      }
+    },
+    "fields": {
+      "id": {
+        "type": "integer",
+        "readonly": true
+      },
+      "name": {
+        "type": "string",
+        "required": true,
+        "maxLength": 100
+      },
+      "is_active": {
+        "type": "boolean",
+        "default": true
+      },
+      "created_at": {
+        "type": "timestamp",
+        "readonly": true
+      },
+      "updated_at": {
+        "type": "timestamp",
+        "readonly": true
+      },
+      "status": {
+        "type": "enum",
+        "default": "active",
+        "values": {
+          "active": {
+            "color": "success"
+          },
+          "inactive": {
+            "color": "secondary"
+          }
+        }
+      },
+      "description": {
+        "type": "text"
+      },
+      "manager_id": {
+        "type": "foreignKey"
+      }
+    }
+  },
   "file_attachment": {
     "entityKey": "file_attachment",
     "tableName": "file_attachments",
