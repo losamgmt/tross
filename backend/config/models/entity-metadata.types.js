@@ -93,17 +93,23 @@
 
 /**
  * Relationship type enumeration.
- * @typedef {'belongsTo' | 'hasMany' | 'hasOne'} RelationshipType
+ * - belongsTo: This entity has FK to the related entity (N:1)
+ * - hasMany: Related entity has FK to this entity (1:N)
+ * - hasOne: Related entity has FK to this entity, unique (1:1)
+ * - manyToMany: Related through a junction table (M:N)
+ * @typedef {'belongsTo' | 'hasMany' | 'hasOne' | 'manyToMany'} RelationshipType
  */
 
 /**
  * Relationship definition for JOINs and data loading.
  * @typedef {Object} RelationshipDefinition
  * @property {RelationshipType} type - Relationship cardinality
- * @property {string} foreignKey - FK column name
- * @property {string} table - Target table name
+ * @property {string} foreignKey - FK column name in related table (or sourceKey for manyToMany)
+ * @property {string} table - Target table name (the entity we're relating TO)
  * @property {string[]} [fields] - Fields to include in JOIN
  * @property {string} [description] - Relationship documentation
+ * @property {string} [through] - For manyToMany: junction table name (e.g., 'customer_properties')
+ * @property {string} [targetKey] - For manyToMany: FK in junction pointing to target entity
  */
 
 /**
@@ -231,6 +237,29 @@
  */
 
 // ============================================================================
+// JUNCTION ENTITY TYPES
+// ============================================================================
+
+/**
+ * Unique constraint definition for composite keys.
+ * Used primarily in junction tables but available for any entity.
+ * @typedef {Object} UniqueConstraint
+ * @property {string} name - Constraint name (e.g., 'uq_customer_property')
+ * @property {string[]} fields - Fields forming the composite unique key
+ * @property {string} [description] - Constraint documentation
+ */
+
+/**
+ * Junction entity configuration for M:M relationships.
+ * Junction entities connect two entities with optional relationship attributes.
+ * @typedef {Object} JunctionConfig
+ * @property {string} entity1 - First related entity key (e.g., 'customer')
+ * @property {string} entity2 - Second related entity key (e.g., 'property')
+ * @property {string} [foreignKey1] - FK field for entity1 (defaults to 'entity1_id')
+ * @property {string} [foreignKey2] - FK field for entity2 (defaults to 'entity2_id')
+ */
+
+// ============================================================================
 // ENTITY NAME TYPES
 // ============================================================================
 
@@ -308,6 +337,10 @@
  * @property {boolean} [sharedPrimaryKey] - Whether PK is FK to another table (preferences)
  * @property {boolean} [uncountable] - Whether entity name is uncountable (inventory)
  * @property {boolean} [isSystemTable] - Whether this is a system table (audit_log)
+ *
+ * @property {boolean} [isJunction] - Whether this entity is a junction table for M:M
+ * @property {JunctionConfig} [junctionFor] - Junction entity configuration (required if isJunction=true)
+ * @property {UniqueConstraint[]} [uniqueConstraints] - Composite unique constraints (common in junctions)
  */
 
 // Export empty object - this file is for types only

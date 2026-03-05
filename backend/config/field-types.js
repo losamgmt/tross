@@ -577,6 +577,157 @@ function getEnumValues(enumDef) {
 }
 
 // ============================================================================
+// NAMING CONVENTIONS
+// ============================================================================
+
+/**
+ * Generate FK field name from entity key.
+ * SINGLE SOURCE OF TRUTH for FK naming convention: entityKey → entityKey_id
+ *
+ * @param {string} entityKey - Entity key (e.g., 'customer', 'work_order')
+ * @returns {string} FK field name (e.g., 'customer_id', 'work_order_id')
+ *
+ * @example
+ * foreignKeyFieldName('customer')     // 'customer_id'
+ * foreignKeyFieldName('work_order')   // 'work_order_id'
+ */
+function foreignKeyFieldName(entityKey) {
+  return `${entityKey}_id`;
+}
+
+// ============================================================================
+// JUNCTION ENTITY FIELD HELPERS
+// ============================================================================
+
+/**
+ * Standard field definitions for junction entities (M:M relationship tables).
+ * Junction entities connect two entities and may have relationship metadata.
+ *
+ * @example
+ * fields: {
+ *   ...JUNCTION.CORE_FIELDS,
+ *   // Optional relationship attributes
+ *   relationship_type: { type: 'enum', enumKey: 'relationshipType' },
+ *   is_primary: JUNCTION.IS_PRIMARY,
+ *   start_date: JUNCTION.START_DATE,
+ *   end_date: JUNCTION.END_DATE,
+ * }
+ */
+const JUNCTION = Object.freeze({
+  /**
+   * Core fields that every junction entity should have.
+   * Spread into fields: { ...JUNCTION.CORE_FIELDS, customer_id: ..., property_id: ... }
+   */
+  CORE_FIELDS: Object.freeze({
+    id: { type: 'integer', readonly: true },
+    created_at: { type: 'timestamp', readonly: true },
+    updated_at: { type: 'timestamp', readonly: true },
+  }),
+
+  /**
+   * Primary flag for hierarchical relationships.
+   * Example: A customer may have multiple properties, one is their "primary" residence.
+   */
+  IS_PRIMARY: Object.freeze({
+    type: 'boolean',
+    default: false,
+    description: 'Whether this is the primary relationship of this type',
+    sqlType: 'BOOLEAN',
+  }),
+
+  /**
+   * Start date for temporal relationships.
+   * Example: Customer occupies property starting from this date.
+   */
+  START_DATE: Object.freeze({
+    type: 'date',
+    description: 'When this relationship became active',
+    sqlType: 'DATE',
+  }),
+
+  /**
+   * End date for temporal relationships.
+   * Null means relationship is ongoing/current.
+   */
+  END_DATE: Object.freeze({
+    type: 'date',
+    description: 'When this relationship ended (null = ongoing)',
+    sqlType: 'DATE',
+  }),
+
+  /**
+   * Notes field for relationship context.
+   */
+  NOTES: Object.freeze({
+    type: 'text',
+    maxLength: 2000,
+    description: 'Additional notes about this relationship',
+    sqlType: 'TEXT',
+  }),
+});
+
+/**
+ * Generate foreign key fields for a junction entity.
+ * Creates properly configured FK fields for both sides of the relationship.
+ *
+ * @param {string} entity1 - First entity key (e.g., 'customer')
+ * @param {string} entity2 - Second entity key (e.g., 'property')
+ * @param {Object} [options={}] - Configuration options
+ * @param {boolean} [options.required=true] - Whether both FKs are required
+ * @returns {Object} Object with two FK field definitions
+ *
+ * @example
+ * fields: {
+ *   ...JUNCTION.CORE_FIELDS,
+ *   ...createJunctionForeignKeys('customer', 'property'),
+ * }
+ * // Produces: customer_id, property_id (both type: 'foreignKey')
+ */
+function createJunctionForeignKeys(entity1, entity2, options = {}) {
+  const { required = true } = options;
+  const fk1 = foreignKeyFieldName(entity1);
+  const fk2 = foreignKeyFieldName(entity2);
+
+  return {
+    [fk1]: {
+      type: 'foreignKey',
+      relatedEntity: entity1,
+      required,
+      description: `Reference to the ${entity1} in this relationship`,
+    },
+    [fk2]: {
+      type: 'foreignKey',
+      relatedEntity: entity2,
+      required,
+      description: `Reference to the ${entity2} in this relationship`,
+    },
+  };
+}
+
+/**
+ * Generate a standard unique constraint for a junction entity.
+ * Prevents duplicate relationships between the same pair of entities.
+ *
+ * @param {string} entity1 - First entity key
+ * @param {string} entity2 - Second entity key
+ * @param {string} [constraintName] - Optional constraint name (auto-generated if not provided)
+ * @returns {Object} UniqueConstraint configuration
+ *
+ * @example
+ * uniqueConstraints: [
+ *   createJunctionUniqueConstraint('customer', 'property'),
+ * ]
+ */
+function createJunctionUniqueConstraint(entity1, entity2, constraintName) {
+  const name = constraintName || `uq_${entity1}_${entity2}`;
+  return {
+    name,
+    fields: [foreignKeyFieldName(entity1), foreignKeyFieldName(entity2)],
+    description: `Each ${entity1}-${entity2} pair must be unique`,
+  };
+}
+
+// ============================================================================
 // EXPORTS
 // ============================================================================
 
@@ -590,6 +741,9 @@ module.exports = {
   // SQL type derivation (for schema generation)
   TYPE_TO_SQL,
   deriveSqlType,
+
+  // Naming conventions
+  foreignKeyFieldName,
 
   // Address constants
   ADDRESS_SUFFIXES,
@@ -605,4 +759,9 @@ module.exports = {
 
   // Enum utilities
   getEnumValues,
+
+  // Junction entity helpers
+  JUNCTION,
+  createJunctionForeignKeys,
+  createJunctionUniqueConstraint,
 };

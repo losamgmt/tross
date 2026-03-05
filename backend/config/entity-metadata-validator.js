@@ -14,6 +14,7 @@
 const { getRoleHierarchy } = require('./role-hierarchy-loader');
 const { RLS_CONTEXT_VALUES } = require('./constants');
 const { getForeignKeyFieldNames, extractForeignKeyFields } = require('./fk-helpers');
+const { foreignKeyFieldName } = require('./field-types');
 
 /**
  * Valid navigation groups for menu placement.
@@ -323,6 +324,193 @@ function validateRlsPolicy(meta, errors) {
 }
 
 /**
+ * Valid relationship types.
+ */
+const VALID_RELATIONSHIP_TYPES = new Set([
+  'belongsTo',
+  'hasMany',
+  'hasOne',
+  'manyToMany',
+]);
+
+/**
+ * Validate relationships configuration.
+ * Ensures manyToMany relationships have required properties.
+ */
+function validateRelationships(meta, errors, _allMetadata) {
+  const relationships = meta.relationships;
+  if (!relationships || typeof relationships !== 'object') {
+    return; // Optional or empty
+  }
+
+  for (const [relName, relDef] of Object.entries(relationships)) {
+    if (!relDef || typeof relDef !== 'object') {
+      errors.add(`relationships.${relName}`, 'Must be an object');
+      continue;
+    }
+
+    if (!relDef.type) {
+      errors.add(`relationships.${relName}`, 'Missing required property: type');
+      continue;
+    }
+
+    if (!VALID_RELATIONSHIP_TYPES.has(relDef.type)) {
+      errors.add(
+        `relationships.${relName}`,
+        `Invalid type '${relDef.type}'. Valid: ${[...VALID_RELATIONSHIP_TYPES].join(', ')}`,
+      );
+      continue;
+    }
+
+    // All relationships require foreignKey and table
+    if (!relDef.foreignKey) {
+      errors.add(`relationships.${relName}`, 'Missing required property: foreignKey');
+    }
+    if (!relDef.table) {
+      errors.add(`relationships.${relName}`, 'Missing required property: table');
+    }
+
+    // manyToMany relationships require 'through' (junction table) and 'targetKey'
+    if (relDef.type === 'manyToMany') {
+      if (!relDef.through) {
+        errors.add(
+          `relationships.${relName}`,
+          "manyToMany relationship requires 'through' property (junction table name)",
+        );
+      } else if (typeof relDef.through !== 'string') {
+        errors.add(
+          `relationships.${relName}`,
+          "'through' must be a string (junction table name)",
+        );
+      }
+
+      if (!relDef.targetKey) {
+        errors.add(
+          `relationships.${relName}`,
+          "manyToMany relationship requires 'targetKey' property (FK in junction to target)",
+        );
+      }
+    }
+  }
+}
+
+/**
+ * Validate junction entity configuration.
+ * Ensures isJunction entities have proper junctionFor config.
+ */
+function validateJunctionConfig(meta, errors, allMetadata) {
+  // If not a junction, nothing to validate
+  if (!meta.isJunction) {
+    // Warn if junctionFor is present without isJunction
+    if (meta.junctionFor) {
+      errors.add(
+        'junctionFor',
+        'junctionFor is defined but isJunction is not true. Add isJunction: true.',
+      );
+    }
+    return;
+  }
+
+  // isJunction is true - junctionFor is REQUIRED
+  if (!meta.junctionFor) {
+    errors.add(
+      'junctionFor',
+      'isJunction is true but junctionFor config is missing. ' +
+        'Add: junctionFor: { entity1: \'...\', entity2: \'...\' }',
+    );
+    return;
+  }
+
+  const config = meta.junctionFor;
+  const allEntityKeys = new Set(Object.keys(allMetadata));
+
+  // Validate entity1
+  if (!config.entity1) {
+    errors.add('junctionFor.entity1', 'Required property missing');
+  } else if (!allEntityKeys.has(config.entity1)) {
+    errors.add(
+      'junctionFor.entity1',
+      `References unknown entity '${config.entity1}'`,
+    );
+  }
+
+  // Validate entity2
+  if (!config.entity2) {
+    errors.add('junctionFor.entity2', 'Required property missing');
+  } else if (!allEntityKeys.has(config.entity2)) {
+    errors.add(
+      'junctionFor.entity2',
+      `References unknown entity '${config.entity2}'`,
+    );
+  }
+
+  // Validate FK fields exist if specified
+  const fields = meta.fields || {};
+  const fk1 = config.foreignKey1 || foreignKeyFieldName(config.entity1);
+  const fk2 = config.foreignKey2 || foreignKeyFieldName(config.entity2);
+
+  if (!fields[fk1]) {
+    errors.add(
+      'junctionFor',
+      `FK field '${fk1}' not found in fields. Add: ${fk1}: { type: 'foreignKey', relatedEntity: '${config.entity1}' }`,
+    );
+  }
+  if (!fields[fk2]) {
+    errors.add(
+      'junctionFor',
+      `FK field '${fk2}' not found in fields. Add: ${fk2}: { type: 'foreignKey', relatedEntity: '${config.entity2}' }`,
+    );
+  }
+}
+
+/**
+ * Validate unique constraints configuration.
+ */
+function validateUniqueConstraints(meta, errors) {
+  const constraints = meta.uniqueConstraints;
+  if (!constraints) {
+    return; // Optional
+  }
+
+  if (!Array.isArray(constraints)) {
+    errors.add('uniqueConstraints', 'Must be an array of constraint definitions');
+    return;
+  }
+
+  const fields = meta.fields || {};
+
+  for (let i = 0; i < constraints.length; i++) {
+    const constraint = constraints[i];
+
+    if (!constraint.name || typeof constraint.name !== 'string') {
+      errors.add(`uniqueConstraints[${i}]`, 'Missing or invalid name property');
+    }
+
+    if (!constraint.fields || !Array.isArray(constraint.fields)) {
+      errors.add(`uniqueConstraints[${i}]`, 'Missing or invalid fields array');
+      continue;
+    }
+
+    if (constraint.fields.length < 2) {
+      errors.add(
+        `uniqueConstraints[${i}]`,
+        'Composite unique constraint must have at least 2 fields',
+      );
+    }
+
+    // Validate each field exists
+    for (const fieldName of constraint.fields) {
+      if (!fields[fieldName]) {
+        errors.add(
+          `uniqueConstraints[${i}]`,
+          `Field '${fieldName}' not found in fields definition`,
+        );
+      }
+    }
+  }
+}
+
+/**
  * Validate UI display properties
  * These are required for frontend rendering (navigation, headers, etc.)
  */
@@ -499,6 +687,9 @@ function validateEntity(entityName, meta, allMetadata) {
   validateRequiredFields(meta, errors);
   validateForeignKeys(meta, errors, allMetadata);
   validateRlsPolicy(meta, errors);
+  validateRelationships(meta, errors, allMetadata);
+  validateJunctionConfig(meta, errors, allMetadata);
+  validateUniqueConstraints(meta, errors);
 
   return errors;
 }
@@ -591,6 +782,7 @@ module.exports = {
   // Constants for reference
   SUPPORTED_FIELD_TYPES,
   VALID_NAV_GROUPS,
+  VALID_RELATIONSHIP_TYPES,
   getValidAccessValues,
   getValidEntityPermissionValues,
 };
