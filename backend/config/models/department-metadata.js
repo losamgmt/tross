@@ -181,7 +181,7 @@ module.exports = {
     description: { type: 'text' },
     manager_id: {
       type: 'foreignKey',
-      references: { table: 'users', column: 'id' },
+      relatedEntity: 'user',
     },
   },
 };

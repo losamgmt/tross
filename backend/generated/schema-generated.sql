@@ -1,7 +1,7 @@
 -- ============================================================================
 -- GENERATED SCHEMA - SINGLE SOURCE OF TRUTH
 -- ============================================================================
--- Generated: 2026-03-05T02:00:23.378Z
+-- Generated: 2026-03-05T02:38:53.735Z
 -- Command: npm run generate:schema
 --
 -- This file is for REVIEW. Merge changes into backend/schema.sql manually.
@@ -71,27 +71,6 @@ CREATE INDEX IF NOT EXISTS idx_contracts_contract_number ON contracts(contract_n
 CREATE INDEX IF NOT EXISTS idx_contracts_name ON contracts(name);
 CREATE INDEX IF NOT EXISTS idx_contracts_summary ON contracts(summary);
 CREATE INDEX IF NOT EXISTS idx_contracts_customer_id ON contracts(customer_id);
-
--- ============================================================================
--- DEPARTMENTS
--- ============================================================================
--- Entity: department
--- ============================================================================
-CREATE TABLE IF NOT EXISTS departments (
-    id SERIAL PRIMARY KEY,
-    is_active BOOLEAN DEFAULT true NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    name VARCHAR(255) NOT NULL UNIQUE,
-    status VARCHAR(25) DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
-    description TEXT,
-    manager_id INTEGER
-);
-
--- Indexes
-CREATE INDEX IF NOT EXISTS idx_departments_name ON departments(name);
-CREATE INDEX IF NOT EXISTS idx_departments_description ON departments(description);
-CREATE INDEX IF NOT EXISTS idx_departments_manager_id ON departments(manager_id);
 
 -- ============================================================================
 -- INVENTORY
@@ -217,6 +196,27 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
+
+-- ============================================================================
+-- DEPARTMENTS
+-- ============================================================================
+-- Entity: department
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS departments (
+    id SERIAL PRIMARY KEY,
+    is_active BOOLEAN DEFAULT true NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    name VARCHAR(255) NOT NULL UNIQUE,
+    status VARCHAR(25) DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+    description TEXT,
+    manager_id INTEGER REFERENCES users(id)
+);
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_departments_name ON departments(name);
+CREATE INDEX IF NOT EXISTS idx_departments_description ON departments(description);
+CREATE INDEX IF NOT EXISTS idx_departments_manager_id ON departments(manager_id);
 
 -- ============================================================================
 -- FILE_ATTACHMENTS
