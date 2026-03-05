@@ -50,6 +50,8 @@ const TYPE_BUILDERS = {
 
   time: () => Joi.string().pattern(/^([01]\d|2[0-3]):([0-5]\d)(:([0-5]\d))?$/), // HH:MM or HH:MM:SS
 
+  uuid: () => Joi.string().max(255), // UUID/auth0_id - string format, not strict UUID validation
+
   // ---- Numeric types ----
   integer: () => Joi.number().integer(),
 
@@ -70,7 +72,11 @@ const TYPE_BUILDERS = {
   // ---- Other types ----
   boolean: () => Joi.boolean(),
 
-  object: () => Joi.object(), // JSONB - ONLY for saved_views.settings per design
+  object: () => Joi.object(), // Legacy: JSONB - ONLY for saved_views.settings per design
+
+  json: () => Joi.any(), // JSON field - accepts any valid JSON value
+
+  jsonb: () => Joi.any(), // JSONB field - accepts any valid JSON value (binary storage)
 
   // ---- Date/Time types ----
   date: () => Joi.date(), // Date only (YYYY-MM-DD) - DB: DATE
@@ -93,6 +99,7 @@ const STRING_TYPES = new Set([
   'text',
   'url',
   'time',
+  'uuid',
 ]);
 
 /**

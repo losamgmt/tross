@@ -87,6 +87,8 @@ module.exports = {
    * Roles are public for reading (dropdowns) but shouldn't appear in nav for non-admins
    */
   navVisibility: 'admin',
+  navGroup: 'admin',
+  navOrder: 2,
 
   /**
    * File attachments - whether this entity supports file uploads
@@ -373,9 +375,11 @@ module.exports = {
     // TIER 1: Universal Entity Contract Fields
     id: { type: 'integer', readonly: true },
     // Role name - uses FIELD.NAME with custom validation for role-specific pattern
+    // Must be unique for ON CONFLICT in seeds
     name: {
       ...FIELD.NAME,
       required: true,
+      unique: true,
       minLength: 2,
       maxLength: 100,
       pattern: '^[a-zA-Z0-9\\s_-]+$',

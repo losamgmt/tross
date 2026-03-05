@@ -24,7 +24,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: "22"
+  NODE_VERSION: "24" # Match Railway production (nixpacks.toml)
   FLUTTER_VERSION: "3.38.7" # Includes Dart 3.10.x (satisfies >=3.9.2 <4.0.0)
 
 jobs:

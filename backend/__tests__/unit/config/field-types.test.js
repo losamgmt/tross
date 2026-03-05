@@ -12,6 +12,8 @@ const {
   getAddressFieldNames,
   getAddressPrefix,
   hasCompleteAddress,
+  TYPE_TO_SQL,
+  deriveSqlType,
 } = require("../../../config/field-types");
 
 const {
@@ -35,6 +37,7 @@ describe("field-types", () => {
         expect(FIELD.EMAIL).toEqual({
           type: "email",
           maxLength: 255,
+          sqlType: "VARCHAR(255)",
         });
       });
 
@@ -48,6 +51,7 @@ describe("field-types", () => {
         expect(FIELD.PHONE).toEqual({
           type: "phone",
           maxLength: 50,
+          sqlType: "VARCHAR(50)",
         });
       });
     });
@@ -57,6 +61,7 @@ describe("field-types", () => {
         expect(FIELD.FIRST_NAME).toEqual({
           type: "string",
           maxLength: 100,
+          sqlType: "VARCHAR(100)",
         });
       });
 
@@ -70,6 +75,7 @@ describe("field-types", () => {
         expect(FIELD.LAST_NAME).toEqual({
           type: "string",
           maxLength: 100,
+          sqlType: "VARCHAR(100)",
         });
       });
 
@@ -83,6 +89,7 @@ describe("field-types", () => {
         expect(FIELD.NAME).toEqual({
           type: "string",
           maxLength: 255,
+          sqlType: "VARCHAR(255)",
         });
       });
     });
@@ -92,6 +99,7 @@ describe("field-types", () => {
         expect(FIELD.SUMMARY).toEqual({
           type: "string",
           maxLength: 255,
+          sqlType: "VARCHAR(255)",
         });
       });
     });
@@ -101,6 +109,7 @@ describe("field-types", () => {
         expect(FIELD.DESCRIPTION).toEqual({
           type: "text", // Semantic type for long-form content
           maxLength: 5000,
+          sqlType: "TEXT",
         });
       });
     });
@@ -112,6 +121,7 @@ describe("field-types", () => {
         expect(FIELD.TITLE).toEqual({
           type: "string",
           maxLength: 150,
+          sqlType: "VARCHAR(150)",
         });
       });
     });
@@ -121,6 +131,7 @@ describe("field-types", () => {
         expect(FIELD.NOTES).toEqual({
           type: "text",
           maxLength: 10000,
+          sqlType: "TEXT",
         });
       });
     });
@@ -130,6 +141,7 @@ describe("field-types", () => {
         expect(FIELD.TERMS).toEqual({
           type: "text",
           maxLength: 50000,
+          sqlType: "TEXT",
         });
       });
     });
@@ -139,6 +151,7 @@ describe("field-types", () => {
         expect(FIELD.IDENTIFIER).toEqual({
           type: "string",
           maxLength: 100,
+          sqlType: "VARCHAR(100)",
         });
       });
     });
@@ -148,6 +161,7 @@ describe("field-types", () => {
         expect(FIELD.SKU).toEqual({
           type: "string",
           maxLength: 50,
+          sqlType: "VARCHAR(50)",
         });
       });
     });
@@ -158,6 +172,7 @@ describe("field-types", () => {
           type: "currency",
           precision: 2,
           min: 0,
+          sqlType: "DECIMAL(12,2)",
         });
       });
     });
@@ -167,6 +182,7 @@ describe("field-types", () => {
         expect(FIELD.URL).toEqual({
           type: "url",
           maxLength: 2048,
+          sqlType: "TEXT",
         });
       });
     });
@@ -175,6 +191,10 @@ describe("field-types", () => {
       it("should be an enum with all subdivisions", () => {
         expect(FIELD.ADDRESS_STATE.type).toBe("enum");
         expect(FIELD.ADDRESS_STATE.values).toEqual(ALL_SUBDIVISIONS);
+      });
+
+      it("should have sqlType VARCHAR(10)", () => {
+        expect(FIELD.ADDRESS_STATE.sqlType).toBe("VARCHAR(10)");
       });
     });
 
@@ -186,6 +206,79 @@ describe("field-types", () => {
 
       it("should default to US", () => {
         expect(FIELD.ADDRESS_COUNTRY.default).toBe(DEFAULT_COUNTRY);
+      });
+
+      it("should have sqlType VARCHAR(2)", () => {
+        expect(FIELD.ADDRESS_COUNTRY.sqlType).toBe("VARCHAR(2)");
+      });
+    });
+
+    // ---- Numeric Fields ----
+
+    describe("INTEGER", () => {
+      it("should have correct structure", () => {
+        expect(FIELD.INTEGER).toEqual({
+          type: "integer",
+          sqlType: "INTEGER",
+        });
+      });
+    });
+
+    describe("BOOLEAN", () => {
+      it("should have correct structure", () => {
+        expect(FIELD.BOOLEAN).toEqual({
+          type: "boolean",
+          sqlType: "BOOLEAN",
+        });
+      });
+    });
+
+    // ---- Date/Time Fields ----
+
+    describe("TIMESTAMP", () => {
+      it("should have correct structure", () => {
+        expect(FIELD.TIMESTAMP).toEqual({
+          type: "timestamp",
+          sqlType: "TIMESTAMP",
+        });
+      });
+    });
+
+    describe("DATE", () => {
+      it("should have correct structure", () => {
+        expect(FIELD.DATE).toEqual({
+          type: "date",
+          sqlType: "DATE",
+        });
+      });
+    });
+
+    // ---- UUID/JSON Fields ----
+
+    describe("UUID", () => {
+      it("should have correct structure", () => {
+        expect(FIELD.UUID).toEqual({
+          type: "uuid",
+          sqlType: "VARCHAR(255)",
+        });
+      });
+    });
+
+    describe("JSON", () => {
+      it("should have correct structure", () => {
+        expect(FIELD.JSON).toEqual({
+          type: "json",
+          sqlType: "JSON",
+        });
+      });
+    });
+
+    describe("JSONB", () => {
+      it("should have correct structure", () => {
+        expect(FIELD.JSONB).toEqual({
+          type: "jsonb",
+          sqlType: "JSONB",
+        });
       });
     });
   });
@@ -469,6 +562,120 @@ describe("field-types", () => {
 
       // billing editable by dispatcher
       expect(fieldAccess.billing_line1.update).toBe("dispatcher");
+    });
+  });
+
+  // ==========================================================================
+  // SQL TYPE DERIVATION
+  // ==========================================================================
+
+  describe("TYPE_TO_SQL", () => {
+    it("should be frozen", () => {
+      expect(Object.isFrozen(TYPE_TO_SQL)).toBe(true);
+    });
+
+    it("should have mappers for all supported types", () => {
+      const expectedTypes = [
+        "string",
+        "text",
+        "email",
+        "phone",
+        "url",
+        "uuid",
+        "integer",
+        "decimal",
+        "currency",
+        "boolean",
+        "date",
+        "timestamp",
+        "json",
+        "jsonb",
+        "enum",
+        "foreignKey",
+      ];
+
+      expectedTypes.forEach((type) => {
+        expect(TYPE_TO_SQL[type]).toBeDefined();
+      });
+    });
+  });
+
+  describe("deriveSqlType", () => {
+    it("should use explicit sqlType when provided", () => {
+      const fieldDef = { type: "string", sqlType: "VARCHAR(42)" };
+      expect(deriveSqlType(fieldDef)).toBe("VARCHAR(42)");
+    });
+
+    it("should derive VARCHAR from string with maxLength", () => {
+      const fieldDef = { type: "string", maxLength: 100 };
+      expect(deriveSqlType(fieldDef)).toBe("VARCHAR(100)");
+    });
+
+    it("should derive VARCHAR(255) for string without maxLength", () => {
+      const fieldDef = { type: "string" };
+      expect(deriveSqlType(fieldDef)).toBe("VARCHAR(255)");
+    });
+
+    it("should derive TEXT for text type", () => {
+      const fieldDef = { type: "text" };
+      expect(deriveSqlType(fieldDef)).toBe("TEXT");
+    });
+
+    it("should derive INTEGER for integer type", () => {
+      const fieldDef = { type: "integer" };
+      expect(deriveSqlType(fieldDef)).toBe("INTEGER");
+    });
+
+    it("should derive INTEGER for foreignKey type", () => {
+      const fieldDef = { type: "foreignKey" };
+      expect(deriveSqlType(fieldDef)).toBe("INTEGER");
+    });
+
+    it("should derive DECIMAL with precision for currency", () => {
+      const fieldDef = { type: "currency", precision: 4 };
+      expect(deriveSqlType(fieldDef)).toBe("DECIMAL(12,4)");
+    });
+
+    it("should derive DECIMAL(12,2) for currency without precision", () => {
+      const fieldDef = { type: "currency" };
+      expect(deriveSqlType(fieldDef)).toBe("DECIMAL(12,2)");
+    });
+
+    it("should derive BOOLEAN for boolean type", () => {
+      const fieldDef = { type: "boolean" };
+      expect(deriveSqlType(fieldDef)).toBe("BOOLEAN");
+    });
+
+    it("should derive TIMESTAMP for timestamp type", () => {
+      const fieldDef = { type: "timestamp" };
+      expect(deriveSqlType(fieldDef)).toBe("TIMESTAMP");
+    });
+
+    it("should derive DATE for date type", () => {
+      const fieldDef = { type: "date" };
+      expect(deriveSqlType(fieldDef)).toBe("DATE");
+    });
+
+    it("should derive JSONB for jsonb type", () => {
+      const fieldDef = { type: "jsonb" };
+      expect(deriveSqlType(fieldDef)).toBe("JSONB");
+    });
+
+    it("should derive VARCHAR(50) for enum without maxLength", () => {
+      const fieldDef = { type: "enum" };
+      expect(deriveSqlType(fieldDef)).toBe("VARCHAR(50)");
+    });
+
+    it("should throw for unknown type", () => {
+      const fieldDef = { type: "unknown_type" };
+      expect(() => deriveSqlType(fieldDef)).toThrow(/Unknown field type/);
+    });
+
+    it("should work with FIELD constants that have sqlType", () => {
+      expect(deriveSqlType(FIELD.EMAIL)).toBe("VARCHAR(255)");
+      expect(deriveSqlType(FIELD.CURRENCY)).toBe("DECIMAL(12,2)");
+      expect(deriveSqlType(FIELD.BOOLEAN)).toBe("BOOLEAN");
+      expect(deriveSqlType(FIELD.TIMESTAMP)).toBe("TIMESTAMP");
     });
   });
 });

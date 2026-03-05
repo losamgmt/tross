@@ -95,6 +95,8 @@ module.exports = {
    * Work orders are visible to all authenticated users
    */
   navVisibility: 'customer',
+  navGroup: 'operations',
+  navOrder: 1,
 
   /**
    * File attachments - whether this entity supports file uploads

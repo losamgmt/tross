@@ -40,11 +40,14 @@ const VALID_VALUES_BY_TYPE = {
   phone: "+12025551234",
   url: "https://example.com",
   time: "09:30",
+  uuid: "google-oauth2|106216621173067609100",
   integer: 42,
   decimal: 99.99,
   currency: 199.99,
   boolean: true,
   object: { key: "value" },
+  json: { key: "value" },
+  jsonb: { key: "value", nested: { array: [1, 2, 3] } },
   date: "2026-01-23", // Date only
   timestamp: "2026-01-23T14:30:00Z", // Full ISO datetime
   enum: "value1", // Will be used with { type: 'enum', values: ['value1', 'value2'] }
@@ -60,11 +63,14 @@ const INVALID_VALUES_BY_TYPE = {
   phone: "(202) 555-1234", // Not E.164 format
   url: "ftp://example.com", // Not http/https
   time: "24:00", // Invalid hour
+  uuid: 123, // number, not string
   integer: 3.14, // Not whole number
   decimal: "not a number",
   currency: "not a currency", // Currency must be a number
   boolean: 12345, // Number - Joi converts strings/0/1 to boolean, but not random numbers
   object: "not an object",
+  json: undefined, // undefined is not valid JSON
+  jsonb: undefined, // undefined is not valid JSON
   date: "not-a-date",
   timestamp: "not-a-timestamp",
   enum: "invalid_value", // Not in enum list
@@ -167,6 +173,8 @@ describe("utils/validation-loader.js", () => {
         // Skip types that are very permissive or have special coercion
         if (typeName === "object") return; // object accepts many things
         if (typeName === "boolean") return; // Joi boolean is very permissive with coercion
+        if (typeName === "json") return; // json/jsonb use Joi.any() - accepts almost anything
+        if (typeName === "jsonb") return; // json/jsonb use Joi.any() - accepts almost anything
 
         const fieldDef =
           typeName === "enum"

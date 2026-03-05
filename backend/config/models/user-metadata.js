@@ -81,6 +81,8 @@ module.exports = {
    * Separate from read permission (users can read own record, but shouldn't see Users in nav)
    */
   navVisibility: 'admin',
+  navGroup: 'admin',
+  navOrder: 1,
 
   /**
    * File attachments - whether this entity supports file uploads

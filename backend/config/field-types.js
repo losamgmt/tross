@@ -37,12 +37,81 @@ const {
 const { NAME_PATTERNS } = require('./name-patterns');
 
 // ============================================================================
+// TYPE TO SQL MAPPING
+// ============================================================================
+
+/**
+ * Maps field types to default SQL types for schema generation.
+ * Used when a field has `type` but no explicit `sqlType`.
+ * Field-specific overrides (maxLength, precision) are applied by the schema generator.
+ *
+ * @type {Object.<string, string | ((fieldDef: Object) => string)>}
+ */
+const TYPE_TO_SQL = Object.freeze({
+  // String-based types
+  string: (fieldDef) => `VARCHAR(${fieldDef.maxLength || 255})`,
+  text: () => 'TEXT',
+  email: (fieldDef) => `VARCHAR(${fieldDef.maxLength || 255})`,
+  phone: (fieldDef) => `VARCHAR(${fieldDef.maxLength || 50})`,
+  url: () => 'TEXT',
+  uuid: () => 'VARCHAR(255)',
+
+  // Numeric types
+  integer: () => 'INTEGER',
+  decimal: (fieldDef) => `DECIMAL(12,${fieldDef.precision || 2})`,
+  currency: (fieldDef) => `DECIMAL(12,${fieldDef.precision || 2})`,
+
+  // Boolean
+  boolean: () => 'BOOLEAN',
+
+  // Date/Time
+  date: () => 'DATE',
+  timestamp: () => 'TIMESTAMP',
+
+  // JSON
+  json: () => 'JSON',
+  jsonb: () => 'JSONB',
+
+  // Enum (string with CHECK constraint - length determined by enum generator)
+  enum: (fieldDef) => `VARCHAR(${fieldDef.maxLength || 50})`,
+
+  // Foreign Key (integer referencing another table)
+  foreignKey: () => 'INTEGER',
+});
+
+/**
+ * Derive SQL type from field definition.
+ * Uses explicit sqlType if present, otherwise derives from type.
+ *
+ * @param {Object} fieldDef - Field definition with type and optional sqlType
+ * @returns {string} SQL column type
+ */
+function deriveSqlType(fieldDef) {
+  // Use explicit sqlType if provided
+  if (fieldDef.sqlType) {
+    return fieldDef.sqlType;
+  }
+
+  const typeMapper = TYPE_TO_SQL[fieldDef.type];
+  if (!typeMapper) {
+    throw new Error(`Unknown field type: ${fieldDef.type}`);
+  }
+
+  return typeof typeMapper === 'function' ? typeMapper(fieldDef) : typeMapper;
+}
+
+// ============================================================================
 // STANDARD SINGLE-FIELD DEFINITIONS
 // ============================================================================
 
 /**
  * Standard field definitions for common field types.
  * Use these in metadata files: `email: FIELD.EMAIL`
+ *
+ * Each field includes:
+ * - type: Semantic type for validation
+ * - sqlType: PostgreSQL type for schema generation
+ * - maxLength/precision: Constraints
  */
 const FIELD = Object.freeze({
   // ---- Identity Fields ----
@@ -56,6 +125,7 @@ const FIELD = Object.freeze({
   EMAIL: Object.freeze({
     type: 'email',
     maxLength: 255,
+    sqlType: 'VARCHAR(255)',
   }),
 
   /**
@@ -67,6 +137,7 @@ const FIELD = Object.freeze({
   PHONE: Object.freeze({
     type: 'phone',
     maxLength: 50,
+    sqlType: 'VARCHAR(50)',
   }),
 
   // ---- Name Fields (HUMAN entities) ----
@@ -79,6 +150,7 @@ const FIELD = Object.freeze({
   FIRST_NAME: Object.freeze({
     type: 'string',
     maxLength: 100,
+    sqlType: 'VARCHAR(100)',
   }),
 
   /**
@@ -89,6 +161,7 @@ const FIELD = Object.freeze({
   LAST_NAME: Object.freeze({
     type: 'string',
     maxLength: 100,
+    sqlType: 'VARCHAR(100)',
   }),
 
   // ---- Generic Text Fields ----
@@ -100,6 +173,7 @@ const FIELD = Object.freeze({
   NAME: Object.freeze({
     type: 'string',
     maxLength: 255,
+    sqlType: 'VARCHAR(255)',
   }),
 
   /**
@@ -109,15 +183,18 @@ const FIELD = Object.freeze({
   SUMMARY: Object.freeze({
     type: 'string',
     maxLength: 255,
+    sqlType: 'VARCHAR(255)',
   }),
 
   /**
    * Standard long description field
    * - Max length: 5000
+   * - Uses TEXT for PostgreSQL (no length limit in DB, validated in app)
    */
   DESCRIPTION: Object.freeze({
     type: 'text',
     maxLength: 5000,
+    sqlType: 'TEXT',
   }),
 
   // ---- Additional Text Fields ----
@@ -129,24 +206,29 @@ const FIELD = Object.freeze({
   TITLE: Object.freeze({
     type: 'string',
     maxLength: 150,
+    sqlType: 'VARCHAR(150)',
   }),
 
   /**
    * Internal notes field
    * - Max length: 10000
+   * - Uses TEXT for PostgreSQL
    */
   NOTES: Object.freeze({
     type: 'text',
     maxLength: 10000,
+    sqlType: 'TEXT',
   }),
 
   /**
    * Legal terms field (contracts, invoices)
    * - Max length: 50000
+   * - Uses TEXT for PostgreSQL
    */
   TERMS: Object.freeze({
     type: 'text',
     maxLength: 50000,
+    sqlType: 'TEXT',
   }),
 
   // ---- Identifier Fields ----
@@ -159,6 +241,7 @@ const FIELD = Object.freeze({
   IDENTIFIER: Object.freeze({
     type: 'string',
     maxLength: 100,
+    sqlType: 'VARCHAR(100)',
   }),
 
   /**
@@ -169,6 +252,7 @@ const FIELD = Object.freeze({
   SKU: Object.freeze({
     type: 'string',
     maxLength: 50,
+    sqlType: 'VARCHAR(50)',
   }),
 
   // ---- Currency/Financial Fields ----
@@ -177,11 +261,33 @@ const FIELD = Object.freeze({
    * Standard currency field
    * - Decimal with 2 decimal places
    * - Minimum 0 (no negative amounts)
+   * - DECIMAL(12,2) supports up to 9,999,999,999.99
    */
   CURRENCY: Object.freeze({
     type: 'currency',
     precision: 2,
     min: 0,
+    sqlType: 'DECIMAL(12,2)',
+  }),
+
+  // ---- Numeric Fields ----
+
+  /**
+   * Standard integer field
+   * - For counts, quantities, foreign keys, etc.
+   */
+  INTEGER: Object.freeze({
+    type: 'integer',
+    sqlType: 'INTEGER',
+  }),
+
+  /**
+   * Standard boolean field
+   * - For flags, toggles, binary states
+   */
+  BOOLEAN: Object.freeze({
+    type: 'boolean',
+    sqlType: 'BOOLEAN',
   }),
 
   // ---- URL Field ----
@@ -189,10 +295,66 @@ const FIELD = Object.freeze({
   /**
    * Standard URL field
    * - Max length: 2048 (browser URL limit)
+   * - Uses TEXT for PostgreSQL (URLs can be long)
    */
   URL: Object.freeze({
     type: 'url',
     maxLength: 2048,
+    sqlType: 'TEXT',
+  }),
+
+  // ---- Date & Time Fields ----
+
+  /**
+   * Timestamp field (date + time with timezone)
+   * - Used for: created_at, updated_at, scheduled_start, completed_at
+   * - PostgreSQL TIMESTAMP WITHOUT TIME ZONE (app handles TZ)
+   */
+  TIMESTAMP: Object.freeze({
+    type: 'timestamp',
+    sqlType: 'TIMESTAMP',
+  }),
+
+  /**
+   * Date-only field (no time component)
+   * - Used for: birth dates, due dates, effective dates
+   */
+  DATE: Object.freeze({
+    type: 'date',
+    sqlType: 'DATE',
+  }),
+
+  // ---- UUID Field ----
+
+  /**
+   * UUID field (universally unique identifier)
+   * - Used for: auth0_id, external references, distributed IDs
+   */
+  UUID: Object.freeze({
+    type: 'uuid',
+    sqlType: 'VARCHAR(255)',
+  }),
+
+  // ---- JSON Fields ----
+
+  /**
+   * JSON field (standard JSON)
+   * - Used for: flexible/schemaless data, API payloads
+   * - Use JSONB when you need indexing/querying
+   */
+  JSON: Object.freeze({
+    type: 'json',
+    sqlType: 'JSON',
+  }),
+
+  /**
+   * JSONB field (binary JSON with indexing)
+   * - Used for: audit log changes, preferences, complex data
+   * - Supports GIN indexes for fast querying
+   */
+  JSONB: Object.freeze({
+    type: 'jsonb',
+    sqlType: 'JSONB',
   }),
 
   // ---- Address Component Fields ----
@@ -205,6 +367,7 @@ const FIELD = Object.freeze({
   ADDRESS_LINE1: Object.freeze({
     type: 'string',
     maxLength: 255,
+    sqlType: 'VARCHAR(255)',
   }),
 
   /**
@@ -213,6 +376,7 @@ const FIELD = Object.freeze({
   ADDRESS_LINE2: Object.freeze({
     type: 'string',
     maxLength: 255,
+    sqlType: 'VARCHAR(255)',
   }),
 
   /**
@@ -221,15 +385,18 @@ const FIELD = Object.freeze({
   ADDRESS_CITY: Object.freeze({
     type: 'string',
     maxLength: 100,
+    sqlType: 'VARCHAR(100)',
   }),
 
   /**
    * State/Province code (ISO 3166-2)
    * Enum-validated against ALL_SUBDIVISIONS from geo-standards
+   * Max code length is ~5-6 chars (e.g., "CA-BC"), using VARCHAR(10) for safety
    */
   ADDRESS_STATE: Object.freeze({
     type: 'enum',
     values: ALL_SUBDIVISIONS,
+    sqlType: 'VARCHAR(10)',
   }),
 
   /**
@@ -239,6 +406,7 @@ const FIELD = Object.freeze({
   ADDRESS_POSTAL_CODE: Object.freeze({
     type: 'string',
     maxLength: 20,
+    sqlType: 'VARCHAR(20)',
   }),
 
   /**
@@ -249,6 +417,7 @@ const FIELD = Object.freeze({
     type: 'enum',
     values: SUPPORTED_COUNTRIES,
     default: DEFAULT_COUNTRY,
+    sqlType: 'VARCHAR(2)',
   }),
 });
 
@@ -417,6 +586,10 @@ module.exports = {
 
   // Standard field definitions
   FIELD,
+
+  // SQL type derivation (for schema generation)
+  TYPE_TO_SQL,
+  deriveSqlType,
 
   // Address constants
   ADDRESS_SUFFIXES,

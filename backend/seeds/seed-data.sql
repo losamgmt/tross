@@ -77,6 +77,22 @@ ON CONFLICT (id) DO UPDATE SET
     notifications_enabled = EXCLUDED.notifications_enabled;
 
 -- ============================================================================
+-- SYSTEM SETTINGS (default configuration)
+-- ============================================================================
+INSERT INTO system_settings (key, value, description) VALUES 
+(
+    'maintenance_mode',
+    '{"enabled": false, "message": "System is under maintenance. Please try again later.", "allowed_roles": ["admin"], "estimated_end": null}',
+    'Controls system-wide maintenance mode. When enabled, only allowed_roles can access the system.'
+),
+(
+    'feature_flags',
+    '{"dark_mode": true, "file_attachments": true, "audit_logging": true}',
+    'Feature flags for enabling/disabling system features.'
+)
+ON CONFLICT (key) DO NOTHING;
+
+-- ============================================================================
 -- VERIFICATION
 -- ============================================================================
 DO $$
@@ -85,4 +101,5 @@ BEGIN
     RAISE NOTICE '   - Roles: %', (SELECT COUNT(*) FROM roles);
     RAISE NOTICE '   - Users: %', (SELECT COUNT(*) FROM users);
     RAISE NOTICE '   - Preferences: %', (SELECT COUNT(*) FROM preferences);
+    RAISE NOTICE '   - System Settings: %', (SELECT COUNT(*) FROM system_settings);
 END $$;

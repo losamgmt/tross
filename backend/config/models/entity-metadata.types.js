@@ -172,6 +172,15 @@
 // ============================================================================
 
 /**
+ * Navigation group for menu placement.
+ * - 'people': People management (customers, technicians, users)
+ * - 'operations': Operations (work orders, inventory)
+ * - 'finance': Finance (contracts, invoices)
+ * - 'admin': Admin (users, roles)
+ * @typedef {'people' | 'operations' | 'finance' | 'admin'} NavGroup
+ */
+
+/**
  * Field group for form layout.
  * @typedef {Object} FieldGroup
  * @property {string} label - Display label for the group
@@ -252,6 +261,9 @@
  * @property {string} icon - REQUIRED: Material Icons name (e.g., 'build', 'people')
  * @property {string | null} navVisibility - REQUIRED: Min role for nav menu, or null for system tables
  * @property {boolean} supportsFileAttachments - REQUIRED: Whether entity supports file uploads
+ *
+ * @property {NavGroup} [navGroup] - Navigation group for menu placement (people, operations, finance, admin)
+ * @property {number} [navOrder] - Order within navigation group (lower = higher priority)
  *
  * @property {NamePattern} [namePattern] - Entity naming pattern (HUMAN/SIMPLE/COMPUTED/null)
  * @property {string} [identityField] - Human-readable unique field (e.g., 'email', 'work_order_number')

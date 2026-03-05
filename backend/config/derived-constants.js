@@ -344,19 +344,16 @@ function getAuditAction(entityName, operation) {
 // ============================================================================
 
 /**
- * Core entities that have API routes (excludes utility entities)
- * These are entities with full CRUD API exposure
+ * Get entities with API routes (derived from metadata.routeConfig.useGenericRouter)
+ * SSOT: Auto-discovers from metadata instead of hardcoded list
+ * @returns {string[]} Array of entity names with API routes
  */
-const SWAGGER_ENTITY_NAMES = [
-  'user',
-  'role',
-  'customer',
-  'technician',
-  'work_order',
-  'invoice',
-  'contract',
-  'inventory',
-];
+function getSwaggerEntityNames() {
+  const metadata = getAllMetadata();
+  return Object.entries(metadata)
+    .filter(([_, m]) => m.routeConfig?.useGenericRouter === true)
+    .map(([entityName]) => entityName);
+}
 
 // Lazy cache for swagger entity configs
 let _swaggerEntityConfigs = null;
@@ -372,11 +369,16 @@ function toSwaggerDisplayName(entityName) {
   const words = entityName
     .split('_')
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1));
-  // Join with space and add 's' for plural (handle 'inventory' specially)
+  // Join with space and add 's' for plural (handle special cases)
   const joined = words.join(' ');
-  // Inventory is already plural-ish, use "Inventory Items" for clarity
+
+  // Handle special cases - already plural or needs custom handling
   if (entityName === 'inventory') {
     return 'Inventory Items';
+  }
+  // Already plural words - don't add 's'
+  if (entityName === 'preferences' || entityName === 'notifications') {
+    return joined;
   }
   // Most entities just add 's'
   return joined + 's';
@@ -413,7 +415,7 @@ function buildSwaggerEntityConfigs() {
   const metadata = getAllMetadata();
   const configs = [];
 
-  for (const entityName of SWAGGER_ENTITY_NAMES) {
+  for (const entityName of getSwaggerEntityNames()) {
     const entityMetadata = metadata[entityName];
     if (!entityMetadata || !entityMetadata.tableName) {
       continue;
@@ -578,7 +580,7 @@ function buildSwaggerEntitySchemas() {
   const metadata = getAllMetadata();
   const schemas = {};
 
-  for (const entityName of SWAGGER_ENTITY_NAMES) {
+  for (const entityName of getSwaggerEntityNames()) {
     const entityMetadata = metadata[entityName];
     if (!entityMetadata) {
       continue;
@@ -606,6 +608,33 @@ function getSwaggerEntitySchemas() {
   return _swaggerEntitySchemas;
 }
 
+// Lazy cache for swagger entity tags
+let _swaggerEntityTags = null;
+
+/**
+ * Build swagger tags from metadata (for OpenAPI tags array)
+ * These provide descriptions for entity groupings in Swagger UI
+ * @returns {Array} Array of { name, description } tag objects
+ */
+function buildSwaggerEntityTags() {
+  const configs = getSwaggerEntityConfigs();
+  return configs.map(({ displayName }) => ({
+    name: displayName,
+    description: `${displayName} management`,
+  }));
+}
+
+/**
+ * Get swagger entity tags (lazy, cached)
+ * @returns {Array} Array of { name, description } tag objects
+ */
+function getSwaggerEntityTags() {
+  if (!_swaggerEntityTags) {
+    _swaggerEntityTags = buildSwaggerEntityTags();
+  }
+  return _swaggerEntityTags;
+}
+
 /**
  * Clear cache (for testing or hot reload)
  */
@@ -619,6 +648,7 @@ function clearCache() {
   _entityActionMap = null;
   _swaggerEntityConfigs = null;
   _swaggerEntitySchemas = null;
+  _swaggerEntityTags = null;
 }
 
 module.exports = {
@@ -647,9 +677,10 @@ module.exports = {
   getAuditAction,
 
   // Swagger configuration functions
-  SWAGGER_ENTITY_NAMES,
+  getSwaggerEntityNames,
   getSwaggerEntityConfigs,
   getSwaggerEntitySchemas,
+  getSwaggerEntityTags,
   toSwaggerDisplayName,
   toSwaggerSchemaRef,
   toSwaggerTag,

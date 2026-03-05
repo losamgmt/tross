@@ -102,6 +102,8 @@ module.exports = {
    * Contracts are financial docs - only dispatcher+ should see in nav
    */
   navVisibility: 'dispatcher',
+  navGroup: 'finance',
+  navOrder: 1,
 
   /**
    * File attachments - whether this entity supports file uploads

@@ -96,6 +96,8 @@ module.exports = {
    * Technicians can see other technicians (for scheduling), but not customers
    */
   navVisibility: 'technician',
+  navGroup: 'people',
+  navOrder: 2,
 
   /**
    * File attachments - whether this entity supports file uploads

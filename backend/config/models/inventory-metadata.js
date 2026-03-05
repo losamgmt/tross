@@ -94,6 +94,8 @@ module.exports = {
    * Inventory is visible to technician+ (those who use it for work orders)
    */
   navVisibility: 'technician',
+  navGroup: 'operations',
+  navOrder: 2,
 
   /**
    * File attachments - whether this entity supports file uploads

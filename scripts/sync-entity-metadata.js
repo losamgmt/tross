@@ -22,6 +22,7 @@ const path = require("path");
 const {
   BACKEND_MODELS_DIR,
   ENTITY_METADATA_JSON,
+  NAV_CONFIG_JSON,
 } = require("./lib/paths");
 const {
   snakeToTitleCase,
@@ -423,6 +424,61 @@ function transformModel(entityName, backendMeta, allModels) {
 }
 
 /**
+ * Build entityPlacements from backend metadata
+ *
+ * SSOT: navGroup and navOrder come from backend metadata.
+ * This replaces the hardcoded placements in nav-config.json.
+ *
+ * @returns {Object} entityPlacements object for nav-config.json
+ */
+function buildEntityPlacements() {
+  const placements = {};
+
+  for (const [entityName, backendMeta] of Object.entries(backendModels)) {
+    // Only include entities with navGroup (visible in nav)
+    if (backendMeta.navGroup && backendMeta.navVisibility !== null) {
+      placements[entityName] = {
+        group: backendMeta.navGroup,
+        order: backendMeta.navOrder ?? 99,
+      };
+    }
+  }
+
+  return placements;
+}
+
+/**
+ * Update nav-config.json with derived entityPlacements
+ *
+ * Reads existing nav-config.json, replaces entityPlacements section,
+ * and writes back with proper formatting.
+ */
+function updateNavConfig() {
+  console.log("\n🔄 Updating nav-config.json entityPlacements...\n");
+
+  // Read existing nav-config.json
+  const existingConfig = JSON.parse(fs.readFileSync(NAV_CONFIG_JSON, "utf8"));
+
+  // Build placements from metadata
+  const entityPlacements = buildEntityPlacements();
+
+  // Update only the entityPlacements section
+  existingConfig.entityPlacements = entityPlacements;
+
+  // Write back with consistent formatting
+  const output = JSON.stringify(existingConfig, null, 2);
+  fs.writeFileSync(NAV_CONFIG_JSON, output);
+
+  const placementCount = Object.keys(entityPlacements).length;
+  console.log(`  ✓ Updated ${placementCount} entity placements`);
+  for (const [name, placement] of Object.entries(entityPlacements)) {
+    console.log(`    - ${name}: ${placement.group} (order ${placement.order})`);
+  }
+
+  return entityPlacements;
+}
+
+/**
  * Main sync function
  */
 function syncMetadata() {
@@ -461,6 +517,9 @@ function syncMetadata() {
   console.log(`   ${ENTITY_METADATA_JSON}`);
   console.log(`\nEntities: ${entities.join(", ")}`);
 
+  // Also update nav-config.json entityPlacements (SSOT)
+  updateNavConfig();
+
   return frontendMetadata;
 }
 
@@ -474,6 +533,8 @@ module.exports = {
   transformRelationships,
   transformPreferenceSchema,
   transformModel,
+  buildEntityPlacements,
+  updateNavConfig,
   syncMetadata,
   PLURAL_OVERRIDES,
 };

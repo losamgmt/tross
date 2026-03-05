@@ -15,6 +15,7 @@ const swaggerJsdoc = require('swagger-jsdoc');
 const {
   getSwaggerEntityConfigs,
   getSwaggerEntitySchemas,
+  getSwaggerEntityTags,
 } = require('./derived-constants');
 
 // =============================================================================
@@ -542,44 +543,12 @@ const options = {
         name: 'Development',
         description: 'Development-only utilities (test tokens, status)',
       },
-      // User & Access Management
-      {
-        name: 'Users',
-        description: 'User CRUD operations (admin only)',
-      },
-      {
-        name: 'Roles',
-        description: 'Role CRUD and user-role assignment',
-      },
-      {
-        name: 'Preferences',
-        description: 'User preferences management',
-      },
-      // Core Business Entities
-      {
-        name: 'Customers',
-        description: 'Customer management (CRM)',
-      },
-      {
-        name: 'Technicians',
-        description: 'Technician/field worker management',
-      },
-      {
-        name: 'Work Orders',
-        description: 'Work order lifecycle management',
-      },
-      {
-        name: 'Invoices',
-        description: 'Invoice and billing management',
-      },
-      {
-        name: 'Contracts',
-        description: 'Service contract management',
-      },
-      {
-        name: 'Inventory',
-        description: 'Parts and inventory tracking',
-      },
+      // =====================================================================
+      // BUSINESS ENTITY TAGS - DERIVED FROM METADATA (SSOT)
+      // These tags are auto-generated from *-metadata.js files.
+      // DO NOT HARDCODE - update the metadata files instead.
+      // =====================================================================
+      ...getSwaggerEntityTags(),
       // Developer Tools
       {
         name: 'Schema',

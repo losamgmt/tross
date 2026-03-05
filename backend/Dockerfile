@@ -4,9 +4,12 @@
 # Platform-agnostic: Works with deployment-adapter.js for any platform
 # Supports: AWS ECS, GCP Cloud Run, Fly.io, self-hosted Kubernetes
 # Note: Railway uses Nixpacks, Vercel uses serverless - they don't need this
+#
+# BUILD CONTEXT: Must be run from repo root:
+#   docker build -t tross-backend -f backend/Dockerfile .
 
 # Stage 1: Build stage
-FROM node:18-alpine AS builder
+FROM node:24-alpine AS builder
 
 WORKDIR /app
 
@@ -18,7 +21,7 @@ COPY backend/package*.json ./backend/
 RUN npm ci --only=production --workspace=backend
 
 # Stage 2: Production stage
-FROM node:18-alpine AS production
+FROM node:24-alpine AS production
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && \
@@ -45,9 +48,9 @@ USER backend
 # Expose port
 EXPOSE 3001
 
-# Health check
+# Health check using curl (more reliable than node -e)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD node -e "http.get('http://localhost:3001/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3001/api/health || exit 1
 
 # Start application
 CMD ["node", "backend/server.js"]
