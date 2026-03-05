@@ -735,7 +735,9 @@
         "type": "text"
       },
       "manager_id": {
-        "type": "foreignKey"
+        "type": "foreignKey",
+        "relatedEntity": "user",
+        "displayField": "email"
       }
     }
   },
