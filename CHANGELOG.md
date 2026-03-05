@@ -7,6 +7,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Navigation Placement SSOT (2026-03-04)
+
+#### Nav Placement Now Metadata-Driven
+
+- **Problem**: `entityPlacements` in `nav-config.json` was hardcoded, causing new entities (like Vendor) to not appear in navigation
+- **Solution**: Nav placement now derives from backend metadata via `navGroup` and `navOrder` properties
+- **SSOT Flow**: `*-metadata.js` → `sync:metadata` → `nav-config.json` entityPlacements
+
+#### New Metadata Properties
+
+- **navGroup**: Menu category (`'people'`, `'operations'`, `'finance'`, `'admin'`)
+- **navOrder**: Display order within group (lower = higher priority)
+- **Type Definition**: Added `NavGroup` type to `entity-metadata.types.js`
+
+#### Validation
+
+- **validateNavPlacement()**: Enforces navGroup/navOrder for navigable entities (those with navVisibility)
+- **VALID_NAV_GROUPS**: Exported constant for valid group names
+- **13 new tests**: Full coverage for navGroup/navOrder validation
+
+#### Updated Entities
+
+| Entity     | Group      | Order |
+| ---------- | ---------- | ----- |
+| customer   | people     | 1     |
+| technician | people     | 2     |
+| work_order | operations | 1     |
+| inventory  | operations | 2     |
+| vendor     | operations | 3     |
+| contract   | finance    | 1     |
+| invoice    | finance    | 2     |
+| user       | admin      | 1     |
+| role       | admin      | 2     |
+
+#### Sync Script Enhancement
+
+- **buildEntityPlacements()**: Reads navGroup/navOrder from all metadata
+- **updateNavConfig()**: Writes entityPlacements to nav-config.json automatically
+- **4 new tests**: Coverage for buildEntityPlacements function
+
+### Fixed - CI/CD Infrastructure (2026-03-04)
+
+#### Docker Image Fixes
+
+- **Frontend Dockerfile**: Fixed non-existent `flutter:3.16.0` image → now uses `ghcr.io/cirruslabs/flutter:stable`
+- **Backend Dockerfile**: Updated Node 18 → Node 24 for production parity
+- **Health Check**: Changed from Node.js inline script to `wget` (more reliable in Alpine)
+- **Context Paths**: Fixed COPY paths for correct build context
+- **Deprecated Flags**: Removed `--web-renderer canvaskit` (now default in Flutter 3.22+)
+
+#### Version Alignment
+
+- **Node.js 24**: Aligned CI, Docker, and nixpacks.toml (was inconsistent between 18/22/24)
+- **Flutter stable**: Docker uses `stable` tag to match project requirements
+
+#### Documentation
+
+- **CI_CD_GUIDE.md**: Updated Node version references to 24
+
 ### Fixed - Mobile Auth0 Login (2026-02-04)
 
 #### Mobile Authentication Flow

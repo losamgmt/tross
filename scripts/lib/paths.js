@@ -38,6 +38,7 @@ const FRONTEND_PERMISSIONS_JSON = path.join(
 const CONFIG_PERMISSIONS_JSON = path.join(CONFIG_DIR, "permissions.json");
 const RESOURCE_TYPE_DART = path.join(FRONTEND_GENERATED_DIR, "resource_type.dart");
 const BACKEND_MODELS_INDEX = path.join(BACKEND_MODELS_DIR, "index.js");
+const NAV_CONFIG_JSON = path.join(FRONTEND_CONFIG_DIR, "nav-config.json");
 
 module.exports = {
   // Root directories
@@ -56,6 +57,7 @@ module.exports = {
   FRONTEND_GENERATED_DIR,
   // Specific files
   ENTITY_METADATA_JSON,
+  NAV_CONFIG_JSON,
   FRONTEND_PERMISSIONS_JSON,
   CONFIG_PERMISSIONS_JSON,
   RESOURCE_TYPE_DART,

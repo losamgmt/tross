@@ -38,7 +38,7 @@ Guide to Tross's continuous integration and deployment pipeline.
 - Unit tests (fast, isolated, mocked dependencies)
 - ESLint code quality checks
 
-**Environment:** Node.js 22, no database
+**Environment:** Node.js 24, no database
 
 **Required to pass:** ✅ All tests must pass
 
@@ -49,7 +49,7 @@ Guide to Tross's continuous integration and deployment pipeline.
 - Integration tests (real database, API endpoints)
 - PostgreSQL 15 service container
 
-**Environment:** Node.js 22, PostgreSQL 15, R2 credentials
+**Environment:** Node.js 24, PostgreSQL 15, R2 credentials
 
 **Required to pass:** ✅ All tests must pass
 

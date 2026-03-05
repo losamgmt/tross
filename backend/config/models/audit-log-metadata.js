@@ -98,12 +98,14 @@ module.exports = {
     },
     action: {
       type: 'string',
+      maxLength: 50,
       required: true,
       readOnly: true,
     },
     resource_type: {
       type: 'string',
-      required: false,
+      maxLength: 100,
+      required: true,
       readOnly: true,
     },
     resource_id: {
@@ -119,16 +121,33 @@ module.exports = {
     },
     ip_address: {
       type: 'string',
+      maxLength: 45,
       required: false,
       readOnly: true,
     },
     user_agent: {
-      type: 'string',
+      type: 'text',
       required: false,
       readOnly: true,
     },
-    details: {
+    old_values: {
       type: 'jsonb',
+      required: false,
+      readOnly: true,
+    },
+    new_values: {
+      type: 'jsonb',
+      required: false,
+      readOnly: true,
+    },
+    result: {
+      type: 'string',
+      maxLength: 20,
+      required: false,
+      readOnly: true,
+    },
+    error_message: {
+      type: 'text',
       required: false,
       readOnly: true,
     },
@@ -190,7 +209,25 @@ module.exports = {
       update: 'none',
       delete: 'none',
     },
-    details: {
+    old_values: {
+      create: 'none',
+      read: 'admin',
+      update: 'none',
+      delete: 'none',
+    },
+    new_values: {
+      create: 'none',
+      read: 'admin',
+      update: 'none',
+      delete: 'none',
+    },
+    result: {
+      create: 'none',
+      read: 'admin',
+      update: 'none',
+      delete: 'none',
+    },
+    error_message: {
       create: 'none',
       read: 'admin',
       update: 'none',

@@ -5,28 +5,37 @@
 # Supports: AWS ECS, GCP Cloud Run, Fly.io, self-hosted Kubernetes
 # Note: Vercel auto-builds Flutter web - doesn't need this Dockerfile
 #       Railway can use this OR Nixpacks (both work)
+#
+# BUILD CONTEXT: Must be run from repo root with: 
+#   docker build -t tross-frontend -f frontend/Dockerfile .
+#
+# Or from frontend/ directory (context = .):
+#   docker build -t tross-frontend .
 
 # Stage 1: Flutter build stage
-FROM flutter:3.16.0 AS builder
+# Using official Cirrus Labs Flutter image (community standard)
+# Use 'stable' tag to get latest stable Flutter matching pubspec requirements
+FROM ghcr.io/cirruslabs/flutter:stable AS builder
 
 WORKDIR /app
 
-# Copy Flutter project files
-COPY frontend/pubspec.yaml frontend/pubspec.lock ./
+# Copy pubspec files first for better layer caching
+COPY pubspec.yaml pubspec.lock ./
 RUN flutter pub get
 
 # Copy source code
-COPY frontend/ ./
+COPY . ./
 
 # Build for web production
 # --no-tree-shake-icons: Keep all Material Icons (we reference them by string name)
-RUN flutter build web --release --web-renderer canvaskit --no-tree-shake-icons
+# Note: --web-renderer deprecated in Flutter 3.22+, CanvasKit is now default
+RUN flutter build web --release --no-tree-shake-icons
 
 # Stage 2: Nginx serving stage
 FROM nginx:alpine AS production
 
 # Copy custom nginx config
-COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy built Flutter web app
 COPY --from=builder /app/build/web /usr/share/nginx/html

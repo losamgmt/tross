@@ -251,4 +251,66 @@ describe("sync-entity-metadata", () => {
       expect(result.sortableFields).toEqual(["created_at", "email"]);
     });
   });
+
+  describe("buildEntityPlacements", () => {
+    const { buildEntityPlacements } = require("../../../../scripts/sync-entity-metadata");
+    
+    it("builds placements from metadata with navGroup", () => {
+      // buildEntityPlacements reads from actual metadata, so we're testing
+      // that it correctly extracts navGroup and navOrder
+      const placements = buildEntityPlacements();
+      
+      // Should include vendor (has navGroup: 'operations', navOrder: 3)
+      expect(placements.vendor).toEqual({
+        group: "operations",
+        order: 3,
+      });
+    });
+
+    it("excludes entities without navGroup", () => {
+      const placements = buildEntityPlacements();
+      
+      // Should NOT include audit_log (navVisibility: null)
+      expect(placements.audit_log).toBeUndefined();
+      
+      // Should NOT include notification (navVisibility: null)
+      expect(placements.notification).toBeUndefined();
+    });
+
+    it("includes all navigable entities", () => {
+      const placements = buildEntityPlacements();
+      
+      // All entities with navVisibility + navGroup should be present
+      expect(Object.keys(placements)).toContain("customer");
+      expect(Object.keys(placements)).toContain("technician");
+      expect(Object.keys(placements)).toContain("work_order");
+      expect(Object.keys(placements)).toContain("invoice");
+      expect(Object.keys(placements)).toContain("contract");
+      expect(Object.keys(placements)).toContain("inventory");
+      expect(Object.keys(placements)).toContain("user");
+      expect(Object.keys(placements)).toContain("role");
+      expect(Object.keys(placements)).toContain("vendor");
+    });
+
+    it("assigns correct groups to entities", () => {
+      const placements = buildEntityPlacements();
+      
+      // People group
+      expect(placements.customer.group).toBe("people");
+      expect(placements.technician.group).toBe("people");
+      
+      // Operations group
+      expect(placements.work_order.group).toBe("operations");
+      expect(placements.inventory.group).toBe("operations");
+      expect(placements.vendor.group).toBe("operations");
+      
+      // Finance group
+      expect(placements.contract.group).toBe("finance");
+      expect(placements.invoice.group).toBe("finance");
+      
+      // Admin group
+      expect(placements.user.group).toBe("admin");
+      expect(placements.role.group).toBe("admin");
+    });
+  });
 });

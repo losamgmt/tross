@@ -15,6 +15,12 @@ const { getRoleHierarchy } = require('./role-hierarchy-loader');
 const { RLS_CONTEXT_VALUES } = require('./constants');
 
 /**
+ * Valid navigation groups for menu placement.
+ * Must match groups defined in nav-config.json.
+ */
+const VALID_NAV_GROUPS = new Set(['people', 'operations', 'finance', 'admin']);
+
+/**
  * All supported field types that the data generator can handle.
  * If a field uses a type not in this list, validation fails.
  */
@@ -398,6 +404,62 @@ function validateNavVisibility(meta, errors) {
 }
 
 /**
+ * Validate navGroup and navOrder properties
+ *
+ * If an entity has navVisibility (is shown in nav), it SHOULD have navGroup and navOrder.
+ * This enables automatic entityPlacements generation for SSOT.
+ *
+ * Valid navGroup values: 'people', 'operations', 'finance', 'admin'
+ * navOrder: positive integer (lower = higher priority in menu)
+ */
+function validateNavPlacement(meta, errors) {
+  const hasNavVisibility =
+    'navVisibility' in meta && meta.navVisibility !== null;
+
+  // If entity is visible in nav, validate placement fields
+  if (hasNavVisibility) {
+    // navGroup is REQUIRED for navigable entities
+    if (!('navGroup' in meta)) {
+      errors.add(
+        'navGroup',
+        `Entity has navVisibility='${meta.navVisibility}' but no navGroup. ` +
+          `Add navGroup (${[...VALID_NAV_GROUPS].join(', ')}) for menu placement.`,
+      );
+    } else if (!VALID_NAV_GROUPS.has(meta.navGroup)) {
+      errors.add(
+        'navGroup',
+        `Invalid value '${meta.navGroup}'. Valid: ${[...VALID_NAV_GROUPS].join(', ')}`,
+      );
+    }
+
+    // navOrder is REQUIRED for navigable entities
+    if (!('navOrder' in meta)) {
+      errors.add(
+        'navOrder',
+        `Entity has navVisibility='${meta.navVisibility}' but no navOrder. ` +
+          'Add navOrder (positive integer) for menu ordering.',
+      );
+    } else if (
+      typeof meta.navOrder !== 'number' ||
+      !Number.isInteger(meta.navOrder) ||
+      meta.navOrder < 0
+    ) {
+      errors.add(
+        'navOrder',
+        `Invalid value '${meta.navOrder}'. Must be a non-negative integer.`,
+      );
+    }
+  } else {
+    // Entity not visible in nav - warn if navGroup/navOrder are provided
+    if ('navGroup' in meta || 'navOrder' in meta) {
+      // This is a warning, not an error - just unexpected
+      // errors.add() would fail validation, so we just log info
+      // In strict mode this could be an error
+    }
+  }
+}
+
+/**
  * Validate a single entity's metadata
  */
 function validateEntity(entityName, meta, allMetadata) {
@@ -427,6 +489,7 @@ function validateEntity(entityName, meta, allMetadata) {
   // Run all validators
   validateDisplayProperties(meta, errors);
   validateNavVisibility(meta, errors);
+  validateNavPlacement(meta, errors);
   validateSupportsFileAttachments(meta, errors);
   validateFieldTypes(meta, errors);
   validateFieldAccess(meta, errors);
@@ -525,6 +588,7 @@ module.exports = {
 
   // Constants for reference
   SUPPORTED_FIELD_TYPES,
+  VALID_NAV_GROUPS,
   getValidAccessValues,
   getValidEntityPermissionValues,
 };

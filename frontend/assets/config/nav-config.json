@@ -1,9 +1,7 @@
 {
   "$schema": "./nav-config.schema.json",
   "version": "1.6.0",
-
   "mobileNavigationStyle": "bottomNav",
-
   "_comments": {
     "permissionResource": "Maps to permissions.json resource for nav visibility. Distinct from entity-metadata.json rlsResource which controls row-level data access.",
     "syntheticResources": "dashboard, admin_panel, preferences are synthetic (non-entity) resources defined in permissions.json for nav visibility checks.",
@@ -11,7 +9,6 @@
     "menuBehaviors": "Defines display behavior for each menu type. displayMode: 'dropdown' = always anchored to trigger, 'adaptive' = responsive based on screen size (popup on desktop, bottom sheet on mobile).",
     "mobileNavigationStyle": "Mobile navigation pattern: 'bottomNav' = bottom navigation bar (modern Material, no hamburger), 'drawer' = hamburger menu with side drawer (no bottom nav). One or the other, not both."
   },
-
   "menuBehaviors": {
     "userMenu": {
       "displayMode": "dropdown",
@@ -26,17 +23,26 @@
       "_comment": "Mobile nav items with children show adaptive picker"
     }
   },
-
   "sidebarStrategies": {
     "app": {
       "label": "Main Navigation",
-      "groups": ["people", "operations", "finance", "admin"],
+      "groups": [
+        "people",
+        "operations",
+        "finance",
+        "admin"
+      ],
       "includeEntities": true,
       "showDashboard": true
     },
     "admin": {
       "label": "Administration",
-      "groups": ["people", "operations", "finance", "admin"],
+      "groups": [
+        "people",
+        "operations",
+        "finance",
+        "admin"
+      ],
       "includeEntities": true,
       "sections": [
         {
@@ -74,25 +80,45 @@
       ]
     }
   },
-
   "routeStrategies": {
     "/home": "app",
     "/admin": "admin",
     "/admin/*": "admin",
     "/settings": "app"
   },
-
   "publicRoutes": [
-    { "id": "root", "path": "/" },
-    { "id": "login", "path": "/login" },
-    { "id": "callback", "path": "/callback" },
-    { "id": "error", "path": "/error" },
-    { "id": "unauthorized", "path": "/unauthorized" },
-    { "id": "notFound", "path": "/not-found" }
+    {
+      "id": "root",
+      "path": "/"
+    },
+    {
+      "id": "login",
+      "path": "/login"
+    },
+    {
+      "id": "callback",
+      "path": "/callback"
+    },
+    {
+      "id": "error",
+      "path": "/error"
+    },
+    {
+      "id": "unauthorized",
+      "path": "/unauthorized"
+    },
+    {
+      "id": "notFound",
+      "path": "/not-found"
+    }
   ],
-
   "groups": [
-    { "id": "main", "label": "Main", "icon": "dashboard_outlined", "order": 0 },
+    {
+      "id": "main",
+      "label": "Main",
+      "icon": "dashboard_outlined",
+      "order": 0
+    },
     {
       "id": "people",
       "label": "People",
@@ -118,7 +144,6 @@
       "order": 98
     }
   ],
-
   "staticItems": [
     {
       "id": "dashboard",
@@ -150,15 +175,42 @@
       "menuType": "userMenu"
     }
   ],
-
   "entityPlacements": {
-    "customer": { "group": "people", "order": 1 },
-    "technician": { "group": "people", "order": 2 },
-    "work_order": { "group": "operations", "order": 1 },
-    "inventory": { "group": "operations", "order": 2 },
-    "contract": { "group": "finance", "order": 1 },
-    "invoice": { "group": "finance", "order": 2 },
-    "user": { "group": "admin", "order": 1 },
-    "role": { "group": "admin", "order": 2 }
+    "contract": {
+      "group": "finance",
+      "order": 1
+    },
+    "customer": {
+      "group": "people",
+      "order": 1
+    },
+    "inventory": {
+      "group": "operations",
+      "order": 2
+    },
+    "invoice": {
+      "group": "finance",
+      "order": 2
+    },
+    "role": {
+      "group": "admin",
+      "order": 2
+    },
+    "technician": {
+      "group": "people",
+      "order": 2
+    },
+    "user": {
+      "group": "admin",
+      "order": 1
+    },
+    "vendor": {
+      "group": "operations",
+      "order": 3
+    },
+    "work_order": {
+      "group": "operations",
+      "order": 1
+    }
   }
 }
