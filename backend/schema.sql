@@ -32,6 +32,7 @@ DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS technicians CASCADE;
 DROP TABLE IF EXISTS roles CASCADE;
 DROP TABLE IF EXISTS inventory CASCADE;
+DROP TABLE IF EXISTS departments CASCADE;
 DROP TABLE IF EXISTS contracts CASCADE;
 DROP TABLE IF EXISTS customers CASCADE;
 
@@ -98,6 +99,27 @@ CREATE INDEX IF NOT EXISTS idx_contracts_contract_number ON contracts(contract_n
 CREATE INDEX IF NOT EXISTS idx_contracts_name ON contracts(name);
 CREATE INDEX IF NOT EXISTS idx_contracts_summary ON contracts(summary);
 CREATE INDEX IF NOT EXISTS idx_contracts_customer_id ON contracts(customer_id);
+
+-- ============================================================================
+-- DEPARTMENTS
+-- ============================================================================
+-- Entity: department
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS departments (
+    id SERIAL PRIMARY KEY,
+    is_active BOOLEAN DEFAULT true NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    name VARCHAR(255) NOT NULL UNIQUE,
+    status VARCHAR(25) DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+    description TEXT,
+    manager_id INTEGER
+);
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_departments_name ON departments(name);
+CREATE INDEX IF NOT EXISTS idx_departments_description ON departments(description);
+CREATE INDEX IF NOT EXISTS idx_departments_manager_id ON departments(manager_id);
 
 -- ============================================================================
 -- INVENTORY
