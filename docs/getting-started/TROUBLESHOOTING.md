@@ -360,6 +360,59 @@ DEBUG=knex:query
 
 ---
 
+## Entity & Metadata Issues
+
+### FK Test Fails: "Expected: not null"
+
+**Error**: `field_parity_test` fails with "Foreign key must have relatedEntity"
+
+**Cause**: Using wrong property for foreign keys in metadata.
+
+**Solution**:
+
+```javascript
+// ❌ Wrong (invented syntax)
+manager_id: {
+  type: 'foreignKey',
+  references: { table: 'users' },  // Does not sync to frontend
+}
+
+// ✅ Correct
+manager_id: {
+  type: 'foreignKey',
+  relatedEntity: 'user',          // This is what sync script reads
+}
+```
+
+Then run: `npm run sync:metadata`
+
+### Entity Not Showing in Frontend
+
+**Cause**: Metadata not synced after backend changes.
+
+**Solution**:
+
+```bash
+npm run sync:metadata   # Regenerates frontend JSON
+```
+
+### Verification Fails
+
+**Error**: `npm run verify:entity` reports missing checkpoints
+
+**Checklist**:
+
+1. Metadata file named `{entity}-metadata.js` (kebab-case + `-metadata.js`)
+2. Has `entityKey` property matching snake_case name
+3. Has all Tier 1 fields: `id`, identity field, `is_active`, `created_at`, `updated_at`
+4. Table exists in `backend/schema.sql`
+5. Entity in Dart `EntityType` enum (`frontend/lib/services/entity_metadata.dart`)
+6. Entity in test registry (`frontend/test/factory/entity_registry.dart`)
+
+Run `npm run verify:all` to check all entities at once.
+
+---
+
 ## Getting Help
 
 1. **Check existing docs**: See `/docs` folder

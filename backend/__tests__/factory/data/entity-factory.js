@@ -15,6 +15,10 @@ const validationGenerator = require("./validation-data-generator");
 const {
   deriveCapabilities,
 } = require("../../../config/entity-metadata-validator");
+const {
+  getForeignKeyFieldNames,
+  extractForeignKeyFields,
+} = require("../../../config/fk-helpers");
 
 /**
  * Cache for entity capabilities (derived once per entity)
@@ -99,7 +103,7 @@ function buildMinimal(entityName, overrides = {}) {
   const payload = {};
 
   // Get FK field names so we can skip them
-  const fkFields = new Set(Object.keys(meta.foreignKeys || {}));
+  const fkFields = getForeignKeyFieldNames(meta);
 
   for (const field of meta.requiredFields || []) {
     // Skip FK fields - test-context will resolve them by creating parents
@@ -136,7 +140,7 @@ function buildComplete(entityName, overrides = {}) {
   const payload = {};
 
   // Get FK field names so we can skip them
-  const fkFields = new Set(Object.keys(meta.foreignKeys || {}));
+  const fkFields = getForeignKeyFieldNames(meta);
 
   // Get all fields from fieldAccess (the canonical field list)
   const allFields = Object.keys(meta.fieldAccess || {});
@@ -174,10 +178,11 @@ function getDependencyOrder(entityName) {
   const meta = getMetadata(entityName);
   const deps = [];
 
-  for (const [fkField, fkDef] of Object.entries(meta.foreignKeys || {})) {
+  for (const [fkField, fkDef] of Object.entries(extractForeignKeyFields(meta))) {
     // Skip optional FKs (not in requiredFields)
     if (!meta.requiredFields?.includes(fkField)) continue;
-    deps.push(entityNameFromTable(fkDef.table));
+    // relatedEntity is the entity name directly - no conversion needed
+    deps.push(fkDef.relatedEntity);
   }
 
   return deps;
@@ -193,10 +198,11 @@ async function createWithParents(entityName, ctx, overrides = {}) {
   const payload = buildMinimal(entityName, overrides);
 
   // Create required parent entities first
-  for (const [fkField, fkDef] of Object.entries(meta.foreignKeys || {})) {
+  for (const [fkField, fkDef] of Object.entries(extractForeignKeyFields(meta))) {
     if (!meta.requiredFields?.includes(fkField)) continue;
 
-    const parentName = entityNameFromTable(fkDef.table);
+    // relatedEntity is the entity name directly - no conversion needed
+    const parentName = fkDef.relatedEntity;
     const parent = await ctx.factory.create(parentName);
     parents[parentName] = parent;
     payload[fkField] = parent.id;

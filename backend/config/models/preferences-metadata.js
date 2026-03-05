@@ -106,13 +106,6 @@ module.exports = {
     updated_at: FAL.SYSTEM_READONLY,
   },
 
-  foreignKeys: {
-    id: {
-      table: 'users',
-      settableOnCreate: true,
-    },
-  },
-
   relationships: {
     user: {
       type: 'belongsTo',
@@ -126,9 +119,11 @@ module.exports = {
 
   fields: {
     id: {
-      type: 'integer',
+      type: 'foreignKey',
+      relatedEntity: 'user',
       required: true,
       readonly: true,
+      // This is a 1:1 PK-FK relationship - preferences.id = users.id
     },
     theme: {
       type: 'enum',

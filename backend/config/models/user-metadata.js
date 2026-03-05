@@ -239,34 +239,6 @@ module.exports = {
   },
 
   // ============================================================================
-  // FOREIGN KEY CONFIGURATION (for db-error-handler)
-  // ============================================================================
-
-  /**
-   * Foreign keys for user-friendly DB error messages
-   * Used by buildDbErrorConfig() to generate handleDbError config
-   *
-   * settableOnCreate: Whether this FK can be set via POST (default: true)
-   */
-  foreignKeys: {
-    role_id: {
-      table: 'roles',
-      displayName: 'Role',
-      settableOnCreate: true,
-    },
-    customer_profile_id: {
-      table: 'customers',
-      displayName: 'Customer Profile',
-      settableOnCreate: true, // Can link profile on create or edit
-    },
-    technician_profile_id: {
-      table: 'technicians',
-      displayName: 'Technician Profile',
-      settableOnCreate: true, // Can link profile on create or edit
-    },
-  },
-
-  // ============================================================================
   // DELETE CONFIGURATION (for GenericEntityService.delete)
   // ============================================================================
 

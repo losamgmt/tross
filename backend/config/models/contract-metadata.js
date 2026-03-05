@@ -250,21 +250,6 @@ module.exports = {
   },
 
   // ============================================================================
-  // FOREIGN KEY CONFIGURATION (for db-error-handler.js)
-  // ============================================================================
-
-  /**
-   * Foreign key relationships for error message generation
-   * Maps FK field -> { table, displayName }
-   */
-  foreignKeys: {
-    customer_id: {
-      table: 'customers',
-      displayName: 'Customer',
-    },
-  },
-
-  // ============================================================================
   // RELATIONSHIPS (for JOIN queries)
   // ============================================================================
 

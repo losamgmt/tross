@@ -6,6 +6,7 @@
  */
 
 const { getCapabilities } = require("./scenario-helpers");
+const { extractForeignKeyFields } = require("../../../config/fk-helpers");
 
 /**
  * Scenario: Unique constraint violation
@@ -63,16 +64,16 @@ function uniqueConstraintViolation(meta, ctx) {
 /**
  * Scenario: Foreign key constraint violation
  *
- * Preconditions: Entity has foreignKeys defined AND create is not disabled
+ * Preconditions: Entity has FK fields (type: 'foreignKey') AND create is not disabled
  * Tests: Invalid FK values rejected with appropriate error
  */
 function foreignKeyViolation(meta, ctx) {
-  const { foreignKeys } = meta;
+  const foreignKeyFields = extractForeignKeyFields(meta);
   const caps = getCapabilities(meta);
-  if (!foreignKeys) return;
+  if (Object.keys(foreignKeyFields).length === 0) return;
   if (!caps.canCreate) return; // Create disabled = scenario N/A
 
-  for (const [fkField, fkDef] of Object.entries(foreignKeys)) {
+  for (const [fkField, fkDef] of Object.entries(foreignKeyFields)) {
     ctx.it(
       `POST /api/${meta.tableName} - rejects invalid ${fkField} reference`,
       async () => {

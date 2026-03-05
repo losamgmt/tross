@@ -77,81 +77,25 @@ function getPluralForm(singular) {
 }
 
 /**
- * Get entity key from table name using actual metadata lookup.
- * This is much more robust than naive ".replace(/s$/, "")" de-pluralization.
- *
- * @param {string} tableName - Table name (e.g., 'roles', 'work_orders', 'inventory')
- * @param {object} allModels - All backend models for lookup
- * @returns {string} Entity key (e.g., 'role', 'work_order', 'inventory')
- */
-function getEntityKeyFromTable(tableName, allModels) {
-  // First try: direct lookup by tableName in metadata
-  for (const [entityKey, meta] of Object.entries(allModels || {})) {
-    if (meta.tableName === tableName) {
-      return entityKey;
-    }
-  }
-
-  // Fallback: naive de-pluralization (handles regular plurals)
-  // This is only used if table isn't in our metadata (external tables)
-  const naive = tableName.replace(/s$/, "");
-  return naive;
-}
-
-/**
  * Transform backend field definition to frontend format
+ *
+ * SINGLE CODE PATH: Foreign keys MUST use `type: 'foreignKey', relatedEntity: '...'`
+ * No legacy fallbacks - all FKs must be explicitly declared in field definitions.
  */
-function transformField(
-  fieldName,
-  fieldDef,
-  foreignKeys,
-  relationships,
-  enums,
-  allModels,
-) {
+function transformField(fieldName, fieldDef, enums, allModels) {
   const result = { type: fieldDef.type };
-
-  // Check if this is a foreign key field
-  const fkConfig = foreignKeys?.[fieldName];
-  const relConfig = Object.values(relationships || {}).find(
-    (rel) => rel.foreignKey === fieldName,
-  );
 
   // Helper to get display field for a related entity
   const getDisplayFieldForEntity = (entityName) => {
     const relatedMeta = allModels?.[entityName];
-    // Prefer displayField (what to show in dropdowns), fallback to identityField, then 'name'
     return relatedMeta?.displayField || relatedMeta?.identityField || "name";
   };
 
-  // Handle foreignKey type - can come from:
-  // 1. Field type is directly 'foreignKey' with relatedEntity
-  // 2. FK config in foreignKeys section
-  // 3. Relationship config that references this field
-  // 4. Integer type field ending in _id with relationship
+  // Foreign key handling - SINGLE PATH: type + relatedEntity required
   if (fieldDef.type === "foreignKey" && fieldDef.relatedEntity) {
-    // Type is explicitly foreignKey with relatedEntity (e.g., audit_log.user_id)
     result.relatedEntity = fieldDef.relatedEntity;
     result.displayField =
       fieldDef.displayField || getDisplayFieldForEntity(fieldDef.relatedEntity);
-  } else if (
-    fkConfig ||
-    (fieldDef.type === "integer" && fieldName.endsWith("_id") && relConfig)
-  ) {
-    result.type = "foreignKey";
-
-    // Determine related entity from relationship or FK config
-    if (relConfig) {
-      // Use metadata lookup to get proper entity key (handles 'inventory' etc.)
-      result.relatedEntity = getEntityKeyFromTable(relConfig.table, allModels);
-      // Use first non-id field as display field, or default to entity's identityField
-      const displayFields = relConfig.fields?.filter((f) => f !== "id") || [];
-      result.displayField =
-        displayFields[0] || getDisplayFieldForEntity(result.relatedEntity);
-    } else if (fkConfig) {
-      result.relatedEntity = getEntityKeyFromTable(fkConfig.table, allModels);
-      result.displayField = getDisplayFieldForEntity(result.relatedEntity);
-    }
   }
 
   // Copy other properties
@@ -212,45 +156,6 @@ function transformField(
   }
 
   return result;
-}
-
-/**
- * Transform relationships for frontend format
- * @param {object} foreignKeys - Foreign key configs from metadata
- * @param {object} relationships - Relationship configs from metadata
- * @param {object} allModels - All backend models for entity key lookup
- */
-function transformRelationships(foreignKeys, relationships, allModels) {
-  const result = {};
-
-  // Process relationships first (more complete info)
-  for (const [relName, relConfig] of Object.entries(relationships || {})) {
-    const fkField = relConfig.foreignKey;
-    if (fkField) {
-      // Use metadata lookup to get proper entity key (handles 'inventory' etc.)
-      const entityName = getEntityKeyFromTable(relConfig.table, allModels);
-      const displayFields = relConfig.fields?.filter((f) => f !== "id") || [];
-
-      result[fkField] = {
-        relatedEntity: entityName,
-        displayField: displayFields[0] || "name",
-        type: relConfig.type || "belongsTo",
-      };
-    }
-  }
-
-  // Add any FK configs not covered by relationships
-  for (const [fkField, fkConfig] of Object.entries(foreignKeys || {})) {
-    if (!result[fkField]) {
-      result[fkField] = {
-        relatedEntity: getEntityKeyFromTable(fkConfig.table, allModels),
-        displayField: fkConfig.displayField || "name",
-        type: "belongsTo",
-      };
-    }
-  }
-
-  return Object.keys(result).length > 0 ? result : undefined;
 }
 
 /**
@@ -367,16 +272,6 @@ function transformModel(entityName, backendMeta, allModels) {
   // Always include to maintain consistent contract
   result.fieldGroups = backendMeta.fieldGroups || {};
 
-  // Relationships
-  const relationships = transformRelationships(
-    backendMeta.foreignKeys,
-    backendMeta.relationships,
-    allModels,
-  );
-  if (relationships) {
-    result.relationships = relationships;
-  }
-
   // Fields
   result.fields = {};
   for (const [fieldName, fieldDef] of Object.entries(
@@ -385,8 +280,6 @@ function transformModel(entityName, backendMeta, allModels) {
     result.fields[fieldName] = transformField(
       fieldName,
       fieldDef,
-      backendMeta.foreignKeys,
-      backendMeta.relationships,
       backendMeta.enums,
       allModels,
     );
@@ -528,9 +421,7 @@ function syncMetadata() {
 // ============================================================================
 module.exports = {
   getPluralForm,
-  getEntityKeyFromTable,
   transformField,
-  transformRelationships,
   transformPreferenceSchema,
   transformModel,
   buildEntityPlacements,

@@ -307,29 +307,6 @@ module.exports = {
   },
 
   // ============================================================================
-  // FOREIGN KEY CONFIGURATION (for db-error-handler.js)
-  // ============================================================================
-
-  foreignKeys: {
-    customer_id: {
-      table: 'customers',
-      displayName: 'Customer',
-      // FK dropdown display config
-      relatedEntity: 'customer',
-      displayFields: ['first_name', 'last_name', 'email'],
-      displayTemplate: '{first_name} {last_name} - {email}',
-    },
-    assigned_technician_id: {
-      table: 'technicians',
-      displayName: 'Technician',
-      // FK dropdown display config
-      relatedEntity: 'technician',
-      displayFields: ['first_name', 'last_name', 'email'],
-      displayTemplate: '{first_name} {last_name} - {email}',
-    },
-  },
-
-  // ============================================================================
   // RELATIONSHIPS (for JOIN queries)
   // ============================================================================
 

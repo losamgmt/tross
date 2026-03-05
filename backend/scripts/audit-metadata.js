@@ -6,6 +6,7 @@
  */
 
 const m = require('../config/models');
+const { extractForeignKeyFields } = require('../config/fk-helpers');
 
 console.log('--- FIELD ACCESS vs FIELDS AUDIT ---');
 console.log('');
@@ -66,7 +67,8 @@ console.log('');
 const entityKeys = Object.keys(m);
 
 for (const [name, meta] of Object.entries(m)) {
-  const fks = meta.foreignKeys || {};
+  // Extract FK fields from fields section (type: 'foreignKey' with relatedEntity)
+  const fks = extractForeignKeyFields(meta);
 
   for (const [fkField, fkConfig] of Object.entries(fks)) {
     if (fkConfig.relatedEntity) {

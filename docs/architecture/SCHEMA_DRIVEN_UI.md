@@ -38,6 +38,17 @@ Entity metadata serves as the single definition point. From there:
 - Frontend derives form fields and validation
 - UI components render based on field types
 
+### The Pipeline
+
+```
+backend/config/models/*-metadata.js   ← SSOT (edit here)
+              ↓
+       npm run sync:metadata
+              ↓
+frontend/assets/config/entity-metadata.json  (generated)
+frontend/assets/config/nav-config.json       (generated)
+```
+
 ## Architectural Decisions
 
 ### Decision: Introspection Over Configuration

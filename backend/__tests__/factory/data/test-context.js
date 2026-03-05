@@ -16,6 +16,7 @@ const request = require("supertest");
 const entityFactory = require("./entity-factory");
 const allMetadata = require("../../../config/models");
 const { createTestUser } = require("../../helpers/test-db");
+const { extractForeignKeyFields } = require("../../../config/fk-helpers");
 
 /**
  * Build test context for a given app instance
@@ -81,7 +82,8 @@ function buildTestContext(app, db) {
    * @returns {Promise<number>} The ID to use for the FK
    */
   async function resolveFkDependency(fkField, fkDef) {
-    const parentEntityName = entityFactory.entityNameFromTable(fkDef.table);
+    // relatedEntity is the entity name directly - no conversion needed
+    const parentEntityName = fkDef.relatedEntity;
 
     // Check if we have a fixture for this entity type
     if (fixtures[parentEntityName]) {
@@ -109,7 +111,7 @@ function buildTestContext(app, db) {
       const payload = entityFactory.buildMinimal(entityName, overrides);
 
       // Handle required FK dependencies - use fixtures or create parents
-      for (const [fkField, fkDef] of Object.entries(meta.foreignKeys || {})) {
+      for (const [fkField, fkDef] of Object.entries(extractForeignKeyFields(meta))) {
         if (!meta.requiredFields?.includes(fkField)) continue;
         if (payload[fkField] || overrides[fkField]) continue; // Already provided
 
@@ -131,7 +133,7 @@ function buildTestContext(app, db) {
       const payload = entityFactory.buildMinimal(entityName, overrides);
 
       // Handle required FK dependencies - use fixtures or create parents
-      for (const [fkField, fkDef] of Object.entries(meta.foreignKeys || {})) {
+      for (const [fkField, fkDef] of Object.entries(extractForeignKeyFields(meta))) {
         if (!meta.requiredFields?.includes(fkField)) continue;
         if (payload[fkField] || overrides[fkField]) continue; // Already provided
 
@@ -267,9 +269,8 @@ function buildTestContext(app, db) {
 
       // Find an entity that has FK to this parent
       const childEntities = Object.entries(allMetadata).filter(([_, meta]) => {
-        return Object.values(meta.foreignKeys || {}).some(
-          (fk) =>
-            fk.table === entityFactory.getMetadata(parentEntityName).tableName,
+        return Object.values(extractForeignKeyFields(meta)).some(
+          (fk) => fk.relatedEntity === parentEntityName,
         );
       });
 
@@ -278,9 +279,8 @@ function buildTestContext(app, db) {
       }
 
       const [childName, childMeta] = childEntities[0];
-      const fkField = Object.entries(childMeta.foreignKeys).find(
-        ([_, fk]) =>
-          fk.table === entityFactory.getMetadata(parentEntityName).tableName,
+      const fkField = Object.entries(extractForeignKeyFields(childMeta)).find(
+        ([_, fk]) => fk.relatedEntity === parentEntityName,
       )[0];
 
       const child = await this.create(childName, { [fkField]: parent.id });
@@ -313,11 +313,10 @@ function buildTestContext(app, db) {
 
   // Helper to get entities that have FK to a given entity
   function entitiesWithFkTo(entityName) {
-    const targetTable = entityFactory.getMetadata(entityName).tableName;
     return Object.entries(allMetadata)
       .filter(([_, meta]) => {
-        return Object.values(meta.foreignKeys || {}).some(
-          (fk) => fk.table === targetTable,
+        return Object.values(extractForeignKeyFields(meta)).some(
+          (fk) => fk.relatedEntity === entityName,
         );
       })
       .map(([name, meta]) => ({ name, ...meta }));
