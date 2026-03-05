@@ -57,6 +57,7 @@ const CONFIG = Object.freeze({
       { name: 'name', sqlType: FIELD.NAME.sqlType, constraints: ['NOT NULL'] },
     ],
     [NAME_PATTERNS.COMPUTED]: [],
+    // namePattern: null entities (system tables, junctions) have no auto-generated name columns
   }),
 
   /** Table name pluralization overrides */
