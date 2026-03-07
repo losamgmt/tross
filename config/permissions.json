@@ -4,7 +4,7 @@
   "title": "Tross Permission Configuration",
   "description": "Single source of truth for role-based access control (RBAC). AUTO-GENERATED from entity metadata - run sync-permissions.js to regenerate.",
   "version": "4.0.0-derived",
-  "lastModified": "2026-03-06",
+  "lastModified": "2026-03-07",
   "roles": {
     "customer": {
       "priority": 1,
