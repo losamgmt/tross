@@ -41,6 +41,7 @@ library;
 
 import 'package:flutter/material.dart';
 import '../../../config/table_column.dart';
+import '../../../config/table_config.dart';
 import '../../molecules/forms/filter_bar.dart';
 import '../../molecules/menus/action_item.dart';
 import 'data_table.dart';
@@ -104,6 +105,9 @@ class FilterableDataTable<T> extends StatelessWidget {
   /// Entity name for saved views
   final String? entityName;
 
+  /// Initial table density (compact for Related lists, etc.)
+  final TableDensity? initialDensity;
+
   const FilterableDataTable({
     super.key,
     // Search/filter
@@ -126,6 +130,7 @@ class FilterableDataTable<T> extends StatelessWidget {
     this.emptyAction,
     this.showCustomizationMenu = true,
     this.entityName,
+    this.initialDensity,
   });
 
   @override
@@ -148,6 +153,7 @@ class FilterableDataTable<T> extends StatelessWidget {
       emptyAction: emptyAction,
       showCustomizationMenu: showCustomizationMenu,
       entityName: entityName,
+      initialDensity: initialDensity,
     );
   }
 }

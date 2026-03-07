@@ -95,11 +95,13 @@ async function runMigrations(pool) {
       AND table_name IN (
         'users', 'roles', 'refresh_tokens', 'audit_logs',
         'customers', 'technicians', 'work_orders', 
-        'invoices', 'contracts', 'inventory'
+        'invoices', 'contracts', 'inventory',
+        'properties', 'assets', 'units', 'customer_units', 'property_roles',
+        'vendors', 'departments', 'notifications', 'preferences', 'saved_views'
       )
     `);
 
-    const expectedTables = 10;
+    const expectedTables = 20;
     const hasSchema = parseInt(tableCheck.rows[0].count) === expectedTables;
 
     if (hasSchema) {

@@ -27,8 +27,9 @@
     "app": {
       "label": "Main Navigation",
       "groups": [
-        "people",
-        "operations",
+        "customers",
+        "resources",
+        "work",
         "finance",
         "admin"
       ],
@@ -38,8 +39,9 @@
     "admin": {
       "label": "Administration",
       "groups": [
-        "people",
-        "operations",
+        "customers",
+        "resources",
+        "work",
         "finance",
         "admin"
       ],
@@ -120,22 +122,28 @@
       "order": 0
     },
     {
-      "id": "people",
-      "label": "People",
-      "icon": "people_outlined",
+      "id": "customers",
+      "label": "Customers",
+      "icon": "business_outlined",
       "order": 1
     },
     {
-      "id": "operations",
-      "label": "Operations",
-      "icon": "build_outlined",
+      "id": "resources",
+      "label": "Resources",
+      "icon": "engineering_outlined",
       "order": 2
+    },
+    {
+      "id": "work",
+      "label": "Work",
+      "icon": "build_outlined",
+      "order": 3
     },
     {
       "id": "finance",
       "label": "Finance",
       "icon": "payments_outlined",
-      "order": 3
+      "order": 4
     },
     {
       "id": "admin",
@@ -176,12 +184,16 @@
     }
   ],
   "entityPlacements": {
+    "asset": {
+      "group": "customers",
+      "order": 4
+    },
     "contract": {
       "group": "finance",
       "order": 1
     },
     "customer": {
-      "group": "people",
+      "group": "customers",
       "order": 1
     },
     "department": {
@@ -189,11 +201,15 @@
       "order": 2
     },
     "inventory": {
-      "group": "operations",
+      "group": "resources",
       "order": 2
     },
     "invoice": {
       "group": "finance",
+      "order": 2
+    },
+    "property": {
+      "group": "customers",
       "order": 2
     },
     "role": {
@@ -201,19 +217,23 @@
       "order": 2
     },
     "technician": {
-      "group": "people",
-      "order": 2
+      "group": "resources",
+      "order": 1
+    },
+    "unit": {
+      "group": "customers",
+      "order": 3
     },
     "user": {
       "group": "admin",
       "order": 1
     },
     "vendor": {
-      "group": "operations",
+      "group": "resources",
       "order": 3
     },
     "work_order": {
-      "group": "operations",
+      "group": "work",
       "order": 1
     }
   }

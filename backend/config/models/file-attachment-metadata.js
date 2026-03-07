@@ -87,6 +87,12 @@ module.exports = {
   supportsFileAttachments: false,
 
   /**
+   * Summary endpoint configuration for aggregated analytics.
+   * Null: File attachments are not aggregated.
+   */
+  summaryConfig: null,
+
+  /**
    * Entity-level permission overrides
    * Matches permissions.json - technician+ create/update, dispatcher+ delete
    */

@@ -139,11 +139,18 @@ jest.mock("../../../validators", () => {
     req.validated.id = parseInt(req.params.id);
     next();
   };
+  const includeMiddleware = (req, res, next) => {
+    if (!req.validated) req.validated = {};
+    if (!req.validated.query) req.validated.query = {};
+    req.validated.query.include = req.query.include ? req.query.include.split(",") : [];
+    next();
+  };
 
   return {
     validatePagination: () => paginationMiddleware,
     validateQuery: () => paginationMiddleware,
     validateIdParam: () => idMiddleware,
+    validateInclude: () => includeMiddleware,
     // NOTE: Entity-specific validators (validateCustomerCreate, etc.) removed
     // Routes use genericValidateBody middleware, not these validators
   };
@@ -406,7 +413,8 @@ describe.each(ENTITIES)(
         expect(GenericEntityService.findById).toHaveBeenCalledWith(
           name,
           expect.any(Number),
-          expect.any(Object),
+          expect.any(Object), // options (includes `include` array)
+          expect.any(Object), // rlsContext
         );
       });
 

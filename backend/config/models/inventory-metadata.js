@@ -94,7 +94,7 @@ module.exports = {
    * Inventory is visible to technician+ (those who use it for work orders)
    */
   navVisibility: 'technician',
-  navGroup: 'operations',
+  navGroup: 'resources',
   navOrder: 2,
 
   /**
@@ -102,6 +102,14 @@ module.exports = {
    * Inventory: product images, spec sheets, manuals
    */
   supportsFileAttachments: true,
+
+  /**
+   * Summary endpoint configuration for aggregated analytics.
+   */
+  summaryConfig: {
+    groupableFields: ['status'],
+    summableFields: ['quantity', 'unit_cost'],
+  },
 
   /**
    * Entity-level permission overrides

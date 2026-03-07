@@ -90,7 +90,8 @@ function noAuthReturns401(meta, ctx) {
     ctx.it(
       `POST /api/${meta.tableName} - returns 401 without auth`,
       async () => {
-        const payload = ctx.factory.buildMinimal(meta.entityName);
+        // Use buildMinimalWithFKs to ensure payload has all required FKs
+        const payload = await ctx.factory.buildMinimalWithFKs(meta.entityName);
 
         const response = await ctx.request
           .post(`/api/${meta.tableName}`)

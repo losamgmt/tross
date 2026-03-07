@@ -168,6 +168,107 @@ class GenericTableActionBuilders {
     return items;
   }
 
+  // ============================================================================
+  // RELATED LIST ACTION BUILDERS (for embedded tables in detail screens)
+  // ============================================================================
+
+  /// Build toolbar actions for related entity list (embedded in detail screens)
+  ///
+  /// - Refresh: Always available
+  /// - Create: Pre-fills FK to parent entity
+  ///
+  /// Used in entity detail Related tabs for junction tables and hasMany relations.
+  static List<ActionItem> buildRelatedListToolbarActions(
+    BuildContext context, {
+    required String entityName,
+    required String? userRole,
+    required VoidCallback onRefresh,
+    Map<String, dynamic>? prefillData,
+  }) {
+    final items = <ActionItem>[];
+    final metadata = EntityMetadataRegistry.get(entityName);
+    final resource = metadata.rlsResource;
+
+    // Refresh action
+    items.add(ActionItem.refresh(onTap: onRefresh, label: 'Refresh'));
+
+    // Create action
+    if (PermissionService.hasPermission(
+      userRole,
+      resource,
+      CrudOperation.create,
+    )) {
+      items.add(
+        ActionItem.create(
+          onTap: () => _showEntityForm(
+            context,
+            entityName: entityName,
+            onSuccess: onRefresh,
+            defaultValues: prefillData,
+          ),
+          label: 'Create',
+          tooltip: 'Create new ${metadata.displayName.toLowerCase()}',
+        ),
+      );
+    }
+
+    return items;
+  }
+
+  /// Build row actions for related list (delete only)
+  ///
+  /// Edit is omitted because row click opens modal for editing.
+  /// This saves horizontal space in compact related list tables.
+  static List<ActionItem> buildRelatedListRowActions(
+    BuildContext context, {
+    required String entityName,
+    required Map<String, dynamic> entity,
+    required String? userRole,
+    required VoidCallback onRefresh,
+  }) {
+    final items = <ActionItem>[];
+    final metadata = EntityMetadataRegistry.get(entityName);
+    final resource = metadata.rlsResource;
+
+    // Delete action only (edit via row click modal)
+    if (PermissionService.hasPermission(
+      userRole,
+      resource,
+      CrudOperation.delete,
+    )) {
+      final identityField = metadata.identityField;
+      final entityDisplayName =
+          entity[identityField]?.toString() ?? '#${entity['id']}';
+
+      items.add(
+        ActionItem.delete(
+          onTap: () async {
+            await CrudHandlers.handleDelete(
+              context: context,
+              entityType: metadata.displayName.toLowerCase(),
+              entityName: entityDisplayName,
+              deleteOperation: () async {
+                final entityService = context.read<GenericEntityService>();
+                await entityService.delete(entityName, entity['id'] as int);
+                return true;
+              },
+              onSuccess: onRefresh,
+            );
+          },
+          label: 'Delete',
+          tooltip: 'Delete ${metadata.displayName.toLowerCase()}',
+        ),
+      );
+    }
+
+    return items;
+  }
+
+  /// Returns the maximum number of row actions for related lists (SSOT)
+  ///
+  /// Related lists only show delete (edit via row click).
+  static int get maxRelatedListRowActionCount => 1;
+
   /// Returns the maximum number of row actions (SSOT for geometric layout)
   ///
   /// This is the count of all POSSIBLE row actions regardless of permissions.
@@ -224,6 +325,7 @@ class GenericTableActionBuilders {
     required String entityName,
     Map<String, dynamic>? entity,
     required VoidCallback onSuccess,
+    Map<String, dynamic>? defaultValues,
   }) async {
     final metadata = EntityMetadataRegistry.get(entityName);
     final isEdit = entity != null;
@@ -233,10 +335,13 @@ class GenericTableActionBuilders {
         ? MetadataFieldConfigFactory.forEdit(context, entityName)
         : MetadataFieldConfigFactory.forCreate(context, entityName);
 
-    // Initialize data
+    // Initialize data - merge defaultValues for create mode
     final initialData = isEdit
         ? Map<String, dynamic>.from(entity)
-        : _createEmptyData(metadata);
+        : {
+            ..._createEmptyData(metadata),
+            if (defaultValues != null) ...defaultValues,
+          };
 
     await showDialog<void>(
       context: context,
@@ -364,12 +469,30 @@ class _EntityFormDialogState extends State<_EntityFormDialog> {
     }
   }
 
+  /// Normalize enum values to match exact case from metadata.
+  /// Returns the original value unchanged for non-enum fields.
+  dynamic _normalizeEnumValue(String fieldName, dynamic value) {
+    if (value is! String) return value;
+
+    final fieldDef = widget.metadata.fields[fieldName];
+    if (fieldDef == null ||
+        fieldDef.type != FieldType.enumType ||
+        fieldDef.enumValues == null) {
+      return value;
+    }
+
+    return fieldDef.enumValues!.firstWhere(
+      (enumVal) => enumVal.toLowerCase() == value.toLowerCase(),
+      orElse: () => value,
+    );
+  }
+
   Map<String, dynamic> _getChangedFields() {
     final updates = <String, dynamic>{};
     for (final key in _data.keys) {
       if (widget.metadata.isImmutable(key)) continue;
       if (_data[key] != widget.initialData[key]) {
-        updates[key] = _data[key];
+        updates[key] = _normalizeEnumValue(key, _data[key]);
       }
     }
     return updates;
@@ -381,7 +504,7 @@ class _EntityFormDialogState extends State<_EntityFormDialog> {
       final value = entry.value;
       if (value == null) continue;
       if (value is String && value.isEmpty) continue;
-      clean[entry.key] = value;
+      clean[entry.key] = _normalizeEnumValue(entry.key, value);
     }
     return clean;
   }

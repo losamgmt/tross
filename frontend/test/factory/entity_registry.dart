@@ -29,12 +29,17 @@ const coreBusinessEntities = <String>[
 /// entity names before registry initialization.
 const allKnownEntities = <String>[
   ...coreBusinessEntities,
+  'asset',
+  'customer_unit',
   'department',
-  'vendor',
-  'preferences',
-  'saved_view',
-  'file_attachment',
   'notification',
+  'file_attachment',
+  'preferences',
+  'property',
+  'property_role',
+  'saved_view',
+  'unit',
+  'vendor',
   'audit_log',
 ];
 

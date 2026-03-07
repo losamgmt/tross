@@ -96,13 +96,20 @@ module.exports = {
    * Technicians can see other technicians (for scheduling), but not customers
    */
   navVisibility: 'technician',
-  navGroup: 'people',
-  navOrder: 2,
+  navGroup: 'resources',
+  navOrder: 1,
 
   /**
    * File attachments - whether this entity supports file uploads
    */
   supportsFileAttachments: false,
+
+  /**
+   * Summary endpoint configuration for aggregated analytics.
+   */
+  summaryConfig: {
+    groupableFields: ['status'],
+  },
 
   /**
    * Route configuration - explicit opt-in for generic router

@@ -48,10 +48,17 @@ module.exports = {
   },
 
   navVisibility: 'dispatcher',
-  navGroup: 'operations',
+  navGroup: 'resources',
   navOrder: 3,
 
   supportsFileAttachments: false,
+
+  /**
+   * Summary endpoint configuration for aggregated analytics.
+   */
+  summaryConfig: {
+    groupableFields: ['status'],
+  },
 
   entityPermissions: {
     create: 'manager',

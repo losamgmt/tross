@@ -266,10 +266,10 @@ const user = await strategy.authenticate(credentials);
 
 **SSOT Modules:**
 
-- `config/models/*-metadata.js` - Entity definitions including field types, constraints, and allowed values
+- `config/models/*-metadata.js` - Entity definitions including field types, constraints, relationships, and allowed values
 - `derived-constants.js` - Computes constants FROM metadata at runtime
 - `validation-deriver.js` - Derives Joi schemas FROM metadata
-- `sync-entity-metadata.js` - Syncs to frontend entity-metadata.json
+- `sync-entity-metadata.js` - Syncs to frontend entity-metadata.json (includes relationships, junction config)
 
 **Why:**
 

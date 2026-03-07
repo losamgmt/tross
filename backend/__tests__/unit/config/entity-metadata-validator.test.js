@@ -27,6 +27,7 @@ function createMinimalMetadata(overrides = {}) {
     icon: 'settings',
     navVisibility: null, // Not shown in nav by default
     supportsFileAttachments: false,
+    summaryConfig: null, // No aggregation support by default
     fields: {
       id: {
         type: 'integer',
@@ -68,7 +69,7 @@ describe('Entity Metadata Validator', () => {
       test('navGroup is ignored when navVisibility is null', () => {
         const meta = createMinimalMetadata({
           navVisibility: null,
-          navGroup: 'people', // Should be ignored
+          navGroup: 'customers', // Should be ignored
         });
         const result = validateEntity('test_entity', meta, allMetadata);
         expect(result.hasErrors()).toBe(false);
@@ -90,7 +91,7 @@ describe('Entity Metadata Validator', () => {
       test('requires navOrder when navVisibility is set', () => {
         const meta = createMinimalMetadata({
           navVisibility: 'technician',
-          navGroup: 'people',
+          navGroup: 'customers',
           // navOrder missing
         });
         const result = validateEntity('test_entity', meta, allMetadata);
@@ -101,7 +102,7 @@ describe('Entity Metadata Validator', () => {
       test('passes when both navGroup and navOrder are present', () => {
         const meta = createMinimalMetadata({
           navVisibility: 'customer',
-          navGroup: 'operations',
+          navGroup: 'work',
           navOrder: 2,
         });
         const result = validateEntity('test_entity', meta, allMetadata);
@@ -122,9 +123,10 @@ describe('Entity Metadata Validator', () => {
         }
       });
 
-      test('valid navGroups include people, operations, finance, admin', () => {
-        expect(VALID_NAV_GROUPS.has('people')).toBe(true);
-        expect(VALID_NAV_GROUPS.has('operations')).toBe(true);
+      test('valid navGroups include customers, work, resources, finance, admin', () => {
+        expect(VALID_NAV_GROUPS.has('customers')).toBe(true);
+        expect(VALID_NAV_GROUPS.has('work')).toBe(true);
+        expect(VALID_NAV_GROUPS.has('resources')).toBe(true);
         expect(VALID_NAV_GROUPS.has('finance')).toBe(true);
         expect(VALID_NAV_GROUPS.has('admin')).toBe(true);
       });
@@ -145,7 +147,7 @@ describe('Entity Metadata Validator', () => {
       test('accepts zero as navOrder', () => {
         const meta = createMinimalMetadata({
           navVisibility: 'dispatcher',
-          navGroup: 'people',
+          navGroup: 'customers',
           navOrder: 0,
         });
         const result = validateEntity('test_entity', meta, allMetadata);
@@ -155,7 +157,7 @@ describe('Entity Metadata Validator', () => {
       test('accepts positive integers as navOrder', () => {
         const meta = createMinimalMetadata({
           navVisibility: 'dispatcher',
-          navGroup: 'people',
+          navGroup: 'customers',
           navOrder: 99,
         });
         const result = validateEntity('test_entity', meta, allMetadata);
@@ -165,7 +167,7 @@ describe('Entity Metadata Validator', () => {
       test('rejects negative navOrder', () => {
         const meta = createMinimalMetadata({
           navVisibility: 'dispatcher',
-          navGroup: 'people',
+          navGroup: 'customers',
           navOrder: -1,
         });
         const result = validateEntity('test_entity', meta, allMetadata);
@@ -176,7 +178,7 @@ describe('Entity Metadata Validator', () => {
       test('rejects non-integer navOrder', () => {
         const meta = createMinimalMetadata({
           navVisibility: 'dispatcher',
-          navGroup: 'people',
+          navGroup: 'customers',
           navOrder: 1.5,
         });
         const result = validateEntity('test_entity', meta, allMetadata);
@@ -187,7 +189,7 @@ describe('Entity Metadata Validator', () => {
       test('rejects string navOrder', () => {
         const meta = createMinimalMetadata({
           navVisibility: 'dispatcher',
-          navGroup: 'people',
+          navGroup: 'customers',
           navOrder: '1',
         });
         const result = validateEntity('test_entity', meta, allMetadata);

@@ -69,7 +69,9 @@ function createFailsWithMissingRequired(meta, ctx) {
 
   for (const field of requiredFields) {
     ctx.it(`POST /api/${meta.tableName} - fails without ${field}`, async () => {
-      const payload = ctx.factory.buildMinimal(entityName);
+      // Use buildMinimalWithFKs to get complete valid payload with FKs resolved
+      // Then specifically delete the field we're testing
+      const payload = await ctx.factory.buildMinimalWithFKs(entityName);
       delete payload[field];
       const auth = await ctx.authHeader("admin");
 

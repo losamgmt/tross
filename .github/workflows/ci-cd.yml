@@ -56,6 +56,20 @@ jobs:
           NODE_ENV: test
           JWT_SECRET: test-secret-key-for-ci
 
+      - name: Verify sync scripts are idempotent
+        run: |
+          echo "🔄 Running sync scripts..."
+          npm run sync:all
+          
+          echo "🔍 Checking for uncommitted changes..."
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "❌ Sync scripts produced changes. Please run 'npm run sync:all' locally and commit."
+            git status --porcelain
+            git diff --stat
+            exit 1
+          fi
+          echo "✅ All synced files are up to date"
+
       - name: Lint check
         run: npm run lint --workspace=backend
 

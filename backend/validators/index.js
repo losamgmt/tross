@@ -27,6 +27,7 @@ const {
   validateSearch,
   validateSort,
   validateQuery, // Metadata-driven query validation
+  validateInclude, // Relationship include param validation
 } = require('./query-validators');
 
 // Export logging utilities
@@ -67,6 +68,7 @@ module.exports = {
   validateSearch,
   validateSort,
   validateQuery,
+  validateInclude,
 
   // Body Validators (special-case only, not entity CRUD)
   validateProfileUpdate,

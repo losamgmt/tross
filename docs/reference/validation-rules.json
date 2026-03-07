@@ -1,0 +1,3121 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "3.0.0",
+  "description": "Validation rules derived from entity metadata - SINGLE SOURCE OF TRUTH",
+  "derivedAt": "2026-03-06T18:10:24.965Z",
+  "policy": {
+    "email": {
+      "tldValidation": "permissive",
+      "description": "Accept any TLD format - no fascist restrictions! 🚀"
+    }
+  },
+  "fields": {
+    "email": {
+      "type": "string",
+      "maxLength": 255,
+      "sqlType": "VARCHAR(255)",
+      "format": "email",
+      "tldRestriction": false,
+      "trim": true,
+      "lowercase": true,
+      "pattern": "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z0-9]+$",
+      "errorMessages": {
+        "required": "Email is required",
+        "format": "Email must be a valid email address",
+        "maxLength": "Email cannot exceed 255 characters"
+      }
+    },
+    "first_name": {
+      "type": "string",
+      "maxLength": 100,
+      "sqlType": "VARCHAR(100)",
+      "minLength": 1,
+      "trim": true,
+      "errorMessages": {
+        "required": "First name is required",
+        "minLength": "First name cannot be empty",
+        "maxLength": "First name cannot exceed 100 characters"
+      }
+    },
+    "last_name": {
+      "type": "string",
+      "maxLength": 100,
+      "sqlType": "VARCHAR(100)",
+      "minLength": 1,
+      "trim": true,
+      "errorMessages": {
+        "required": "Last name is required",
+        "minLength": "Last name cannot be empty",
+        "maxLength": "Last name cannot exceed 100 characters"
+      }
+    },
+    "phone": {
+      "type": "phone",
+      "maxLength": 50,
+      "sqlType": "VARCHAR(50)",
+      "pattern": "^\\+?[1-9]\\d{1,14}$",
+      "trim": true,
+      "errorMessages": {
+        "pattern": "Phone number must be in international format (E.164)"
+      }
+    },
+    "name": {
+      "type": "string",
+      "maxLength": 255,
+      "sqlType": "VARCHAR(255)",
+      "minLength": 1,
+      "trim": true,
+      "errorMessages": {
+        "required": "Name is required",
+        "minLength": "Name cannot be empty",
+        "maxLength": "Name cannot exceed 255 characters"
+      }
+    },
+    "summary": {
+      "type": "string",
+      "maxLength": 255,
+      "sqlType": "VARCHAR(255)",
+      "trim": true,
+      "errorMessages": {
+        "maxLength": "Summary cannot exceed 255 characters"
+      }
+    },
+    "description": {
+      "type": "text",
+      "maxLength": 5000,
+      "sqlType": "TEXT",
+      "trim": true,
+      "errorMessages": {
+        "maxLength": "Description cannot exceed 5000 characters"
+      }
+    },
+    "is_active": {
+      "type": "boolean",
+      "errorMessages": {
+        "type": "is_active must be true or false"
+      }
+    }
+  },
+  "entityFields": {
+    "asset": {
+      "id": {
+        "type": "integer",
+        "errorMessages": {
+          "type": "Id must be a number"
+        }
+      },
+      "name": {
+        "type": "string",
+        "maxLength": 255,
+        "sqlType": "VARCHAR(255)",
+        "minLength": 1,
+        "trim": true,
+        "errorMessages": {
+          "required": "Name is required",
+          "minLength": "Name cannot be empty",
+          "maxLength": "Name cannot exceed 255 characters"
+        },
+        "required": true
+      },
+      "is_active": {
+        "type": "boolean",
+        "errorMessages": {
+          "type": "is_active must be true or false"
+        }
+      },
+      "created_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      },
+      "updated_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "active",
+          "inactive",
+          "needs_repair",
+          "decommissioned"
+        ],
+        "errorMessages": {
+          "enum": "Status must be one of: active, inactive, needs_repair, decommissioned"
+        },
+        "default": "active"
+      },
+      "unit_id": {
+        "type": "integer",
+        "required": true,
+        "min": 1,
+        "max": 2147483647,
+        "errorMessages": {
+          "required": "Unit is required",
+          "type": "Unit ID must be an integer",
+          "min": "Unit ID must be positive"
+        }
+      },
+      "property_id": {
+        "type": "integer",
+        "min": 1,
+        "max": 2147483647,
+        "errorMessages": {
+          "required": "Property is required",
+          "type": "Property ID must be an integer",
+          "min": "Property ID must be positive"
+        }
+      },
+      "asset_type": {
+        "type": "string",
+        "required": true,
+        "enum": [
+          "hvac",
+          "plumbing",
+          "electrical",
+          "appliance",
+          "other"
+        ],
+        "errorMessages": {
+          "enum": "Asset type must be one of: hvac, plumbing, electrical, appliance, other"
+        }
+      },
+      "manufacturer": {
+        "type": "string",
+        "maxLength": 255,
+        "errorMessages": {
+          "maxLength": "Manufacturer cannot exceed 255 characters"
+        }
+      },
+      "model": {
+        "type": "string",
+        "maxLength": 255,
+        "errorMessages": {
+          "maxLength": "Model cannot exceed 255 characters"
+        }
+      },
+      "serial_number": {
+        "type": "string",
+        "maxLength": 100,
+        "errorMessages": {
+          "maxLength": "Serial number cannot exceed 100 characters"
+        }
+      },
+      "install_date": {
+        "type": "date",
+        "errorMessages": {}
+      },
+      "last_service_date": {
+        "type": "date",
+        "errorMessages": {}
+      },
+      "next_service_date": {
+        "type": "date",
+        "errorMessages": {}
+      },
+      "warranty_expiry": {
+        "type": "date",
+        "errorMessages": {}
+      },
+      "notes": {
+        "type": "text",
+        "errorMessages": {}
+      }
+    },
+    "audit_log": {
+      "id": {
+        "type": "integer",
+        "errorMessages": {
+          "type": "Id must be a number"
+        }
+      },
+      "action": {
+        "type": "string",
+        "required": true,
+        "maxLength": 50,
+        "errorMessages": {
+          "required": "Action is required",
+          "maxLength": "Action cannot exceed 50 characters"
+        }
+      },
+      "resource_type": {
+        "type": "string",
+        "required": true,
+        "maxLength": 100,
+        "errorMessages": {
+          "required": "Resource type is required",
+          "maxLength": "Resource type cannot exceed 100 characters"
+        }
+      },
+      "resource_id": {
+        "type": "integer",
+        "errorMessages": {
+          "type": "Resource id must be a number"
+        }
+      },
+      "user_id": {
+        "type": "integer",
+        "min": 1,
+        "max": 2147483647,
+        "errorMessages": {
+          "required": "User is required",
+          "type": "User ID must be an integer",
+          "min": "User ID must be positive"
+        }
+      },
+      "ip_address": {
+        "type": "string",
+        "maxLength": 45,
+        "errorMessages": {
+          "maxLength": "Ip address cannot exceed 45 characters"
+        }
+      },
+      "user_agent": {
+        "type": "text",
+        "errorMessages": {}
+      },
+      "old_values": {
+        "type": "object",
+        "errorMessages": {}
+      },
+      "new_values": {
+        "type": "object",
+        "errorMessages": {}
+      },
+      "result": {
+        "type": "string",
+        "maxLength": 20,
+        "errorMessages": {
+          "maxLength": "Result cannot exceed 20 characters"
+        }
+      },
+      "error_message": {
+        "type": "text",
+        "errorMessages": {}
+      },
+      "created_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      }
+    },
+    "contract": {
+      "id": {
+        "type": "integer",
+        "errorMessages": {
+          "type": "Id must be a number"
+        }
+      },
+      "contract_number": {
+        "type": "string",
+        "maxLength": 100,
+        "pattern": "^CTR-[0-9]{4}-[0-9]+$",
+        "errorMessages": {
+          "maxLength": "Contract number cannot exceed 100 characters",
+          "pattern": "Contract number has an invalid format"
+        }
+      },
+      "is_active": {
+        "type": "boolean",
+        "errorMessages": {
+          "type": "is_active must be true or false"
+        }
+      },
+      "created_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      },
+      "updated_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "draft",
+          "active",
+          "expired",
+          "cancelled",
+          "terminated"
+        ],
+        "errorMessages": {
+          "enum": "Status must be one of: draft, active, expired, cancelled, terminated"
+        },
+        "default": "draft"
+      },
+      "name": {
+        "type": "string",
+        "maxLength": 255,
+        "sqlType": "VARCHAR(255)",
+        "minLength": 1,
+        "trim": true,
+        "errorMessages": {
+          "required": "Name is required",
+          "minLength": "Name cannot be empty",
+          "maxLength": "Name cannot exceed 255 characters"
+        }
+      },
+      "summary": {
+        "type": "string",
+        "maxLength": 255,
+        "sqlType": "VARCHAR(255)",
+        "trim": true,
+        "errorMessages": {
+          "maxLength": "Summary cannot exceed 255 characters"
+        }
+      },
+      "customer_id": {
+        "type": "integer",
+        "required": true,
+        "min": 1,
+        "max": 2147483647,
+        "errorMessages": {
+          "required": "Customer is required",
+          "type": "Customer ID must be an integer",
+          "min": "Customer ID must be positive"
+        }
+      },
+      "start_date": {
+        "type": "date",
+        "required": true,
+        "errorMessages": {
+          "required": "Start date is required"
+        }
+      },
+      "end_date": {
+        "type": "date",
+        "errorMessages": {}
+      },
+      "terms": {
+        "type": "text",
+        "maxLength": 50000,
+        "errorMessages": {
+          "maxLength": "Terms cannot exceed 50000 characters"
+        }
+      },
+      "value": {
+        "type": "currency",
+        "min": 0,
+        "errorMessages": {
+          "type": "Value must be a number",
+          "min": "Value must be at least 0"
+        }
+      },
+      "billing_cycle": {
+        "type": "string",
+        "enum": [
+          "monthly",
+          "quarterly",
+          "annually",
+          "one_time"
+        ],
+        "errorMessages": {
+          "enum": "Billing cycle must be one of: monthly, quarterly, annually, one_time"
+        }
+      }
+    },
+    "customer": {
+      "id": {
+        "type": "integer",
+        "errorMessages": {
+          "type": "Id must be a number"
+        }
+      },
+      "email": {
+        "type": "string",
+        "maxLength": 255,
+        "sqlType": "VARCHAR(255)",
+        "format": "email",
+        "tldRestriction": false,
+        "trim": true,
+        "lowercase": true,
+        "pattern": "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z0-9]+$",
+        "errorMessages": {
+          "required": "Email is required",
+          "format": "Email must be a valid email address",
+          "maxLength": "Email cannot exceed 255 characters"
+        },
+        "required": true
+      },
+      "is_active": {
+        "type": "boolean",
+        "errorMessages": {
+          "type": "is_active must be true or false"
+        }
+      },
+      "created_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      },
+      "updated_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "active",
+          "suspended"
+        ],
+        "errorMessages": {
+          "enum": "Status must be one of: pending, active, suspended"
+        },
+        "default": "pending"
+      },
+      "first_name": {
+        "type": "string",
+        "maxLength": 100,
+        "sqlType": "VARCHAR(100)",
+        "minLength": 1,
+        "trim": true,
+        "errorMessages": {
+          "required": "First name is required",
+          "minLength": "First name cannot be empty",
+          "maxLength": "First name cannot exceed 100 characters"
+        },
+        "required": true
+      },
+      "last_name": {
+        "type": "string",
+        "maxLength": 100,
+        "sqlType": "VARCHAR(100)",
+        "minLength": 1,
+        "trim": true,
+        "errorMessages": {
+          "required": "Last name is required",
+          "minLength": "Last name cannot be empty",
+          "maxLength": "Last name cannot exceed 100 characters"
+        },
+        "required": true
+      },
+      "phone": {
+        "type": "phone",
+        "maxLength": 50,
+        "sqlType": "VARCHAR(50)",
+        "pattern": "^\\+?[1-9]\\d{1,14}$",
+        "trim": true,
+        "errorMessages": {
+          "pattern": "Phone number must be in international format (E.164)"
+        }
+      },
+      "organization_name": {
+        "type": "string",
+        "maxLength": 255,
+        "errorMessages": {
+          "maxLength": "Organization name cannot exceed 255 characters"
+        }
+      },
+      "billing_line1": {
+        "type": "string",
+        "maxLength": 255,
+        "sqlType": "VARCHAR(255)",
+        "trim": true,
+        "errorMessages": {
+          "required": "Street address is required",
+          "maxLength": "Street address cannot exceed 255 characters"
+        }
+      },
+      "billing_line2": {
+        "type": "string",
+        "maxLength": 255,
+        "sqlType": "VARCHAR(255)",
+        "trim": true,
+        "errorMessages": {
+          "maxLength": "Address line 2 cannot exceed 255 characters"
+        }
+      },
+      "billing_city": {
+        "type": "string",
+        "maxLength": 100,
+        "sqlType": "VARCHAR(100)",
+        "trim": true,
+        "errorMessages": {
+          "required": "City is required",
+          "maxLength": "City cannot exceed 100 characters"
+        }
+      },
+      "billing_state": {
+        "type": "string",
+        "enum": [
+          "AL",
+          "AK",
+          "AZ",
+          "AR",
+          "CA",
+          "CO",
+          "CT",
+          "DE",
+          "DC",
+          "FL",
+          "GA",
+          "HI",
+          "ID",
+          "IL",
+          "IN",
+          "IA",
+          "KS",
+          "KY",
+          "LA",
+          "ME",
+          "MD",
+          "MA",
+          "MI",
+          "MN",
+          "MS",
+          "MO",
+          "MT",
+          "NE",
+          "NV",
+          "NH",
+          "NJ",
+          "NM",
+          "NY",
+          "NC",
+          "ND",
+          "OH",
+          "OK",
+          "OR",
+          "PA",
+          "RI",
+          "SC",
+          "SD",
+          "TN",
+          "TX",
+          "UT",
+          "VT",
+          "VA",
+          "WA",
+          "WV",
+          "WI",
+          "WY",
+          "AS",
+          "GU",
+          "MP",
+          "PR",
+          "VI",
+          "AB",
+          "BC",
+          "MB",
+          "NB",
+          "NL",
+          "NS",
+          "NT",
+          "NU",
+          "ON",
+          "PE",
+          "QC",
+          "SK",
+          "YT"
+        ],
+        "errorMessages": {
+          "enum": "State/Province must be a valid code (e.g., OR, WA, BC)"
+        }
+      },
+      "billing_postal_code": {
+        "type": "string",
+        "maxLength": 20,
+        "sqlType": "VARCHAR(20)",
+        "trim": true,
+        "errorMessages": {
+          "maxLength": "Postal code cannot exceed 20 characters"
+        }
+      },
+      "billing_country": {
+        "type": "string",
+        "enum": [
+          "US",
+          "CA"
+        ],
+        "errorMessages": {
+          "enum": "Country must be one of: US, CA"
+        }
+      },
+      "service_line1": {
+        "type": "string",
+        "maxLength": 255,
+        "sqlType": "VARCHAR(255)",
+        "trim": true,
+        "errorMessages": {
+          "required": "Street address is required",
+          "maxLength": "Street address cannot exceed 255 characters"
+        }
+      },
+      "service_line2": {
+        "type": "string",
+        "maxLength": 255,
+        "sqlType": "VARCHAR(255)",
+        "trim": true,
+        "errorMessages": {
+          "maxLength": "Address line 2 cannot exceed 255 characters"
+        }
+      },
+      "service_city": {
+        "type": "string",
+        "maxLength": 100,
+        "sqlType": "VARCHAR(100)",
+        "trim": true,
+        "errorMessages": {
+          "required": "City is required",
+          "maxLength": "City cannot exceed 100 characters"
+        }
+      },
+      "service_state": {
+        "type": "string",
+        "enum": [
+          "AL",
+          "AK",
+          "AZ",
+          "AR",
+          "CA",
+          "CO",
+          "CT",
+          "DE",
+          "DC",
+          "FL",
+          "GA",
+          "HI",
+          "ID",
+          "IL",
+          "IN",
+          "IA",
+          "KS",
+          "KY",
+          "LA",
+          "ME",
+          "MD",
+          "MA",
+          "MI",
+          "MN",
+          "MS",
+          "MO",
+          "MT",
+          "NE",
+          "NV",
+          "NH",
+          "NJ",
+          "NM",
+          "NY",
+          "NC",
+          "ND",
+          "OH",
+          "OK",
+          "OR",
+          "PA",
+          "RI",
+          "SC",
+          "SD",
+          "TN",
+          "TX",
+          "UT",
+          "VT",
+          "VA",
+          "WA",
+          "WV",
+          "WI",
+          "WY",
+          "AS",
+          "GU",
+          "MP",
+          "PR",
+          "VI",
+          "AB",
+          "BC",
+          "MB",
+          "NB",
+          "NL",
+          "NS",
+          "NT",
+          "NU",
+          "ON",
+          "PE",
+          "QC",
+          "SK",
+          "YT"
+        ],
+        "errorMessages": {
+          "enum": "State/Province must be a valid code (e.g., OR, WA, BC)"
+        }
+      },
+      "service_postal_code": {
+        "type": "string",
+        "maxLength": 20,
+        "sqlType": "VARCHAR(20)",
+        "trim": true,
+        "errorMessages": {
+          "maxLength": "Postal code cannot exceed 20 characters"
+        }
+      },
+      "service_country": {
+        "type": "string",
+        "enum": [
+          "US",
+          "CA"
+        ],
+        "errorMessages": {
+          "enum": "Country must be one of: US, CA"
+        }
+      }
+    },
+    "customer_unit": {
+      "id": {
+        "type": "integer",
+        "errorMessages": {
+          "type": "Id must be a number"
+        }
+      },
+      "is_active": {
+        "type": "boolean",
+        "errorMessages": {
+          "type": "is_active must be true or false"
+        }
+      },
+      "created_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      },
+      "updated_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "active",
+          "inactive"
+        ],
+        "errorMessages": {
+          "enum": "Status must be one of: active, inactive"
+        },
+        "default": "active"
+      },
+      "customer_id": {
+        "type": "integer",
+        "required": true,
+        "min": 1,
+        "max": 2147483647,
+        "errorMessages": {
+          "required": "Customer is required",
+          "type": "Customer ID must be an integer",
+          "min": "Customer ID must be positive"
+        }
+      },
+      "unit_id": {
+        "type": "integer",
+        "required": true,
+        "min": 1,
+        "max": 2147483647,
+        "errorMessages": {
+          "required": "Unit is required",
+          "type": "Unit ID must be an integer",
+          "min": "Unit ID must be positive"
+        }
+      },
+      "role": {
+        "type": "string",
+        "enum": [
+          "owner",
+          "authorized_occupant"
+        ],
+        "errorMessages": {
+          "enum": "Role must be one of: owner, authorized_occupant"
+        },
+        "default": "owner"
+      },
+      "effective_date": {
+        "type": "date",
+        "errorMessages": {}
+      },
+      "end_date": {
+        "type": "date",
+        "errorMessages": {}
+      }
+    },
+    "department": {
+      "id": {
+        "type": "integer",
+        "errorMessages": {
+          "type": "Id must be a number"
+        }
+      },
+      "name": {
+        "type": "string",
+        "maxLength": 255,
+        "sqlType": "VARCHAR(255)",
+        "minLength": 1,
+        "trim": true,
+        "errorMessages": {
+          "required": "Name is required",
+          "minLength": "Name cannot be empty",
+          "maxLength": "Name cannot exceed 255 characters"
+        },
+        "required": true
+      },
+      "is_active": {
+        "type": "boolean",
+        "errorMessages": {
+          "type": "is_active must be true or false"
+        }
+      },
+      "created_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      },
+      "updated_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "active",
+          "inactive"
+        ],
+        "errorMessages": {
+          "enum": "Status must be one of: active, inactive"
+        },
+        "default": "active"
+      },
+      "description": {
+        "type": "text",
+        "maxLength": 5000,
+        "sqlType": "TEXT",
+        "trim": true,
+        "errorMessages": {
+          "maxLength": "Description cannot exceed 5000 characters"
+        }
+      },
+      "manager_id": {
+        "type": "integer",
+        "min": 1,
+        "max": 2147483647,
+        "errorMessages": {
+          "required": "Manager is required",
+          "type": "Manager ID must be an integer",
+          "min": "Manager ID must be positive"
+        }
+      }
+    },
+    "file_attachment": {
+      "id": {
+        "type": "integer",
+        "errorMessages": {
+          "type": "Id must be a number"
+        }
+      },
+      "entity_type": {
+        "type": "string",
+        "required": true,
+        "maxLength": 50,
+        "errorMessages": {
+          "required": "Entity type is required",
+          "maxLength": "Entity type cannot exceed 50 characters"
+        }
+      },
+      "entity_id": {
+        "type": "integer",
+        "required": true,
+        "errorMessages": {
+          "required": "Entity id is required",
+          "type": "Entity id must be a number"
+        }
+      },
+      "original_filename": {
+        "type": "string",
+        "required": true,
+        "maxLength": 255,
+        "errorMessages": {
+          "required": "Original filename is required",
+          "maxLength": "Original filename cannot exceed 255 characters"
+        }
+      },
+      "storage_key": {
+        "type": "string",
+        "required": true,
+        "maxLength": 500,
+        "errorMessages": {
+          "required": "Storage key is required",
+          "maxLength": "Storage key cannot exceed 500 characters"
+        }
+      },
+      "mime_type": {
+        "type": "string",
+        "required": true,
+        "maxLength": 100,
+        "errorMessages": {
+          "required": "Mime type is required",
+          "maxLength": "Mime type cannot exceed 100 characters"
+        }
+      },
+      "file_size": {
+        "type": "integer",
+        "required": true,
+        "errorMessages": {
+          "required": "File size is required",
+          "type": "File size must be a number"
+        }
+      },
+      "category": {
+        "type": "string",
+        "maxLength": 50,
+        "default": "attachment",
+        "errorMessages": {
+          "maxLength": "Category cannot exceed 50 characters"
+        }
+      },
+      "description": {
+        "type": "text",
+        "maxLength": 5000,
+        "sqlType": "TEXT",
+        "trim": true,
+        "errorMessages": {
+          "maxLength": "Description cannot exceed 5000 characters"
+        }
+      },
+      "uploaded_by": {
+        "type": "integer",
+        "min": 1,
+        "max": 2147483647,
+        "errorMessages": {
+          "required": "Uploaded by is required",
+          "type": "Uploaded by ID must be an integer",
+          "min": "Uploaded by ID must be positive"
+        }
+      },
+      "is_active": {
+        "type": "boolean",
+        "errorMessages": {
+          "type": "is_active must be true or false"
+        }
+      },
+      "created_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      },
+      "updated_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      }
+    },
+    "inventory": {
+      "id": {
+        "type": "integer",
+        "errorMessages": {
+          "type": "Id must be a number"
+        }
+      },
+      "name": {
+        "type": "string",
+        "maxLength": 255,
+        "sqlType": "VARCHAR(255)",
+        "minLength": 1,
+        "trim": true,
+        "errorMessages": {
+          "required": "Name is required",
+          "minLength": "Name cannot be empty",
+          "maxLength": "Name cannot exceed 255 characters"
+        },
+        "required": true
+      },
+      "is_active": {
+        "type": "boolean",
+        "errorMessages": {
+          "type": "is_active must be true or false"
+        }
+      },
+      "created_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      },
+      "updated_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "in_stock",
+          "low_stock",
+          "out_of_stock",
+          "discontinued"
+        ],
+        "errorMessages": {
+          "enum": "Status must be one of: in_stock, low_stock, out_of_stock, discontinued"
+        },
+        "default": "in_stock"
+      },
+      "sku": {
+        "type": "string",
+        "required": true,
+        "maxLength": 50,
+        "errorMessages": {
+          "required": "Sku is required",
+          "maxLength": "Sku cannot exceed 50 characters"
+        }
+      },
+      "description": {
+        "type": "text",
+        "maxLength": 5000,
+        "sqlType": "TEXT",
+        "trim": true,
+        "errorMessages": {
+          "maxLength": "Description cannot exceed 5000 characters"
+        }
+      },
+      "quantity": {
+        "type": "integer",
+        "default": 0,
+        "errorMessages": {
+          "type": "Quantity must be a number"
+        }
+      },
+      "reorder_level": {
+        "type": "integer",
+        "default": 10,
+        "errorMessages": {
+          "type": "Reorder level must be a number"
+        }
+      },
+      "unit_cost": {
+        "type": "currency",
+        "min": 0,
+        "errorMessages": {
+          "type": "Unit cost must be a number",
+          "min": "Unit cost must be at least 0"
+        }
+      },
+      "location": {
+        "type": "string",
+        "maxLength": 255,
+        "errorMessages": {
+          "maxLength": "Location cannot exceed 255 characters"
+        }
+      },
+      "supplier": {
+        "type": "string",
+        "maxLength": 255,
+        "errorMessages": {
+          "maxLength": "Supplier cannot exceed 255 characters"
+        }
+      }
+    },
+    "invoice": {
+      "id": {
+        "type": "integer",
+        "errorMessages": {
+          "type": "Id must be a number"
+        }
+      },
+      "invoice_number": {
+        "type": "string",
+        "maxLength": 100,
+        "pattern": "^INV-[0-9]{4}-[0-9]+$",
+        "errorMessages": {
+          "maxLength": "Invoice number cannot exceed 100 characters",
+          "pattern": "Invoice number has an invalid format"
+        }
+      },
+      "is_active": {
+        "type": "boolean",
+        "errorMessages": {
+          "type": "is_active must be true or false"
+        }
+      },
+      "created_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      },
+      "updated_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "draft",
+          "sent",
+          "paid",
+          "overdue",
+          "cancelled",
+          "void"
+        ],
+        "errorMessages": {
+          "enum": "Status must be one of: draft, sent, paid, overdue, cancelled, void"
+        },
+        "default": "draft"
+      },
+      "name": {
+        "type": "string",
+        "maxLength": 255,
+        "sqlType": "VARCHAR(255)",
+        "minLength": 1,
+        "trim": true,
+        "errorMessages": {
+          "required": "Name is required",
+          "minLength": "Name cannot be empty",
+          "maxLength": "Name cannot exceed 255 characters"
+        }
+      },
+      "summary": {
+        "type": "string",
+        "maxLength": 255,
+        "sqlType": "VARCHAR(255)",
+        "trim": true,
+        "errorMessages": {
+          "maxLength": "Summary cannot exceed 255 characters"
+        }
+      },
+      "work_order_id": {
+        "type": "integer",
+        "min": 1,
+        "max": 2147483647,
+        "errorMessages": {
+          "required": "Work order is required",
+          "type": "Work order ID must be an integer",
+          "min": "Work order ID must be positive"
+        }
+      },
+      "customer_id": {
+        "type": "integer",
+        "required": true,
+        "min": 1,
+        "max": 2147483647,
+        "errorMessages": {
+          "required": "Customer is required",
+          "type": "Customer ID must be an integer",
+          "min": "Customer ID must be positive"
+        }
+      },
+      "amount": {
+        "type": "currency",
+        "required": true,
+        "min": 0,
+        "errorMessages": {
+          "required": "Amount is required",
+          "type": "Amount must be a number",
+          "min": "Amount must be at least 0"
+        }
+      },
+      "tax": {
+        "type": "currency",
+        "min": 0,
+        "default": 0,
+        "errorMessages": {
+          "type": "Tax must be a number",
+          "min": "Tax must be at least 0"
+        }
+      },
+      "total": {
+        "type": "currency",
+        "required": true,
+        "min": 0,
+        "errorMessages": {
+          "required": "Total is required",
+          "type": "Total must be a number",
+          "min": "Total must be at least 0"
+        }
+      },
+      "due_date": {
+        "type": "date",
+        "errorMessages": {}
+      },
+      "paid_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      }
+    },
+    "notification": {
+      "id": {
+        "type": "integer",
+        "errorMessages": {
+          "type": "Id must be a number"
+        }
+      },
+      "user_id": {
+        "type": "integer",
+        "required": true,
+        "min": 1,
+        "max": 2147483647,
+        "errorMessages": {
+          "required": "User is required",
+          "type": "User ID must be an integer",
+          "min": "User ID must be positive"
+        }
+      },
+      "title": {
+        "type": "string",
+        "required": true,
+        "maxLength": 150,
+        "errorMessages": {
+          "required": "Title is required",
+          "maxLength": "Title cannot exceed 150 characters"
+        }
+      },
+      "body": {
+        "type": "text",
+        "errorMessages": {}
+      },
+      "type": {
+        "type": "string",
+        "required": true,
+        "enum": [
+          "info",
+          "success",
+          "warning",
+          "error",
+          "assignment",
+          "reminder"
+        ],
+        "errorMessages": {
+          "enum": "Type must be one of: info, success, warning, error, assignment, reminder"
+        }
+      },
+      "resource_type": {
+        "type": "string",
+        "maxLength": 50,
+        "errorMessages": {
+          "maxLength": "Resource type cannot exceed 50 characters"
+        }
+      },
+      "resource_id": {
+        "type": "integer",
+        "errorMessages": {
+          "type": "Resource id must be a number"
+        }
+      },
+      "is_read": {
+        "type": "boolean",
+        "default": false,
+        "errorMessages": {}
+      },
+      "read_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      },
+      "created_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      },
+      "updated_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      }
+    },
+    "preferences": {
+      "id": {
+        "type": "integer",
+        "required": true,
+        "min": 1,
+        "max": 2147483647,
+        "errorMessages": {
+          "required": "Id is required",
+          "type": "Id ID must be an integer",
+          "min": "Id ID must be positive"
+        }
+      },
+      "theme": {
+        "type": "string",
+        "enum": [
+          "system",
+          "light",
+          "dark"
+        ],
+        "errorMessages": {
+          "enum": "Theme must be one of: system, light, dark"
+        },
+        "default": "system"
+      },
+      "density": {
+        "type": "string",
+        "enum": [
+          "compact",
+          "standard",
+          "comfortable"
+        ],
+        "errorMessages": {
+          "enum": "Density must be one of: compact, standard, comfortable"
+        },
+        "default": "comfortable"
+      },
+      "notifications_enabled": {
+        "type": "boolean",
+        "default": true,
+        "errorMessages": {}
+      },
+      "items_per_page": {
+        "type": "integer",
+        "min": 10,
+        "max": 100,
+        "default": 25,
+        "errorMessages": {
+          "type": "Items per page must be a number",
+          "min": "Items per page must be at least 10",
+          "max": "Items per page cannot exceed 100"
+        }
+      },
+      "notification_retention_days": {
+        "type": "integer",
+        "min": 1,
+        "max": 365,
+        "default": 30,
+        "errorMessages": {
+          "type": "Notification retention days must be a number",
+          "min": "Notification retention days must be at least 1",
+          "max": "Notification retention days cannot exceed 365"
+        }
+      },
+      "auto_refresh_interval": {
+        "type": "integer",
+        "min": 0,
+        "max": 300,
+        "default": 0,
+        "errorMessages": {
+          "type": "Auto refresh interval must be a number",
+          "min": "Auto refresh interval must be at least 0",
+          "max": "Auto refresh interval cannot exceed 300"
+        }
+      },
+      "created_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      },
+      "updated_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      }
+    },
+    "property": {
+      "id": {
+        "type": "integer",
+        "errorMessages": {
+          "type": "Id must be a number"
+        }
+      },
+      "name": {
+        "type": "string",
+        "maxLength": 255,
+        "sqlType": "VARCHAR(255)",
+        "minLength": 1,
+        "trim": true,
+        "errorMessages": {
+          "required": "Name is required",
+          "minLength": "Name cannot be empty",
+          "maxLength": "Name cannot exceed 255 characters"
+        },
+        "required": true
+      },
+      "is_active": {
+        "type": "boolean",
+        "errorMessages": {
+          "type": "is_active must be true or false"
+        }
+      },
+      "created_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      },
+      "updated_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "active",
+          "inactive"
+        ],
+        "errorMessages": {
+          "enum": "Status must be one of: active, inactive"
+        },
+        "default": "active"
+      },
+      "property_type": {
+        "type": "string",
+        "enum": [
+          "residential",
+          "commercial",
+          "industrial"
+        ],
+        "errorMessages": {
+          "enum": "Property type must be one of: residential, commercial, industrial"
+        },
+        "default": "residential"
+      },
+      "access_instructions": {
+        "type": "text",
+        "maxLength": 2000,
+        "errorMessages": {
+          "maxLength": "Access instructions cannot exceed 2000 characters"
+        }
+      },
+      "notes": {
+        "type": "text",
+        "errorMessages": {}
+      },
+      "address_line1": {
+        "type": "string",
+        "maxLength": 255,
+        "sqlType": "VARCHAR(255)",
+        "trim": true,
+        "errorMessages": {
+          "required": "Street address is required",
+          "maxLength": "Street address cannot exceed 255 characters"
+        }
+      },
+      "address_line2": {
+        "type": "string",
+        "maxLength": 255,
+        "sqlType": "VARCHAR(255)",
+        "trim": true,
+        "errorMessages": {
+          "maxLength": "Address line 2 cannot exceed 255 characters"
+        }
+      },
+      "address_city": {
+        "type": "string",
+        "maxLength": 100,
+        "sqlType": "VARCHAR(100)",
+        "trim": true,
+        "errorMessages": {
+          "required": "City is required",
+          "maxLength": "City cannot exceed 100 characters"
+        }
+      },
+      "address_state": {
+        "type": "string",
+        "enum": [
+          "AL",
+          "AK",
+          "AZ",
+          "AR",
+          "CA",
+          "CO",
+          "CT",
+          "DE",
+          "DC",
+          "FL",
+          "GA",
+          "HI",
+          "ID",
+          "IL",
+          "IN",
+          "IA",
+          "KS",
+          "KY",
+          "LA",
+          "ME",
+          "MD",
+          "MA",
+          "MI",
+          "MN",
+          "MS",
+          "MO",
+          "MT",
+          "NE",
+          "NV",
+          "NH",
+          "NJ",
+          "NM",
+          "NY",
+          "NC",
+          "ND",
+          "OH",
+          "OK",
+          "OR",
+          "PA",
+          "RI",
+          "SC",
+          "SD",
+          "TN",
+          "TX",
+          "UT",
+          "VT",
+          "VA",
+          "WA",
+          "WV",
+          "WI",
+          "WY",
+          "AS",
+          "GU",
+          "MP",
+          "PR",
+          "VI",
+          "AB",
+          "BC",
+          "MB",
+          "NB",
+          "NL",
+          "NS",
+          "NT",
+          "NU",
+          "ON",
+          "PE",
+          "QC",
+          "SK",
+          "YT"
+        ],
+        "errorMessages": {
+          "enum": "State/Province must be a valid code (e.g., OR, WA, BC)"
+        }
+      },
+      "address_postal_code": {
+        "type": "string",
+        "maxLength": 20,
+        "sqlType": "VARCHAR(20)",
+        "trim": true,
+        "errorMessages": {
+          "maxLength": "Postal code cannot exceed 20 characters"
+        }
+      },
+      "address_country": {
+        "type": "string",
+        "enum": [
+          "US",
+          "CA"
+        ],
+        "errorMessages": {
+          "enum": "Country must be one of: US, CA"
+        }
+      }
+    },
+    "property_role": {
+      "id": {
+        "type": "integer",
+        "errorMessages": {
+          "type": "Id must be a number"
+        }
+      },
+      "is_active": {
+        "type": "boolean",
+        "errorMessages": {
+          "type": "is_active must be true or false"
+        }
+      },
+      "created_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      },
+      "updated_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "active",
+          "inactive"
+        ],
+        "errorMessages": {
+          "enum": "Status must be one of: active, inactive"
+        },
+        "default": "active"
+      },
+      "customer_id": {
+        "type": "integer",
+        "required": true,
+        "min": 1,
+        "max": 2147483647,
+        "errorMessages": {
+          "required": "Customer is required",
+          "type": "Customer ID must be an integer",
+          "min": "Customer ID must be positive"
+        }
+      },
+      "property_id": {
+        "type": "integer",
+        "required": true,
+        "min": 1,
+        "max": 2147483647,
+        "errorMessages": {
+          "required": "Property is required",
+          "type": "Property ID must be an integer",
+          "min": "Property ID must be positive"
+        }
+      },
+      "role": {
+        "type": "string",
+        "required": true,
+        "enum": [
+          "board_chair",
+          "board_member",
+          "property_manager",
+          "accountant"
+        ],
+        "errorMessages": {
+          "enum": "Role must be one of: board_chair, board_member, property_manager, accountant"
+        }
+      },
+      "effective_date": {
+        "type": "date",
+        "errorMessages": {}
+      },
+      "end_date": {
+        "type": "date",
+        "errorMessages": {}
+      }
+    },
+    "role": {
+      "id": {
+        "type": "integer",
+        "errorMessages": {
+          "type": "Id must be a number"
+        }
+      },
+      "name": {
+        "type": "string",
+        "maxLength": 255,
+        "sqlType": "VARCHAR(255)",
+        "minLength": 1,
+        "trim": true,
+        "errorMessages": {
+          "required": "Name is required",
+          "minLength": "Name cannot be empty",
+          "maxLength": "Name cannot exceed 255 characters"
+        },
+        "required": true
+      },
+      "is_active": {
+        "type": "boolean",
+        "errorMessages": {
+          "type": "is_active must be true or false"
+        }
+      },
+      "created_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      },
+      "updated_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "active",
+          "disabled"
+        ],
+        "errorMessages": {
+          "enum": "Status must be one of: active, disabled"
+        },
+        "default": "active"
+      },
+      "description": {
+        "type": "text",
+        "maxLength": 5000,
+        "sqlType": "TEXT",
+        "trim": true,
+        "errorMessages": {
+          "maxLength": "Description cannot exceed 5000 characters"
+        }
+      },
+      "priority": {
+        "type": "integer",
+        "required": true,
+        "min": 1,
+        "errorMessages": {
+          "required": "Priority is required",
+          "type": "Priority must be a number",
+          "min": "Priority must be at least 1"
+        }
+      }
+    },
+    "saved_view": {
+      "id": {
+        "type": "integer",
+        "errorMessages": {
+          "type": "Id must be a number"
+        }
+      },
+      "user_id": {
+        "type": "integer",
+        "required": true,
+        "min": 1,
+        "max": 2147483647,
+        "errorMessages": {
+          "required": "User is required",
+          "type": "User ID must be an integer",
+          "min": "User ID must be positive"
+        }
+      },
+      "entity_name": {
+        "type": "string",
+        "required": true,
+        "maxLength": 50,
+        "errorMessages": {
+          "required": "Entity name is required",
+          "maxLength": "Entity name cannot exceed 50 characters"
+        }
+      },
+      "view_name": {
+        "type": "string",
+        "required": true,
+        "maxLength": 100,
+        "errorMessages": {
+          "required": "View name is required",
+          "maxLength": "View name cannot exceed 100 characters"
+        }
+      },
+      "settings": {
+        "type": "object",
+        "required": true,
+        "default": {},
+        "errorMessages": {
+          "required": "Settings is required"
+        }
+      },
+      "is_default": {
+        "type": "boolean",
+        "default": false,
+        "errorMessages": {}
+      },
+      "created_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      },
+      "updated_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      }
+    },
+    "technician": {
+      "id": {
+        "type": "integer",
+        "errorMessages": {
+          "type": "Id must be a number"
+        }
+      },
+      "email": {
+        "type": "string",
+        "maxLength": 255,
+        "sqlType": "VARCHAR(255)",
+        "format": "email",
+        "tldRestriction": false,
+        "trim": true,
+        "lowercase": true,
+        "pattern": "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z0-9]+$",
+        "errorMessages": {
+          "required": "Email is required",
+          "format": "Email must be a valid email address",
+          "maxLength": "Email cannot exceed 255 characters"
+        },
+        "required": true
+      },
+      "is_active": {
+        "type": "boolean",
+        "errorMessages": {
+          "type": "is_active must be true or false"
+        }
+      },
+      "created_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      },
+      "updated_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "active",
+          "suspended"
+        ],
+        "errorMessages": {
+          "enum": "Status must be one of: pending, active, suspended"
+        },
+        "default": "pending"
+      },
+      "availability": {
+        "type": "string",
+        "enum": [
+          "available",
+          "on_job",
+          "off_duty"
+        ],
+        "errorMessages": {
+          "enum": "Availability must be one of: available, on_job, off_duty"
+        },
+        "default": "available"
+      },
+      "first_name": {
+        "type": "string",
+        "maxLength": 100,
+        "sqlType": "VARCHAR(100)",
+        "minLength": 1,
+        "trim": true,
+        "errorMessages": {
+          "required": "First name is required",
+          "minLength": "First name cannot be empty",
+          "maxLength": "First name cannot exceed 100 characters"
+        },
+        "required": true
+      },
+      "last_name": {
+        "type": "string",
+        "maxLength": 100,
+        "sqlType": "VARCHAR(100)",
+        "minLength": 1,
+        "trim": true,
+        "errorMessages": {
+          "required": "Last name is required",
+          "minLength": "Last name cannot be empty",
+          "maxLength": "Last name cannot exceed 100 characters"
+        },
+        "required": true
+      },
+      "license_number": {
+        "type": "string",
+        "maxLength": 100,
+        "errorMessages": {
+          "maxLength": "License number cannot exceed 100 characters"
+        }
+      },
+      "hourly_rate": {
+        "type": "currency",
+        "min": 0,
+        "errorMessages": {
+          "type": "Hourly rate must be a number",
+          "min": "Hourly rate must be at least 0"
+        }
+      },
+      "certifications": {
+        "type": "text",
+        "maxLength": 1000,
+        "errorMessages": {
+          "maxLength": "Certifications cannot exceed 1000 characters"
+        }
+      },
+      "skills": {
+        "type": "text",
+        "maxLength": 500,
+        "errorMessages": {
+          "maxLength": "Skills cannot exceed 500 characters"
+        }
+      }
+    },
+    "unit": {
+      "id": {
+        "type": "integer",
+        "errorMessages": {
+          "type": "Id must be a number"
+        }
+      },
+      "is_active": {
+        "type": "boolean",
+        "errorMessages": {
+          "type": "is_active must be true or false"
+        }
+      },
+      "created_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      },
+      "updated_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "active",
+          "inactive"
+        ],
+        "errorMessages": {
+          "enum": "Status must be one of: active, inactive"
+        },
+        "default": "active"
+      },
+      "property_id": {
+        "type": "integer",
+        "required": true,
+        "min": 1,
+        "max": 2147483647,
+        "errorMessages": {
+          "required": "Property is required",
+          "type": "Property ID must be an integer",
+          "min": "Property ID must be positive"
+        }
+      },
+      "unit_identifier": {
+        "type": "string",
+        "required": true,
+        "maxLength": 50,
+        "errorMessages": {
+          "required": "Unit identifier is required",
+          "maxLength": "Unit identifier cannot exceed 50 characters"
+        }
+      },
+      "ownership_type": {
+        "type": "string",
+        "required": true,
+        "enum": [
+          "private",
+          "common"
+        ],
+        "errorMessages": {
+          "enum": "Ownership type must be one of: private, common"
+        }
+      },
+      "unit_category": {
+        "type": "string",
+        "enum": [
+          "residential",
+          "commercial",
+          "amenity",
+          "utility",
+          "parking"
+        ],
+        "errorMessages": {
+          "enum": "Unit category must be one of: residential, commercial, amenity, utility, parking"
+        }
+      },
+      "floor": {
+        "type": "integer",
+        "errorMessages": {
+          "type": "Floor must be a number"
+        }
+      },
+      "square_footage": {
+        "type": "integer",
+        "errorMessages": {
+          "type": "Square footage must be a number"
+        }
+      },
+      "notes": {
+        "type": "text",
+        "errorMessages": {}
+      }
+    },
+    "user": {
+      "id": {
+        "type": "integer",
+        "errorMessages": {
+          "type": "Id must be a number"
+        }
+      },
+      "email": {
+        "type": "string",
+        "maxLength": 255,
+        "sqlType": "VARCHAR(255)",
+        "format": "email",
+        "tldRestriction": false,
+        "trim": true,
+        "lowercase": true,
+        "pattern": "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z0-9]+$",
+        "errorMessages": {
+          "required": "Email is required",
+          "format": "Email must be a valid email address",
+          "maxLength": "Email cannot exceed 255 characters"
+        },
+        "required": true
+      },
+      "is_active": {
+        "type": "boolean",
+        "errorMessages": {
+          "type": "is_active must be true or false"
+        }
+      },
+      "created_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      },
+      "updated_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "active",
+          "suspended"
+        ],
+        "errorMessages": {
+          "enum": "Status must be one of: pending, active, suspended"
+        },
+        "default": "pending"
+      },
+      "auth0_id": {
+        "type": "string",
+        "maxLength": 255,
+        "errorMessages": {
+          "maxLength": "Auth0 id cannot exceed 255 characters"
+        }
+      },
+      "first_name": {
+        "type": "string",
+        "maxLength": 100,
+        "sqlType": "VARCHAR(100)",
+        "minLength": 1,
+        "trim": true,
+        "errorMessages": {
+          "required": "First name is required",
+          "minLength": "First name cannot be empty",
+          "maxLength": "First name cannot exceed 100 characters"
+        }
+      },
+      "last_name": {
+        "type": "string",
+        "maxLength": 100,
+        "sqlType": "VARCHAR(100)",
+        "minLength": 1,
+        "trim": true,
+        "errorMessages": {
+          "required": "Last name is required",
+          "minLength": "Last name cannot be empty",
+          "maxLength": "Last name cannot exceed 100 characters"
+        }
+      },
+      "role_id": {
+        "type": "integer",
+        "min": 1,
+        "max": 2147483647,
+        "errorMessages": {
+          "required": "Role is required",
+          "type": "Role ID must be an integer",
+          "min": "Role ID must be positive"
+        }
+      },
+      "customer_profile_id": {
+        "type": "integer",
+        "min": 1,
+        "max": 2147483647,
+        "errorMessages": {
+          "required": "Customer profile is required",
+          "type": "Customer profile ID must be an integer",
+          "min": "Customer profile ID must be positive"
+        }
+      },
+      "technician_profile_id": {
+        "type": "integer",
+        "min": 1,
+        "max": 2147483647,
+        "errorMessages": {
+          "required": "Technician profile is required",
+          "type": "Technician profile ID must be an integer",
+          "min": "Technician profile ID must be positive"
+        }
+      }
+    },
+    "vendor": {
+      "id": {
+        "type": "integer",
+        "errorMessages": {
+          "type": "Id must be a number"
+        }
+      },
+      "name": {
+        "type": "string",
+        "maxLength": 255,
+        "sqlType": "VARCHAR(255)",
+        "minLength": 1,
+        "trim": true,
+        "errorMessages": {
+          "required": "Name is required",
+          "minLength": "Name cannot be empty",
+          "maxLength": "Name cannot exceed 255 characters"
+        },
+        "required": true
+      },
+      "is_active": {
+        "type": "boolean",
+        "errorMessages": {
+          "type": "is_active must be true or false"
+        }
+      },
+      "created_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      },
+      "updated_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "active",
+          "inactive"
+        ],
+        "errorMessages": {
+          "enum": "Status must be one of: active, inactive"
+        },
+        "default": "active"
+      },
+      "contact_email": {
+        "type": "email",
+        "maxLength": 255,
+        "errorMessages": {
+          "maxLength": "Contact email cannot exceed 255 characters"
+        }
+      },
+      "phone": {
+        "type": "phone",
+        "maxLength": 50,
+        "sqlType": "VARCHAR(50)",
+        "pattern": "^\\+?[1-9]\\d{1,14}$",
+        "trim": true,
+        "errorMessages": {
+          "pattern": "Phone number must be in international format (E.164)"
+        }
+      },
+      "notes": {
+        "type": "text",
+        "errorMessages": {}
+      }
+    },
+    "work_order": {
+      "id": {
+        "type": "integer",
+        "errorMessages": {
+          "type": "Id must be a number"
+        }
+      },
+      "work_order_number": {
+        "type": "string",
+        "maxLength": 100,
+        "pattern": "^WO-[0-9]{4}-[0-9]+$",
+        "errorMessages": {
+          "maxLength": "Work order number cannot exceed 100 characters",
+          "pattern": "Work order number has an invalid format"
+        }
+      },
+      "is_active": {
+        "type": "boolean",
+        "errorMessages": {
+          "type": "is_active must be true or false"
+        }
+      },
+      "created_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      },
+      "updated_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "assigned",
+          "in_progress",
+          "completed",
+          "cancelled"
+        ],
+        "errorMessages": {
+          "enum": "Status must be one of: pending, assigned, in_progress, completed, cancelled"
+        },
+        "default": "pending"
+      },
+      "name": {
+        "type": "string",
+        "maxLength": 255,
+        "sqlType": "VARCHAR(255)",
+        "minLength": 1,
+        "trim": true,
+        "errorMessages": {
+          "required": "Name is required",
+          "minLength": "Name cannot be empty",
+          "maxLength": "Name cannot exceed 255 characters"
+        }
+      },
+      "summary": {
+        "type": "string",
+        "maxLength": 255,
+        "sqlType": "VARCHAR(255)",
+        "trim": true,
+        "errorMessages": {
+          "maxLength": "Summary cannot exceed 255 characters"
+        }
+      },
+      "priority": {
+        "type": "string",
+        "enum": [
+          "low",
+          "normal",
+          "high",
+          "urgent"
+        ],
+        "errorMessages": {
+          "enum": "Priority must be one of: low, normal, high, urgent"
+        },
+        "default": "normal"
+      },
+      "customer_id": {
+        "type": "integer",
+        "required": true,
+        "min": 1,
+        "max": 2147483647,
+        "errorMessages": {
+          "required": "Customer is required",
+          "type": "Customer ID must be an integer",
+          "min": "Customer ID must be positive"
+        }
+      },
+      "property_id": {
+        "type": "integer",
+        "min": 1,
+        "max": 2147483647,
+        "errorMessages": {
+          "required": "Property is required",
+          "type": "Property ID must be an integer",
+          "min": "Property ID must be positive"
+        }
+      },
+      "unit_id": {
+        "type": "integer",
+        "min": 1,
+        "max": 2147483647,
+        "errorMessages": {
+          "required": "Unit is required",
+          "type": "Unit ID must be an integer",
+          "min": "Unit ID must be positive"
+        }
+      },
+      "assigned_technician_id": {
+        "type": "integer",
+        "min": 1,
+        "max": 2147483647,
+        "errorMessages": {
+          "required": "Assigned technician is required",
+          "type": "Assigned technician ID must be an integer",
+          "min": "Assigned technician ID must be positive"
+        }
+      },
+      "scheduled_start": {
+        "type": "timestamp",
+        "errorMessages": {}
+      },
+      "scheduled_end": {
+        "type": "timestamp",
+        "errorMessages": {}
+      },
+      "completed_at": {
+        "type": "timestamp",
+        "errorMessages": {}
+      },
+      "location_line1": {
+        "type": "string",
+        "maxLength": 255,
+        "sqlType": "VARCHAR(255)",
+        "trim": true,
+        "errorMessages": {
+          "required": "Street address is required",
+          "maxLength": "Street address cannot exceed 255 characters"
+        }
+      },
+      "location_line2": {
+        "type": "string",
+        "maxLength": 255,
+        "sqlType": "VARCHAR(255)",
+        "trim": true,
+        "errorMessages": {
+          "maxLength": "Address line 2 cannot exceed 255 characters"
+        }
+      },
+      "location_city": {
+        "type": "string",
+        "maxLength": 100,
+        "sqlType": "VARCHAR(100)",
+        "trim": true,
+        "errorMessages": {
+          "required": "City is required",
+          "maxLength": "City cannot exceed 100 characters"
+        }
+      },
+      "location_state": {
+        "type": "string",
+        "enum": [
+          "AL",
+          "AK",
+          "AZ",
+          "AR",
+          "CA",
+          "CO",
+          "CT",
+          "DE",
+          "DC",
+          "FL",
+          "GA",
+          "HI",
+          "ID",
+          "IL",
+          "IN",
+          "IA",
+          "KS",
+          "KY",
+          "LA",
+          "ME",
+          "MD",
+          "MA",
+          "MI",
+          "MN",
+          "MS",
+          "MO",
+          "MT",
+          "NE",
+          "NV",
+          "NH",
+          "NJ",
+          "NM",
+          "NY",
+          "NC",
+          "ND",
+          "OH",
+          "OK",
+          "OR",
+          "PA",
+          "RI",
+          "SC",
+          "SD",
+          "TN",
+          "TX",
+          "UT",
+          "VT",
+          "VA",
+          "WA",
+          "WV",
+          "WI",
+          "WY",
+          "AS",
+          "GU",
+          "MP",
+          "PR",
+          "VI",
+          "AB",
+          "BC",
+          "MB",
+          "NB",
+          "NL",
+          "NS",
+          "NT",
+          "NU",
+          "ON",
+          "PE",
+          "QC",
+          "SK",
+          "YT"
+        ],
+        "errorMessages": {
+          "enum": "State/Province must be a valid code (e.g., OR, WA, BC)"
+        }
+      },
+      "location_postal_code": {
+        "type": "string",
+        "maxLength": 20,
+        "sqlType": "VARCHAR(20)",
+        "trim": true,
+        "errorMessages": {
+          "maxLength": "Postal code cannot exceed 20 characters"
+        }
+      },
+      "location_country": {
+        "type": "string",
+        "enum": [
+          "US",
+          "CA"
+        ],
+        "errorMessages": {
+          "enum": "Country must be one of: US, CA"
+        }
+      }
+    }
+  },
+  "compositeValidations": {
+    "createAsset": {
+      "entityName": "asset",
+      "requiredFields": [
+        "name",
+        "unit_id",
+        "asset_type"
+      ],
+      "optionalFields": [
+        "is_active",
+        "status",
+        "property_id",
+        "manufacturer",
+        "model",
+        "serial_number",
+        "install_date",
+        "last_service_date",
+        "next_service_date",
+        "warranty_expiry",
+        "notes"
+      ],
+      "description": "Validation rules for creating a new asset"
+    },
+    "updateAsset": {
+      "entityName": "asset",
+      "requiredFields": [],
+      "optionalFields": [
+        "name",
+        "unit_id",
+        "asset_type",
+        "is_active",
+        "status",
+        "property_id",
+        "manufacturer",
+        "model",
+        "serial_number",
+        "install_date",
+        "last_service_date",
+        "next_service_date",
+        "warranty_expiry",
+        "notes",
+        "is_active"
+      ],
+      "description": "Validation rules for updating an existing asset"
+    },
+    "createAuditLog": {
+      "entityName": "audit_log",
+      "requiredFields": [],
+      "optionalFields": [
+        "id",
+        "action",
+        "resource_type",
+        "resource_id",
+        "user_id",
+        "ip_address",
+        "user_agent",
+        "old_values",
+        "new_values",
+        "result",
+        "error_message",
+        "created_at"
+      ],
+      "description": "Validation rules for creating a new audit log"
+    },
+    "updateAuditLog": {
+      "entityName": "audit_log",
+      "requiredFields": [],
+      "optionalFields": [
+        "id",
+        "action",
+        "resource_type",
+        "resource_id",
+        "user_id",
+        "ip_address",
+        "user_agent",
+        "old_values",
+        "new_values",
+        "result",
+        "error_message",
+        "created_at",
+        "is_active"
+      ],
+      "description": "Validation rules for updating an existing audit log"
+    },
+    "createContract": {
+      "entityName": "contract",
+      "requiredFields": [
+        "customer_id",
+        "start_date"
+      ],
+      "optionalFields": [
+        "is_active",
+        "status",
+        "name",
+        "summary",
+        "end_date",
+        "terms",
+        "value",
+        "billing_cycle"
+      ],
+      "description": "Validation rules for creating a new contract"
+    },
+    "updateContract": {
+      "entityName": "contract",
+      "requiredFields": [],
+      "optionalFields": [
+        "customer_id",
+        "start_date",
+        "is_active",
+        "status",
+        "name",
+        "summary",
+        "end_date",
+        "terms",
+        "value",
+        "billing_cycle",
+        "is_active"
+      ],
+      "description": "Validation rules for updating an existing contract"
+    },
+    "createCustomer": {
+      "entityName": "customer",
+      "requiredFields": [
+        "email",
+        "first_name",
+        "last_name"
+      ],
+      "optionalFields": [
+        "is_active",
+        "status",
+        "phone",
+        "organization_name",
+        "billing_line1",
+        "billing_line2",
+        "billing_city",
+        "billing_state",
+        "billing_postal_code",
+        "billing_country",
+        "service_line1",
+        "service_line2",
+        "service_city",
+        "service_state",
+        "service_postal_code",
+        "service_country"
+      ],
+      "description": "Validation rules for creating a new customer"
+    },
+    "updateCustomer": {
+      "entityName": "customer",
+      "requiredFields": [],
+      "optionalFields": [
+        "email",
+        "first_name",
+        "last_name",
+        "is_active",
+        "status",
+        "phone",
+        "organization_name",
+        "billing_line1",
+        "billing_line2",
+        "billing_city",
+        "billing_state",
+        "billing_postal_code",
+        "billing_country",
+        "service_line1",
+        "service_line2",
+        "service_city",
+        "service_state",
+        "service_postal_code",
+        "service_country",
+        "is_active"
+      ],
+      "description": "Validation rules for updating an existing customer"
+    },
+    "createCustomerUnit": {
+      "entityName": "customer_unit",
+      "requiredFields": [
+        "customer_id",
+        "unit_id"
+      ],
+      "optionalFields": [
+        "is_active",
+        "status",
+        "role",
+        "effective_date",
+        "end_date"
+      ],
+      "description": "Validation rules for creating a new customer unit"
+    },
+    "updateCustomerUnit": {
+      "entityName": "customer_unit",
+      "requiredFields": [],
+      "optionalFields": [
+        "customer_id",
+        "unit_id",
+        "is_active",
+        "status",
+        "role",
+        "effective_date",
+        "end_date",
+        "is_active"
+      ],
+      "description": "Validation rules for updating an existing customer unit"
+    },
+    "createDepartment": {
+      "entityName": "department",
+      "requiredFields": [
+        "name"
+      ],
+      "optionalFields": [
+        "is_active",
+        "status",
+        "description",
+        "manager_id"
+      ],
+      "description": "Validation rules for creating a new department"
+    },
+    "updateDepartment": {
+      "entityName": "department",
+      "requiredFields": [],
+      "optionalFields": [
+        "name",
+        "is_active",
+        "status",
+        "description",
+        "manager_id",
+        "is_active"
+      ],
+      "description": "Validation rules for updating an existing department"
+    },
+    "createFileAttachment": {
+      "entityName": "file_attachment",
+      "requiredFields": [
+        "entity_type",
+        "entity_id",
+        "original_filename",
+        "storage_key",
+        "mime_type",
+        "file_size"
+      ],
+      "optionalFields": [
+        "category",
+        "description",
+        "is_active"
+      ],
+      "description": "Validation rules for creating a new file attachment"
+    },
+    "updateFileAttachment": {
+      "entityName": "file_attachment",
+      "requiredFields": [],
+      "optionalFields": [
+        "entity_type",
+        "entity_id",
+        "original_filename",
+        "storage_key",
+        "mime_type",
+        "file_size",
+        "category",
+        "description",
+        "is_active",
+        "is_active"
+      ],
+      "description": "Validation rules for updating an existing file attachment"
+    },
+    "createInventory": {
+      "entityName": "inventory",
+      "requiredFields": [
+        "name",
+        "sku"
+      ],
+      "optionalFields": [
+        "is_active",
+        "status",
+        "description",
+        "quantity",
+        "reorder_level",
+        "unit_cost",
+        "location",
+        "supplier"
+      ],
+      "description": "Validation rules for creating a new inventory"
+    },
+    "updateInventory": {
+      "entityName": "inventory",
+      "requiredFields": [],
+      "optionalFields": [
+        "name",
+        "sku",
+        "is_active",
+        "status",
+        "description",
+        "quantity",
+        "reorder_level",
+        "unit_cost",
+        "location",
+        "supplier",
+        "is_active"
+      ],
+      "description": "Validation rules for updating an existing inventory"
+    },
+    "createInvoice": {
+      "entityName": "invoice",
+      "requiredFields": [
+        "customer_id",
+        "amount",
+        "total"
+      ],
+      "optionalFields": [
+        "is_active",
+        "status",
+        "name",
+        "summary",
+        "work_order_id",
+        "tax",
+        "due_date",
+        "paid_at"
+      ],
+      "description": "Validation rules for creating a new invoice"
+    },
+    "updateInvoice": {
+      "entityName": "invoice",
+      "requiredFields": [],
+      "optionalFields": [
+        "customer_id",
+        "amount",
+        "total",
+        "is_active",
+        "status",
+        "name",
+        "summary",
+        "work_order_id",
+        "tax",
+        "due_date",
+        "paid_at",
+        "is_active"
+      ],
+      "description": "Validation rules for updating an existing invoice"
+    },
+    "createNotification": {
+      "entityName": "notification",
+      "requiredFields": [
+        "user_id",
+        "title",
+        "type"
+      ],
+      "optionalFields": [
+        "is_read"
+      ],
+      "description": "Validation rules for creating a new notification"
+    },
+    "updateNotification": {
+      "entityName": "notification",
+      "requiredFields": [],
+      "optionalFields": [
+        "user_id",
+        "title",
+        "type",
+        "is_read",
+        "is_active"
+      ],
+      "description": "Validation rules for updating an existing notification"
+    },
+    "createPreferences": {
+      "entityName": "preferences",
+      "requiredFields": [
+        "id"
+      ],
+      "optionalFields": [
+        "theme",
+        "density",
+        "notifications_enabled",
+        "items_per_page",
+        "notification_retention_days",
+        "auto_refresh_interval"
+      ],
+      "description": "Validation rules for creating a new preferences"
+    },
+    "updatePreferences": {
+      "entityName": "preferences",
+      "requiredFields": [],
+      "optionalFields": [
+        "id",
+        "theme",
+        "density",
+        "notifications_enabled",
+        "items_per_page",
+        "notification_retention_days",
+        "auto_refresh_interval",
+        "is_active"
+      ],
+      "description": "Validation rules for updating an existing preferences"
+    },
+    "createProperty": {
+      "entityName": "property",
+      "requiredFields": [
+        "name"
+      ],
+      "optionalFields": [
+        "is_active",
+        "status",
+        "property_type",
+        "access_instructions",
+        "notes",
+        "address_line1",
+        "address_line2",
+        "address_city",
+        "address_state",
+        "address_postal_code",
+        "address_country"
+      ],
+      "description": "Validation rules for creating a new property"
+    },
+    "updateProperty": {
+      "entityName": "property",
+      "requiredFields": [],
+      "optionalFields": [
+        "name",
+        "is_active",
+        "status",
+        "property_type",
+        "access_instructions",
+        "notes",
+        "address_line1",
+        "address_line2",
+        "address_city",
+        "address_state",
+        "address_postal_code",
+        "address_country",
+        "is_active"
+      ],
+      "description": "Validation rules for updating an existing property"
+    },
+    "createPropertyRole": {
+      "entityName": "property_role",
+      "requiredFields": [
+        "customer_id",
+        "property_id",
+        "role"
+      ],
+      "optionalFields": [
+        "is_active",
+        "status",
+        "effective_date",
+        "end_date"
+      ],
+      "description": "Validation rules for creating a new property role"
+    },
+    "updatePropertyRole": {
+      "entityName": "property_role",
+      "requiredFields": [],
+      "optionalFields": [
+        "customer_id",
+        "property_id",
+        "role",
+        "is_active",
+        "status",
+        "effective_date",
+        "end_date",
+        "is_active"
+      ],
+      "description": "Validation rules for updating an existing property role"
+    },
+    "createRole": {
+      "entityName": "role",
+      "requiredFields": [
+        "name",
+        "priority"
+      ],
+      "optionalFields": [
+        "is_active",
+        "status",
+        "description"
+      ],
+      "description": "Validation rules for creating a new role"
+    },
+    "updateRole": {
+      "entityName": "role",
+      "requiredFields": [],
+      "optionalFields": [
+        "name",
+        "priority",
+        "is_active",
+        "status",
+        "description",
+        "is_active"
+      ],
+      "description": "Validation rules for updating an existing role"
+    },
+    "createSavedView": {
+      "entityName": "saved_view",
+      "requiredFields": [
+        "user_id",
+        "entity_name",
+        "view_name",
+        "settings"
+      ],
+      "optionalFields": [
+        "is_default"
+      ],
+      "description": "Validation rules for creating a new saved view"
+    },
+    "updateSavedView": {
+      "entityName": "saved_view",
+      "requiredFields": [],
+      "optionalFields": [
+        "user_id",
+        "entity_name",
+        "view_name",
+        "settings",
+        "is_default",
+        "is_active"
+      ],
+      "description": "Validation rules for updating an existing saved view"
+    },
+    "createTechnician": {
+      "entityName": "technician",
+      "requiredFields": [
+        "email",
+        "first_name",
+        "last_name"
+      ],
+      "optionalFields": [
+        "is_active",
+        "status",
+        "availability",
+        "license_number",
+        "hourly_rate",
+        "certifications",
+        "skills"
+      ],
+      "description": "Validation rules for creating a new technician"
+    },
+    "updateTechnician": {
+      "entityName": "technician",
+      "requiredFields": [],
+      "optionalFields": [
+        "email",
+        "first_name",
+        "last_name",
+        "is_active",
+        "status",
+        "availability",
+        "license_number",
+        "hourly_rate",
+        "certifications",
+        "skills",
+        "is_active"
+      ],
+      "description": "Validation rules for updating an existing technician"
+    },
+    "createUnit": {
+      "entityName": "unit",
+      "requiredFields": [
+        "unit_identifier",
+        "property_id",
+        "ownership_type"
+      ],
+      "optionalFields": [
+        "is_active",
+        "status",
+        "unit_category",
+        "floor",
+        "square_footage",
+        "notes"
+      ],
+      "description": "Validation rules for creating a new unit"
+    },
+    "updateUnit": {
+      "entityName": "unit",
+      "requiredFields": [],
+      "optionalFields": [
+        "unit_identifier",
+        "property_id",
+        "ownership_type",
+        "is_active",
+        "status",
+        "unit_category",
+        "floor",
+        "square_footage",
+        "notes",
+        "is_active"
+      ],
+      "description": "Validation rules for updating an existing unit"
+    },
+    "createUser": {
+      "entityName": "user",
+      "requiredFields": [
+        "email",
+        "first_name",
+        "last_name"
+      ],
+      "optionalFields": [
+        "is_active",
+        "status",
+        "role_id",
+        "customer_profile_id",
+        "technician_profile_id"
+      ],
+      "description": "Validation rules for creating a new user"
+    },
+    "updateUser": {
+      "entityName": "user",
+      "requiredFields": [],
+      "optionalFields": [
+        "email",
+        "first_name",
+        "last_name",
+        "is_active",
+        "status",
+        "role_id",
+        "customer_profile_id",
+        "technician_profile_id",
+        "is_active"
+      ],
+      "description": "Validation rules for updating an existing user"
+    },
+    "createVendor": {
+      "entityName": "vendor",
+      "requiredFields": [
+        "name"
+      ],
+      "optionalFields": [
+        "is_active",
+        "status",
+        "contact_email",
+        "phone",
+        "notes"
+      ],
+      "description": "Validation rules for creating a new vendor"
+    },
+    "updateVendor": {
+      "entityName": "vendor",
+      "requiredFields": [],
+      "optionalFields": [
+        "name",
+        "is_active",
+        "status",
+        "contact_email",
+        "phone",
+        "notes",
+        "is_active"
+      ],
+      "description": "Validation rules for updating an existing vendor"
+    },
+    "createWorkOrder": {
+      "entityName": "work_order",
+      "requiredFields": [
+        "customer_id"
+      ],
+      "optionalFields": [
+        "is_active",
+        "status",
+        "name",
+        "summary",
+        "priority",
+        "property_id",
+        "unit_id",
+        "assigned_technician_id",
+        "scheduled_start",
+        "scheduled_end",
+        "completed_at",
+        "location_line1",
+        "location_line2",
+        "location_city",
+        "location_state",
+        "location_postal_code",
+        "location_country"
+      ],
+      "description": "Validation rules for creating a new work order"
+    },
+    "updateWorkOrder": {
+      "entityName": "work_order",
+      "requiredFields": [],
+      "optionalFields": [
+        "customer_id",
+        "is_active",
+        "status",
+        "name",
+        "summary",
+        "priority",
+        "property_id",
+        "unit_id",
+        "assigned_technician_id",
+        "scheduled_start",
+        "scheduled_end",
+        "completed_at",
+        "location_line1",
+        "location_line2",
+        "location_city",
+        "location_state",
+        "location_postal_code",
+        "location_country",
+        "is_active"
+      ],
+      "description": "Validation rules for updating an existing work order"
+    }
+  }
+}

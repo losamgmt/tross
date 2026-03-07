@@ -231,6 +231,39 @@ describe("sync-entity-metadata", () => {
       expect(result.filterableFields).toEqual(["role_id", "status"]);
       expect(result.sortableFields).toEqual(["created_at", "email"]);
     });
+
+    it("includes summaryConfig when present", () => {
+      const backendMeta = {
+        tableName: "work_orders",
+        primaryKey: "id",
+        identityField: "work_order_number",
+        summaryConfig: {
+          groupableFields: ["customer_id", "status"],
+          summableFields: ["total"],
+        },
+        fields: {},
+      };
+
+      const result = transformModel("work_order", backendMeta);
+
+      expect(result.summaryConfig).toEqual({
+        groupableFields: ["customer_id", "status"],
+        summableFields: ["total"],
+      });
+    });
+
+    it("sets summaryConfig to null when not provided", () => {
+      const backendMeta = {
+        tableName: "notifications",
+        primaryKey: "id",
+        identityField: "id",
+        fields: {},
+      };
+
+      const result = transformModel("notification", backendMeta);
+
+      expect(result.summaryConfig).toBeNull();
+    });
   });
 
   describe("buildEntityPlacements", () => {
@@ -241,9 +274,9 @@ describe("sync-entity-metadata", () => {
       // that it correctly extracts navGroup and navOrder
       const placements = buildEntityPlacements();
       
-      // Should include vendor (has navGroup: 'operations', navOrder: 3)
+      // Should include vendor (has navGroup: 'resources', navOrder: 3)
       expect(placements.vendor).toEqual({
-        group: "operations",
+        group: "resources",
         order: 3,
       });
     });
@@ -276,14 +309,16 @@ describe("sync-entity-metadata", () => {
     it("assigns correct groups to entities", () => {
       const placements = buildEntityPlacements();
       
-      // People group
-      expect(placements.customer.group).toBe("people");
-      expect(placements.technician.group).toBe("people");
+      // Customers group
+      expect(placements.customer.group).toBe("customers");
       
-      // Operations group
-      expect(placements.work_order.group).toBe("operations");
-      expect(placements.inventory.group).toBe("operations");
-      expect(placements.vendor.group).toBe("operations");
+      // Resources group
+      expect(placements.technician.group).toBe("resources");
+      expect(placements.inventory.group).toBe("resources");
+      expect(placements.vendor.group).toBe("resources");
+      
+      // Work group
+      expect(placements.work_order.group).toBe("work");
       
       // Finance group
       expect(placements.contract.group).toBe("finance");

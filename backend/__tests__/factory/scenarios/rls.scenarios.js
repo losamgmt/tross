@@ -54,7 +54,8 @@ function createPermissionDenied(meta, ctx) {
     ctx.it(
       `POST /api/${tableName} - returns 403 for ${role} role`,
       async () => {
-        const payload = ctx.factory.buildMinimal(meta.entityName);
+        // Use buildMinimalWithFKs to ensure payload has all required FKs
+        const payload = await ctx.factory.buildMinimalWithFKs(meta.entityName);
         const auth = await ctx.authHeader(role);
 
         const response = await ctx.request

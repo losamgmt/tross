@@ -664,6 +664,21 @@ const JUNCTION = Object.freeze({
     description: 'Additional notes about this relationship',
     sqlType: 'TEXT',
   }),
+
+  /**
+   * Common fieldAccess pattern for junction entities.
+   * Junction FK fields are typically:
+   * - Creatable by managers (who establish relationships)
+   * - Readable by all who can read the entity
+   * - Immutable after creation (cannot change which entities are linked)
+   *
+   * NOTE: This provides a TEMPLATE - individual junction metadata should
+   * add their specific FK field access using this pattern.
+   */
+  FIELD_ACCESS: Object.freeze({
+    // Note: FK fields (customer_id, property_id) should be added explicitly
+    // in each junction entity's fieldAccess since the minimum role may vary
+  }),
 });
 
 /**

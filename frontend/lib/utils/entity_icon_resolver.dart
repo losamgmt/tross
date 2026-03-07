@@ -49,12 +49,32 @@ class EntityIconResolver {
     'person_outlined': Icons.person_outlined,
     'engineering': Icons.engineering,
     'engineering_outlined': Icons.engineering_outlined,
+    'groups': Icons.groups,
+    'groups_outlined': Icons.groups_outlined,
 
     // Business
     'business': Icons.business,
     'business_outlined': Icons.business_outlined,
     'work': Icons.work,
     'work_outlined': Icons.work_outlined,
+
+    // Buildings/Property
+    'meeting_room': Icons.meeting_room,
+    'meeting_room_outlined': Icons.meeting_room_outlined,
+    'apartment': Icons.apartment,
+    'apartment_outlined': Icons.apartment_outlined,
+    'domain': Icons.domain,
+    'domain_outlined': Icons.domain_outlined,
+
+    // Manufacturing/Assets
+    'precision_manufacturing': Icons.precision_manufacturing,
+    'precision_manufacturing_outlined': Icons.precision_manufacturing_outlined,
+    'handyman': Icons.handyman,
+    'handyman_outlined': Icons.handyman_outlined,
+
+    // Relationships/Links
+    'link': Icons.link,
+    'link_outlined': Icons.link_outlined,
 
     // Documents
     'description': Icons.description,

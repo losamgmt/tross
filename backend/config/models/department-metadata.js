@@ -53,6 +53,12 @@ module.exports = {
 
   supportsFileAttachments: false,
 
+  /**
+   * Summary endpoint configuration for aggregated analytics.
+   * Null: Departments are not aggregated.
+   */
+  summaryConfig: null,
+
   entityPermissions: {
     create: 'admin',
     read: 'dispatcher',

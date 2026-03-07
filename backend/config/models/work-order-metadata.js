@@ -95,7 +95,7 @@ module.exports = {
    * Work orders are visible to all authenticated users
    */
   navVisibility: 'customer',
-  navGroup: 'operations',
+  navGroup: 'work',
   navOrder: 1,
 
   /**
@@ -103,6 +103,23 @@ module.exports = {
    * Work orders: before/after photos, inspection reports, completion docs
    */
   supportsFileAttachments: true,
+
+  /**
+   * Summary endpoint configuration for aggregated analytics.
+   * Enables GET /summaries/work-orders?group_by=unit_id&property_id=123
+   */
+  summaryConfig: {
+    groupableFields: [
+      'customer_id',
+      'property_id',
+      'unit_id',
+      'assigned_technician_id',
+      'status',
+      'priority',
+    ],
+    // breakdownFields: null = auto-detect from enums (status, priority)
+    // dateFields: null = auto-detect (scheduled_start, completed_at, etc.)
+  },
 
   /**
    * Entity-level permission overrides
@@ -130,7 +147,7 @@ module.exports = {
     },
     assignment: {
       label: 'Assignment',
-      fields: ['customer_id', 'assigned_technician_id', 'priority', 'status'],
+      fields: ['customer_id', 'unit_id', 'assigned_technician_id', 'priority', 'status'],
       rows: [['priority', 'status']],
       order: 2,
     },
@@ -242,6 +259,22 @@ module.exports = {
       delete: 'none',
     },
 
+    // FK to property - auto-populated from unit when unit_id is set
+    property_id: {
+      create: 'dispatcher', // Can set directly if no unit
+      read: 'technician',
+      update: 'dispatcher',
+      delete: 'none',
+    },
+
+    // FK to unit - optional, dispatcher+ sets (takes precedence over manual property_id)
+    unit_id: {
+      create: 'dispatcher',
+      read: 'technician',
+      update: 'dispatcher',
+      delete: 'none',
+    },
+
     // FK to technicians - dispatcher+ assigns
     assigned_technician_id: {
       create: 'dispatcher',
@@ -328,6 +361,22 @@ module.exports = {
       ],
       description: 'Customer who requested this work order',
     },
+    // Work order may reference a specific unit (optional)
+    unit: {
+      type: 'belongsTo',
+      foreignKey: 'unit_id',
+      table: 'units',
+      fields: ['id', 'unit_identifier', 'property_id', 'ownership_type'],
+      description: 'Unit where the work is to be performed',
+    },
+    // Work order may reference a specific property (optional, or auto-populated from unit)
+    property: {
+      type: 'belongsTo',
+      foreignKey: 'property_id',
+      table: 'properties',
+      fields: ['id', 'name', 'address_city', 'address_state'],
+      description: 'Property where the work is to be performed (often derived from unit)',
+    },
     // Work order may be assigned to a technician (optional)
     assignedTechnician: {
       type: 'belongsTo',
@@ -380,6 +429,8 @@ module.exports = {
     'work_order_number',
     'name',
     'customer_id',
+    'unit_id',
+    'property_id',
     'assigned_technician_id',
     'is_active',
     'status',
@@ -455,6 +506,20 @@ module.exports = {
       displayFields: ['first_name', 'last_name', 'email'],
       displayTemplate: '{first_name} {last_name} - {email}',
       required: true,
+    },
+    property_id: {
+      type: 'foreignKey',
+      relatedEntity: 'property',
+      displayFields: ['name', 'address_city'],
+      displayTemplate: '{name} - {address_city}',
+      description: 'Property for this work order (auto-populated from unit when set)',
+    },
+    unit_id: {
+      type: 'foreignKey',
+      relatedEntity: 'unit',
+      displayFields: ['unit_identifier'],
+      displayTemplate: '{unit_identifier}',
+      description: 'Specific unit for this work order',
     },
     assigned_technician_id: {
       type: 'foreignKey',

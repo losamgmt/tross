@@ -124,6 +124,10 @@ class AppDataTable<T> extends StatefulWidget {
   /// Set to 0 to disable pinning entirely
   final int? pinnedColumns;
 
+  /// Initial table density. When provided, overrides the default (standard).
+  /// Use TableDensity.compact for Related lists, inline tables, etc.
+  final TableDensity? initialDensity;
+
   const AppDataTable({
     super.key,
     required this.columns,
@@ -144,6 +148,7 @@ class AppDataTable<T> extends StatefulWidget {
     this.autoSizeColumns = false,
     this.entityName,
     this.pinnedColumns,
+    this.initialDensity,
   });
 
   @override
@@ -181,8 +186,8 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
   /// Hidden column IDs (session-only, not persisted)
   final Set<String> _hiddenColumnIds = {};
 
-  /// Table density (session-only, not persisted)
-  TableDensity _density = TableDensity.standard;
+  /// Table density - initialized from widget.initialDensity or defaults to standard
+  late TableDensity _density;
 
   /// Get visible columns (filtered by hidden state)
   List<TableColumn<T>> get _visibleColumns =>
@@ -419,6 +424,12 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
         );
       },
     );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _density = widget.initialDensity ?? TableDensity.standard;
   }
 
   @override
