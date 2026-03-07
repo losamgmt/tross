@@ -179,11 +179,12 @@
 
 /**
  * Navigation group for menu placement.
- * - 'people': People management (customers, technicians, users)
- * - 'operations': Operations (work orders, inventory)
- * - 'finance': Finance (contracts, invoices)
- * - 'admin': Admin (users, roles)
- * @typedef {'people' | 'operations' | 'finance' | 'admin'} NavGroup
+ * - 'customers': Customer management (customers, properties, assets)
+ * - 'work': Work operations (work orders, quotes, visits)
+ * - 'resources': Resources (technicians, inventory, vendors)
+ * - 'finance': Finance (contracts, invoices, payments)
+ * - 'admin': Admin (users, roles, departments)
+ * @typedef {'customers' | 'work' | 'resources' | 'finance' | 'admin'} NavGroup
  */
 
 /**
@@ -257,6 +258,33 @@
  * @property {string} entity2 - Second related entity key (e.g., 'property')
  * @property {string} [foreignKey1] - FK field for entity1 (defaults to 'entity1_id')
  * @property {string} [foreignKey2] - FK field for entity2 (defaults to 'entity2_id')
+ */
+
+// ============================================================================
+// SUMMARY CONFIGURATION TYPES
+// ============================================================================
+
+/**
+ * Summary endpoint configuration for aggregated/analytics queries.
+ *
+ * Enables the generic /summaries/:entity endpoint with GROUP BY support.
+ * null = entity not summarizable (junction tables, system tables, etc.)
+ *
+ * @typedef {Object} SummaryConfigObject
+ * @property {string[]} groupableFields - REQUIRED: Fields that can be used with group_by parameter.
+ *   Must be FK fields (relatedEntity) or enum fields. Defines valid grouping dimensions.
+ * @property {string[]} [summableFields] - Numeric fields that can be summed (e.g., totals, amounts).
+ *   Must be integer, decimal, number, or currency type. Defaults to [].
+ * @property {string[] | null} [breakdownFields] - Enum fields that get automatic count_by_X breakdowns.
+ *   null = auto-detect from enum fields in groupableFields. Defaults to null.
+ * @property {string[] | null} [dateFields] - Date/timestamp fields for time bucketing.
+ *   null = auto-detect from date/timestamp fields. Defaults to null.
+ */
+
+/**
+ * Summary configuration for an entity.
+ * null = entity should not have a summary endpoint.
+ * @typedef {SummaryConfigObject | null} SummaryConfig
  */
 
 // ============================================================================
@@ -341,6 +369,8 @@
  * @property {boolean} [isJunction] - Whether this entity is a junction table for M:M
  * @property {JunctionConfig} [junctionFor] - Junction entity configuration (required if isJunction=true)
  * @property {UniqueConstraint[]} [uniqueConstraints] - Composite unique constraints (common in junctions)
+ *
+ * @property {SummaryConfig} summaryConfig - REQUIRED: Summary endpoint configuration (null if not summarizable)
  */
 
 // Export empty object - this file is for types only

@@ -48,6 +48,12 @@ module.exports = {
    */
   supportsFileAttachments: false,
 
+  /**
+   * Summary endpoint configuration for aggregated analytics.
+   * Null: Preferences are not aggregated.
+   */
+  summaryConfig: null,
+
   entityPermissions: {
     create: 'customer',
     read: 'customer',

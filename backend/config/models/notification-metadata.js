@@ -75,6 +75,12 @@ module.exports = {
   supportsFileAttachments: false,
 
   /**
+   * Summary endpoint configuration for aggregated analytics.
+   * Null: Notifications are not aggregated.
+   */
+  summaryConfig: null,
+
+  /**
    * Entity-level permission overrides
    * Users can read/delete their own notifications
    * Create is system-only (backend creates notifications, not users)

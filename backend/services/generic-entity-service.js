@@ -40,6 +40,7 @@ const {
   logEntityAudit,
   isAuditEnabled,
 } = require('../db/helpers/audit-helper');
+const { loadRelationships } = require('../db/helpers/relationship-loader');
 const {
   ENTITY_FIELDS,
   NAME_PATTERNS,
@@ -275,8 +276,36 @@ class GenericEntityService {
    *     userId: 123
    *   });
    *   // Returns user if authorized, null if not
+   *
+   * @example
+   *   // With include (load related entities)
+   *   const customer = await GenericEntityService.findById('customer', 123, { include: ['units'] });
+   *   // Returns: { id: 123, name: '...', units: [{ id: 1, unit_number: 'A1' }, ...] }
    */
-  static async findById(entityName, id, rlsContext = null) {
+  static async findById(entityName, id, optionsOrRlsContext = null, rlsContextArg = null) {
+    // Backward compatibility: detect if 3rd arg is options or rlsContext
+    // rlsContext has: filterConfig, userId, policy, customerProfileId, technicianProfileId
+    // options has: include
+    let options = {};
+    let rlsContext = rlsContextArg;
+
+    if (optionsOrRlsContext) {
+      const isRlsContext =
+        optionsOrRlsContext.filterConfig !== undefined ||
+        optionsOrRlsContext.userId !== undefined ||
+        optionsOrRlsContext.policy !== undefined ||
+        optionsOrRlsContext.customerProfileId !== undefined ||
+        optionsOrRlsContext.technicianProfileId !== undefined;
+
+      if (isRlsContext) {
+        // Old signature: findById(entityName, id, rlsContext)
+        rlsContext = optionsOrRlsContext;
+      } else {
+        // New signature: findById(entityName, id, options, rlsContext)
+        options = optionsOrRlsContext;
+      }
+    }
+
     // Get metadata to find primary key name
     const metadata = this._getMetadata(entityName);
 
@@ -287,12 +316,24 @@ class GenericEntityService {
 
     // Delegate to findByField using the primary key
     // Note: primaryKey (e.g., 'id') must be in filterableFields for this to work
-    return this.findByField(
+    const entity = await this.findByField(
       entityName,
       metadata.primaryKey,
       safeId,
       rlsContext,
     );
+
+    // Load relationships if requested and entity found
+    if (entity && options.include && options.include.length > 0) {
+      const withRelationships = await loadRelationships(
+        entityName,
+        options.include,
+        [entity],
+      );
+      return withRelationships[0] || entity;
+    }
+
+    return entity;
   }
 
   /**
@@ -460,7 +501,16 @@ class GenericEntityService {
     const pagination = PaginationService.generateMetadata(page, limit, total);
 
     // Filter sensitive fields from all records
-    const filteredData = filterOutputArray(result.rows, metadata);
+    let filteredData = filterOutputArray(result.rows, metadata);
+
+    // Load relationships if requested
+    if (options.include && options.include.length > 0 && filteredData.length > 0) {
+      filteredData = await loadRelationships(
+        entityName,
+        options.include,
+        filteredData,
+      );
+    }
 
     return {
       data: filteredData,

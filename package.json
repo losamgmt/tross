@@ -77,7 +77,8 @@
     "db:test:reset": "docker-compose -f docker-compose.test.yml down -v && docker-compose -f docker-compose.test.yml up -d",
     "db:test:logs": "docker-compose -f docker-compose.test.yml logs -f postgres-test",
     "docs:api:export": "node backend/scripts/export-openapi.js",
-    "docs:api:generate": "npm run docs:api:export && echo 'API docs exported! Import docs/api/openapi.json into Postman'"
+    "docs:api:generate": "npm run docs:api:export && echo 'API docs exported! Import docs/api/openapi.json into Postman'",
+    "docs:validation": "node scripts/export-validation-rules.js"
   },
   "keywords": [],
   "author": "Tross Team",

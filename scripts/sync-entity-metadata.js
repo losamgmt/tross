@@ -209,68 +209,50 @@ function transformModel(entityName, backendMeta, allModels) {
     icon: backendMeta.icon,
     // Whether this entity supports file attachments (metadata-driven UI)
     supportsFileAttachments: backendMeta.supportsFileAttachments,
+    // Summary endpoint configuration for analytics (null = not summarizable)
+    summaryConfig: backendMeta.summaryConfig ?? null,
   };
 
   // displayField - what to show when this entity is referenced (e.g., in FK dropdowns)
   // Distinct from identityField (unique key) - e.g., role: identityField=priority, displayField=name
-  if (backendMeta.displayField) {
-    result.displayField = backendMeta.displayField;
-  }
+  // ALWAYS emit - defaults to identityField for consistency
+  result.displayField = backendMeta.displayField ?? backendMeta.identityField;
 
   // Display names - convert snake_case entity name to Title Case
   const displayName = snakeToTitleCase(entityName);
   result.displayName = displayName;
   result.displayNamePlural = getPluralForm(displayName);
 
-  // Arrays
-  if (backendMeta.requiredFields?.length) {
-    result.requiredFields = backendMeta.requiredFields;
-  }
-  if (backendMeta.immutableFields?.length) {
-    result.immutableFields = backendMeta.immutableFields;
-  }
-  if (backendMeta.searchableFields?.length) {
-    result.searchableFields = backendMeta.searchableFields;
-  }
-  if (backendMeta.filterableFields?.length) {
-    result.filterableFields = backendMeta.filterableFields;
-  }
-  if (backendMeta.sortableFields?.length) {
-    result.sortableFields = backendMeta.sortableFields;
-  }
+  // ============================================================================
+  // CONSISTENT SHAPE: All array/object fields ALWAYS present (empty if none)
+  // Frontend can confidently access without null checks.
+  // ============================================================================
 
-  // Default sort
-  if (backendMeta.defaultSort) {
-    result.defaultSort = backendMeta.defaultSort;
-  }
+  // Arrays - ALWAYS emit (empty array if none)
+  result.requiredFields = backendMeta.requiredFields ?? [];
+  result.immutableFields = backendMeta.immutableFields ?? [];
+  result.searchableFields = backendMeta.searchableFields ?? [];
+  result.filterableFields = backendMeta.filterableFields ?? [];
+  result.sortableFields = backendMeta.sortableFields ?? [];
+  result.displayColumns = backendMeta.displayColumns ?? [];
 
-  // Display columns for table views (ordered list of default visible columns)
-  if (backendMeta.displayColumns?.length) {
-    result.displayColumns = backendMeta.displayColumns;
-  }
+  // Default sort - ALWAYS emit (sensible default if none)
+  result.defaultSort = backendMeta.defaultSort ?? { field: "created_at", order: "DESC" };
 
-  // Field aliases for UI labels (e.g., { name: 'Title' })
-  if (
-    backendMeta.fieldAliases &&
-    Object.keys(backendMeta.fieldAliases).length > 0
-  ) {
-    result.fieldAliases = backendMeta.fieldAliases;
-  }
+  // Field aliases for UI labels - ALWAYS emit (empty object if none)
+  result.fieldAliases = backendMeta.fieldAliases ?? {};
 
   // Name pattern for entity category (human, simple, computed, null)
   // Determines how entity names are displayed/computed
-  if (backendMeta.namePattern !== undefined) {
-    result.namePattern = backendMeta.namePattern;
-  }
+  // ALWAYS emit - null is valid for system entities
+  result.namePattern = backendMeta.namePattern ?? null;
 
-  // System protected (for roles)
-  if (backendMeta.systemProtected) {
-    result.systemProtected = backendMeta.systemProtected;
-  }
+  // System protected (for roles) - ALWAYS emit
+  result.systemProtected = backendMeta.systemProtected ?? [];
 
   // Field groups (for semantic grouping in forms/UI)
   // Always include to maintain consistent contract
-  result.fieldGroups = backendMeta.fieldGroups || {};
+  result.fieldGroups = backendMeta.fieldGroups ?? {};
 
   // Fields
   result.fields = {};
@@ -312,6 +294,41 @@ function transformModel(entityName, backendMeta, allModels) {
 
     result.preferenceSchema = transformPreferenceSchema(preferenceFields);
   }
+
+  // ============================================================================
+  // RELATIONSHIP SUPPORT (M:M, hasMany, hasOne, belongsTo)
+  // ============================================================================
+  // CONSISTENT SHAPE: All entities have these properties, varying only in content.
+  // This enables frontend code to confidently access without null checks.
+
+  // Sync relationships for ?include= API support and frontend data fetching
+  // ALWAYS emit (empty object if none) - consistent shape contract
+  result.relationships = {};
+  if (backendMeta.relationships && Object.keys(backendMeta.relationships).length > 0) {
+    for (const [relName, relDef] of Object.entries(backendMeta.relationships)) {
+      result.relationships[relName] = {
+        type: relDef.type,
+        table: relDef.table,
+        foreignKey: relDef.foreignKey,
+        // M:M specific properties
+        ...(relDef.through && { through: relDef.through }),
+        ...(relDef.targetKey && { targetKey: relDef.targetKey }),
+        // Field subset to retrieve
+        ...(relDef.fields?.length && { fields: relDef.fields }),
+        // Human-readable description
+        ...(relDef.description && { description: relDef.description }),
+      };
+    }
+  }
+
+  // Junction entity markers (for M:M pivot tables)
+  // ALWAYS emit - consistent shape contract
+  result.isJunction = backendMeta.isJunction === true;
+  result.junctionFor = backendMeta.junctionFor ?? null;
+
+  // Default includes (auto-loaded relationships)
+  // ALWAYS emit (empty array if none) - consistent shape contract
+  result.defaultIncludes = backendMeta.defaultIncludes ?? [];
 
   return result;
 }

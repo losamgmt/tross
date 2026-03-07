@@ -7,10 +7,11 @@
  * - Type-based, not field-based - applies universally across ALL entities
  * - No per-entity configuration - lean metadata, centralized logic
  * - Automatic and invisible - GenericEntityService uses this on all create/update
+ * - Enum values match metadata SSOT (geo-standards, field-types) exactly
  *
  * TYPE-BASED RULES:
  * - string: trim whitespace from both ends
- * - enum: lowercase + trim
+ * - enum: match to metadata.values (case-insensitive) + trim, preserving SSOT case
  * - email: lowercase + trim (email is a special string subtype)
  * - All other types: pass through unchanged
  *
@@ -48,9 +49,17 @@ function sanitizeValue(value, fieldDef) {
       return value;
 
     case 'enum':
-      // Enums: lowercase + trim (for consistency in DB)
+      // Enums: match to metadata values (case-insensitive), preserving exact case from SSOT
       if (typeof value === 'string') {
-        return value.toLowerCase().trim();
+        const trimmed = value.trim();
+        // If metadata has enum values, match case-insensitively to get exact value
+        if (fieldDef.values && Array.isArray(fieldDef.values)) {
+          const matched = fieldDef.values.find(
+            (v) => v.toLowerCase() === trimmed.toLowerCase(),
+          );
+          return matched !== undefined ? matched : trimmed;
+        }
+        return trimmed;
       }
       return value;
 

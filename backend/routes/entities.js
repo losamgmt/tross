@@ -24,6 +24,7 @@ const {
   validatePagination,
   validateIdParam,
   validateQuery,
+  validateInclude,
 } = require('../validators');
 const GenericEntityService = require('../services/generic-entity-service');
 const ResponseFormatter = require('../utils/response-formatter');
@@ -144,6 +145,7 @@ function createEntityRouter(entityName, _options = {}) {
           filters,
           sortBy,
           sortOrder,
+          include: req.validated.query.include,
         },
         rlsContext,
       );
@@ -175,13 +177,16 @@ function createEntityRouter(entityName, _options = {}) {
     requirePermission('read'),
     enforceRLS,
     validateIdParam(),
+    validateInclude(metadata),
     asyncHandler(async (req, res) => {
       const entityId = req.validated.id;
       const rlsContext = buildRlsContext(req);
+      const include = req.validated.query?.include;
 
       const entity = await GenericEntityService.findById(
         entityName,
         entityId,
+        { include },
         rlsContext,
       );
 

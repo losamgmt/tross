@@ -112,6 +112,14 @@ module.exports = {
   supportsFileAttachments: true,
 
   /**
+   * Summary endpoint configuration for aggregated analytics.
+   */
+  summaryConfig: {
+    groupableFields: ['customer_id', 'status'],
+    summableFields: ['value'],
+  },
+
+  /**
    * Route configuration - explicit opt-in for generic router
    */
   routeConfig: {

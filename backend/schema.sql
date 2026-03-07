@@ -30,8 +30,13 @@ DROP TABLE IF EXISTS file_attachments CASCADE;
 DROP TABLE IF EXISTS departments CASCADE;
 DROP TABLE IF EXISTS audit_logs CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
+DROP TABLE IF EXISTS customer_units CASCADE;
+DROP TABLE IF EXISTS assets CASCADE;
+DROP TABLE IF EXISTS units CASCADE;
 DROP TABLE IF EXISTS technicians CASCADE;
 DROP TABLE IF EXISTS roles CASCADE;
+DROP TABLE IF EXISTS property_roles CASCADE;
+DROP TABLE IF EXISTS properties CASCADE;
 DROP TABLE IF EXISTS inventory CASCADE;
 DROP TABLE IF EXISTS contracts CASCADE;
 DROP TABLE IF EXISTS customers CASCADE;
@@ -127,6 +132,57 @@ CREATE INDEX IF NOT EXISTS idx_inventory_name ON inventory(name);
 CREATE INDEX IF NOT EXISTS idx_inventory_description ON inventory(description);
 
 -- ============================================================================
+-- PROPERTIES
+-- ============================================================================
+-- Entity: property
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS properties (
+    id SERIAL PRIMARY KEY,
+    is_active BOOLEAN DEFAULT true NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    status VARCHAR(25) DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+    property_type VARCHAR(27) DEFAULT 'residential' CHECK (property_type IN ('residential', 'commercial', 'industrial')),
+    access_instructions TEXT,
+    notes TEXT,
+    address_line1 VARCHAR(255),
+    address_line2 VARCHAR(255),
+    address_city VARCHAR(100),
+    address_state VARCHAR(25) CHECK (address_state IN ('AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'DC', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ', 'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY', 'AS', 'GU', 'MP', 'PR', 'VI', 'AB', 'BC', 'MB', 'NB', 'NL', 'NS', 'NT', 'NU', 'ON', 'PE', 'QC', 'SK', 'YT')),
+    address_postal_code VARCHAR(20),
+    address_country VARCHAR(25) DEFAULT 'US' CHECK (address_country IN ('US', 'CA'))
+);
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_properties_name ON properties(name);
+CREATE INDEX IF NOT EXISTS idx_properties_address_city ON properties(address_city);
+CREATE INDEX IF NOT EXISTS idx_properties_address_state ON properties(address_state);
+
+-- ============================================================================
+-- PROPERTY_ROLES
+-- ============================================================================
+-- Entity: property_role
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS property_roles (
+    id SERIAL PRIMARY KEY,
+    role VARCHAR(34) NOT NULL CHECK (role IN ('board_chair', 'board_member', 'property_manager', 'accountant')),
+    is_active BOOLEAN DEFAULT true NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    status VARCHAR(25) DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+    customer_id INTEGER NOT NULL REFERENCES customers(id),
+    property_id INTEGER NOT NULL REFERENCES properties(id),
+    effective_date DATE,
+    end_date DATE
+);
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_property_roles_role ON property_roles(role);
+CREATE INDEX IF NOT EXISTS idx_property_roles_customer_id ON property_roles(customer_id);
+CREATE INDEX IF NOT EXISTS idx_property_roles_property_id ON property_roles(property_id);
+
+-- ============================================================================
 -- ROLES
 -- ============================================================================
 -- Entity: role
@@ -173,6 +229,87 @@ CREATE INDEX IF NOT EXISTS idx_technicians_email ON technicians(email);
 CREATE INDEX IF NOT EXISTS idx_technicians_first_name ON technicians(first_name);
 CREATE INDEX IF NOT EXISTS idx_technicians_last_name ON technicians(last_name);
 CREATE INDEX IF NOT EXISTS idx_technicians_license_number ON technicians(license_number);
+
+-- ============================================================================
+-- UNITS
+-- ============================================================================
+-- Entity: unit
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS units (
+    id SERIAL PRIMARY KEY,
+    unit_identifier VARCHAR(255) NOT NULL,
+    is_active BOOLEAN DEFAULT true NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    status VARCHAR(25) DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+    property_id INTEGER NOT NULL REFERENCES properties(id),
+    ownership_type VARCHAR(25) NOT NULL CHECK (ownership_type IN ('private', 'common')),
+    unit_category VARCHAR(27) CHECK (unit_category IN ('residential', 'commercial', 'amenity', 'utility', 'parking')),
+    floor INTEGER,
+    square_footage INTEGER,
+    notes TEXT
+);
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_units_unit_identifier ON units(unit_identifier);
+CREATE INDEX IF NOT EXISTS idx_units_notes ON units(notes);
+CREATE INDEX IF NOT EXISTS idx_units_property_id ON units(property_id);
+
+-- ============================================================================
+-- ASSETS
+-- ============================================================================
+-- Entity: asset
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS assets (
+    id SERIAL PRIMARY KEY,
+    is_active BOOLEAN DEFAULT true NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    status VARCHAR(31) DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'needs_repair', 'decommissioned')),
+    unit_id INTEGER NOT NULL REFERENCES units(id),
+    property_id INTEGER REFERENCES properties(id),
+    asset_type VARCHAR(25) NOT NULL CHECK (asset_type IN ('hvac', 'plumbing', 'electrical', 'appliance', 'other')),
+    manufacturer VARCHAR(255),
+    model VARCHAR(255),
+    serial_number VARCHAR(100),
+    install_date DATE,
+    last_service_date DATE,
+    next_service_date DATE,
+    warranty_expiry DATE,
+    notes TEXT
+);
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_assets_name ON assets(name);
+CREATE INDEX IF NOT EXISTS idx_assets_manufacturer ON assets(manufacturer);
+CREATE INDEX IF NOT EXISTS idx_assets_model ON assets(model);
+CREATE INDEX IF NOT EXISTS idx_assets_serial_number ON assets(serial_number);
+CREATE INDEX IF NOT EXISTS idx_assets_unit_id ON assets(unit_id);
+CREATE INDEX IF NOT EXISTS idx_assets_property_id ON assets(property_id);
+
+-- ============================================================================
+-- CUSTOMER_UNITS
+-- ============================================================================
+-- Entity: customer_unit
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS customer_units (
+    id SERIAL PRIMARY KEY,
+    role VARCHAR(39) DEFAULT 'owner' CHECK (role IN ('owner', 'authorized_occupant')),
+    is_active BOOLEAN DEFAULT true NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    status VARCHAR(25) DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+    customer_id INTEGER NOT NULL REFERENCES customers(id),
+    unit_id INTEGER NOT NULL REFERENCES units(id),
+    effective_date DATE,
+    end_date DATE
+);
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_customer_units_role ON customer_units(role);
+CREATE INDEX IF NOT EXISTS idx_customer_units_customer_id ON customer_units(customer_id);
+CREATE INDEX IF NOT EXISTS idx_customer_units_unit_id ON customer_units(unit_id);
 
 -- ============================================================================
 -- USERS
@@ -314,6 +451,9 @@ CREATE TABLE IF NOT EXISTS preferences (
     auto_refresh_interval INTEGER DEFAULT 0
 );
 
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_preferences_id ON preferences(id);
+
 -- ============================================================================
 -- SAVED_VIEWS
 -- ============================================================================
@@ -372,6 +512,8 @@ CREATE TABLE IF NOT EXISTS work_orders (
     summary VARCHAR(255),
     priority VARCHAR(25) DEFAULT 'normal' CHECK (priority IN ('low', 'normal', 'high', 'urgent')),
     customer_id INTEGER NOT NULL REFERENCES customers(id),
+    property_id INTEGER REFERENCES properties(id),
+    unit_id INTEGER REFERENCES units(id),
     assigned_technician_id INTEGER REFERENCES technicians(id),
     scheduled_start TIMESTAMP,
     scheduled_end TIMESTAMP,
@@ -389,6 +531,8 @@ CREATE INDEX IF NOT EXISTS idx_work_orders_work_order_number ON work_orders(work
 CREATE INDEX IF NOT EXISTS idx_work_orders_name ON work_orders(name);
 CREATE INDEX IF NOT EXISTS idx_work_orders_summary ON work_orders(summary);
 CREATE INDEX IF NOT EXISTS idx_work_orders_customer_id ON work_orders(customer_id);
+CREATE INDEX IF NOT EXISTS idx_work_orders_property_id ON work_orders(property_id);
+CREATE INDEX IF NOT EXISTS idx_work_orders_unit_id ON work_orders(unit_id);
 CREATE INDEX IF NOT EXISTS idx_work_orders_assigned_technician_id ON work_orders(assigned_technician_id);
 
 -- ============================================================================

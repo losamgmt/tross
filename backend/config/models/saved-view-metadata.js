@@ -74,6 +74,12 @@ module.exports = {
    */
   supportsFileAttachments: false,
 
+  /**
+   * Summary endpoint configuration for aggregated analytics.
+   * Null: Saved views are not aggregated.
+   */
+  summaryConfig: null,
+
   /**   * Entity-level permission overrides
    * Matches permissions.json - all users can manage their own saved views
    */

@@ -96,6 +96,12 @@ module.exports = {
   supportsFileAttachments: false,
 
   /**
+   * Summary endpoint configuration for aggregated analytics.
+   * Null: Roles are not aggregated.
+   */
+  summaryConfig: null,
+
+  /**
    * Entity-level permission overrides
    * Roles are admin-only for CUD, but readable by all
    */
@@ -339,15 +345,13 @@ module.exports = {
   /**
    * Foreign key relationships
    * Used for JOIN generation and validation
+   *
+   * NOTE: A 'permissions' M:M relationship was considered but deferred.
+   * See ADR-009 for the granular permissions vision and why it's not
+   * implemented yet. The current permission system is code-derived from
+   * entity metadata (permissions-deriver.js), not database-stored.
    */
   relationships: {
-    permissions: {
-      type: 'hasMany',
-      foreignKey: 'role_id',
-      table: 'role_permissions',
-      through: 'permissions',
-      fields: ['id', 'permission_name', 'resource', 'action'],
-    },
     users: {
       type: 'hasMany',
       foreignKey: 'role_id',

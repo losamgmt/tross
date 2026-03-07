@@ -63,6 +63,7 @@ const CONFIG = Object.freeze({
   /** Table name pluralization overrides */
   TABLE_OVERRIDES: Object.freeze({
     inventory: 'inventory',
+    property: 'properties',
   }),
 
   /** Enum VARCHAR padding */

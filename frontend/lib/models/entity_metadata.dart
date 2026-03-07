@@ -7,6 +7,7 @@ library;
 import 'field_definition.dart';
 import 'preference_field.dart';
 import 'permission.dart';
+import 'relationship.dart';
 
 /// Semantic grouping of fields for form layout
 class FieldGroup {
@@ -176,6 +177,26 @@ class EntityMetadata {
   /// - null: System table (notification, audit_log)
   final String? namePattern;
 
+  // ============================================================================
+  // RELATIONSHIP SUPPORT (M:M, hasMany, hasOne, belongsTo)
+  // ============================================================================
+
+  /// Entity relationships for JOINs and data loading.
+  /// ALWAYS present (empty map if none) - consistent shape contract.
+  final Map<String, Relationship> relationships;
+
+  /// Whether this is a junction entity (M:M pivot table)
+  /// ALWAYS present (false for non-junctions) - consistent shape contract.
+  final bool isJunction;
+
+  /// Junction entity configuration (which two entities it connects)
+  /// Null for non-junction entities.
+  final JunctionFor? junctionFor;
+
+  /// Default relationships to auto-load via ?include=
+  /// ALWAYS present (empty list if none) - consistent shape contract.
+  final List<String> defaultIncludes;
+
   const EntityMetadata({
     required this.entityKey,
     required this.tableName,
@@ -199,6 +220,11 @@ class EntityMetadata {
     this.displayColumns,
     this.fieldAliases,
     this.namePattern,
+    // Relationship fields - ALWAYS present (consistent shape)
+    this.relationships = const {},
+    this.isJunction = false,
+    this.junctionFor,
+    this.defaultIncludes = const [],
   });
 
   factory EntityMetadata.fromJson(String name, Map<String, dynamic> json) {
@@ -269,7 +295,35 @@ class EntityMetadata {
         (k, v) => MapEntry(k, v as String),
       ),
       namePattern: json['namePattern'] as String?,
+      // Relationship support - ALWAYS present (consistent shape contract)
+      relationships: _parseRelationships(json['relationships']),
+      isJunction: json['isJunction'] as bool? ?? false,
+      junctionFor: _parseJunctionFor(json['junctionFor']),
+      defaultIncludes:
+          (json['defaultIncludes'] as List<dynamic>?)?.cast<String>() ?? [],
     );
+  }
+
+  /// Parse relationships JSON into Relationship map
+  static Map<String, Relationship> _parseRelationships(dynamic relsJson) {
+    if (relsJson == null) return {};
+    final rels = relsJson as Map<String, dynamic>;
+    if (rels.isEmpty) return {};
+
+    final result = <String, Relationship>{};
+    for (final entry in rels.entries) {
+      result[entry.key] = Relationship.fromJson(
+        entry.key,
+        entry.value as Map<String, dynamic>,
+      );
+    }
+    return result;
+  }
+
+  /// Parse junctionFor JSON into JunctionFor object
+  static JunctionFor? _parseJunctionFor(dynamic junctionJson) {
+    if (junctionJson == null) return null;
+    return JunctionFor.fromJson(junctionJson as Map<String, dynamic>);
   }
 
   /// Parse fieldGroups JSON into FieldGroup map
@@ -361,4 +415,29 @@ class EntityMetadata {
 
   /// Check if this entity has field groups defined
   bool get hasFieldGroups => fieldGroups.isNotEmpty;
+
+  // ============================================================================
+  // RELATIONSHIP HELPERS
+  // ============================================================================
+
+  /// Check if this entity has any relationships defined
+  bool get hasRelationships => relationships.isNotEmpty;
+
+  /// Get relationships that should show in Related tabs (hasMany or manyToMany)
+  List<Relationship> get relatedTabRelationships =>
+      relationships.values.where((r) => r.showInRelatedTab).toList();
+
+  /// Check if this entity has Related tab content
+  bool get hasRelatedTab => relatedTabRelationships.isNotEmpty;
+
+  /// Get manyToMany relationships only
+  List<Relationship> get manyToManyRelationships =>
+      relationships.values.where((r) => r.isManyToMany).toList();
+
+  /// Get hasMany relationships only
+  List<Relationship> get hasManyRelationships =>
+      relationships.values.where((r) => r.isHasMany).toList();
+
+  /// Get a relationship by name
+  Relationship? getRelationship(String name) => relationships[name];
 }

@@ -6,6 +6,7 @@ library;
 
 // Cards
 export 'cards/entity_detail_card.dart';
+export 'cards/relationship_section.dart';
 
 // Dashboards
 export 'dashboards/db_health_dashboard.dart';

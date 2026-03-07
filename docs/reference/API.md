@@ -162,6 +162,75 @@ GET /api/work_orders?status=pending&assigned_to=123&created_after=2025-01-01
 
 ---
 
+## Including Related Entities
+
+Use the `include` query parameter to fetch related entities in a single request.
+This avoids N+1 queries and is the recommended approach for loading relationships.
+
+### Syntax
+
+```http
+GET /api/{entity}?include=relationship1,relationship2
+GET /api/{entity}/:id?include=relationship1
+```
+
+### Examples
+
+**Load customer with their units and invoices:**
+```http
+GET /api/customers/123?include=units,invoices
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 123,
+    "first_name": "Alice",
+    "last_name": "Smith",
+    "email": "alice@example.com",
+    "units": [
+      { "id": 10, "unit_identifier": "4A", "property_id": 1 },
+      { "id": 11, "unit_identifier": "5B", "property_id": 1 }
+    ],
+    "invoices": [
+      { "id": 201, "invoice_number": "INV-001", "status": "paid", "total": 150.00 }
+    ]
+  }
+}
+```
+
+**Load units with their customers (M:M relationship):**
+```http
+GET /api/units?include=customers&limit=10
+```
+
+### Available Relationships
+
+Relationships are defined in entity metadata. Common patterns:
+
+| Entity | Relationships | Type |
+|--------|--------------|------|
+| `customer` | `units`, `invoices`, `workOrders`, `contracts` | M:M, hasMany |
+| `unit` | `customers`, `assets` | M:M, hasMany |
+| `work_order` | `invoices` | hasMany |
+| `role` | `users` | hasMany |
+
+### Validation
+
+- Invalid relationship names return `400 Bad Request`
+- `belongsTo` relationships are auto-loaded via JOINs (no need to include)
+- Multiple relationships separated by comma: `?include=units,invoices,contracts`
+
+### Notes
+
+- Relationships are loaded via efficient batch queries (no N+1)
+- Related data is filtered by the `fields` defined in entity metadata
+- RLS currently applies to parent entity only (junction table RLS is planned)
+
+---
+
 ## Authentication
 
 **All endpoints require authentication except:**

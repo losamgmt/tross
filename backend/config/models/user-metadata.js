@@ -90,6 +90,12 @@ module.exports = {
   supportsFileAttachments: false,
 
   /**
+   * Summary endpoint configuration for aggregated analytics.
+   * Null: Users are not aggregated.
+   */
+  summaryConfig: null,
+
+  /**
    * Entity-level permission overrides
    * When entity-level access differs from field-level minimums
    * (e.g., only admin can call PATCH /users/:id even if some fields are self-editable)

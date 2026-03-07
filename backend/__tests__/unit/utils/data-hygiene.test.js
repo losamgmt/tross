@@ -56,8 +56,26 @@ describe("data-hygiene", () => {
     });
 
     describe("enum type", () => {
-      it("lowercases and trims enum values", () => {
-        expect(sanitizeValue("  ACTIVE  ", { type: "enum" })).toBe("active");
+      it("matches to metadata values array, preserving original case", () => {
+        expect(
+          sanitizeValue("  us  ", { type: "enum", values: ["US", "CA"] })
+        ).toBe("US");
+        expect(
+          sanitizeValue("active", { type: "enum", values: ["ACTIVE", "PENDING"] })
+        ).toBe("ACTIVE");
+        expect(
+          sanitizeValue("  PENDING  ", { type: "enum", values: ["active", "pending"] })
+        ).toBe("pending");
+      });
+
+      it("trims enum values when no metadata values array", () => {
+        expect(sanitizeValue("  ACTIVE  ", { type: "enum" })).toBe("ACTIVE");
+      });
+
+      it("returns trimmed value when no match found", () => {
+        expect(
+          sanitizeValue("  unknown  ", { type: "enum", values: ["US", "CA"] })
+        ).toBe("unknown");
       });
 
       it("handles non-string for enum type", () => {
@@ -160,13 +178,13 @@ describe("data-hygiene", () => {
     it("sanitizes based on field types from metadata", () => {
       const data = {
         email: "  TEST@EXAMPLE.COM  ",
-        status: "  ACTIVE  ",
+        status: "  active  ",
         name: "  John Doe  ",
       };
       const metadata = {
         fields: {
           email: { type: "email" },
-          status: { type: "enum" },
+          status: { type: "enum", values: ["active", "pending"] },
           name: { type: "string" },
         },
       };

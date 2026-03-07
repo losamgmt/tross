@@ -332,6 +332,40 @@ function validateQuery(metadata) {
       req.validated.query.sortBy = sortBy;
       req.validated.query.sortOrder = sortOrder;
 
+      // Validate include parameter (relationship loading)
+      // Format: ?include=units,invoices
+      const includeParam = req.query.include;
+      if (includeParam && typeof includeParam === 'string') {
+        const trimmed = includeParam.trim();
+        if (trimmed.length > 0) {
+          // Split by comma, trim each, filter empty
+          const relationships = trimmed
+            .split(',')
+            .map((r) => r.trim())
+            .filter((r) => r.length > 0);
+
+          // Validate against metadata.relationships if available
+          const availableRelationships = Object.keys(metadata.relationships || {});
+          if (availableRelationships.length > 0) {
+            const invalid = relationships.filter((r) => !availableRelationships.includes(r));
+            if (invalid.length > 0) {
+              return ResponseFormatter.badRequest(
+                res,
+                `Invalid include: ${invalid.join(', ')}. Available: ${availableRelationships.join(', ')}`,
+                [
+                  {
+                    field: 'include',
+                    message: `Invalid relationships: ${invalid.join(', ')}`,
+                  },
+                ],
+              );
+            }
+          }
+
+          req.validated.query.include = relationships;
+        }
+      }
+
       next();
     } catch (error) {
       logValidationFailure({
@@ -349,9 +383,65 @@ function validateQuery(metadata) {
   };
 }
 
+/**
+ * Validate include query parameter (standalone, for single entity routes)
+ *
+ * Usage:
+ *   router.get('/:id', validateInclude(metadata), handler);
+ *   // Access: req.validated.query.include (array of relationship names)
+ *
+ * @param {Object} metadata - Model metadata with relationships
+ * @returns {Function} Express middleware
+ */
+function validateInclude(metadata) {
+  return (req, res, next) => {
+    if (!req.validated) {
+      req.validated = {};
+    }
+    if (!req.validated.query) {
+      req.validated.query = {};
+    }
+
+    const includeParam = req.query.include;
+    if (includeParam && typeof includeParam === 'string') {
+      const trimmed = includeParam.trim();
+      if (trimmed.length > 0) {
+        // Split by comma, trim each, filter empty
+        const relationships = trimmed
+          .split(',')
+          .map((r) => r.trim())
+          .filter((r) => r.length > 0);
+
+        // Validate against metadata.relationships if available
+        const availableRelationships = Object.keys(metadata.relationships || {});
+        if (availableRelationships.length > 0) {
+          const invalid = relationships.filter((r) => !availableRelationships.includes(r));
+          if (invalid.length > 0) {
+            return ResponseFormatter.badRequest(
+              res,
+              `Invalid include: ${invalid.join(', ')}. Available: ${availableRelationships.join(', ')}`,
+              [
+                {
+                  field: 'include',
+                  message: `Invalid relationships: ${invalid.join(', ')}`,
+                },
+              ],
+            );
+          }
+        }
+
+        req.validated.query.include = relationships;
+      }
+    }
+
+    next();
+  };
+}
+
 module.exports = {
   validatePagination,
   validateSearch,
   validateSort,
   validateQuery, // Metadata-driven query validation (replaced validateFilters)
+  validateInclude, // Relationship include validation
 };

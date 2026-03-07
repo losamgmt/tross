@@ -20,7 +20,7 @@ const { foreignKeyFieldName } = require('./field-types');
  * Valid navigation groups for menu placement.
  * Must match groups defined in nav-config.json.
  */
-const VALID_NAV_GROUPS = new Set(['people', 'operations', 'finance', 'admin']);
+const VALID_NAV_GROUPS = new Set(['customers', 'work', 'resources', 'finance', 'admin']);
 
 /**
  * All supported field types that the data generator can handle.
@@ -594,6 +594,167 @@ function validateNavVisibility(meta, errors) {
 }
 
 /**
+ * Validate summaryConfig property
+ * REQUIRED: Every entity must explicitly declare its summary configuration.
+ * This enables the generic /summaries/:entity endpoint.
+ *
+ * Valid values:
+ * - null: Entity is not summarizable (junction tables, system tables)
+ * - { groupableFields: [...], summableFields?: [...], breakdownFields?: [...], dateFields?: [...] }
+ */
+function validateSummaryConfig(meta, errors) {
+  // summaryConfig is REQUIRED - every entity must explicitly declare it
+  if (!('summaryConfig' in meta)) {
+    errors.add(
+      'summaryConfig',
+      'REQUIRED: Every entity must declare summaryConfig. ' +
+        'Use null for non-summarizable entities, or { groupableFields: [...] } for analytics support.',
+    );
+    return;
+  }
+
+  const config = meta.summaryConfig;
+
+  // null is valid (entity not summarizable)
+  if (config === null) {
+    return;
+  }
+
+  // Must be an object if not null
+  if (typeof config !== 'object') {
+    errors.add(
+      'summaryConfig',
+      `Must be null or an object, got '${typeof config}'`,
+    );
+    return;
+  }
+
+  const fields = meta.fields || {};
+  const filterableFields = meta.filterableFields || [];
+
+  // groupableFields is REQUIRED and must be non-empty
+  if (!Array.isArray(config.groupableFields) || config.groupableFields.length === 0) {
+    errors.add(
+      'summaryConfig.groupableFields',
+      'Must be a non-empty array of field names',
+    );
+    return;
+  }
+
+  // Validate each groupable field exists and is appropriate type (FK or enum)
+  for (const fieldName of config.groupableFields) {
+    const fieldDef = fields[fieldName];
+    if (!fieldDef && !filterableFields.includes(fieldName)) {
+      errors.add(
+        'summaryConfig.groupableFields',
+        `Unknown field '${fieldName}'`,
+      );
+      continue;
+    }
+
+    // Groupable fields should be FK or enum (categorical data for GROUP BY)
+    if (fieldDef) {
+      const validGroupTypes = ['foreignKey', 'enum', 'boolean'];
+      if (!validGroupTypes.includes(fieldDef.type)) {
+        // Status fields like 'is_active' are boolean, which is fine
+        // But warn for other types - they might be intentional for time-based grouping
+        const warnTypes = ['date', 'timestamp'];
+        if (!warnTypes.includes(fieldDef.type)) {
+          // Just a soft warning - numeric grouping is unusual but possible
+          // errors.add would fail validation, so we allow it
+        }
+      }
+    }
+  }
+
+  // Validate summableFields if present
+  if (config.summableFields !== undefined && config.summableFields !== null) {
+    if (!Array.isArray(config.summableFields)) {
+      errors.add(
+        'summaryConfig.summableFields',
+        'Must be an array of numeric field names',
+      );
+    } else {
+      for (const fieldName of config.summableFields) {
+        const fieldDef = fields[fieldName];
+        if (!fieldDef) {
+          errors.add(
+            'summaryConfig.summableFields',
+            `Unknown field '${fieldName}'`,
+          );
+          continue;
+        }
+
+        const numericTypes = ['integer', 'number', 'decimal', 'currency'];
+        if (!numericTypes.includes(fieldDef.type)) {
+          errors.add(
+            'summaryConfig.summableFields',
+            `Field '${fieldName}' must be numeric (${numericTypes.join(', ')}), got '${fieldDef.type}'`,
+          );
+        }
+      }
+    }
+  }
+
+  // Validate breakdownFields if present (explicit, not null for auto-detect)
+  if (config.breakdownFields !== undefined && config.breakdownFields !== null) {
+    if (!Array.isArray(config.breakdownFields)) {
+      errors.add(
+        'summaryConfig.breakdownFields',
+        'Must be null (auto-detect) or an array of enum field names',
+      );
+    } else {
+      for (const fieldName of config.breakdownFields) {
+        const fieldDef = fields[fieldName];
+        if (!fieldDef) {
+          errors.add(
+            'summaryConfig.breakdownFields',
+            `Unknown field '${fieldName}'`,
+          );
+          continue;
+        }
+
+        if (fieldDef.type !== 'enum') {
+          errors.add(
+            'summaryConfig.breakdownFields',
+            `Field '${fieldName}' must be an enum type, got '${fieldDef.type}'`,
+          );
+        }
+      }
+    }
+  }
+
+  // Validate dateFields if present (explicit, not null for auto-detect)
+  if (config.dateFields !== undefined && config.dateFields !== null) {
+    if (!Array.isArray(config.dateFields)) {
+      errors.add(
+        'summaryConfig.dateFields',
+        'Must be null (auto-detect) or an array of date/timestamp field names',
+      );
+    } else {
+      for (const fieldName of config.dateFields) {
+        const fieldDef = fields[fieldName];
+        if (!fieldDef) {
+          errors.add(
+            'summaryConfig.dateFields',
+            `Unknown field '${fieldName}'`,
+          );
+          continue;
+        }
+
+        const dateTypes = ['date', 'timestamp'];
+        if (!dateTypes.includes(fieldDef.type)) {
+          errors.add(
+            'summaryConfig.dateFields',
+            `Field '${fieldName}' must be date or timestamp, got '${fieldDef.type}'`,
+          );
+        }
+      }
+    }
+  }
+}
+
+/**
  * Validate navGroup and navOrder properties
  *
  * If an entity has navVisibility (is shown in nav), it SHOULD have navGroup and navOrder.
@@ -681,6 +842,7 @@ function validateEntity(entityName, meta, allMetadata) {
   validateNavVisibility(meta, errors);
   validateNavPlacement(meta, errors);
   validateSupportsFileAttachments(meta, errors);
+  validateSummaryConfig(meta, errors);
   validateFieldTypes(meta, errors);
   validateFieldAccess(meta, errors);
   validateEntityPermissions(meta, errors);

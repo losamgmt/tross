@@ -70,6 +70,13 @@ module.exports = {
   supportsFileAttachments: false,
 
   /**
+   * Summary endpoint configuration for aggregated analytics.
+   */
+  summaryConfig: {
+    groupableFields: ['resource_type', 'action', 'user_id'],
+  },
+
+  /**
    * Entity-level permission overrides
    * Only admin can read audit logs. No create/update/delete via API.
    * This is the SSOT for "admin only" access control.

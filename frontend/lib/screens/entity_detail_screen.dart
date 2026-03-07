@@ -435,62 +435,150 @@ class _EntityDetailScreenState extends State<EntityDetailScreen> {
     required bool canUpdate,
     required bool canDelete,
   }) {
+    // Build action buttons row (shared between tabs and non-tabbed view)
+    final actionButtons = Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        if (canUpdate)
+          AppButton(
+            icon: Icons.edit,
+            tooltip: 'Edit this ${widget.entityName}',
+            label: 'Edit',
+            onPressed: _toggleEdit,
+          ),
+        if (canUpdate && canDelete) SizedBox(width: spacing.sm),
+        if (canDelete)
+          AppButton(
+            icon: Icons.delete,
+            tooltip: 'Delete this ${widget.entityName}',
+            label: 'Delete',
+            style: AppButtonStyle.danger,
+            onPressed: () => _handleDelete(metadata),
+          ),
+      ],
+    );
+
+    // Details content (card + attachments) - wrapped in scroll view for tab
+    Widget buildDetailsContent() {
+      return SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Entity details card
+            EntityDetailCard(
+              entityName: widget.entityName,
+              entity: _entity,
+              title: metadata.displayName,
+              icon: EntityIconResolver.getIcon(widget.entityName),
+              excludeFields: const ['created_at', 'updated_at'],
+            ),
+
+            SizedBox(height: spacing.lg),
+
+            // File attachments (if supported)
+            if (metadata.supportsFileAttachments)
+              EntityFileAttachments(
+                files: _files,
+                loading: _filesLoading,
+                error: _filesError,
+                uploading: _filesUploading,
+                readOnly: !canUpdate,
+                title: 'Attachments',
+                onUpload: _handleFileUpload,
+                onDownload: _handleFileDownload,
+                onDelete: _handleFileDelete,
+                onRetry: _loadFiles,
+              ),
+          ],
+        ),
+      );
+    }
+
+    // Related content (relationships list)
+    Widget buildRelatedContent() {
+      return _buildRelatedTabContent(
+        context,
+        metadata: metadata,
+        spacing: spacing,
+      );
+    }
+
+    // If entity has related relationships, use tabbed layout
+    // Note: No ScrollableContent here - TabbedContent handles its own scrolling
+    // and we need bounded height for Expanded to work
+    if (metadata.hasRelatedTab) {
+      return Padding(
+        padding: EdgeInsets.all(spacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            actionButtons,
+            SizedBox(height: spacing.lg),
+            Expanded(
+              child: TabbedContent(
+                tabs: [
+                  const TabConfig(
+                    id: 'details',
+                    label: 'Details',
+                    icon: Icons.info_outline,
+                  ),
+                  const TabConfig(
+                    id: 'related',
+                    label: 'Related',
+                    icon: Icons.link,
+                  ),
+                ],
+                contentBuilder: (tabId) => switch (tabId) {
+                  'details' => buildDetailsContent(),
+                  'related' => buildRelatedContent(),
+                  _ => const SizedBox.shrink(),
+                },
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // No related tab - simple layout
     return ScrollableContent(
       padding: EdgeInsets.all(spacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Action buttons
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              if (canUpdate)
-                AppButton(
-                  icon: Icons.edit,
-                  tooltip: 'Edit this ${widget.entityName}',
-                  label: 'Edit',
-                  onPressed: _toggleEdit,
-                ),
-              if (canUpdate && canDelete) SizedBox(width: spacing.sm),
-              if (canDelete)
-                AppButton(
-                  icon: Icons.delete,
-                  tooltip: 'Delete this ${widget.entityName}',
-                  label: 'Delete',
-                  style: AppButtonStyle.danger,
-                  onPressed: () => _handleDelete(metadata),
-                ),
-            ],
-          ),
-
+          actionButtons,
           SizedBox(height: spacing.lg),
+          buildDetailsContent(),
+        ],
+      ),
+    );
+  }
 
-          // Entity details card - uses metadata-driven EntityDetailCard
-          EntityDetailCard(
-            entityName: widget.entityName,
-            entity: _entity,
-            title: metadata.displayName,
-            icon: EntityIconResolver.getIcon(widget.entityName),
-            // Exclude system fields from detail view
-            excludeFields: const ['created_at', 'updated_at'],
-          ),
+  /// Build the Related tab content with sections per relationship.
+  /// Pure composition: uses RelationshipSection widget.
+  Widget _buildRelatedTabContent(
+    BuildContext context, {
+    required EntityMetadata metadata,
+    required AppSpacing spacing,
+  }) {
+    final relationships = metadata.relatedTabRelationships;
 
-          SizedBox(height: spacing.lg),
+    if (relationships.isEmpty) {
+      return const Center(child: Text('No related data'));
+    }
 
-          // File attachments section (only for entities that support it)
-          if (metadata.supportsFileAttachments)
-            EntityFileAttachments(
-              files: _files,
-              loading: _filesLoading,
-              error: _filesError,
-              uploading: _filesUploading,
-              readOnly: !canUpdate,
-              title: 'Attachments',
-              onUpload: _handleFileUpload,
-              onDownload: _handleFileDownload,
-              onDelete: _handleFileDelete,
-              onRetry: _loadFiles,
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (final relationship in relationships) ...[
+            RelationshipSection(
+              relationship: relationship,
+              parentEntityId: widget.entityId,
+              onSuccess: _loadEntity,
             ),
+            SizedBox(height: spacing.lg),
+          ],
         ],
       ),
     );

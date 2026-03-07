@@ -17,11 +17,37 @@ erDiagram
     CUSTOMERS ||--o{ WORK_ORDERS : "requests"
     CUSTOMERS ||--o{ INVOICES : "billed to"
     CUSTOMERS ||--o{ CONTRACTS : "signs"
+    CUSTOMERS ||--o{ CUSTOMER_UNITS : "owns/occupies"
+    CUSTOMERS ||--o{ PROPERTY_ROLES : "has role at"
+
+    PROPERTIES ||--o{ UNITS : "contains"
+    PROPERTIES ||--o{ PROPERTY_ROLES : "has roles"
+
+    UNITS ||--o{ CUSTOMER_UNITS : "owned by"
+    UNITS ||--o{ ASSETS : "contains"
+    UNITS ||--o{ WORK_ORDERS : "location"
 
     TECHNICIANS ||--o{ WORK_ORDERS : "assigned to"
 
     WORK_ORDERS ||--o| INVOICES : "generates"
 ```
+
+## Many-to-Many Relationships
+
+Junction tables enable M:M relationships:
+
+| Junction | Connects | Purpose |
+|----------|----------|---------|
+| `customer_units` | Customer ↔ Unit | Ownership/occupancy |
+| `property_roles` | Customer ↔ Property | Board/management roles |
+
+**API Pattern:** Use `?include=` to load related entities:
+```http
+GET /api/customers/123?include=units,invoices
+GET /api/units?include=customers
+```
+
+See [API Documentation](../reference/API.md#including-related-entities) for details.
 
 ## Entity Categories
 
@@ -36,6 +62,21 @@ Core domain entities following Entity Contract v2.0:
 - **INVOICES** - Billing records
 - **CONTRACTS** - Service agreements
 - **INVENTORY** - Stock management
+
+### Location Entities
+
+Property and unit management:
+
+- **PROPERTIES** - Buildings, complexes, addresses
+- **UNITS** - Individual units within properties
+- **ASSETS** - Equipment, appliances within units
+
+### Junction Entities
+
+M:M relationship pivot tables:
+
+- **CUSTOMER_UNITS** - Customer ↔ Unit ownership/occupancy
+- **PROPERTY_ROLES** - Customer ↔ Property board/management roles
 
 ### Reference Entities
 

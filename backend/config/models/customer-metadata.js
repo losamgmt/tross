@@ -87,13 +87,20 @@ module.exports = {
    * Customers are visible to all authenticated users
    */
   navVisibility: 'customer',
-  navGroup: 'people',
+  navGroup: 'customers',
   navOrder: 1,
 
   /**
    * File attachments - whether this entity supports file uploads
    */
   supportsFileAttachments: false,
+
+  /**
+   * Summary endpoint configuration for aggregated analytics.
+   */
+  summaryConfig: {
+    groupableFields: ['status'],
+  },
 
   /**
    * Entity-level permission overrides
@@ -297,6 +304,24 @@ module.exports = {
         'end_date',
       ],
       description: 'Service contracts with this customer',
+    },
+    // Customers belong to many units (through customer_unit junction)
+    units: {
+      type: 'manyToMany',
+      foreignKey: 'customer_id',
+      table: 'units',
+      through: 'customer_units',
+      targetKey: 'unit_id',
+      fields: ['id', 'unit_identifier', 'property_id', 'ownership_type'],
+      description: 'Units owned or occupied by this customer',
+    },
+    // Customers have many property roles (board/management positions)
+    propertyRoles: {
+      type: 'hasMany',
+      foreignKey: 'customer_id',
+      table: 'property_roles',
+      fields: ['id', 'property_id', 'role', 'status'],
+      description: 'Board/management roles this customer holds at properties',
     },
     // Optional: User account linked to this customer profile
     userAccount: {

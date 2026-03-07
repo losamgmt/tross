@@ -74,11 +74,18 @@ function foreignKeyViolation(meta, ctx) {
   if (!caps.canCreate) return; // Create disabled = scenario N/A
 
   for (const [fkField, fkDef] of Object.entries(foreignKeyFields)) {
+    // Skip FK fields that can't be created (e.g., auto-populated/computed fields)
+    const fieldAccess = meta.fieldAccess?.[fkField];
+    if (!fieldAccess || fieldAccess.create === 'none') continue;
+    
     ctx.it(
       `POST /api/${meta.tableName} - rejects invalid ${fkField} reference`,
       async () => {
-        const payload = ctx.factory.buildMinimal(meta.entityName);
-        payload[fkField] = 99999; // Non-existent FK
+        // Use buildMinimalWithFKs to ensure ALL required FKs are populated
+        // Then override just the one being tested with an invalid value
+        const payload = await ctx.factory.buildMinimalWithFKs(meta.entityName, {
+          [fkField]: 99999, // Non-existent FK
+        });
         const auth = await ctx.authHeader("admin");
 
         const response = await ctx.request

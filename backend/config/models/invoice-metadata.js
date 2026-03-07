@@ -112,6 +112,15 @@ module.exports = {
   supportsFileAttachments: true,
 
   /**
+   * Summary endpoint configuration for aggregated analytics.
+   * Enables GET /summaries/invoices?group_by=customer_id
+   */
+  summaryConfig: {
+    groupableFields: ['customer_id', 'work_order_id', 'status'],
+    summableFields: ['total', 'tax', 'amount'],
+  },
+
+  /**
    * Route configuration - explicit opt-in for generic router
    */
   routeConfig: {
