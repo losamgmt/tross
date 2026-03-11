@@ -538,18 +538,18 @@ describe("GenericEntityService", () => {
     });
 
     // ------------------------------------------------------------------------
-    // RLS (Row-Level Security) Integration
+    // RLS (Row-Level Security) Integration (ADR-011)
     // ------------------------------------------------------------------------
 
     describe("RLS integration", () => {
-      test("should apply user id RLS filter", async () => {
-        // Arrange - ADR-008: filterConfig 'id' is shorthand for { field: 'id', value: 'userId' }
+      test("should apply user id RLS filter for customer role", async () => {
+        // Arrange - ADR-011: customer can only see their own user record
         const mockUser = { id: 42, email: "test@example.com" };
         db.query.mockResolvedValue({ rows: [mockUser] });
 
-        // Act - string shorthand for field name
+        // Act - pass role for rule matching
         const result = await GenericEntityService.findById("user", 42, {
-          filterConfig: "id",
+          role: "customer",
           userId: 42,
         });
 
@@ -561,39 +561,39 @@ describe("GenericEntityService", () => {
         expect(params).toEqual([42, 42]);
       });
 
-      test("should apply null filterConfig (no additional filter)", async () => {
+      test("should allow staff full access (no additional filter)", async () => {
         // Arrange
         const mockUser = { id: 1, email: "admin@example.com" };
         db.query.mockResolvedValue({ rows: [mockUser] });
 
-        // Act - ADR-008: filterConfig: null means all records
+        // Act - ADR-011: admin role has full access (access: null)
         const result = await GenericEntityService.findById("user", 1, {
-          filterConfig: null,
+          role: "admin",
           userId: 99,
         });
 
         // Assert
         expect(result).toEqual(mockUser);
-        // null filterConfig should not add any filter beyond the base WHERE
+        // Staff access: null means no additional filter beyond the base WHERE
         const [query, params] = db.query.mock.calls[0];
         expect(query).toContain("WHERE users.id = $1");
-        expect(query).not.toContain("AND id = $2"); // No additional RLS filter
+        expect(query).not.toContain("AND 1=0"); // Not denied
         expect(params).toEqual([1]);
       });
 
-      test("should apply false filterConfig (always returns null)", async () => {
+      test("should deny access when no matching rules", async () => {
         // Arrange
         db.query.mockResolvedValue({ rows: [] });
 
-        // Act - ADR-008: filterConfig: false means deny all
+        // Act - ADR-011: unknown role has no rules = deny
         const result = await GenericEntityService.findById("invoice", 1, {
-          filterConfig: false,
+          role: "unknown_role",
           userId: 99,
         });
 
         // Assert
         expect(result).toBeNull();
-        // false filterConfig adds WHERE 1=0
+        // No matching rules adds WHERE 1=0
         const [query, params] = db.query.mock.calls[0];
         expect(query).toContain("WHERE invoices.id = $1");
         expect(query).toContain("AND 1=0");
@@ -616,13 +616,13 @@ describe("GenericEntityService", () => {
         expect(params).toEqual([1]);
       });
 
-      test("should return null when RLS blocks access to existing record", async () => {
-        // Arrange: User 42 exists but user 99 tries to access it
+      test("should return null when customer tries to access another user record", async () => {
+        // Arrange: User 42 exists but customer user 99 tries to access it
         db.query.mockResolvedValue({ rows: [] }); // RLS filter returns no rows
 
-        // Act - ADR-008 format
+        // Act - ADR-011: customer role can only see own record
         const result = await GenericEntityService.findById("user", 42, {
-          filterConfig: "id",
+          role: "customer",
           userId: 99, // Different user
         });
 
@@ -634,8 +634,8 @@ describe("GenericEntityService", () => {
         expect(params).toEqual([42, 99]);
       });
 
-      test("should apply assigned_technician_id RLS for technicians", async () => {
-        // Arrange - ADR-008: filterConfig uses field + context value
+      test("should apply technician_profile_id RLS for technicians viewing work orders", async () => {
+        // Arrange - ADR-011: technician sees assigned work orders
         const mockWorkOrder = {
           id: 10,
           title: "Fix AC",
@@ -643,11 +643,11 @@ describe("GenericEntityService", () => {
         };
         db.query.mockResolvedValue({ rows: [mockWorkOrder] });
 
-        // Act - filterConfig: { field, value } where value maps to context property
+        // Act - pass role and profile ID (snake_case)
         const result = await GenericEntityService.findById("work_order", 10, {
-          filterConfig: { field: "assigned_technician_id", value: "technicianProfileId" },
+          role: "technician",
           userId: 1,
-          technicianProfileId: 5,
+          technician_profile_id: 5,
         });
 
         // Assert
@@ -658,16 +658,16 @@ describe("GenericEntityService", () => {
         expect(params).toEqual([10, 5]);
       });
 
-      test("should apply customer_id RLS for customers", async () => {
-        // Arrange - ADR-008: filterConfig uses field + context value
+      test("should apply customer_profile_id RLS for customers viewing work orders", async () => {
+        // Arrange - ADR-011: customer sees own work orders
         const mockWorkOrder = { id: 10, title: "Fix AC", customer_id: 42 };
         db.query.mockResolvedValue({ rows: [mockWorkOrder] });
 
-        // Act - filterConfig: { field, value } where value maps to context property
+        // Act - pass role and profile ID (snake_case)
         const result = await GenericEntityService.findById("work_order", 10, {
-          filterConfig: { field: "customer_id", value: "customerProfileId" },
+          role: "customer",
           userId: 1,
-          customerProfileId: 42,
+          customer_profile_id: 42,
         });
 
         // Assert
@@ -981,22 +981,22 @@ describe("GenericEntityService", () => {
     });
 
     // ------------------------------------------------------------------------
-    // RLS (Row-Level Security) Integration
+    // RLS (Row-Level Security) Integration (ADR-011)
     // ------------------------------------------------------------------------
 
     describe("RLS integration", () => {
-      test("should apply user id RLS filter to findAll", async () => {
-        // Arrange - ADR-008: filterConfig 'id' is shorthand for { field: 'id', value: 'userId' }
+      test("should apply user id RLS filter for customer role", async () => {
+        // Arrange - ADR-011: customer can only see their own user record
         const mockUser = { id: 42, email: "test@example.com", is_active: true };
         db.query
           .mockResolvedValueOnce({ rows: [{ total: "1" }] })
           .mockResolvedValueOnce({ rows: [mockUser] });
 
-        // Act - string shorthand for field name
+        // Act - pass role for rule matching
         const result = await GenericEntityService.findAll(
           "user",
           { page: 1, limit: 10 },
-          { filterConfig: "id", userId: 42 },
+          { role: "customer", userId: 42 },
         );
 
         // Assert
@@ -1008,7 +1008,7 @@ describe("GenericEntityService", () => {
         expect(selectParams).toContain(42);
       });
 
-      test("should apply null filterConfig (no additional filter)", async () => {
+      test("should allow staff full access (no additional filter)", async () => {
         // Arrange
         const mockUsers = [
           { id: 1, email: "admin@example.com", is_active: true },
@@ -1018,11 +1018,11 @@ describe("GenericEntityService", () => {
           .mockResolvedValueOnce({ rows: [{ total: "2" }] })
           .mockResolvedValueOnce({ rows: mockUsers });
 
-        // Act - ADR-008: filterConfig: null means all records
+        // Act - ADR-011: admin role has full access
         const result = await GenericEntityService.findAll(
           "user",
           { page: 1, limit: 10 },
-          { filterConfig: null, userId: 1 },
+          { role: "admin", userId: 1 },
         );
 
         // Assert
@@ -1030,17 +1030,17 @@ describe("GenericEntityService", () => {
         expect(result.pagination.total).toBe(2);
       });
 
-      test("should apply false filterConfig (returns empty array)", async () => {
+      test("should deny access when no matching rules", async () => {
         // Arrange
         db.query
           .mockResolvedValueOnce({ rows: [{ total: "0" }] })
           .mockResolvedValueOnce({ rows: [] });
 
-        // Act - ADR-008: filterConfig: false means deny all
+        // Act - ADR-011: unknown role has no rules = deny
         const result = await GenericEntityService.findAll(
           "invoice",
           { page: 1, limit: 10 },
-          { filterConfig: false, userId: 99 },
+          { role: "unknown_role", userId: 99 },
         );
 
         // Assert
@@ -1067,7 +1067,7 @@ describe("GenericEntityService", () => {
         expect(result.data).toEqual(mockUsers);
       });
 
-      test("should combine RLS filter with search and other filters", async () => {
+      test("should combine RLS filter with search for customer role", async () => {
         // Arrange
         const mockWorkOrders = [
           { id: 1, title: "Fix AC", customer_id: 42, is_active: true },
@@ -1076,11 +1076,11 @@ describe("GenericEntityService", () => {
           .mockResolvedValueOnce({ rows: [{ total: "1" }] })
           .mockResolvedValueOnce({ rows: mockWorkOrders });
 
-        // Act - customer searching their own work orders (ADR-008 format)
+        // Act - customer searching their own work orders (ADR-011 format)
         const result = await GenericEntityService.findAll(
           "work_order",
           { page: 1, limit: 10, search: "Fix" },
-          { filterConfig: { field: "customer_id", value: "customerProfileId" }, userId: 1, customerProfileId: 42 },
+          { role: "customer", userId: 1, customer_profile_id: 42 },
         );
 
         // Assert
@@ -1088,11 +1088,11 @@ describe("GenericEntityService", () => {
         // Should have both search params and RLS params
         const selectParams = db.query.mock.calls[1][1];
         expect(selectParams).toContain("%Fix%"); // Search param
-        expect(selectParams).toContain(42); // RLS customerProfileId param
+        expect(selectParams).toContain(42); // RLS customer_profile_id param
       });
 
-      test("should apply assigned_technician_id for technicians", async () => {
-        // Arrange - ADR-008 format
+      test("should apply technician_profile_id RLS for technicians", async () => {
+        // Arrange - ADR-011 format
         const mockWorkOrders = [
           {
             id: 10,
@@ -1105,11 +1105,11 @@ describe("GenericEntityService", () => {
           .mockResolvedValueOnce({ rows: [{ total: "1" }] })
           .mockResolvedValueOnce({ rows: mockWorkOrders });
 
-        // Act - filterConfig with field + context value
+        // Act - pass role and profile ID (snake_case)
         const result = await GenericEntityService.findAll(
           "work_order",
           { page: 1 },
-          { filterConfig: { field: "assigned_technician_id", value: "technicianProfileId" }, userId: 1, technicianProfileId: 5 },
+          { role: "technician", userId: 1, technician_profile_id: 5 },
         );
 
         // Assert
@@ -1118,8 +1118,8 @@ describe("GenericEntityService", () => {
         expect(selectQuery).toContain("assigned_technician_id =");
       });
 
-      test("should apply customer_id for invoice customers", async () => {
-        // Arrange - ADR-008 format
+      test("should apply customer_id RLS for invoice customers", async () => {
+        // Arrange - ADR-011 format
         const mockInvoices = [
           {
             id: 1,
@@ -1132,11 +1132,11 @@ describe("GenericEntityService", () => {
           .mockResolvedValueOnce({ rows: [{ total: "1" }] })
           .mockResolvedValueOnce({ rows: mockInvoices });
 
-        // Act - filterConfig with field + context value
+        // Act - pass role and profile ID (snake_case)
         const result = await GenericEntityService.findAll(
           "invoice",
           { page: 1 },
-          { filterConfig: { field: "customer_id", value: "customerProfileId" }, userId: 1, customerProfileId: 100 },
+          { role: "customer", userId: 1, customer_profile_id: 100 },
         );
 
         // Assert

@@ -51,17 +51,25 @@ module.exports = {
   rlsResource: 'saved_views',
 
   /**
-   * Row-Level Security policy per role
-   * Users can only access their own saved views, admin can see all
-   * Values: null (all records), false (deny), field string, or { field, value } object
+   * Row-Level Security rules (ADR-011)
+   * Declarative grant-based rules. No match = deny.
    */
-  rlsPolicy: {
-    customer: 'user_id',
-    technician: 'user_id',
-    dispatcher: 'user_id',
-    manager: 'user_id',
-    admin: null,
-  },
+  rlsRules: [
+    {
+      id: 'user-own-saved-views',
+      description: 'Users see only their own saved views',
+      roles: ['customer', 'technician', 'dispatcher', 'manager'],
+      operations: '*',
+      access: { type: 'direct', field: 'user_id', value: 'userId' },
+    },
+    {
+      id: 'admin-full-access',
+      description: 'Admin can see all saved views',
+      roles: 'admin',
+      operations: '*',
+      access: null,
+    },
+  ],
 
   /**
    * Navigation visibility - null means not shown in nav menus

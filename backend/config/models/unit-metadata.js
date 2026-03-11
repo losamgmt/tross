@@ -45,17 +45,33 @@ module.exports = {
   rlsResource: 'units',
 
   /**
-   * Row-Level Security policy per role
-   * Customer access to units is via customer_unit junction - not directly queryable.
-   * Technician+ can see all units for operational needs.
+   * Row-Level Security rules (ADR-011)
+   * Declarative grant-based rules. No match = deny.
    */
-  rlsPolicy: {
-    customer: false,
-    technician: null,
-    dispatcher: null,
-    manager: null,
-    admin: null,
-  },
+  rlsRules: [
+    {
+      id: 'customer-via-junction',
+      description: 'Customers see units they own/occupy via customer_units',
+      roles: 'customer',
+      operations: 'read',
+      access: {
+        type: 'junction',
+        junction: {
+          table: 'customer_units',
+          localKey: 'id',
+          foreignKey: 'unit_id',
+          filter: { customer_id: 'customer_profile_id' },
+        },
+      },
+    },
+    {
+      id: 'staff-full-access',
+      description: 'Staff see all units',
+      roles: ['technician', 'dispatcher', 'manager', 'admin'],
+      operations: '*',
+      access: null,
+    },
+  ],
 
   /**
    * Navigation visibility - minimum role to see this entity in nav menus
@@ -77,7 +93,7 @@ module.exports = {
 
   entityPermissions: {
     create: 'dispatcher',
-    read: 'technician',
+    read: 'customer', // Customers can see their units via junction RLS
     update: 'dispatcher',
     delete: 'manager',
   },

@@ -19,7 +19,7 @@ const allMetadata = require('../config/models');
 const { logger } = require('../config/logger');
 const db = require('../db/connection');
 const QueryBuilderService = require('./query-builder-service');
-const { buildRLSFilter } = require('../db/helpers/rls-filter-helper');
+const { buildRLSFilter } = require('../db/helpers/rls');
 const {
   sanitizeIdentifier,
   validateFieldAgainstWhitelist,
@@ -55,8 +55,8 @@ class StatsService {
     const metadata = this._getMetadata(entityName);
     const { tableName, filterableFields = [] } = metadata;
 
-    // Build RLS filter - ADR-008: use rlsContext from request
-    const rlsResult = buildRLSFilter(req.rlsContext, metadata, 0);
+    // Build RLS filter - ADR-011: include operation for rule matching
+    const rlsResult = buildRLSFilter(req.rlsContext, metadata, 'read', 0);
     const paramOffset = rlsResult.params.length;
 
     // Build filter clause
@@ -120,8 +120,8 @@ class StatsService {
       );
     }
 
-    // Build RLS filter - ADR-008: use rlsContext from request
-    const rlsResult = buildRLSFilter(req.rlsContext, metadata, 0);
+    // Build RLS filter - ADR-011: include operation for rule matching
+    const rlsResult = buildRLSFilter(req.rlsContext, metadata, 'read', 0);
     const paramOffset = rlsResult.params.length;
 
     // Build filter clause
@@ -196,8 +196,8 @@ class StatsService {
     const safeField = sanitizeIdentifier(field, 'field');
     const safeTable = sanitizeIdentifier(tableName, 'table');
 
-    // Build RLS filter - ADR-008: use rlsContext from request
-    const rlsResult = buildRLSFilter(req.rlsContext, metadata, 0);
+    // Build RLS filter - ADR-011: include operation for rule matching
+    const rlsResult = buildRLSFilter(req.rlsContext, metadata, 'read', 0);
     const paramOffset = rlsResult.params.length;
 
     // Build filter clause

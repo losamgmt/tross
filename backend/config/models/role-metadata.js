@@ -70,17 +70,18 @@ module.exports = {
   rlsResource: 'roles',
 
   /**
-   * Row-Level Security policy per role
-   * Roles are a public resource - all authenticated users can read
-   * Values: null (all records), false (deny), field string, or { field, value } object
+   * Row-Level Security rules (ADR-011)
+   * Declarative grant-based rules. No match = deny.
    */
-  rlsPolicy: {
-    customer: null,
-    technician: null,
-    dispatcher: null,
-    manager: null,
-    admin: null,
-  },
+  rlsRules: [
+    {
+      id: 'all-authenticated-access',
+      description: 'All authenticated users can view roles (for dropdowns)',
+      roles: '*',
+      operations: '*',
+      access: null,
+    },
+  ],
 
   /**
    * Navigation visibility - minimum role to see this entity in nav menus

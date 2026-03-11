@@ -68,25 +68,29 @@ module.exports = {
   rlsResource: 'technicians',
 
   /**
-   * Row-Level Security policy per role
-   * Technicians are visible to all roles (customers see assigned tech)
-   * Values: null (all records), false (deny), field string, or { field, value } object
+   * Row-Level Security rules (ADR-011)
+   * Declarative grant-based rules. No match = deny.
+   *
+   * Technician records are staff-only. Customers cannot see
+   * technician details (only see assigned tech name on work orders).
    */
-  rlsPolicy: {
-    customer: null,
-    technician: null,
-    dispatcher: null,
-    manager: null,
-    admin: null,
-  },
+  rlsRules: [
+    {
+      id: 'staff-full-access',
+      description: 'Staff (technician+) have full access to technician records',
+      roles: ['technician', 'dispatcher', 'manager', 'admin'],
+      operations: '*',
+      access: null,
+    },
+  ],
 
   /**
    * Entity-level permission overrides
-   * Matches permissions.json - manager+ create/delete, technician+ update, customer+ read
+   * Matches permissions.json - manager+ create/delete, technician+ read/update
    */
   entityPermissions: {
     create: 'manager',
-    read: 'customer',
+    read: 'technician',
     update: 'technician',
     delete: 'manager',
   },

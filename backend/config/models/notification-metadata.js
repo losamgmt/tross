@@ -51,17 +51,18 @@ module.exports = {
   rlsResource: 'notifications',
 
   /**
-   * Row-Level Security policy per role
-   * Users can only access their own notifications
-   * Values: null (all records), false (deny), field string, or { field, value } object
+   * Row-Level Security rules (ADR-011)
+   * Declarative grant-based rules. No match = deny.
    */
-  rlsPolicy: {
-    customer: 'user_id',
-    technician: 'user_id',
-    dispatcher: 'user_id',
-    manager: 'user_id',
-    admin: 'user_id', // Even admins only see their own notifications
-  },
+  rlsRules: [
+    {
+      id: 'user-own-notifications',
+      description: 'All users see only their own notifications',
+      roles: '*',
+      operations: '*',
+      access: { type: 'direct', field: 'user_id', value: 'userId' },
+    },
+  ],
 
   /**
    * Navigation visibility - null means not shown in nav menus

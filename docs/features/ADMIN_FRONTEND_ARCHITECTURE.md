@@ -251,14 +251,14 @@ All form inputs follow these principles:
 | `FileService`              | File attachment operations        |
 | `PreferencesService`       | User preferences API              |
 
-### Need to Build ❌
+### Metadata Services ✅
 
-| Component              | Type      | Location             | Purpose                             |
-| ---------------------- | --------- | -------------------- | ----------------------------------- |
-| `MetadataProvider`     | Interface | `services/metadata/` | Abstract data source                |
-| `JsonMetadataProvider` | Impl      | `services/metadata/` | Loads from JSON assets              |
-| `EditableFormProvider` | Provider  | `providers/`         | Dirty state tracking for batch save |
-| `SaveDiscardBar`       | Molecule  | `molecules/forms/`   | Appears when form is dirty          |
+| Component              | Type      | Location               | Purpose                             |
+| ---------------------- | --------- | ---------------------- | ----------------------------------- |
+| `MetadataProvider`     | Interface | `services/metadata/`   | Abstract data source                |
+| `JsonMetadataProvider` | Impl      | `services/metadata/`   | Loads from JSON assets              |
+| `EditableFormNotifier` | Provider  | `providers/`           | Dirty state tracking for batch save |
+| `SaveDiscardBar`       | Molecule  | `molecules/forms/`     | Appears when form is dirty          |
 
 ### Already Built (Completed) ✅
 

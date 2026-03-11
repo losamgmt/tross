@@ -12,7 +12,7 @@
  */
 
 const { getRoleHierarchy } = require('./role-hierarchy-loader');
-const { RLS_CONTEXT_VALUES } = require('./constants');
+const { RLS_ENGINE } = require('./constants');
 const { getForeignKeyFieldNames, extractForeignKeyFields } = require('./fk-helpers');
 const { foreignKeyFieldName } = require('./field-types');
 
@@ -67,6 +67,26 @@ function getValidAccessValues() {
 function getValidEntityPermissionValues() {
   const roleHierarchy = getRoleHierarchy();
   return new Set([null, 'none', ...roleHierarchy]);
+}
+
+/**
+ * Check if a context value key follows naming conventions
+ *
+ * Convention-based validation (schema-driven, no hardcoded list):
+ * - 'userId' - the user's ID (always valid)
+ * - '*_profile_id' - any profile foreign key from users table
+ *
+ * Adding a new profile type (e.g., vendor_profile_id) requires
+ * only a DB migration — NO code changes here.
+ *
+ * @param {string} value - Context value key to validate
+ * @returns {boolean}
+ */
+function isValidContextValue(value) {
+  if (!value || typeof value !== 'string') {
+    return false;
+  }
+  return value === 'userId' || value.endsWith('_profile_id');
 }
 
 /**
@@ -251,7 +271,7 @@ function validateForeignKeys(meta, errors, allMetadata) {
 /**
  * Validate RLS policy uses valid values
  *
- * ADR-008: Field-Based Filtering
+ * ADR-008: Field-Based Filtering (LEGACY - being replaced by rlsRules)
  * Policy value IS the filter configuration (pure data, no code).
  *
  * Valid filterConfig values:
@@ -261,65 +281,217 @@ function validateForeignKeys(meta, errors, allMetadata) {
  * - string: Shorthand for { field: string, value: 'userId' }
  * - { field, value }: Explicit field + context value mapping
  *
- * Valid context values for { field, value }.value:
- * - 'userId': user's id
- * - 'customerProfileId': user's customer_profile_id
- * - 'technicianProfileId': user's technician_profile_id
+ * @deprecated rlsPolicy is REMOVED. All entities now use rlsRules (ADR-011).
+ * This function is kept as a no-op for backward compatibility.
  */
-function validateRlsPolicy(meta, errors) {
-  const rlsPolicy = meta.rlsPolicy;
-  if (!rlsPolicy) {
-    return; // Optional
+function validateRlsPolicy(_meta, _errors) {
+  // No-op: rlsPolicy has been removed from all entity metadata.
+  // rlsRules (ADR-011) is now the only RLS configuration method.
+  // TODO: Remove this function entirely in next major version.
+}
+
+/**
+ * Validate RLS rules (ADR-011: Rule-Based RLS Engine)
+ *
+ * NOTE: This validates SCHEMA SHAPE at module load time.
+ * Semantic validation (cycles, cross-entity refs, SQL identifiers)
+ * is done by path-validator.validateAllRules() at server startup.
+ *
+ * Valid access configurations:
+ * - null: Full access (no filter applied)
+ * - { type: 'direct', field, value }: Direct field match
+ * - { type: 'parent', foreignKey, parentEntity }: Inherit from parent RLS
+ * - { type: 'junction', junction: {...} }: Access via junction table
+ */
+function validateRlsRules(meta, errors) {
+  const rlsRules = meta.rlsRules;
+  if (!rlsRules) {
+    return; // Optional for now (during migration)
   }
 
-  // Valid context values from SSOT constant (ADR-008)
-  const validContextValues = new Set(RLS_CONTEXT_VALUES);
+  if (!Array.isArray(rlsRules)) {
+    errors.add('rlsRules', 'Must be an array of rule objects');
+    return;
+  }
 
-  const validAccessValues = getValidAccessValues();
-  for (const [role, filterConfig] of Object.entries(rlsPolicy)) {
-    if (!validAccessValues.has(role) && role !== 'all_roles') {
-      errors.add(`rlsPolicy.${role}`, `Unknown role '${role}'`);
-    }
-
-    // Validate filterConfig value
-    if (filterConfig === null || filterConfig === false) {
-      // Valid: null = all records, false = deny
-      continue;
-    }
-
-    if (typeof filterConfig === 'string') {
-      // Valid: '$parent' or field name shorthand
-      // Field names are validated elsewhere (could be any column)
-      continue;
-    }
-
-    if (typeof filterConfig === 'object') {
-      // Must be { field, value } format
-      if (!filterConfig.field || typeof filterConfig.field !== 'string') {
-        errors.add(
-          `rlsPolicy.${role}`,
-          'Object filterConfig must have \'field\' string property',
-        );
-      }
-      if (!filterConfig.value || typeof filterConfig.value !== 'string') {
-        errors.add(
-          `rlsPolicy.${role}`,
-          'Object filterConfig must have \'value\' string property',
-        );
-      } else if (!validContextValues.has(filterConfig.value)) {
-        errors.add(
-          `rlsPolicy.${role}`,
-          `Invalid context value '${filterConfig.value}'. Valid: ${[...validContextValues].join(', ')}`,
-        );
-      }
-      continue;
-    }
-
-    // Invalid type
+  if (rlsRules.length > RLS_ENGINE.MAX_RULES_PER_ENTITY) {
     errors.add(
-      `rlsPolicy.${role}`,
-      'Invalid filterConfig type. Must be null, false, string, or { field, value } object',
+      'rlsRules',
+      `Exceeds maximum of ${RLS_ENGINE.MAX_RULES_PER_ENTITY} rules per entity`,
     );
+  }
+
+  // Valid roles include all role hierarchy + wildcard
+  const roleHierarchy = getRoleHierarchy();
+  const validRoles = new Set([...roleHierarchy, '*']);
+
+  // Valid operations for RLS rules
+  const validOperations = new Set(['read', 'summary', 'update', 'delete', '*']);
+
+  // Valid access types from RLS_ENGINE (direct, junction, parent)
+  const validAccessTypes = new Set(RLS_ENGINE.ACCESS_TYPES);
+
+  // Track rule IDs for uniqueness
+  const seenIds = new Set();
+
+  for (let i = 0; i < rlsRules.length; i++) {
+    const rule = rlsRules[i];
+    const prefix = `rlsRules[${i}]`;
+
+    if (!rule || typeof rule !== 'object') {
+      errors.add(prefix, 'Must be an object');
+      continue;
+    }
+
+    // Validate id (required, unique)
+    if (!rule.id || typeof rule.id !== 'string') {
+      errors.add(`${prefix}.id`, 'Required string property');
+    } else if (seenIds.has(rule.id)) {
+      errors.add(`${prefix}.id`, `Duplicate rule id '${rule.id}'`);
+    } else {
+      seenIds.add(rule.id);
+    }
+
+    // Validate roles (required: string or array)
+    if (!rule.roles) {
+      errors.add(`${prefix}.roles`, 'Required property');
+    } else {
+      const roles = Array.isArray(rule.roles) ? rule.roles : [rule.roles];
+      for (const role of roles) {
+        if (!validRoles.has(role)) {
+          errors.add(
+            `${prefix}.roles`,
+            `Invalid role '${role}'. Valid: ${[...validRoles].join(', ')}`,
+          );
+        }
+      }
+    }
+
+    // Validate operations (required: string or array)
+    if (!rule.operations) {
+      errors.add(`${prefix}.operations`, 'Required property');
+    } else {
+      const ops = Array.isArray(rule.operations) ? rule.operations : [rule.operations];
+      for (const op of ops) {
+        if (!validOperations.has(op)) {
+          errors.add(
+            `${prefix}.operations`,
+            `Invalid operation '${op}'. Valid: ${[...validOperations].join(', ')}`,
+          );
+        }
+      }
+    }
+
+    // Validate access (required: null or object)
+    if (!('access' in rule)) {
+      errors.add(`${prefix}.access`, 'Required property (use null for full access)');
+      continue;
+    }
+
+    const access = rule.access;
+
+    // null = full access (valid)
+    if (access === null) {
+      continue;
+    }
+
+    if (typeof access !== 'object') {
+      errors.add(`${prefix}.access`, 'Must be null or an object with type property');
+      continue;
+    }
+
+    // Validate access type
+    if (!access.type || typeof access.type !== 'string') {
+      errors.add(`${prefix}.access.type`, 'Required string property');
+      continue;
+    }
+
+    if (!validAccessTypes.has(access.type)) {
+      errors.add(
+        `${prefix}.access.type`,
+        `Invalid type '${access.type}'. Valid: ${[...validAccessTypes].join(', ')}`,
+      );
+      continue;
+    }
+
+    // Type-specific validation
+    if (access.type === 'direct') {
+      // Direct access requires field
+      if (!access.field || typeof access.field !== 'string') {
+        errors.add(`${prefix}.access.field`, 'Required string property for direct access');
+      }
+
+      // value is optional (defaults to 'userId')
+      if (access.value !== undefined) {
+        if (typeof access.value !== 'string') {
+          errors.add(`${prefix}.access.value`, 'Must be a string');
+        } else if (!isValidContextValue(access.value)) {
+          errors.add(
+            `${prefix}.access.value`,
+            `Invalid context value '${access.value}'. Expected 'userId' or '*_profile_id' pattern.`,
+          );
+        }
+      }
+    } else if (access.type === 'parent') {
+      // Parent access requires foreignKey (parentEntity optional for polymorphic)
+      if (!access.foreignKey || typeof access.foreignKey !== 'string') {
+        errors.add(`${prefix}.access.foreignKey`, 'Required string property for parent access');
+      }
+      if (access.parentEntity !== undefined && typeof access.parentEntity !== 'string') {
+        errors.add(`${prefix}.access.parentEntity`, 'Must be a string (entity key)');
+      }
+    } else if (access.type === 'junction') {
+      // Junction access requires junction configuration
+      if (!access.junction || typeof access.junction !== 'object') {
+        errors.add(
+          `${prefix}.access.junction`,
+          'Required object property for junction access',
+        );
+      } else {
+        const junction = access.junction;
+
+        // Required junction properties
+        if (!junction.table || typeof junction.table !== 'string') {
+          errors.add(`${prefix}.access.junction.table`, 'Required string property');
+        }
+        if (!junction.localKey || typeof junction.localKey !== 'string') {
+          errors.add(`${prefix}.access.junction.localKey`, 'Required string property');
+        }
+        if (!junction.foreignKey || typeof junction.foreignKey !== 'string') {
+          errors.add(`${prefix}.access.junction.foreignKey`, 'Required string property');
+        }
+
+        // Validate filter if present
+        if (junction.filter !== undefined) {
+          if (typeof junction.filter !== 'object' || junction.filter === null) {
+            errors.add(`${prefix}.access.junction.filter`, 'Must be an object');
+          } else {
+            // Each filter value should be a valid context value
+            for (const [filterField, filterValue] of Object.entries(junction.filter)) {
+              if (typeof filterValue !== 'string') {
+                errors.add(
+                  `${prefix}.access.junction.filter.${filterField}`,
+                  'Must be a string (context value)',
+                );
+              } else if (!isValidContextValue(filterValue)) {
+                errors.add(
+                  `${prefix}.access.junction.filter.${filterField}`,
+                  `Invalid context value '${filterValue}'. Expected 'userId' or '*_profile_id' pattern.`,
+                );
+              }
+            }
+          }
+        }
+
+        // Validate through (nested junction) if present
+        if (junction.through !== undefined) {
+          // Basic structure check - deep validation could recurse
+          if (typeof junction.through !== 'object' || junction.through === null) {
+            errors.add(`${prefix}.access.junction.through`, 'Must be a junction config object');
+          }
+        }
+      }
+    }
   }
 }
 
@@ -849,6 +1021,7 @@ function validateEntity(entityName, meta, allMetadata) {
   validateRequiredFields(meta, errors);
   validateForeignKeys(meta, errors, allMetadata);
   validateRlsPolicy(meta, errors);
+  validateRlsRules(meta, errors);
   validateRelationships(meta, errors, allMetadata);
   validateJunctionConfig(meta, errors, allMetadata);
   validateUniqueConstraints(meta, errors);
@@ -908,11 +1081,11 @@ function deriveCapabilities(meta) {
     // Create disabled means system-only creation (e.g., notifications)
     isCreateDisabled: entityPerms.create === null,
 
-    // RLS patterns
-    isOwnRecordOnly: Object.values(meta.rlsPolicy || {}).some((p) => {
-      return p === 'own_record_only';
+    // RLS patterns (ADR-011: uses rlsRules)
+    isOwnRecordOnly: (meta.rlsRules || []).some((rule) => {
+      return rule.access?.type === 'direct' && rule.access?.value === 'userId';
     }),
-    hasRls: !!meta.rlsPolicy && Object.keys(meta.rlsPolicy).length > 0,
+    hasRls: Array.isArray(meta.rlsRules) && meta.rlsRules.length > 0,
 
     // Routing
     usesGenericRouter: meta.routeConfig?.useGenericRouter === true,

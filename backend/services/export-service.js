@@ -20,7 +20,7 @@ const allMetadata = require('../config/models');
 const { logger } = require('../config/logger');
 const db = require('../db/connection');
 const QueryBuilderService = require('./query-builder-service');
-const { buildRLSFilter } = require('../db/helpers/rls-filter-helper');
+const { buildRLSFilter } = require('../db/helpers/rls');
 const AppError = require('../utils/app-error');
 
 /**
@@ -190,9 +190,9 @@ class ExportService {
     const whereClauses = [search?.clause, filters?.clause].filter(Boolean);
     const params = [...(search?.params || []), ...(filters?.params || [])];
 
-    // Apply RLS filter
+    // Apply RLS filter - ADR-011: include operation for rule matching
     if (rlsContext) {
-      const rlsFilter = buildRLSFilter(rlsContext, metadata, params.length);
+      const rlsFilter = buildRLSFilter(rlsContext, metadata, 'read', params.length);
 
       if (rlsFilter.clause) {
         whereClauses.push(rlsFilter.clause);

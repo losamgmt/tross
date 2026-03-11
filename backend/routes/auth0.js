@@ -89,9 +89,10 @@ router.post('/callback', validateAuthCallback, async (req, res) => {
     logger.info('🔐 Auth0 callback: Exchanging authorization code for tokens');
 
     // Use Auth0 strategy directly - always works regardless of AUTH_MODE
+    // redirect_uri is required by validator - no fallback needed
     const authResult = await auth0Strategy.authenticate({
       code,
-      redirect_uri: redirect_uri || 'http://localhost:8080/callback',
+      redirect_uri,
     });
 
     logger.info('🔐 Auth0 authentication successful', {

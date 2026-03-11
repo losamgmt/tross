@@ -7,10 +7,13 @@
 // Note: globalSetup runs in a separate context and cannot export to tests
 // We need to use environment variables or the filesystem to communicate state
 
+// SECURITY: Centralized test JWT secret - matches TEST_JWT_SECRET in test-constants.js
+const TEST_JWT_SECRET = 'test-only-jwt-secret-do-not-use-in-production';
+
 module.exports = async () => {
   // Set up environment for database connection
   process.env.NODE_ENV = "test";
-  process.env.JWT_SECRET = "test-secret-key-for-jest-integration";
+  process.env.JWT_SECRET = TEST_JWT_SECRET;
   process.env.AUTH_MODE = "development";
   process.env.USE_TEST_AUTH = "true";
 

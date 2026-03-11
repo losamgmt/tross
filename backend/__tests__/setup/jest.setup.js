@@ -19,6 +19,7 @@ jest.mock("../../config/logger", () => ({
 
 const { setTestEnv, cleanupTestEnv } = require("../helpers/test-helpers");
 const { DATABASE } = require("../../config/constants");
+const { TEST_JWT_SECRET } = require("../../config/test-constants");
 const testLogger = require("../../config/test-logger");
 const { transactionMatchers } = require("../mocks");
 
@@ -29,9 +30,10 @@ if (transactionMatchers) {
 
 // Set up test environment variables
 // Uses constants.js for single source of truth
+// SECURITY: Uses centralized TEST_JWT_SECRET to ensure consistency
 setTestEnv({
   NODE_ENV: "test",
-  JWT_SECRET: "test-secret-key-for-jest",
+  JWT_SECRET: TEST_JWT_SECRET,
   AUTH_MODE: "development",
   USE_TEST_AUTH: "true",
   // Disable database connections in tests

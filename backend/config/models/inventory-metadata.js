@@ -77,17 +77,21 @@ module.exports = {
   rlsResource: 'inventory',
 
   /**
-   * Row-Level Security policy per role
-   * Inventory is a public resource - all authorized users can read
-   * Values: null (all records), false (deny), field string, or { field, value } object
+   * Row-Level Security rules (ADR-011)
+   * Declarative grant-based rules. No match = deny.
+   *
+   * Inventory is staff-only (technician+). Customers cannot see
+   * parts catalog, pricing, or stock levels.
    */
-  rlsPolicy: {
-    customer: null,
-    technician: null,
-    dispatcher: null,
-    manager: null,
-    admin: null,
-  },
+  rlsRules: [
+    {
+      id: 'staff-full-access',
+      description: 'Staff (technician+) have full access to inventory',
+      roles: ['technician', 'dispatcher', 'manager', 'admin'],
+      operations: '*',
+      access: null,
+    },
+  ],
 
   /**
    * Navigation visibility - minimum role to see this entity in nav menus

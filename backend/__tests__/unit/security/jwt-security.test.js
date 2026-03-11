@@ -13,8 +13,9 @@ const request = require("supertest");
 const express = require("express");
 const { signJwt } = require("../../../utils/jwt-helper");
 const { authenticateToken } = require("../../../middleware/auth");
+const { TEST_JWT_SECRET } = require("../../../config/test-constants");
 
-const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-key";
+const JWT_SECRET = TEST_JWT_SECRET;
 
 describe("JWT Security", () => {
   let app;

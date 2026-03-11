@@ -71,17 +71,25 @@ module.exports = {
   rlsResource: 'customer_units',
 
   /**
-   * Row-Level Security policy per role
-   * Customers can see their own unit associations
-   * Technician+ can see all
+   * Row-Level Security rules (ADR-011)
+   * Declarative grant-based rules. No match = deny.
    */
-  rlsPolicy: {
-    customer: { field: 'customer_id', value: 'customerProfileId' },
-    technician: null,
-    dispatcher: null,
-    manager: null,
-    admin: null,
-  },
+  rlsRules: [
+    {
+      id: 'customer-own-unit-associations',
+      description: 'Customers see their own unit associations',
+      roles: 'customer',
+      operations: '*',
+      access: { type: 'direct', field: 'customer_id', value: 'customer_profile_id' },
+    },
+    {
+      id: 'staff-full-access',
+      description: 'Staff see all customer-unit associations',
+      roles: ['technician', 'dispatcher', 'manager', 'admin'],
+      operations: '*',
+      access: null,
+    },
+  ],
 
   /**
    * Junction tables are not shown in navigation

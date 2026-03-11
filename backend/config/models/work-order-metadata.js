@@ -78,17 +78,32 @@ module.exports = {
   rlsResource: 'work_orders',
 
   /**
-   * Row-Level Security policy per role
-   * Customers see own work orders, technicians see assigned, dispatcher+ see all
-   * Values: null (all records), false (deny), field string, or { field, value } object
+   * Row-Level Security rules (ADR-011)
+   * Declarative grant-based rules. No match = deny.
    */
-  rlsPolicy: {
-    customer: { field: 'customer_id', value: 'customerProfileId' },
-    technician: { field: 'assigned_technician_id', value: 'technicianProfileId' },
-    dispatcher: null,
-    manager: null,
-    admin: null,
-  },
+  rlsRules: [
+    {
+      id: 'customer-own-work-orders',
+      description: 'Customers see their own work orders',
+      roles: 'customer',
+      operations: '*',
+      access: { type: 'direct', field: 'customer_id', value: 'customer_profile_id' },
+    },
+    {
+      id: 'technician-assigned-work-orders',
+      description: 'Technicians see work orders assigned to them',
+      roles: 'technician',
+      operations: '*',
+      access: { type: 'direct', field: 'assigned_technician_id', value: 'technician_profile_id' },
+    },
+    {
+      id: 'staff-full-access',
+      description: 'Dispatcher, manager, admin see all work orders',
+      roles: ['dispatcher', 'manager', 'admin'],
+      operations: '*',
+      access: null,
+    },
+  ],
 
   /**
    * Navigation visibility - minimum role to see this entity in nav menus

@@ -165,12 +165,90 @@
  */
 
 /**
- * RLS filter configuration for own-record patterns.
- * Used by rls-filter-helper.js to build WHERE clauses for row-level security.
+ * @deprecated RLSFilterConfig is no longer used. Use rlsRules (ADR-011) instead.
+ * Kept for documentation purposes only.
  * @typedef {Object} RLSFilterConfig
  * @property {string} [ownRecordField] - Field linking to user record (default: 'id')
  * @property {string} [customerField] - Field for customer ownership (default: 'customer_id')
  * @property {string} [assignedField] - Field for technician assignment (default: 'assigned_technician_id')
+ */
+
+// ============================================================================
+// RLS RULES TYPES (ADR-011)
+// ============================================================================
+
+/**
+ * Junction path configuration for junction-based RLS access.
+ * Used in EXISTS subqueries for M:M relationship traversal.
+ * @typedef {Object} RLSJunctionConfig
+ * @property {string} table - Junction table name (e.g., 'customer_units')
+ * @property {string} localKey - This entity's key for JOIN (usually 'id')
+ * @property {string} foreignKey - Junction table's FK to this entity (e.g., 'unit_id')
+ * @property {Object.<string, string>} [filter] - Conditions on junction: { customer_profile_id: 'customerProfileId' }
+ * @property {RLSJunctionConfig} [through] - For multi-hop: next junction in path
+ */
+
+/**
+ * Direct access configuration - field equals context value.
+ * @typedef {Object} RLSDirectAccess
+ * @property {'direct'} type - Access type discriminator
+ * @property {string} field - Database column to match (e.g., 'customer_profile_id')
+ * @property {string} [value] - Context key: 'userId' | 'customerProfileId' | 'technicianProfileId'. Defaults to 'userId'
+ */
+
+/**
+ * Polymorphic parent configuration for type discriminator + foreign key patterns.
+ * Used when a child entity can reference multiple parent types (e.g., file_attachments).
+ *
+ * At RUNTIME, the parent type is resolved from:
+ * - Route context (e.g., /work_orders/:id/files → parentType = 'work_order')
+ * - Query parameter (e.g., /files?entity_type=work_order)
+ *
+ * @typedef {Object} RLSPolymorphicConfig
+ * @property {string} typeColumn - Column containing parent entity type (e.g., 'entity_type')
+ * @property {string[]} [allowedTypes] - Optional allowlist of valid parent entity keys. If omitted, any entity with RLS rules is valid.
+ */
+
+/**
+ * Parent access configuration - delegates to parent entity's RLS.
+ * Recursively applies the parent entity's RLS rules to filter this entity.
+ *
+ * For STATIC parents: Specify parentEntity (e.g., asset → unit).
+ * For POLYMORPHIC parents: Specify polymorphic config (e.g., file_attachments → work_order|asset|etc).
+ * Exactly one of parentEntity or polymorphic must be specified.
+ *
+ * Polymorphic resolution uses RUNTIME context from routes/queries, not compile-time enumeration.
+ * This scales to hundreds of entity types without SQL complexity.
+ *
+ * @typedef {Object} RLSParentAccess
+ * @property {'parent'} type - Access type discriminator
+ * @property {string} foreignKey - Column referencing parent's primary key (e.g., 'unit_id', 'entity_id')
+ * @property {string} [parentEntity] - Entity name for static parents (mutually exclusive with polymorphic)
+ * @property {RLSPolymorphicConfig} [polymorphic] - Config for polymorphic parents (mutually exclusive with parentEntity)
+ */
+
+/**
+ * Junction access configuration - EXISTS subquery through junction table.
+ * @typedef {Object} RLSJunctionAccess
+ * @property {'junction'} type - Access type discriminator
+ * @property {RLSJunctionConfig} junction - Junction path configuration
+ */
+
+/**
+ * Access configuration for an RLS rule.
+ * null = full access (no filtering).
+ * @typedef {null | RLSDirectAccess | RLSParentAccess | RLSJunctionAccess} RLSAccessConfig
+ */
+
+/**
+ * RLS rule definition (ADR-011).
+ * Declarative rule specifying who can access what records via which path.
+ * @typedef {Object} RLSRule
+ * @property {string} id - Unique rule identifier within entity (e.g., 'customer-own-records')
+ * @property {string} [description] - Human-readable rule description
+ * @property {string | string[]} roles - Role(s) this rule applies to
+ * @property {string | string[]} operations - Operation(s): 'read' | 'summary' | 'update' | 'delete' | '*'
+ * @property {RLSAccessConfig} access - How records are filtered for matched role/operation
  */
 
 // ============================================================================
@@ -330,7 +408,8 @@
  * @property {string} [identifierPrefix] - Auto-ID prefix for COMPUTED entities (e.g., 'WO')
  *
  * @property {string} [rlsResource] - Resource name for permission checks (defaults to tableName)
- * @property {RLSPolicy} [rlsPolicy] - Row-level security rules per role
+ * @property {RLSPolicy} [rlsPolicy] - DEPRECATED: Legacy row-level security rules per role. Use rlsRules.
+ * @property {RLSRule[]} [rlsRules] - Row-level security rules array (ADR-011). Preferred over rlsPolicy.
  * @property {RLSFilterConfig} [rlsFilterConfig] - Custom RLS filter configuration
  * @property {EntityPermissions} [entityPermissions] - Entity-level CRUD overrides
  * @property {Object.<string, FieldAccessConfig>} [fieldAccess] - Per-field CRUD access levels

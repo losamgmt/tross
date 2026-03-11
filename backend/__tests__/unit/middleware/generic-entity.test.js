@@ -33,7 +33,6 @@ jest.mock("../../../config/logger", () => ({
 const GenericEntityService = require("../../../services/generic-entity-service");
 const {
   hasPermission,
-  getRLSRule,
 } = require("../../../config/permissions-loader");
 const { logSecurityEvent } = require("../../../config/logger");
 

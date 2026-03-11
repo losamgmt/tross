@@ -25,17 +25,26 @@ module.exports = {
   namePattern: null,
 
   /**
-   * Row-Level Security policy per role
-   * Values: null (all records), false (deny), field string, or { field, value } object
+   * Row-Level Security rules (ADR-011)
+   * Declarative grant-based rules. No match = deny.
    * Note: preferences uses shared-PK pattern where preferences.id = users.id
    */
-  rlsPolicy: {
-    customer: 'id',
-    technician: 'id',
-    dispatcher: 'id',
-    manager: 'id',
-    admin: null,
-  },
+  rlsRules: [
+    {
+      id: 'user-own-preferences',
+      description: 'Users see only their own preferences (shared PK with users)',
+      roles: ['customer', 'technician', 'dispatcher', 'manager'],
+      operations: '*',
+      access: { type: 'direct', field: 'id', value: 'userId' },
+    },
+    {
+      id: 'admin-full-access',
+      description: 'Admin can see all preferences',
+      roles: 'admin',
+      operations: '*',
+      access: null,
+    },
+  ],
 
   /**
    * Navigation visibility - null means not shown in nav menus

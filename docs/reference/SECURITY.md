@@ -418,6 +418,59 @@ app.use("/api", limiter);
 
 **Never hardcode secrets.**
 
+#### Fail-Fast Pattern (March 2026 Update)
+
+**Problem:** Module-level fallbacks like `process.env.JWT_SECRET || 'dev-secret-key'` can silently use insecure defaults if the environment variable isn't set, defeating startup validation.
+
+**Solution:** Critical secrets use a fail-fast getter pattern:
+
+```javascript
+// backend/config/app-config.js
+jwt: {
+  get secret() {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      // Test mode: allow unit tests without explicit JWT_SECRET
+      if (isTest()) {
+        return 'test-only-jwt-secret-do-not-use-in-production';
+      }
+      // Dev/Production: FAIL IMMEDIATELY
+      throw new Error('SECURITY ERROR: JWT_SECRET environment variable is not set.');
+    }
+    return secret;
+  },
+  // ...
+}
+```
+
+**Benefits:**
+- ✅ No silent fallbacks in dev or production
+- ✅ Clear error message when secret is missing
+- ✅ Tests can still run without explicit configuration
+- ✅ Validation happens at the point of use, not import time
+
+**Files using this pattern:**
+- `backend/config/app-config.js` - Centralized `jwt.secret` getter
+- `backend/middleware/auth.js` - Uses `AppConfig.jwt.secret`
+- `backend/services/token-service.js` - Uses `AppConfig.jwt.secret`
+- `backend/services/auth/DevAuthStrategy.js` - Uses `AppConfig.jwt.secret`
+- `backend/services/auth/Auth0Strategy.js` - Uses `AppConfig.jwt.secret`
+
+**Frontend Equivalent:**
+
+Entity metadata loading also uses fail-fast in release builds:
+
+```dart
+// frontend/lib/services/entity_metadata.dart
+} catch (e) {
+  if (kReleaseMode) {
+    throw StateError('FATAL: Failed to load entity-metadata.json.');
+  }
+  // Debug mode only: use fallback defaults with warning
+  _loadDefaults();
+}
+```
+
 **Configuration:**
 
 ```bash

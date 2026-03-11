@@ -168,7 +168,8 @@ class AuthService {
 
   /// Handle refresh failure callback from TokenRefreshManager
   void _handleRefreshFailed() {
-    ErrorService.logWarning('Proactive token refresh failed - clearing auth');
+    // Session expired is an expected state, not an error
+    ErrorService.logInfo('Session expired - auth state cleared');
     _clearAuthState();
     onAuthStateChanged?.call();
   }

@@ -711,9 +711,9 @@
           "description": "Entity-level override - create requires manager"
         },
         "read": {
-          "minimumRole": "customer",
-          "minimumPriority": 1,
-          "description": "Entity-level override - read requires customer"
+          "minimumRole": "technician",
+          "minimumPriority": 2,
+          "description": "Entity-level override - read requires technician"
         },
         "update": {
           "minimumRole": "technician",

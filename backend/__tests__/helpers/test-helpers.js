@@ -6,6 +6,7 @@
 const express = require("express");
 const { signJwt } = require("../../utils/jwt-helper");
 const { AUTH } = require("../../config/constants");
+const { TEST_JWT_SECRET } = require("../../config/test-constants");
 const { TEST_USERS, JWT_PAYLOADS } = require("../fixtures/test-data");
 
 /**
@@ -41,8 +42,8 @@ async function generateTestToken(userType = "technician", overrides = {}) {
     ...overrides,
   };
 
-  const secret = process.env.JWT_SECRET || "test-secret-key";
-  return signJwt(payload, secret, { expiresIn: "24h" });
+  // SECURITY: Use centralized test secret - no fallbacks
+  return signJwt(payload, TEST_JWT_SECRET, { expiresIn: "24h" });
 }
 
 /**
@@ -58,9 +59,9 @@ async function generateExpiredToken(userType = "technician") {
     exp: Math.floor(Date.now() / 1000) - 3600, // 1 hour ago (expired)
   };
 
-  const secret = process.env.JWT_SECRET || "test-secret-key";
+  // SECURITY: Use centralized test secret - no fallbacks
   // Sign without additional expiration (already in payload)
-  return signJwt(payload, secret);
+  return signJwt(payload, TEST_JWT_SECRET);
 }
 
 /**
@@ -171,7 +172,7 @@ function mockDevAuthService(options = {}) {
 function setTestEnv(envVars = {}) {
   const defaultEnv = {
     NODE_ENV: "test",
-    JWT_SECRET: "test-secret-key",
+    JWT_SECRET: TEST_JWT_SECRET,
     AUTH_MODE: "development",
     USE_TEST_AUTH: "true",
   };

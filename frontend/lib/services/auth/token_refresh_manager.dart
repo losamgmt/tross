@@ -179,7 +179,8 @@ class TokenRefreshManager with WidgetsBindingObserver {
 
         ErrorService.logInfo('Proactive token refresh successful');
       } else {
-        ErrorService.logWarning('Proactive token refresh failed - no result');
+        // Expected when session has expired - not an error condition
+        ErrorService.logInfo('Session expired - re-authentication required');
         _onRefreshFailed();
       }
     } catch (e) {

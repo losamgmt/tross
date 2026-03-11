@@ -2,25 +2,10 @@
  * File Sub-Router - Sub-resource pattern for entity file attachments
  *
  * Mounted on entities with supportsFileAttachments: true
- * e.g., /api/work_orders/:id/files, /api/contracts/:id/files
+ * Routes: POST/GET/GET:fileId/DELETE on /:id/files
  *
- * Uses mergeParams to access parent entity route params (:id)
- *
- * ROUTES:
- * - POST   /:id/files           - Upload file to entity
- * - GET    /:id/files           - List entity's files
- * - GET    /:id/files/:fileId   - Get single file (with download_url)
- * - DELETE /:id/files/:fileId   - Soft delete file
- *
- * PERMISSIONS:
- * - List/Get: require 'read' on parent entity
- * - Upload/Delete: require 'update' on parent entity
- *
- * ARCHITECTURE:
- * - Generic sub-entity middleware from middleware/sub-entity.js
- * - File-specific validation from middleware/file-upload.js
- * - Route handlers are thin controllers
- * - FileAttachmentService handles all database operations
+ * RLS: Uses declarative polymorphic parent RLS via requireParentAccess middleware.
+ * File access is determined by parent entity's RLS rules (work_order, asset, etc.)
  */
 
 const express = require('express');
@@ -38,8 +23,8 @@ const { FILE_ATTACHMENTS } = require('../config/constants');
 const {
   attachParentMetadata,
   requireParentPermission,
+  requireParentAccess,
   requireServiceConfigured,
-  requireParentExists,
 } = require('../middleware/sub-entity');
 
 // File-specific middleware
@@ -48,81 +33,58 @@ const {
   validateFileBody,
 } = require('../middleware/file-upload');
 
-/**
- * Storage configuration check function
- */
+/** Storage configured check */
 const isStorageConfigured = () => storageService.isConfigured();
 
 /**
- * Generate download info for a file
- * @param {string} storageKey - R2 storage key
- * @returns {Promise<{url: string, expiresAt: Date}>}
+ * Generate signed download URL with expiry
  */
 async function generateDownloadInfo(storageKey) {
   const expirySeconds = FILE_ATTACHMENTS.DOWNLOAD_URL_EXPIRY_SECONDS;
-  const url = await storageService.getSignedDownloadUrl(
-    storageKey,
-    expirySeconds,
-  );
+  const url = await storageService.getSignedDownloadUrl(storageKey, expirySeconds);
   const expiresAt = new Date(Date.now() + expirySeconds * 1000);
   return { url, expiresAt };
 }
 
 /**
- * Create a file sub-router for an entity
- *
- * @param {Object} metadata - Entity metadata from config/models
- * @param {string} metadata.entityKey - Singular entity key (e.g., 'work_order')
- * @param {string} metadata.tableName - Plural table name (e.g., 'work_orders')
- * @param {string} metadata.rlsResource - RLS resource for permission checks
- * @returns {Router} Express router with mergeParams: true
+ * Verify file belongs to the expected parent entity
+ * Returns the file if valid, throws 404 if not found or mismatched
  */
+async function getVerifiedFile(fileId, entityKey, parentId) {
+  const file = await FileAttachmentService.getActiveFile(fileId);
+  if (!file || file.entity_type !== entityKey || file.entity_id !== parentId) {
+    throw new AppError('File not found', 404, 'NOT_FOUND');
+  }
+  return file;
+}
+
+/** Create a file sub-router for an entity */
 function createFileSubRouter(metadata) {
   const router = express.Router({ mergeParams: true });
   const { entityKey } = metadata;
 
-  // Attach metadata to all requests for middleware access
   router.use(attachParentMetadata(metadata));
-
-  // All file routes require authentication
   router.use(authenticateToken);
-
-  // Validate the parent entity :id param for all file routes
   router.use(validateIdParam({ paramName: 'id' }));
 
-  // Storage check middleware (used by routes that need R2)
   const requireStorage = requireServiceConfigured(
     isStorageConfigured,
     'File storage',
   );
 
-  // =============================================================================
-  // ROUTES
-  // =============================================================================
-
-  /**
-   * POST /:id/files - Upload a file attached to an entity
-   *
-   * Middleware order rationale:
-   * 1. requireParentPermission - Auth check first
-   * 2. validateFileHeaders - Cheap validation, reject bad MIME types early
-   * 3. validateFileBody - Cheap validation, reject empty uploads early
-   * 4. requireStorage - Only check storage AFTER we know the upload is valid
-   * 5. requireParentExists - DB check for parent entity
-   */
+  // POST /:id/files - Upload file
   router.post(
     '/',
     requireParentPermission('update'),
     validateFileHeaders,
     validateFileBody,
     requireStorage,
-    requireParentExists(FileAttachmentService.entityExists),
+    requireParentAccess(entityKey),
     asyncHandler(async (req, res) => {
       const parentId = req.parentId;
       const { mimeType, originalFilename, category, description } =
         req.fileUpload;
 
-      // Generate storage key and upload
       const storageKey = storageService.generateStorageKey(
         entityKey,
         parentId,
@@ -137,11 +99,10 @@ function createFileSubRouter(metadata) {
           entityType: entityKey,
           entityId: String(parentId),
           category,
-          uploadedBy: String(req.user?.id || 'unknown'),
+          uploadedBy: String(req.user.id),
         },
       });
 
-      // Save to database
       const attachment = await FileAttachmentService.createAttachment({
         entityType: entityKey,
         entityId: parentId,
@@ -151,10 +112,9 @@ function createFileSubRouter(metadata) {
         fileSize: uploadResult.size,
         category,
         description,
-        uploadedBy: req.user?.id || null,
+        uploadedBy: req.user.id,
       });
 
-      // Generate download URL for response
       const downloadInfo = await generateDownloadInfo(storageKey);
 
       return ResponseFormatter.created(
@@ -164,17 +124,14 @@ function createFileSubRouter(metadata) {
     }),
   );
 
-  /**
-   * GET /:id/files - List all files attached to an entity
-   */
+  // GET /:id/files - List files
   router.get(
     '/',
     requireParentPermission('read'),
     requireStorage,
+    requireParentAccess(entityKey),
     asyncHandler(async (req, res) => {
-      const parentId = parseInt(req.params.id, 10);
-
-      // List files from database
+      const parentId = req.parentId;
       const files = await FileAttachmentService.listFilesForEntity(
         entityKey,
         parentId,
@@ -183,7 +140,6 @@ function createFileSubRouter(metadata) {
         },
       );
 
-      // Generate download URLs for each file
       const filesWithUrls = await Promise.all(
         files.map(async (file) => {
           const downloadInfo = await generateDownloadInfo(file.storage_key);
@@ -197,31 +153,20 @@ function createFileSubRouter(metadata) {
     }),
   );
 
-  /**
-   * GET /:id/files/:fileId - Get a single file with download URL
-   */
+  // GET /:id/files/:fileId - Get single file
   router.get(
     '/:fileId',
     validateIdParam({ paramName: 'fileId' }),
     requireParentPermission('read'),
     requireStorage,
+    requireParentAccess(entityKey),
     asyncHandler(async (req, res) => {
-      const parentId = parseInt(req.params.id, 10);
-      const fileId = parseInt(req.params.fileId, 10);
-
-      // Get and verify file
-      const file = await FileAttachmentService.getActiveFile(fileId);
-      if (
-        !file ||
-        file.entity_type !== entityKey ||
-        file.entity_id !== parentId
-      ) {
-        throw new AppError('File not found', 404, 'NOT_FOUND');
-      }
-
-      // Generate download URL
+      const file = await getVerifiedFile(
+        parseInt(req.params.fileId, 10),
+        entityKey,
+        req.parentId,
+      );
       const downloadInfo = await generateDownloadInfo(file.storage_key);
-
       return ResponseFormatter.success(
         res,
         FileAttachmentService.formatForResponse(file, downloadInfo),
@@ -229,34 +174,21 @@ function createFileSubRouter(metadata) {
     }),
   );
 
-  /**
-   * DELETE /:id/files/:fileId - Soft delete a file
-   */
+  // DELETE /:id/files/:fileId - Soft delete
   router.delete(
     '/:fileId',
     validateIdParam({ paramName: 'fileId' }),
     requireParentPermission('update'),
+    requireParentAccess(entityKey),
     asyncHandler(async (req, res) => {
-      const parentId = parseInt(req.params.id, 10);
       const fileId = parseInt(req.params.fileId, 10);
-
-      // Get and verify file
-      const file = await FileAttachmentService.getActiveFile(fileId);
-      if (
-        !file ||
-        file.entity_type !== entityKey ||
-        file.entity_id !== parentId
-      ) {
-        throw new AppError('File not found', 404, 'NOT_FOUND');
-      }
-
-      // Soft delete
+      await getVerifiedFile(fileId, entityKey, req.parentId);
       await FileAttachmentService.softDelete(fileId);
 
-      logger.info('File deleted by user', {
+      logger.info('File deleted', {
         fileId,
         entityType: entityKey,
-        entityId: parentId,
+        entityId: req.parentId,
         deletedBy: req.user?.id,
       });
 

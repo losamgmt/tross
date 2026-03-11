@@ -111,8 +111,10 @@ const validateAuthCallback = createValidator(
       'string.empty': 'Authorization code is required',
       'any.required': 'Authorization code is required',
     }),
-    redirect_uri: Joi.string().uri().optional().trim().messages({
+    redirect_uri: Joi.string().uri().required().trim().messages({
       'string.uri': 'Redirect URI must be a valid URL',
+      'string.empty': 'Redirect URI is required',
+      'any.required': 'Redirect URI is required',
     }),
   }),
 );

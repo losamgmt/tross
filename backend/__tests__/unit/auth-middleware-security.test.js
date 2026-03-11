@@ -19,6 +19,7 @@ const AppConfig = require("../../config/app-config");
 const {
   mockUserDataServiceFindOrCreateUser,
 } = require("../mocks/services.mock");
+const { TEST_JWT_SECRET } = require("../../config/test-constants");
 
 // Mock the UserDataService (static class)
 jest.mock("../../services/user-data", () => ({
@@ -41,7 +42,7 @@ const attachTestEntity = (resource) => (req, res, next) => {
 
 describe("Authentication Middleware - Security", () => {
   let app;
-  const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-key";
+  const JWT_SECRET = TEST_JWT_SECRET;
 
   beforeEach(() => {
     app = express();

@@ -1,4 +1,10 @@
 // Clean Tross Backend Server
+//
+// SECURITY: Load environment variables FIRST, before any other imports.
+// This ensures all modules see the correct env vars from .env file.
+// Also ensures validateEnvironment() sees the complete environment.
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const swaggerUi = require('swagger-ui-express');
@@ -15,7 +21,6 @@ const { initializeDatabase } = require('./scripts/init-database');
 const {
   initializeFromDatabase: initRoleHierarchy,
 } = require('./config/role-hierarchy-loader');
-require('dotenv').config();
 
 // Environment Validation
 // Comprehensive validation of all environment variables at startup
@@ -431,6 +436,21 @@ if (process.env.NODE_ENV !== 'test') {
           logger.error(
             '   Permission checks will use fallback constants (may be stale!)',
           );
+        }
+
+        // Validate RLS rules (fail-fast if misconfigured)
+        // This MUST happen after role hierarchy is loaded
+        try {
+          const { validateAllRules } = require('./db/helpers/rls');
+          const allMetadata = require('./config/models');
+          // validateAllRules throws AppError if invalid, otherwise logs success
+          validateAllRules(allMetadata);
+        } catch (rlsError) {
+          logger.error('❌ CRITICAL: RLS validation failed:', rlsError.message);
+          if (process.env.NODE_ENV === 'production') {
+            logger.error('   Refusing to start with invalid RLS configuration');
+            process.exit(1);
+          }
         }
 
         // Validate enum synchronization between Joi and PostgreSQL

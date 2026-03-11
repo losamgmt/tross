@@ -11,6 +11,7 @@
 
 const permissions = require("../../../../config/permissions.json");
 const { getForeignKeyFieldNames } = require("../../../config/fk-helpers");
+const { linkUserToCustomerProfile } = require("../../helpers/test-db");
 
 /**
  * Get the RLS policy for a role on a resource
@@ -245,9 +246,163 @@ function adminSeesAllRecords(meta, ctx) {
   });
 }
 
+/**
+ * Scenario: Customer sees only units linked via junction table
+ *
+ * Preconditions:
+ * - Entity is unit
+ * - RLS rule has junction type for customer
+ * Tests: Customer listing only shows units linked via customer_units
+ */
+function customerSeesOnlyLinkedUnits(meta, ctx) {
+  if (meta.entityName !== "unit") return;
+
+  // Check for junction RLS rule
+  const hasJunctionRls = meta.rlsRules?.some(
+    (rule) =>
+      rule.roles === "customer" &&
+      rule.access?.type === "junction" &&
+      rule.access?.junction?.table === "customer_units"
+  );
+  if (!hasJunctionRls) return;
+
+  ctx.it(
+    `GET /api/${meta.tableName} - customer sees only units linked via junction`,
+    async () => {
+      // Create two customer profiles
+      const customerProfile = await ctx.factory.create("customer", {
+        email: `junction_test_${Date.now()}@example.com`,
+      });
+      const otherCustomerProfile = await ctx.factory.create("customer", {
+        email: `junction_other_${Date.now()}@example.com`,
+      });
+
+      // Create two units (factory auto-resolves property FK)
+      const linkedUnit = await ctx.factory.create("unit");
+      const unlinkedUnit = await ctx.factory.create("unit");
+
+      // Link customer to one unit via junction table
+      await ctx.factory.create("customer_unit", {
+        customer_id: customerProfile.id,
+        unit_id: linkedUnit.id,
+      });
+
+      // Link the other unit to a different customer
+      await ctx.factory.create("customer_unit", {
+        customer_id: otherCustomerProfile.id,
+        unit_id: unlinkedUnit.id,
+      });
+
+      // Create a fresh user and link to customer profile
+      const { createTestUser } = require("../../helpers/test-db");
+      const { user, token } = await createTestUser({ role: "customer" });
+      await linkUserToCustomerProfile(user.id, customerProfile.id);
+
+      // Customer requests units
+      const response = await ctx.request
+        .get(`/api/${meta.tableName}`)
+        .set({ Authorization: `Bearer ${token}` })
+        .query({ limit: 100 });
+
+      ctx.expect(response.status).toBe(200);
+      const items = response.body.data || response.body;
+
+      // Should contain the linked unit
+      const foundLinked = items.find((u) => u.id === linkedUnit.id);
+      ctx.expect(foundLinked).toBeDefined();
+
+      // Should NOT contain the unlinked unit
+      const foundUnlinked = items.find((u) => u.id === unlinkedUnit.id);
+      ctx.expect(foundUnlinked).toBeUndefined();
+    }
+  );
+}
+
+/**
+ * Scenario: Customer sees only assets in units linked via junction
+ *
+ * Preconditions:
+ * - Entity is asset
+ * - RLS rule has parent type referencing unit (which has junction RLS)
+ * Tests: Multi-hop RLS - customer sees assets only in their linked units
+ */
+function customerSeesOnlyAssetsInLinkedUnits(meta, ctx) {
+  if (meta.entityName !== "asset") return;
+
+  // Check for parent RLS rule referencing unit
+  const hasParentRls = meta.rlsRules?.some(
+    (rule) =>
+      rule.roles === "customer" &&
+      rule.access?.type === "parent" &&
+      rule.access?.parentEntity === "unit"
+  );
+  if (!hasParentRls) return;
+
+  ctx.it(
+    `GET /api/${meta.tableName} - customer sees only assets in linked units (multi-hop RLS)`,
+    async () => {
+      // Create customer profile
+      const customerProfile = await ctx.factory.create("customer", {
+        email: `asset_test_${Date.now()}@example.com`,
+      });
+      const otherCustomerProfile = await ctx.factory.create("customer", {
+        email: `asset_other_${Date.now()}@example.com`,
+      });
+
+      // Create two units (factory auto-resolves property FK)
+      const linkedUnit = await ctx.factory.create("unit");
+      const unlinkedUnit = await ctx.factory.create("unit");
+
+      // Link customer to one unit via junction table
+      await ctx.factory.create("customer_unit", {
+        customer_id: customerProfile.id,
+        unit_id: linkedUnit.id,
+      });
+
+      // Link the other unit to a different customer
+      await ctx.factory.create("customer_unit", {
+        customer_id: otherCustomerProfile.id,
+        unit_id: unlinkedUnit.id,
+      });
+
+      // Create assets in both units
+      const linkedAsset = await ctx.factory.create("asset", {
+        unit_id: linkedUnit.id,
+      });
+      const unlinkedAsset = await ctx.factory.create("asset", {
+        unit_id: unlinkedUnit.id,
+      });
+
+      // Create fresh user and link to customer profile
+      const { createTestUser } = require("../../helpers/test-db");
+      const { user, token } = await createTestUser({ role: "customer" });
+      await linkUserToCustomerProfile(user.id, customerProfile.id);
+
+      // Customer requests assets
+      const response = await ctx.request
+        .get(`/api/${meta.tableName}`)
+        .set({ Authorization: `Bearer ${token}` })
+        .query({ limit: 100 });
+
+      ctx.expect(response.status).toBe(200);
+      const items = response.body.data || response.body;
+
+      // Should contain asset from linked unit
+      const foundLinked = items.find((a) => a.id === linkedAsset.id);
+      ctx.expect(foundLinked).toBeDefined();
+
+      // Should NOT contain asset from unlinked unit
+      const foundUnlinked = items.find((a) => a.id === unlinkedAsset.id);
+      ctx.expect(foundUnlinked).toBeUndefined();
+    }
+  );
+}
+
 module.exports = {
   customerSeesOnlyOwnWorkOrders,
   technicianSeesOnlyAssignedWorkOrders,
   customerSeesOnlyOwnInvoices,
   adminSeesAllRecords,
+  customerSeesOnlyLinkedUnits,
+  customerSeesOnlyAssetsInLinkedUnits,
 };

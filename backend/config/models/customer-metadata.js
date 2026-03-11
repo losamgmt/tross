@@ -70,17 +70,25 @@ module.exports = {
   rlsResource: 'customers',
 
   /**
-   * Row-Level Security policy per role
-   * Customers see own record only, technician+ see all
-   * Values: null (all records), false (deny), field string, or { field, value } object
+   * Row-Level Security rules (ADR-011)
+   * Declarative grant-based rules. No match = deny.
    */
-  rlsPolicy: {
-    customer: { field: 'id', value: 'customerProfileId' }, // Filter customers.id = customerProfileId
-    technician: null,
-    dispatcher: null,
-    manager: null,
-    admin: null,
-  },
+  rlsRules: [
+    {
+      id: 'customer-own-record',
+      description: 'Customers see their own customer record',
+      roles: 'customer',
+      operations: '*',
+      access: { type: 'direct', field: 'id', value: 'customer_profile_id' },
+    },
+    {
+      id: 'staff-full-access',
+      description: 'Staff see all customer records',
+      roles: ['technician', 'dispatcher', 'manager', 'admin'],
+      operations: '*',
+      access: null,
+    },
+  ],
 
   /**
    * Navigation visibility - minimum role to see this entity in nav menus

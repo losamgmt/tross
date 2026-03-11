@@ -2,6 +2,7 @@
  * Sub-Entity Middleware - Unit Tests
  *
  * Tests for the generic sub-entity middleware.
+ * ADR-011: Uses rule-based RLS context (no filterConfig lookup).
  */
 
 const {
@@ -9,8 +10,41 @@ const {
   requireParentPermission,
   requireServiceConfigured,
   requireParentExists,
+  requireParentAccess,
+  setPolymorphicContext,
   getActionVerb,
 } = require("../../../middleware/sub-entity");
+
+// Mock pool for requireParentAccess
+jest.mock("../../../db/connection", () => ({
+  pool: {
+    query: jest.fn(),
+  },
+}));
+
+// Mock buildRLSFilter for requireParentAccess
+jest.mock("../../../db/helpers/rls", () => ({
+  buildRLSFilter: jest.fn(),
+}));
+
+// Mock allMetadata for requireParentAccess
+jest.mock("../../../config/models", () => ({
+  work_order: {
+    entityKey: "work_order",
+    tableName: "work_orders",
+    rlsResource: "work_orders",
+    rlsRules: [{ id: "test-rule", roles: "*", operations: "*", access: null }],
+  },
+  asset: {
+    entityKey: "asset",
+    tableName: "assets",
+    rlsResource: "assets",
+    rlsRules: [{ id: "test-rule", roles: "*", operations: "*", access: null }],
+  },
+}));
+
+const { pool } = require("../../../db/connection");
+const { buildRLSFilter } = require("../../../db/helpers/rls");
 
 describe("Sub-Entity Middleware", () => {
   let req, res, next;
@@ -179,6 +213,194 @@ describe("Sub-Entity Middleware", () => {
       const existsFn = jest.fn().mockRejectedValue(dbError);
 
       await requireParentExists(existsFn)(req, res, next);
+
+      expect(next).toHaveBeenCalledWith(dbError);
+    });
+  });
+
+  describe("setPolymorphicContext", () => {
+    it("should set polymorphicContext from params.id", () => {
+      req.params.id = "123";
+
+      setPolymorphicContext("work_order")(req, res, next);
+
+      expect(req.polymorphicContext).toEqual({
+        parentType: "work_order",
+        parentId: 123,
+      });
+      expect(next).toHaveBeenCalledWith();
+    });
+
+    it("should prefer validated.id over params.id", () => {
+      req.validated = { id: 456 };
+      req.params.id = "123";
+
+      setPolymorphicContext("asset")(req, res, next);
+
+      expect(req.polymorphicContext).toEqual({
+        parentType: "asset",
+        parentId: 456,
+      });
+    });
+
+    it("should use custom idParam when specified", () => {
+      req.params.parentId = "789";
+
+      setPolymorphicContext("work_order", "parentId")(req, res, next);
+
+      expect(req.polymorphicContext).toEqual({
+        parentType: "work_order",
+        parentId: 789,
+      });
+    });
+
+    it("should set parentId to null for invalid ID", () => {
+      req.params.id = "invalid";
+
+      setPolymorphicContext("work_order")(req, res, next);
+
+      expect(req.polymorphicContext).toEqual({
+        parentType: "work_order",
+        parentId: null,
+      });
+    });
+  });
+
+  describe("requireParentAccess", () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+      req.params.id = "123";
+      req.method = "GET";
+      req.dbUser = {
+        id: 1,
+        role: "customer",
+        customer_profile_id: 42,
+      };
+    });
+
+    it("should call next() when parent exists and is accessible", async () => {
+      buildRLSFilter.mockReturnValue({
+        clause: "work_orders.customer_id = $2",
+        params: [42],
+        applied: true,
+      });
+      pool.query.mockResolvedValue({ rows: [{ id: 123 }] });
+
+      await requireParentAccess("work_order")(req, res, next);
+
+      expect(buildRLSFilter).toHaveBeenCalled();
+      expect(pool.query).toHaveBeenCalled();
+      expect(req.parentId).toBe(123);
+      expect(req.parentEntity).toEqual({ id: 123 });
+      expect(req.polymorphicContext).toEqual({
+        parentType: "work_order",
+        parentId: 123,
+      });
+      expect(next).toHaveBeenCalledWith();
+    });
+
+    it("should return 404 when parent not found", async () => {
+      buildRLSFilter.mockReturnValue({
+        clause: "",
+        params: [],
+        applied: false,
+      });
+      pool.query.mockResolvedValue({ rows: [] }); // Empty = not found
+
+      await requireParentAccess("work_order")(req, res, next);
+
+      const error = next.mock.calls[0][0];
+      expect(error.statusCode).toBe(404);
+      expect(error.code).toBe("NOT_FOUND");
+    });
+
+    it("should return 404 when RLS denies access (hides existence)", async () => {
+      buildRLSFilter.mockReturnValue({
+        clause: "1=0", // Deny clause
+        params: [],
+        applied: true,
+      });
+
+      await requireParentAccess("work_order")(req, res, next);
+
+      const error = next.mock.calls[0][0];
+      expect(error.statusCode).toBe(404);
+      expect(error.code).toBe("NOT_FOUND");
+      expect(pool.query).not.toHaveBeenCalled(); // Short-circuits before query
+    });
+
+    it("should return 400 for invalid parent ID", async () => {
+      req.params.id = "invalid";
+
+      await requireParentAccess("work_order")(req, res, next);
+
+      const error = next.mock.calls[0][0];
+      expect(error.statusCode).toBe(400);
+      expect(error.code).toBe("VALIDATION_ERROR");
+    });
+
+    it("should return 400 for zero ID", async () => {
+      req.params.id = "0";
+
+      await requireParentAccess("work_order")(req, res, next);
+
+      const error = next.mock.calls[0][0];
+      expect(error.statusCode).toBe(400);
+    });
+
+    it("should return 500 for unknown entity key", async () => {
+      await requireParentAccess("unknown_entity")(req, res, next);
+
+      const error = next.mock.calls[0][0];
+      expect(error.statusCode).toBe(500);
+      expect(error.code).toBe("INTERNAL_ERROR");
+    });
+
+    it("should prefer validated.id over params.id", async () => {
+      req.validated = { id: 999 };
+      req.params.id = "123";
+      buildRLSFilter.mockReturnValue({ clause: "", params: [], applied: false });
+      pool.query.mockResolvedValue({ rows: [{ id: 999 }] });
+
+      await requireParentAccess("work_order")(req, res, next);
+
+      expect(req.parentId).toBe(999);
+    });
+
+    it("should use custom idParam when specified", async () => {
+      req.params.parentId = "456";
+      delete req.params.id;
+      buildRLSFilter.mockReturnValue({ clause: "", params: [], applied: false });
+      pool.query.mockResolvedValue({ rows: [{ id: 456 }] });
+
+      await requireParentAccess("work_order", "parentId")(req, res, next);
+
+      expect(req.parentId).toBe(456);
+    });
+
+    it("should pass correct operation from HTTP method", async () => {
+      req.method = "POST";
+      buildRLSFilter.mockReturnValue({ clause: "", params: [], applied: false });
+      pool.query.mockResolvedValue({ rows: [{ id: 123 }] });
+
+      await requireParentAccess("work_order")(req, res, next);
+
+      // buildRLSFilter is called with 'read' operation (always check read for parent)
+      expect(buildRLSFilter).toHaveBeenCalledWith(
+        expect.objectContaining({ operation: "create" }), // From POST method
+        expect.anything(),
+        "read", // Always check read permission
+        2,
+        expect.anything(),
+      );
+    });
+
+    it("should propagate database errors", async () => {
+      const dbError = new Error("Database connection failed");
+      buildRLSFilter.mockReturnValue({ clause: "", params: [], applied: false });
+      pool.query.mockRejectedValue(dbError);
+
+      await requireParentAccess("work_order")(req, res, next);
 
       expect(next).toHaveBeenCalledWith(dbError);
     });
