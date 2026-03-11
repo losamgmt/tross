@@ -62,17 +62,54 @@ module.exports = {
   rlsResource: RLS_RESOURCE_TYPES.PARENT_DERIVED,
 
   /**
-   * Row-Level Security policy per role
-   * Access controlled by parent entity - admin can see all
-   * Values: null (all records), false (deny), '$parent', field string, or { field, value } object
+   * Row-Level Security rules (ADR-011)
+   * Declarative grant-based rules. No match = deny.
+   *
+   * File attachments use POLYMORPHIC PARENT RLS - access is determined by
+   * the parent entity (work_order, asset, etc.) via entity_type + entity_id.
+   *
+   * At runtime, the parent type is resolved from:
+   * - Route context: /work_orders/:id/files → parentType = 'work_order'
+   * - Query param: /files?entity_type=work_order → parentType = 'work_order'
+   *
+   * This scales to unlimited parent entity types without SQL enumeration.
    */
-  rlsPolicy: {
-    customer: '$parent',
-    technician: '$parent',
-    dispatcher: '$parent',
-    manager: '$parent',
-    admin: null,
-  },
+  rlsRules: [
+    {
+      id: 'customer-via-parent',
+      description: 'Customers access files via parent entity RLS',
+      roles: 'customer',
+      operations: ['read'],
+      access: {
+        type: 'parent',
+        foreignKey: 'entity_id',
+        polymorphic: {
+          typeColumn: 'entity_type',
+          // No allowedTypes = any entity supporting attachments is valid
+        },
+      },
+    },
+    {
+      id: 'technician-via-parent',
+      description: 'Technicians access files via parent entity RLS',
+      roles: 'technician',
+      operations: '*',
+      access: {
+        type: 'parent',
+        foreignKey: 'entity_id',
+        polymorphic: {
+          typeColumn: 'entity_type',
+        },
+      },
+    },
+    {
+      id: 'staff-full-access',
+      description: 'Dispatcher+ have full access to all file attachments',
+      roles: ['dispatcher', 'manager', 'admin'],
+      operations: '*',
+      access: null,
+    },
+  ],
 
   /**
    * Navigation visibility - null means not shown in nav menus

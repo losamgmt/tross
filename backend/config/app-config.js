@@ -4,42 +4,19 @@
  *
  * CRITICAL: This module controls security features including dev authentication.
  * Changes here affect authentication, authorization, and API behavior.
+ *
+ * NOTE: Environment variable defaults are documented in env-manifest.js
+ * That file is the SINGLE SOURCE OF TRUTH for what defaults exist and when.
  */
 
-const { ENVIRONMENTS, DATABASE, REDIS } = require('./constants');
+const { DATABASE, REDIS } = require('./constants');
+const {
+  getEnvironment,
+  isDevelopment,
+  isProduction,
+  isTest,
+} = require('./environment');
 const { logger } = require('./logger');
-
-/**
- * Get current environment from NODE_ENV
- * @returns {string} Current environment
- */
-function getEnvironment() {
-  return process.env.NODE_ENV || ENVIRONMENTS.DEVELOPMENT;
-}
-
-/**
- * Check if running in development mode
- * @returns {boolean} True if development environment
- */
-function isDevelopment() {
-  return getEnvironment() === ENVIRONMENTS.DEVELOPMENT;
-}
-
-/**
- * Check if running in production mode
- * @returns {boolean} True if production environment
- */
-function isProduction() {
-  return getEnvironment() === ENVIRONMENTS.PRODUCTION;
-}
-
-/**
- * Check if running in test mode
- * @returns {boolean} True if test environment
- */
-function isTest() {
-  return getEnvironment() === ENVIRONMENTS.TEST;
-}
 
 /**
  * AppConfig - Centralized configuration service
@@ -156,9 +133,35 @@ const AppConfig = {
   // ============================================================================
   // JWT CONFIGURATION
   // SECURITY: No fallbacks - must be explicitly configured via environment
+  // PATTERN: Getter throws if secret not set (except in test mode)
   // ============================================================================
   jwt: {
-    secret: process.env.JWT_SECRET,
+    /**
+     * Get JWT secret - FAIL-FAST if not configured
+     *
+     * SECURITY: This getter ensures no module can use an undefined secret.
+     * In test mode, returns a test-only secret for unit tests that don't set env vars.
+     * In dev/production, throws immediately if JWT_SECRET is not set.
+     *
+     * @returns {string} The JWT secret
+     * @throws {Error} If JWT_SECRET is not set (except in test mode)
+     */
+    get secret() {
+      const secret = process.env.JWT_SECRET;
+      if (!secret) {
+        // In test mode, allow tests to run without explicit JWT_SECRET
+        if (isTest()) {
+          return 'test-only-jwt-secret-do-not-use-in-production';
+        }
+        // In dev/production, fail immediately
+        throw new Error(
+          'SECURITY ERROR: JWT_SECRET environment variable is not set. ' +
+          'Cannot proceed without a valid JWT secret. ' +
+          'Set JWT_SECRET in your environment variables.',
+        );
+      }
+      return secret;
+    },
     expiresIn: process.env.JWT_EXPIRES_IN || '24h',
     algorithm: 'HS256',
   },
@@ -218,26 +221,29 @@ const AppConfig = {
 
   /**
    * Validates required configuration
-   * Throws if critical config is missing
+   * Uses env-manifest.js for comprehensive validation
    *
    * @throws {Error} If required configuration is missing
    */
   validate() {
+    // Import manifest here to avoid circular dependency at module load
+    const { validateManifest } = require('./env-manifest');
+    const manifestResult = validateManifest();
     const errors = [];
 
+    // Add manifest errors
+    errors.push(...manifestResult.errors);
+
+    // Log warnings from manifest (defaults being used)
+    if (manifestResult.warnings.length > 0 && !isTest()) {
+      logger.info('📋 Environment defaults applied:');
+      manifestResult.warnings.forEach((warning) => {
+        logger.info(`   ${warning}`);
+      });
+    }
+
     if (this.isProduction) {
-      // Production-specific validation
-      if (
-        !process.env.JWT_SECRET ||
-        process.env.JWT_SECRET === 'your-secret-key-change-in-production'
-      ) {
-        errors.push('JWT_SECRET must be set in production');
-      }
-
-      if (!this.auth0.clientSecret) {
-        errors.push('AUTH0_CLIENT_SECRET must be set in production');
-      }
-
+      // Production-specific validation (manifest handles JWT_SECRET and AUTH0_* vars)
       if (this.devAuthEnabled) {
         errors.push(
           'Development authentication must be disabled in production',

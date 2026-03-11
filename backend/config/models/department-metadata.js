@@ -39,13 +39,20 @@ module.exports = {
 
   rlsResource: 'departments',
 
-  rlsPolicy: {
-    customer: false,
-    technician: null,
-    dispatcher: null,
-    manager: null,
-    admin: null,
-  },
+  /**
+   * Row-Level Security rules (ADR-011)
+   * Declarative grant-based rules. No match = deny.
+   */
+  rlsRules: [
+    // customer: no rule = deny (internal resource)
+    {
+      id: 'staff-full-access',
+      description: 'Staff see all departments',
+      roles: ['technician', 'dispatcher', 'manager', 'admin'],
+      operations: '*',
+      access: null,
+    },
+  ],
 
   navVisibility: 'manager',
   navGroup: 'admin',

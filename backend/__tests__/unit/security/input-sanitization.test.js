@@ -15,8 +15,9 @@ const {
   sanitizeInput,
   securityHeaders,
 } = require("../../../middleware/security");
+const { TEST_JWT_SECRET } = require("../../../config/test-constants");
 
-const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-key";
+const JWT_SECRET = TEST_JWT_SECRET;
 
 describe("Input Sanitization Security", () => {
   let app;

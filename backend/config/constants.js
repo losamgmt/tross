@@ -220,20 +220,32 @@ const ENTITY_FIELDS = Object.freeze({
 });
 
 // ============================================================================
-// RLS (ROW-LEVEL SECURITY) CONSTANTS - ADR-008
+// RLS ENGINE LIMITS (ADR-011)
 // ============================================================================
 /**
- * Valid context value keys for RLS { field, value } configurations.
- * These map to properties on the rlsContext object built by RLS middleware.
+ * Rule-based RLS engine limits and configuration.
+ * ADR-011: Declarative grant rules for row-level access control.
  *
- * SSOT: This is the single source of truth for valid context values.
- * Used by entity-metadata-validator.js to validate rlsPolicy configurations.
+ * SSOT: Single source of truth for all RLS engine constraints.
+ * Used by: db/helpers/rls/* modules
  */
-const RLS_CONTEXT_VALUES = Object.freeze([
-  'userId', // users.id - the current user's ID
-  'customerProfileId', // users.customer_profile_id - user's customer profile FK
-  'technicianProfileId', // users.technician_profile_id - user's technician profile FK
-]);
+const RLS_ENGINE = Object.freeze({
+  // Rule validation limits
+  MAX_HOPS: 5, // Maximum junction path depth (security + performance)
+  MAX_RULES_PER_ENTITY: 50, // Maximum rules per entity (complexity limit)
+  MAX_FILTER_CONDITIONS: 10, // Maximum conditions in a filter object
+
+  // Cache configuration
+  CACHE_MAX_SIZE: 500, // Maximum cached clause templates
+  CACHE_EVICT_PERCENT: 0.1, // Evict 10% when cache full
+
+  // SQL generation
+  JUNCTION_ALIAS_PREFIX: 'j', // Prefix for junction table aliases (j0, j1, j2...)
+  PARENT_ALIAS_PREFIX: 'p', // Prefix for parent table aliases (p0, p1, p2...)
+
+  // Access types supported
+  ACCESS_TYPES: Object.freeze(['direct', 'junction', 'parent']),
+});
 
 // ============================================================================
 // FIELD ACCESS LEVELS (for field-level CRUD permissions)
@@ -569,6 +581,7 @@ module.exports = Object.freeze({
   FILE_ATTACHMENTS,
   NAME_PATTERNS,
   RLS_RESOURCE_TYPES,
+  RLS_ENGINE,
   // NAME_PATTERN_MAP is derived from metadata at runtime
   get NAME_PATTERN_MAP() {
     return derivedConstants.NAME_PATTERN_MAP;
@@ -580,7 +593,6 @@ module.exports = Object.freeze({
   ROLE_DESCRIPTIONS,
   FIELD_ACCESS_LEVELS,
   UNIVERSAL_FIELD_ACCESS,
-  RLS_CONTEXT_VALUES,
   HEALTH,
   API_ENDPOINTS,
   MODEL_ERRORS,

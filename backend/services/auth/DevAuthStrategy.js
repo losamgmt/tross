@@ -14,8 +14,17 @@ const { logger } = require('../../config/logger');
 class DevAuthStrategy extends AuthStrategy {
   constructor() {
     super();
-    this.jwtSecret = process.env.JWT_SECRET || 'dev-secret-key';
+    // SECURITY: Access JWT secret via AppConfig getter (fail-fast if not configured)
+    // Note: In development mode, AppConfig allows test secret; in production, this throws
     this.tokenExpiry = AUTH.JWT.DEFAULT_EXPIRY;
+  }
+
+  /**
+   * Get JWT secret from AppConfig (fail-fast getter)
+   * @returns {string} JWT secret
+   */
+  get jwtSecret() {
+    return require('../../config/app-config').jwt.secret;
   }
 
   /**

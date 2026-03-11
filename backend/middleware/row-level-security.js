@@ -2,41 +2,84 @@
  * Row-Level Security (RLS) Middleware
  *
  * Enforces data-driven row-level access control policies.
- * Works with entity metadata rlsPolicy and model-level filtering.
+ * ADR-011: Rule-based RLS using declarative grant rules.
  *
  * SECURITY: This is Level 2 of the multi-tier access control system:
  * - Level 1: Resource permissions (requirePermission) - WHO can access WHAT
  * - Level 2: Row-Level Security (enforceRLS) - WHICH RECORDS can be accessed
  * - Level 3: Field-Level Security (future) - WHICH FIELDS can be seen/modified
  *
- * RLS POLICY VALUES (ADR-008):
- * - null: No filtering - role can see all records
- * - false: Deny all access - role cannot access any records
- * - '$parent': Access controlled by parent entity
- * - 'field_name': Filter: WHERE table.field_name = $userId (shorthand)
- * - { field, value }: Full config - WHERE table.field = $rlsContext[value]
+ * CONTEXT BUILDING (ADR-011):
+ * - Dynamically extracts all *_profile_id columns from user record
+ * - Maps HTTP method to operation (read, create, update, delete)
+ * - Context uses snake_case for all profile IDs (schema-aligned)
  *
  * USAGE:
  * Apply AFTER authenticateToken and requirePermission:
  * router.get('/customers',
  *   authenticateToken,
  *   requirePermission('customers', 'read'),
- *   enforceRLS('customers'),
+ *   enforceRLS,
  *   getCustomers
  * );
  */
 
-const { getRLSRule } = require('../config/permissions-loader');
 const { logSecurityEvent, logger } = require('../config/logger');
 const { getClientIp, getUserAgent } = require('../utils/request-helpers');
 const ResponseFormatter = require('../utils/response-formatter');
 const { ERROR_CODES } = require('../utils/response-formatter');
 
 /**
+ * Extract all profile ID columns from user record
+ *
+ * Convention-based: any column ending in '_profile_id' is extracted.
+ * This is schema-driven — adding a new profile type (e.g., vendor_profile_id)
+ * to the users table requires NO code changes here.
+ *
+ * @param {Object} user - User record from database
+ * @returns {Object} Profile IDs keyed by column name (snake_case)
+ */
+function extractProfileIds(user) {
+  if (!user) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(user)
+      .filter(([key]) => key.endsWith('_profile_id'))
+      .map(([key, value]) => [key, value ?? null]),
+  );
+}
+
+/**
+ * Map HTTP method to RLS operation
+ *
+ * @param {string} method - HTTP method (GET, POST, PUT, PATCH, DELETE)
+ * @returns {string} RLS operation (read, create, update, delete)
+ */
+function getOperationFromMethod(method) {
+  const mapping = {
+    GET: 'read',
+    POST: 'create',
+    PUT: 'update',
+    PATCH: 'update',
+    DELETE: 'delete',
+  };
+  return mapping[method] || 'read';
+}
+
+/**
  * Enforce Row-Level Security for a resource
  *
- * Attaches RLS filter configuration to request object for model-level filtering.
- * Models use this in their buildRLSQuery() method.
+ * Attaches RLS context to request object for service-level filtering.
+ * Context includes all profile IDs dynamically extracted from user record.
+ *
+ * ADR-011: Rule-based RLS. Context structure:
+ * - role: User's role (for rule matching)
+ * - userId: User's ID
+ * - operation: Derived from HTTP method (read, create, update, delete)
+ * - *_profile_id: All profile columns from users table (snake_case)
+ * - filterConfig: (LEGACY) For backward compatibility during migration
  *
  * UNIFIED PATTERN: Resource is ALWAYS read from req.entityMetadata.rlsResource
  * Routes must attach entity metadata via middleware BEFORE this runs.
@@ -92,19 +135,28 @@ const enforceRLS = (req, res, next) => {
     );
   }
 
-  // Get RLS filter configuration from permissions (via entity metadata)
-  // ADR-008: filterConfig is the rlsPolicy value for this role
-  const filterConfig = getRLSRule(userRole, resource);
+  // Dynamically extract all profile IDs from user record (ADR-011)
+  // Convention: any column ending in '_profile_id'
+  const profileIds = extractProfileIds(req.dbUser);
 
-  // Build RLS context with all available filter values
-  // ADR-008: Different entities may filter by different profile IDs
+  // Determine operation from HTTP method
+  const operation = getOperationFromMethod(req.method);
+
+  // Build RLS context (ADR-011 format)
+  // The new RLS engine reads rlsRules from entity metadata to match rules by role
   req.rlsContext = {
-    filterConfig, // null | false | '$parent' | string | { field, value }
-    userId,
-    customerProfileId: req.dbUser?.customer_profile_id || null,
-    technicianProfileId: req.dbUser?.technician_profile_id || null,
+    // Core identity
     role: userRole,
+    userId,
+    operation,
     resource,
+
+    // Dynamic profile IDs (snake_case, schema-driven)
+    ...profileIds,
+
+    // Polymorphic parent context (from setPolymorphicContext middleware)
+    // Used by polymorphic parent RLS rules to resolve parent type at runtime
+    polymorphic: req.polymorphicContext || null,
   };
 
   // Debug log only - RLS application is routine, not a security concern
@@ -113,10 +165,8 @@ const enforceRLS = (req, res, next) => {
     userId,
     userRole,
     resource,
-    filterConfig:
-      typeof filterConfig === 'object'
-        ? JSON.stringify(filterConfig)
-        : filterConfig,
+    operation,
+    profileIds: Object.keys(profileIds).join(', ') || 'none',
   });
 
   next();
@@ -150,10 +200,8 @@ const validateRLSApplied = (req, result) => {
     return; // No RLS enforcement on this route
   }
 
-  if (req.rlsContext.filterConfig === null) {
-    return; // No RLS filtering required
-  }
-
+  // ADR-011: The new RLS engine always sets rlsApplied=true when rules are processed.
+  // This includes full-access rules (access: null) which add no filter but are still "applied".
   // Result should have metadata indicating RLS was applied
   if (!result || !result.rlsApplied) {
     const error = new Error(
@@ -167,10 +215,6 @@ const validateRLSApplied = (req, result) => {
       userId: req.rlsContext.userId,
       userRole: req.rlsContext.role,
       resource: req.rlsContext.resource,
-      filterConfig:
-        typeof req.rlsContext.filterConfig === 'object'
-          ? JSON.stringify(req.rlsContext.filterConfig)
-          : req.rlsContext.filterConfig,
       severity: 'CRITICAL',
     });
     throw error;
@@ -180,4 +224,7 @@ const validateRLSApplied = (req, result) => {
 module.exports = {
   enforceRLS,
   validateRLSApplied,
+  // Exported for use by related modules (e.g., sub-entity.js, parent-rls-service.js)
+  extractProfileIds,
+  getOperationFromMethod,
 };

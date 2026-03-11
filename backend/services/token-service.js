@@ -5,9 +5,11 @@ const db = require('../db/connection');
 const { logger } = require('../config/logger');
 const { toSafeInteger, toSafeUuid } = require('../validators/type-coercion');
 const AppError = require('../utils/app-error');
+const AppConfig = require('../config/app-config');
 
-// JWT Configuration from environment variables
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key';
+// SECURITY: JWT_SECRET accessed via AppConfig.jwt.secret getter
+// This getter FAILS FAST if secret is not configured (no fallbacks)
+// See app-config.js for implementation details
 const JWT_ACCESS_EXPIRY = '15m'; // 15 minutes
 const JWT_REFRESH_EXPIRY = '7d'; // 7 days
 
@@ -47,7 +49,7 @@ class TokenService {
           provider: provider, // Required by auth middleware
           type: 'access',
         },
-        JWT_SECRET,
+        AppConfig.jwt.secret,
         { expiresIn: JWT_ACCESS_EXPIRY },
       );
 
@@ -59,7 +61,7 @@ class TokenService {
           tokenId: refreshTokenId,
           type: 'refresh',
         },
-        JWT_SECRET,
+        AppConfig.jwt.secret,
         { expiresIn: JWT_REFRESH_EXPIRY },
       );
 
@@ -108,7 +110,7 @@ class TokenService {
   ) {
     try {
       // Verify and decode refresh token
-      const decoded = await verifyJwt(refreshToken, JWT_SECRET);
+      const decoded = await verifyJwt(refreshToken, AppConfig.jwt.secret);
 
       if (decoded.type !== 'refresh') {
         throw new AppError('Invalid token type', 401, 'UNAUTHORIZED');

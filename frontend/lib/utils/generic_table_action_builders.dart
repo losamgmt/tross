@@ -359,6 +359,12 @@ class GenericTableActionBuilders {
   }
 
   /// Create empty data map with defaults from metadata
+  ///
+  /// Handles default values with this priority:
+  /// 1. Explicit defaultValue from field definition
+  /// 2. Type-specific defaults (boolean -> false, strings -> '')
+  /// 3. Required enum fields without default -> first enum value
+  ///    (matches SelectInput visual behavior for consistency)
   static Map<String, dynamic> _createEmptyData(EntityMetadata metadata) {
     final data = <String, dynamic>{};
     for (final entry in metadata.fields.entries) {
@@ -374,6 +380,14 @@ class GenericTableActionBuilders {
           FieldType.email ||
           FieldType.phone ||
           FieldType.text => '',
+          // Required enum fields: use first value to match UI display
+          // SelectInput shows items.first for required fields with null value
+          FieldType.enumType =>
+            (fieldDef.required &&
+                    fieldDef.enumValues != null &&
+                    fieldDef.enumValues!.isNotEmpty)
+                ? fieldDef.enumValues!.first
+                : null,
           _ => null,
         };
       }

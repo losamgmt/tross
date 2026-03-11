@@ -33,12 +33,15 @@ cp backend/.env.example backend/.env
 
 | Variable          | Description            | Example                     | Required             |
 | ----------------- | ---------------------- | --------------------------- | -------------------- |
-| `JWT_SECRET`      | Secret for JWT signing | 32+ character random string | Yes (production)     |
+| `JWT_SECRET`      | Secret for JWT signing | 64+ character random string | Yes                  |
 | `AUTH0_DOMAIN`    | Auth0 tenant domain    | `yourapp.auth0.com`         | Yes (if using Auth0) |
 | `AUTH0_AUDIENCE`  | Auth0 API identifier   | `https://api.yourapp.com`   | Yes (if using Auth0) |
 | `AUTH0_CLIENT_ID` | Auth0 client ID        | (from Auth0 dashboard)      | Yes (if using Auth0) |
 
-> **Default (development)**: `JWT_SECRET` defaults to `'dev-secret-key'` - never use in production!
+> **SECURITY NOTE (Updated March 2026)**: `JWT_SECRET` has **NO fallback** in development or production.
+> - In **test mode** (`NODE_ENV=test`): A test-only secret is provided for unit tests
+> - In **dev/production**: The application throws immediately if `JWT_SECRET` is not set
+> - This is a fail-fast security pattern - see `backend/config/app-config.js` for implementation
 
 ### Server Configuration
 
@@ -116,7 +119,7 @@ cp backend/.env.example backend/.env
 
 ```env
 NODE_ENV=development
-JWT_SECRET=dev-secret-key
+JWT_SECRET=your-development-secret-here-32-chars-min
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=tross_dev
@@ -129,7 +132,7 @@ ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8080
 
 | Check | Requirement                                        |
 | ----- | -------------------------------------------------- |
-| ✅    | `JWT_SECRET` is a secure random string (32+ chars) |
+| ✅    | `JWT_SECRET` is a secure random string (64+ chars) |
 | ✅    | `DATABASE_URL` uses SSL (`?sslmode=require`)       |
 | ✅    | `NODE_ENV=production` is set                       |
 | ✅    | `ALLOWED_ORIGINS` contains only your domains       |
@@ -150,8 +153,9 @@ DB_NAME=tross_dev
 DB_USER=postgres
 DB_PASSWORD=postgres
 
-# Auth (development mode - no Auth0 needed)
-JWT_SECRET=dev-secret-key-for-local-only
+# Auth - REQUIRED (no fallback anymore)
+# Generate a random secret: openssl rand -base64 32
+JWT_SECRET=your-local-development-secret-32-chars-minimum
 
 # CORS
 ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8080
@@ -162,7 +166,8 @@ ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8080
 ```env
 NODE_ENV=development
 DATABASE_URL=postgresql://postgres:postgres@db:5432/tross
-JWT_SECRET=dev-secret-key
+# REQUIRED - generate with: openssl rand -base64 32
+JWT_SECRET=your-docker-development-secret-32-chars-minimum
 ```
 
 ### Railway Production

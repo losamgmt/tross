@@ -28,10 +28,8 @@ const PaginationService = require('./pagination-service');
 const QueryBuilderService = require('./query-builder-service');
 const { buildUpdateClause } = require('../db/helpers/update-helper');
 const { cascadeDeleteDependents } = require('../db/helpers/cascade-helper');
-const {
-  buildRLSFilter,
-  buildRLSFilterForFindById,
-} = require('../db/helpers/rls-filter-helper');
+// ADR-011: Use new rule-based RLS engine
+const { buildRLSFilter } = require('../db/helpers/rls');
 const {
   filterOutput,
   filterOutputArray,
@@ -436,10 +434,13 @@ class GenericEntityService {
     // Combine parameters
     const params = [...(search?.params || []), ...(filters?.params || [])];
 
-    // Apply RLS filter if context provided
+    // Apply RLS filter if context provided (ADR-011: rule-based engine)
     let rlsApplied = false;
     if (rlsContext) {
-      const rlsFilter = buildRLSFilter(rlsContext, metadata, params.length);
+      // Determine operation: use context.operation if set, else default to 'read'
+      const operation = rlsContext.operation || 'read';
+      // New engine uses 1-indexed offset, pass allMetadata for parent access
+      const rlsFilter = buildRLSFilter(rlsContext, metadata, operation, params.length + 1, allMetadata);
 
       if (rlsFilter.clause) {
         whereClauses.push(rlsFilter.clause);
@@ -450,9 +451,7 @@ class GenericEntityService {
 
       logger.debug('GenericEntityService.findAll with RLS', {
         entity: entityName,
-        filterConfig: typeof rlsContext.filterConfig === 'object'
-          ? JSON.stringify(rlsContext.filterConfig)
-          : rlsContext.filterConfig,
+        operation,
         rlsApplied: rlsFilter.applied,
         rlsClause: rlsFilter.clause || '(none)',
       });
@@ -593,12 +592,16 @@ class GenericEntityService {
     const whereClauses = [`${tableName}.${field} = $1`];
     const params = [value];
 
-    // Apply RLS filter if context provided
+    // Apply RLS filter if context provided (ADR-011: rule-based engine)
     if (rlsContext) {
-      const rlsFilter = buildRLSFilterForFindById(
+      // For findByField, use operation from context or default to 'read'
+      const operation = rlsContext.operation || 'read';
+      const rlsFilter = buildRLSFilter(
         rlsContext,
         metadata,
-        params.length,
+        operation,
+        params.length + 1,
+        allMetadata,
       );
 
       if (rlsFilter.clause) {
@@ -609,7 +612,7 @@ class GenericEntityService {
       logger.debug('GenericEntityService.findByField with RLS', {
         entity: entityName,
         field,
-        policy: rlsContext.policy,
+        operation,
         rlsApplied: rlsFilter.applied,
       });
     }
@@ -678,9 +681,11 @@ class GenericEntityService {
       params = [...filterResult.params];
     }
 
-    // Apply RLS filter if context provided
+    // Apply RLS filter if context provided (ADR-011: rule-based engine)
     if (rlsContext) {
-      const rlsFilter = buildRLSFilter(rlsContext, metadata, params.length);
+      // For count, use operation from context or default to 'read'
+      const operation = rlsContext.operation || 'read';
+      const rlsFilter = buildRLSFilter(rlsContext, metadata, operation, params.length + 1, allMetadata);
 
       if (rlsFilter.clause) {
         whereClauses.push(rlsFilter.clause);
@@ -689,7 +694,7 @@ class GenericEntityService {
 
       logger.debug('GenericEntityService.count with RLS', {
         entity: entityName,
-        policy: rlsContext.policy,
+        operation,
         rlsApplied: rlsFilter.applied,
       });
     }

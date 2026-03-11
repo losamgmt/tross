@@ -46,17 +46,19 @@ module.exports = {
   rlsResource: 'audit_logs',
 
   /**
-   * Row-Level Security policy per role
-   * Only admin can access audit logs
-   * Values: null (all records), false (deny), field string, or { field, value } object
+   * Row-Level Security rules (ADR-011)
+   * Declarative grant-based rules. No match = deny.
    */
-  rlsPolicy: {
-    customer: false,
-    technician: false,
-    dispatcher: false,
-    manager: false,
-    admin: null,
-  },
+  rlsRules: [
+    // customer, technician, dispatcher, manager: no rule = deny
+    {
+      id: 'admin-full-access',
+      description: 'Only admin can access audit logs',
+      roles: 'admin',
+      operations: '*',
+      access: null,
+    },
+  ],
 
   /**
    * Navigation visibility - null means not shown in entity nav

@@ -17,8 +17,6 @@ const {
   getMinimumRole,
   getRoleHierarchy,
   getPermissionMatrix,
-  getRowLevelSecurity,
-  getRLSRule,
   loadPermissions,
 } = require("../../../config/permissions-loader");
 
@@ -250,105 +248,6 @@ describe("Permission System - Data-Driven Tests", () => {
     test("should return null for unknown resource/operation", () => {
       expect(getMinimumRole("unknown_resource", "read")).toBeNull();
       expect(getMinimumRole("users", "unknown_operation")).toBeNull();
-    });
-  });
-
-  describe("getRowLevelSecurity()", () => {
-    test("should return RLS filterConfig for valid role/resource", () => {
-      // ADR-008: Returns filterConfig (null, false, string, or object)
-      const filterConfig = getRowLevelSecurity("customer", "users");
-      // 'id' string shorthand or { field: 'id', value: 'userId' }
-      expect(
-        filterConfig === null ||
-          filterConfig === false ||
-          typeof filterConfig === "string" ||
-          (typeof filterConfig === "object" &&
-            filterConfig.field &&
-            filterConfig.value),
-      ).toBe(true);
-    });
-
-    test("should return null for admin on audit_logs (all records)", () => {
-      // Admin can see all audit logs - null means no filter
-      const filterConfig = getRowLevelSecurity("admin", "audit_logs");
-      expect(filterConfig).toBeNull();
-    });
-
-    test("should be case-insensitive for role names", () => {
-      const policy1 = getRowLevelSecurity("customer", "users");
-      const policy2 = getRowLevelSecurity("CUSTOMER", "users");
-      const policy3 = getRowLevelSecurity("Customer", "users");
-
-      expect(policy1).toEqual(policy2);
-      expect(policy2).toEqual(policy3);
-    });
-
-    test("should return null for unknown roles", () => {
-      expect(getRowLevelSecurity("superadmin", "users")).toBeNull();
-    });
-
-    test("should return null for unknown resources", () => {
-      expect(getRowLevelSecurity("admin", "unknown_resource")).toBeNull();
-    });
-
-    test("should have getRLSRule alias for getRowLevelSecurity", () => {
-      expect(getRLSRule).toBe(getRowLevelSecurity);
-      expect(getRLSRule("customer", "customers")).toBe(
-        getRowLevelSecurity("customer", "customers"),
-      );
-    });
-
-    test("should return false for technician access to contracts", () => {
-      // ADR-008: false = deny access (no records returned)
-      expect(getRowLevelSecurity("technician", "contracts")).toBe(false);
-      expect(getRLSRule("technician", "contracts")).toBe(false);
-    });
-
-    test("should return filterConfig object for technician work_orders", () => {
-      // ADR-008: { field, value } format for technician accessing work_orders
-      const filterConfig = getRowLevelSecurity("technician", "work_orders");
-      expect(filterConfig).toEqual({
-        field: "assigned_technician_id",
-        value: "technicianProfileId",
-      });
-      expect(getRLSRule("technician", "work_orders")).toEqual(filterConfig);
-    });
-
-    test("should validate all RLS rules match expected ADR-008 patterns", () => {
-      // ADR-008: filterConfig can be:
-      // - null: all records
-      // - false: deny access
-      // - '$parent': inherit from parent entity
-      // - string: field name shorthand (e.g., 'user_id')
-      // - { field, value }: explicit field + context value
-      const config = loadPermissions();
-
-      function isValidFilterConfig(filterConfig) {
-        if (filterConfig === null || filterConfig === false) return true;
-        if (typeof filterConfig === "string") return true; // '$parent' or field name
-        if (
-          typeof filterConfig === "object" &&
-          filterConfig.field &&
-          filterConfig.value
-        ) {
-          return true;
-        }
-        return false;
-      }
-
-      for (const [resourceName, resourceConfig] of Object.entries(
-        config.resources,
-      )) {
-        if (resourceConfig.rowLevelSecurity) {
-          // rowLevelSecurity must ALWAYS be an object with per-role policies
-          expect(typeof resourceConfig.rowLevelSecurity).toBe("object");
-          for (const [roleName, filterConfig] of Object.entries(
-            resourceConfig.rowLevelSecurity,
-          )) {
-            expect(isValidFilterConfig(filterConfig)).toBe(true);
-          }
-        }
-      }
     });
   });
 

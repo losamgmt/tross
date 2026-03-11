@@ -33,8 +33,9 @@ jest.mock("../../../services/user-data", () => ({
 }));
 
 const UserDataService = require("../../../services/user-data");
+const { TEST_JWT_SECRET } = require("../../../config/test-constants");
 
-const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-key";
+const JWT_SECRET = TEST_JWT_SECRET;
 
 /**
  * Test helper: attach entity metadata for routes that use requirePermission.

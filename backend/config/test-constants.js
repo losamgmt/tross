@@ -96,6 +96,14 @@ const TEST_EMAIL_PREFIXES = Object.freeze({
 });
 
 // ============================================================================
+// TEST JWT SECRET
+// ============================================================================
+// SECURITY: Centralized test-only JWT secret
+// This ensures ALL tests use a consistent secret without fallbacks in production code
+// MUST MATCH: AppConfig.jwt.secret returns this same value in test mode
+const TEST_JWT_SECRET = 'test-only-jwt-secret-do-not-use-in-production';
+
+// ============================================================================
 // TEST TOKENS
 // ============================================================================
 // RFC 7519 token claim templates
@@ -275,6 +283,7 @@ const TEST_PERFORMANCE = Object.freeze({
 // EXPORTS
 // ============================================================================
 module.exports = Object.freeze({
+  TEST_JWT_SECRET,
   TEST_ROLES,
   TEST_USERS,
   TEST_EMAIL_PREFIXES,

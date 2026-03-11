@@ -249,7 +249,7 @@ async function createTestUser(userData = {}) {
   // Generate JWT token for testing - MUST match unified token structure (RFC 7519)
   // CRITICAL: Use 'auth0' provider since these are REAL database users
   // 'development' provider is for in-memory test-users.js only (no DB)
-  const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-key";
+  const { TEST_JWT_SECRET } = require("../../config/test-constants");
   const token = await signJwt(
     {
       // REGISTERED CLAIMS (RFC 7519 Standard) - REQUIRED by auth middleware
@@ -263,7 +263,7 @@ async function createTestUser(userData = {}) {
       provider: "auth0", // REQUIRED: auth0 = database user, development = config-only
       userId: user.id, // Database ID for convenience
     },
-    JWT_SECRET,
+    TEST_JWT_SECRET,
     { expiresIn: "1h" },
   );
 
@@ -357,6 +357,113 @@ function uniqueRoleName(baseRole = TEST_ROLES.UNIQUE_COORDINATOR) {
   return `${baseRole}_${timestamp}_${random}`;
 }
 
+// =============================================================================
+// PROFILE CREATION HELPERS
+// For integration tests requiring user-profile relationships (RLS testing, etc.)
+// =============================================================================
+
+/**
+ * Create a customer profile in the database
+ * @param {string} name - Customer first name
+ * @returns {Promise<number>} Customer profile ID
+ */
+async function createCustomerProfile(name) {
+  const pool = getTestPool();
+  const email = uniqueEmail('customer');
+  const result = await pool.query(
+    `INSERT INTO customers (first_name, last_name, email)
+     VALUES ($1, 'Test', $2)
+     RETURNING id`,
+    [name, email],
+  );
+  return result.rows[0].id;
+}
+
+/**
+ * Create a technician profile in the database
+ * @param {string} name - Technician first name
+ * @returns {Promise<number>} Technician profile ID
+ */
+async function createTechnicianProfile(name) {
+  const pool = getTestPool();
+  const email = uniqueEmail('technician');
+  const result = await pool.query(
+    `INSERT INTO technicians (first_name, last_name, email)
+     VALUES ($1, 'Test', $2)
+     RETURNING id`,
+    [name, email],
+  );
+  return result.rows[0].id;
+}
+
+/**
+ * Link a user to a customer profile
+ * @param {number} userId - User ID
+ * @param {number} customerProfileId - Customer profile ID
+ */
+async function linkUserToCustomerProfile(userId, customerProfileId) {
+  const pool = getTestPool();
+  await pool.query(
+    `UPDATE users SET customer_profile_id = $1 WHERE id = $2`,
+    [customerProfileId, userId],
+  );
+}
+
+/**
+ * Link a user to a technician profile
+ * @param {number} userId - User ID
+ * @param {number} technicianProfileId - Technician profile ID
+ */
+async function linkUserToTechnicianProfile(userId, technicianProfileId) {
+  const pool = getTestPool();
+  await pool.query(
+    `UPDATE users SET technician_profile_id = $1 WHERE id = $2`,
+    [technicianProfileId, userId],
+  );
+}
+
+/**
+ * Create a test user WITH a linked profile (convenience helper)
+ * Combines createTestUser + profile creation + linking in one call
+ *
+ * @param {Object} options - Configuration options
+ * @param {string} options.role - Role name ('customer', 'technician', etc.)
+ * @param {string} [options.profileName] - Profile name (defaults to role-based name)
+ * @returns {Promise<{user: Object, token: string, profileId: number}>}
+ */
+async function createTestUserWithProfile({ role, profileName } = {}) {
+  const name = profileName || `Test${role.charAt(0).toUpperCase() + role.slice(1)}`;
+  const { user, token } = await createTestUser({ role });
+
+  let profileId = null;
+  if (role === 'customer') {
+    profileId = await createCustomerProfile(name);
+    await linkUserToCustomerProfile(user.id, profileId);
+  } else if (role === 'technician') {
+    profileId = await createTechnicianProfile(name);
+    await linkUserToTechnicianProfile(user.id, profileId);
+  }
+
+  return { user, token, profileId };
+}
+
+/**
+ * Create a work order in the database
+ * @param {number} customerId - Customer profile ID
+ * @param {number} [technicianId] - Optional technician profile ID
+ * @returns {Promise<{id: number}>} Work order record
+ */
+async function createWorkOrder(customerId, technicianId = null) {
+  const pool = getTestPool();
+  const result = await pool.query(
+    `INSERT INTO work_orders (customer_id, assigned_technician_id)
+     VALUES ($1, $2)
+     RETURNING id`,
+    [customerId, technicianId],
+  );
+  return result.rows[0];
+}
+
 module.exports = {
   setupTestDatabase,
   cleanupTestDatabase,
@@ -367,4 +474,11 @@ module.exports = {
   verifyTestDatabase,
   uniqueEmail,
   uniqueRoleName,
+  // Profile helpers for RLS integration tests
+  createCustomerProfile,
+  createTechnicianProfile,
+  linkUserToCustomerProfile,
+  linkUserToTechnicianProfile,
+  createTestUserWithProfile,
+  createWorkOrder,
 };

@@ -9,7 +9,12 @@
 
 const request = require("supertest");
 const app = require("../../server");
-const { createTestUser, cleanupTestDatabase } = require("../helpers/test-db");
+const {
+  createTestUser,
+  cleanupTestDatabase,
+  createCustomerProfile,
+  createWorkOrder,
+} = require("../helpers/test-db");
 const { HTTP_STATUS } = require("../../config/constants");
 
 describe("Files API Endpoints - Integration Tests", () => {
@@ -19,6 +24,7 @@ describe("Files API Endpoints - Integration Tests", () => {
   let customerToken;
   let viewerUser;
   let viewerToken;
+  let testWorkOrderId;
 
   beforeAll(async () => {
     adminUser = await createTestUser("admin");
@@ -27,6 +33,11 @@ describe("Files API Endpoints - Integration Tests", () => {
     customerToken = customerUser.token;
     viewerUser = await createTestUser("viewer");
     viewerToken = viewerUser.token;
+
+    // Create a work order for file tests (requires customer profile)
+    const customerId = await createCustomerProfile("FilesTestCustomer");
+    const workOrder = await createWorkOrder(customerId);
+    testWorkOrderId = workOrder.id;
   });
 
   afterAll(async () => {
@@ -137,7 +148,7 @@ describe("Files API Endpoints - Integration Tests", () => {
 
     test("should return empty array for entity with no files", async () => {
       const response = await request(app)
-        .get("/api/work_orders/1/files")
+        .get(`/api/work_orders/${testWorkOrderId}/files`)
         .set("Authorization", `Bearer ${adminToken}`);
 
       // Storage check happens before listing - expect 503 if not configured
@@ -152,7 +163,7 @@ describe("Files API Endpoints - Integration Tests", () => {
 
     test("should accept category filter", async () => {
       const response = await request(app)
-        .get("/api/work_orders/1/files?category=photo")
+        .get(`/api/work_orders/${testWorkOrderId}/files?category=photo`)
         .set("Authorization", `Bearer ${adminToken}`);
 
       // Could be 503 if storage not configured

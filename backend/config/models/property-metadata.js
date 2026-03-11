@@ -45,17 +45,54 @@ module.exports = {
   rlsResource: 'properties',
 
   /**
-   * Row-Level Security policy per role
-   * Customers access their properties via relationship endpoints (GET /customers/:id/properties),
-   * not through the generic entity API - our RLS doesn't support junction-based lookups.
+   * Row-Level Security rules (ADR-011)
+   * Declarative grant-based rules. No match = deny.
    */
-  rlsPolicy: {
-    customer: false,
-    technician: null,
-    dispatcher: null,
-    manager: null,
-    admin: null,
-  },
+  rlsRules: [
+    {
+      id: 'customer-via-property-role',
+      description: 'Customers see properties where they have a board/manager role',
+      roles: 'customer',
+      operations: 'read',
+      access: {
+        type: 'junction',
+        junction: {
+          table: 'property_roles',
+          localKey: 'id',
+          foreignKey: 'property_id',
+          filter: { customer_id: 'customer_profile_id' },
+        },
+      },
+    },
+    {
+      id: 'customer-via-unit-ownership',
+      description: 'Customers see properties containing units they own/occupy',
+      roles: 'customer',
+      operations: 'read',
+      access: {
+        type: 'junction',
+        junction: {
+          // Join through units: properties.id = units.property_id, then units.id = customer_units.unit_id
+          table: 'units',
+          localKey: 'id',
+          foreignKey: 'property_id',
+          through: {
+            table: 'customer_units',
+            localKey: 'id',
+            foreignKey: 'unit_id',
+            filter: { customer_id: 'customer_profile_id' },
+          },
+        },
+      },
+    },
+    {
+      id: 'staff-full-access',
+      description: 'Staff see all properties',
+      roles: ['technician', 'dispatcher', 'manager', 'admin'],
+      operations: '*',
+      access: null,
+    },
+  ],
 
   /**
    * Navigation visibility - minimum role to see this entity in nav menus

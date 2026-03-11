@@ -21,7 +21,9 @@ const ResponseFormatter = require('../utils/response-formatter');
 const { ERROR_CODES } = require('../utils/response-formatter');
 const AppError = require('../utils/app-error');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key';
+// SECURITY: JWT_SECRET accessed via AppConfig.jwt.secret getter
+// This getter FAILS FAST if secret is not configured (no fallbacks)
+// See app-config.js for implementation details
 
 const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -43,7 +45,7 @@ const authenticateToken = async (req, res, next) => {
   }
 
   try {
-    const decoded = await verifyJwt(token, JWT_SECRET);
+    const decoded = await verifyJwt(token, AppConfig.jwt.secret);
 
     // Validate required standard claims (RFC 7519)
     if (!decoded.sub) {

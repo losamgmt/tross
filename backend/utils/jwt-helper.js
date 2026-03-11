@@ -11,8 +11,19 @@
  */
 const { SignJWT, jwtVerify, decodeJwt: joseDecodeJwt } = require('jose');
 
-// Get secret as Uint8Array for jose
-const getSecret = (secret) => new TextEncoder().encode(secret || 'dev-secret-key');
+/**
+ * Get secret as Uint8Array for jose
+ * SECURITY: Fail-fast if secret is empty/undefined - no fallbacks
+ * @param {string} secret - JWT secret (required)
+ * @returns {Uint8Array} Encoded secret
+ * @throws {Error} If secret is not provided
+ */
+const getSecret = (secret) => {
+  if (!secret) {
+    throw new Error('JWT secret is required - cannot sign/verify without a secret');
+  }
+  return new TextEncoder().encode(secret);
+};
 
 /**
  * Parse time string to seconds (supports negative values for testing)

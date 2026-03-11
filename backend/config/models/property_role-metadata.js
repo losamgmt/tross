@@ -74,17 +74,25 @@ module.exports = {
   rlsResource: 'property_roles',
 
   /**
-   * Row-Level Security policy per role
-   * Customers can see their own property roles
-   * Technician+ can see all (for support purposes)
+   * Row-Level Security rules (ADR-011)
+   * Declarative grant-based rules. No match = deny.
    */
-  rlsPolicy: {
-    customer: { field: 'customer_id', value: 'customerProfileId' },
-    technician: null,
-    dispatcher: null,
-    manager: null,
-    admin: null,
-  },
+  rlsRules: [
+    {
+      id: 'customer-own-property-roles',
+      description: 'Customers see their own property role assignments',
+      roles: 'customer',
+      operations: '*',
+      access: { type: 'direct', field: 'customer_id', value: 'customer_profile_id' },
+    },
+    {
+      id: 'staff-full-access',
+      description: 'Staff see all property role assignments',
+      roles: ['technician', 'dispatcher', 'manager', 'admin'],
+      operations: '*',
+      access: null,
+    },
+  ],
 
   /**
    * Junction tables are not shown in navigation

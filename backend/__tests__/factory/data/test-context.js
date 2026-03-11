@@ -147,26 +147,39 @@ function buildTestContext(app, db) {
       const createDisabled = meta.entityPermissions?.create === null;
 
       if (createDisabled) {
-        // ADR-008: For entities with user-based RLS, set the owner field
+        // ADR-011: For entities with user-based RLS, set the owner field
         // to the admin test user's ID so the record is accessible via API.
         //
-        // Detect user-owned entities by checking rlsPolicy values:
-        // - String shorthand (e.g., 'user_id') defaults to value: 'userId'
-        // - Object with { value: 'userId' } is explicit user-based RLS
+        // Check rlsRules for direct access rules with value: 'userId'
         let ownerField = null;
-        for (const filterConfig of Object.values(meta.rlsPolicy || {})) {
-          if (typeof filterConfig === "string" && filterConfig !== "$parent") {
-            // String shorthand like 'user_id' defaults to value: 'userId'
-            ownerField = filterConfig;
+
+        // Check new ADR-011 rlsRules format
+        for (const rule of meta.rlsRules || []) {
+          if (
+            rule.access?.type === "direct" &&
+            rule.access?.value === "userId"
+          ) {
+            ownerField = rule.access.field;
             break;
           }
-          if (
-            filterConfig &&
-            typeof filterConfig === "object" &&
-            filterConfig.value === "userId"
-          ) {
-            ownerField = filterConfig.field;
-            break;
+        }
+
+        // Legacy: check rlsPolicy (deprecated, kept for backward compat)
+        if (!ownerField) {
+          for (const filterConfig of Object.values(meta.rlsPolicy || {})) {
+            if (typeof filterConfig === "string" && filterConfig !== "$parent") {
+              // String shorthand like 'user_id' defaults to value: 'userId'
+              ownerField = filterConfig;
+              break;
+            }
+            if (
+              filterConfig &&
+              typeof filterConfig === "object" &&
+              filterConfig.value === "userId"
+            ) {
+              ownerField = filterConfig.field;
+              break;
+            }
           }
         }
 

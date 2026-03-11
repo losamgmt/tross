@@ -16,6 +16,7 @@
 library;
 
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import '../models/entity_metadata.dart';
 import '../models/field_definition.dart';
@@ -85,11 +86,28 @@ class EntityMetadataRegistry {
       // Fallback paths only execute when rootBundle.loadString fails
       // (e.g., assets not bundled). Cannot be tested without mocking rootBundle.
     } catch (e) {
+      // SECURITY: In release builds, metadata loading failure is FATAL
+      // We cannot operate with stale/hardcoded defaults in production
+      if (kReleaseMode) {
+        ErrorService.logError(
+          '[EntityMetadataRegistry] FATAL: Failed to load entity-metadata.json in release mode',
+          error: e,
+        );
+        throw StateError(
+          'FATAL: Failed to load entity-metadata.json. '
+          'Entity metadata is required for the application to function. '
+          'Ensure assets are bundled correctly. Error: $e',
+        );
+      }
+
+      // In debug mode only: log warning and use fallback defaults
+      // This allows development/debugging when assets aren't bundled
       ErrorService.logError(
-        '[EntityMetadataRegistry] Failed to load entity metadata',
+        '[EntityMetadataRegistry] WARNING: Using fallback defaults - '
+        'Asset load failed, metadata may be stale! '
+        'This is only allowed in debug mode.',
         error: e,
       );
-      // Load defaults for required entities
       _loadDefaults();
       _initialized = true;
       // coverage:ignore-end

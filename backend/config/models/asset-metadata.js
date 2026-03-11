@@ -43,16 +43,29 @@ module.exports = {
   rlsResource: 'assets',
 
   /**
-   * Row-Level Security policy per role
-   * Assets follow unit RLS - customers access via relationship endpoints.
+   * Row-Level Security rules (ADR-011)
+   * Declarative grant-based rules. No match = deny.
    */
-  rlsPolicy: {
-    customer: false,
-    technician: null,
-    dispatcher: null,
-    manager: null,
-    admin: null,
-  },
+  rlsRules: [
+    {
+      id: 'customer-via-unit',
+      description: 'Customers see assets in units they own/occupy',
+      roles: 'customer',
+      operations: 'read',
+      access: {
+        type: 'parent',
+        foreignKey: 'unit_id',
+        parentEntity: 'unit',
+      },
+    },
+    {
+      id: 'staff-full-access',
+      description: 'Staff see all assets',
+      roles: ['technician', 'dispatcher', 'manager', 'admin'],
+      operations: '*',
+      access: null,
+    },
+  ],
 
   /**
    * Navigation visibility - minimum role to see this entity in nav menus
@@ -73,7 +86,7 @@ module.exports = {
 
   entityPermissions: {
     create: 'dispatcher',
-    read: 'technician',
+    read: 'customer', // Customers can see assets in their units via parent RLS
     update: 'dispatcher',
     delete: 'manager',
   },

@@ -35,7 +35,7 @@ const SYNTHETIC_RESOURCES = {
     description: 'Main dashboard view - role-driven overview',
     // Dashboard is UI-only (no database table) - RLS not applicable
     // Row filtering happens on the underlying entities (work_orders, etc.)
-    rlsPolicy: null,
+    rlsRules: [],
     entityPermissions: {
       create: 'admin',
       read: 'customer',
@@ -46,7 +46,7 @@ const SYNTHETIC_RESOURCES = {
   admin_panel: {
     description: 'Admin control center - system health, sessions, audit logs',
     // Admin-only resource - no row filtering needed
-    rlsPolicy: null,
+    rlsRules: [],
     entityPermissions: {
       create: 'admin',
       read: 'admin',
@@ -57,7 +57,7 @@ const SYNTHETIC_RESOURCES = {
   system_settings: {
     description: 'System-wide configuration (maintenance mode, feature flags)',
     // Admin-only resource - no row filtering needed
-    rlsPolicy: null,
+    rlsRules: [],
     entityPermissions: {
       create: 'admin',
       read: 'admin',
@@ -144,7 +144,7 @@ function buildRolesConfig() {
  * @returns {Object} Resource config matching permissions.json format
  */
 function buildResourceConfig(metadata, resourceName) {
-  const { fieldAccess, rlsPolicy, entityPermissions } = metadata;
+  const { fieldAccess, rlsRules, entityPermissions } = metadata;
 
   // Standard CRUD operations (always derived or overridden)
   const standardOps = ['create', 'read', 'update', 'delete'];
@@ -224,7 +224,7 @@ function buildResourceConfig(metadata, resourceName) {
 
   return {
     description: metadata.description || `${resourceName} resource`,
-    rowLevelSecurity: rlsPolicy || {},
+    rowLevelSecurity: rlsRules || [],
     permissions,
     navVisibility,
   };
@@ -268,7 +268,7 @@ function buildSyntheticResourceConfig(resourceName, config) {
 
   return {
     description: config.description,
-    rowLevelSecurity: config.rlsPolicy,
+    rowLevelSecurity: config.rlsRules || [],
     permissions,
     navVisibility,
   };
@@ -300,8 +300,8 @@ function derivePermissions(forceReload = false) {
     // They're handled specially or use parent entity permissions
     const resourceName = metadata.rlsResource;
     if (!resourceName) {
-      // Still add if it has an rlsPolicy (like file_attachments)
-      if (metadata.rlsPolicy) {
+      // Still add if it has rlsRules defined
+      if (metadata.rlsRules && metadata.rlsRules.length > 0) {
         // Use table name as resource for polymorphic entities
         const polyResourceName = metadata.tableName || entityName;
         resources[polyResourceName] = buildResourceConfig(

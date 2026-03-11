@@ -174,17 +174,27 @@ describe("AppConfig", () => {
   describe("JWT Configuration", () => {
     test("should have JWT config object", () => {
       expect(AppConfig.jwt).toBeDefined();
-      // JWT secret requires explicit env var - no fallback for security
+      // JWT secret accessed via getter - fail-fast pattern
       expect(AppConfig.jwt).toHaveProperty("secret");
       expect(AppConfig.jwt.expiresIn).toBeDefined();
       expect(AppConfig.jwt.algorithm).toBe("HS256");
     });
 
-    test("JWT secret should be undefined without env var (security)", () => {
-      // In test environment without JWT_SECRET env var, secret should be undefined
-      // This is INTENTIONAL - no hardcoded fallback secrets
-      if (!process.env.JWT_SECRET) {
-        expect(AppConfig.jwt.secret).toBeUndefined();
+    test("JWT secret getter should return test secret in test mode", () => {
+      // In test environment, the getter returns a test-only secret
+      // This allows tests to run without setting JWT_SECRET env var
+      // In dev/production, the getter would throw if JWT_SECRET is not set
+      const secret = AppConfig.jwt.secret;
+      expect(secret).toBeDefined();
+      expect(typeof secret).toBe("string");
+      expect(secret.length).toBeGreaterThan(0);
+      
+      // If JWT_SECRET is set, it should return that
+      if (process.env.JWT_SECRET) {
+        expect(secret).toBe(process.env.JWT_SECRET);
+      } else {
+        // Otherwise, it should return the test-only fallback
+        expect(secret).toContain("test-only");
       }
     });
 

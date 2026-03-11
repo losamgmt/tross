@@ -276,30 +276,6 @@ function hasMinimumRole(userRole, requiredRole) {
 }
 
 /**
- * Get row-level security policy for role and resource
- *
- * ADR-008: Returns filterConfig (null | false | string | { field, value })
- *
- * @param {string} roleName - User's role name
- * @param {string} resource - Resource name
- * @returns {*} RLS filterConfig or null if not defined
- */
-function getRowLevelSecurity(roleName, resource) {
-  const config = loadPermissions();
-  const resourceConfig = config.resources[resource];
-
-  if (!resourceConfig || !resourceConfig.rowLevelSecurity) {
-    return null; // No RLS defined
-  }
-
-  const normalized = roleName.toLowerCase();
-  const filterConfig = resourceConfig.rowLevelSecurity[normalized];
-
-  // Return undefined as null, but preserve false and other falsy values
-  return filterConfig === undefined ? null : filterConfig;
-}
-
-/**
  * Reload permissions (re-derive from metadata)
  * @returns {Object} New permission configuration
  */
@@ -320,8 +296,6 @@ module.exports = {
   hasPermission,
   hasMinimumRole,
   getMinimumRole,
-  getRowLevelSecurity,
-  getRLSRule: getRowLevelSecurity, // Alias for clarity
   reloadPermissions,
 
   // Legacy compatibility (for gradual migration)

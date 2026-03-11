@@ -73,17 +73,26 @@ module.exports = {
   rlsResource: 'invoices',
 
   /**
-   * Row-Level Security policy per role
-   * Customers see own invoices, technicians denied, dispatcher+ see all
-   * Values: null (all records), false (deny), field string, or { field, value } object
+   * Row-Level Security rules (ADR-011)
+   * Declarative grant-based rules. No match = deny.
    */
-  rlsPolicy: {
-    customer: { field: 'customer_id', value: 'customerProfileId' },
-    technician: false,
-    dispatcher: null,
-    manager: null,
-    admin: null,
-  },
+  rlsRules: [
+    {
+      id: 'customer-own-invoices',
+      description: 'Customers see their own invoices',
+      roles: 'customer',
+      operations: '*',
+      access: { type: 'direct', field: 'customer_id', value: 'customer_profile_id' },
+    },
+    // technician: no rule = deny
+    {
+      id: 'office-staff-full-access',
+      description: 'Dispatcher, manager, admin see all invoices',
+      roles: ['dispatcher', 'manager', 'admin'],
+      operations: '*',
+      access: null,
+    },
+  ],
 
   /**
    * Entity-level permission overrides

@@ -2,23 +2,23 @@
  * Unit Tests: Row-Level Security Middleware
  *
  * Tests the enforceRLS middleware in isolation.
- * Validates RLS policy attachment and error handling.
+ * ADR-011: Rule-based RLS using declarative grant rules.
  *
  * UNIFIED DATA FLOW:
  * - enforceRLS reads resource from req.entityMetadata.rlsResource
  * - Entity metadata is attached by extractEntity or attachEntity middleware
- * - ONE code path, ONE data shape - no optional parameters, no fallbacks
+ * - RLS context is built with role, userId, operation, and dynamic profile IDs
  */
 
 const {
   enforceRLS,
   validateRLSApplied,
+  extractProfileIds,
+  getOperationFromMethod,
 } = require("../../../middleware/row-level-security");
-const { getRLSRule } = require("../../../config/permissions-loader");
 const { HTTP_STATUS } = require("../../../config/constants");
 
 // Mock dependencies
-jest.mock("../../../config/permissions-loader");
 jest.mock("../../../config/logger", () => ({
   logSecurityEvent: jest.fn(),
   logger: {
@@ -38,8 +38,9 @@ describe("Row-Level Security Middleware", () => {
 
   beforeEach(() => {
     req = {
-      dbUser: { role: "customer", id: 1 },
+      dbUser: { role: "customer", id: 1, customer_profile_id: 100 },
       url: "/api/customers",
+      method: "GET",
       // Unified data flow: entityMetadata is set by extractEntity/attachEntity
       entityMetadata: { rlsResource: "customers" },
     };
@@ -51,40 +52,45 @@ describe("Row-Level Security Middleware", () => {
     jest.clearAllMocks();
   });
 
-  describe("enforceRLS (unified signature)", () => {
-    test("should attach RLS context to request when policy exists", () => {
-      getRLSRule.mockReturnValue("user_id");
-
+  describe("enforceRLS (ADR-011 context format)", () => {
+    test("should attach RLS context with role and profile IDs", () => {
       enforceRLS(req, res, next);
 
-      expect(req.rlsContext.filterConfig).toBe("user_id");
-      expect(req.rlsContext.resource).toBe("customers");
-      expect(req.rlsContext.userId).toBe(1);
+      expect(req.rlsContext).toMatchObject({
+        role: "customer",
+        userId: 1,
+        operation: "read",
+        resource: "customers",
+        customer_profile_id: 100,
+      });
       expect(next).toHaveBeenCalled();
       expect(res.status).not.toHaveBeenCalled();
     });
 
-    test("should attach null filterConfig when no RLS defined", () => {
-      getRLSRule.mockReturnValue(null);
-      req.entityMetadata = { rlsResource: "inventory" };
+    test("should extract operation from HTTP method", () => {
+      req.method = "POST";
 
       enforceRLS(req, res, next);
 
-      expect(req.rlsContext.filterConfig).toBeNull();
-      expect(req.rlsContext.resource).toBe("inventory");
+      expect(req.rlsContext.operation).toBe("create");
       expect(next).toHaveBeenCalled();
-      expect(res.status).not.toHaveBeenCalled();
     });
 
-    test("should handle different RLS filter configs for different resources", () => {
-      getRLSRule.mockReturnValue({ field: "assigned_technician_id", value: "technicianProfileId" });
-      req.entityMetadata = { rlsResource: "work_orders" };
-
+    test("should map PUT/PATCH to update operation", () => {
+      req.method = "PUT";
       enforceRLS(req, res, next);
+      expect(req.rlsContext.operation).toBe("update");
 
-      expect(req.rlsContext.filterConfig).toEqual({ field: "assigned_technician_id", value: "technicianProfileId" });
-      expect(req.rlsContext.resource).toBe("work_orders");
-      expect(next).toHaveBeenCalled();
+      jest.clearAllMocks();
+      req.method = "PATCH";
+      enforceRLS(req, res, next);
+      expect(req.rlsContext.operation).toBe("update");
+    });
+
+    test("should map DELETE to delete operation", () => {
+      req.method = "DELETE";
+      enforceRLS(req, res, next);
+      expect(req.rlsContext.operation).toBe("delete");
     });
 
     test("should reject request when user has no role", () => {
@@ -111,50 +117,50 @@ describe("Row-Level Security Middleware", () => {
       expect(next).not.toHaveBeenCalled();
     });
 
-    test("should call getRLSRule with correct parameters", () => {
-      // ADR-008: filterConfig object for technician work order access
-      getRLSRule.mockReturnValue({ field: "assigned_technician_id", value: "technicianProfileId" });
-      req.dbUser.role = "technician";
+    test("should extract technician_profile_id for technicians", () => {
+      req.dbUser = { role: "technician", id: 3, technician_profile_id: 50 };
       req.entityMetadata = { rlsResource: "work_orders" };
 
       enforceRLS(req, res, next);
 
-      expect(getRLSRule).toHaveBeenCalledWith("technician", "work_orders");
-    });
-
-    test("should handle null filterConfig for roles with no access", () => {
-      // Technicians have null access to contracts (meaning all records)
-      getRLSRule.mockReturnValue(null);
-      req.dbUser.role = "technician";
-      req.entityMetadata = { rlsResource: "contracts" };
-
-      enforceRLS(req, res, next);
-
-      expect(req.rlsContext.filterConfig).toBeNull();
-      expect(req.rlsContext.resource).toBe("contracts");
+      expect(req.rlsContext).toMatchObject({
+        role: "technician",
+        userId: 3,
+        technician_profile_id: 50,
+        resource: "work_orders",
+      });
       expect(next).toHaveBeenCalled();
     });
 
-    test("should preserve user ID for filtering", () => {
-      getRLSRule.mockReturnValue({ field: "customer_id", value: "customerProfileId" });
-      req.dbUser = { role: "customer", id: 42, customer_profile_id: 100 };
-      req.entityMetadata = { rlsResource: "invoices" };
+    test("should handle users with multiple profile IDs", () => {
+      // Rare case: user has both customer and technician profiles
+      req.dbUser = {
+        role: "dispatcher",
+        id: 5,
+        customer_profile_id: 10,
+        technician_profile_id: 20,
+      };
 
       enforceRLS(req, res, next);
 
-      expect(req.rlsContext.userId).toBe(42);
-      expect(req.rlsContext.customerProfileId).toBe(100);
-      expect(next).toHaveBeenCalled();
+      expect(req.rlsContext).toMatchObject({
+        role: "dispatcher",
+        customer_profile_id: 10,
+        technician_profile_id: 20,
+      });
     });
 
-    test("should handle dispatcher with null filterConfig (all records)", () => {
-      getRLSRule.mockReturnValue(null);
-      req.dbUser.role = "dispatcher";
+    test("should handle users with no profile IDs (staff)", () => {
+      req.dbUser = { role: "admin", id: 99 };
 
       enforceRLS(req, res, next);
 
-      expect(req.rlsContext.filterConfig).toBeNull();
-      expect(next).toHaveBeenCalled();
+      expect(req.rlsContext).toMatchObject({
+        role: "admin",
+        userId: 99,
+      });
+      expect(req.rlsContext.customer_profile_id).toBeUndefined();
+      expect(req.rlsContext.technician_profile_id).toBeUndefined();
     });
 
     test("should fail when entityMetadata is missing (configuration error)", () => {
@@ -187,13 +193,86 @@ describe("Row-Level Security Middleware", () => {
     });
   });
 
+  describe("extractProfileIds helper", () => {
+    test("should extract all *_profile_id columns", () => {
+      const user = {
+        id: 1,
+        role: "customer",
+        customer_profile_id: 100,
+        technician_profile_id: null,
+        email: "test@example.com",
+      };
+
+      const result = extractProfileIds(user);
+
+      expect(result).toEqual({
+        customer_profile_id: 100,
+        technician_profile_id: null,
+      });
+      expect(result.id).toBeUndefined();
+      expect(result.role).toBeUndefined();
+    });
+
+    test("should return empty object for null user", () => {
+      expect(extractProfileIds(null)).toEqual({});
+    });
+
+    test("should return empty object for user without profile IDs", () => {
+      const user = { id: 1, role: "admin", email: "admin@example.com" };
+      expect(extractProfileIds(user)).toEqual({});
+    });
+
+    test("should handle future profile types dynamically", () => {
+      // When a new profile type is added (e.g., vendor_profile_id)
+      const user = {
+        id: 1,
+        customer_profile_id: 10,
+        vendor_profile_id: 20,
+      };
+
+      const result = extractProfileIds(user);
+
+      expect(result).toEqual({
+        customer_profile_id: 10,
+        vendor_profile_id: 20,
+      });
+    });
+  });
+
+  describe("getOperationFromMethod helper", () => {
+    test("should map GET to read", () => {
+      expect(getOperationFromMethod("GET")).toBe("read");
+    });
+
+    test("should map POST to create", () => {
+      expect(getOperationFromMethod("POST")).toBe("create");
+    });
+
+    test("should map PUT to update", () => {
+      expect(getOperationFromMethod("PUT")).toBe("update");
+    });
+
+    test("should map PATCH to update", () => {
+      expect(getOperationFromMethod("PATCH")).toBe("update");
+    });
+
+    test("should map DELETE to delete", () => {
+      expect(getOperationFromMethod("DELETE")).toBe("delete");
+    });
+
+    test("should default to read for unknown methods", () => {
+      expect(getOperationFromMethod("OPTIONS")).toBe("read");
+      expect(getOperationFromMethod("HEAD")).toBe("read");
+    });
+  });
+
   describe("validateRLSApplied(req, result)", () => {
     beforeEach(() => {
       req.rlsContext = {
         resource: "customers",
-        filterConfig: "user_id",
-        userId: 1,
         role: "customer",
+        userId: 1,
+        operation: "read",
       };
     });
 
@@ -211,12 +290,6 @@ describe("Row-Level Security Middleware", () => {
 
     test("should pass when no RLS enforcement is required", () => {
       req.rlsContext = null; // No RLS on this route
-      const result = { data: [] }; // No rlsApplied flag
-      expect(() => validateRLSApplied(req, result)).not.toThrow();
-    });
-
-    test("should pass when RLS filterConfig is null (no filtering required)", () => {
-      req.rlsContext.filterConfig = null;
       const result = { data: [] }; // No rlsApplied flag
       expect(() => validateRLSApplied(req, result)).not.toThrow();
     });
@@ -244,44 +317,46 @@ describe("Row-Level Security Middleware", () => {
   });
 
   describe("Integration with Role Hierarchy", () => {
-    test("should apply different filter configs for customer vs dispatcher", () => {
-      // Customer gets filter by user_id
-      getRLSRule.mockReturnValue("user_id");
-      req.dbUser = { role: "customer", id: 1 };
+    test("should build correct context for customer vs admin roles", () => {
+      // Customer with profile
+      req.dbUser = { role: "customer", id: 1, customer_profile_id: 100 };
       req.entityMetadata = { rlsResource: "customers" };
 
       enforceRLS(req, res, next);
-      expect(req.rlsContext.filterConfig).toBe("user_id");
+      expect(req.rlsContext.role).toBe("customer");
+      expect(req.rlsContext.customer_profile_id).toBe(100);
 
-      // Dispatcher gets null (all records)
+      // Admin without profile
       jest.clearAllMocks();
-      getRLSRule.mockReturnValue(null);
-      req.dbUser = { role: "dispatcher", id: 2 };
+      req.dbUser = { role: "admin", id: 2 };
 
       enforceRLS(req, res, next);
-      expect(req.rlsContext.filterConfig).toBeNull();
+      expect(req.rlsContext.role).toBe("admin");
+      expect(req.rlsContext.customer_profile_id).toBeUndefined();
     });
 
-    test("should handle work_orders with technician role", () => {
-      getRLSRule.mockReturnValue({ field: "assigned_technician_id", value: "technicianProfileId" });
-      req.dbUser = { role: "technician", id: 3, technician_profile_id: 10 };
+    test("should build correct context for technician accessing work_orders", () => {
+      req.dbUser = { role: "technician", id: 3, technician_profile_id: 50 };
       req.entityMetadata = { rlsResource: "work_orders" };
 
       enforceRLS(req, res, next);
 
-      expect(req.rlsContext.filterConfig).toEqual({ field: "assigned_technician_id", value: "technicianProfileId" });
-      expect(req.rlsContext.technicianProfileId).toBe(10);
-      expect(getRLSRule).toHaveBeenCalledWith("technician", "work_orders");
+      expect(req.rlsContext).toMatchObject({
+        role: "technician",
+        userId: 3,
+        technician_profile_id: 50,
+        resource: "work_orders",
+        operation: "read",
+      });
     });
 
-    test("should handle contracts with technician role (false = deny)", () => {
-      getRLSRule.mockReturnValue(false);
-      req.dbUser = { role: "technician", id: 3 };
-      req.entityMetadata = { rlsResource: "contracts" };
+    test("should build correct context for dispatcher (staff role)", () => {
+      req.dbUser = { role: "dispatcher", id: 4 };
+      req.entityMetadata = { rlsResource: "work_orders" };
 
       enforceRLS(req, res, next);
 
-      expect(req.rlsContext.filterConfig).toBe(false);
+      expect(req.rlsContext.role).toBe("dispatcher");
       expect(next).toHaveBeenCalled();
     });
   });

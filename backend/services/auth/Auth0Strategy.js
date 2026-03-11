@@ -14,10 +14,11 @@ const UserDataService = require('../user-data');
 const auth0Config = require('../../config/auth0');
 const { toSafeString, toSafeEmail } = require('../../validators');
 const AppError = require('../../utils/app-error');
+const AppConfig = require('../../config/app-config');
 
-// JWT Secret - MUST be set in production (validated by env-validator.js on startup)
-// Fallback only exists for local development convenience
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key';
+// SECURITY: JWT_SECRET accessed via AppConfig.jwt.secret getter
+// This getter FAILS FAST if secret is not configured (no fallbacks)
+// See app-config.js for implementation details
 
 class Auth0Strategy extends AuthStrategy {
   constructor() {
@@ -322,7 +323,7 @@ class Auth0Strategy extends AuthStrategy {
         provider: 'auth0',
         userId: localUser.id, // Database ID
       },
-      JWT_SECRET, // Use module constant for consistency with middleware
+      AppConfig.jwt.secret, // Use centralized config for consistency with middleware
       { expiresIn: '24h' },
     );
   }
