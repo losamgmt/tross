@@ -4,7 +4,7 @@
   "title": "Tross Permission Configuration",
   "description": "Single source of truth for role-based access control (RBAC). AUTO-GENERATED from entity metadata - run sync-permissions.js to regenerate.",
   "version": "4.0.0-derived",
-  "lastModified": "2026-03-07",
+  "lastModified": "2026-03-11",
   "roles": {
     "customer": {
       "priority": 1,
@@ -30,13 +30,47 @@
   "resources": {
     "_parent_derived": {
       "description": "_parent_derived resource",
-      "rowLevelSecurity": {
-        "customer": "$parent",
-        "technician": "$parent",
-        "dispatcher": "$parent",
-        "manager": "$parent",
-        "admin": null
-      },
+      "rowLevelSecurity": [
+        {
+          "id": "customer-via-parent",
+          "description": "Customers access files via parent entity RLS",
+          "roles": "customer",
+          "operations": [
+            "read"
+          ],
+          "access": {
+            "type": "parent",
+            "foreignKey": "entity_id",
+            "polymorphic": {
+              "typeColumn": "entity_type"
+            }
+          }
+        },
+        {
+          "id": "technician-via-parent",
+          "description": "Technicians access files via parent entity RLS",
+          "roles": "technician",
+          "operations": "*",
+          "access": {
+            "type": "parent",
+            "foreignKey": "entity_id",
+            "polymorphic": {
+              "typeColumn": "entity_type"
+            }
+          }
+        },
+        {
+          "id": "staff-full-access",
+          "description": "Dispatcher+ have full access to all file attachments",
+          "roles": [
+            "dispatcher",
+            "manager",
+            "admin"
+          ],
+          "operations": "*",
+          "access": null
+        }
+      ],
       "permissions": {
         "create": {
           "minimumRole": "technician",
@@ -67,7 +101,7 @@
     },
     "admin_panel": {
       "description": "Admin control center - system health, sessions, audit logs",
-      "rowLevelSecurity": null,
+      "rowLevelSecurity": [],
       "permissions": {
         "create": {
           "minimumRole": "admin",
@@ -98,13 +132,31 @@
     },
     "assets": {
       "description": "assets resource",
-      "rowLevelSecurity": {
-        "customer": false,
-        "technician": null,
-        "dispatcher": null,
-        "manager": null,
-        "admin": null
-      },
+      "rowLevelSecurity": [
+        {
+          "id": "customer-via-unit",
+          "description": "Customers see assets in units they own/occupy",
+          "roles": "customer",
+          "operations": "read",
+          "access": {
+            "type": "parent",
+            "foreignKey": "unit_id",
+            "parentEntity": "unit"
+          }
+        },
+        {
+          "id": "staff-full-access",
+          "description": "Staff see all assets",
+          "roles": [
+            "technician",
+            "dispatcher",
+            "manager",
+            "admin"
+          ],
+          "operations": "*",
+          "access": null
+        }
+      ],
       "permissions": {
         "create": {
           "minimumRole": "dispatcher",
@@ -112,9 +164,9 @@
           "description": "Entity-level override - create requires dispatcher"
         },
         "read": {
-          "minimumRole": "technician",
-          "minimumPriority": 2,
-          "description": "Entity-level override - read requires technician"
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Entity-level override - read requires customer"
         },
         "update": {
           "minimumRole": "dispatcher",
@@ -135,13 +187,15 @@
     },
     "audit_logs": {
       "description": "audit_logs resource",
-      "rowLevelSecurity": {
-        "customer": false,
-        "technician": false,
-        "dispatcher": false,
-        "manager": false,
-        "admin": null
-      },
+      "rowLevelSecurity": [
+        {
+          "id": "admin-full-access",
+          "description": "Only admin can access audit logs",
+          "roles": "admin",
+          "operations": "*",
+          "access": null
+        }
+      ],
       "permissions": {
         "create": {
           "minimumRole": null,
@@ -175,16 +229,30 @@
     },
     "contracts": {
       "description": "contracts resource",
-      "rowLevelSecurity": {
-        "customer": {
-          "field": "customer_id",
-          "value": "customerProfileId"
+      "rowLevelSecurity": [
+        {
+          "id": "customer-own-contracts",
+          "description": "Customers see their own contracts",
+          "roles": "customer",
+          "operations": "*",
+          "access": {
+            "type": "direct",
+            "field": "customer_id",
+            "value": "customer_profile_id"
+          }
         },
-        "technician": false,
-        "dispatcher": null,
-        "manager": null,
-        "admin": null
-      },
+        {
+          "id": "office-staff-full-access",
+          "description": "Dispatcher, manager, admin see all contracts",
+          "roles": [
+            "dispatcher",
+            "manager",
+            "admin"
+          ],
+          "operations": "*",
+          "access": null
+        }
+      ],
       "permissions": {
         "create": {
           "minimumRole": "manager",
@@ -215,16 +283,31 @@
     },
     "customer_units": {
       "description": "customer_units resource",
-      "rowLevelSecurity": {
-        "customer": {
-          "field": "customer_id",
-          "value": "customerProfileId"
+      "rowLevelSecurity": [
+        {
+          "id": "customer-own-unit-associations",
+          "description": "Customers see their own unit associations",
+          "roles": "customer",
+          "operations": "*",
+          "access": {
+            "type": "direct",
+            "field": "customer_id",
+            "value": "customer_profile_id"
+          }
         },
-        "technician": null,
-        "dispatcher": null,
-        "manager": null,
-        "admin": null
-      },
+        {
+          "id": "staff-full-access",
+          "description": "Staff see all customer-unit associations",
+          "roles": [
+            "technician",
+            "dispatcher",
+            "manager",
+            "admin"
+          ],
+          "operations": "*",
+          "access": null
+        }
+      ],
       "permissions": {
         "create": {
           "minimumRole": "dispatcher",
@@ -255,16 +338,31 @@
     },
     "customers": {
       "description": "customers resource",
-      "rowLevelSecurity": {
-        "customer": {
-          "field": "id",
-          "value": "customerProfileId"
+      "rowLevelSecurity": [
+        {
+          "id": "customer-own-record",
+          "description": "Customers see their own customer record",
+          "roles": "customer",
+          "operations": "*",
+          "access": {
+            "type": "direct",
+            "field": "id",
+            "value": "customer_profile_id"
+          }
         },
-        "technician": null,
-        "dispatcher": null,
-        "manager": null,
-        "admin": null
-      },
+        {
+          "id": "staff-full-access",
+          "description": "Staff see all customer records",
+          "roles": [
+            "technician",
+            "dispatcher",
+            "manager",
+            "admin"
+          ],
+          "operations": "*",
+          "access": null
+        }
+      ],
       "permissions": {
         "create": {
           "minimumRole": "dispatcher",
@@ -295,7 +393,7 @@
     },
     "dashboard": {
       "description": "Main dashboard view - role-driven overview",
-      "rowLevelSecurity": null,
+      "rowLevelSecurity": [],
       "permissions": {
         "create": {
           "minimumRole": "admin",
@@ -326,13 +424,20 @@
     },
     "departments": {
       "description": "departments resource",
-      "rowLevelSecurity": {
-        "customer": false,
-        "technician": null,
-        "dispatcher": null,
-        "manager": null,
-        "admin": null
-      },
+      "rowLevelSecurity": [
+        {
+          "id": "staff-full-access",
+          "description": "Staff see all departments",
+          "roles": [
+            "technician",
+            "dispatcher",
+            "manager",
+            "admin"
+          ],
+          "operations": "*",
+          "access": null
+        }
+      ],
       "permissions": {
         "create": {
           "minimumRole": "admin",
@@ -363,13 +468,20 @@
     },
     "inventory": {
       "description": "inventory resource",
-      "rowLevelSecurity": {
-        "customer": null,
-        "technician": null,
-        "dispatcher": null,
-        "manager": null,
-        "admin": null
-      },
+      "rowLevelSecurity": [
+        {
+          "id": "staff-full-access",
+          "description": "Staff (technician+) have full access to inventory",
+          "roles": [
+            "technician",
+            "dispatcher",
+            "manager",
+            "admin"
+          ],
+          "operations": "*",
+          "access": null
+        }
+      ],
       "permissions": {
         "create": {
           "minimumRole": "dispatcher",
@@ -400,16 +512,30 @@
     },
     "invoices": {
       "description": "invoices resource",
-      "rowLevelSecurity": {
-        "customer": {
-          "field": "customer_id",
-          "value": "customerProfileId"
+      "rowLevelSecurity": [
+        {
+          "id": "customer-own-invoices",
+          "description": "Customers see their own invoices",
+          "roles": "customer",
+          "operations": "*",
+          "access": {
+            "type": "direct",
+            "field": "customer_id",
+            "value": "customer_profile_id"
+          }
         },
-        "technician": false,
-        "dispatcher": null,
-        "manager": null,
-        "admin": null
-      },
+        {
+          "id": "office-staff-full-access",
+          "description": "Dispatcher, manager, admin see all invoices",
+          "roles": [
+            "dispatcher",
+            "manager",
+            "admin"
+          ],
+          "operations": "*",
+          "access": null
+        }
+      ],
       "permissions": {
         "create": {
           "minimumRole": "dispatcher",
@@ -440,13 +566,19 @@
     },
     "notifications": {
       "description": "notifications resource",
-      "rowLevelSecurity": {
-        "customer": "user_id",
-        "technician": "user_id",
-        "dispatcher": "user_id",
-        "manager": "user_id",
-        "admin": "user_id"
-      },
+      "rowLevelSecurity": [
+        {
+          "id": "user-own-notifications",
+          "description": "All users see only their own notifications",
+          "roles": "*",
+          "operations": "*",
+          "access": {
+            "type": "direct",
+            "field": "user_id",
+            "value": "userId"
+          }
+        }
+      ],
       "permissions": {
         "create": {
           "minimumRole": null,
@@ -478,13 +610,31 @@
     },
     "preferences": {
       "description": "preferences resource",
-      "rowLevelSecurity": {
-        "customer": "id",
-        "technician": "id",
-        "dispatcher": "id",
-        "manager": "id",
-        "admin": null
-      },
+      "rowLevelSecurity": [
+        {
+          "id": "user-own-preferences",
+          "description": "Users see only their own preferences (shared PK with users)",
+          "roles": [
+            "customer",
+            "technician",
+            "dispatcher",
+            "manager"
+          ],
+          "operations": "*",
+          "access": {
+            "type": "direct",
+            "field": "id",
+            "value": "userId"
+          }
+        },
+        {
+          "id": "admin-full-access",
+          "description": "Admin can see all preferences",
+          "roles": "admin",
+          "operations": "*",
+          "access": null
+        }
+      ],
       "permissions": {
         "create": {
           "minimumRole": "customer",
@@ -515,13 +665,59 @@
     },
     "properties": {
       "description": "properties resource",
-      "rowLevelSecurity": {
-        "customer": false,
-        "technician": null,
-        "dispatcher": null,
-        "manager": null,
-        "admin": null
-      },
+      "rowLevelSecurity": [
+        {
+          "id": "customer-via-property-role",
+          "description": "Customers see properties where they have a board/manager role",
+          "roles": "customer",
+          "operations": "read",
+          "access": {
+            "type": "junction",
+            "junction": {
+              "table": "property_roles",
+              "localKey": "id",
+              "foreignKey": "property_id",
+              "filter": {
+                "customer_id": "customer_profile_id"
+              }
+            }
+          }
+        },
+        {
+          "id": "customer-via-unit-ownership",
+          "description": "Customers see properties containing units they own/occupy",
+          "roles": "customer",
+          "operations": "read",
+          "access": {
+            "type": "junction",
+            "junction": {
+              "table": "units",
+              "localKey": "id",
+              "foreignKey": "property_id",
+              "through": {
+                "table": "customer_units",
+                "localKey": "id",
+                "foreignKey": "unit_id",
+                "filter": {
+                  "customer_id": "customer_profile_id"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "staff-full-access",
+          "description": "Staff see all properties",
+          "roles": [
+            "technician",
+            "dispatcher",
+            "manager",
+            "admin"
+          ],
+          "operations": "*",
+          "access": null
+        }
+      ],
       "permissions": {
         "create": {
           "minimumRole": "dispatcher",
@@ -552,16 +748,31 @@
     },
     "property_roles": {
       "description": "property_roles resource",
-      "rowLevelSecurity": {
-        "customer": {
-          "field": "customer_id",
-          "value": "customerProfileId"
+      "rowLevelSecurity": [
+        {
+          "id": "customer-own-property-roles",
+          "description": "Customers see their own property role assignments",
+          "roles": "customer",
+          "operations": "*",
+          "access": {
+            "type": "direct",
+            "field": "customer_id",
+            "value": "customer_profile_id"
+          }
         },
-        "technician": null,
-        "dispatcher": null,
-        "manager": null,
-        "admin": null
-      },
+        {
+          "id": "staff-full-access",
+          "description": "Staff see all property role assignments",
+          "roles": [
+            "technician",
+            "dispatcher",
+            "manager",
+            "admin"
+          ],
+          "operations": "*",
+          "access": null
+        }
+      ],
       "permissions": {
         "create": {
           "minimumRole": "manager",
@@ -592,13 +803,15 @@
     },
     "roles": {
       "description": "roles resource",
-      "rowLevelSecurity": {
-        "customer": null,
-        "technician": null,
-        "dispatcher": null,
-        "manager": null,
-        "admin": null
-      },
+      "rowLevelSecurity": [
+        {
+          "id": "all-authenticated-access",
+          "description": "All authenticated users can view roles (for dropdowns)",
+          "roles": "*",
+          "operations": "*",
+          "access": null
+        }
+      ],
       "permissions": {
         "create": {
           "minimumRole": "admin",
@@ -629,13 +842,31 @@
     },
     "saved_views": {
       "description": "saved_views resource",
-      "rowLevelSecurity": {
-        "customer": "user_id",
-        "technician": "user_id",
-        "dispatcher": "user_id",
-        "manager": "user_id",
-        "admin": null
-      },
+      "rowLevelSecurity": [
+        {
+          "id": "user-own-saved-views",
+          "description": "Users see only their own saved views",
+          "roles": [
+            "customer",
+            "technician",
+            "dispatcher",
+            "manager"
+          ],
+          "operations": "*",
+          "access": {
+            "type": "direct",
+            "field": "user_id",
+            "value": "userId"
+          }
+        },
+        {
+          "id": "admin-full-access",
+          "description": "Admin can see all saved views",
+          "roles": "admin",
+          "operations": "*",
+          "access": null
+        }
+      ],
       "permissions": {
         "create": {
           "minimumRole": "customer",
@@ -666,7 +897,7 @@
     },
     "system_settings": {
       "description": "System-wide configuration (maintenance mode, feature flags)",
-      "rowLevelSecurity": null,
+      "rowLevelSecurity": [],
       "permissions": {
         "create": {
           "minimumRole": "admin",
@@ -697,13 +928,20 @@
     },
     "technicians": {
       "description": "technicians resource",
-      "rowLevelSecurity": {
-        "customer": null,
-        "technician": null,
-        "dispatcher": null,
-        "manager": null,
-        "admin": null
-      },
+      "rowLevelSecurity": [
+        {
+          "id": "staff-full-access",
+          "description": "Staff (technician+) have full access to technician records",
+          "roles": [
+            "technician",
+            "dispatcher",
+            "manager",
+            "admin"
+          ],
+          "operations": "*",
+          "access": null
+        }
+      ],
       "permissions": {
         "create": {
           "minimumRole": "manager",
@@ -734,13 +972,37 @@
     },
     "units": {
       "description": "units resource",
-      "rowLevelSecurity": {
-        "customer": false,
-        "technician": null,
-        "dispatcher": null,
-        "manager": null,
-        "admin": null
-      },
+      "rowLevelSecurity": [
+        {
+          "id": "customer-via-junction",
+          "description": "Customers see units they own/occupy via customer_units",
+          "roles": "customer",
+          "operations": "read",
+          "access": {
+            "type": "junction",
+            "junction": {
+              "table": "customer_units",
+              "localKey": "id",
+              "foreignKey": "unit_id",
+              "filter": {
+                "customer_id": "customer_profile_id"
+              }
+            }
+          }
+        },
+        {
+          "id": "staff-full-access",
+          "description": "Staff see all units",
+          "roles": [
+            "technician",
+            "dispatcher",
+            "manager",
+            "admin"
+          ],
+          "operations": "*",
+          "access": null
+        }
+      ],
       "permissions": {
         "create": {
           "minimumRole": "dispatcher",
@@ -748,9 +1010,9 @@
           "description": "Entity-level override - create requires dispatcher"
         },
         "read": {
-          "minimumRole": "technician",
-          "minimumPriority": 2,
-          "description": "Entity-level override - read requires technician"
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Entity-level override - read requires customer"
         },
         "update": {
           "minimumRole": "dispatcher",
@@ -771,13 +1033,31 @@
     },
     "users": {
       "description": "users resource",
-      "rowLevelSecurity": {
-        "customer": "id",
-        "technician": null,
-        "dispatcher": null,
-        "manager": null,
-        "admin": null
-      },
+      "rowLevelSecurity": [
+        {
+          "id": "customer-own-record",
+          "description": "Customers see only their own user record",
+          "roles": "customer",
+          "operations": "*",
+          "access": {
+            "type": "direct",
+            "field": "id",
+            "value": "userId"
+          }
+        },
+        {
+          "id": "staff-full-access",
+          "description": "Staff see all user records",
+          "roles": [
+            "technician",
+            "dispatcher",
+            "manager",
+            "admin"
+          ],
+          "operations": "*",
+          "access": null
+        }
+      ],
       "permissions": {
         "create": {
           "minimumRole": "admin",
@@ -808,13 +1088,20 @@
     },
     "vendors": {
       "description": "vendors resource",
-      "rowLevelSecurity": {
-        "customer": false,
-        "technician": null,
-        "dispatcher": null,
-        "manager": null,
-        "admin": null
-      },
+      "rowLevelSecurity": [
+        {
+          "id": "staff-full-access",
+          "description": "Staff see all vendors",
+          "roles": [
+            "technician",
+            "dispatcher",
+            "manager",
+            "admin"
+          ],
+          "operations": "*",
+          "access": null
+        }
+      ],
       "permissions": {
         "create": {
           "minimumRole": "manager",
@@ -845,19 +1132,41 @@
     },
     "work_orders": {
       "description": "work_orders resource",
-      "rowLevelSecurity": {
-        "customer": {
-          "field": "customer_id",
-          "value": "customerProfileId"
+      "rowLevelSecurity": [
+        {
+          "id": "customer-own-work-orders",
+          "description": "Customers see their own work orders",
+          "roles": "customer",
+          "operations": "*",
+          "access": {
+            "type": "direct",
+            "field": "customer_id",
+            "value": "customer_profile_id"
+          }
         },
-        "technician": {
-          "field": "assigned_technician_id",
-          "value": "technicianProfileId"
+        {
+          "id": "technician-assigned-work-orders",
+          "description": "Technicians see work orders assigned to them",
+          "roles": "technician",
+          "operations": "*",
+          "access": {
+            "type": "direct",
+            "field": "assigned_technician_id",
+            "value": "technician_profile_id"
+          }
         },
-        "dispatcher": null,
-        "manager": null,
-        "admin": null
-      },
+        {
+          "id": "staff-full-access",
+          "description": "Dispatcher, manager, admin see all work orders",
+          "roles": [
+            "dispatcher",
+            "manager",
+            "admin"
+          ],
+          "operations": "*",
+          "access": null
+        }
+      ],
       "permissions": {
         "create": {
           "minimumRole": "customer",
