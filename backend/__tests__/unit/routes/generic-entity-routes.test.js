@@ -145,12 +145,21 @@ jest.mock("../../../validators", () => {
     req.validated.query.include = req.query.include ? req.query.include.split(",") : [];
     next();
   };
+  const batchMiddleware = (req, res, next) => {
+    if (!req.validated) req.validated = {};
+    req.validated.batch = {
+      operations: req.body.operations || [],
+      options: req.body.options || { continueOnError: false },
+    };
+    next();
+  };
 
   return {
     validatePagination: () => paginationMiddleware,
     validateQuery: () => paginationMiddleware,
     validateIdParam: () => idMiddleware,
     validateInclude: () => includeMiddleware,
+    validateBatchRequest: () => batchMiddleware,
     // NOTE: Entity-specific validators (validateCustomerCreate, etc.) removed
     // Routes use genericValidateBody middleware, not these validators
   };

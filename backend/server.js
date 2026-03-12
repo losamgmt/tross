@@ -21,6 +21,7 @@ const { initializeDatabase } = require('./scripts/init-database');
 const {
   initializeFromDatabase: initRoleHierarchy,
 } = require('./config/role-hierarchy-loader');
+const backgroundTasks = require('./services/background-tasks');
 
 // Environment Validation
 // Comprehensive validation of all environment variables at startup
@@ -361,6 +362,7 @@ app.use((error, req, res, _next) => {
 // Graceful shutdown (no hard dependencies)
 process.on('SIGTERM', async () => {
   logger.info('📴 Shutting down gracefully...');
+  backgroundTasks.stop();
   try {
     // Try to close DB connection if available, but don't fail if it's not
     const db = require('./db/connection');
@@ -374,6 +376,7 @@ process.on('SIGTERM', async () => {
 
 process.on('SIGINT', async () => {
   logger.info('📴 SIGINT received, shutting down gracefully');
+  backgroundTasks.stop();
   try {
     const db = require('./db/connection');
     await db.end();
@@ -456,6 +459,9 @@ if (process.env.NODE_ENV !== 'test') {
         // Validate enum synchronization between Joi and PostgreSQL
         const { validateEnumSync } = require('./utils/validation-sync-checker');
         await validateEnumSync(db);
+
+        // Start background maintenance tasks (cleanup jobs)
+        backgroundTasks.start();
       } catch (_error) {
         logger.error(
           '⚠️ Database connection failed on startup. Server will continue but DB-dependent features will be unavailable.',

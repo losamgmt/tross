@@ -49,6 +49,9 @@ const {
   validateRefreshToken,
 } = require('./body-validators');
 
+// Export batch operation validators
+const { validateBatchRequest } = require('./batch-validators');
+
 module.exports = {
   // Type Coercion
   toSafeInteger,
@@ -77,6 +80,9 @@ module.exports = {
   validateAuth0Token,
   validateAuth0Refresh,
   validateRefreshToken,
+
+  // Batch Operation Validators
+  validateBatchRequest,
 
   // Logging
   logValidationFailure,

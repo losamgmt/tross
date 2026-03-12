@@ -557,4 +557,158 @@ describe("GenericEntityService.batch()", () => {
       });
     });
   });
+
+  describe("RLS pre-validation", () => {
+    test("should validate all update operations have RLS access before transaction", async () => {
+      // Mock findById returning null = no access
+      jest.spyOn(GenericEntityService, "findById").mockResolvedValue(null);
+
+      await expect(
+        GenericEntityService.batch(
+          "customer",
+          [{ operation: "update", id: 1, data: { phone: "555" } }],
+          { rlsContext: { user_id: 42, role: "user" } },
+        ),
+      ).rejects.toThrow("Access denied or record not found");
+
+      // Should not have started transaction
+      expect(mockClient.query).not.toHaveBeenCalledWith("BEGIN");
+
+      GenericEntityService.findById.mockRestore();
+    });
+
+    test("should validate all delete operations have RLS access before transaction", async () => {
+      jest.spyOn(GenericEntityService, "findById").mockResolvedValue(null);
+
+      await expect(
+        GenericEntityService.batch(
+          "customer",
+          [{ operation: "delete", id: 1 }],
+          { rlsContext: { user_id: 42, role: "user" } },
+        ),
+      ).rejects.toThrow("Access denied or record not found");
+
+      expect(mockClient.query).not.toHaveBeenCalledWith("BEGIN");
+
+      GenericEntityService.findById.mockRestore();
+    });
+
+    test("should reject batch with partial RLS failures", async () => {
+      const mockRecords = { 1: { id: 1, email: "a@test.com" }, 2: null };
+
+      jest
+        .spyOn(GenericEntityService, "findById")
+        .mockImplementation((entity, id) =>
+          Promise.resolve(mockRecords[id] || null),
+        );
+
+      await expect(
+        GenericEntityService.batch(
+          "customer",
+          [
+            { operation: "update", id: 1, data: { phone: "555" } },
+            { operation: "update", id: 2, data: { phone: "666" } }, // No access
+          ],
+          { rlsContext: { user_id: 42, role: "user" } },
+        ),
+      ).rejects.toThrow("Access denied or record not found at operation 1");
+
+      GenericEntityService.findById.mockRestore();
+    });
+
+    test("should include operation index in RLS error message", async () => {
+      jest.spyOn(GenericEntityService, "findById").mockResolvedValue(null);
+
+      await expect(
+        GenericEntityService.batch(
+          "customer",
+          [
+            { operation: "create", data: { email: "a@test.com" } }, // Creates don't need RLS check
+            { operation: "delete", id: 99 }, // This will fail RLS
+          ],
+          { rlsContext: { user_id: 42 } },
+        ),
+      ).rejects.toThrow("at operation 1");
+
+      GenericEntityService.findById.mockRestore();
+    });
+
+    test("should skip RLS check for create operations", async () => {
+      jest.spyOn(GenericEntityService, "findById").mockResolvedValue(null);
+
+      mockClient.query
+        .mockResolvedValueOnce({}) // BEGIN
+        .mockResolvedValueOnce({
+          rows: [{ id: 1, first_name: "New", last_name: "User", email: "a@test.com", organization_name: "New" }],
+        }) // CREATE
+        .mockResolvedValueOnce({}); // COMMIT
+
+      const result = await GenericEntityService.batch(
+        "customer",
+        [
+          {
+            operation: "create",
+            data: {
+              first_name: "New",
+              last_name: "User",
+              email: "a@test.com",
+              organization_name: "New",
+            },
+          },
+        ],
+        { rlsContext: { user_id: 42 } },
+      );
+
+      expect(result.success).toBe(true);
+      // findById should NOT have been called (creates skip RLS pre-check)
+      expect(GenericEntityService.findById).not.toHaveBeenCalled();
+
+      GenericEntityService.findById.mockRestore();
+    });
+
+    test("should proceed with transaction after RLS validation passes", async () => {
+      const existingRecord = { id: 1, email: "old@test.com", phone: "111" };
+
+      jest.spyOn(GenericEntityService, "findById").mockResolvedValue(existingRecord);
+
+      mockClient.query
+        .mockResolvedValueOnce({}) // BEGIN
+        .mockResolvedValueOnce({ rows: [existingRecord] }) // SELECT for old values
+        .mockResolvedValueOnce({
+          rows: [{ ...existingRecord, phone: "555" }],
+        }) // UPDATE
+        .mockResolvedValueOnce({}); // COMMIT
+
+      const result = await GenericEntityService.batch(
+        "customer",
+        [{ operation: "update", id: 1, data: { phone: "555" } }],
+        { rlsContext: { user_id: 42 } },
+      );
+
+      expect(result.success).toBe(true);
+      expect(mockClient.query).toHaveBeenCalledWith("BEGIN");
+
+      GenericEntityService.findById.mockRestore();
+    });
+
+    test("should not check RLS when rlsContext not provided", async () => {
+      jest.spyOn(GenericEntityService, "findById");
+
+      mockClient.query
+        .mockResolvedValueOnce({}) // BEGIN
+        .mockResolvedValueOnce({ rows: [{ id: 1, phone: "111" }] }) // SELECT
+        .mockResolvedValueOnce({ rows: [{ id: 1, phone: "555" }] }) // UPDATE
+        .mockResolvedValueOnce({}); // COMMIT
+
+      const result = await GenericEntityService.batch("customer", [
+        { operation: "update", id: 1, data: { phone: "555" } },
+      ]);
+
+      expect(result.success).toBe(true);
+      // findById should NOT have been called for RLS (no rlsContext)
+      expect(GenericEntityService.findById).not.toHaveBeenCalled();
+
+      GenericEntityService.findById.mockRestore();
+    });
+  });
 });

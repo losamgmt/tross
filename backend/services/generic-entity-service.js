@@ -1212,6 +1212,7 @@ class GenericEntityService {
    * @param {Object} [operations[].data] - Required for create/update
    * @param {Object} [options={}] - Additional options
    * @param {Object} [options.auditContext] - Audit context from buildAuditContext()
+   * @param {Object} [options.rlsContext] - RLS context for access checks on update/delete
    * @param {boolean} [options.continueOnError=false] - Continue processing after first error
    * @returns {Promise<Object>} { success: boolean, results: [...], errors: [...], stats: {...} }
    *
@@ -1298,7 +1299,34 @@ class GenericEntityService {
       requiredFields = [],
       immutableFields = [],
     } = metadata;
-    const { continueOnError = false, auditContext } = options;
+    const { continueOnError = false, auditContext, rlsContext } = options;
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // RLS PRE-VALIDATION: Verify access to all records before starting transaction
+    // This matches individual route pattern: check access before mutation
+    // Security boundary: fail-fast if user attempts unauthorized modification
+    // ─────────────────────────────────────────────────────────────────────────
+    if (rlsContext) {
+      const accessChecks = operations
+        .map((op, index) => ({ op, index }))
+        .filter(
+          ({ op }) => op.operation === 'update' || op.operation === 'delete',
+        );
+
+      for (const { op, index } of accessChecks) {
+        const safeId = toSafeInteger(op.id, 'id', { silent: true });
+        const existing = await this.findById(entityName, safeId, rlsContext);
+
+        if (!existing) {
+          // Record not found OR user lacks RLS access - same behavior as individual routes
+          throw new AppError(
+            `Access denied or record not found at operation ${index}: ${op.operation} on id ${safeId}`,
+            404,
+            'NOT_FOUND',
+          );
+        }
+      }
+    }
 
     const results = [];
     const errors = [];

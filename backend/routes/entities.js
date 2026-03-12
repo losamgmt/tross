@@ -25,6 +25,7 @@ const {
   validateIdParam,
   validateQuery,
   validateInclude,
+  validateBatchRequest,
 } = require('../validators');
 const GenericEntityService = require('../services/generic-entity-service');
 const ResponseFormatter = require('../utils/response-formatter');
@@ -33,6 +34,11 @@ const {
   buildRlsContext,
   buildAuditContext,
 } = require('../utils/request-context');
+const {
+  checkIdempotency,
+  saveIdempotencyResponse,
+} = require('../middleware/idempotency');
+const { API_OPERATIONS } = require('../config/api-operations');
 const {
   handleDbError,
   buildDbErrorConfig,
@@ -214,6 +220,7 @@ function createEntityRouter(entityName, _options = {}) {
     authenticateToken,
     attachEntity,
     requirePermission('create'),
+    checkIdempotency,
     genericValidateBody('create'),
     asyncHandler(async (req, res) => {
       const validatedBody = req.validated.body;
@@ -240,6 +247,16 @@ function createEntityRouter(entityName, _options = {}) {
         req.dbUser.role,
         'read',
       );
+
+      // Build response body for idempotency caching
+      const responseBody = {
+        success: true,
+        data: sanitizedData,
+        message: `${displayName} created successfully`,
+      };
+
+      // Save idempotency response for future retries
+      await saveIdempotencyResponse(req, 201, responseBody);
 
       return ResponseFormatter.created(
         res,
@@ -331,6 +348,87 @@ function createEntityRouter(entityName, _options = {}) {
         res,
         `${displayName} deleted successfully`,
       );
+    }),
+  );
+
+  // =============================================================================
+  // BATCH - POST /batch
+  // =============================================================================
+
+  router.post(
+    '/batch',
+    authenticateToken,
+    attachEntity,
+    enforceRLS,
+    checkIdempotency,
+    validateBatchRequest(),
+    asyncHandler(async (req, res) => {
+      const { operations, options } = req.validated.batch;
+      const auditContext = buildAuditContext(req);
+      const rlsContext = buildRlsContext(req);
+
+      // Per-operation permission check
+      // Extract unique operation types and verify permissions for each
+      const requiredPerms = [...new Set(operations.map((op) => op.operation))];
+      for (const perm of requiredPerms) {
+        if (!req.permissions.hasPermission(metadata.rlsResource, perm)) {
+          return ResponseFormatter.forbidden(
+            res,
+            `Missing '${perm}' permission for ${entityName}`,
+          );
+        }
+      }
+
+      // Execute batch operation
+      const result = await GenericEntityService.batch(entityName, operations, {
+        auditContext,
+        rlsContext,
+        continueOnError: options.continueOnError,
+      });
+
+      // Filter results by role (consistent with single-item routes)
+      const filteredResults = result.results.map((r) => {
+        if (r.success && r.result) {
+          return {
+            ...r,
+            result: filterDataByRole(
+              r.result,
+              metadata,
+              req.dbUser.role,
+              'read',
+            ),
+          };
+        }
+        return r;
+      });
+
+      // Determine status code based on success and atomicity mode
+      // 200: All operations succeeded
+      // 207: Partial success (only when continueOnError=true and some failed)
+      // 400: Complete failure when continueOnError=false (atomic mode)
+      let status;
+      if (result.success) {
+        status = API_OPERATIONS.BATCH.STATUS_SUCCESS;
+      } else if (options.continueOnError) {
+        // Partial success: some operations committed, some failed
+        status = API_OPERATIONS.BATCH.STATUS_MULTI_STATUS;
+      } else {
+        // Atomic failure: transaction rolled back, nothing committed
+        status = API_OPERATIONS.BATCH.STATUS_BAD_REQUEST;
+      }
+
+      const responseBody = {
+        success: result.success,
+        message: result.message,
+        stats: result.stats,
+        results: filteredResults,
+        errors: result.errors,
+      };
+
+      // Save idempotency response for future retries
+      await saveIdempotencyResponse(req, status, responseBody);
+
+      return res.status(status).json(responseBody);
     }),
   );
 

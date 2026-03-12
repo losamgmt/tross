@@ -35,13 +35,13 @@ const CONFIG = Object.freeze({
 
   // Files to compose
   HEADER_FILE: 'header.sql',
-  LEGACY_FILE: 'legacy.sql',
+  INFRASTRUCTURE_FILE: 'infrastructure.sql',
   GENERATED_FILE: 'schema-generated.sql',
   SEEDS_FILE: 'seed-data.sql',
 
-  // Tables to drop that aren't in metadata (legacy cleanup)
-  // Note: These are created by legacy.sql, not entity metadata
-  LEGACY_TABLES: ['system_settings', 'refresh_tokens'],
+  // Infrastructure tables (not generated from entity metadata)
+  // Note: These are created by infrastructure.sql, not entity metadata
+  INFRASTRUCTURE_TABLES: ['system_settings', 'refresh_tokens', 'idempotency_keys'],
 });
 
 // ============================================================================
@@ -122,10 +122,10 @@ function composeSchema() {
   }
   console.log('  ✓ schema-generated.sql');
 
-  // 3. Read legacy tables (non-entity infrastructure tables)
-  const legacyPath = path.join(CONFIG.PARTS_DIR, CONFIG.LEGACY_FILE);
-  const legacy = readFile(legacyPath);
-  console.log(legacy ? '  ✓ legacy.sql' : '  ⚠️  No legacy tables file');
+  // 3. Read infrastructure tables (non-entity system tables)
+  const infrastructurePath = path.join(CONFIG.PARTS_DIR, CONFIG.INFRASTRUCTURE_FILE);
+  const infrastructure = readFile(infrastructurePath);
+  console.log(infrastructure ? '  ✓ infrastructure.sql' : '  ⚠️  No infrastructure tables file');
 
   // 4. Read seeds
   const seedsPath = path.join(CONFIG.SEEDS_DIR, CONFIG.SEEDS_FILE);
@@ -134,10 +134,10 @@ function composeSchema() {
 
   // 5. Extract table names and generate DROP section
   const tableNames = extractTableNames(generated);
-  const legacyTableNames = extractTableNames(legacy);
-  console.log(`\n🗃️  Found ${tableNames.length} entity tables + ${legacyTableNames.length} legacy tables`);
+  const infrastructureTableNames = extractTableNames(infrastructure);
+  console.log(`\n🗃️  Found ${tableNames.length} entity tables + ${infrastructureTableNames.length} infrastructure tables`);
 
-  const dropSection = generateDropStatements(tableNames, CONFIG.LEGACY_TABLES);
+  const dropSection = generateDropStatements(tableNames, CONFIG.INFRASTRUCTURE_TABLES);
 
   // 6. Strip header from generated (it has its own header comment)
   // Find where the first entity definition starts (marked by "-- Entity:")
@@ -153,7 +153,7 @@ function composeSchema() {
   }
 
   // 7. Compose final output
-  // Order matters: header → drops → entities → legacy (FKs depend on entities) → seeds
+  // Order matters: header → drops → entities → infrastructure (FKs depend on entities) → seeds
   console.log('\n🔧 Composing schema.sql...');
   const composed = [
     header.trim(),
@@ -161,7 +161,7 @@ function composeSchema() {
     dropSection,
     generatedBody.trim(),
     '',
-    legacy ? legacy.trim() : '',
+    infrastructure ? infrastructure.trim() : '',
     '',
     seeds.trim(),
     '',
@@ -172,7 +172,7 @@ function composeSchema() {
   console.log(`\n✅ Written to: ${CONFIG.OUTPUT_FILE}`);
   console.log(`   ${composed.split('\n').length} lines`);
 
-  return { success: true, tables: [...tableNames, ...legacyTableNames] };
+  return { success: true, tables: [...tableNames, ...infrastructureTableNames] };
 }
 
 // ============================================================================
