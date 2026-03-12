@@ -324,13 +324,14 @@ function derivePermissions(forceReload = false) {
   }
 
   // Build complete config
+  // Note: lastModified removed for deterministic output (CI stability)
+  // Use git history for change tracking
   cachedPermissions = {
     $schema: 'http://json-schema.org/draft-07/schema#',
     $id: 'https://tross.com/schemas/permissions.json',
     title: 'Tross Permission Configuration (DERIVED)',
     description: 'Auto-derived from entity metadata - DO NOT EDIT MANUALLY',
     version: '4.0.0-derived',
-    lastModified: new Date().toISOString().split('T')[0],
     roles,
     resources,
   };
