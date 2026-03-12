@@ -432,6 +432,89 @@ DELETE /api/work_orders/:id
 
 ---
 
+### Batch Operations
+
+Perform bulk create, update, or delete operations in a single transactional request.
+
+**URL Pattern:**
+
+```
+POST /api/:tableName/batch
+```
+
+**Request:**
+
+```http
+POST /api/customers/batch
+Authorization: Bearer YOUR_TOKEN
+Content-Type: application/json
+Idempotency-Key: batch-import-2026-03-11
+
+{
+  "operations": [
+    { "operation": "create", "data": { "first_name": "Alice", "last_name": "Smith", "email": "alice@example.com" } },
+    { "operation": "create", "data": { "first_name": "Bob", "last_name": "Jones", "email": "bob@example.com" } },
+    { "operation": "update", "id": 123, "data": { "phone": "+1234567890" } },
+    { "operation": "delete", "id": 456 }
+  ],
+  "options": {
+    "continueOnError": false
+  }
+}
+```
+
+**Response (Success):**
+
+```json
+{
+  "success": true,
+  "message": "Batch completed: 4 operations (2 created, 1 updated, 1 deleted)",
+  "stats": {
+    "total": 4,
+    "created": 2,
+    "updated": 1,
+    "deleted": 1,
+    "failed": 0
+  },
+  "results": [
+    { "index": 0, "operation": "create", "success": true, "result": { "id": 101 } },
+    { "index": 1, "operation": "create", "success": true, "result": { "id": 102 } },
+    { "index": 2, "operation": "update", "success": true, "result": { "id": 123 } },
+    { "index": 3, "operation": "delete", "success": true, "result": { "id": 456, "deleted": true } }
+  ],
+  "errors": []
+}
+```
+
+**Options:**
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `continueOnError` | boolean | `false` | If `true`, continues processing after errors (partial success). If `false`, rolls back entire batch on first error. |
+
+**Status Codes:**
+
+| Code | Meaning |
+|------|---------||
+| `200` | All operations succeeded |
+| `207` | Partial success (when `continueOnError=true` and some failed) |
+| `400` | Invalid batch structure or validation error |
+| `404` | Entity not found (for update/delete operations) |
+
+**Limits:**
+
+- Maximum 100 operations per batch
+- Mixed operations allowed (create + update + delete in same batch)
+- RLS (Row-Level Security) enforced on all operations
+
+**Best Practices:**
+
+- Use with `Idempotency-Key` header for retry safety
+- Prefer `continueOnError: false` for data integrity
+- Keep batch sizes reasonable (50-100) to avoid timeouts
+
+---
+
 ### File Attachments
 
 Files are attached to entities using a **sub-resource pattern**. The URL path uses `tableName` (plural, snake_case) from entity metadata.
@@ -646,6 +729,97 @@ All errors use the unified `AppError` class with explicit status codes. The resp
   "timestamp": "2026-01-16T10:30:00Z"
 }
 ```
+
+---
+
+## Idempotency
+
+Prevent duplicate mutations from network retries or double-submits. Supported on all `POST` create and batch endpoints.
+
+### Header
+
+```http
+Idempotency-Key: <unique-key>
+```
+
+**Requirements:**
+
+- Alphanumeric, hyphens, underscores only (regex: `^[\w-]+$`)
+- Maximum 255 characters
+- UUID v4 recommended (e.g., `550e8400-e29b-41d4-a716-446655440000`)
+
+### Behavior
+
+| Scenario | Result |
+|----------|--------|
+| First request with key | Executes normally, response cached |
+| Retry with same key + same payload | Returns cached response (no duplicate) |
+| Same key + different payload | `422 Unprocessable Entity` (mismatch error) |
+| No key provided | Normal execution (opt-in feature) |
+
+### Example
+
+**First Request:**
+
+```http
+POST /api/customers
+Authorization: Bearer YOUR_TOKEN
+Idempotency-Key: create-customer-abc123
+Content-Type: application/json
+
+{ "first_name": "Alice", "email": "alice@example.com" }
+```
+
+**Response:** `201 Created`
+
+```json
+{
+  "success": true,
+  "data": { "id": 42, "first_name": "Alice", "email": "alice@example.com" }
+}
+```
+
+**Retry (Network failure, same key):**
+
+```http
+POST /api/customers
+Idempotency-Key: create-customer-abc123
+...
+```
+
+**Response:** `201 Created` (cached, no duplicate created)
+
+```json
+{
+  "success": true,
+  "data": { "id": 42, "first_name": "Alice", "email": "alice@example.com" }
+}
+```
+
+### Payload Mismatch Error
+
+If same key sent with different body:
+
+```json
+{
+  "success": false,
+  "error": "Unprocessable Entity",
+  "message": "Idempotency key already used with different request body",
+  "code": "IDEMPOTENCY_MISMATCH"
+}
+```
+
+### Key Scoping
+
+- Keys are **scoped per user** (same key, different users = separate operations)
+- Keys expire after **24 hours** (industry standard: Stripe, AWS)
+- Expired keys are cleaned up automatically
+
+### When to Use
+
+- **Recommended:** All create operations (`POST`)
+- **Critical:** Payment/invoice creation, batch imports
+- **Optional:** Reads (`GET`) don't need idempotency
 
 ---
 

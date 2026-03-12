@@ -1,7 +1,7 @@
 -- ============================================================================
 -- GENERATED SCHEMA - SINGLE SOURCE OF TRUTH
 -- ============================================================================
--- Generated: 2026-03-06T02:18:47.130Z
+-- Generated: 2026-03-12T01:31:02.091Z
 -- Command: npm run generate:schema
 --
 -- This file is for REVIEW. Merge changes into backend/schema.sql manually.

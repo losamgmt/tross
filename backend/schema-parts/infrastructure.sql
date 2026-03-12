@@ -1,9 +1,10 @@
 -- ============================================================================
--- LEGACY TABLES (Non-entity infrastructure tables)
+-- INFRASTRUCTURE TABLES (Non-entity system tables)
 -- ============================================================================
 -- These tables are NOT generated from entity metadata because they:
 -- 1. Have special relationships (refresh_tokens: security/sessions)
--- 2. Are infrastructure, not business entities
+-- 2. Are system infrastructure, not business entities
+-- 3. Support API semantics (idempotency_keys: retry safety)
 -- ============================================================================
 
 -- ============================================================================
@@ -52,7 +53,7 @@ CREATE TABLE IF NOT EXISTS system_settings (
 );
 
 -- Indexes for system_settings
-CREATE INDEX IF NOT EXISTS idx_system_settings_key ON system_settings(key);
+-- Note: PRIMARY KEY on 'key' already creates an index; no additional index needed
 
 -- Trigger to auto-update updated_at
 CREATE OR REPLACE FUNCTION update_system_settings_timestamp()
@@ -68,3 +69,41 @@ CREATE TRIGGER trigger_system_settings_updated_at
     BEFORE UPDATE ON system_settings
     FOR EACH ROW
     EXECUTE FUNCTION update_system_settings_timestamp();
+
+-- ============================================================================
+-- IDEMPOTENCY KEYS TABLE
+-- ============================================================================
+-- Purpose: Stores request/response pairs for retry-safe mutations
+-- Relationship: Many-to-one with users (scoped per-user to prevent collision)
+-- TTL: Records expire after 24 hours (enforced by application cleanup job)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS idempotency_keys (
+    id SERIAL PRIMARY KEY,
+    
+    -- Client-provided idempotency key (unique per user)
+    idempotency_key VARCHAR(255) NOT NULL,
+    
+    -- Scoped to user (prevents cross-user collision)
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    
+    -- Request fingerprint for mismatch detection
+    request_method VARCHAR(10) NOT NULL,
+    request_path VARCHAR(500) NOT NULL,
+    request_body_hash VARCHAR(64) NOT NULL,  -- SHA-256 hex
+    
+    -- Cached response
+    response_status INTEGER NOT NULL,
+    response_body JSONB NOT NULL,
+    
+    -- Timestamp for TTL enforcement (matches entity convention)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    
+    -- Per-user uniqueness (same user cannot reuse key within TTL)
+    CONSTRAINT uq_idempotency_key_user UNIQUE (idempotency_key, user_id)
+);
+
+-- Indexes for idempotency_keys
+-- Note: UNIQUE constraint already creates index on (idempotency_key, user_id)
+-- Cleanup job finds expired keys efficiently
+CREATE INDEX IF NOT EXISTS idx_idempotency_keys_created_at 
+    ON idempotency_keys(created_at);

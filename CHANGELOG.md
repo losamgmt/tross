@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Enterprise Backend Features (2026-03-11)
+
+#### Idempotency Layer (Retry-Safe Mutations)
+
+- **Purpose**: Prevent duplicate records from network retries or double-submits
+- **Header**: `Idempotency-Key: <uuid>` on POST requests
+- **Behavior**: First request executes and caches; retries return cached response
+- **Payload Mismatch**: Same key + different body returns `422 IDEMPOTENCY_MISMATCH`
+- **User Scoping**: Keys are scoped per-user (no cross-user collisions)
+- **TTL**: 24-hour expiration (industry standard: Stripe, AWS)
+
+#### Batch Operations (Bulk CRUD)
+
+- **Endpoint**: `POST /api/:entity/batch`
+- **Operations**: `create`, `update`, `delete` in single request
+- **Atomicity**: `continueOnError: false` = all-or-nothing transaction
+- **Partial Success**: `continueOnError: true` = commit successes, report failures
+- **Limit**: 100 operations per batch
+- **RLS Enforcement**: Pre-validates RLS access before batch execution
+
+#### Background Tasks (Scheduled Maintenance)
+
+- **Idempotency Cleanup**: Hourly purge of expired keys
+- **Token Cleanup**: 6-hour purge of expired refresh tokens
+- **In-Process**: No external scheduler needed (setInterval-based)
+
+#### New Files
+
+| File | Purpose |
+|------|--------|
+| `config/api-operations.js` | SSOT for idempotency/batch configuration |
+| `services/idempotency-service.js` | Store, find, cleanup idempotency keys |
+| `services/background-tasks.js` | Scheduled maintenance runner |
+| `middleware/idempotency.js` | `checkIdempotency` middleware |
+| `validators/batch-validators.js` | Request validation + RLS pre-check |
+| `schema-parts/infrastructure.sql` | `idempotency_keys` table definition |
+
+#### Test Coverage
+
+- **123 new tests** across 7 test files
+- **Unit tests**: idempotency-service (27), middleware (26), batch-validators (27), background-tasks (13), generic-entity-service.batch (+7)
+- **Integration tests**: idempotency (11), batch-operations (12)
+- **Total test suite**: 4,551 tests passing
+
 ### Added - Navigation Placement SSOT (2026-03-04)
 
 #### Nav Placement Now Metadata-Driven
