@@ -56,7 +56,8 @@ function syncPermissions() {
     derived.description =
       "Single source of truth for role-based access control (RBAC). " +
       "AUTO-GENERATED from entity metadata - run sync-permissions.js to regenerate.";
-    derived.lastModified = new Date().toISOString().split("T")[0];
+    // Note: lastModified removed - use git history for change tracking
+    // This ensures deterministic output for CI stability
 
     // Sort resources for consistent output
     const sortedResources = {};
