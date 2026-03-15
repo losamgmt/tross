@@ -18,19 +18,23 @@ require('dotenv').config();
 // FIX: Override pg type parsers to treat TIMESTAMP values as UTC
 // This ensures consistent round-trips regardless of server timezone.
 // ============================================================================
-const TIMESTAMP_OID = 1114;     // TIMESTAMP without timezone
-const TIMESTAMPTZ_OID = 1184;   // TIMESTAMP with timezone
+const TIMESTAMP_OID = 1114; // TIMESTAMP without timezone
+const TIMESTAMPTZ_OID = 1184; // TIMESTAMP with timezone
 
 // Parse TIMESTAMP as UTC by appending 'Z' before creating Date
 types.setTypeParser(TIMESTAMP_OID, (val) => {
-  if (val === null) return null;
+  if (val === null) {
+    return null;
+  }
   // Append Z to treat the raw timestamp as UTC, not local time
   return new Date(val.replace(' ', 'T') + 'Z');
 });
 
 // TIMESTAMPTZ already includes timezone info - parse as-is
 types.setTypeParser(TIMESTAMPTZ_OID, (val) => {
-  if (val === null) return null;
+  if (val === null) {
+    return null;
+  }
   return new Date(val);
 });
 
