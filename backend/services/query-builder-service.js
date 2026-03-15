@@ -139,6 +139,8 @@ class QueryBuilderService {
           lte: '<=',
           not: '!=',
           in: 'IN',
+          nin: 'NOT IN',
+          null: 'IS NULL',
         };
 
         for (const [operator, operatorValue] of Object.entries(value)) {
@@ -147,10 +149,18 @@ class QueryBuilderService {
             continue;
           } // Unknown operator
 
+          // Special handling for NULL operator (no param needed)
+          if (operator === 'null') {
+            // operatorValue is truthy = IS NULL, falsy = IS NOT NULL
+            const nullOp = operatorValue ? 'IS NULL' : 'IS NOT NULL';
+            conditions.push(`${prefix}${field} ${nullOp}`);
+            continue;
+          }
+
           currentOffset++;
 
-          // Special handling for IN operator (expects array)
-          if (operator === 'in') {
+          // Special handling for IN/NOT IN operators (expect array)
+          if (operator === 'in' || operator === 'nin') {
             // Parse comma-separated values
             const values = Array.isArray(operatorValue)
               ? operatorValue
@@ -159,7 +169,7 @@ class QueryBuilderService {
             const placeholders = values
               .map((_, i) => `$${currentOffset + i}`)
               .join(', ');
-            conditions.push(`${prefix}${field} IN (${placeholders})`);
+            conditions.push(`${prefix}${field} ${sqlOperator} (${placeholders})`);
             params.push(...values);
             currentOffset += values.length - 1; // Adjust for multiple params
           } else {

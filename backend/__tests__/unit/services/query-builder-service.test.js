@@ -229,6 +229,39 @@ describe("QueryBuilderService", () => {
       expect(result.params).toEqual(["1", "2", "3"]);
     });
 
+    test("should handle NOT IN operator with array", () => {
+      const result = QueryBuilderService.buildFilterClause(
+        { status: { nin: ["completed", "cancelled"] } },
+        [...filterableFields, "status"],
+      );
+
+      expect(result.clause).toBe("status NOT IN ($1, $2)");
+      expect(result.params).toEqual(["completed", "cancelled"]);
+      expect(result.paramOffset).toBe(2);
+    });
+
+    test("should handle NULL operator (IS NULL)", () => {
+      const result = QueryBuilderService.buildFilterClause(
+        { assigned_technician_id: { null: true } },
+        [...filterableFields, "assigned_technician_id"],
+      );
+
+      expect(result.clause).toBe("assigned_technician_id IS NULL");
+      expect(result.params).toEqual([]);
+      expect(result.paramOffset).toBe(0);
+    });
+
+    test("should handle NULL operator (IS NOT NULL)", () => {
+      const result = QueryBuilderService.buildFilterClause(
+        { scheduled_start: { null: false } },
+        [...filterableFields, "scheduled_start"],
+      );
+
+      expect(result.clause).toBe("scheduled_start IS NOT NULL");
+      expect(result.params).toEqual([]);
+      expect(result.paramOffset).toBe(0);
+    });
+
     test("should handle multiple operators on same field", () => {
       const result = QueryBuilderService.buildFilterClause(
         { priority: { gte: "5", lte: "10" } },

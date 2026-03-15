@@ -31,7 +31,7 @@ class DetailFieldDisplay<T, V> extends StatelessWidget {
       FieldType.asyncSelect ||
       FieldType.lookup => DisplayType.text,
       FieldType.number => DisplayType.number,
-      FieldType.date => DisplayType.date,
+      FieldType.date || FieldType.datetime => DisplayType.date,
       FieldType.time => DisplayType.time,
       FieldType.boolean => DisplayType.boolean,
       FieldType.select => DisplayType.select,

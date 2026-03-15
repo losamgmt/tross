@@ -131,6 +131,7 @@ class DateTimeHelpers {
   /// Formats a [DateTime] as user-friendly date string.
   ///
   /// Returns formatted string "MMM d, yyyy" (e.g., "Jan 15, 2024").
+  /// Automatically converts UTC times to local for correct display.
   /// No external dependencies - pure Dart implementation.
   ///
   /// Example:
@@ -139,6 +140,8 @@ class DateTimeHelpers {
   /// print(DateTimeHelpers.formatDate(date)); // "Jan 15, 2024"
   /// ```
   static String formatDate(DateTime date) {
+    // Ensure local time for display - UTC dates would show wrong day at midnight boundary
+    final local = date.isUtc ? date.toLocal() : date;
     const months = [
       'Jan',
       'Feb',
@@ -153,7 +156,28 @@ class DateTimeHelpers {
       'Nov',
       'Dec',
     ];
-    return '${months[date.month - 1]} ${date.day}, ${date.year}';
+    return '${months[local.month - 1]} ${local.day}, ${local.year}';
+  }
+
+  /// Formats a [DateTime] as user-friendly date AND time string.
+  ///
+  /// Returns formatted string "MMM d, yyyy h:mm AM/PM"
+  /// (e.g., "Jan 15, 2024 9:30 AM").
+  /// Automatically converts UTC times to local for correct display.
+  ///
+  /// Example:
+  /// ```dart
+  /// final dt = DateTime(2024, 1, 15, 14, 30);
+  /// print(DateTimeHelpers.formatDateTime(dt)); // "Jan 15, 2024 2:30 PM"
+  /// ```
+  static String formatDateTime(DateTime dt) {
+    // Ensure local time for display - UTC would show wrong hour
+    final local = dt.isUtc ? dt.toLocal() : dt;
+    final datePart = formatDate(local);
+    final hour = local.hour % 12 == 0 ? 12 : local.hour % 12;
+    final minute = local.minute.toString().padLeft(2, '0');
+    final period = local.hour >= 12 ? 'PM' : 'AM';
+    return '$datePart $hour:$minute $period';
   }
 
   /// Formats a [DateTime] as contextual timestamp.
@@ -172,17 +196,19 @@ class DateTimeHelpers {
   /// print(DateTimeHelpers.formatTimestamp(recent)); // "Today 14:30"
   /// ```
   static String formatTimestamp(DateTime dt, {DateTime? referenceTime}) {
+    // Ensure local time for display
+    final local = dt.isUtc ? dt.toLocal() : dt;
     final now = referenceTime ?? DateTime.now();
-    final diff = now.difference(dt);
+    final diff = now.difference(local);
 
     if (diff.inDays == 0) {
-      return 'Today ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+      return 'Today ${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
     } else if (diff.inDays == 1) {
       return 'Yesterday';
     } else if (diff.inDays < 7) {
       return '${diff.inDays} days ago';
     } else {
-      return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
+      return '${local.year}-${local.month.toString().padLeft(2, '0')}-${local.day.toString().padLeft(2, '0')}';
     }
   }
 }

@@ -76,28 +76,28 @@ class RouteGuard {
   /// Check if user can access the requested route
   ///
   /// Returns [RouteGuardResult] with access decision and optional redirect
+  ///
+  /// SECURITY-FIRST: Default policy is DENY.
+  /// Only explicitly public routes are accessible without authentication.
+  /// All other routes (including entity routes and 404s) require auth.
   static RouteGuardResult checkAccess({
     required String route,
     required bool isAuthenticated,
     Map<String, dynamic>? user,
   }) {
-    // 1. Public routes are always accessible
+    // 1. Public routes are always accessible (login, callback, error pages)
     if (AppRoutes.isPublicRoute(route)) {
       return const RouteGuardResult.allow();
     }
 
-    // 2. Unknown routes (404s) should pass through to show error page
-    // Don't block them - let the router handle them
-    if (!isValidRoute(route)) {
-      return const RouteGuardResult.allow();
-    }
-
-    // 3. Protected routes require authentication
+    // 2. ALL non-public routes require authentication
+    // This includes entity routes (/work_orders, /customers, etc.)
+    // and unknown routes (404 handling happens AFTER auth check)
     if (!isAuthenticated) {
       return const RouteGuardResult.requiresLogin();
     }
 
-    // 4. Admin routes require admin role
+    // 3. Admin routes require admin role
     if (AppRoutes.requiresAdmin(route)) {
       final isAdmin = AuthProfileService.isAdmin(user);
 
@@ -108,7 +108,7 @@ class RouteGuard {
       }
     }
 
-    // 5. Access granted
+    // 4. Access granted (user is authenticated, not blocked by admin check)
     return const RouteGuardResult.allow();
   }
 

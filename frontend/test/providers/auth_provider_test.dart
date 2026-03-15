@@ -35,7 +35,9 @@ void main() {
 
     group('Initial State', () {
       test('should start with correct initial state', () {
-        expect(authProvider.isLoading, false);
+        // AuthProvider starts with isLoading=true until initialize() completes
+        // This prevents routes from rendering before auth state is known
+        expect(authProvider.isLoading, true);
         expect(authProvider.error, isNull);
         expect(authProvider.user, isNull);
         expect(authProvider.isAuthenticated, false);
@@ -44,11 +46,19 @@ void main() {
         expect(authProvider.userRole, equals('unknown'));
         expect(authProvider.userEmail, equals(''));
       });
+
+      test('should be ready after initialize()', () async {
+        await authProvider.initialize();
+        expect(authProvider.isLoading, false);
+        expect(authProvider.error, isNull);
+      });
     });
 
     group('State Management', () {
-      test('should set loading state correctly', () {
-        // We'd need to expose a test method or make _setLoading public for testing
+      test('should set loading state correctly', () async {
+        // AuthProvider starts loading, becomes ready after initialize()
+        expect(authProvider.isLoading, true);
+        await authProvider.initialize();
         expect(authProvider.isLoading, false);
       });
 

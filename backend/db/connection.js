@@ -1,10 +1,38 @@
 // Database connection and pool management
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
 const { logger } = require('../config/logger');
 const { DATABASE, DATABASE_PERFORMANCE } = require('../config/constants');
 const { TIMEOUTS } = require('../config/timeouts');
 const { getDatabaseConfig } = require('../config/deployment-adapter');
 require('dotenv').config();
+
+// ============================================================================
+// TIMESTAMP TIMEZONE HANDLING
+// ============================================================================
+// PostgreSQL TIMESTAMP WITHOUT TIME ZONE columns don't store timezone info.
+// By default, pg parses these as LOCAL time, causing timezone bugs:
+//   - Frontend sends UTC: "2026-03-15T03:00:00.000Z"
+//   - PostgreSQL stores: "2026-03-15 03:00:00" (Z stripped)
+//   - Default pg parse: treats as local → wrong UTC conversion
+//
+// FIX: Override pg type parsers to treat TIMESTAMP values as UTC
+// This ensures consistent round-trips regardless of server timezone.
+// ============================================================================
+const TIMESTAMP_OID = 1114;     // TIMESTAMP without timezone
+const TIMESTAMPTZ_OID = 1184;   // TIMESTAMP with timezone
+
+// Parse TIMESTAMP as UTC by appending 'Z' before creating Date
+types.setTypeParser(TIMESTAMP_OID, (val) => {
+  if (val === null) return null;
+  // Append Z to treat the raw timestamp as UTC, not local time
+  return new Date(val.replace(' ', 'T') + 'Z');
+});
+
+// TIMESTAMPTZ already includes timezone info - parse as-is
+types.setTypeParser(TIMESTAMPTZ_OID, (val) => {
+  if (val === null) return null;
+  return new Date(val);
+});
 
 // Determine which database configuration to use based on environment
 const isTest = process.env.NODE_ENV === 'test';

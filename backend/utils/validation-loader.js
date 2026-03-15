@@ -243,10 +243,11 @@ function applyNumericModifiers(schema, fieldDef) {
  */
 function applyCommonModifiers(schema, fieldDef) {
   // Apply required/optional
+  // Optional fields allow null to support PATCH with full form state
   if (fieldDef.required) {
     schema = schema.required();
   } else {
-    schema = schema.optional();
+    schema = schema.optional().allow(null);
   }
 
   // Apply custom error messages

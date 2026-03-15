@@ -282,7 +282,14 @@ void main() {
     // LOADING STATE
     // =========================================================================
     group('Loading State', () {
-      test('isLoading starts as false', () {
+      test('isLoading starts as true (checking stored session)', () {
+        // AuthProvider intentionally starts with isLoading=true
+        // This prevents routes rendering before auth state is known
+        expect(authProvider.isLoading, isTrue);
+      });
+
+      test('isLoading becomes false after initialize()', () async {
+        await authProvider.initialize();
         expect(authProvider.isLoading, isFalse);
       });
 

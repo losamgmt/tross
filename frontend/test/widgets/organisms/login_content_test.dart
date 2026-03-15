@@ -14,29 +14,22 @@ import 'package:tross/providers/app_provider.dart';
 import 'package:tross/providers/auth_provider.dart';
 import 'package:tross/config/constants.dart';
 import 'package:tross/widgets/organisms/login_content.dart';
-import '../../mocks/mock_api_client.dart';
 
 void main() {
-  late MockApiClient mockApiClient;
-
-  setUp(() {
-    mockApiClient = MockApiClient();
-  });
-
-  tearDown(() {
-    mockApiClient.reset();
-  });
-
   /// Helper that wraps LoginContent with required providers
+  /// Uses a test-only AuthProvider that doesn't require secure storage
   Widget createTestWidget({
     VoidCallback? onAuth0Login,
     void Function(String role)? onDevLogin,
+    bool isLoading = true, // Default: loading state (matches real behavior)
   }) {
     return MaterialApp(
       home: Scaffold(
         body: MultiProvider(
           providers: [
-            ChangeNotifierProvider(create: (_) => AuthProvider(mockApiClient)),
+            ChangeNotifierProvider<AuthProvider>(
+              create: (_) => _TestAuthProvider(isLoading: isLoading),
+            ),
             ChangeNotifierProvider(create: (_) => AppProvider()),
           ],
           child: SingleChildScrollView(
@@ -125,8 +118,12 @@ void main() {
         tester,
       ) async {
         var auth0Called = false;
+        // Use isLoading: false so button is enabled (not in loading state)
         await tester.pumpWidget(
-          createTestWidget(onAuth0Login: () => auth0Called = true),
+          createTestWidget(
+            onAuth0Login: () => auth0Called = true,
+            isLoading: false,
+          ),
         );
         await tester.pump();
 
@@ -143,8 +140,12 @@ void main() {
         tester,
       ) async {
         String? selectedRole;
+        // Use isLoading: false so button is enabled
         await tester.pumpWidget(
-          createTestWidget(onDevLogin: (role) => selectedRole = role),
+          createTestWidget(
+            onDevLogin: (role) => selectedRole = role,
+            isLoading: false,
+          ),
         );
         await tester.pump();
 
@@ -196,4 +197,66 @@ void main() {
       });
     });
   });
+}
+
+/// Test-only AuthProvider that doesn't require secure storage or network calls
+/// Used in widget tests to avoid hangs from real AuthService dependencies
+class _TestAuthProvider extends ChangeNotifier implements AuthProvider {
+  final bool _isLoading;
+
+  _TestAuthProvider({bool isLoading = true}) : _isLoading = isLoading;
+
+  @override
+  bool get isLoading => _isLoading;
+
+  @override
+  bool get isAuthenticated => false;
+
+  @override
+  bool get isRedirecting => false;
+
+  @override
+  String? get error => null;
+
+  @override
+  String? get token => null;
+
+  @override
+  String? get provider => null;
+
+  @override
+  Map<String, dynamic>? get user => null;
+
+  @override
+  String get userName => '';
+
+  @override
+  String get userEmail => '';
+
+  @override
+  int? get userId => null;
+
+  @override
+  String get userRole => 'customer';
+
+  @override
+  Future<bool> loginWithTestToken({String role = 'admin'}) async => true;
+
+  @override
+  Future<bool> loginWithAuth0() async => true;
+
+  @override
+  Future<bool> handleAuth0Callback() async => true;
+
+  @override
+  Future<void> logout() async {}
+
+  @override
+  Future<void> initialize() async {}
+
+  @override
+  Future<bool> updateProfile(Map<String, dynamic> updates) async => true;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

@@ -3686,7 +3686,7 @@
           "pending": {
             "color": "warning"
           },
-          "assigned": {
+          "scheduled": {
             "color": "info"
           },
           "in_progress": {

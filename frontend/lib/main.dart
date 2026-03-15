@@ -13,6 +13,8 @@ import 'providers/auth_provider.dart';
 import 'providers/app_provider.dart';
 import 'providers/dashboard_provider.dart';
 import 'providers/preferences_provider.dart';
+import 'providers/refresh_coordinator.dart';
+import 'providers/schedule_provider.dart';
 import 'core/routing/app_routes.dart';
 import 'core/routing/app_router.dart';
 import 'config/constants.dart';
@@ -178,7 +180,27 @@ class Tross extends StatelessWidget {
           update: (_, apiClient, authProvider) => authProvider!,
         ),
         ChangeNotifierProvider(create: (context) => PreferencesProvider()),
-        ChangeNotifierProvider(create: (context) => DashboardProvider()),
+        // RefreshCoordinator - created first, no dependencies
+        // Enables coordinated refresh across dashboard and schedule providers
+        ChangeNotifierProvider(create: (context) => RefreshCoordinator()),
+        // DashboardProvider - receives RefreshCoordinator for coordinated refresh
+        ChangeNotifierProxyProvider<RefreshCoordinator, DashboardProvider>(
+          create: (context) => DashboardProvider(),
+          update: (_, coordinator, provider) =>
+              (provider ?? DashboardProvider())..setCoordinator(coordinator),
+        ),
+        // ScheduleProvider - receives GenericEntityService and RefreshCoordinator
+        ChangeNotifierProxyProvider2<
+          GenericEntityService,
+          RefreshCoordinator,
+          ScheduleProvider
+        >(
+          create: (context) =>
+              ScheduleProvider(context.read<GenericEntityService>()),
+          update: (_, entityService, coordinator, provider) =>
+              (provider ?? ScheduleProvider(entityService))
+                ..setCoordinator(coordinator),
+        ),
       ],
       child: const _AppWithRouter(),
     );
@@ -224,6 +246,10 @@ class _AppWithRouterState extends State<_AppWithRouter> {
       context,
       listen: false,
     );
+    final scheduleProvider = Provider.of<ScheduleProvider>(
+      context,
+      listen: false,
+    );
     final statsService = Provider.of<StatsService>(context, listen: false);
     final preferencesService = Provider.of<PreferencesService>(
       context,
@@ -237,6 +263,7 @@ class _AppWithRouterState extends State<_AppWithRouter> {
     // Connect providers to auth - will auto-load on login and clear on logout
     preferencesProvider.connectToAuth(authProvider);
     dashboardProvider.connectToAuth(authProvider);
+    scheduleProvider.connectToAuth(authProvider);
 
     // Initialize auth state (checks for stored session)
     // If session exists, this triggers auth state change → preferences load

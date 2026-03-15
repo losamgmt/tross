@@ -16,6 +16,8 @@
 /// ZERO per-entity code. Purely metadata-driven.
 library;
 
+import 'dart:async';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -24,6 +26,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../config/config.dart';
 import '../core/routing/app_routes.dart';
 import '../providers/auth_provider.dart';
+import '../providers/refresh_coordinator.dart';
 import '../models/permission.dart';
 import '../models/file_attachment.dart';
 import '../services/generic_entity_service.dart';
@@ -316,6 +319,12 @@ class _EntityDetailScreenState extends State<EntityDetailScreen> {
         return true;
       },
       onSuccess: () {
+        // Notify RefreshCoordinator so dashboard components update
+        unawaited(
+          context.read<RefreshCoordinator>().refreshForEntity(
+            widget.entityName,
+          ),
+        );
         // Navigate back to entity list
         if (mounted) {
           context.go(AppRoutes.entityList(widget.entityName));
@@ -645,6 +654,7 @@ class _EntityDetailScreenState extends State<EntityDetailScreen> {
                     onPressed: () async {
                       if (formKey.currentState?.validateAll() ?? false) {
                         final messenger = ScaffoldMessenger.of(context);
+                        final coordinator = context.read<RefreshCoordinator>();
                         try {
                           final entityService = context
                               .read<GenericEntityService>();
@@ -656,6 +666,10 @@ class _EntityDetailScreenState extends State<EntityDetailScreen> {
                           if (!mounted) return;
                           await _loadEntity();
                           _toggleEdit();
+                          // Notify RefreshCoordinator so dashboard components update
+                          unawaited(
+                            coordinator.refreshForEntity(widget.entityName),
+                          );
                           messenger.showSnackBar(
                             SnackBar(
                               content: Text(

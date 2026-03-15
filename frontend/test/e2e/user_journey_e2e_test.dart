@@ -37,6 +37,7 @@ void main() {
     group('Complete User Journey: Login → Dashboard → Logout', () {
       test('User journey validates all provider state transitions', () async {
         // PHASE 1: App Initialization
+        // AuthProvider starts with isLoading=true until initialize() completes
         expect(
           authProvider.isAuthenticated,
           isFalse,
@@ -44,12 +45,20 @@ void main() {
         );
         expect(
           authProvider.isLoading,
-          isFalse,
-          reason: 'Should not be loading initially',
+          isTrue,
+          reason: 'Should be loading until initialize() completes',
         );
         expect(authProvider.user, isNull, reason: 'No user initially');
 
-        // Initialize app state (simulates app startup)
+        // Initialize auth (simulates app startup - checks for stored session)
+        await authProvider.initialize();
+        expect(
+          authProvider.isLoading,
+          isFalse,
+          reason: 'Should not be loading after initialize()',
+        );
+
+        // Initialize app state
         await appProvider.initialize();
 
         expect(
