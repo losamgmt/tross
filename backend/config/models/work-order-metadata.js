@@ -341,7 +341,7 @@ module.exports = {
   enums: {
     status: {
       pending: { color: 'warning', label: 'Pending' },
-      scheduled: { color: 'info', label: 'Scheduled' },  // renamed from 'assigned' - status tracks work state, technician tracked via assigned_technician_id
+      scheduled: { color: 'info', label: 'Scheduled' }, // renamed from 'assigned' - status tracks work state, technician tracked via assigned_technician_id
       in_progress: { color: 'primary', label: 'In Progress' },
       completed: { color: 'success', label: 'Completed' },
       cancelled: { color: 'error', label: 'Cancelled' },
