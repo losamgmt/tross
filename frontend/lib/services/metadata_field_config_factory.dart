@@ -281,7 +281,14 @@ class MetadataFieldConfigFactory {
         label: label,
         readOnly: readOnly,
       ),
-      meta.FieldType.timestamp || meta.FieldType.date => _createDateFieldConfig(
+      meta.FieldType.timestamp => _createTimestampFieldConfig(
+        fieldName: fieldName,
+        fieldDef: fieldDef,
+        label: label,
+        validator: validator,
+        readOnly: readOnly,
+      ),
+      meta.FieldType.date => _createDateFieldConfig(
         fieldName: fieldName,
         fieldDef: fieldDef,
         label: label,
@@ -561,6 +568,11 @@ class MetadataFieldConfigFactory {
   }
 
   /// Create date field config
+  ///
+  /// **TIMEZONE HANDLING:**
+  /// - Dates are typically stored without time component
+  /// - On load: Parse and convert to local if UTC (defensive)
+  /// - On save: Convert to UTC before serializing (consistent storage)
   static FieldConfig<Map<String, dynamic>, dynamic> _createDateFieldConfig({
     required String fieldName,
     required meta.FieldDefinition fieldDef,
@@ -575,14 +587,20 @@ class MetadataFieldConfigFactory {
       getValue: (map) {
         final value = map[fieldName];
         if (value == null) return null;
-        if (value is DateTime) return value;
-        if (value is String) return DateTime.tryParse(value);
+        // If already DateTime, ensure it's local for display
+        if (value is DateTime) return value.isUtc ? value.toLocal() : value;
+        if (value is String) {
+          final parsed = DateTime.tryParse(value);
+          // Convert to local if UTC
+          return parsed?.isUtc == true ? parsed!.toLocal() : parsed;
+        }
         return null;
       },
       setValue: (map, value) {
         String? isoString;
         if (value is DateTime) {
-          isoString = value.toIso8601String();
+          // Convert to UTC for consistent storage
+          isoString = value.toUtc().toIso8601String();
         } else if (value is String) {
           isoString = value;
         }
@@ -592,6 +610,53 @@ class MetadataFieldConfigFactory {
       required: fieldDef.required,
       readOnly: readOnly,
       icon: Icons.calendar_today,
+    );
+  }
+
+  /// Create timestamp/datetime field config
+  ///
+  /// **TIMEZONE HANDLING:**
+  /// - On load (getValue): Parse UTC strings from backend, convert to local
+  /// - On save (setValue): Convert local DateTime to UTC before serializing
+  /// - This ensures consistent round-trips regardless of user timezone
+  static FieldConfig<Map<String, dynamic>, dynamic>
+  _createTimestampFieldConfig({
+    required String fieldName,
+    required meta.FieldDefinition fieldDef,
+    required String label,
+    required String? Function(dynamic)? validator,
+    required bool readOnly,
+  }) {
+    return FieldConfig<Map<String, dynamic>, dynamic>(
+      fieldName: fieldName,
+      fieldType: FieldType.datetime,
+      label: label,
+      getValue: (map) {
+        final value = map[fieldName];
+        if (value == null) return null;
+        // If already DateTime, ensure it's local for display
+        if (value is DateTime) return value.isUtc ? value.toLocal() : value;
+        if (value is String) {
+          final parsed = DateTime.tryParse(value);
+          // Backend sends UTC (Z suffix) - convert to local for display
+          return parsed?.isUtc == true ? parsed!.toLocal() : parsed;
+        }
+        return null;
+      },
+      setValue: (map, value) {
+        String? isoString;
+        if (value is DateTime) {
+          // Convert to UTC before serializing to ensure consistent storage
+          isoString = value.toUtc().toIso8601String();
+        } else if (value is String) {
+          isoString = value;
+        }
+        return {...map, fieldName: isoString};
+      },
+      validator: validator,
+      required: fieldDef.required,
+      readOnly: readOnly,
+      icon: Icons.event,
     );
   }
 

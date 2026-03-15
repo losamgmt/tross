@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:tross/widgets/atoms/inputs/text_input.dart'
-    show TextFieldType;
+import 'package:tross/widgets/atoms/inputs/text_input.dart' show TextFieldType;
 
 /// Field type enumeration
 enum FieldType {
@@ -15,6 +14,9 @@ enum FieldType {
 
   /// Date picker input
   date,
+
+  /// DateTime picker input (date + time combined)
+  datetime,
 
   /// Time picker input
   time,

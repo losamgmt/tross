@@ -265,7 +265,7 @@ function validateQuery(metadata) {
         }
 
         // Check for operator-based filters (field[operator]=value)
-        const operators = ['gt', 'gte', 'lt', 'lte', 'in', 'not'];
+        const operators = ['gt', 'gte', 'lt', 'lte', 'in', 'not', 'null', 'nin'];
         for (const op of operators) {
           const opKey = `${field}[${op}]`;
           if (req.query[opKey] !== undefined) {

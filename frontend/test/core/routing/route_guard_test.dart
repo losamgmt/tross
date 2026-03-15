@@ -323,4 +323,114 @@ void main() {
       );
     });
   });
+
+  group('RouteGuard - Entity Routes (Dynamic Routes Require Auth)', () {
+    test('denies access to entity list route without authentication', () {
+      // Entity routes like /work_orders, /customers are NOT in static lists
+      // but they MUST require authentication (security-first approach)
+      final entityRoutes = [
+        '/work_orders',
+        '/customers',
+        '/technicians',
+        '/invoices',
+        '/users',
+      ];
+
+      for (final route in entityRoutes) {
+        final result = RouteGuard.checkAccess(
+          route: route,
+          isAuthenticated: false,
+          user: null,
+        );
+
+        expect(
+          result.canAccess,
+          isFalse,
+          reason: '$route should require authentication',
+        );
+        expect(
+          result.redirectRoute,
+          equals(AppRoutes.login),
+          reason: '$route should redirect to login when not authenticated',
+        );
+      }
+    });
+
+    test('allows access to entity routes when authenticated', () {
+      final entityRoutes = ['/work_orders', '/customers', '/technicians'];
+
+      for (final route in entityRoutes) {
+        final result = RouteGuard.checkAccess(
+          route: route,
+          isAuthenticated: true,
+          user: {'role': 'technician', 'email': 'tech@test.com'},
+        );
+
+        expect(
+          result.canAccess,
+          isTrue,
+          reason: '$route should be accessible when authenticated',
+        );
+      }
+    });
+
+    test('denies access to entity detail route without authentication', () {
+      final detailRoutes = ['/work_orders/42', '/customers/123', '/users/5'];
+
+      for (final route in detailRoutes) {
+        final result = RouteGuard.checkAccess(
+          route: route,
+          isAuthenticated: false,
+          user: null,
+        );
+
+        expect(
+          result.canAccess,
+          isFalse,
+          reason: '$route should require authentication',
+        );
+      }
+    });
+
+    test('unknown routes require authentication (security-first)', () {
+      // Unknown routes should NOT bypass authentication
+      // 404 handling happens AFTER auth check
+      final unknownRoutes = [
+        '/totally-unknown',
+        '/random-path/123',
+        '/does-not-exist',
+      ];
+
+      for (final route in unknownRoutes) {
+        final result = RouteGuard.checkAccess(
+          route: route,
+          isAuthenticated: false,
+          user: null,
+        );
+
+        expect(
+          result.canAccess,
+          isFalse,
+          reason: 'Unknown route $route should require auth (security-first)',
+        );
+        expect(result.redirectRoute, equals(AppRoutes.login));
+      }
+    });
+
+    test('unknown routes accessible when authenticated (404 shown)', () {
+      // Once authenticated, unknown routes pass through to show 404
+      final result = RouteGuard.checkAccess(
+        route: '/this-does-not-exist',
+        isAuthenticated: true,
+        user: {'role': 'technician'},
+      );
+
+      expect(
+        result.canAccess,
+        isTrue,
+        reason:
+            'Unknown routes pass to router for 404 handling AFTER auth check',
+      );
+    });
+  });
 }

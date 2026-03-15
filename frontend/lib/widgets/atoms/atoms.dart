@@ -25,6 +25,7 @@ export 'indicators/status_chip.dart';
 export 'inputs/boolean_toggle.dart';
 export 'inputs/checkbox_input.dart';
 export 'inputs/date_input.dart';
+export 'inputs/datetime_input.dart';
 export 'inputs/filter_dropdown.dart';
 export 'inputs/lookup_input.dart';
 export 'inputs/number_input.dart';

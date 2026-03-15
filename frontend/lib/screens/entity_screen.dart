@@ -17,11 +17,14 @@
 /// ZERO per-entity code. Purely metadata-driven.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../config/config.dart';
 import '../core/routing/app_routes.dart';
+import '../providers/refresh_coordinator.dart';
 import '../services/generic_entity_service.dart';
 import '../services/metadata_table_column_factory.dart';
 import '../services/entity_metadata.dart';
@@ -53,8 +56,14 @@ class _EntityScreenState extends State<EntityScreen> {
   String _searchQuery = '';
 
   /// Refresh handler for CRUD callbacks
+  /// Refreshes both local table AND notifies RefreshCoordinator
+  /// so dashboard components stay in sync
   void _refreshTable() {
     _tableKey.currentState?.refresh();
+    // Notify RefreshCoordinator so dashboard components update too
+    unawaited(
+      context.read<RefreshCoordinator>().refreshForEntity(widget.entityName),
+    );
   }
 
   @override

@@ -1,12 +1,90 @@
 {
   "$schema": "./dashboard-config.schema.json",
-  "version": "1.0.0",
+  "version": "1.4.0",
 
   "_comments": {
     "design": "MINIMAL CONFIG - only specifies WHICH entities and HOW to group them",
     "emergent": "Display names, icons, and value colors from EntityMetadataRegistry",
     "minRole": "Uses UserRole.priority from permission.dart (customer=1, technician=2, dispatcher=3, manager=4, admin=5)",
-    "groupBy": "Field to group by for distribution chart (e.g., 'status')"
+    "groupBy": "Field to group by for distribution chart (e.g., 'status')",
+    "schedule": "Schedule visible to ALL roles - data filtering via backend RLS",
+    "scheduleFilters": "roles: explicit list; minRole: minimum role; DRY: Customer=property/unit/status, Technician=none, Dispatcher+=technician",
+    "attentionBanner": "Dispatcher+ attention banner - items needing immediate action",
+    "roleViews": "Config-driven view types per role: log (customer history), schedule (tech assigned), operations (dispatcher+ center)",
+    "timeframes": "Days to look back (30, 90, 365) or null for all time"
+  },
+
+  "roleViews": {
+    "customer": {
+      "type": "log",
+      "title": "Work Order History",
+      "timeframes": [30, 90, 365, null],
+      "defaultTimeframe": 30
+    },
+    "technician": {
+      "type": "schedule",
+      "title": "My Schedule"
+    },
+    "dispatcher": {
+      "type": "operations",
+      "title": "Operations Center"
+    },
+    "manager": {
+      "type": "operations",
+      "title": "Operations Center"
+    },
+    "admin": {
+      "type": "operations",
+      "title": "Operations Center"
+    }
+  },
+
+  "attentionBanner": {
+    "stalePendingHours": 48,
+    "minRole": "dispatcher"
+  },
+
+  "unscheduledQueue": {
+    "minRole": "dispatcher",
+    "maxItems": 20,
+    "pageSize": 20,
+    "paginated": true,
+    "title": "Unscheduled"
+  },
+
+  "schedule": {
+    "position": "top",
+    "defaultDateRangeUnit": "week",
+    "minRole": "customer",
+    "filters": [
+      {
+        "field": "property_id",
+        "label": "Property",
+        "roles": ["customer"],
+        "optionsEntity": "property"
+      },
+      {
+        "field": "status",
+        "label": "Status",
+        "roles": ["customer"]
+      },
+      {
+        "field": "assigned_technician_id",
+        "label": "Technician",
+        "minRole": "dispatcher",
+        "optionsEntity": "technician"
+      }
+    ],
+    "displayColumns": [
+      "work_order_number",
+      "name",
+      "customer_id",
+      "status",
+      "priority",
+      "assigned_technician_id",
+      "scheduled_start",
+      "scheduled_end"
+    ]
   },
 
   "entities": [

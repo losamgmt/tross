@@ -376,7 +376,12 @@ class HttpApiClient implements ApiClient {
     if (filters != null) {
       filters.forEach((key, value) {
         if (value != null) {
-          queryParams[key] = value.toString();
+          // Serialize lists as comma-separated values for IN/NOT IN operators
+          if (value is List) {
+            queryParams[key] = value.join(',');
+          } else {
+            queryParams[key] = value.toString();
+          }
         }
       });
     }

@@ -85,7 +85,9 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // State properties
-  bool _isLoading = false;
+  // Default to true - auth is loading until initialize() completes
+  // This prevents routes from rendering before auth state is known
+  bool _isLoading = true;
   bool _isRedirecting = false; // Track Auth0 redirect in progress
   String? _error;
   Map<String, dynamic>? _user;

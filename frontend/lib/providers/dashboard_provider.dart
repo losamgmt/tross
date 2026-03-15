@@ -8,7 +8,8 @@
 /// - Filters entities by user role (using UserRole.priority)
 /// - RLS on backend automatically filters data per user's access level
 /// - Handles loading/error states gracefully
-/// - Listens to AuthProvider to auto-load on login
+/// - Uses AuthConnectionManager for auth lifecycle (DRY)
+/// - Implements EntityAwareRefreshable for coordinated refresh
 ///
 /// ARCHITECTURE:
 /// - dashboard-config.json specifies which entities to show
@@ -16,11 +17,16 @@
 /// - StatsService.countGrouped() fetches distribution data
 /// - This provider stores GroupedCount lists per entity
 /// - DashboardContent renders DistributionPieChart for each entity
+/// - RefreshCoordinator enables coordinated refresh with other providers
 ///
 /// USAGE:
 /// ```dart
 /// // In main.dart MultiProvider:
-/// ChangeNotifierProvider(create: (_) => DashboardProvider())
+/// ChangeNotifierProxyProvider<RefreshCoordinator, DashboardProvider>(
+///   create: (_) => DashboardProvider(),
+///   update: (_, coord, provider) =>
+///     (provider ?? DashboardProvider())..setCoordinator(coord),
+/// )
 ///
 /// // Connect to auth provider (in _AppWithRouter):
 /// dashboardProvider.connectToAuth(authProvider);
@@ -46,14 +52,23 @@ import '../services/dashboard_config_loader.dart';
 import '../services/stats_service.dart';
 import '../services/error_service.dart';
 import 'auth_provider.dart';
+import 'interfaces/refreshable.dart';
+import 'managers/auth_connection_manager.dart';
+import 'refresh_coordinator.dart';
 
 // =============================================================================
 // PROVIDER
 // =============================================================================
 
 /// Provider for config-driven chart dashboard
-class DashboardProvider extends ChangeNotifier {
+///
+/// Implements EntityAwareRefreshable for coordinated refresh.
+/// Uses AuthConnectionManager for DRY auth lifecycle handling.
+class DashboardProvider extends ChangeNotifier
+    implements EntityAwareRefreshable {
   StatsService? _statsService;
+  RefreshCoordinator? _coordinator;
+  AuthConnectionManager? _authManager;
 
   /// Map of entity name -> grouped count data for charts
   final Map<String, List<GroupedCount>> _chartData = {};
@@ -65,13 +80,28 @@ class DashboardProvider extends ChangeNotifier {
   String? _error;
   DateTime? _lastUpdated;
 
-  // Auth provider reference for listening to auth changes
-  AuthProvider? _authProvider;
-  bool _wasAuthenticated = false;
-
   /// Set the StatsService dependency
   void setStatsService(StatsService statsService) {
     _statsService = statsService;
+  }
+
+  /// Set the RefreshCoordinator for coordinated refresh
+  ///
+  /// Called by ChangeNotifierProxyProvider update function.
+  void setCoordinator(RefreshCoordinator? coordinator) {
+    _coordinator = coordinator;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // EntityAwareRefreshable IMPLEMENTATION
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Entities this provider cares about (dynamic based on config)
+  ///
+  /// When any of these entities change, this provider should refresh.
+  @override
+  Set<String> get interestedEntities {
+    return getVisibleEntities().map((e) => e.entity).toSet();
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -91,8 +121,8 @@ class DashboardProvider extends ChangeNotifier {
   DateTime? get lastUpdated => _lastUpdated;
 
   /// Get the current user's role
-  /// Defaults to 'customer' if no auth provider connected
-  String get _userRole => _authProvider?.userRole ?? 'customer';
+  /// Defaults to 'customer' if no auth manager connected
+  String get _userRole => _authManager?.userRole ?? 'customer';
 
   /// Check if a specific entity is currently loading
   bool isEntityLoading(String entityName) =>
@@ -127,36 +157,23 @@ class DashboardProvider extends ChangeNotifier {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // AUTH INTEGRATION
+  // AUTH INTEGRATION (via AuthConnectionManager)
   // ═══════════════════════════════════════════════════════════════════════════
 
-  /// Connect to AuthProvider to auto-load stats on login
+  /// Connect to AuthProvider for auto-load on login.
+  ///
+  /// Uses AuthConnectionManager for DRY lifecycle handling.
+  /// Also registers with RefreshCoordinator for coordinated refresh.
   ///
   /// Call this once after providers are created (in _AppWithRouter).
-  void connectToAuth(AuthProvider authProvider) {
-    _authProvider = authProvider;
-    _wasAuthenticated = authProvider.isAuthenticated;
-
-    authProvider.addListener(_onAuthChanged);
-
-    // If already authenticated, load stats
-    if (authProvider.isAuthenticated) {
-      loadStats();
-    }
-  }
-
-  void _onAuthChanged() {
-    final isNowAuthenticated = _authProvider?.isAuthenticated ?? false;
-
-    if (!_wasAuthenticated && isNowAuthenticated) {
-      // Just logged in - load stats
-      loadStats();
-    } else if (_wasAuthenticated && !isNowAuthenticated) {
-      // Just logged out - clear stats
-      _clearStats();
-    }
-
-    _wasAuthenticated = isNowAuthenticated;
+  Future<void> connectToAuth(AuthProvider authProvider) async {
+    _authManager = AuthConnectionManager(
+      onLogin: loadStats,
+      onLogout: _clearStats,
+      coordinator: _coordinator,
+      refreshable: this,
+    );
+    await _authManager!.connect(authProvider);
   }
 
   void _clearStats() {
@@ -237,7 +254,10 @@ class DashboardProvider extends ChangeNotifier {
     }
   }
 
-  /// Refresh stats (alias for loadStats with force refresh semantics)
+  /// Refresh stats (implements Refreshable.refresh)
+  ///
+  /// Also loaded initially via auth lifecycle (loadStats).
+  @override
   Future<void> refresh() async {
     await loadStats();
   }
@@ -248,7 +268,7 @@ class DashboardProvider extends ChangeNotifier {
 
   @override
   void dispose() {
-    _authProvider?.removeListener(_onAuthChanged);
+    _authManager?.dispose();
     super.dispose();
   }
 }

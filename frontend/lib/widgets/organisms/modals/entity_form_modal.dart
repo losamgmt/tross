@@ -115,6 +115,7 @@ class EntityFormModal extends StatefulWidget {
 class _EntityFormModalState extends State<EntityFormModal> {
   final _formKey = GlobalKey<GenericFormState<Map<String, dynamic>>>();
   late Map<String, dynamic> _currentValue;
+  late Map<String, dynamic> _previousValue;
   late EditableFormNotifier _dirtyNotifier;
   bool _isSaving = false;
 
@@ -122,6 +123,7 @@ class _EntityFormModalState extends State<EntityFormModal> {
   void initState() {
     super.initState();
     _currentValue = Map<String, dynamic>.from(widget.initialValue);
+    _previousValue = Map<String, dynamic>.from(widget.initialValue);
     // Initialize dirty state notifier for tracking unsaved changes
     _dirtyNotifier = EditableFormNotifier(initialValues: widget.initialValue);
   }
@@ -148,9 +150,63 @@ class _EntityFormModalState extends State<EntityFormModal> {
   }
 
   void _handleFormChange(Map<String, dynamic> value) {
-    setState(() => _currentValue = value);
+    // Apply inter-field dependencies (e.g., scheduled_start/scheduled_end)
+    final updatedValue = _applyFieldDependencies(value);
+
+    setState(() {
+      _previousValue = Map<String, dynamic>.from(_currentValue);
+      _currentValue = updatedValue;
+    });
     // Sync with dirty notifier for tracking unsaved changes
-    _dirtyNotifier.setCurrent(value);
+    _dirtyNotifier.setCurrent(updatedValue);
+  }
+
+  /// Apply inter-field dependencies based on entity type
+  ///
+  /// For work_order:
+  /// - If scheduled_start is set and scheduled_end is not, set end to start + 1hr
+  /// - If scheduled_end is set and scheduled_start is not, set start to end - 1hr
+  Map<String, dynamic> _applyFieldDependencies(Map<String, dynamic> value) {
+    if (widget.entityName != 'work_order') return value;
+
+    final result = Map<String, dynamic>.from(value);
+
+    // Parse current values
+    final startValue = result['scheduled_start'];
+    final endValue = result['scheduled_end'];
+
+    // Parse previous values
+    final prevStartValue = _previousValue['scheduled_start'];
+    final prevEndValue = _previousValue['scheduled_end'];
+
+    // Detect which field changed
+    final startChanged = startValue != prevStartValue;
+    final endChanged = endValue != prevEndValue;
+
+    final start = _parseDateTime(startValue);
+    final end = _parseDateTime(endValue);
+
+    // If start was just set/changed and end is null, derive end from start + 1hr
+    if (startChanged && start != null && end == null) {
+      result['scheduled_end'] = start
+          .add(const Duration(hours: 1))
+          .toIso8601String();
+    }
+    // If end was just set/changed and start is null, derive start from end - 1hr
+    else if (endChanged && end != null && start == null) {
+      result['scheduled_start'] = end
+          .subtract(const Duration(hours: 1))
+          .toIso8601String();
+    }
+
+    return result;
+  }
+
+  DateTime? _parseDateTime(dynamic value) {
+    if (value == null) return null;
+    if (value is DateTime) return value;
+    if (value is String && value.isNotEmpty) return DateTime.tryParse(value);
+    return null;
   }
 
   Future<void> _handleSubmit() async {

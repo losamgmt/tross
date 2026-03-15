@@ -1,7 +1,7 @@
 -- ============================================================================
 -- GENERATED SCHEMA - SINGLE SOURCE OF TRUTH
 -- ============================================================================
--- Generated: 2026-03-12T01:31:02.091Z
+-- Generated: 2026-03-15T03:25:26.425Z
 -- Command: npm run generate:schema
 --
 -- This file is for REVIEW. Merge changes into backend/schema.sql manually.
@@ -474,7 +474,7 @@ CREATE TABLE IF NOT EXISTS work_orders (
     is_active BOOLEAN DEFAULT true NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    status VARCHAR(27) DEFAULT 'pending' CHECK (status IN ('pending', 'assigned', 'in_progress', 'completed', 'cancelled')),
+    status VARCHAR(27) DEFAULT 'pending' CHECK (status IN ('pending', 'scheduled', 'in_progress', 'completed', 'cancelled')),
     name VARCHAR(255),
     summary VARCHAR(255),
     priority VARCHAR(25) DEFAULT 'normal' CHECK (priority IN ('low', 'normal', 'high', 'urgent')),

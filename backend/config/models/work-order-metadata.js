@@ -341,7 +341,7 @@ module.exports = {
   enums: {
     status: {
       pending: { color: 'warning', label: 'Pending' },
-      assigned: { color: 'info', label: 'Assigned' },
+      scheduled: { color: 'info', label: 'Scheduled' },  // renamed from 'assigned' - status tracks work state, technician tracked via assigned_technician_id
       in_progress: { color: 'primary', label: 'In Progress' },
       completed: { color: 'success', label: 'Completed' },
       cancelled: { color: 'error', label: 'Cancelled' },
@@ -528,6 +528,8 @@ module.exports = {
       displayFields: ['name', 'address_city'],
       displayTemplate: '{name} - {address_city}',
       description: 'Property for this work order (auto-populated from unit when set)',
+      computed: true,
+      derivedFrom: 'unit_id',
     },
     unit_id: {
       type: 'foreignKey',

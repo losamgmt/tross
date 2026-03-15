@@ -1,9 +1,9 @@
 /// Row Click Handlers
 ///
 /// Utilities for handling row taps in data tables.
-/// Supports navigate, modal, and no-op behaviors.
+/// Supports navigate, modal (edit), and no-op behaviors.
 ///
-/// PURE COMPOSITION: Uses existing GenericModal + EntityDetailCard.
+/// PURE COMPOSITION: Uses existing EntityFormModal for editing.
 /// ZERO SPECIFICITY: No custom widgets, only composing generics.
 ///
 /// Usage:
@@ -13,6 +13,7 @@
 ///     context: context,
 ///     entityName: 'customer_unit',
 ///     behavior: RowClickBehavior.modal,
+///     onSuccess: () => refreshData(),
 ///   ),
 /// )
 /// ```
@@ -20,9 +21,11 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import '../models/form_mode.dart';
 import '../models/relationship.dart';
-import '../widgets/organisms/modals/generic_modal.dart';
-import '../widgets/organisms/cards/entity_detail_card.dart';
+import '../services/generic_entity_service.dart';
+import '../widgets/organisms/modals/entity_form_modal.dart';
 
 /// Callback type for row tap handlers
 typedef RowTapCallback<T> = void Function(T item);
@@ -49,33 +52,36 @@ RowTapCallback<Map<String, dynamic>>? buildRowTapHandler({
       }
     },
     RowClickBehavior.modal => (item) async {
-      // Pure composition: GenericModal + EntityDetailCard
-      await GenericModal.show(
+      // Open edit form modal - pure composition with EntityFormModal
+      final result = await EntityFormModal.show(
         context: context,
-        title: _getEntityTitle(item, entityName),
-        content: EntityDetailCard(
-          entityName: entityName,
-          entity: item,
-          elevation: 0,
-          padding: EdgeInsets.zero,
-        ),
+        entityName: entityName,
+        mode: FormMode.edit,
+        initialValue: item,
       );
-      // Refresh parent after modal closes (user may have edited data)
-      onSuccess?.call();
+
+      // If user saved changes, persist and refresh
+      if (result != null && context.mounted) {
+        try {
+          final service = context.read<GenericEntityService>();
+          final id = item[idField];
+          if (id != null) {
+            await service.update(entityName, id, result);
+          }
+          onSuccess?.call();
+        } catch (e) {
+          // Show error snackbar
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Failed to save: $e'),
+                backgroundColor: Theme.of(context).colorScheme.error,
+              ),
+            );
+          }
+        }
+      }
     },
     RowClickBehavior.none => null,
   };
-}
-
-/// Get a display title from an entity map.
-/// Tries common fields, falls back to entity name + id.
-String _getEntityTitle(Map<String, dynamic> item, String entityName) {
-  final name =
-      item['name'] ?? item['title'] ?? item['display_name'] ?? item['email'];
-  if (name != null) return name.toString();
-
-  final id = item['id'];
-  if (id != null) return '$entityName #$id';
-
-  return entityName;
 }

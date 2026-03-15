@@ -424,13 +424,72 @@ class _EntityFormDialog extends StatefulWidget {
 
 class _EntityFormDialogState extends State<_EntityFormDialog> {
   late Map<String, dynamic> _data;
+  late Map<String, dynamic> _previousData;
   final _formKey = GlobalKey<GenericFormState<Map<String, dynamic>>>();
   bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
-    _data = widget.initialData;
+    _data = Map<String, dynamic>.from(widget.initialData);
+    _previousData = Map<String, dynamic>.from(widget.initialData);
+  }
+
+  /// Handle form change with inter-field dependencies
+  void _handleFormChange(Map<String, dynamic> data) {
+    final updatedData = _applyFieldDependencies(data);
+    setState(() {
+      _previousData = Map<String, dynamic>.from(_data);
+      _data = updatedData;
+    });
+  }
+
+  /// Apply inter-field dependencies based on entity type
+  ///
+  /// For work_order:
+  /// - If scheduled_start is set and scheduled_end is not, set end to start + 1hr
+  /// - If scheduled_end is set and scheduled_start is not, set start to end - 1hr
+  Map<String, dynamic> _applyFieldDependencies(Map<String, dynamic> value) {
+    if (widget.entityName != 'work_order') return value;
+
+    final result = Map<String, dynamic>.from(value);
+
+    // Parse current values
+    final startValue = result['scheduled_start'];
+    final endValue = result['scheduled_end'];
+
+    // Parse previous values
+    final prevStartValue = _previousData['scheduled_start'];
+    final prevEndValue = _previousData['scheduled_end'];
+
+    // Detect which field changed
+    final startChanged = startValue != prevStartValue;
+    final endChanged = endValue != prevEndValue;
+
+    final start = _parseDateTime(startValue);
+    final end = _parseDateTime(endValue);
+
+    // If start was just set/changed and end is null, derive end from start + 1hr
+    if (startChanged && start != null && end == null) {
+      result['scheduled_end'] = start
+          .add(const Duration(hours: 1))
+          .toIso8601String();
+    }
+    // If end was just set/changed and start is null, derive start from end - 1hr
+    else if (endChanged && end != null && start == null) {
+      result['scheduled_start'] = end
+          .subtract(const Duration(hours: 1))
+          .toIso8601String();
+    }
+
+    return result;
+  }
+
+  DateTime? _parseDateTime(dynamic value) {
+    if (value == null) return null;
+    if (value is DateTime) return value;
+    if (value is String && value.isNotEmpty) return DateTime.tryParse(value);
+    return null;
   }
 
   Future<void> _handleSave() async {
@@ -545,7 +604,7 @@ class _EntityFormDialogState extends State<_EntityFormDialog> {
         fieldGroups: useGroupedLayout
             ? widget.metadata.sortedFieldGroups
             : null,
-        onChange: (data) => setState(() => _data = data),
+        onChange: _handleFormChange,
         enabled: !_isSaving,
       ),
       actions: [

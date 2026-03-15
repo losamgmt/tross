@@ -6,6 +6,7 @@
 /// - Supports async handlers with loading state
 /// - Supports disabled state
 /// - Supports destructive styling
+/// - Supports position-based placement (leading/actions/trailing)
 /// - Used by TableToolbar, ActionMenu
 ///
 /// The key principle: Actions are DATA, not widgets.
@@ -25,6 +26,21 @@ enum ActionStyle {
 
   /// Destructive action (delete, remove)
   danger,
+}
+
+/// Position in toolbar where action appears
+///
+/// WHY "leading/trailing" not "left/right": RTL internationalization.
+/// Leading means "start of row" regardless of text direction.
+enum ActionPosition {
+  /// Before search (date picker, view controls) - never overflow
+  leading,
+
+  /// After search, before trailing (refresh, create, delete) - CAN overflow
+  actions,
+
+  /// After actions (settings, customize) - never overflow
+  trailing,
 }
 
 /// Action item configuration
@@ -63,6 +79,18 @@ class ActionItem {
   /// Whether to show label in compact mode (icon-only otherwise)
   final bool showLabelInCompact;
 
+  /// Position in toolbar (leading, actions, trailing)
+  /// Actions position can overflow to menu on small screens.
+  final ActionPosition position;
+
+  /// Whether this action can move to overflow menu on small screens.
+  /// Default: true for actions position, false for leading/trailing.
+  final bool canOverflow;
+
+  /// Builder for complex controls (date picker, dropdown).
+  /// If non-null, renders this widget instead of icon button.
+  final Widget Function(BuildContext)? widgetBuilder;
+
   const ActionItem({
     required this.id,
     required this.label,
@@ -74,6 +102,9 @@ class ActionItem {
     this.isDisabled = false,
     this.style = ActionStyle.primary,
     this.showLabelInCompact = false,
+    this.position = ActionPosition.actions,
+    this.canOverflow = true,
+    this.widgetBuilder,
   });
 
   /// Get effective tooltip (falls back to label)
@@ -81,6 +112,9 @@ class ActionItem {
 
   /// Whether this action has an async handler
   bool get isAsync => onTapAsync != null;
+
+  /// Whether this action renders a custom widget
+  bool get hasWidgetBuilder => widgetBuilder != null;
 
   /// Whether this action is interactive (not loading and not disabled)
   bool get isInteractive => !isLoading && !isDisabled;
@@ -97,6 +131,9 @@ class ActionItem {
     bool? isDisabled,
     ActionStyle? style,
     bool? showLabelInCompact,
+    ActionPosition? position,
+    bool? canOverflow,
+    Widget Function(BuildContext)? widgetBuilder,
   }) {
     return ActionItem(
       id: id ?? this.id,
@@ -109,6 +146,9 @@ class ActionItem {
       isDisabled: isDisabled ?? this.isDisabled,
       style: style ?? this.style,
       showLabelInCompact: showLabelInCompact ?? this.showLabelInCompact,
+      position: position ?? this.position,
+      canOverflow: canOverflow ?? this.canOverflow,
+      widgetBuilder: widgetBuilder ?? this.widgetBuilder,
     );
   }
 

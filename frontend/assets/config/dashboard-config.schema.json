@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Dashboard Configuration",
-  "description": "Minimal dashboard config - specifies which entities to show and how to group them for distribution charts",
+  "description": "Dashboard config - entities, schedule, attention banner, and unscheduled queue",
   "type": "object",
   "required": ["entities"],
   "properties": {
@@ -20,6 +20,156 @@
       "additionalProperties": {
         "type": "string"
       }
+    },
+    "attentionBanner": {
+      "type": "object",
+      "description": "Dispatcher+ attention banner for overdue/stale work orders",
+      "properties": {
+        "stalePendingHours": {
+          "type": "integer",
+          "description": "Hours after which a pending work order is considered stale",
+          "minimum": 1,
+          "default": 48
+        },
+        "minRole": {
+          "type": "string",
+          "description": "Minimum role to see attention banner",
+          "enum": ["customer", "technician", "dispatcher", "manager", "admin"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "roleViews": {
+      "type": "object",
+      "description": "Role-specific view configurations",
+      "additionalProperties": {
+        "type": "object",
+        "description": "View configuration for a role",
+        "required": ["type", "title"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "View type: log (history), schedule (assigned), operations (full center)",
+            "enum": ["log", "schedule", "operations"]
+          },
+          "title": {
+            "type": "string",
+            "description": "Display title for this view"
+          },
+          "timeframes": {
+            "type": "array",
+            "description": "Available timeframe options in days (null = all time)",
+            "items": {
+              "type": ["integer", "null"],
+              "minimum": 1
+            }
+          },
+          "defaultTimeframe": {
+            "type": ["integer", "null"],
+            "description": "Default timeframe in days (null = all time)",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "unscheduledQueue": {
+      "type": "object",
+      "description": "Queue of work orders without scheduled_start",
+      "properties": {
+        "minRole": {
+          "type": "string",
+          "description": "Minimum role to see unscheduled queue",
+          "enum": ["customer", "technician", "dispatcher", "manager", "admin"]
+        },
+        "maxItems": {
+          "type": "integer",
+          "description": "Maximum items to display initially or per page",
+          "minimum": 1,
+          "default": 20
+        },
+        "pageSize": {
+          "type": "integer",
+          "description": "Items per page when paginated",
+          "minimum": 1,
+          "default": 20
+        },
+        "paginated": {
+          "type": "boolean",
+          "description": "Enable pagination (load more)",
+          "default": false
+        },
+        "title": {
+          "type": "string",
+          "description": "Section title"
+        }
+      },
+      "additionalProperties": false
+    },
+    "schedule": {
+      "type": "object",
+      "description": "Schedule/calendar view configuration",
+      "properties": {
+        "position": {
+          "type": "string",
+          "description": "Position in dashboard layout",
+          "enum": ["top", "bottom"]
+        },
+        "defaultDateRangeUnit": {
+          "type": "string",
+          "description": "Default date range unit for schedule view",
+          "enum": ["day", "week", "month"]
+        },
+        "minRole": {
+          "type": "string",
+          "description": "Minimum role to see schedule",
+          "enum": ["customer", "technician", "dispatcher", "manager", "admin"]
+        },
+        "filters": {
+          "type": "array",
+          "description": "Role-based filters for schedule view",
+          "items": {
+            "type": "object",
+            "required": ["field", "label"],
+            "properties": {
+              "field": {
+                "type": "string",
+                "description": "Filter field name"
+              },
+              "label": {
+                "type": "string",
+                "description": "Display label for filter"
+              },
+              "minRole": {
+                "type": "string",
+                "description": "Minimum role to see this filter",
+                "enum": ["customer", "technician", "dispatcher", "manager", "admin"]
+              },
+              "roles": {
+                "type": "array",
+                "description": "Explicit list of roles that see this filter",
+                "items": {
+                  "type": "string",
+                  "enum": ["customer", "technician", "dispatcher", "manager", "admin"]
+                }
+              },
+              "optionsEntity": {
+                "type": "string",
+                "description": "Entity to load options from"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "displayColumns": {
+          "type": "array",
+          "description": "Columns to display in schedule table",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": true
     },
     "entities": {
       "type": "array",

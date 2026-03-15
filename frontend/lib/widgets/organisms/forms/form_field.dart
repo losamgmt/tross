@@ -184,6 +184,22 @@ class _GenericFormFieldState<T, V> extends State<GenericFormField<T, V>> {
           prefixIcon: widget.config.icon,
         );
 
+      case FieldType.datetime:
+        final isDateTimeEditable = widget.enabled && !widget.config.readOnly;
+        return DateTimeInput(
+          value: fieldValue as DateTime?,
+          onChanged: _handleChange,
+          minDate: widget.config.minDate,
+          maxDate: widget.config.maxDate,
+          placeholder: widget.config.placeholder,
+          helperText: widget.config.readOnly
+              ? '${widget.config.helperText ?? ''} (Read-only)'.trim()
+              : widget.config.helperText,
+          errorText: _errorText,
+          enabled: isDateTimeEditable,
+          prefixIcon: widget.config.icon,
+        );
+
       case FieldType.time:
         final isTimeEditable = widget.enabled && !widget.config.readOnly;
         return TimeInput(
