@@ -26,9 +26,10 @@ jest.mock("../../middleware/auth", () => ({
 }));
 
 // Mock RLS middleware - unified signature (no args)
+// ADR-011: rlsContext now uses 'role' (not legacy 'policy')
 jest.mock("../../middleware/row-level-security", () => ({
   enforceRLS: (req, res, next) => {
-    req.rlsContext = { policy: "all_records", userId: 1 };
+    req.rlsContext = { role: "admin", userId: 1 };
     next();
   },
 }));
