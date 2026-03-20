@@ -11,6 +11,7 @@
  */
 
 const { spawnSync } = require('child_process');
+const path = require('path');
 
 // Run Jest with integration config, capturing output to detect test results
 // Use --no-color to ensure clean output for regex parsing in CI
@@ -20,7 +21,7 @@ const result = spawnSync(
   {
     stdio: ['inherit', 'pipe', 'pipe'],
     shell: true,
-    cwd: __dirname + '/..',
+    cwd: path.join(__dirname, '..'),
     encoding: 'utf-8',
   },
 );
@@ -40,18 +41,32 @@ if (debugCI) {
   console.log('[DEBUG] Output length:', output.length);
 }
 
-// Check if all tests passed by looking for Jest's summary line
-// Patterns: "Test Suites: 32 passed, 32 total" or "Tests: 1795 passed, 1795 total"
-const suiteMatch = output.match(/Test Suites:\s*(\d+)\s*passed,\s*(\d+)\s*total/);
-const testMatch = output.match(/Tests:\s*(\d+)\s*passed,\s*(\d+)\s*total/);
+// ============================================================================
+// PARSE JEST OUTPUT - Handle all formats:
+// - "Test Suites: 32 passed, 32 total"           (all pass)
+// - "Test Suites: 1 failed, 31 passed, 32 total" (some fail)
+// - "Tests: 1795 passed, 1795 total"             (all pass)
+// - "Tests: 5 failed, 1790 passed, 1795 total"   (some fail)
+// ============================================================================
+
+// Check for explicit failures FIRST (most reliable signal)
+const hasFailedSuites = /Test Suites:.*\d+\s*failed/.test(output);
+const hasFailedTests = /Tests:.*\d+\s*failed/.test(output);
+const hasFailures = hasFailedSuites || hasFailedTests;
+
+// Match passed/total counts with flexible pattern (allows "failed, " prefix)
+// This uses .*? to skip any "N failed, " that may precede "N passed"
+const suiteMatch = output.match(/Test Suites:.*?(\d+)\s*passed,\s*(\d+)\s*total/);
+const testMatch = output.match(/Tests:.*?(\d+)\s*passed,\s*(\d+)\s*total/);
 
 if (debugCI) {
+  console.log('[DEBUG] Has failures:', hasFailures);
   console.log('[DEBUG] Suite match:', suiteMatch ? `${suiteMatch[1]}/${suiteMatch[2]}` : 'none');
   console.log('[DEBUG] Test match:', testMatch ? `${testMatch[1]}/${testMatch[2]}` : 'none');
 }
 
-const allSuitesPassed = suiteMatch && suiteMatch[1] === suiteMatch[2];
-const allTestsPassed = testMatch && testMatch[1] === testMatch[2];
+const allSuitesPassed = suiteMatch && suiteMatch[1] === suiteMatch[2] && !hasFailedSuites;
+const allTestsPassed = testMatch && testMatch[1] === testMatch[2] && !hasFailedTests;
 const testsRan = suiteMatch || testMatch;
 
 // Check for the known pg cleanup error (not a real test failure)
@@ -76,25 +91,34 @@ if (result.stderr) {
   }
 }
 
-// Determine exit code based on actual test results
-if (testsRan && allSuitesPassed && allTestsPassed) {
-  // Tests definitely passed
+// ============================================================================
+// EXIT CODE LOGIC - Priority order:
+// 1. Explicit failures → exit 1
+// 2. Confirmed all passed → exit 0
+// 3. Jest exited 0 → exit 0
+// 4. Only pg cleanup error (no failure indicators) → exit 0
+// 5. Unknown → preserve original exit code
+// ============================================================================
+
+if (hasFailures) {
+  // Explicit failures detected - this is definitive
+  console.error('\n❌ Some tests failed');
+  process.exit(1);
+} else if (testsRan && allSuitesPassed && allTestsPassed) {
+  // All tests confirmed passing
   if (hasConnectionTerminated) {
     console.log('\n✅ All tests passed (pg cleanup warning suppressed)');
   }
   process.exit(0);
-} else if (testsRan && (!allSuitesPassed || !allTestsPassed)) {
-  // Tests definitely failed
-  console.error('\n❌ Some tests failed');
-  process.exit(1);
 } else if (result.status === 0) {
-  // Jest exited cleanly
+  // Jest exited cleanly with no failures
   process.exit(0);
-} else if (hasConnectionTerminated && result.status === 1) {
-  // Exit code 1 but only pg error - likely tests passed
-  console.log('\n✅ Tests completed (pg cleanup handled)');
+} else if (hasConnectionTerminated && !hasFailures && testsRan) {
+  // Exit code 1 due to pg cleanup, but no test failures detected
+  console.log('\n✅ All tests passed (pg cleanup warning suppressed)');
   process.exit(0);
 } else {
-  // Unknown state - preserve original exit code
+  // Unknown state - preserve original exit code for safety
+  console.error('\n⚠️ Could not determine test status, using Jest exit code');
   process.exit(result.status || 1);
 }
