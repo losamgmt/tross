@@ -4,6 +4,7 @@
 /// Includes download URL (always present) and expiry timestamp.
 library;
 
+import '../utils/datetime_utils.dart';
 import '../utils/helpers/mime_helper.dart';
 
 /// A file attachment metadata record with download URL
@@ -51,11 +52,11 @@ class FileAttachment {
       category: json['category'] as String? ?? 'attachment',
       description: json['description'] as String?,
       uploadedBy: json['uploaded_by'] as int?,
-      createdAt: DateTime.parse(json['created_at'] as String),
+      createdAt: DateTimeUtils.fromApiString(json['created_at'] as String)!,
       downloadUrl: json['download_url'] as String,
-      downloadUrlExpiresAt: DateTime.parse(
+      downloadUrlExpiresAt: DateTimeUtils.fromApiString(
         json['download_url_expires_at'] as String,
-      ),
+      )!,
     );
   }
 
@@ -79,7 +80,7 @@ class FileAttachment {
 
   /// Check if the download URL is expired or will expire soon (within 5 minutes)
   bool get isDownloadUrlExpired {
-    final now = DateTime.now();
+    final now = DateTimeUtils.nowUtc();
     final buffer = const Duration(minutes: 5);
     return downloadUrlExpiresAt.isBefore(now.add(buffer));
   }

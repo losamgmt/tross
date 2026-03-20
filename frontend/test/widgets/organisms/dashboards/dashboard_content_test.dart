@@ -15,8 +15,10 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:tross/models/attention_rule.dart';
 import 'package:tross/models/dashboard_config.dart';
 import 'package:tross/models/date_range_unit.dart';
+import 'package:tross/models/mutation_result.dart';
 import 'package:tross/providers/auth_provider.dart';
 import 'package:tross/providers/dashboard_provider.dart';
 import 'package:tross/providers/refresh_coordinator.dart';
@@ -655,12 +657,20 @@ class _TestScheduleProvider extends ChangeNotifier implements ScheduleProvider {
   @override
   List<Map<String, dynamic>> get attentionWorkOrders {
     return _workOrders.where((wo) {
-      return isOverdue(wo) || isStalePending(wo) || isUnassigned(wo);
+      return _isOverdue(wo) || _isStalePending(wo) || _isUnassigned(wo);
     }).toList();
   }
 
   @override
-  bool isOverdue(Map<String, dynamic> workOrder) {
+  List<AttentionItem> get attentionItems {
+    return _workOrders
+        .map((wo) => AttentionRules.evaluate(wo, stalePendingHours: 48))
+        .whereType<AttentionItem>()
+        .toList();
+  }
+
+  // Internal helpers (no longer overrides - AttentionRules handles this now)
+  bool _isOverdue(Map<String, dynamic> workOrder) {
     final status = workOrder['status'] as String?;
     if (status == 'completed' || status == 'cancelled') return false;
     final scheduledEnd = workOrder['scheduled_end'];
@@ -671,8 +681,7 @@ class _TestScheduleProvider extends ChangeNotifier implements ScheduleProvider {
     return endTime.isBefore(DateTime.now());
   }
 
-  @override
-  bool isStalePending(Map<String, dynamic> workOrder, [DateTime? threshold]) {
+  bool _isStalePending(Map<String, dynamic> workOrder, [DateTime? threshold]) {
     final status = workOrder['status'] as String?;
     if (status != 'pending') return false;
     final createdAt = workOrder['created_at'];
@@ -685,8 +694,7 @@ class _TestScheduleProvider extends ChangeNotifier implements ScheduleProvider {
     return createTime.isBefore(staleThreshold);
   }
 
-  @override
-  bool isUnassigned(Map<String, dynamic> workOrder) {
+  bool _isUnassigned(Map<String, dynamic> workOrder) {
     return workOrder['assigned_technician_id'] == null;
   }
 
@@ -722,4 +730,11 @@ class _TestScheduleProvider extends ChangeNotifier implements ScheduleProvider {
 
   @override
   String? get unscheduledError => null;
+
+  @override
+  Future<MutationResult> updateEntity(
+    String entityName,
+    int id,
+    Map<String, dynamic> changes,
+  ) async => const MutationResult.success();
 }

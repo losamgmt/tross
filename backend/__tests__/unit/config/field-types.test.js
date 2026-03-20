@@ -239,7 +239,7 @@ describe("field-types", () => {
       it("should have correct structure", () => {
         expect(FIELD.TIMESTAMP).toEqual({
           type: "timestamp",
-          sqlType: "TIMESTAMP",
+          sqlType: "TIMESTAMPTZ",
         });
       });
     });
@@ -646,9 +646,9 @@ describe("field-types", () => {
       expect(deriveSqlType(fieldDef)).toBe("BOOLEAN");
     });
 
-    it("should derive TIMESTAMP for timestamp type", () => {
+    it("should derive TIMESTAMPTZ for timestamp type", () => {
       const fieldDef = { type: "timestamp" };
-      expect(deriveSqlType(fieldDef)).toBe("TIMESTAMP");
+      expect(deriveSqlType(fieldDef)).toBe("TIMESTAMPTZ");
     });
 
     it("should derive DATE for date type", () => {
@@ -675,7 +675,7 @@ describe("field-types", () => {
       expect(deriveSqlType(FIELD.EMAIL)).toBe("VARCHAR(255)");
       expect(deriveSqlType(FIELD.CURRENCY)).toBe("DECIMAL(12,2)");
       expect(deriveSqlType(FIELD.BOOLEAN)).toBe("BOOLEAN");
-      expect(deriveSqlType(FIELD.TIMESTAMP)).toBe("TIMESTAMP");
+      expect(deriveSqlType(FIELD.TIMESTAMP)).toBe("TIMESTAMPTZ");
     });
   });
 });

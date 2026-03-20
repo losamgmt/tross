@@ -31,6 +31,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../utils/datetime_utils.dart';
 import '../widgets/atoms/inputs/text_input.dart' show TextFieldType;
 import '../widgets/molecules/forms/field_config.dart';
 import 'entity_metadata.dart' as meta;
@@ -567,12 +568,12 @@ class MetadataFieldConfigFactory {
     );
   }
 
-  /// Create date field config
+  /// Create date field config (date only, no time)
   ///
   /// **TIMEZONE HANDLING:**
-  /// - Dates are typically stored without time component
-  /// - On load: Parse and convert to local if UTC (defensive)
-  /// - On save: Convert to UTC before serializing (consistent storage)
+  /// Uses DateTimeSerializer for consistent UTC conversion:
+  /// - On load: Parse UTC from backend, convert to local date
+  /// - On save: Convert to UTC before serializing
   static FieldConfig<Map<String, dynamic>, dynamic> _createDateFieldConfig({
     required String fieldName,
     required meta.FieldDefinition fieldDef,
@@ -584,27 +585,10 @@ class MetadataFieldConfigFactory {
       fieldName: fieldName,
       fieldType: FieldType.date,
       label: label,
-      getValue: (map) {
-        final value = map[fieldName];
-        if (value == null) return null;
-        // If already DateTime, ensure it's local for display
-        if (value is DateTime) return value.isUtc ? value.toLocal() : value;
-        if (value is String) {
-          final parsed = DateTime.tryParse(value);
-          // Convert to local if UTC
-          return parsed?.isUtc == true ? parsed!.toLocal() : parsed;
-        }
-        return null;
-      },
-      setValue: (map, value) {
-        String? isoString;
-        if (value is DateTime) {
-          // Convert to UTC for consistent storage
-          isoString = value.toUtc().toIso8601String();
-        } else if (value is String) {
-          isoString = value;
-        }
-        return {...map, fieldName: isoString};
+      getValue: (map) => DateTimeUtils.deserializeForDisplay(map[fieldName]),
+      setValue: (map, value) => {
+        ...map,
+        fieldName: DateTimeUtils.serializeForApi(value),
       },
       validator: validator,
       required: fieldDef.required,
@@ -616,9 +600,9 @@ class MetadataFieldConfigFactory {
   /// Create timestamp/datetime field config
   ///
   /// **TIMEZONE HANDLING:**
+  /// Uses DateTimeUtils for consistent UTC conversion:
   /// - On load (getValue): Parse UTC strings from backend, convert to local
   /// - On save (setValue): Convert local DateTime to UTC before serializing
-  /// - This ensures consistent round-trips regardless of user timezone
   static FieldConfig<Map<String, dynamic>, dynamic>
   _createTimestampFieldConfig({
     required String fieldName,
@@ -631,27 +615,10 @@ class MetadataFieldConfigFactory {
       fieldName: fieldName,
       fieldType: FieldType.datetime,
       label: label,
-      getValue: (map) {
-        final value = map[fieldName];
-        if (value == null) return null;
-        // If already DateTime, ensure it's local for display
-        if (value is DateTime) return value.isUtc ? value.toLocal() : value;
-        if (value is String) {
-          final parsed = DateTime.tryParse(value);
-          // Backend sends UTC (Z suffix) - convert to local for display
-          return parsed?.isUtc == true ? parsed!.toLocal() : parsed;
-        }
-        return null;
-      },
-      setValue: (map, value) {
-        String? isoString;
-        if (value is DateTime) {
-          // Convert to UTC before serializing to ensure consistent storage
-          isoString = value.toUtc().toIso8601String();
-        } else if (value is String) {
-          isoString = value;
-        }
-        return {...map, fieldName: isoString};
+      getValue: (map) => DateTimeUtils.deserializeForDisplay(map[fieldName]),
+      setValue: (map, value) => {
+        ...map,
+        fieldName: DateTimeUtils.serializeForApi(value),
       },
       validator: validator,
       required: fieldDef.required,

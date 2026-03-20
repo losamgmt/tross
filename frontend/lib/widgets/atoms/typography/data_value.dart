@@ -60,7 +60,7 @@ class DataValue extends StatelessWidget {
 
   /// Factory for timestamps (secondary emphasis)
   factory DataValue.timestamp(DateTime timestamp) {
-    final formatted = DateTimeHelpers.formatTimestamp(timestamp);
+    final formatted = DateTimeUtils.formatTimestamp(timestamp);
     return DataValue(text: formatted, emphasis: ValueEmphasis.secondary);
   }
 

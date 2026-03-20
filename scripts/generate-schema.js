@@ -43,8 +43,8 @@ const CONFIG = Object.freeze({
   TIER1_COLUMNS: Object.freeze([
     { name: 'id', sqlType: 'SERIAL', constraints: ['PRIMARY KEY'], order: 1 },
     { name: 'is_active', sqlType: 'BOOLEAN', constraints: ['DEFAULT true', 'NOT NULL'], order: 3 },
-    { name: 'created_at', sqlType: 'TIMESTAMP', constraints: ['DEFAULT CURRENT_TIMESTAMP', 'NOT NULL'], order: 4 },
-    { name: 'updated_at', sqlType: 'TIMESTAMP', constraints: ['DEFAULT CURRENT_TIMESTAMP', 'NOT NULL'], order: 5 },
+    { name: 'created_at', sqlType: 'TIMESTAMPTZ', constraints: ['DEFAULT CURRENT_TIMESTAMP', 'NOT NULL'], order: 4 },
+    { name: 'updated_at', sqlType: 'TIMESTAMPTZ', constraints: ['DEFAULT CURRENT_TIMESTAMP', 'NOT NULL'], order: 5 },
   ]),
 
   /** Name pattern field definitions */

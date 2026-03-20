@@ -66,7 +66,7 @@ const TYPE_TO_SQL = Object.freeze({
 
   // Date/Time
   date: () => 'DATE',
-  timestamp: () => 'TIMESTAMP',
+  timestamp: () => 'TIMESTAMPTZ',
 
   // JSON
   json: () => 'JSON',
@@ -308,11 +308,11 @@ const FIELD = Object.freeze({
   /**
    * Timestamp field (date + time with timezone)
    * - Used for: created_at, updated_at, scheduled_start, completed_at
-   * - PostgreSQL TIMESTAMP WITHOUT TIME ZONE (app handles TZ)
+   * - PostgreSQL TIMESTAMPTZ (WITH TIME ZONE) - stores as UTC, converts on I/O
    */
   TIMESTAMP: Object.freeze({
     type: 'timestamp',
-    sqlType: 'TIMESTAMP',
+    sqlType: 'TIMESTAMPTZ',
   }),
 
   /**

@@ -25,6 +25,7 @@ import '../../config/app_colors.dart';
 import '../../config/table_column.dart';
 import '../../models/dashboard_config.dart';
 import '../../models/date_range_unit.dart';
+import '../../models/attention_rule.dart';
 import '../../models/permission.dart';
 import '../../models/relationship.dart';
 import '../../providers/auth_provider.dart';
@@ -33,6 +34,7 @@ import '../../providers/refresh_coordinator.dart';
 import '../../providers/schedule_provider.dart';
 import '../../services/dashboard_config_loader.dart';
 import '../../services/entity_metadata.dart';
+import '../../utils/datetime_utils.dart';
 import '../../utils/entity_icon_resolver.dart';
 import '../../utils/helpers/string_helper.dart';
 import '../../utils/row_click_handlers.dart';
@@ -121,7 +123,7 @@ class DashboardContent extends StatelessWidget {
     ScheduleProvider schedule,
   ) {
     final theme = Theme.of(context);
-    final attentionItems = schedule.attentionWorkOrders;
+    final attentionItems = schedule.attentionItems;
     final hasItems = attentionItems.isNotEmpty;
 
     return CollapseController(
@@ -191,61 +193,56 @@ class DashboardContent extends StatelessWidget {
   }
 
   /// List of attention items - clickable to open edit modal
+  ///
+  /// Uses pre-computed violations from AttentionItem - no re-evaluation needed.
   Widget _buildAttentionList(
     BuildContext context,
-    List<Map<String, dynamic>> items,
+    List<AttentionItem> items,
     ScheduleProvider schedule,
   ) {
     final theme = Theme.of(context);
 
     return Column(
-      children: items.map((wo) {
-        final woNumber = wo['work_order_number'] ?? 'WO-???';
-        final isOverdue = schedule.isOverdue(wo);
-        final isUnassigned = schedule.isUnassigned(wo);
-
-        // Priority: Overdue > Unassigned > Stale Pending
-        final String label;
-        final IconData icon;
-        if (isOverdue) {
-          label = 'Overdue';
-          icon = Icons.schedule;
-        } else if (isUnassigned) {
-          label = 'Unassigned';
-          icon = Icons.person_off;
-        } else {
-          label = 'Pending ${_daysOld(wo)} days';
-          icon = Icons.hourglass_empty;
-        }
+      children: items.map((item) {
+        // Violations are pre-computed - just read them
+        final primary = item.primaryViolation;
+        final icon = primary?.icon ?? Icons.warning;
+        final color = primary?.color ?? AppColors.warning;
 
         return InkWell(
-          onTap: () => _openWorkOrderModal(context, wo, schedule),
+          onTap: () => _openWorkOrderModal(context, item.workOrder, schedule),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Row(
               children: [
-                Icon(icon, color: AppColors.warning, size: 18),
+                Icon(icon, color: color, size: 18),
                 const SizedBox(width: 8),
                 Text(
-                  woNumber.toString(),
+                  item.workOrderNumber,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.warning.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    label,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: AppColors.warning,
+                // Show all violations as chips
+                ...item.violations.map(
+                  (v) => Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: v.color.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        v.label,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: v.color,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -257,16 +254,6 @@ class DashboardContent extends StatelessWidget {
         );
       }).toList(),
     );
-  }
-
-  int _daysOld(Map<String, dynamic> wo) {
-    final createdAt = wo['created_at'];
-    if (createdAt == null) return 0;
-    final date = createdAt is DateTime
-        ? createdAt
-        : DateTime.tryParse(createdAt.toString());
-    if (date == null) return 0;
-    return DateTime.now().difference(date).inDays;
   }
 
   void _openWorkOrderModal(
@@ -588,8 +575,20 @@ class DashboardContent extends StatelessWidget {
       return TableColumn<Map<String, dynamic>>(
         id: name,
         label: _titleCase(name),
-        cellBuilder: (row) =>
-            Text(row[name]?.toString() ?? '', overflow: TextOverflow.ellipsis),
+        cellBuilder: (row) {
+          final value = row[name];
+          // Format datetime columns using metadata-driven type check
+          if (_isDateTimeField('work_order', name) && value != null) {
+            final dt = DateTimeUtils.fromApiString(value.toString());
+            if (dt != null) {
+              return Text(
+                DateTimeUtils.formatDateTime(dt),
+                overflow: TextOverflow.ellipsis,
+              );
+            }
+          }
+          return Text(value?.toString() ?? '', overflow: TextOverflow.ellipsis);
+        },
       );
     }).toList();
   }
@@ -602,6 +601,17 @@ class DashboardContent extends StatelessWidget {
           return w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : '';
         })
         .join(' ');
+  }
+
+  /// Check if a field is a datetime/timestamp type using entity metadata
+  /// Single source of truth - no hardcoded field names!
+  bool _isDateTimeField(String entityName, String fieldName) {
+    final metadata = EntityMetadataRegistry.tryGet(entityName);
+    if (metadata == null) return false;
+    final fieldDef = metadata.fields[fieldName];
+    if (fieldDef == null) return false;
+    return fieldDef.type == FieldType.timestamp ||
+        fieldDef.type == FieldType.date;
   }
 
   Widget _buildScheduleEmpty(BuildContext context) {
@@ -1018,7 +1028,7 @@ class DashboardContent extends StatelessWidget {
   /// Last updated timestamp
   Widget _buildLastUpdated(BuildContext context, DateTime lastUpdated) {
     final theme = Theme.of(context);
-    final formatted = _formatDateTime(lastUpdated);
+    final formatted = DateTimeUtils.formatDateTime(lastUpdated);
 
     return Padding(
       padding: const EdgeInsets.only(top: 8),
@@ -1040,32 +1050,6 @@ class DashboardContent extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // FORMATTERS
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  /// Format date time
-  String _formatDateTime(DateTime dt) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    final month = months[dt.month - 1];
-    final hour = dt.hour > 12 ? dt.hour - 12 : (dt.hour == 0 ? 12 : dt.hour);
-    final period = dt.hour >= 12 ? 'PM' : 'AM';
-    return '$month ${dt.day}, $hour:${dt.minute.toString().padLeft(2, '0')} $period';
   }
 }
 

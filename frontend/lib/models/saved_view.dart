@@ -3,6 +3,8 @@
 /// Represents a saved view configuration for a data table.
 library;
 
+import '../utils/datetime_utils.dart';
+
 /// Settings stored in a saved view
 class SavedViewSettings {
   final List<String> hiddenColumns;
@@ -70,8 +72,8 @@ class SavedView {
         (json['settings'] as Map<String, dynamic>?) ?? {},
       ),
       isDefault: json['is_default'] as bool? ?? false,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      createdAt: DateTimeUtils.fromApiString(json['created_at'] as String)!,
+      updatedAt: DateTimeUtils.fromApiString(json['updated_at'] as String)!,
     );
   }
 }

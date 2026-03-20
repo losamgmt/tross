@@ -3,6 +3,8 @@
 /// Represents a single audit log entry tracking changes to entities.
 library;
 
+import '../utils/datetime_utils.dart';
+
 /// A single audit log entry
 class AuditLogEntry {
   final int id;
@@ -50,7 +52,7 @@ class AuditLogEntry {
       oldValues: json['old_values'] as Map<String, dynamic>?,
       newValues: json['new_values'] as Map<String, dynamic>?,
       userId: json['user_id'] as int?,
-      createdAt: DateTime.parse(json['created_at'] as String),
+      createdAt: DateTimeUtils.fromApiString(json['created_at'] as String)!,
       ipAddress: json['ip_address'] as String?,
       userAgent: json['user_agent'] as String?,
       result: json['result'] as String?,

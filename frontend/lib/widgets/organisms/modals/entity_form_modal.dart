@@ -45,6 +45,7 @@ import '../../../models/form_mode.dart';
 import '../../../providers/editable_form_notifier.dart';
 import '../../../services/metadata_field_config_factory.dart';
 import '../../../services/entity_metadata.dart';
+import '../../../utils/datetime_utils.dart';
 import '../../atoms/buttons/app_button.dart';
 import '../../molecules/dialogs/unsaved_changes_dialog.dart';
 import '../forms/generic_form.dart';
@@ -150,8 +151,26 @@ class _EntityFormModalState extends State<EntityFormModal> {
   }
 
   void _handleFormChange(Map<String, dynamic> value) {
+    // DEBUG: Log datetime values received
+    if (widget.entityName == 'work_order') {
+      debugPrint('[EntityFormModal._handleFormChange] received:');
+      debugPrint(
+        '  scheduled_start: ${value['scheduled_start']} (${value['scheduled_start']?.runtimeType})',
+      );
+      debugPrint(
+        '  scheduled_end: ${value['scheduled_end']} (${value['scheduled_end']?.runtimeType})',
+      );
+    }
+
     // Apply inter-field dependencies (e.g., scheduled_start/scheduled_end)
     final updatedValue = _applyFieldDependencies(value);
+
+    // DEBUG: Log after dependencies applied
+    if (widget.entityName == 'work_order') {
+      debugPrint('[EntityFormModal._handleFormChange] after dependencies:');
+      debugPrint('  scheduled_start: ${updatedValue['scheduled_start']}');
+      debugPrint('  scheduled_end: ${updatedValue['scheduled_end']}');
+    }
 
     setState(() {
       _previousValue = Map<String, dynamic>.from(_currentValue);
@@ -166,6 +185,8 @@ class _EntityFormModalState extends State<EntityFormModal> {
   /// For work_order:
   /// - If scheduled_start is set and scheduled_end is not, set end to start + 1hr
   /// - If scheduled_end is set and scheduled_start is not, set start to end - 1hr
+  ///
+  /// Uses DateTimeSerializer to ensure UTC consistency.
   Map<String, dynamic> _applyFieldDependencies(Map<String, dynamic> value) {
     if (widget.entityName != 'work_order') return value;
 
@@ -183,33 +204,34 @@ class _EntityFormModalState extends State<EntityFormModal> {
     final startChanged = startValue != prevStartValue;
     final endChanged = endValue != prevEndValue;
 
-    final start = _parseDateTime(startValue);
-    final end = _parseDateTime(endValue);
+    // Use centralized parser that preserves UTC flag
+    final start = DateTimeUtils.parseAny(startValue);
+    final end = DateTimeUtils.parseAny(endValue);
 
     // If start was just set/changed and end is null, derive end from start + 1hr
     if (startChanged && start != null && end == null) {
-      result['scheduled_end'] = start
-          .add(const Duration(hours: 1))
-          .toIso8601String();
+      final derivedEnd = start.add(const Duration(hours: 1));
+      // Use centralized serializer to ensure UTC format
+      result['scheduled_end'] = DateTimeUtils.toApiString(derivedEnd);
     }
     // If end was just set/changed and start is null, derive start from end - 1hr
     else if (endChanged && end != null && start == null) {
-      result['scheduled_start'] = end
-          .subtract(const Duration(hours: 1))
-          .toIso8601String();
+      final derivedStart = end.subtract(const Duration(hours: 1));
+      // Use centralized serializer to ensure UTC format
+      result['scheduled_start'] = DateTimeUtils.toApiString(derivedStart);
     }
 
     return result;
   }
 
-  DateTime? _parseDateTime(dynamic value) {
-    if (value == null) return null;
-    if (value is DateTime) return value;
-    if (value is String && value.isNotEmpty) return DateTime.tryParse(value);
-    return null;
-  }
-
   Future<void> _handleSubmit() async {
+    // DEBUG: Log what we're about to submit
+    if (widget.entityName == 'work_order') {
+      debugPrint('[EntityFormModal._handleSubmit] SUBMITTING:');
+      debugPrint('  scheduled_start: ${_currentValue['scheduled_start']}');
+      debugPrint('  scheduled_end: ${_currentValue['scheduled_end']}');
+    }
+
     // Validate form
     final isValid = _formKey.currentState?.validateAll() ?? false;
     if (!isValid) return;

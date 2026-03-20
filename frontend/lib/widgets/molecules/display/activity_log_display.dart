@@ -398,9 +398,14 @@ class _EntryContent extends StatelessWidget {
     );
   }
 
+  /// Format time for activity log display
+  ///
+  /// Handles UTC-to-local conversion for consistent display.
   String _formatTime(DateTime time) {
+    // Convert UTC to local time for display
+    final local = time.isUtc ? time.toLocal() : time;
     final now = DateTime.now();
-    final diff = now.difference(time);
+    final diff = now.difference(local);
 
     if (diff.inMinutes < 1) {
       return 'Just now';
@@ -425,7 +430,7 @@ class _EntryContent extends StatelessWidget {
         'Nov',
         'Dec',
       ];
-      return '${months[time.month - 1]} ${time.day}, ${time.year}';
+      return '${months[local.month - 1]} ${local.day}, ${local.year}';
     }
   }
 }

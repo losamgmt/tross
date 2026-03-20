@@ -44,11 +44,19 @@ For definitive field definitions, see `backend/config/field-types.js`.
 | `decimal` | Precise decimal (currency) | `DECIMAL(n,m)` |
 | `boolean` | True/false | `BOOLEAN` |
 | `date` | Date only | `DATE` |
-| `time` | Time only | `TIME` |
-| `timestamp` | Date and time | `TIMESTAMPTZ` |
+| `time` | Time only (no timezone) | `TIME` |
+| `timestamp` | Date and time (with timezone) | `TIMESTAMPTZ` |
 | `enum` | Constrained values | `VARCHAR(50)` |
 | `foreignKey` | References another entity | `INTEGER` FK |
 | `object` | Dynamic structure (rare - only `saved_views`) | `JSONB` |
+
+### Date/Time Handling
+
+- **`timestamp`** → Uses `TIMESTAMPTZ` (WITH TIME ZONE). PostgreSQL stores as UTC internally and converts on read based on session timezone. Frontend sends ISO UTC strings, displays in user's local timezone.
+- **`date`** → Uses `DATE`. No timezone conversion. Stored as literal date.
+- **`time`** → Uses `TIME` (WITHOUT TIME ZONE). For recurring daily times like "opens at 9:00 AM". No timezone conversion.
+
+See `DATABASE_ARCHITECTURE.md` for complete timezone handling details.
 
 ### JSONB Policy
 

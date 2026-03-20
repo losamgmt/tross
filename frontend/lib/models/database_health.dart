@@ -7,6 +7,7 @@
 /// Philosophy: Never trust external data - validate at every boundary
 library;
 
+import '../utils/datetime_utils.dart';
 import '../utils/validators.dart';
 import '../widgets/atoms/indicators/app_badge.dart';
 
@@ -170,7 +171,7 @@ class DatabaseHealth {
   }
 
   /// Get DateTime from ISO 8601 string
-  DateTime get lastCheckedDateTime => DateTime.parse(lastChecked);
+  DateTime get lastCheckedDateTime => DateTimeUtils.fromApiString(lastChecked)!;
 
   /// Get Duration from milliseconds
   Duration get responseTimeDuration => Duration(milliseconds: responseTime);
@@ -265,7 +266,7 @@ class DatabasesHealthResponse {
   }
 
   /// Get DateTime from ISO 8601 string
-  DateTime get timestampDateTime => DateTime.parse(timestamp);
+  DateTime get timestampDateTime => DateTimeUtils.fromApiString(timestamp)!;
 
   /// Get overall system status (worst status among all databases)
   HealthStatus get overallStatus {

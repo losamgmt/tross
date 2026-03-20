@@ -50,8 +50,8 @@ CREATE TABLE IF NOT EXISTS customers (
     id SERIAL PRIMARY KEY,
     email VARCHAR(255) NOT NULL UNIQUE,
     is_active BOOLEAN DEFAULT true NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
     status VARCHAR(25) DEFAULT 'pending' CHECK (status IN ('pending', 'active', 'suspended')),
@@ -87,8 +87,8 @@ CREATE TABLE IF NOT EXISTS contracts (
     id SERIAL PRIMARY KEY,
     contract_number VARCHAR(100) UNIQUE,
     is_active BOOLEAN DEFAULT true NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     status VARCHAR(25) DEFAULT 'draft' CHECK (status IN ('draft', 'active', 'expired', 'cancelled', 'terminated')),
     name VARCHAR(255),
     summary VARCHAR(255),
@@ -115,8 +115,8 @@ CREATE TABLE IF NOT EXISTS inventory (
     id SERIAL PRIMARY KEY,
     sku VARCHAR(50) NOT NULL UNIQUE,
     is_active BOOLEAN DEFAULT true NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     name VARCHAR(255) NOT NULL,
     status VARCHAR(28) DEFAULT 'in_stock' CHECK (status IN ('in_stock', 'low_stock', 'out_of_stock', 'discontinued')),
     description TEXT,
@@ -140,8 +140,8 @@ CREATE INDEX IF NOT EXISTS idx_inventory_description ON inventory(description);
 CREATE TABLE IF NOT EXISTS properties (
     id SERIAL PRIMARY KEY,
     is_active BOOLEAN DEFAULT true NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     name VARCHAR(255) NOT NULL,
     status VARCHAR(25) DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
     property_type VARCHAR(27) DEFAULT 'residential' CHECK (property_type IN ('residential', 'commercial', 'industrial')),
@@ -169,8 +169,8 @@ CREATE TABLE IF NOT EXISTS property_roles (
     id SERIAL PRIMARY KEY,
     role VARCHAR(34) NOT NULL CHECK (role IN ('board_chair', 'board_member', 'property_manager', 'accountant')),
     is_active BOOLEAN DEFAULT true NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     status VARCHAR(25) DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
     customer_id INTEGER NOT NULL REFERENCES customers(id),
     property_id INTEGER NOT NULL REFERENCES properties(id),
@@ -192,8 +192,8 @@ CREATE TABLE IF NOT EXISTS roles (
     id SERIAL PRIMARY KEY,
     priority INTEGER NOT NULL UNIQUE,
     is_active BOOLEAN DEFAULT true NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     name VARCHAR(255) NOT NULL UNIQUE,
     status VARCHAR(25) DEFAULT 'active' CHECK (status IN ('active', 'disabled')),
     description TEXT
@@ -213,8 +213,8 @@ CREATE TABLE IF NOT EXISTS technicians (
     id SERIAL PRIMARY KEY,
     email VARCHAR(255) NOT NULL UNIQUE,
     is_active BOOLEAN DEFAULT true NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
     status VARCHAR(25) DEFAULT 'pending' CHECK (status IN ('pending', 'active', 'suspended')),
@@ -240,8 +240,8 @@ CREATE TABLE IF NOT EXISTS units (
     id SERIAL PRIMARY KEY,
     unit_identifier VARCHAR(255) NOT NULL,
     is_active BOOLEAN DEFAULT true NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     status VARCHAR(25) DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
     property_id INTEGER NOT NULL REFERENCES properties(id),
     ownership_type VARCHAR(25) NOT NULL CHECK (ownership_type IN ('private', 'common')),
@@ -264,8 +264,8 @@ CREATE INDEX IF NOT EXISTS idx_units_property_id ON units(property_id);
 CREATE TABLE IF NOT EXISTS assets (
     id SERIAL PRIMARY KEY,
     is_active BOOLEAN DEFAULT true NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     name VARCHAR(255) NOT NULL,
     status VARCHAR(31) DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'needs_repair', 'decommissioned')),
     unit_id INTEGER NOT NULL REFERENCES units(id),
@@ -298,8 +298,8 @@ CREATE TABLE IF NOT EXISTS customer_units (
     id SERIAL PRIMARY KEY,
     role VARCHAR(39) DEFAULT 'owner' CHECK (role IN ('owner', 'authorized_occupant')),
     is_active BOOLEAN DEFAULT true NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     status VARCHAR(25) DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
     customer_id INTEGER NOT NULL REFERENCES customers(id),
     unit_id INTEGER NOT NULL REFERENCES units(id),
@@ -321,8 +321,8 @@ CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     email VARCHAR(255) NOT NULL UNIQUE,
     is_active BOOLEAN DEFAULT true NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
     status VARCHAR(25) DEFAULT 'pending' CHECK (status IN ('pending', 'active', 'suspended')),
@@ -347,7 +347,7 @@ CREATE INDEX IF NOT EXISTS idx_users_technician_profile_id ON users(technician_p
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS audit_logs (
     id SERIAL PRIMARY KEY,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     action VARCHAR(50) NOT NULL,
     resource_type VARCHAR(100) NOT NULL,
     resource_id INTEGER,
@@ -371,8 +371,8 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
 CREATE TABLE IF NOT EXISTS departments (
     id SERIAL PRIMARY KEY,
     is_active BOOLEAN DEFAULT true NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     name VARCHAR(255) NOT NULL UNIQUE,
     status VARCHAR(25) DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
     description TEXT,
@@ -393,8 +393,8 @@ CREATE TABLE IF NOT EXISTS file_attachments (
     id SERIAL PRIMARY KEY,
     original_filename VARCHAR(255) NOT NULL,
     is_active BOOLEAN DEFAULT true NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     entity_type VARCHAR(50) NOT NULL,
     entity_id INTEGER NOT NULL,
     storage_key VARCHAR(500) NOT NULL,
@@ -419,15 +419,15 @@ CREATE TABLE IF NOT EXISTS notifications (
     id SERIAL PRIMARY KEY,
     title VARCHAR(150) NOT NULL,
     is_active BOOLEAN DEFAULT true NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     user_id INTEGER NOT NULL REFERENCES users(id),
     body TEXT,
     type VARCHAR(25) NOT NULL CHECK (type IN ('info', 'success', 'warning', 'error', 'assignment', 'reminder')),
     resource_type VARCHAR(50),
     resource_id INTEGER,
     is_read BOOLEAN DEFAULT FALSE,
-    read_at TIMESTAMP
+    read_at TIMESTAMPTZ
 );
 
 -- Indexes
@@ -442,8 +442,8 @@ CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS preferences (
     id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     theme VARCHAR(25) DEFAULT 'system' CHECK (theme IN ('system', 'light', 'dark')),
     density VARCHAR(27) DEFAULT 'comfortable' CHECK (density IN ('compact', 'standard', 'comfortable')),
     notifications_enabled BOOLEAN DEFAULT TRUE,
@@ -464,8 +464,8 @@ CREATE TABLE IF NOT EXISTS saved_views (
     id SERIAL PRIMARY KEY,
     view_name VARCHAR(255) NOT NULL,
     is_active BOOLEAN DEFAULT true NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     user_id INTEGER NOT NULL REFERENCES users(id),
     entity_name VARCHAR(50) NOT NULL,
     settings JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -484,8 +484,8 @@ CREATE INDEX IF NOT EXISTS idx_saved_views_user_id ON saved_views(user_id);
 CREATE TABLE IF NOT EXISTS vendors (
     id SERIAL PRIMARY KEY,
     is_active BOOLEAN DEFAULT true NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     name VARCHAR(255) NOT NULL UNIQUE,
     status VARCHAR(25) DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
     contact_email VARCHAR(255),
@@ -506,8 +506,8 @@ CREATE TABLE IF NOT EXISTS work_orders (
     id SERIAL PRIMARY KEY,
     work_order_number VARCHAR(100) UNIQUE,
     is_active BOOLEAN DEFAULT true NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     status VARCHAR(27) DEFAULT 'pending' CHECK (status IN ('pending', 'scheduled', 'in_progress', 'completed', 'cancelled')),
     name VARCHAR(255),
     summary VARCHAR(255),
@@ -516,9 +516,9 @@ CREATE TABLE IF NOT EXISTS work_orders (
     property_id INTEGER REFERENCES properties(id),
     unit_id INTEGER REFERENCES units(id),
     assigned_technician_id INTEGER REFERENCES technicians(id),
-    scheduled_start TIMESTAMP,
-    scheduled_end TIMESTAMP,
-    completed_at TIMESTAMP,
+    scheduled_start TIMESTAMPTZ,
+    scheduled_end TIMESTAMPTZ,
+    completed_at TIMESTAMPTZ,
     location_line1 VARCHAR(255),
     location_line2 VARCHAR(255),
     location_city VARCHAR(100),
@@ -545,8 +545,8 @@ CREATE TABLE IF NOT EXISTS invoices (
     id SERIAL PRIMARY KEY,
     invoice_number VARCHAR(100) UNIQUE,
     is_active BOOLEAN DEFAULT true NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     status VARCHAR(25) DEFAULT 'draft' CHECK (status IN ('draft', 'sent', 'paid', 'overdue', 'cancelled', 'void')),
     name VARCHAR(255),
     summary VARCHAR(255),
@@ -556,7 +556,7 @@ CREATE TABLE IF NOT EXISTS invoices (
     tax DECIMAL(12,2) DEFAULT 0,
     total DECIMAL(12,2) NOT NULL,
     due_date DATE,
-    paid_at TIMESTAMP
+    paid_at TIMESTAMPTZ
 );
 
 -- Indexes
@@ -589,11 +589,11 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
     token_hash TEXT NOT NULL,
 
     -- Token lifecycle
-    expires_at TIMESTAMP NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
     is_active BOOLEAN DEFAULT true NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    last_used_at TIMESTAMP,
-    revoked_at TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    last_used_at TIMESTAMPTZ,
+    revoked_at TIMESTAMPTZ,
 
     -- Request context
     ip_address VARCHAR(45),
@@ -616,7 +616,7 @@ CREATE TABLE IF NOT EXISTS system_settings (
     key VARCHAR(100) PRIMARY KEY,
     value JSONB NOT NULL DEFAULT '{}',
     description TEXT,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL
 );
 
@@ -664,7 +664,7 @@ CREATE TABLE IF NOT EXISTS idempotency_keys (
     response_body JSONB NOT NULL,
     
     -- Timestamp for TTL enforcement (matches entity convention)
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     
     -- Per-user uniqueness (same user cannot reuse key within TTL)
     CONSTRAINT uq_idempotency_key_user UNIQUE (idempotency_key, user_id)

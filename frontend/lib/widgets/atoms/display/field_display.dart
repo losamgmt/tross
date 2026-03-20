@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../../config/app_colors.dart';
 import '../../../config/app_spacing.dart';
+import '../../../utils/datetime_utils.dart';
 
 /// Display type for FieldDisplay - determines formatting
-enum DisplayType { text, number, boolean, date, time, select }
+enum DisplayType { text, number, boolean, date, time, datetime, select }
 
 /// FieldDisplay - SINGLE unified read-only field display atom
 ///
@@ -192,6 +193,12 @@ class FieldDisplay extends StatelessWidget {
         final formatted = dateFormat != null
             ? _formatDate(date, dateFormat!)
             : '${_monthName(date.month)} ${date.day}, ${date.year}';
+        return (formatted, null, null);
+
+      case DisplayType.datetime:
+        if (value is! DateTime) return (emptyText, null, null);
+        // Use DateTimeUtils for consistent local time formatting
+        final formatted = DateTimeUtils.formatDateTime(value as DateTime);
         return (formatted, null, null);
 
       case DisplayType.time:

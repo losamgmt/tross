@@ -11,6 +11,7 @@
 // This eliminates abrupt logouts when tokens expire during active use.
 import 'dart:async';
 import 'package:flutter/widgets.dart';
+import '../../utils/datetime_utils.dart';
 import 'token_manager.dart';
 import 'auth_token_service.dart';
 import '../error_service.dart';
@@ -106,8 +107,8 @@ class TokenRefreshManager with WidgetsBindingObserver {
     ErrorService.logInfo(
       'Scheduling token refresh in ${delay.inMinutes} minutes',
       context: {
-        'expiresAt': expiry.toIso8601String(),
-        'refreshAt': refreshAt.toIso8601String(),
+        'expiresAt': DateTimeUtils.formatAbsoluteTime(expiry),
+        'refreshAt': DateTimeUtils.formatAbsoluteTime(refreshAt),
       },
     );
 
