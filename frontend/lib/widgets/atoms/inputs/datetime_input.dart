@@ -91,7 +91,7 @@ class _DateTimeInputState extends State<DateTimeInput> {
   String _formatValue() {
     if (widget.value == null) return '';
     // Format as "Mar 15, 2026 9:30 AM"
-    return DateTimeHelpers.formatDateTime(widget.value!);
+    return DateTimeUtils.formatDateTime(widget.value!);
   }
 
   Future<void> _selectDateTime(BuildContext context) async {
@@ -123,6 +123,12 @@ class _DateTimeInputState extends State<DateTimeInput> {
       pickedTime.hour,
       pickedTime.minute,
     );
+
+    // DEBUG: Log what DateTimeInput is returning
+    debugPrint('[DateTimeInput] User picked:');
+    debugPrint('  pickedDate: $pickedDate');
+    debugPrint('  pickedTime: ${pickedTime.hour}:${pickedTime.minute}');
+    debugPrint('  combined: $combined (isUtc: ${combined.isUtc})');
 
     widget.onChanged(combined);
   }

@@ -21,11 +21,11 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
     token_hash TEXT NOT NULL,
 
     -- Token lifecycle
-    expires_at TIMESTAMP NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
     is_active BOOLEAN DEFAULT true NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    last_used_at TIMESTAMP,
-    revoked_at TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    last_used_at TIMESTAMPTZ,
+    revoked_at TIMESTAMPTZ,
 
     -- Request context
     ip_address VARCHAR(45),
@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS system_settings (
     key VARCHAR(100) PRIMARY KEY,
     value JSONB NOT NULL DEFAULT '{}',
     description TEXT,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL
 );
 
@@ -96,7 +96,7 @@ CREATE TABLE IF NOT EXISTS idempotency_keys (
     response_body JSONB NOT NULL,
     
     -- Timestamp for TTL enforcement (matches entity convention)
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     
     -- Per-user uniqueness (same user cannot reuse key within TTL)
     CONSTRAINT uq_idempotency_key_user UNIQUE (idempotency_key, user_id)

@@ -13,21 +13,26 @@
 /// - RefreshCoordinator enables coordinated refresh with DashboardProvider
 ///
 /// ATTENTION CONDITIONS (dispatcher+ only):
-/// - Overdue: scheduled_end < now AND status NOT IN (completed, cancelled)
+/// - Overdue: scheduled_start < now AND scheduled_end < now AND status NOT IN (completed, cancelled)
 /// - Stale: status = pending AND created_at < now - stalePendingHours
 library;
 
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import '../models/attention_rule.dart';
 import '../models/dashboard_config.dart';
 import '../models/date_range_unit.dart';
+import '../models/mutation_result.dart';
 import '../models/permission.dart';
 import '../services/dashboard_config_loader.dart';
 import '../services/generic_entity_service.dart';
+import '../utils/datetime_utils.dart';
 import 'auth_provider.dart';
+import 'interfaces/mutatable.dart';
 import 'interfaces/refreshable.dart';
 import 'managers/auth_connection_manager.dart';
 import 'managers/loading_state_manager.dart';
+import 'managers/optimistic_update_manager.dart';
 import 'refresh_coordinator.dart';
 
 /// Schedule provider for dashboard work order calendar/list view
@@ -35,8 +40,11 @@ import 'refresh_coordinator.dart';
 /// Composes:
 /// - LoadingStateManager for loading/error/lastUpdated state
 /// - AuthConnectionManager for auth lifecycle (login → load, logout → clear)
+/// - OptimisticUpdateManager for mutation with automatic rollback
 ///
-/// Implements EntityAwareRefreshable for coordinated refresh.
+/// Implements:
+/// - EntityAwareRefreshable for coordinated refresh
+/// - Mutatable for generic entity updates
 ///
 /// Role-based view support:
 /// - Customer: Work order log with timeframe filter
@@ -48,10 +56,14 @@ import 'refresh_coordinator.dart';
 /// final provider = context.watch<ScheduleProvider>();
 /// if (provider.isLoading) return LoadingIndicator();
 /// return WorkOrderTable(data: provider.workOrders);
+///
+/// // Update via Mutatable interface:
+/// await provider.updateEntity('work_order', id, {'status': 'completed'});
 /// ```
 class ScheduleProvider extends ChangeNotifier
-    implements EntityAwareRefreshable {
+    implements EntityAwareRefreshable, Mutatable {
   late final LoadingStateManager _loadingManager;
+  late final OptimisticUpdateManager _optimisticManager;
   AuthConnectionManager? _authManager;
   final GenericEntityService _entityService;
   RefreshCoordinator? _coordinator;
@@ -99,7 +111,7 @@ class ScheduleProvider extends ChangeNotifier
 
   List<Map<String, dynamic>> _workOrders = [];
   List<Map<String, dynamic>> _unscheduledWorkOrders = [];
-  List<Map<String, dynamic>> _attentionWorkOrders = [];
+  List<AttentionItem> _attentionItems = [];
 
   // Pagination state for unscheduled queue
   int _unscheduledPage = 1;
@@ -121,6 +133,7 @@ class ScheduleProvider extends ChangeNotifier
 
   ScheduleProvider(this._entityService) {
     _loadingManager = LoadingStateManager(notifyListeners);
+    _optimisticManager = OptimisticUpdateManager(notifyListeners);
     // AuthConnectionManager created in setCoordinator (deferred initialization)
   }
 
@@ -288,7 +301,7 @@ class ScheduleProvider extends ChangeNotifier
   void _clearData() {
     _workOrders = [];
     _unscheduledWorkOrders = [];
-    _attentionWorkOrders = [];
+    _attentionItems = [];
     _unscheduledPage = 1;
     _hasMoreUnscheduled = false;
     _isLoadingMoreUnscheduled = false;
@@ -495,60 +508,18 @@ class ScheduleProvider extends ChangeNotifier
 
   /// Work orders that need attention (overdue, stale, or unassigned)
   ///
+  /// Returns AttentionItems which include the work order AND its violations.
+  /// Violations are pre-computed at load time - no re-evaluation needed.
+  ///
   /// Loaded independently via loadAttentionWorkOrders() - NOT constrained by
   /// schedule date filters. This ensures the attention banner shows ALL items
   /// needing attention regardless of the current schedule view window.
-  ///
-  /// Attention conditions:
-  /// - Overdue: scheduled_end < now AND status NOT IN (completed, cancelled)
-  /// - Stale: status = pending AND created_at < now - stalePendingHours
-  /// - Unassigned: scheduled_start is set but assigned_technician_id is null
+  List<AttentionItem> get attentionItems => List.unmodifiable(_attentionItems);
+
+  /// Legacy getter for backward compatibility
+  @Deprecated('Use attentionItems instead for pre-computed violations')
   List<Map<String, dynamic>> get attentionWorkOrders =>
-      List.unmodifiable(_attentionWorkOrders);
-
-  /// Check if a work order is overdue
-  bool isOverdue(Map<String, dynamic> workOrder) {
-    final status = workOrder['status'] as String?;
-    if (status == 'completed' || status == 'cancelled') return false;
-
-    final scheduledEnd = workOrder['scheduled_end'];
-    if (scheduledEnd == null) return false;
-
-    final endDate = scheduledEnd is DateTime
-        ? scheduledEnd
-        : DateTime.tryParse(scheduledEnd.toString());
-    if (endDate == null) return false;
-
-    return endDate.isBefore(DateTime.now());
-  }
-
-  /// Check if a work order is stale pending
-  bool isStalePending(Map<String, dynamic> workOrder, [DateTime? threshold]) {
-    final status = workOrder['status'] as String?;
-    if (status != 'pending') return false;
-
-    final createdAt = workOrder['created_at'];
-    if (createdAt == null) return false;
-
-    final createdDate = createdAt is DateTime
-        ? createdAt
-        : DateTime.tryParse(createdAt.toString());
-    if (createdDate == null) return false;
-
-    final staleThreshold =
-        threshold ??
-        DateTime.now().subtract(Duration(hours: _stalePendingHours));
-    return createdDate.isBefore(staleThreshold);
-  }
-
-  /// Check if a scheduled work order is unassigned
-  bool isUnassigned(Map<String, dynamic> workOrder) {
-    final scheduledStart = workOrder['scheduled_start'];
-    if (scheduledStart == null) return false; // Not scheduled
-
-    final technicianId = workOrder['assigned_technician_id'];
-    return technicianId == null;
-  }
+      _attentionItems.map((item) => item.workOrder).toList();
 
   // ===========================================================================
   // DATA LOADING
@@ -670,7 +641,7 @@ class ScheduleProvider extends ChangeNotifier
         final startDate = DateTime.now().subtract(
           Duration(days: _logTimeframeDays!),
         );
-        filters['created_at[gte]'] = startDate.toIso8601String();
+        filters['created_at[gte]'] = DateTimeUtils.toApiString(startDate);
       }
 
       final result = await _entityService.getAll(
@@ -706,12 +677,10 @@ class ScheduleProvider extends ChangeNotifier
 
   /// Load work orders that need attention (independent of schedule filters)
   ///
-  /// Fetches ALL non-closed work orders and filters client-side for:
-  /// - Overdue (scheduled_end < now)
-  /// - Stale pending (pending > stalePendingHours)
-  /// - Unassigned but scheduled
+  /// Fetches ALL non-closed work orders and evaluates attention rules.
+  /// Each AttentionItem stores its violations - no re-evaluation needed at display.
   ///
-  /// Uses separate loading to allow parallel execution with loadSchedule().
+  /// Uses AttentionRules.evaluateAll() for single-pass evaluation.
   Future<void> loadAttentionWorkOrders() async {
     try {
       // Fetch all non-completed, non-cancelled work orders
@@ -723,15 +692,11 @@ class ScheduleProvider extends ChangeNotifier
         sortOrder: 'ASC',
       );
 
-      final now = DateTime.now();
-      final staleThreshold = now.subtract(Duration(hours: _stalePendingHours));
-
-      // Filter to only items that actually need attention
-      _attentionWorkOrders = result.data.where((wo) {
-        return isOverdue(wo) ||
-            isStalePending(wo, staleThreshold) ||
-            isUnassigned(wo);
-      }).toList();
+      // Evaluate all rules in one pass, storing violations with each item
+      _attentionItems = AttentionRules.evaluateAll(
+        result.data,
+        stalePendingHours: _stalePendingHours,
+      );
 
       notifyListeners();
     } catch (e) {
@@ -745,8 +710,8 @@ class ScheduleProvider extends ChangeNotifier
     // Filter for work orders that START within the visible window
     // This catches all work scheduled to begin during this period
     return {
-      'scheduled_start[gte]': _windowStart.toIso8601String(),
-      'scheduled_start[lte]': endDate.toIso8601String(),
+      'scheduled_start[gte]': DateTimeUtils.toApiString(_windowStart),
+      'scheduled_start[lte]': DateTimeUtils.toApiString(endDate),
       // Customer filters
       if (_selectedPropertyId != null) 'property_id': _selectedPropertyId,
       if (_selectedUnitId != null) 'unit_id': _selectedUnitId,
@@ -757,6 +722,132 @@ class ScheduleProvider extends ChangeNotifier
       else if (_selectedTechnicianId != null)
         'assigned_technician_id': _selectedTechnicianId,
     };
+  }
+
+  // ===========================================================================
+  // MUTATABLE IMPLEMENTATION
+  // ===========================================================================
+
+  /// Update any entity with arbitrary field changes
+  ///
+  /// Uses optimistic updates: UI updates immediately, rollback on failure.
+  /// Triggers coordinated refresh on success.
+  ///
+  /// Currently handles work orders - can be extended for other entities.
+  @override
+  Future<MutationResult> updateEntity(
+    String entityName,
+    int id,
+    Map<String, dynamic> changes,
+  ) async {
+    // Currently only work_order is supported
+    if (entityName != 'work_order') {
+      return MutationResult.failure('Unsupported entity: $entityName');
+    }
+
+    // Find the work order in any of our lists
+    final snapshot = _captureWorkOrderSnapshot(id);
+    if (snapshot == null) {
+      return MutationResult.failure('Work order $id not found');
+    }
+
+    final result = await _optimisticManager.run(
+      snapshot: snapshot,
+      applyOptimistic: () => _applyWorkOrderChanges(id, changes),
+      persist: () => _entityService.update(entityName, id, changes),
+      rollback: (old) => _restoreWorkOrderSnapshot(id, old),
+      errorContext: 'ScheduleProvider.updateEntity',
+    );
+
+    // Trigger coordinated refresh on success
+    if (result.success) {
+      await _coordinator?.refreshForEntity(entityName);
+    }
+
+    return result;
+  }
+
+  /// Capture a snapshot of a work order from all lists
+  Map<String, dynamic>? _captureWorkOrderSnapshot(int id) {
+    return _findWorkOrderById(id);
+  }
+
+  /// Apply changes to a work order in all lists where it exists
+  void _applyWorkOrderChanges(int id, Map<String, dynamic> changes) {
+    _forEachWorkOrderById(id, (list, index) {
+      list[index] = {...list[index], ...changes};
+    });
+    // Re-evaluate attention state after change
+    _recomputeAttentionForId(id);
+  }
+
+  /// Restore a work order from snapshot in all lists
+  void _restoreWorkOrderSnapshot(int id, Map<String, dynamic> snapshot) {
+    _forEachWorkOrderById(id, (list, index) {
+      list[index] = Map<String, dynamic>.from(snapshot);
+    });
+    // Re-evaluate attention state after rollback
+    _recomputeAttentionForId(id);
+  }
+
+  /// Find a work order by ID across all lists (returns first match copy)
+  Map<String, dynamic>? _findWorkOrderById(int id) {
+    for (final list in _allWorkOrderLists) {
+      final index = list.indexWhere((wo) => wo['id'] == id);
+      if (index != -1) {
+        return Map<String, dynamic>.from(list[index]);
+      }
+    }
+    return null;
+  }
+
+  /// Execute action on all instances of a work order across all lists
+  void _forEachWorkOrderById(
+    int id,
+    void Function(List<Map<String, dynamic>> list, int index) action,
+  ) {
+    for (final list in _allWorkOrderLists) {
+      final index = list.indexWhere((wo) => wo['id'] == id);
+      if (index != -1) {
+        action(list, index);
+      }
+    }
+  }
+
+  /// All work order lists for unified iteration (raw data lists only)
+  ///
+  /// Note: _attentionItems is excluded - it's a derived/computed list.
+  /// After mutation, use _recomputeAttention() to update attention state.
+  List<List<Map<String, dynamic>>> get _allWorkOrderLists => [
+    _workOrders,
+    _unscheduledWorkOrders,
+  ];
+
+  /// Re-evaluate attention state for a specific work order after mutation
+  ///
+  /// Called after optimistic update to ensure attention list stays in sync.
+  void _recomputeAttentionForId(int id) {
+    // Find the work order in raw lists
+    final wo = _findWorkOrderById(id);
+    if (wo == null) {
+      // Work order not found - remove from attention if present
+      _attentionItems.removeWhere((item) => item.id == id);
+      return;
+    }
+
+    // Check if it currently needs attention
+    final newItem = AttentionRules.evaluate(
+      wo,
+      stalePendingHours: _stalePendingHours,
+    );
+
+    // Remove existing entry for this ID
+    _attentionItems.removeWhere((item) => item.id == id);
+
+    // Add back if still needs attention
+    if (newItem != null) {
+      _attentionItems.add(newItem);
+    }
   }
 
   // ===========================================================================

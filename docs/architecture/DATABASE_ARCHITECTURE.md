@@ -77,6 +77,45 @@ Entities with workflow requirements add:
 - Cached on entity for query performance
 - Never updated after initial insert
 
+### Decision: TIMESTAMPTZ for All Timestamps
+
+**All timestamp columns use PostgreSQL `TIMESTAMPTZ` (WITH TIME ZONE):**
+
+```sql
+scheduled_start TIMESTAMPTZ,
+created_at      TIMESTAMPTZ DEFAULT NOW(),
+```
+
+**Why TIMESTAMPTZ, not TIMESTAMP:**
+
+| TIMESTAMP (without timezone) | TIMESTAMPTZ (with timezone) |
+|------------------------------|------------------------------|
+| Stores literal value as-is | Stores as UTC internally |
+| Ignores input timezone | Converts input to UTC on write |
+| Returns value as-is | Converts to session timezone on read |
+| Prone to timezone bugs | Timezone-safe by design |
+
+**Configuration:**
+
+1. **Session timezone = UTC**: Set on each connection via `pool.on('connect')`
+2. **Frontend sends ISO strings**: `"2026-03-15T17:00:00.000Z"` (explicit UTC)
+3. **Backend returns UTC**: All reads return UTC ISO strings
+4. **Frontend displays local**: Converts UTC to user's local timezone for display
+
+**Flow example:**
+
+```
+User (Denver, UTC-7): Picks 5:00 PM local
+Frontend: Sends "2026-03-16T00:00:00.000Z" (midnight UTC)
+PostgreSQL: Stores as UTC (thanks to TIMESTAMPTZ)
+Backend: Returns "2026-03-16T00:00:00.000Z"
+Frontend: Displays "Mar 15, 2026 5:00 PM" (local)
+```
+
+**Pure TIME fields:**
+
+For time-only fields (without date, e.g., "store opens at 9:00 AM"), use `TIME` without timezone. These are recurring daily times and don't need timezone conversion.
+
 ### Decision: Status Values in Metadata
 
 **Why status enums are NOT hardcoded in schema:**

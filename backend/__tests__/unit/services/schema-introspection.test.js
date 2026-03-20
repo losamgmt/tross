@@ -48,7 +48,7 @@ describe("SchemaIntrospectionService - Business Logic", () => {
           },
           {
             column_name: "created_at",
-            data_type: "timestamp without time zone",
+            data_type: "timestamp with time zone",
             is_nullable: "NO",
             column_default: "CURRENT_TIMESTAMP",
             character_maximum_length: null,
@@ -471,7 +471,7 @@ describe("SchemaIntrospectionService - Business Logic", () => {
           },
           {
             column_name: "created_at",
-            data_type: "timestamp without time zone",
+            data_type: "timestamp with time zone",
             is_nullable: "NO",
             column_default: "CURRENT_TIMESTAMP",
             character_maximum_length: null,
@@ -482,7 +482,7 @@ describe("SchemaIntrospectionService - Business Logic", () => {
           },
           {
             column_name: "updated_at",
-            data_type: "timestamp without time zone",
+            data_type: "timestamp with time zone",
             is_nullable: "NO",
             column_default: "CURRENT_TIMESTAMP",
             character_maximum_length: null,
@@ -599,7 +599,7 @@ describe("SchemaIntrospectionService - Business Logic", () => {
           },
           {
             column_name: "created_at",
-            data_type: "timestamp without time zone",
+            data_type: "timestamp with time zone",
             is_nullable: "NO",
             column_default: "CURRENT_TIMESTAMP",
             character_maximum_length: null,

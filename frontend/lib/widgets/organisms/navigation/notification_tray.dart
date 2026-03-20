@@ -26,6 +26,7 @@ library;
 import 'package:flutter/material.dart';
 import '../../../config/app_colors.dart';
 import '../../../config/app_spacing.dart';
+import '../../../utils/datetime_utils.dart';
 
 /// Callback when a notification is tapped
 typedef OnNotificationTap = void Function(Map<String, dynamic> notification);
@@ -228,7 +229,9 @@ class _NotificationItem extends StatelessWidget {
                 ],
                 SizedBox(height: spacing.xxs),
                 Text(
-                  _formatTimestamp(notification['created_at']),
+                  DateTimeUtils.tryFormatRelativeTime(
+                    notification['created_at'],
+                  ),
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                   ),
@@ -265,28 +268,5 @@ class _NotificationItem extends StatelessWidget {
     };
 
     return Icon(icon, size: 20, color: color);
-  }
-
-  String _formatTimestamp(dynamic timestamp) {
-    if (timestamp == null) return '';
-
-    DateTime? date;
-    if (timestamp is String) {
-      date = DateTime.tryParse(timestamp);
-    } else if (timestamp is DateTime) {
-      date = timestamp;
-    }
-
-    if (date == null) return '';
-
-    final now = DateTime.now();
-    final diff = now.difference(date);
-
-    if (diff.inMinutes < 1) return 'Just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    if (diff.inDays < 7) return '${diff.inDays}d ago';
-
-    return '${date.month}/${date.day}/${date.year}';
   }
 }

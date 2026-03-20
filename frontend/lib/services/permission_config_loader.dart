@@ -12,6 +12,7 @@ library;
 
 import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
+import '../utils/datetime_utils.dart';
 import '../utils/helpers/string_helper.dart';
 import 'error_service.dart';
 
@@ -65,9 +66,10 @@ class PermissionConfig {
       roles: rolesMap,
       resources: resourcesMap,
       version: json['version'] as String? ?? '1.0.0',
-      lastModified: DateTime.parse(
-        json['lastModified'] as String? ?? DateTime.now().toIso8601String(),
-      ),
+      lastModified: DateTimeUtils.fromApiString(
+        json['lastModified'] as String? ??
+            DateTimeUtils.toApiString(DateTimeUtils.nowUtc()),
+      )!,
     );
   }
 
@@ -291,7 +293,7 @@ class PermissionConfigLoader {
   static Future<PermissionConfig> load({bool forceReload = false}) async {
     // Return cache if valid (within 5 minutes)
     if (!forceReload && _cached != null && _loadedAt != null) {
-      final age = DateTime.now().difference(_loadedAt!);
+      final age = DateTimeUtils.nowUtc().difference(_loadedAt!);
       if (age.inMinutes < 5) {
         return _cached!;
       }
@@ -322,7 +324,7 @@ class PermissionConfigLoader {
 
       // Cache and return
       _cached = config;
-      _loadedAt = DateTime.now();
+      _loadedAt = DateTimeUtils.nowUtc();
 
       // Summary log - still uses logDebug for dev-only output
       ErrorService.logDebug(

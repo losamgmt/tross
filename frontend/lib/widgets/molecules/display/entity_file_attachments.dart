@@ -27,7 +27,7 @@ library;
 import 'package:flutter/material.dart';
 import '../../../models/file_attachment.dart';
 import '../../../utils/helpers/string_helper.dart';
-import '../../../utils/helpers/date_time_helpers.dart';
+import '../../../utils/datetime_utils.dart';
 import '../../../config/app_spacing.dart';
 import '../../organisms/modals/generic_modal.dart';
 import 'key_value_list.dart';
@@ -505,7 +505,7 @@ class _FilePreviewContent extends StatelessWidget {
         ),
         KeyValueItem.text(
           label: 'Uploaded',
-          value: DateTimeHelpers.formatTimestamp(file.createdAt),
+          value: DateTimeUtils.formatTimestamp(file.createdAt),
           icon: Icons.calendar_today,
         ),
         if (file.description != null && file.description!.isNotEmpty)

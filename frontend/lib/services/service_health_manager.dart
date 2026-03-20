@@ -4,6 +4,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
+import '../utils/datetime_utils.dart';
 import 'error_service.dart';
 
 enum ServiceStatus { healthy, degraded, critical, unknown, offline }
@@ -89,7 +90,7 @@ class ServiceHealthManager {
       _lastHealthData = {
         'status': 'offline',
         'error': e.toString(),
-        'timestamp': DateTime.now().toIso8601String(),
+        'timestamp': DateTimeUtils.toApiString(DateTime.now()),
         'mode': 'frontend_standalone',
       };
       return ServiceStatus.offline;
@@ -117,7 +118,9 @@ class ServiceHealthManager {
     return {
       'backend_status': _backendStatus.toString().split('.').last,
       'backend_url': _baseUrl,
-      'last_check': _lastCheck?.toIso8601String() ?? 'Never',
+      'last_check': _lastCheck != null
+          ? DateTimeUtils.toApiString(_lastCheck!)
+          : 'Never',
       'frontend_mode': 'standalone',
       'offline_capable': true,
       'message': getStatusMessage(),

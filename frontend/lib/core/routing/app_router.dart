@@ -28,6 +28,7 @@ import '../../services/entity_metadata.dart';
 import '../../services/auth/token_manager.dart';
 import '../../services/metadata/metadata.dart';
 import '../../services/audit_log_service.dart';
+import '../../utils/datetime_utils.dart';
 import '../../models/audit_log_entry.dart';
 import '../../widgets/molecules/display/data_matrix.dart';
 import '../../widgets/molecules/display/key_value_list.dart';
@@ -486,7 +487,7 @@ class _AdminLogsScreen extends StatelessWidget {
                   id: 'timestamp',
                   label: 'Time',
                   cellBuilder: (log) => Text(
-                    _formatTimestamp(log.createdAt),
+                    DateTimeUtils.formatRelativeTime(log.createdAt),
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ),
@@ -520,16 +521,6 @@ class _AdminLogsScreen extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Format timestamp for audit log display
-String _formatTimestamp(DateTime dt) {
-  final now = DateTime.now();
-  final diff = now.difference(dt);
-  if (diff.inMinutes < 1) return 'Just now';
-  if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-  if (diff.inHours < 24) return '${diff.inHours}h ago';
-  return '${dt.month}/${dt.day} ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
 }
 
 /// Action chip with color coding based on action type

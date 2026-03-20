@@ -8,6 +8,7 @@ library;
 
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../../config/api_endpoints.dart';
 import '../../config/app_config.dart';
@@ -194,6 +195,15 @@ class HttpApiClient implements ApiClient {
     String? token,
   }) async {
     try {
+      // DEBUG: Log datetime values in request body
+      if (body != null &&
+          (body.containsKey('scheduled_start') ||
+              body.containsKey('scheduled_end'))) {
+        debugPrint('[HttpApiClient.post] datetime values being sent:');
+        debugPrint('  scheduled_start: ${body['scheduled_start']}');
+        debugPrint('  scheduled_end: ${body['scheduled_end']}');
+      }
+
       final authToken = token ?? await _getStoredToken();
       if (authToken == null) {
         throw Exception('No authentication token available');
@@ -246,6 +256,15 @@ class HttpApiClient implements ApiClient {
     String? token,
   }) async {
     try {
+      // DEBUG: Log datetime values in request body
+      if (body != null &&
+          (body.containsKey('scheduled_start') ||
+              body.containsKey('scheduled_end'))) {
+        debugPrint('[HttpApiClient.patch] datetime values being sent:');
+        debugPrint('  scheduled_start: ${body['scheduled_start']}');
+        debugPrint('  scheduled_end: ${body['scheduled_end']}');
+      }
+
       final authToken = token ?? await _getStoredToken();
       if (authToken == null) {
         throw Exception('No authentication token available');

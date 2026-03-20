@@ -23,7 +23,9 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../config/constants.dart';
 import '../config/table_column.dart';
+import '../utils/datetime_utils.dart';
 import '../utils/helpers/string_helper.dart';
 import '../utils/table_cell_builders.dart';
 import '../widgets/atoms/cells/foreign_key_lookup_cell.dart';
@@ -76,10 +78,9 @@ class MetadataTableColumnFactory {
     if (metadata.displayColumns?.isNotEmpty ?? false) {
       return metadata.displayColumns!;
     }
-    // Fallback: all fields minus system fields
-    final systemFields = {'id', 'created_at', 'updated_at'};
+    // Fallback: all fields minus system fields (from centralized constant)
     return metadata.fields.keys
-        .where((f) => !systemFields.contains(f))
+        .where((f) => !FieldConstants.systemFields.contains(f))
         .toList();
   }
 
@@ -247,41 +248,45 @@ class MetadataTableColumnFactory {
   }
 
   /// Build timestamp cell
+  ///
+  /// Parses datetime from API (UTC) and formats as local time for display.
+  /// Uses DateTimeUtils for consistent UTC-to-local conversion.
   static Widget _buildTimestampCell(dynamic value) {
     if (value == null) return TableCellBuilders.textCell('—');
 
     DateTime? dateTime;
     if (value is String) {
-      dateTime = DateTime.tryParse(value);
+      // Use DateTimeUtils to properly parse UTC strings from API
+      dateTime = DateTimeUtils.fromApiString(value);
     } else if (value is DateTime) {
       dateTime = value;
     }
 
     if (dateTime == null) return TableCellBuilders.textCell(value.toString());
 
-    // Format as "Jan 15, 2024 3:45 PM"
-    final formatted =
-        '${_monthAbbr(dateTime.month)} ${dateTime.day}, ${dateTime.year} '
-        '${_formatTime(dateTime)}';
-    return TableCellBuilders.textCell(formatted);
+    // Use centralized helper - handles UTC-to-local conversion
+    return TableCellBuilders.textCell(DateTimeUtils.formatDateTime(dateTime));
   }
 
   /// Build date cell
+  ///
+  /// Parses date from API (UTC) and formats as local date for display.
+  /// Uses DateTimeUtils for consistent UTC-to-local conversion.
   static Widget _buildDateCell(dynamic value) {
     if (value == null) return TableCellBuilders.textCell('—');
 
     DateTime? date;
     if (value is String) {
-      date = DateTime.tryParse(value);
+      // Use DateTimeUtils to properly parse UTC strings from API
+      date = DateTimeUtils.fromApiString(value);
     } else if (value is DateTime) {
       date = value;
     }
 
     if (date == null) return TableCellBuilders.textCell(value.toString());
 
-    // Format as "Jan 15, 2024"
-    final formatted = '${_monthAbbr(date.month)} ${date.day}, ${date.year}';
-    return TableCellBuilders.textCell(formatted);
+    // Use centralized helper - handles UTC-to-local conversion
+    return TableCellBuilders.textCell(DateTimeUtils.formatDate(date));
   }
 
   /// Build enum cell - badge if colors defined, plain text otherwise
@@ -336,7 +341,17 @@ class MetadataTableColumnFactory {
     if (value == null) return TableCellBuilders.textCell('—');
 
     final relatedEntity = fieldDef.relatedEntity;
-    final displayField = fieldDef.displayField ?? 'name';
+
+    // Display field fallback chain: field → related entity → constant default
+    String displayField;
+    if (fieldDef.displayField != null) {
+      displayField = fieldDef.displayField!;
+    } else if (relatedEntity != null &&
+        EntityMetadataRegistry.has(relatedEntity)) {
+      displayField = EntityMetadataRegistry.get(relatedEntity).displayField;
+    } else {
+      displayField = FieldConstants.defaultDisplayField;
+    }
 
     if (relatedEntity == null) {
       // No relationship defined, just show the ID
@@ -397,42 +412,15 @@ class MetadataTableColumnFactory {
     DateTime? dateA;
     DateTime? dateB;
 
-    if (a is String) dateA = DateTime.tryParse(a);
+    // Use DateTimeUtils for consistent UTC parsing from API strings
+    if (a is String) dateA = DateTimeUtils.fromApiString(a);
     if (a is DateTime) dateA = a;
-    if (b is String) dateB = DateTime.tryParse(b);
+    if (b is String) dateB = DateTimeUtils.fromApiString(b);
     if (b is DateTime) dateB = b;
 
     if (dateA == null && dateB == null) return 0;
     if (dateA == null) return 1;
     if (dateB == null) return -1;
     return dateA.compareTo(dateB);
-  }
-
-  /// Month abbreviation helper
-  static String _monthAbbr(int month) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return months[month - 1];
-  }
-
-  /// Format time as "3:45 PM"
-  static String _formatTime(DateTime dateTime) {
-    final hour = dateTime.hour > 12 ? dateTime.hour - 12 : dateTime.hour;
-    final displayHour = hour == 0 ? 12 : hour;
-    final minute = dateTime.minute.toString().padLeft(2, '0');
-    final period = dateTime.hour >= 12 ? 'PM' : 'AM';
-    return '$displayHour:$minute $period';
   }
 }

@@ -22,7 +22,7 @@ library;
 import 'package:flutter/material.dart';
 import '../../../../config/app_spacing.dart';
 import '../../../../config/app_colors.dart';
-import '../../../../utils/helpers/date_time_helpers.dart';
+import '../../../../utils/datetime_utils.dart';
 import '../../../../utils/helpers/color_helpers.dart';
 import '../../../../models/database_health.dart';
 import '../../../atoms/indicators/app_badge.dart';
@@ -156,7 +156,7 @@ class DatabaseHealthCard extends StatelessWidget {
             spacing,
             icon: Icons.timer_outlined,
             label: 'Response Time',
-            value: DateTimeHelpers.formatResponseTime(responseTime),
+            value: DateTimeUtils.formatResponseTime(responseTime),
             color: ColorHelpers.responseTimeColor(responseTime),
           ),
         ),
@@ -224,7 +224,7 @@ class DatabaseHealthCard extends StatelessWidget {
         SizedBox(width: spacing.xxs),
         Flexible(
           child: Text(
-            'Last checked: ${DateTimeHelpers.formatRelativeTime(lastChecked)}',
+            'Last checked: ${DateTimeUtils.formatRelativeTime(lastChecked)}',
             style: theme.textTheme.bodySmall?.copyWith(
               color: AppColors.textSecondary,
             ),

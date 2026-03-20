@@ -74,10 +74,15 @@ afterAll(async () => {
   // Close database connection pool to prevent hanging
   try {
     const { pool } = require("../../db/connection");
-    await pool.end();
-    testLogger.log("🔌 Database pool closed");
+    if (pool && pool.totalCount > 0) {
+      await pool.end();
+      testLogger.log("🔌 Database pool closed");
+    }
   } catch (error) {
-    // Pool might already be closed, ignore
+    // Pool might already be closed or connection terminated - ignore
+    if (error.message !== "Connection terminated") {
+      testLogger.error("⚠️ Pool close warning:", error.message);
+    }
   }
 });
 

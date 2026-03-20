@@ -13,14 +13,14 @@
 /// import 'package:tross/utils/helpers/helpers.dart';
 ///
 /// // Use centralized helpers instead of inline logic
-/// final formatted = DateTimeHelpers.formatDate(date);
+/// final formatted = DateTimeUtils.formatDate(date);
 /// final capitalized = StringHelpers.capitalize(text);
 /// ```
 library;
 
 // Export all helper modules
 export 'color_helpers.dart';
-export 'date_time_helpers.dart';
+export '../datetime_utils.dart'; // Consolidated datetime serialization + formatting
 export 'input_type_helpers.dart';
 export 'number_helpers.dart';
 export 'string_helper.dart'; // Fixed: was exporting non-existent string_helpers.dart

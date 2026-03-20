@@ -15,7 +15,7 @@ import 'package:provider/provider.dart';
 import '../../config/config.dart';
 import '../../models/database_health.dart';
 import '../../services/api/api_client.dart';
-import '../../utils/helpers/date_time_helpers.dart';
+import '../../utils/datetime_utils.dart';
 import '../atoms/indicators/app_badge.dart';
 import '../molecules/cards/error_card.dart';
 import '../molecules/cards/titled_card.dart';
@@ -143,7 +143,7 @@ class _AdminHomeContentState extends State<AdminHomeContent> {
                       id: 'lastActive',
                       label: 'Last Active',
                       cellBuilder: (s) => Text(
-                        DateTimeHelpers.tryFormatRelativeTime(
+                        DateTimeUtils.tryFormatRelativeTime(
                           s['lastUsedAt'] ?? s['loginTime'],
                         ),
                       ),

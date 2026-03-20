@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS system_settings (
     description TEXT,
     
     -- Audit trail
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL
 );
 

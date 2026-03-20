@@ -22,6 +22,7 @@
 library;
 
 import 'dart:convert';
+import '../config/constants.dart';
 import 'api/api_client.dart';
 import 'error_service.dart';
 
@@ -224,11 +225,9 @@ class PreferencesService {
   /// Filters out system fields (id, created_at, updated_at) to return
   /// only the actual preference values.
   Map<String, dynamic> _extractPreferenceFields(Map<String, dynamic> record) {
-    // System fields to exclude from preferences map
-    const systemFields = {'id', 'created_at', 'updated_at'};
-
+    // Use centralized system fields constant
     return Map.fromEntries(
-      record.entries.where((e) => !systemFields.contains(e.key)),
+      record.entries.where((e) => !FieldConstants.systemFields.contains(e.key)),
     );
   }
 }

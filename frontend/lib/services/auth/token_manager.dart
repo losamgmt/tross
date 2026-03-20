@@ -5,6 +5,7 @@
 // See also: token_refresh_manager.dart for proactive refresh logic.
 import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../../utils/datetime_utils.dart';
 import '../error_service.dart';
 
 class TokenManager {
@@ -186,6 +187,6 @@ class TokenManager {
     }
 
     final refreshThreshold = expiry.subtract(buffer);
-    return DateTime.now().isAfter(refreshThreshold);
+    return DateTimeUtils.nowUtc().isAfter(refreshThreshold);
   }
 }

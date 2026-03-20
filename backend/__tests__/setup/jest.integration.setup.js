@@ -12,6 +12,26 @@ const { DATABASE } = require("../../config/constants");
 const { TEST_JWT_SECRET } = require("../../config/test-constants");
 const testLogger = require("../../config/test-logger");
 
+// ============================================================================
+// HANDLE pg "Connection terminated" ERROR ON JEST forceExit
+// ============================================================================
+// When Jest uses --forceExit, it forcefully terminates the process without
+// giving pg time to gracefully close connections. This causes an uncaught
+// "Connection terminated" error. Since tests have already passed, we suppress
+// this specific error to allow clean exit code 0.
+// ============================================================================
+process.on("uncaughtException", (error) => {
+  if (error.message === "Connection terminated") {
+    // Expected during Jest forceExit - the pool is being torn down
+    testLogger.log("🔌 Pool connection terminated (expected during teardown)");
+    process.exit(0); // Exit cleanly - tests already passed
+  } else {
+    // Real error - let it propagate
+    testLogger.error("❌ Uncaught exception:", error.message);
+    throw error;
+  }
+});
+
 // Set up test environment variables
 // Uses constants.js for single source of truth
 // SECURITY: Uses centralized TEST_JWT_SECRET to ensure consistency

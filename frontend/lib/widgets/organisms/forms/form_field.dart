@@ -62,6 +62,12 @@ class _GenericFormFieldState<T, V> extends State<GenericFormField<T, V>> {
     // Cast to proper type for validation and setValue
     final typedValue = newValue as V;
 
+    // DEBUG: Log what form field received and what setValue produces
+    if (newValue is DateTime) {
+      debugPrint('[GenericFormField._handleChange] ${widget.config.fieldName}');
+      debugPrint('  received: $newValue (isUtc: ${newValue.isUtc})');
+    }
+
     // Validate
     final error = widget.config.validator?.call(typedValue);
     setState(() => _errorText = error);
@@ -69,6 +75,15 @@ class _GenericFormFieldState<T, V> extends State<GenericFormField<T, V>> {
 
     // Update model
     final updatedModel = widget.config.setValue(widget.value, typedValue);
+
+    // DEBUG: Log result after setValue
+    if (updatedModel is Map<String, dynamic>) {
+      final fieldName = widget.config.fieldName;
+      final storedValue = updatedModel[fieldName];
+      debugPrint('[GenericFormField._handleChange] after setValue:');
+      debugPrint('  $fieldName = $storedValue (${storedValue.runtimeType})');
+    }
+
     widget.onChanged(updatedModel);
   }
 

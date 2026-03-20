@@ -189,3 +189,20 @@ class NetworkConstants {
   static const int maxRetries = 3;
   static const Duration retryDelay = Duration(seconds: 2);
 }
+
+// ============================================================================
+// FIELD CONSTANTS - Single source of truth for field metadata
+// ============================================================================
+
+/// Field-related constants - centralized to prevent hardcoded duplicates
+class FieldConstants {
+  FieldConstants._();
+
+  /// System fields added/managed by the database, not user-editable
+  /// Used to filter out from forms, displayable fields, etc.
+  static const Set<String> systemFields = {'id', 'created_at', 'updated_at'};
+
+  /// Default display field when metadata doesn't specify one
+  /// Last resort fallback - prefer entity metadata displayField
+  static const String defaultDisplayField = 'name';
+}

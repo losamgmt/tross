@@ -7,8 +7,10 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:tross/models/attention_rule.dart';
 import 'package:tross/models/dashboard_config.dart';
 import 'package:tross/models/date_range_unit.dart';
+import 'package:tross/models/mutation_result.dart';
 import 'package:tross/providers/auth_provider.dart';
 import 'package:tross/providers/dashboard_provider.dart';
 import 'package:tross/providers/refresh_coordinator.dart';
@@ -328,14 +330,7 @@ class _TestScheduleProvider extends ChangeNotifier implements ScheduleProvider {
   List<Map<String, dynamic>> get attentionWorkOrders => [];
 
   @override
-  bool isOverdue(Map<String, dynamic> workOrder) => false;
-
-  @override
-  bool isStalePending(Map<String, dynamic> workOrder, [DateTime? threshold]) =>
-      false;
-
-  @override
-  bool isUnassigned(Map<String, dynamic> workOrder) => false;
+  List<AttentionItem> get attentionItems => [];
 
   @override
   int? get logTimeframeDays => 30;
@@ -368,4 +363,11 @@ class _TestScheduleProvider extends ChangeNotifier implements ScheduleProvider {
 
   @override
   String? get unscheduledError => null;
+
+  @override
+  Future<MutationResult> updateEntity(
+    String entityName,
+    int id,
+    Map<String, dynamic> changes,
+  ) async => const MutationResult.success();
 }

@@ -9,7 +9,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tross/utils/helpers/string_helper.dart';
-import 'package:tross/utils/helpers/date_time_helpers.dart';
+import 'package:tross/utils/datetime_utils.dart';
 import 'package:tross/utils/helpers/number_helpers.dart';
 import 'package:tross/utils/helpers/pagination_helper.dart';
 import 'package:tross/utils/helpers/mime_helper.dart';
@@ -111,16 +111,16 @@ void main() {
   });
 
   // ===========================================================================
-  // DATE TIME HELPERS
+  // DATE TIME UTILS
   // ===========================================================================
-  group('DateTimeHelpers', () {
+  group('DateTimeUtils', () {
     group('formatRelativeTime', () {
-      test('formats seconds ago', () {
+      test('returns "Just now" for sub-minute timestamps', () {
         final now = DateTime(2025, 1, 1, 12, 0, 30);
         final timestamp = DateTime(2025, 1, 1, 12, 0, 0);
         expect(
-          DateTimeHelpers.formatRelativeTime(timestamp, referenceTime: now),
-          equals('30s ago'),
+          DateTimeUtils.formatRelativeTime(timestamp, referenceTime: now),
+          equals('Just now'),
         );
       });
 
@@ -128,7 +128,7 @@ void main() {
         final now = DateTime(2025, 1, 1, 12, 30, 0);
         final timestamp = DateTime(2025, 1, 1, 12, 0, 0);
         expect(
-          DateTimeHelpers.formatRelativeTime(timestamp, referenceTime: now),
+          DateTimeUtils.formatRelativeTime(timestamp, referenceTime: now),
           equals('30m ago'),
         );
       });
@@ -137,7 +137,7 @@ void main() {
         final now = DateTime(2025, 1, 1, 14, 0, 0);
         final timestamp = DateTime(2025, 1, 1, 12, 0, 0);
         expect(
-          DateTimeHelpers.formatRelativeTime(timestamp, referenceTime: now),
+          DateTimeUtils.formatRelativeTime(timestamp, referenceTime: now),
           equals('2h ago'),
         );
       });
@@ -146,7 +146,7 @@ void main() {
         final now = DateTime(2025, 1, 8, 12, 0, 0);
         final timestamp = DateTime(2025, 1, 1, 12, 0, 0);
         expect(
-          DateTimeHelpers.formatRelativeTime(timestamp, referenceTime: now),
+          DateTimeUtils.formatRelativeTime(timestamp, referenceTime: now),
           equals('7d ago'),
         );
       });
@@ -155,16 +155,14 @@ void main() {
     group('formatResponseTime', () {
       test('formats milliseconds', () {
         expect(
-          DateTimeHelpers.formatResponseTime(const Duration(milliseconds: 45)),
+          DateTimeUtils.formatResponseTime(const Duration(milliseconds: 45)),
           equals('45ms'),
         );
       });
 
       test('formats seconds with decimal', () {
         expect(
-          DateTimeHelpers.formatResponseTime(
-            const Duration(milliseconds: 1500),
-          ),
+          DateTimeUtils.formatResponseTime(const Duration(milliseconds: 1500)),
           equals('1.5s'),
         );
       });
@@ -173,35 +171,35 @@ void main() {
     group('formatDuration', () {
       test('formats days singular', () {
         expect(
-          DateTimeHelpers.formatDuration(const Duration(days: 1)),
+          DateTimeUtils.formatDuration(const Duration(days: 1)),
           equals('1 day'),
         );
       });
 
       test('formats days plural', () {
         expect(
-          DateTimeHelpers.formatDuration(const Duration(days: 3)),
+          DateTimeUtils.formatDuration(const Duration(days: 3)),
           equals('3 days'),
         );
       });
 
       test('formats hours', () {
         expect(
-          DateTimeHelpers.formatDuration(const Duration(hours: 2)),
+          DateTimeUtils.formatDuration(const Duration(hours: 2)),
           equals('2 hours'),
         );
       });
 
       test('formats minutes', () {
         expect(
-          DateTimeHelpers.formatDuration(const Duration(minutes: 30)),
+          DateTimeUtils.formatDuration(const Duration(minutes: 30)),
           equals('30 minutes'),
         );
       });
 
       test('formats seconds', () {
         expect(
-          DateTimeHelpers.formatDuration(const Duration(seconds: 45)),
+          DateTimeUtils.formatDuration(const Duration(seconds: 45)),
           equals('45 seconds'),
         );
       });
@@ -210,16 +208,13 @@ void main() {
     group('formatDate', () {
       test('formats date correctly', () {
         final date = DateTime(2024, 1, 15);
-        expect(DateTimeHelpers.formatDate(date), equals('Jan 15, 2024'));
+        expect(DateTimeUtils.formatDate(date), equals('Jan 15, 2024'));
       });
 
       test('formats all months', () {
+        expect(DateTimeUtils.formatDate(DateTime(2024, 6, 1)), contains('Jun'));
         expect(
-          DateTimeHelpers.formatDate(DateTime(2024, 6, 1)),
-          contains('Jun'),
-        );
-        expect(
-          DateTimeHelpers.formatDate(DateTime(2024, 12, 1)),
+          DateTimeUtils.formatDate(DateTime(2024, 12, 1)),
           contains('Dec'),
         );
       });

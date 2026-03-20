@@ -97,9 +97,7 @@ class _DateInputState extends State<DateInput> {
   }
 
   String _formatValue() {
-    return widget.value != null
-        ? DateTimeHelpers.formatDate(widget.value!)
-        : '';
+    return widget.value != null ? DateTimeUtils.formatDate(widget.value!) : '';
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -149,12 +147,12 @@ class _DateInputState extends State<DateInput> {
               : const Icon(Icons.calendar_today),
           suffixIcon:
               widget.value != null && widget.showClearButton && widget.enabled
-                  ? IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: _clearDate,
-                      tooltip: 'Clear date',
-                    )
-                  : (widget.suffixIcon != null ? Icon(widget.suffixIcon) : null),
+              ? IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: _clearDate,
+                  tooltip: 'Clear date',
+                )
+              : (widget.suffixIcon != null ? Icon(widget.suffixIcon) : null),
           border: const OutlineInputBorder(),
           contentPadding: EdgeInsets.symmetric(
             horizontal: spacing.md,

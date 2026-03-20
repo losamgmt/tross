@@ -9,19 +9,24 @@ require('dotenv').config();
 // ============================================================================
 // TIMESTAMP TIMEZONE HANDLING
 // ============================================================================
-// PostgreSQL TIMESTAMP WITHOUT TIME ZONE columns don't store timezone info.
-// By default, pg parses these as LOCAL time, causing timezone bugs:
-//   - Frontend sends UTC: "2026-03-15T03:00:00.000Z"
-//   - PostgreSQL stores: "2026-03-15 03:00:00" (Z stripped)
-//   - Default pg parse: treats as local → wrong UTC conversion
+// All timestamp columns use PostgreSQL TIMESTAMPTZ (WITH TIME ZONE).
+// TIMESTAMPTZ stores values internally as UTC and converts on I/O based on
+// session timezone. This eliminates all timezone bugs:
 //
-// FIX: Override pg type parsers to treat TIMESTAMP values as UTC
-// This ensures consistent round-trips regardless of server timezone.
+//   - Frontend sends: "2026-03-15T17:00:00" (local time, 5pm)
+//   - With session TZ=UTC: PostgreSQL converts and stores as UTC
+//   - On read: Returns UTC timestamp, pg driver creates Date object
+//   - Frontend: Displays in user's local timezone automatically
+//
+// CONFIGURATION:
+// 1. Session timezone set to UTC on connect (pool.on('connect'))
+// 2. TIMESTAMPTZ parser returns JS Date (pg default behavior)
+// 3. Legacy TIMESTAMP parser kept for compatibility (treats as UTC)
 // ============================================================================
-const TIMESTAMP_OID = 1114; // TIMESTAMP without timezone
-const TIMESTAMPTZ_OID = 1184; // TIMESTAMP with timezone
+const TIMESTAMP_OID = 1114; // TIMESTAMP without timezone (legacy)
+const TIMESTAMPTZ_OID = 1184; // TIMESTAMP with timezone (preferred)
 
-// Parse TIMESTAMP as UTC by appending 'Z' before creating Date
+// Legacy TIMESTAMP parser - treats raw value as UTC (for backwards compat)
 types.setTypeParser(TIMESTAMP_OID, (val) => {
   if (val === null) {
     return null;
@@ -30,7 +35,7 @@ types.setTypeParser(TIMESTAMP_OID, (val) => {
   return new Date(val.replace(' ', 'T') + 'Z');
 });
 
-// TIMESTAMPTZ already includes timezone info - parse as-is
+// TIMESTAMPTZ parser - value includes timezone, parse directly
 types.setTypeParser(TIMESTAMPTZ_OID, (val) => {
   if (val === null) {
     return null;
@@ -151,8 +156,11 @@ if (isTest) {
 }
 
 // Comprehensive pool event logging and error handling
-pool.on('connect', (_client) => {
-  logger.debug('New database client connected to pool');
+// Set timezone to UTC on each new connection for consistent TIMESTAMPTZ behavior
+// TIMESTAMPTZ stores as UTC internally; session timezone determines display format
+pool.on('connect', (client) => {
+  client.query('SET timezone = \'UTC\'');
+  logger.debug('New database client connected to pool (timezone set to UTC)');
 });
 
 pool.on('acquire', (_client) => {
@@ -241,10 +249,30 @@ const closePool = async () => {
     logger.info('✅ Database pool closed gracefully');
     return true;
   } catch (err) {
+    // "Connection terminated" is expected during forced shutdown
+    if (err.message === 'Connection terminated') {
+      logger.debug('Pool connection terminated (expected during shutdown)');
+      return true;
+    }
     logger.error('❌ Error closing database pool:', err.message);
     return false;
   }
 };
+
+// Handle process exit signals for graceful shutdown
+// This prevents "Connection terminated" errors when Jest uses --forceExit
+if (isTest) {
+  // In test mode, register exit handlers to close pool before process ends
+  const handleExit = () => {
+    pool.end().catch(() => {
+      // Ignore errors - process is exiting anyway
+    });
+  };
+
+  process.on('exit', handleExit);
+  process.on('SIGINT', handleExit);
+  process.on('SIGTERM', handleExit);
+}
 
 // Graceful shutdown (alias for compatibility)
 const end = () => pool.end();
