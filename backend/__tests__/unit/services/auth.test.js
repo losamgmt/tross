@@ -102,10 +102,10 @@ describe("Authentication Factory Service", () => {
 
   describe("Environment-based Configuration", () => {
     test("should use constants for provider identification", () => {
-      setTestEnv({ AUTH_MODE: AUTH.AUTH_MODES.DEVELOPMENT });
+      setTestEnv({ AUTH_MODE: AUTH.PROVIDERS.DEVELOPMENT_JWT });
       const devAuth = AuthProvider.getInstance();
 
-      setTestEnv({ AUTH_MODE: AUTH.AUTH_MODES.AUTH0 });
+      setTestEnv({ AUTH_MODE: AUTH.PROVIDERS.AUTH0 });
       // Clear instance to force new creation
       AuthProvider._instance = null;
       const auth0Auth = AuthProvider.getInstance();

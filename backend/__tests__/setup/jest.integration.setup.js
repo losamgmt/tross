@@ -38,8 +38,6 @@ process.on("uncaughtException", (error) => {
 setTestEnv({
   NODE_ENV: "test",
   JWT_SECRET: TEST_JWT_SECRET,
-  AUTH_MODE: "development",
-  USE_TEST_AUTH: "true",
   // Test database configuration from constants
   TEST_DB_HOST: DATABASE.TEST.HOST,
   TEST_DB_PORT: DATABASE.TEST.PORT.toString(),

@@ -138,7 +138,8 @@ function validateEnvironment(options = {}) {
   const errors = [];
   const warnings = [];
   const defaults = {}; // Defaults that would be applied
-  const isProduction = process.env.NODE_ENV === 'production';
+  const { isProduction } = require('../config/app-mode');
+  const isProd = isProduction();
 
   logger.info('🔍 Validating environment variables...');
 
@@ -179,7 +180,7 @@ function validateEnvironment(options = {}) {
   }
 
   // Production-specific checks
-  if (isProduction) {
+  if (isProd) {
     logger.info('🏭 Running production-specific checks...');
 
     for (const [key, config] of Object.entries(PRODUCTION_CHECKS)) {

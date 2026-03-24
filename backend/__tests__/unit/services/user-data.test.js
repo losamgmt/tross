@@ -1,7 +1,7 @@
 /**
  * User Data Service - Unit Tests
  *
- * Tests user data service (config vs database mode)
+ * Tests user data service (in-memory vs database mode)
  *
  * KISS: Simple test/dev user handling
  *
@@ -9,6 +9,10 @@
  * instead of User.findByAuth0Id
  *
  * Static class - methods read env vars fresh each call
+ * 
+ * MODE SELECTION (from app-mode.js):
+ * - useInMemoryUsers() = true  when: NODE_ENV=development AND MOCK_USERS=true
+ * - useInMemoryUsers() = false when: NODE_ENV=test OR NODE_ENV=production
  */
 
 const UserDataService = require("../../../services/user-data");
@@ -31,10 +35,10 @@ describe("UserDataService", () => {
   });
 
   describe("getAllUsers", () => {
-    test("should return test users in config mode", async () => {
-      // Arrange
-      process.env.USE_TEST_AUTH = "true";
+    test("should return test users in mock mode (local dev with MOCK_USERS=true)", async () => {
+      // Arrange - enable in-memory users
       process.env.NODE_ENV = "development";
+      process.env.MOCK_USERS = "true";
 
       // Act
       const users = await UserDataService.getAllUsers();
@@ -49,8 +53,25 @@ describe("UserDataService", () => {
 
     test("should query database in production mode", async () => {
       // Arrange
-      process.env.USE_TEST_AUTH = "false";
       process.env.NODE_ENV = "production";
+      delete process.env.MOCK_USERS;
+      const mockUsers = [{ id: 1, email: "test@example.com" }];
+      GenericEntityService.findAll.mockResolvedValue({ data: mockUsers });
+
+      // Act
+      const users = await UserDataService.getAllUsers();
+
+      // Assert
+      expect(GenericEntityService.findAll).toHaveBeenCalledWith("user", {
+        includeInactive: false,
+      });
+      expect(users).toEqual(mockUsers);
+    });
+
+    test("should query database in test mode (integration tests)", async () => {
+      // Arrange - test mode always uses database
+      process.env.NODE_ENV = "test";
+      delete process.env.MOCK_USERS;
       const mockUsers = [{ id: 1, email: "test@example.com" }];
       GenericEntityService.findAll.mockResolvedValue({ data: mockUsers });
 
@@ -66,10 +87,10 @@ describe("UserDataService", () => {
   });
 
   describe("getUserByAuth0Id", () => {
-    test("should find test user by auth0_id in config mode", async () => {
+    test("should find test user by auth0_id in mock mode", async () => {
       // Arrange
-      process.env.USE_TEST_AUTH = "true";
       process.env.NODE_ENV = "development";
+      process.env.MOCK_USERS = "true";
       const testUser = Object.values(TEST_USERS)[0];
 
       // Act
@@ -82,10 +103,10 @@ describe("UserDataService", () => {
       expect(user.role).toBe(testUser.role);
     });
 
-    test("should return null for unknown auth0_id in config mode", async () => {
+    test("should return null for unknown auth0_id in mock mode", async () => {
       // Arrange
-      process.env.USE_TEST_AUTH = "true";
       process.env.NODE_ENV = "development";
+      process.env.MOCK_USERS = "true";
 
       // Act
       const user = await UserDataService.getUserByAuth0Id("unknown|12345");
@@ -96,8 +117,8 @@ describe("UserDataService", () => {
 
     test("should query database by auth0_id in production mode", async () => {
       // Arrange
-      process.env.USE_TEST_AUTH = "false";
       process.env.NODE_ENV = "production";
+      delete process.env.MOCK_USERS;
       const mockUser = {
         id: 1,
         auth0_id: "auth0|123",
@@ -119,10 +140,10 @@ describe("UserDataService", () => {
   });
 
   describe("findOrCreateUser", () => {
-    test("should return existing test user in config mode", async () => {
+    test("should return existing test user in mock mode", async () => {
       // Arrange
-      process.env.USE_TEST_AUTH = "true";
       process.env.NODE_ENV = "development";
+      process.env.MOCK_USERS = "true";
       const testUser = Object.values(TEST_USERS)[0];
       const auth0Data = { sub: testUser.auth0_id };
 
@@ -136,8 +157,8 @@ describe("UserDataService", () => {
 
     test("should call AuthUserService.findOrCreateFromAuth0 in production mode", async () => {
       // Arrange
-      process.env.USE_TEST_AUTH = "false";
       process.env.NODE_ENV = "production";
+      delete process.env.MOCK_USERS;
       const auth0Data = { sub: "auth0|123", email: "new@example.com" };
       const mockUser = { id: 1, auth0_id: "auth0|123" };
       AuthUserService.findOrCreateFromAuth0.mockResolvedValue(mockUser);
@@ -153,11 +174,11 @@ describe("UserDataService", () => {
     });
   });
 
-  describe("isConfigMode", () => {
-    test("should return true when USE_TEST_AUTH=true and NODE_ENV=development", () => {
+  describe("isConfigMode (deprecated)", () => {
+    test("should return true when NODE_ENV=development and MOCK_USERS=true", () => {
       // Arrange
-      process.env.USE_TEST_AUTH = "true";
       process.env.NODE_ENV = "development";
+      process.env.MOCK_USERS = "true";
 
       // Act & Assert
       expect(UserDataService.isConfigMode()).toBe(true);
@@ -165,17 +186,26 @@ describe("UserDataService", () => {
 
     test("should return false in production", () => {
       // Arrange
-      process.env.USE_TEST_AUTH = "false";
       process.env.NODE_ENV = "production";
+      delete process.env.MOCK_USERS;
 
       // Act & Assert
       expect(UserDataService.isConfigMode()).toBe(false);
     });
 
-    test("should return false when USE_TEST_AUTH=false even in development", () => {
+    test("should return false when MOCK_USERS is not set in development", () => {
       // Arrange
-      process.env.USE_TEST_AUTH = "false";
       process.env.NODE_ENV = "development";
+      delete process.env.MOCK_USERS;
+
+      // Act & Assert
+      expect(UserDataService.isConfigMode()).toBe(false);
+    });
+
+    test("should return false in test mode (integration tests use DB)", () => {
+      // Arrange
+      process.env.NODE_ENV = "test";
+      process.env.MOCK_USERS = "true"; // Even with this, test mode uses DB
 
       // Act & Assert
       expect(UserDataService.isConfigMode()).toBe(false);

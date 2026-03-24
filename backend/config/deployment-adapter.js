@@ -8,6 +8,7 @@
  */
 
 const { logger } = require('./logger');
+const { isProduction, isTestMode } = require('./app-mode');
 
 /**
  * Required environment variables (platform-agnostic)
@@ -140,7 +141,7 @@ function getAllowedOrigins() {
     .filter(Boolean);
 
   // Always include localhost for development
-  if (process.env.NODE_ENV !== 'production') {
+  if (!isProduction()) {
     originList.push('http://localhost:8080');
     originList.push('http://localhost:3000');
   }
@@ -203,21 +204,8 @@ function getPlatformMetadata() {
   return metadata;
 }
 
-/**
- * Check if running in production
- * @returns {boolean}
- */
-function isProduction() {
-  return process.env.NODE_ENV === 'production';
-}
-
-/**
- * Check if running in test environment
- * @returns {boolean}
- */
-function isTest() {
-  return process.env.NODE_ENV === 'test';
-}
+// NOTE: isProduction() and isTestMode() are now imported from app-mode.js
+// This module re-exports them for backwards compatibility with existing imports.
 
 /**
  * Get rate limiting configuration
@@ -258,8 +246,10 @@ module.exports = {
   // Platform detection
   detectPlatform,
   getPlatformMetadata,
+
+  // Environment checks (re-exported from app-mode.js for backwards compatibility)
   isProduction,
-  isTest,
+  isTest: isTestMode,
 
   // Configuration getters
   getRateLimitConfig,

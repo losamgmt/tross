@@ -64,8 +64,10 @@ const allMetadata = loadAllMetadata();
  * and if the validator module exists (to avoid circular dependencies during initial load)
  */
 function validateMetadataOnLoad() {
+  const { isProduction } = require('../app-mode');
+
   // Skip validation in production for performance
-  if (process.env.NODE_ENV === 'production') {
+  if (isProduction()) {
     return;
   }
 

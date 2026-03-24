@@ -11,6 +11,7 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
 const { HTTP_STATUS, SECURITY } = require('./config/constants');
 const { TIMEOUTS } = require('./config/timeouts');
+const { devAuthEnabled, isTestMode, isProduction, isLocalDev } = require('./config/app-mode');
 const { logger, requestLogger } = require('./config/logger');
 const { securityHeaders, sanitizeInput } = require('./middleware/security');
 const { apiLimiter, authLimiter } = require('./middleware/rate-limit');
@@ -26,7 +27,7 @@ const backgroundTasks = require('./services/background-tasks');
 // Environment Validation
 // Comprehensive validation of all environment variables at startup
 // Skipped during tests to allow test-specific configuration
-if (process.env.NODE_ENV !== 'test') {
+if (!isTestMode()) {
   const result = validateEnvironment({ exitOnError: true });
   if (!result.valid) {
     // exitOnError: true will have already called process.exit(1)
@@ -37,7 +38,7 @@ if (process.env.NODE_ENV !== 'test') {
 
 // Legacy production checks (kept for backwards compatibility)
 // Note: Most validation now handled by env-validator.js
-if (process.env.NODE_ENV === 'production') {
+if (isProduction()) {
   // Validate DB_PASSWORD strength
   if (
     process.env.DB_PASSWORD === 'tross123' ||
@@ -76,7 +77,7 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Trust proxy for Railway/Vercel (required for rate limiting behind reverse proxy)
-if (process.env.NODE_ENV === 'production') {
+if (isProduction()) {
   app.set('trust proxy', 1);
 }
 
@@ -244,7 +245,7 @@ app.use((req, res) => {
       '/api/auth/me',
       '/api/auth/users',
       '/api/roles',
-      process.env.USE_TEST_AUTH === 'true' ? '/api/dev/status' : null,
+      devAuthEnabled() ? '/api/dev/status' : null,
     ].filter(Boolean),
   });
 });
@@ -336,7 +337,7 @@ app.use((error, req, res, _next) => {
     success: false,
     error: errorCode,
     message:
-      statusCode >= 500 && process.env.NODE_ENV !== 'development'
+      statusCode >= 500 && !isLocalDev()
         ? 'Something went wrong'
         : message,
     timestamp: new Date().toISOString(),
@@ -388,7 +389,7 @@ process.on('SIGINT', async () => {
 });
 
 // Start server and test database connection (skip in test mode - supertest handles it)
-if (process.env.NODE_ENV !== 'test') {
+if (!isTestMode()) {
   // Initialize database schema and seed data (idempotent - safe to run every time)
   (async () => {
     try {
@@ -450,7 +451,7 @@ if (process.env.NODE_ENV !== 'test') {
           validateAllRules(allMetadata);
         } catch (rlsError) {
           logger.error('❌ CRITICAL: RLS validation failed:', rlsError.message);
-          if (process.env.NODE_ENV === 'production') {
+          if (isProduction()) {
             logger.error('   Refusing to start with invalid RLS configuration');
             process.exit(1);
           }

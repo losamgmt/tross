@@ -18,6 +18,7 @@ const {
   cleanupTestDatabase,
   getTestPool,
 } = require('../helpers/test-db');
+const { withAuth } = require('../helpers/test-auth');
 const { getUniqueValues } = require('../helpers/test-helpers');
 const { API_OPERATIONS } = require('../../config/api-operations');
 const GenericEntityService = require('../../services/generic-entity-service');

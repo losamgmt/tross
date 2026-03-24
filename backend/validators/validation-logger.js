@@ -60,8 +60,10 @@ function logTypeCoercion({
   coercedType,
   reason,
 }) {
+  const { isLocalDev } = require('../config/app-mode');
+
   // Only log in development - this is normal HTTP behavior
-  if (process.env.NODE_ENV === 'development') {
+  if (isLocalDev()) {
     logger.info('🔄 Type coercion', {
       field,
       originalValue:

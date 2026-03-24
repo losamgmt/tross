@@ -25,6 +25,7 @@ const {
   linkUserToTechnicianProfile,
   createWorkOrder,
 } = require('../helpers/test-db');
+const { withAuth } = require('../helpers/test-auth');
 const { HTTP_STATUS } = require('../../config/constants');
 
 describe('Parent RLS for File Sub-Routes', () => {

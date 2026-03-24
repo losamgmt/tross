@@ -38,10 +38,7 @@ const DATABASE_PERFORMANCE = Object.freeze({
 
 // Authentication Constants
 const AUTH = Object.freeze({
-  AUTH_MODES: Object.freeze({
-    DEVELOPMENT: 'development',
-    AUTH0: 'auth0',
-  }),
+  // Token provider types (used in JWT payload)
   PROVIDERS: Object.freeze({
     DEVELOPMENT_JWT: 'development',
     AUTH0: 'auth0',

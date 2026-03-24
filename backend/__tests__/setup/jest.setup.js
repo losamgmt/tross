@@ -34,8 +34,6 @@ if (transactionMatchers) {
 setTestEnv({
   NODE_ENV: "test",
   JWT_SECRET: TEST_JWT_SECRET,
-  AUTH_MODE: "development",
-  USE_TEST_AUTH: "true",
   // Disable database connections in tests
   DATABASE_URL: "mock://localhost",
   POSTGRES_HOST: DATABASE.TEST.HOST,

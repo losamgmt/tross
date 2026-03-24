@@ -3,56 +3,32 @@
  *
  * Tests audit log read endpoints with real server
  * Validates permission-based access to audit trails
+ *
+ * PATTERN: Uses TestContext for all authentication setup.
  */
 
-const request = require("supertest");
-const app = require("../../server");
-const { createTestUser, cleanupTestDatabase } = require("../helpers/test-db");
+const { createTestContext } = require("../core");
 const { HTTP_STATUS } = require("../../config/constants");
 
 describe("Audit API Endpoints - Integration Tests", () => {
-  let adminUser;
-  let adminToken;
-  let technicianUser;
-  let technicianToken;
-  let viewerUser;
-  let viewerToken;
+  const ctx = createTestContext({ roles: ["admin", "technician", "viewer"] });
 
-  beforeAll(async () => {
-    const admin = await createTestUser("admin");
-    adminUser = admin.user;
-    adminToken = admin.token;
-    const technician = await createTestUser("technician");
-    technicianUser = technician.user;
-    technicianToken = technician.token;
-    const viewer = await createTestUser("viewer");
-    viewerUser = viewer.user;
-    viewerToken = viewer.token;
-  });
-
-  afterAll(async () => {
-    await cleanupTestDatabase();
-  });
+  beforeAll(() => ctx.setup());
+  afterAll(() => ctx.teardown());
 
   describe("GET /api/audit/all - Get All Audit Logs (Admin)", () => {
     test("should return 401 without authentication", async () => {
-      const response = await request(app).get("/api/audit/all");
-
+      const response = await ctx.get("/api/audit/all").unauthenticated().execute();
       expect(response.status).toBe(HTTP_STATUS.UNAUTHORIZED);
     });
 
     test("should return 403 for non-admin users", async () => {
-      const response = await request(app)
-        .get("/api/audit/all")
-        .set("Authorization", `Bearer ${viewerToken}`);
-
+      const response = await ctx.get("/api/audit/all").as("viewer").execute();
       expect(response.status).toBe(HTTP_STATUS.FORBIDDEN);
     });
 
     test("should return audit logs for admin", async () => {
-      const response = await request(app)
-        .get("/api/audit/all")
-        .set("Authorization", `Bearer ${adminToken}`);
+      const response = await ctx.get("/api/audit/all").as("admin").execute();
 
       expect(response.status).toBe(HTTP_STATUS.OK);
       expect(response.body.success).toBe(true);
@@ -60,54 +36,40 @@ describe("Audit API Endpoints - Integration Tests", () => {
     });
 
     test("should respect limit parameter", async () => {
-      const response = await request(app)
-        .get("/api/audit/all?limit=5")
-        .set("Authorization", `Bearer ${adminToken}`);
+      const response = await ctx.get("/api/audit/all?limit=5").as("admin").execute();
 
       expect(response.status).toBe(HTTP_STATUS.OK);
       expect(response.body.data.length).toBeLessThanOrEqual(5);
     });
 
     test("should respect offset parameter", async () => {
-      const response = await request(app)
-        .get("/api/audit/all?offset=10")
-        .set("Authorization", `Bearer ${adminToken}`);
+      const response = await ctx.get("/api/audit/all?offset=10").as("admin").execute();
 
       expect(response.status).toBe(HTTP_STATUS.OK);
       expect(response.body.success).toBe(true);
     });
 
     test("should accept filter parameter for data actions", async () => {
-      const response = await request(app)
-        .get("/api/audit/all?filter=data")
-        .set("Authorization", `Bearer ${adminToken}`);
+      const response = await ctx.get("/api/audit/all?filter=data").as("admin").execute();
 
       expect(response.status).toBe(HTTP_STATUS.OK);
       expect(response.body.success).toBe(true);
     });
 
     test("should accept filter parameter for auth actions", async () => {
-      const response = await request(app)
-        .get("/api/audit/all?filter=auth")
-        .set("Authorization", `Bearer ${adminToken}`);
+      const response = await ctx.get("/api/audit/all?filter=auth").as("admin").execute();
 
       expect(response.status).toBe(HTTP_STATUS.OK);
       expect(response.body.success).toBe(true);
     });
 
     test("should reject limit above maximum with 400", async () => {
-      const response = await request(app)
-        .get("/api/audit/all?limit=1000")
-        .set("Authorization", `Bearer ${adminToken}`);
-
-      // Validator rejects limits above maxLimit (500) with 400 Bad Request
+      const response = await ctx.get("/api/audit/all?limit=1000").as("admin").execute();
       expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
     });
 
     test("should return pagination metadata", async () => {
-      const response = await request(app)
-        .get("/api/audit/all")
-        .set("Authorization", `Bearer ${adminToken}`);
+      const response = await ctx.get("/api/audit/all").as("admin").execute();
 
       expect(response.status).toBe(HTTP_STATUS.OK);
       expect(response.body.pagination).toBeDefined();
@@ -120,31 +82,22 @@ describe("Audit API Endpoints - Integration Tests", () => {
 
   describe("GET /api/audit/user/:userId - Get User Audit Trail", () => {
     test("should return 401 without authentication", async () => {
-      const response = await request(app).get("/api/audit/user/1");
-
+      const response = await ctx.get("/api/audit/user/1").unauthenticated().execute();
       expect(response.status).toBe(HTTP_STATUS.UNAUTHORIZED);
     });
 
     test("should return 400 for invalid user ID", async () => {
-      const response = await request(app)
-        .get("/api/audit/user/invalid")
-        .set("Authorization", `Bearer ${adminToken}`);
-
+      const response = await ctx.get("/api/audit/user/invalid").as("admin").execute();
       expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
     });
 
     test("should return 403 for non-admin viewing other user", async () => {
-      const response = await request(app)
-        .get(`/api/audit/user/${adminUser.id}`)
-        .set("Authorization", `Bearer ${technicianToken}`);
-
+      const response = await ctx.get(`/api/audit/user/${ctx.user("admin").id}`).as("technician").execute();
       expect(response.status).toBe(HTTP_STATUS.FORBIDDEN);
     });
 
     test("should allow users to view own audit trail", async () => {
-      const response = await request(app)
-        .get(`/api/audit/user/${technicianUser.id}`)
-        .set("Authorization", `Bearer ${technicianToken}`);
+      const response = await ctx.get(`/api/audit/user/${ctx.user("technician").id}`).as("technician").execute();
 
       expect(response.status).toBe(HTTP_STATUS.OK);
       expect(response.body.success).toBe(true);
@@ -152,28 +105,22 @@ describe("Audit API Endpoints - Integration Tests", () => {
     });
 
     test("should allow admin to view any user audit trail", async () => {
-      const response = await request(app)
-        .get(`/api/audit/user/${technicianUser.id}`)
-        .set("Authorization", `Bearer ${adminToken}`);
+      const response = await ctx.get(`/api/audit/user/${ctx.user("technician").id}`).as("admin").execute();
 
       expect(response.status).toBe(HTTP_STATUS.OK);
       expect(response.body.success).toBe(true);
     });
 
     test("should respect limit parameter", async () => {
-      const response = await request(app)
-        .get(`/api/audit/user/${adminUser.id}?limit=10`)
-        .set("Authorization", `Bearer ${adminToken}`);
+      const response = await ctx.get(`/api/audit/user/${ctx.user("admin").id}?limit=10`).as("admin").execute();
 
       expect(response.status).toBe(HTTP_STATUS.OK);
       expect(response.body.data.length).toBeLessThanOrEqual(10);
     });
 
     test("should return empty array for user with no activity", async () => {
-      const { user: newUser } = await createTestUser("viewer");
-      const response = await request(app)
-        .get(`/api/audit/user/${newUser.id}`)
-        .set("Authorization", `Bearer ${adminToken}`);
+      const newUser = await ctx.createUser("viewer");
+      const response = await ctx.get(`/api/audit/user/${newUser.user.id}`).as("admin").execute();
 
       expect(response.status).toBe(HTTP_STATUS.OK);
       expect(Array.isArray(response.body.data)).toBe(true);
@@ -182,32 +129,22 @@ describe("Audit API Endpoints - Integration Tests", () => {
 
   describe("GET /api/audit/:resourceType/:resourceId - Get Resource Audit Trail", () => {
     test("should return 401 without authentication", async () => {
-      const response = await request(app).get("/api/audit/users/1");
-
+      const response = await ctx.get("/api/audit/users/1").unauthenticated().execute();
       expect(response.status).toBe(HTTP_STATUS.UNAUTHORIZED);
     });
 
     test("should return 400 for invalid resource ID", async () => {
-      const response = await request(app)
-        .get("/api/audit/users/invalid")
-        .set("Authorization", `Bearer ${adminToken}`);
-
+      const response = await ctx.get("/api/audit/users/invalid").as("admin").execute();
       expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
     });
 
     test("should return 403 when lacking read permission on resource type", async () => {
-      // Viewers don't have permission to read audit_logs resource type
-      const response = await request(app)
-        .get("/api/audit/audit_log/1")
-        .set("Authorization", `Bearer ${viewerToken}`);
-
+      const response = await ctx.get("/api/audit/audit_log/1").as("viewer").execute();
       expect(response.status).toBe(HTTP_STATUS.FORBIDDEN);
     });
 
     test("should return audit trail for accessible resource type", async () => {
-      const response = await request(app)
-        .get("/api/audit/users/1")
-        .set("Authorization", `Bearer ${adminToken}`);
+      const response = await ctx.get("/api/audit/users/1").as("admin").execute();
 
       expect(response.status).toBe(HTTP_STATUS.OK);
       expect(response.body.success).toBe(true);
@@ -215,28 +152,21 @@ describe("Audit API Endpoints - Integration Tests", () => {
     });
 
     test("should respect limit parameter", async () => {
-      const response = await request(app)
-        .get("/api/audit/users/1?limit=5")
-        .set("Authorization", `Bearer ${adminToken}`);
+      const response = await ctx.get("/api/audit/users/1?limit=5").as("admin").execute();
 
       expect(response.status).toBe(HTTP_STATUS.OK);
       expect(response.body.data.length).toBeLessThanOrEqual(5);
     });
 
     test("should work with singular resource type (auto-pluralization)", async () => {
-      const response = await request(app)
-        .get("/api/audit/user/1")
-        .set("Authorization", `Bearer ${adminToken}`);
+      const response = await ctx.get("/api/audit/user/1").as("admin").execute();
 
-      // user -> users (pluralization for RLS check)
       expect(response.status).toBe(HTTP_STATUS.OK);
       expect(response.body.success).toBe(true);
     });
 
     test("should return empty array for resource with no audit history", async () => {
-      const response = await request(app)
-        .get("/api/audit/work_orders/999999")
-        .set("Authorization", `Bearer ${adminToken}`);
+      const response = await ctx.get("/api/audit/work_orders/999999").as("admin").execute();
 
       expect(response.status).toBe(HTTP_STATUS.OK);
       expect(Array.isArray(response.body.data)).toBe(true);
@@ -247,9 +177,7 @@ describe("Audit API Endpoints - Integration Tests", () => {
       const resourceTypes = ["customers", "work_orders", "roles"];
 
       for (const resourceType of resourceTypes) {
-        const response = await request(app)
-          .get(`/api/audit/${resourceType}/1`)
-          .set("Authorization", `Bearer ${adminToken}`);
+        const response = await ctx.get(`/api/audit/${resourceType}/1`).as("admin").execute();
 
         expect(response.status).toBe(HTTP_STATUS.OK);
         expect(response.body.success).toBe(true);
@@ -259,9 +187,7 @@ describe("Audit API Endpoints - Integration Tests", () => {
 
   describe("Audit Log Response Format", () => {
     test("should format dates as ISO strings", async () => {
-      const response = await request(app)
-        .get("/api/audit/all")
-        .set("Authorization", `Bearer ${adminToken}`);
+      const response = await ctx.get("/api/audit/all").as("admin").execute();
 
       expect(response.status).toBe(HTTP_STATUS.OK);
 
@@ -275,9 +201,7 @@ describe("Audit API Endpoints - Integration Tests", () => {
     });
 
     test("should include standard audit fields", async () => {
-      const response = await request(app)
-        .get("/api/audit/all")
-        .set("Authorization", `Bearer ${adminToken}`);
+      const response = await ctx.get("/api/audit/all").as("admin").execute();
 
       expect(response.status).toBe(HTTP_STATUS.OK);
 

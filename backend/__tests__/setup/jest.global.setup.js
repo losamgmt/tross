@@ -14,8 +14,6 @@ module.exports = async () => {
   // Set up environment for database connection
   process.env.NODE_ENV = "test";
   process.env.JWT_SECRET = TEST_JWT_SECRET;
-  process.env.AUTH_MODE = "development";
-  process.env.USE_TEST_AUTH = "true";
 
   // Import after setting NODE_ENV
   const { pool } = require("../../db/connection");

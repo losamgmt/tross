@@ -73,9 +73,9 @@ function clearCache() {
  * @returns {string} Safe error message
  */
 function sanitizeErrorMessage(error) {
-  const isProduction = process.env.NODE_ENV === 'production';
+  const { isProduction } = require('../config/app-mode');
 
-  if (!isProduction) {
+  if (!isProduction()) {
     // In dev/test, show full error for debugging
     return error.message;
   }

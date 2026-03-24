@@ -29,6 +29,34 @@ const { getClientIp, getUserAgent } = require('../utils/request-helpers');
 const ResponseFormatter = require('../utils/response-formatter');
 const { ERROR_CODES } = require('../utils/response-formatter');
 
+// ============================================================================
+// PROFILE TYPE REGISTRY
+// ============================================================================
+
+/**
+ * Known profile ID columns in the users table.
+ *
+ * EXTENSIBILITY: New profile types are automatically detected via convention
+ * (any column ending in '_profile_id'). This registry exists for:
+ *
+ * 1. DOCUMENTATION: Explicit list of expected profile types
+ * 2. VALIDATION: Tests can verify all expected profiles are extracted
+ * 3. SECURITY AUDIT: Clear visibility of which profiles affect RLS
+ *
+ * TO ADD A NEW PROFILE TYPE:
+ * 1. Add column to users table (e.g., vendor_profile_id)
+ * 2. Add to this registry
+ * 3. Add RLS rules in entity metadata if needed
+ * 4. Profile is automatically extracted — no code changes needed elsewhere
+ *
+ * @constant {string[]}
+ */
+const KNOWN_PROFILE_TYPES = Object.freeze([
+  'customer_profile_id',
+  'technician_profile_id',
+  // Future: 'vendor_profile_id', 'contractor_profile_id', etc.
+]);
+
 /**
  * Extract all profile ID columns from user record
  *
@@ -227,4 +255,6 @@ module.exports = {
   // Exported for use by related modules (e.g., sub-entity.js, parent-rls-service.js)
   extractProfileIds,
   getOperationFromMethod,
+  // Exported for tests and documentation
+  KNOWN_PROFILE_TYPES,
 };

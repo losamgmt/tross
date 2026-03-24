@@ -12,7 +12,8 @@
  *   testLogger.error('Test failed:', error);
  */
 
-const isTest = process.env.NODE_ENV === 'test';
+const { isTestMode } = require('./app-mode');
+const isTest = isTestMode();
 
 // Captured logs for test assertions
 const logs = [];

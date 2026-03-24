@@ -55,7 +55,8 @@ const sanitizeInput = () => {
  * Environment-aware: Stricter policies in production, relaxed for Flutter development
  */
 const securityHeaders = () => {
-  const isDevelopment = process.env.NODE_ENV !== 'production';
+  const { isProduction } = require('../config/app-mode');
+  const isDevelopment = !isProduction();
   // In production, these MUST be set via environment variables
   const cdnDomain = process.env.CDN_DOMAIN;
   const apiDomain = process.env.API_DOMAIN;

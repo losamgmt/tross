@@ -37,7 +37,7 @@ describe("Authentication Flow Integration", () => {
   let app;
 
   beforeEach(() => {
-    setTestEnv({ AUTH_MODE: "development" });
+    setTestEnv();
 
     // Reset mocks
     jest.clearAllMocks();

@@ -1,6 +1,15 @@
 /**
  * Test Helpers
  * Utilities for creating test applications and mocking dependencies
+ *
+ * TOKEN GENERATION:
+ * For auth tokens, use the new test-auth.js module:
+ * - Unit tests: getUnitTestToken() - cached, no DB
+ * - Integration: createTestAuthContext() - scoped, with DB users
+ * - Both: withAuth() - chainable auth header helper
+ *
+ * The functions here (generateTestToken, createAuthHeader) are deprecated
+ * and re-exported for backwards compatibility only.
  */
 
 const express = require("express");
@@ -8,6 +17,15 @@ const { signJwt } = require("../../utils/jwt-helper");
 const { AUTH } = require("../../config/constants");
 const { TEST_JWT_SECRET } = require("../../config/test-constants");
 const { TEST_USERS, JWT_PAYLOADS } = require("../fixtures/test-data");
+
+// Re-export from test-auth.js for new code
+const {
+  getUnitTestToken,
+  getExpiredToken,
+  createTestAuthContext,
+  withAuth,
+  bearerHeader,
+} = require('./test-auth');
 
 /**
  * Create test application with minimal setup
@@ -32,47 +50,35 @@ function createTestApp(options = {}) {
 
 /**
  * Generate valid JWT token for testing (async - uses jose)
+ * @deprecated Use getUnitTestToken() from test-auth.js instead
  * @param {string} userType - Type of user (admin, technician, etc.)
  * @param {Object} overrides - Payload overrides
  * @returns {Promise<string>} JWT token
  */
 async function generateTestToken(userType = "technician", overrides = {}) {
-  const payload = {
-    ...JWT_PAYLOADS[userType],
-    ...overrides,
-  };
-
-  // SECURITY: Use centralized test secret - no fallbacks
-  return signJwt(payload, TEST_JWT_SECRET, { expiresIn: "24h" });
+  // Delegate to new API
+  return getUnitTestToken(userType, overrides);
 }
 
 /**
  * Generate expired JWT token for testing (async - uses jose)
+ * @deprecated Use getExpiredToken() from test-auth.js instead
  * @param {string} userType - Type of user
  * @returns {Promise<string>} Expired JWT token
  */
 async function generateExpiredToken(userType = "technician") {
-  // For expired tokens, we use a very short expiration and pre-expired iat
-  const payload = {
-    ...JWT_PAYLOADS[userType],
-    iat: Math.floor(Date.now() / 1000) - 7200, // 2 hours ago
-    exp: Math.floor(Date.now() / 1000) - 3600, // 1 hour ago (expired)
-  };
-
-  // SECURITY: Use centralized test secret - no fallbacks
-  // Sign without additional expiration (already in payload)
-  return signJwt(payload, TEST_JWT_SECRET);
+  // Delegate to new API
+  return getExpiredToken(userType);
 }
 
 /**
  * Create authorization header for testing
+ * @deprecated Use bearerHeader() from test-auth.js instead
  * @param {string} token - JWT token
  * @returns {Object} Authorization header object
  */
 function createAuthHeader(token) {
-  return {
-    authorization: `Bearer ${token}`,
-  };
+  return bearerHeader(token);
 }
 
 /**
@@ -173,8 +179,6 @@ function setTestEnv(envVars = {}) {
   const defaultEnv = {
     NODE_ENV: "test",
     JWT_SECRET: TEST_JWT_SECRET,
-    AUTH_MODE: "development",
-    USE_TEST_AUTH: "true",
   };
 
   Object.assign(process.env, defaultEnv, envVars);
@@ -295,10 +299,34 @@ function uniqueValue(fieldType) {
 }
 
 module.exports = {
-  createTestApp,
+  // ============================================================================
+  // NEW API (from test-auth.js) - USE THESE
+  // ============================================================================
+  // Unit tests (no DB)
+  getUnitTestToken,
+  getExpiredToken,
+
+  // Integration tests (with DB)
+  createTestAuthContext,
+
+  // Chainable helpers
+  withAuth,
+  bearerHeader,
+
+  // ============================================================================
+  // DEPRECATED (backwards compatibility only)
+  // ============================================================================
+  /** @deprecated Use getUnitTestToken() instead */
   generateTestToken,
+  /** @deprecated Use getExpiredToken() instead */
   generateExpiredToken,
+  /** @deprecated Use bearerHeader() instead */
   createAuthHeader,
+
+  // ============================================================================
+  // APP & MOCK UTILITIES (still current)
+  // ============================================================================
+  createTestApp,
   mockDbResponse,
   mockUserDataService,
   mockJwtVerify,
@@ -308,6 +336,7 @@ module.exports = {
   cleanupTestEnv,
   sleep,
   assertResponseStructure,
+
   // Universal unique value generators
   getUniqueValues,
   uniqueValue,
