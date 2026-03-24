@@ -11,12 +11,17 @@
 
 const { DATABASE, REDIS } = require('./constants');
 const {
-  getEnvironment,
-  isDevelopment,
+  isTestMode,
+  isLocalDev,
   isProduction,
-  isTest,
-} = require('./environment');
+  TEST_JWT_SECRET,
+} = require('./app-mode');
+const { getEnvironment } = require('./environment');
 const { logger } = require('./logger');
+
+// Backwards compatibility aliases
+const isDevelopment = isLocalDev;
+const isTest = isTestMode;
 
 /**
  * AppConfig - Centralized configuration service
@@ -151,7 +156,7 @@ const AppConfig = {
       if (!secret) {
         // In test mode, allow tests to run without explicit JWT_SECRET
         if (isTest()) {
-          return 'test-only-jwt-secret-do-not-use-in-production';
+          return TEST_JWT_SECRET;
         }
         // In dev/production, fail immediately
         throw new Error(

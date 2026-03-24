@@ -1,17 +1,30 @@
 /**
  * Environment Detection Module
  *
- * SINGLE SOURCE OF TRUTH for environment detection helpers.
- * Imported by app-config.js, env-manifest.js, and any other module
- * that needs to detect the current environment.
+ * BACKWARDS COMPATIBILITY WRAPPER
  *
- * This module imports ENVIRONMENTS from constants.js to avoid duplication.
+ * This module now re-exports from app-mode.js which is the new
+ * SINGLE SOURCE OF TRUTH for environment detection.
+ *
+ * For new code, import directly from app-mode.js:
+ *   const { isTestMode, isLocalDev, isProduction } = require('./app-mode');
+ *
+ * This wrapper maintains backwards compatibility with existing code that
+ * imports from environment.js.
  */
 
 const { ENVIRONMENTS } = require('./constants');
+const {
+  getAppMode,
+  isTestMode,
+  isLocalDev,
+  isProduction,
+  AppMode,
+} = require('./app-mode');
 
 /**
  * Get current environment from NODE_ENV
+ * @deprecated Use getAppMode() from app-mode.js for unified behavior
  * @returns {string} Current environment
  */
 function getEnvironment() {
@@ -20,30 +33,25 @@ function getEnvironment() {
 
 /**
  * Check if running in development mode
- * @returns {boolean} True if development environment
+ * @deprecated Use isLocalDev() from app-mode.js
  */
-function isDevelopment() {
-  return getEnvironment() === ENVIRONMENTS.DEVELOPMENT;
-}
-
-/**
- * Check if running in production mode
- * @returns {boolean} True if production environment
- */
-function isProduction() {
-  return getEnvironment() === ENVIRONMENTS.PRODUCTION;
-}
+const isDevelopment = isLocalDev;
 
 /**
  * Check if running in test mode
- * @returns {boolean} True if test environment
+ * @deprecated Use isTestMode() from app-mode.js
  */
-function isTest() {
-  return getEnvironment() === ENVIRONMENTS.TEST;
-}
+const isTest = isTestMode;
 
 module.exports = {
-  ENVIRONMENTS, // Re-export for convenience
+  // Re-exports from app-mode.js (new API)
+  AppMode,
+  getAppMode,
+  isTestMode,
+  isLocalDev,
+
+  // Backwards compatibility (old API)
+  ENVIRONMENTS,
   getEnvironment,
   isDevelopment,
   isProduction,

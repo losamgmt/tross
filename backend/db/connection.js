@@ -43,9 +43,12 @@ types.setTypeParser(TIMESTAMPTZ_OID, (val) => {
   return new Date(val);
 });
 
+// Import environment detection from app-mode (SSOT)
+const { isTestMode, isLocalDev } = require('../config/app-mode');
+
 // Determine which database configuration to use based on environment
-const isTest = process.env.NODE_ENV === 'test';
-const isDevelopment = process.env.NODE_ENV === 'development';
+const isTest = isTestMode();
+const isDevelopment = isLocalDev();
 const useRailwayDB = process.env.DB_ENV === 'railway';
 
 // Railway database configuration (for testing against production DB)

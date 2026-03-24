@@ -19,7 +19,7 @@ const AUTH0_CONFIG = {
     audience: process.env.AUTH0_AUDIENCE, // Required - no fallback
     callbackUrl:
       process.env.AUTH0_CALLBACK_URL ||
-      (process.env.NODE_ENV === 'development'
+      (require('./app-mode').isLocalDev()
         ? 'http://localhost:3001/api/auth/callback'
         : undefined),
   },

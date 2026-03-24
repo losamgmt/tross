@@ -30,11 +30,6 @@ describe("Constants Service", () => {
   });
 
   describe("AUTH", () => {
-    test("should have AUTH_MODES with correct values", () => {
-      expect(AUTH.AUTH_MODES).toHaveProperty("DEVELOPMENT", "development");
-      expect(AUTH.AUTH_MODES).toHaveProperty("AUTH0", "auth0");
-    });
-
     test("should have PROVIDERS with correct values", () => {
       expect(AUTH.PROVIDERS).toHaveProperty("DEVELOPMENT_JWT", "development");
       expect(AUTH.PROVIDERS).toHaveProperty("AUTH0", "auth0");
@@ -44,11 +39,6 @@ describe("Constants Service", () => {
       expect(AUTH.JWT).toHaveProperty("ALGORITHM", "HS256");
       expect(AUTH.JWT).toHaveProperty("DEFAULT_EXPIRY", "24h");
       expect(AUTH.JWT).toHaveProperty("BEARER_PREFIX", "Bearer ");
-    });
-
-    test("should ensure AUTH_MODES and PROVIDERS have matching values", () => {
-      expect(AUTH.AUTH_MODES.DEVELOPMENT).toBe(AUTH.PROVIDERS.DEVELOPMENT_JWT);
-      expect(AUTH.AUTH_MODES.AUTH0).toBe(AUTH.PROVIDERS.AUTH0);
     });
   });
 

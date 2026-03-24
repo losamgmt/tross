@@ -45,7 +45,8 @@ function loadPermissions(forceReload = false) {
     permissionCache = config;
 
     // Log initialization info (logger respects test silence)
-    if (process.env.NODE_ENV !== 'test') {
+    const { isTestMode } = require('./app-mode');
+    if (!isTestMode()) {
       logger.info('[Permissions] Derived from metadata:', {
         roles: Object.keys(config.roles).length,
         resources: Object.keys(config.resources).length,

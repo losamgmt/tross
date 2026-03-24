@@ -100,9 +100,10 @@ async function seedAdminUser() {
       }
     }
   } catch (error) {
+    const { isLocalDev } = require('../config/app-mode');
     logger.error('❌ Admin user seeding failed', {
       error: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      stack: isLocalDev() ? error.stack : undefined,
     });
 
     if (error.message.includes('Auth0')) {

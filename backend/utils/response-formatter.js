@@ -168,6 +168,7 @@ class ResponseFormatter {
    * @param {string} [fallbackMessage] - Fallback error message
    */
   static error(res, error, fallbackMessage = 'An error occurred') {
+    const { isLocalDev } = require('../config/app-mode');
     const statusCode = this._determineStatusCode(error);
     const errorResponse = {
       success: false,
@@ -177,7 +178,7 @@ class ResponseFormatter {
     };
 
     // In development, include stack trace
-    if (process.env.NODE_ENV === 'development' && error.stack) {
+    if (isLocalDev() && error.stack) {
       errorResponse.stack = error.stack;
     }
 

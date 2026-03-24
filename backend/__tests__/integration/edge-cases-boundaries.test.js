@@ -12,6 +12,7 @@
 const request = require("supertest");
 const app = require("../../server");
 const { createTestUser, cleanupTestDatabase } = require("../helpers/test-db");
+const { withAuth } = require("../helpers/test-auth");
 const { getUniqueValues } = require("../helpers/test-helpers");
 const GenericEntityService = require("../../services/generic-entity-service");
 

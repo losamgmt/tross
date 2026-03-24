@@ -136,7 +136,8 @@ function initializeFromFallback() {
   isInitializedFromDB = false;
   isUsingFallback = true;
 
-  if (process.env.NODE_ENV !== 'test') {
+  const { isTestMode } = require('./app-mode');
+  if (!isTestMode()) {
     logger.warn('[RoleHierarchy] Using FALLBACK constants (not from database)');
   }
 

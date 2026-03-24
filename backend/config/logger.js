@@ -4,10 +4,11 @@
  */
 
 const winston = require('winston');
+const { verboseLogging } = require('./app-mode');
 
 // Log levels: error, warn, info, debug
 const logLevel = process.env.LOG_LEVEL || 'info';
-const isDevelopment = process.env.NODE_ENV !== 'production';
+const isDevelopment = verboseLogging();
 
 // Simple, clean format for development - KISS!
 const prettyFormat = winston.format.printf(

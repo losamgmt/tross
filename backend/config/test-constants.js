@@ -98,10 +98,9 @@ const TEST_EMAIL_PREFIXES = Object.freeze({
 // ============================================================================
 // TEST JWT SECRET
 // ============================================================================
-// SECURITY: Centralized test-only JWT secret
-// This ensures ALL tests use a consistent secret without fallbacks in production code
-// MUST MATCH: AppConfig.jwt.secret returns this same value in test mode
-const TEST_JWT_SECRET = 'test-only-jwt-secret-do-not-use-in-production';
+// Imported from app-mode.js which is the SINGLE SOURCE OF TRUTH
+// Re-exported here for convenience in test files
+const { TEST_JWT_SECRET } = require('./app-mode');
 
 // ============================================================================
 // TEST TOKENS
@@ -280,10 +279,67 @@ const TEST_PERFORMANCE = Object.freeze({
 });
 
 // ============================================================================
+// TEST TOKEN GENERATOR
+// ============================================================================
+/**
+ * Generate a test JWT token for a given role with optional claim overrides.
+ *
+ * UNIFIED HELPER: Centralizes token generation for all test scenarios.
+ * Uses the unified token structure expected by auth middleware.
+ *
+ * @param {string} role - User role (admin, manager, technician, customer)
+ * @param {Object} [claims={}] - Optional claim overrides
+ * @param {string} [claims.sub] - Subject (user identifier)
+ * @param {string} [claims.email] - User email
+ * @param {string} [claims.provider] - Auth provider ('auth0' or 'development')
+ * @param {Object} [options={}] - JWT options
+ * @param {string} [options.expiresIn='1h'] - Token expiration time
+ * @returns {Promise<string>} Signed JWT token
+ *
+ * @example
+ * // Generate admin token with default claims
+ * const token = await generateTestToken('admin');
+ *
+ * // Generate customer token with custom email
+ * const token = await generateTestToken('customer', { email: 'custom@test.com' });
+ *
+ * // Generate token for database user (auth0 provider)
+ * const token = await generateTestToken('technician', { provider: 'auth0', userId: 123 });
+ */
+async function generateTestToken(role = 'technician', claims = {}, options = {}) {
+  const { signJwt } = require('../utils/jwt-helper');
+
+  const defaultClaims = {
+    // RFC 7519 standard claims
+    iss: claims.iss || 'https://api.tross.dev',
+    sub: claims.sub || `test-${Date.now()}`,
+    aud: claims.aud || 'https://api.tross.dev',
+
+    // Application claims
+    email: claims.email || `test-${Date.now()}@test.com`,
+    role,
+    provider: claims.provider || 'development',
+  };
+
+  // Merge custom claims (allows userId, profile IDs, etc.)
+  const finalClaims = { ...defaultClaims, ...claims, role };
+
+  return signJwt(finalClaims, TEST_JWT_SECRET, {
+    expiresIn: options.expiresIn || '1h',
+  });
+}
+
+// ============================================================================
 // EXPORTS
 // ============================================================================
 module.exports = Object.freeze({
+  // JWT Secret (SSOT from app-mode.js)
   TEST_JWT_SECRET,
+
+  // Token generation helper
+  generateTestToken,
+
+  // Test data constants
   TEST_ROLES,
   TEST_USERS,
   TEST_EMAIL_PREFIXES,

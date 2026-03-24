@@ -122,8 +122,6 @@ jobs:
           NODE_ENV: test
           # MUST MATCH: TEST_JWT_SECRET in backend/config/test-constants.js
           JWT_SECRET: test-only-jwt-secret-do-not-use-in-production
-          AUTH_MODE: development
-          USE_TEST_AUTH: "true"
           STORAGE_PROVIDER: r2
           STORAGE_ENDPOINT: ${{ secrets.STORAGE_ENDPOINT }}
           STORAGE_BUCKET: ${{ secrets.STORAGE_BUCKET }}

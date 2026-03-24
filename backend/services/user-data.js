@@ -2,35 +2,30 @@
 const { TEST_USERS } = require('../config/test-users');
 const GenericEntityService = require('./generic-entity-service');
 const AuthUserService = require('./auth-user-service');
-
-/**
- * Check if we're in config mode (test auth + development)
- * Reads env vars fresh each call - no caching
- */
-function isConfigMode() {
-  return (
-    process.env.USE_TEST_AUTH === 'true' &&
-    process.env.NODE_ENV === 'development'
-  );
-}
+const { useInMemoryUsers } = require('../config/app-mode');
 
 /**
  * UserDataService - Static class for user data operations
- * Handles both config-based (dev/test) and database-based (production) user data
+ * Handles both in-memory (dev/mock) and database-based (test/production) user data
+ *
+ * DATA SOURCE SELECTION:
+ * - useInMemoryUsers() = true  → Use TEST_USERS from config (LOCAL_DEV + MOCK_USERS=true)
+ * - useInMemoryUsers() = false → Use database (TEST mode, PRODUCTION, or LOCAL_DEV without MOCK_USERS)
  */
 class UserDataService {
   /**
-   * Check if we're in config mode
+   * Check if using in-memory test users
+   * @deprecated Use useInMemoryUsers() from app-mode.js directly
    */
   static isConfigMode() {
-    return isConfigMode();
+    return useInMemoryUsers();
   }
 
   /**
-   * Get all users - config or database based
+   * Get all users - in-memory or database based
    */
   static async getAllUsers() {
-    if (isConfigMode()) {
+    if (useInMemoryUsers()) {
       // Return test users from config
       return Object.values(TEST_USERS).map((user) => ({
         id: null, // No DB ID in config mode
@@ -53,10 +48,10 @@ class UserDataService {
   }
 
   /**
-   * Get user by Auth0 ID - config or database based
+   * Get user by Auth0 ID - in-memory or database based
    */
   static async getUserByAuth0Id(auth0Id) {
-    if (isConfigMode()) {
+    if (useInMemoryUsers()) {
       // Find in test users config
       const testUser = Object.values(TEST_USERS).find(
         (user) => user.auth0_id === auth0Id,
@@ -76,16 +71,16 @@ class UserDataService {
       }
       return null;
     } else {
-      // Use GenericEntityService instead of User.findByAuth0Id
+      // Use GenericEntityService
       return GenericEntityService.findByField('user', 'auth0_id', auth0Id);
     }
   }
 
   /**
-   * Create or find user - config or database based
+   * Create or find user - in-memory or database based
    */
   static async findOrCreateUser(auth0Data) {
-    if (isConfigMode()) {
+    if (useInMemoryUsers()) {
       // Just return the user from config (don't store anywhere)
       return UserDataService.getUserByAuth0Id(auth0Data.sub);
     } else {

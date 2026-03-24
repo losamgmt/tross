@@ -80,7 +80,7 @@ const API_OPERATIONS = Object.freeze({
    */
   BACKGROUND_TASKS: Object.freeze({
     // Whether to run background tasks (disabled in test mode)
-    ENABLED: process.env.NODE_ENV !== 'test',
+    ENABLED: !require('./app-mode').isTestMode(),
 
     // Cleanup intervals (milliseconds)
     INTERVALS: Object.freeze({

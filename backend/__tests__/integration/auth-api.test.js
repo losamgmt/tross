@@ -8,6 +8,7 @@
 const request = require("supertest");
 const app = require("../../server");
 const { createTestUser, cleanupTestDatabase } = require("../helpers/test-db");
+const { withAuth } = require("../helpers/test-auth");
 const {
   TEST_PAGINATION,
   TEST_PERFORMANCE,
