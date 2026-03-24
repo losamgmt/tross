@@ -54,7 +54,8 @@ jobs:
         run: npm run test:unit --workspace=backend
         env:
           NODE_ENV: test
-          JWT_SECRET: test-secret-key-for-ci
+          # MUST MATCH: TEST_JWT_SECRET in backend/config/test-constants.js
+          JWT_SECRET: test-only-jwt-secret-do-not-use-in-production
 
       - name: Verify sync scripts are idempotent
         run: |
@@ -119,7 +120,8 @@ jobs:
           TEST_DB_USER: postgres
           TEST_DB_PASSWORD: test123
           NODE_ENV: test
-          JWT_SECRET: test-secret-key-for-ci
+          # MUST MATCH: TEST_JWT_SECRET in backend/config/test-constants.js
+          JWT_SECRET: test-only-jwt-secret-do-not-use-in-production
           AUTH_MODE: development
           USE_TEST_AUTH: "true"
           STORAGE_PROVIDER: r2
