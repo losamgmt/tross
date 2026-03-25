@@ -107,10 +107,10 @@ router.put(
     await AuditService.log({
       action: 'update',
       resourceType: 'system_settings',
-      resourceId: key,
+      resourceId: null, // System settings don't have integer IDs
       userId: req.dbUser.id,
       oldValues: null, // Could fetch old value first if needed
-      newValues: { value },
+      newValues: { key, value },
       ipAddress: getClientIp(req),
       userAgent: getUserAgent(req),
     });
@@ -168,9 +168,9 @@ router.put(
     await AuditService.log({
       action: enabled ? 'maintenance_enabled' : 'maintenance_disabled',
       resourceType: 'system_settings',
-      resourceId: 'maintenance_mode',
+      resourceId: null, // System settings don't have integer IDs
       userId: req.dbUser.id,
-      newValues: result.value,
+      newValues: { setting: 'maintenance_mode', ...result.value },
       ipAddress: getClientIp(req),
       userAgent: getUserAgent(req),
     });
