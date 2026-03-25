@@ -31,6 +31,10 @@ const {
 const app = require("../../server");
 const db = require("../../db/connection");
 
+// Debug logging for CI troubleshooting
+const DEBUG = process.env.DEBUG_TESTS === 'true';
+const debugLog = (...args) => DEBUG && console.log('[all-entities.test.js]', ...args);
+
 // Validate metadata before running tests (fail fast)
 beforeAll(() => {
   assertValidMetadata();
@@ -51,9 +55,14 @@ describe("All Entities Integration Tests", () => {
   // ============================================================================
 
   const genericCrudEntities = getGenericCrudEntityNames();
+  
+  // Debug: Log entities being registered
+  debugLog(`Generic CRUD entities (${genericCrudEntities.length}):`, genericCrudEntities);
+  console.log(`[all-entities] Registering ${genericCrudEntities.length} entities:`, genericCrudEntities.join(', '));
 
   describe(`Generic CRUD Entities (${genericCrudEntities.length} total)`, () => {
     for (const entityName of genericCrudEntities) {
+      debugLog(`  Registering: ${entityName}`);
       describe(`${entityName}`, () => {
         runEntityTests(entityName, { app, db: db.pool });
       });

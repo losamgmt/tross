@@ -20,6 +20,13 @@ const scenarios = require("./scenarios");
 const { buildTestContext } = require("./data/test-context");
 const entityFactory = require("./data/entity-factory");
 
+// Debug logging for CI troubleshooting
+const DEBUG = process.env.DEBUG_TESTS === 'true';
+const debugLog = (...args) => DEBUG && console.log('[runner.js]', ...args);
+
+// Track which entities have been registered to detect duplicates
+const registeredEntities = new Set();
+
 /**
  * Run all test scenarios for an entity
  *
@@ -30,6 +37,14 @@ const entityFactory = require("./data/entity-factory");
  * @param {Object} options.db - Database pool (required)
  */
 function runEntityTests(entityName, options = {}) {
+  // Debug: detect duplicate registration
+  if (registeredEntities.has(entityName)) {
+    console.error(`[DUPLICATE] runEntityTests called AGAIN for '${entityName}'!`);
+    console.error(`[DUPLICATE] Stack:`, new Error().stack);
+  }
+  registeredEntities.add(entityName);
+  debugLog(`Registering tests for entity: ${entityName}`);
+
   const meta = { ...allMetadata[entityName], entityName };
 
   if (!meta.tableName) {
@@ -37,6 +52,7 @@ function runEntityTests(entityName, options = {}) {
   }
 
   const categoriesToRun = options.categories || Object.keys(scenarios);
+  debugLog(`  Categories: ${categoriesToRun.join(', ')}`);
 
   describe(`${entityName} Integration Tests`, () => {
     let ctx;
