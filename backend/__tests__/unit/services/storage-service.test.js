@@ -598,15 +598,24 @@ describe("StorageService", () => {
     });
 
     test("measures response time accurately", async () => {
-      // Simulate a slow response
-      mockSend.mockImplementationOnce(
-        () => new Promise((resolve) => setTimeout(resolve, 50)),
-      );
+      // Mock Date.now() to return controlled values for deterministic timing
+      const originalDateNow = Date.now;
+      let callCount = 0;
+      jest.spyOn(Date, 'now').mockImplementation(() => {
+        callCount++;
+        // First call (start): return 1000
+        // Second call (end): return 1050 (50ms elapsed)
+        return callCount === 1 ? 1000 : 1050;
+      });
+
+      mockSend.mockResolvedValueOnce({});
 
       const result = await service.healthCheck();
 
-      // Allow 5ms tolerance for timer resolution differences across environments
-      expect(result.responseTime).toBeGreaterThanOrEqual(45);
+      expect(result.responseTime).toBe(50); // Deterministic: 1050 - 1000 = 50
+
+      // Restore
+      Date.now = originalDateNow;
     });
   });
 });
