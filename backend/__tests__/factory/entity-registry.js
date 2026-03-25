@@ -208,8 +208,8 @@ function assertValidMetadata() {
  * - file_attachment: Polymorphic S3-based storage, specialized upload flow
  * - saved_view: User-owned entity (user_id auto-injected from auth context)
  * - audit_log: Read-only system table at /api/audit/*, writes internal only
- *
- * NOTE: preferences was moved to generic router (2026-01-23)
+ * - preferences: sharedPrimaryKey pattern (preferences.id = users.id) is
+ *                incompatible with fixture reuse - each test needs a fresh user
  *
  * They should have their own dedicated tests, not run through all-entities.test.js
  */
@@ -217,6 +217,7 @@ const SPECIALIZED_ROUTE_ENTITIES = [
   "file_attachment",
   "saved_view",
   "audit_log",
+  "preferences",
 ];
 
 /**

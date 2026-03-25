@@ -1,0 +1,1562 @@
+Run npm run test:integration --workspace=backend
+
+> backend@1.0.0 test:integration
+> node scripts/run-integration-tests.js
+
+Running one project: integration
+[dotenv@17.3.1] injecting env (0) from .env -- tip: 🛡️ auth for agents: https://vestauth.com
+03:37:26 Using individual DB environment variables {"host":"localhost","port":5432,"database":"tross_dev"}
+03:37:26 🧪 Using TEST database {"host":"localhost","port":5433,"database":"tross_test"}
+  console.log
+    [dotenv@17.3.1] injecting env (0) from .env -- tip: 🔐 prevent committing .env to code: https://dotenvx.com/precommit
+
+      at _log (node_modules/dotenv/lib/main.js:139:11)
+
+03:37:27 Using individual DB environment variables {"host":"localhost","port":5432,"database":"tross_dev"}
+03:37:27 🧪 Using TEST database {"host":"localhost","port":5433,"database":"tross_test"}
+  console.log
+    [dotenv@17.3.1] injecting env (0) from .env -- tip: 🤖 agentic secret storage: https://dotenvx.com/as2
+
+      at _log (node_modules/dotenv/lib/main.js:139:11)
+
+03:37:28 CORS allowed origins configured {"count":2}
+03:37:30 Security Event {"event":"AUTH_MISSING_TOKEN","url":"/me"}
+03:37:30 ⚠️  [mn5ht7arhkg2z] GET /me → 401 (10ms)
+03:37:30 ✅ [mn5ht7bcwrnrr] GET /me → 200 (17ms)
+03:37:30 ✅ [mn5ht7c6ujsu9] GET /me → 200 (4ms)
+03:37:30 ✅ [mn5ht7ch7jrpu] GET /me → 200 (3ms)
+03:37:30 ✅ [mn5ht7csflsk4] GET /me → 200 (3ms)
+03:37:30 ✅ [mn5ht7d1bjv30] GET /me → 200 (3ms)
+03:37:30 Security Event {"event":"AUTH_INVALID_TOKEN","url":"/me","error":"invalid signature"}
+03:37:30 ⚠️  [mn5ht7db1vdqx] GET /me → 403 (2ms)
+03:37:30 Security Event {"event":"AUTH_MISSING_TOKEN","url":"/me"}
+03:37:30 ⚠️  [mn5ht7dlh6joz] PUT /me → 401 (10ms)
+03:37:30 user updated {"id":2,"fieldsUpdated":1}
+03:37:30 ✅ [mn5ht7e139vs6] PUT /me → 200 (14ms)
+03:37:30 user updated {"id":2,"fieldsUpdated":1}
+03:37:30 ✅ [mn5ht7epgnpb0] PUT /me → 200 (11ms)
+03:37:30 user updated {"id":2,"fieldsUpdated":2}
+03:37:30 ✅ [mn5ht7f6sifg3] PUT /me → 200 (11ms)
+03:37:30 ⚠️  [mn5ht7fnb5c58] PUT /me → 400 (5ms)
+03:37:30 ⚠️  [mn5ht7fzuix67] PUT /me → 400 (5ms)
+03:37:30 ⚠️  [mn5ht7gam00ap] PUT /me → 400 (5ms)
+03:37:30 user updated {"id":2,"fieldsUpdated":2}
+03:37:30 ✅ [mn5ht7glg5x7g] PUT /me → 200 (10ms)
+03:37:30 ✅ [mn5ht7h11u3kl] GET /me → 200 (3ms)
+03:37:30 user updated {"id":2,"fieldsUpdated":2}
+03:37:30 ✅ [mn5ht7hbbe4yj] PUT /me → 200 (11ms)
+03:37:30 ⚠️  [mn5ht7hs0loxd] PUT /me → 400 (4ms)
+03:37:30 user updated {"id":2,"fieldsUpdated":2}
+03:37:30 ✅ [mn5ht7i2vdvav] PUT /me → 200 (10ms)
+03:37:30 ✅ [mn5ht7iivsd2l] GET /me → 200 (3ms)
+03:37:30 ✅ [mn5ht7ir3q7rt] GET /me → 200 (3ms)
+03:37:30 Security Event {"event":"AUTH_MISSING_TOKEN","url":"/me"}
+03:37:30 ⚠️  [mn5ht7j0z86jj] GET /me → 401 (4ms)
+03:37:30 Security Event {"event":"AUTH_MISSING_TOKEN","url":"/me"}
+03:37:30 ⚠️  [mn5ht7jb3opnz] GET /me → 401 (4ms)
+03:37:30 ✅ [mn5ht7jlae9az] GET /me → 200 (3ms)
+03:37:31 ✅ [mn5ht7k00p7r4] GET /me → 200 (12ms)
+03:37:31 ✅ [mn5ht7k2rtumj] GET /me → 200 (40ms)
+03:37:31 ✅ [mn5ht7k4dzwp3] GET /me → 200 (41ms)
+03:37:31 ✅ [mn5ht7k629ur6] GET /me → 200 (43ms)
+03:37:31 ✅ [mn5ht7k822lkc] GET /me → 200 (43ms)
+03:37:31 ✅ [mn5ht7lq4xho3] GET /me → 200 (4ms)
+03:37:31 user updated {"id":3,"fieldsUpdated":1}
+03:37:31 ✅ [mn5ht7m1qbykd] PUT /me → 200 (11ms)
+03:37:31 user updated {"id":2,"fieldsUpdated":1}
+03:37:31 ✅ [mn5ht7mgm5r9p] PUT /me → 200 (11ms)
+03:37:31 Security Event {"event":"AUTH_MISSING_TOKEN","url":"/me"}
+03:37:31 ⚠️  [mn5ht7mzo61dv] GET /me → 401 (4ms)
+03:37:31 Security Event {"event":"AUTH_MISSING_TOKEN","url":"/me"}
+03:37:31 ⚠️  [mn5ht7n5mgzbf] GET /me → 401 (3ms)
+03:37:31 Security Event {"event":"AUTH_MISSING_TOKEN","url":"/me"}
+03:37:31 ⚠️  [mn5ht7nacd1ce] GET /me → 401 (3ms)
+03:37:31 Security Event {"event":"AUTH_MISSING_TOKEN","url":"/logout"}
+03:37:31 ⚠️  [mn5ht7nn782ky] POST /logout → 401 (4ms)
+03:37:31 Audit event {"userId":2,"action":"logout","resourceType":"auth","resourceId":null,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:31 ✅ [mn5ht7ny20abj] POST /logout → 200 (8ms)
+03:37:31 Audit event {"userId":2,"action":"logout","resourceType":"auth","resourceId":null,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:31 ✅ [mn5ht7ocqrsow] POST /logout → 200 (7ms)
+03:37:31 Audit event {"userId":2,"action":"logout","resourceType":"auth","resourceId":null,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:31 ✅ [mn5ht7op5zgcn] POST /logout → 200 (7ms)
+03:37:31 Security Event {"event":"AUTH_MISSING_TOKEN","url":"/logout-all"}
+03:37:31 ⚠️  [mn5ht7p1d8jwy] POST /logout-all → 401 (4ms)
+03:37:31 All user tokens revoked {"userId":2,"reason":"logout_all","count":0}
+03:37:31 Audit event {"userId":2,"action":"logout_all_devices","resourceType":"auth","resourceId":null,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:31 ✅ [mn5ht7pb0jqly] POST /logout-all → 200 (9ms)
+03:37:31 All user tokens revoked {"userId":3,"reason":"logout_all","count":0}
+03:37:31 Audit event {"userId":3,"action":"logout_all_devices","resourceType":"auth","resourceId":null,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:31 ✅ [mn5ht7prxpgho] POST /logout-all → 200 (8ms)
+03:37:31 All user tokens revoked {"userId":2,"reason":"logout_all","count":0}
+03:37:31 Audit event {"userId":2,"action":"logout_all_devices","resourceType":"auth","resourceId":null,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:31 ✅ [mn5ht7q6cl4z3] POST /logout-all → 200 (8ms)
+03:37:31 Security Event {"event":"AUTH_MISSING_TOKEN","url":"/sessions"}
+03:37:31 ⚠️  [mn5ht7qkw5zkq] GET /sessions → 401 (4ms)
+03:37:31 ✅ [mn5ht7qu6arll] GET /sessions → 200 (6ms)
+03:37:31 ✅ [mn5ht7r6wvtxn] GET /sessions → 200 (5ms)
+03:37:31 ✅ [mn5ht7rheed0f] GET /sessions → 200 (5ms)
+03:37:31 ✅ [mn5ht7rstnkqs] GET /sessions → 200 (5ms)
+03:37:31 ⚠️  [mn5ht7s34wup1] POST /refresh → 400 (2ms)
+03:37:31 Invalid refresh token format {"error":"invalid signature"}
+03:37:31 Client error {"error":"Invalid refresh token format","code":"BAD_REQUEST","url":"/api/auth/refresh","method":"POST"}
+03:37:31 ⚠️  [mn5ht7sehhoty] POST /api/auth/refresh → 400 (5ms)
+03:37:31 Invalid refresh token format {"error":"invalid signature"}
+03:37:31 Client error {"error":"Invalid refresh token format","code":"BAD_REQUEST","url":"/api/auth/refresh","method":"POST"}
+03:37:31 ⚠️  [mn5ht7sp85zn7] POST /api/auth/refresh → 400 (4ms)
+03:37:31 Invalid refresh token format {"error":"invalid signature"}
+03:37:31 Client error {"error":"Invalid refresh token format","code":"BAD_REQUEST","url":"/api/auth/refresh","method":"POST"}
+03:37:31 ⚠️  [mn5ht7td525zc] POST /api/auth/refresh → 400 (4ms)
+03:37:31 Invalid refresh token format {"error":"invalid signature"}
+03:37:31 Client error {"error":"Invalid refresh token format","code":"BAD_REQUEST","url":"/api/auth/refresh","method":"POST"}
+03:37:31 ⚠️  [mn5ht7tib5hdb] POST /api/auth/refresh → 400 (4ms)
+03:37:31 Invalid refresh token format {"error":"invalid signature"}
+03:37:31 Client error {"error":"Invalid refresh token format","code":"BAD_REQUEST","url":"/api/auth/refresh","method":"POST"}
+03:37:31 ⚠️  [mn5ht7tnmu9ko] POST /api/auth/refresh → 400 (4ms)
+03:37:31 Invalid refresh token format {"error":"invalid signature"}
+03:37:31 Client error {"error":"Invalid refresh token format","code":"BAD_REQUEST","url":"/api/auth/refresh","method":"POST"}
+03:37:31 ⚠️  [mn5ht7ttsv1ce] POST /api/auth/refresh → 400 (4ms)
+03:37:31 Invalid refresh token format {"error":"invalid signature"}
+03:37:31 Client error {"error":"Invalid refresh token format","code":"BAD_REQUEST","url":"/api/auth/refresh","method":"POST"}
+03:37:31 ⚠️  [mn5ht7typjl55] POST /api/auth/refresh → 400 (4ms)
+03:37:31 Invalid refresh token format {"error":"invalid signature"}
+03:37:31 Client error {"error":"Invalid refresh token format","code":"BAD_REQUEST","url":"/api/auth/refresh","method":"POST"}
+03:37:31 ⚠️  [mn5ht7u3ne63e] POST /api/auth/refresh → 400 (4ms)
+03:37:31 Invalid refresh token format {"error":"invalid signature"}
+03:37:31 Client error {"error":"Invalid refresh token format","code":"BAD_REQUEST","url":"/api/auth/refresh","method":"POST"}
+03:37:31 ⚠️  [mn5ht7u8el3fm] POST /api/auth/refresh → 400 (4ms)
+03:37:31 Invalid refresh token format {"error":"invalid signature"}
+03:37:31 Client error {"error":"Invalid refresh token format","code":"BAD_REQUEST","url":"/api/auth/refresh","method":"POST"}
+03:37:31 ⚠️  [mn5ht7udmmc1e] POST /api/auth/refresh → 400 (6ms)
+03:37:31 Invalid refresh token format {"error":"invalid signature"}
+03:37:31 Client error {"error":"Invalid refresh token format","code":"BAD_REQUEST","url":"/api/auth/refresh","method":"POST"}
+03:37:31 ⚠️  [mn5ht7ukpcqb9] POST /api/auth/refresh → 400 (4ms)
+03:37:31 Invalid refresh token format {"error":"invalid signature"}
+03:37:31 Client error {"error":"Invalid refresh token format","code":"BAD_REQUEST","url":"/api/auth/refresh","method":"POST"}
+03:37:31 ⚠️  [mn5ht7up7i4fo] POST /api/auth/refresh → 400 (4ms)
+03:37:31 Security Event {"event":"AUTH_INVALID_TOKEN","url":"/me","error":"invalid signature"}
+03:37:31 ⚠️  [mn5ht7ve8xt05] GET /me → 403 (2ms)
+03:37:31 Security Event {"event":"AUTH_INVALID_TOKEN","url":"/me","error":"invalid signature"}
+03:37:31 ⚠️  [mn5ht7vmmf9ew] GET /me → 403 (2ms)
+03:37:31 Security Event {"event":"AUTH_MISSING_TOKEN","url":"/me"}
+03:37:31 ⚠️  [mn5ht7vultqvl] GET /me → 401 (3ms)
+03:37:31 Security Event {"event":"AUTH_INVALID_TOKEN","url":"/me","error":"invalid signature"}
+03:37:31 ⚠️  [mn5ht7w3j9sw9] GET /me → 403 (2ms)
+03:37:31 Security Event {"event":"AUTH_MISSING_TOKEN","url":"/me"}
+03:37:31 ⚠️  [mn5ht7wc0q8dy] GET /me → 401 (4ms)
+03:37:31 user updated {"id":2,"fieldsUpdated":1}
+03:37:31 ✅ [mn5ht7wmbpkwt] PUT /me → 200 (12ms)
+03:37:31 Audit event {"userId":3,"action":"logout","resourceType":"auth","resourceId":null,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:31 ✅ [mn5ht7x46fjmy] POST /logout → 200 (7ms)
+03:37:31 All user tokens revoked {"userId":2,"reason":"logout_all","count":0}
+03:37:31 Audit event {"userId":2,"action":"logout_all_devices","resourceType":"auth","resourceId":null,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:31 ✅ [mn5ht7xg8sbin] POST /logout-all → 200 (8ms)
+  console.log
+    [dotenv@17.3.1] injecting env (0) from .env -- tip: 🔐 prevent building .env in docker: https://dotenvx.com/prebuild
+
+      at _log (node_modules/dotenv/lib/main.js:139:11)
+
+03:37:31 Using individual DB environment variables {"host":"localhost","port":5432,"database":"tross_dev"}
+03:37:31 🧪 Using TEST database {"host":"localhost","port":5433,"database":"tross_test"}
+  console.log
+    [dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  suppress all logs with { quiet: true }
+
+      at _log (node_modules/dotenv/lib/main.js:139:11)
+
+03:37:31 CORS allowed origins configured {"count":2}
+03:37:32 Security Event {"event":"AUTH_MISSING_TOKEN","url":"/system/sessions"}
+03:37:32 ⚠️  [mn5ht8g6apgpp] GET /system/sessions → 401 (6ms)
+03:37:32 Security Event {"event":"AUTH_INSUFFICIENT_ROLE","url":"/system/sessions","userId":3,"userRole":"technician","minimumRole":"admin"}
+03:37:32 ⚠️  [mn5ht8gztrbwg] GET /system/sessions → 403 (6ms)
+03:37:32 Security Event {"event":"AUTH_INSUFFICIENT_ROLE","url":"/system/sessions","userId":2,"userRole":"manager","minimumRole":"admin"}
+03:37:32 ⚠️  [mn5ht8hqvwl78] GET /system/sessions → 403 (5ms)
+03:37:32 ✅ [mn5ht8igdo7oc] GET /system/sessions → 200 (9ms)
+03:37:32 ✅ [mn5ht8jh16bxs] GET /system/sessions → 200 (6ms)
+03:37:32 ✅ [mn5ht8keo0sw2] GET /system/sessions → 200 (6ms)
+03:37:32 ✅ [mn5ht8l846n95] GET /system/sessions → 200 (6ms)
+03:37:32 User force logged out {"userId":6,"adminUserId":1,"reason":"Test suspension","revokedTokens":1}
+03:37:32 Audit event {"userId":1,"action":"account_locked","resourceType":"users","resourceId":6,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:32 ✅ [mn5ht8m2dnyco] POST /system/sessions/6/force-logout → 200 (26ms)
+03:37:32 Client error {"error":"Cannot force logout yourself","code":"BAD_REQUEST","url":"/api/admin/system/sessions/1/force-logout","method":"POST"}
+03:37:32 ⚠️  [mn5ht8ndxibtn] POST /api/admin/system/sessions/1/force-logout → 400 (4ms)
+03:37:32 Failed to force logout user {"userId":99999,"adminUserId":1,"error":"User with ID 99999 not found"}
+03:37:32 Client error {"error":"User with ID 99999 not found","code":"NOT_FOUND","url":"/api/admin/system/sessions/99999/force-logout","method":"POST"}
+03:37:32 ⚠️  [mn5ht8o6afz0i] POST /api/admin/system/sessions/99999/force-logout → 404 (9ms)
+03:37:32 ⚠️  Validation failure {"validator":"toSafeInteger","field":"userId","value":"invalid","valueType":"string","reason":"Cannot convert to integer (parsed as NaN)"}
+03:37:32 ⚠️  [mn5ht8p3alfv5] POST /system/sessions/invalid/force-logout → 400 (6ms)
+03:37:32 User reactivated {"userId":7,"adminUserId":1}
+03:37:32 Audit event {"userId":1,"action":"account_unlocked","resourceType":"users","resourceId":7,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:32 ✅ [mn5ht8q2vmmy5] POST /system/sessions/7/reactivate → 200 (8ms)
+03:37:32 Client error {"error":"User 8 not found or not suspended","code":"NOT_FOUND","url":"/api/admin/system/sessions/8/reactivate","method":"POST"}
+03:37:32 ⚠️  [mn5ht8qxymkvu] POST /api/admin/system/sessions/8/reactivate → 404 (5ms)
+03:37:32 Session revoked {"sessionId":1,"userId":9,"adminUserId":1}
+03:37:32 ✅ [mn5ht8rrw3o7o] DELETE /system/sessions/1 → 200 (5ms)
+03:37:32 Client error {"error":"Session 99999 not found or already revoked","code":"NOT_FOUND","url":"/api/admin/system/sessions/99999","method":"DELETE"}
+03:37:32 ⚠️  [mn5ht8sgtt3s5] DELETE /api/admin/system/sessions/99999 → 404 (7ms)
+03:37:32 ⚠️  Validation failure {"validator":"toSafeInteger","field":"sessionId","value":"invalid","valueType":"string","reason":"Cannot convert to integer (parsed as NaN)"}
+03:37:32 ⚠️  [mn5ht8t7xldgq] DELETE /system/sessions/invalid → 400 (4ms)
+03:37:32 ✅ [mn5ht8tve8oxa] GET /entities → 200 (4ms)
+03:37:32 ✅ [mn5ht8uijh0dv] GET /entities → 200 (3ms)
+03:37:32 ✅ [mn5ht8v5pdba3] GET /customer → 200 (4ms)
+03:37:32 ✅ [mn5ht8vs61zcu] GET /customer → 200 (4ms)
+03:37:32 ✅ [mn5ht8wfsoo2j] GET /customer → 200 (3ms)
+03:37:32 Client error {"error":"Entity 'nonexistent' not found","code":"NOT_FOUND","url":"/api/admin/nonexistent","method":"GET"}
+03:37:32 ⚠️  [mn5ht8x1v1fpu] GET /api/admin/nonexistent → 404 (4ms)
+03:37:32 ✅ [mn5ht8xo57jve] GET /customer/raw → 200 (4ms)
+03:37:32 ✅ [mn5ht8ydcf5yy] GET /system/logs/data → 200 (25ms)
+03:37:32 ✅ [mn5ht8zqlhwtm] GET /system/logs/data?resourceType=customers → 200 (10ms)
+03:37:32 ✅ [mn5ht90mb6034] GET /system/logs/data?action=create → 200 (8ms)
+03:37:32 ✅ [mn5ht91gnyboz] GET /system/logs/data?page=1&limit=2 → 200 (8ms)
+03:37:32 ✅ [mn5ht92a118de] GET /system/logs/auth → 200 (7ms)
+03:37:32 ✅ [mn5ht932q4q6i] GET /system/logs/auth?action=login_failure → 200 (6ms)
+03:37:33 ✅ [mn5ht93u8nhn7] GET /system/logs/auth → 200 (7ms)
+03:37:33 ✅ [mn5ht94k894wa] GET /system/logs/summary → 200 (6ms)
+03:37:33 ✅ [mn5ht95bhlp9e] GET /system/logs/summary?period=week → 200 (5ms)
+03:37:33 ✅ [mn5ht960owzcc] GET /system/config/permissions → 200 (4ms)
+03:37:33 ✅ [mn5ht96n757kk] GET /system/config/validation → 200 (4ms)
+03:37:33 ✅ [mn5ht97c39c81] GET /system/maintenance → 200 (7ms)
+03:37:33 Security Event {"event":"MAINTENANCE_MODE_ENABLED","userId":1,"estimatedEnd":null}
+03:37:33 System setting updated {"key":"maintenance_mode","updatedBy":1}
+03:37:33 Audit event {"userId":1,"action":"maintenance_enabled","resourceType":"system_settings","resourceId":null,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:33 ✅ [mn5ht982wwlwx] PUT /system/maintenance → 200 (13ms)
+03:37:33 Security Event {"event":"MAINTENANCE_MODE_DISABLED","userId":1}
+03:37:33 System setting updated {"key":"maintenance_mode","updatedBy":1}
+03:37:33 Audit event {"userId":1,"action":"maintenance_disabled","resourceType":"system_settings","resourceId":null,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:33 ✅ [mn5ht98k8yi4y] PUT /system/maintenance → 200 (13ms)
+03:37:33 Security Event {"event":"MAINTENANCE_MODE_ENABLED","userId":1,"estimatedEnd":null}
+03:37:33 System setting updated {"key":"maintenance_mode","updatedBy":1}
+03:37:33 Audit event {"userId":1,"action":"maintenance_enabled","resourceType":"system_settings","resourceId":null,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:33 ✅ [mn5ht99fs5gbt] PUT /system/maintenance → 200 (12ms)
+03:37:33 Security Event {"event":"MAINTENANCE_MODE_DISABLED","userId":1}
+03:37:33 System setting updated {"key":"maintenance_mode","updatedBy":1}
+03:37:33 Audit event {"userId":1,"action":"maintenance_disabled","resourceType":"system_settings","resourceId":null,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:33 ✅ [mn5ht99w4wyit] PUT /system/maintenance → 200 (11ms)
+03:37:33 Security Event {"event":"MAINTENANCE_MODE_DISABLED","userId":1}
+03:37:33 System setting updated {"key":"maintenance_mode","updatedBy":1}
+03:37:33 Audit event {"userId":1,"action":"maintenance_disabled","resourceType":"system_settings","resourceId":null,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:33 ✅ [mn5ht9acfawi6] PUT /system/maintenance → 200 (11ms)
+03:37:33 ⚠️  [mn5ht9b6cmqx4] PUT /system/maintenance → 400 (5ms)
+03:37:33 Security Event {"event":"MAINTENANCE_MODE_DISABLED","userId":1}
+03:37:33 System setting updated {"key":"maintenance_mode","updatedBy":1}
+03:37:33 Audit event {"userId":1,"action":"maintenance_disabled","resourceType":"system_settings","resourceId":null,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:33 ✅ [mn5ht9bg7vqty] PUT /system/maintenance → 200 (12ms)
+03:37:33 ⚠️  [mn5ht9ca42nto] PUT /system/maintenance → 400 (5ms)
+03:37:33 Security Event {"event":"MAINTENANCE_MODE_DISABLED","userId":1}
+03:37:33 System setting updated {"key":"maintenance_mode","updatedBy":1}
+03:37:33 Audit event {"userId":1,"action":"maintenance_disabled","resourceType":"system_settings","resourceId":null,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:33 ✅ [mn5ht9ck1c4ls] PUT /system/maintenance → 200 (11ms)
+03:37:33 ✅ [mn5ht9dd2251l] GET /system/settings → 200 (5ms)
+03:37:33 ✅ [mn5ht9e1ueco7] GET /system/settings/maintenance_mode → 200 (5ms)
+03:37:33 ⚠️  [mn5ht9epu8xdi] GET /system/settings/nonexistent_setting → 404 (6ms)
+03:37:33 System setting updated {"key":"feature_flags","updatedBy":1}
+03:37:33 Audit event {"userId":1,"action":"update","resourceType":"system_settings","resourceId":null,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:33 ✅ [mn5ht9fpcgbvs] PUT /system/settings/feature_flags → 200 (11ms)
+03:37:33 ⚠️  [mn5ht9giwn7hb] PUT /system/settings/feature_flags → 400 (5ms)
+  console.log
+    [dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  write to custom object with { processEnv: myObject }
+
+      at _log (node_modules/dotenv/lib/main.js:139:11)
+
+03:37:33 Using individual DB environment variables {"host":"localhost","port":5432,"database":"tross_dev"}
+03:37:33 🧪 Using TEST database {"host":"localhost","port":5433,"database":"tross_test"}
+  console.log
+    [dotenv@17.3.1] injecting env (0) from .env -- tip: 🛡️ auth for agents: https://vestauth.com
+
+      at _log (node_modules/dotenv/lib/main.js:139:11)
+
+03:37:33 CORS allowed origins configured {"count":2}
+03:37:34 Audit event {"userId":1,"action":"customer_create","resourceType":"customer","resourceId":1,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:34 Audit event {"userId":1,"action":"customer_create","resourceType":"customer","resourceId":2,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:34 Audit event {"userId":1,"action":"customer_create","resourceType":"customer","resourceId":3,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:34 Batch customer completed {"success":true,"stats":{"created":3,"updated":0,"deleted":0,"failed":0},"errorCount":0}
+03:37:34 ✅ [mn5ht9uy9vsyw] POST /batch → 200 (39ms)
+03:37:34 Audit event {"userId":1,"action":"customer_create","resourceType":"customer","resourceId":4,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:34 Batch customer completed {"success":true,"stats":{"created":1,"updated":0,"deleted":0,"failed":0},"errorCount":0}
+03:37:34 ✅ [mn5ht9wb4q1jw] POST /batch → 200 (11ms)
+03:37:34 customer created {"id":5,"identityField":"test_1774409853710_5@example.com"}
+03:37:34 customer created {"id":6,"identityField":"test_1774409853710_6@example.com"}
+03:37:34 Audit event {"userId":1,"action":"customer_update","resourceType":"customer","resourceId":5,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:34 Audit event {"userId":1,"action":"customer_update","resourceType":"customer","resourceId":6,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:34 Batch customer completed {"success":true,"stats":{"created":0,"updated":2,"deleted":0,"failed":0},"errorCount":0}
+03:37:34 ✅ [mn5ht9x7g5qkk] POST /batch → 200 (22ms)
+03:37:34 customer created {"id":7,"identityField":"test_1774409853710_7@example.com"}
+03:37:34 customer created {"id":8,"identityField":"test_1774409853710_8@example.com"}
+03:37:34 Audit event {"userId":1,"action":"customer_delete","resourceType":"customer","resourceId":7,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:34 Audit event {"userId":1,"action":"customer_delete","resourceType":"customer","resourceId":8,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:34 Batch customer completed {"success":true,"stats":{"created":0,"updated":0,"deleted":2,"failed":0},"errorCount":0}
+03:37:34 ✅ [mn5ht9y6eq7i2] POST /batch → 200 (30ms)
+03:37:34 Error in customer operation {"error":"Access denied or record not found at operation 1: update on id 999999","code":"NOT_FOUND"}
+03:37:34 Client error {"error":"Access denied or record not found at operation 1: update on id 999999","code":"NOT_FOUND","url":"/api/customers/batch","method":"POST"}
+03:37:34 ⚠️  [mn5ht9z747p2c] POST /api/customers/batch → 404 (9ms)
+03:37:34 Audit event {"userId":1,"action":"customer_create","resourceType":"customer","resourceId":9,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:34 Audit event {"userId":1,"action":"customer_create","resourceType":"customer","resourceId":10,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:34 Batch customer completed {"success":false,"stats":{"created":2,"updated":0,"deleted":0,"failed":1},"errorCount":1}
+03:37:34 ✅ [mn5ht9znq6cif] POST /batch → 207 (15ms)
+03:37:34 customer created {"id":11,"identityField":"test_1774409853710_13@example.com"}
+03:37:34 customer created {"id":12,"identityField":"test_1774409853710_14@example.com"}
+03:37:34 Audit event {"userId":1,"action":"customer_create","resourceType":"customer","resourceId":13,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:34 Audit event {"userId":1,"action":"customer_update","resourceType":"customer","resourceId":11,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:34 Audit event {"userId":1,"action":"customer_delete","resourceType":"customer","resourceId":12,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:34 Batch customer completed {"success":true,"stats":{"created":1,"updated":1,"deleted":1,"failed":0},"errorCount":0}
+03:37:34 ✅ [mn5hta0frxxva] POST /batch → 200 (25ms)
+03:37:34 customer created {"id":14,"identityField":"test_1774409853710_16@example.com"}
+03:37:34 Audit event {"userId":2,"action":"customer_update","resourceType":"customer","resourceId":14,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:34 Batch customer completed {"success":true,"stats":{"created":0,"updated":1,"deleted":0,"failed":0},"errorCount":0}
+03:37:34 ✅ [mn5hta1cpanpw] POST /batch → 200 (13ms)
+03:37:34 ⚠️  Validation failure {"validator":"validateBatchRequest","field":"batch","value":"{\"operationsCount\":0,\"options\":{}}","valueType":"object","reason":"Operations array cannot be empty","url":"/batch","method":"POST"}
+03:37:34 ⚠️  [mn5hta1vamosm] POST /batch → 400 (5ms)
+03:37:34 ⚠️  Validation failure {"validator":"validateBatchRequest","field":"batch","value":"{\"operationsCount\":101,\"options\":{}}","valueType":"object","reason":"Operations array exceeds maximum of 100","url":"/batch","method":"POST"}
+03:37:34 ⚠️  [mn5hta27quol2] POST /batch → 400 (6ms)
+03:37:34 ⚠️  Validation failure {"validator":"validateBatchRequest","field":"batch","value":"{\"operationsCount\":1,\"options\":{}}","valueType":"object","reason":"Invalid operation 'invalid'. Valid: create, update, delete","url":"/batch","method":"POST"}
+03:37:34 ⚠️  [mn5hta2j2wge9] POST /batch → 400 (5ms)
+03:37:34 Audit event {"userId":1,"action":"customer_create","resourceType":"customer","resourceId":15,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:34 Audit event {"userId":1,"action":"customer_create","resourceType":"customer","resourceId":16,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:34 Batch customer completed {"success":true,"stats":{"created":2,"updated":0,"deleted":0,"failed":0},"errorCount":0}
+03:37:34 ✅ [mn5hta2wxto2k] POST /batch → 200 (19ms)
+03:37:34 ✅ [mn5hta3ku5ui9] POST /batch → 200 (6ms)
+  console.log
+    [dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] }
+
+      at _log (node_modules/dotenv/lib/main.js:139:11)
+
+03:37:34 Using individual DB environment variables {"host":"localhost","port":5432,"database":"tross_dev"}
+03:37:34 🧪 Using TEST database {"host":"localhost","port":5433,"database":"tross_test"}
+  console.log
+    [dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] }
+
+      at _log (node_modules/dotenv/lib/main.js:139:11)
+
+03:37:34 CORS allowed origins configured {"count":2}
+03:37:34 customer created {"id":1,"identityField":"test_1774409854515_1@example.com"}
+03:37:34 Audit event {"userId":1,"action":"customer_create","resourceType":"customer","resourceId":1,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:34 ✅ [mn5htagy1tily] POST / → 201 (25ms)
+03:37:34 ✅ [mn5htahtlj954] POST / → 201 (7ms)
+03:37:34 customer created {"id":2,"identityField":"test_1774409854515_2@example.com"}
+03:37:34 Audit event {"userId":1,"action":"customer_create","resourceType":"customer","resourceId":2,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:34 ✅ [mn5htai9ip0ik] POST / → 201 (26ms)
+03:37:34 Query error {"error":"duplicate key value violates unique constraint \"customers_email_key\"","code":"23505"}
+03:37:34 Error in customer operation {"error":"duplicate key value violates unique constraint \"customers_email_key\"","code":"23505"}
+03:37:34 Unique violation {"entity":"Customer","field":"email","errorCode":"23505"}
+03:37:34 ⚠️  [mn5htaj4irvnv] POST / → 409 (12ms)
+03:37:34 customer created {"id":4,"identityField":"test_1774409854515_3@example.com"}
+03:37:34 Audit event {"userId":1,"action":"customer_create","resourceType":"customer","resourceId":4,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:34 ✅ [mn5htajx77ecl] POST / → 201 (16ms)
+03:37:34 customer created {"id":5,"identityField":"test_1774409854515_4@example.com"}
+03:37:34 Audit event {"userId":1,"action":"customer_create","resourceType":"customer","resourceId":5,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:34 ✅ [mn5htakm39kw7] POST / → 201 (13ms)
+03:37:34 [Idempotency] Payload mismatch {"key":"mismatch-key-1774409854515_4","userId":1,"expectedHash":"dd68a99b70025c5a32c62f242365d1204adc9ca1f492ef67ccd18e224e1d4168","receivedHash":"46d429cb9b4db4d8edbf5f212c870cef5316d57e75ad9d5721c9a113bf93fbb8"}
+03:37:34 ⚠️  [mn5htal3bd6ie] POST / → 422 (6ms)
+03:37:34 customer created {"id":6,"identityField":"admin-test_1774409854515_6@example.com"}
+03:37:34 Audit event {"userId":1,"action":"customer_create","resourceType":"customer","resourceId":6,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:34 ✅ [mn5htalixtr05] POST / → 201 (12ms)
+03:37:34 customer created {"id":7,"identityField":"dispatcher-test_1774409854515_6@example.com"}
+03:37:34 Audit event {"userId":2,"action":"customer_create","resourceType":"customer","resourceId":7,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:34 ✅ [mn5htalzvj2rf] POST / → 201 (16ms)
+03:37:34 customer created {"id":8,"identityField":"test_1774409854515_7@example.com"}
+03:37:34 Audit event {"userId":1,"action":"customer_create","resourceType":"customer","resourceId":8,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:35 ✅ [mn5htammxxnli] POST / → 201 (12ms)
+03:37:35 customer created {"id":9,"identityField":"test_1774409854515_8@example.com"}
+03:37:35 Audit event {"userId":2,"action":"customer_create","resourceType":"customer","resourceId":9,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:35 ✅ [mn5htan300qta] POST / → 201 (12ms)
+03:37:35 customer created {"id":10,"identityField":"test_1774409854515_9@example.com"}
+03:37:35 Audit event {"userId":1,"action":"customer_create","resourceType":"customer","resourceId":10,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:35 ✅ [mn5htansbpg5k] POST / → 201 (23ms)
+03:37:35 ✅ [mn5htanyvx8po] POST / → 201 (34ms)
+03:37:35 ✅ [mn5htanvdfpyv] POST / → 201 (40ms)
+03:37:35 [IdempotencyService.cleanup] Removed expired keys {"deleted":1}
+03:37:35 [IdempotencyService.cleanup] Removed expired keys {"deleted":1}
+03:37:35 ⚠️  [mn5htapvd1kvk] POST / → 400 (4ms)
+03:37:35 ⚠️  [mn5htaq7j1w8u] POST / → 400 (5ms)
+  console.log
+    [dotenv@17.3.1] injecting env (0) from .env -- tip: 🔐 prevent building .env in docker: https://dotenvx.com/prebuild
+
+      at _log (node_modules/dotenv/lib/main.js:139:11)
+
+03:37:35 Using individual DB environment variables {"host":"localhost","port":5432,"database":"tross_dev"}
+03:37:35 🧪 Using TEST database {"host":"localhost","port":5433,"database":"tross_test"}
+  console.log
+    [dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+
+      at _log (node_modules/dotenv/lib/main.js:139:11)
+
+03:37:35 Using individual DB environment variables {"host":"localhost","port":5432,"database":"tross_dev"}
+03:37:35 🧪 Using TEST database {"host":"localhost","port":5433,"database":"tross_test"}
+03:37:35 🔐 Auth0: Exchanging authorization code for tokens
+03:37:35 🔐 Auth0: Retrieved user info {"email":"test@example.com"}
+03:37:35 🔐 Auth0: Authentication successful {"userId":1,"email":"test@example.com","role":"technician"}
+03:37:35 🔐 Auth0: Authentication failed {"error":"Authorization code is required"}
+03:37:35 🔐 Auth0: Exchanging authorization code for tokens
+03:37:35 🔐 Auth0: Authentication failed {"error":"Invalid authorization code"}
+03:37:35 🔐 Auth0: Exchanging authorization code for tokens
+03:37:35 🔐 Auth0: Authentication failed {"error":"Failed to get user info"}
+03:37:35 🔐 Auth0: Exchanging authorization code for tokens
+03:37:35 🔐 Auth0: Retrieved user info {"email":"test@example.com"}
+03:37:35 🔐 Auth0: Authentication failed {"error":"Database error"}
+03:37:35 🔐 Auth0: Exchanging authorization code for tokens
+03:37:35 🔐 Auth0: Retrieved user info {"email":"test@example.com"}
+03:37:35 🔐 Auth0: Authentication successful {"userId":1,"email":"test@example.com","role":"technician"}
+03:37:35 🔐 Auth0: Token verification failed {"error":"jwt expired"}
+03:37:35 🔐 Auth0: Token verification failed {"error":"invalid signature"}
+03:37:35 🔐 Auth0: Token verification failed {"error":"jwt audience invalid"}
+03:37:35 🔐 Auth0: Token refreshed successfully
+03:37:35 🔐 Auth0: Token refresh failed {"error":"Invalid refresh token"}
+03:37:35 🔐 Auth0: Logout URL generated {"returnToUrl":"http://localhost:3000"}
+03:37:35 🔐 Auth0: Logout URL generated {"returnToUrl":"http://localhost:8080"}
+03:37:35 🔐 Auth0: Exchanging authorization code for tokens
+03:37:35 🔐 Auth0: Authentication failed {"error":"Network error"}
+03:37:35 🔐 Auth0: Exchanging authorization code for tokens
+03:37:35 🔐 Auth0: Authentication failed {"error":"Cannot read properties of null (reading 'access_token')"}
+03:37:35 🔐 Auth0: Exchanging authorization code for tokens
+03:37:35 🔐 Auth0: Retrieved user info {"email":"not-an-email"}
+03:37:35 ⚠️  Validation failure {"validator":"toSafeEmail","field":"auth0.email","value":"not-an-email","valueType":"string","reason":"Invalid email format"}
+03:37:35 🔐 Auth0: Authentication failed {"error":"auth0.email must be a valid email address"}
+  console.log
+    [dotenv@17.3.1] injecting env (0) from .env -- tip: 🤖 agentic secret storage: https://dotenvx.com/as2
+
+      at _log (node_modules/dotenv/lib/main.js:139:11)
+
+03:37:35 Using individual DB environment variables {"host":"localhost","port":5432,"database":"tross_dev"}
+03:37:35 🧪 Using TEST database {"host":"localhost","port":5433,"database":"tross_test"}
+  console.log
+    [dotenv@17.3.1] injecting env (0) from .env -- tip: 🔐 prevent committing .env to code: https://dotenvx.com/precommit
+
+      at _log (node_modules/dotenv/lib/main.js:139:11)
+
+03:37:35 CORS allowed origins configured {"count":2}
+03:37:35 ⚠️  [mn5htbbv9ee5x] GET / → 503 (75ms)
+03:37:35 ⚠️  [mn5htbcg4myph] GET / → 503 (59ms)
+03:37:35 ⚠️  [mn5htbc8pduvf] GET / → 503 (70ms)
+03:37:35 ⚠️  [mn5htbbzwsstz] GET / → 503 (83ms)
+03:37:35 ⚠️  [mn5htbccqci8i] GET / → 503 (73ms)
+03:37:35 ⚠️  [mn5htbc47d2gg] GET / → 503 (84ms)
+03:37:35 ⚠️  [mn5htbcx7vwo4] GET / → 503 (60ms)
+03:37:36 ⚠️  [mn5htbczj0dzi] GET / → 503 (61ms)
+03:37:36 ⚠️  [mn5htbd179u4f] GET / → 503 (62ms)
+03:37:36 ⚠️  [mn5htbd2l2qy3] GET / → 503 (63ms)
+03:37:36 ✅ [mn5htbfsk3dj7] GET / → 200 (3ms)
+03:37:36 ✅ [mn5htbfwb3mme] GET / → 200 (2ms)
+03:37:36 ✅ [mn5htbfzsdzsv] GET / → 200 (2ms)
+03:37:36 ✅ [mn5htbg2d14tx] GET / → 200 (2ms)
+03:37:36 ✅ [mn5htbg5wcvc0] GET / → 200 (2ms)
+03:37:36 ✅ [mn5htbg8vxycs] GET / → 200 (2ms)
+03:37:36 ✅ [mn5htbgbz6epy] GET / → 200 (2ms)
+03:37:36 ✅ [mn5htbgehili8] GET / → 200 (2ms)
+03:37:36 ✅ [mn5htbghoneyz] GET / → 200 (2ms)
+03:37:36 ✅ [mn5htbgkvmjsa] GET / → 200 (2ms)
+03:37:36 ✅ [mn5htbhebf29o] GET / → 200 (2ms)
+  console.log
+    [dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+
+      at _log (node_modules/dotenv/lib/main.js:139:11)
+
+03:37:36 Using individual DB environment variables {"host":"localhost","port":5432,"database":"tross_dev"}
+03:37:36 🧪 Using TEST database {"host":"localhost","port":5433,"database":"tross_test"}
+  console.log
+    [dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  suppress all logs with { quiet: true }
+
+      at _log (node_modules/dotenv/lib/main.js:139:11)
+
+03:37:36 CORS allowed origins configured {"count":2}
+03:37:36 ⚠️  Validation failure {"validator":"toSafeInteger","field":"page","value":"0","valueType":"string","reason":"Value 0 is below minimum 1"}
+03:37:36 ⚠️  Validation failure {"validator":"validatePagination","field":"pagination","value":"{\"page\":\"0\"}","valueType":"object","reason":"page must be at least 1","url":"/?page=0","method":"GET"}
+03:37:36 ⚠️  [mn5htbqvn8n67] GET /?page=0 → 400 (9ms)
+03:37:36 ⚠️  Validation failure {"validator":"toSafeInteger","field":"page","value":"-5","valueType":"string","reason":"Value -5 is below minimum 1"}
+03:37:36 ⚠️  Validation failure {"validator":"validatePagination","field":"pagination","value":"{\"page\":\"-5\"}","valueType":"object","reason":"page must be at least 1","url":"/?page=-5","method":"GET"}
+03:37:36 ⚠️  [mn5htbrqfsra8] GET /?page=-5 → 400 (6ms)
+03:37:36 ⚠️  Validation failure {"validator":"toSafeInteger","field":"limit","value":"0","valueType":"string","reason":"Value 0 is below minimum 1"}
+03:37:36 ⚠️  Validation failure {"validator":"validatePagination","field":"pagination","value":"{\"limit\":\"0\"}","valueType":"object","reason":"limit must be at least 1","url":"/?limit=0","method":"GET"}
+03:37:36 ⚠️  [mn5htbs28ips4] GET /?limit=0 → 400 (7ms)
+03:37:36 ⚠️  Validation failure {"validator":"toSafeInteger","field":"limit","valueType":"undefined","reason":"Field is required but received undefined"}
+03:37:36 ⚠️  Validation failure {"validator":"validatePagination","field":"pagination","value":"{\"page\":\"999999\"}","valueType":"object","reason":"limit is required","url":"/?page=999999","method":"GET"}
+03:37:36 ⚠️  [mn5htbsfdfc9j] GET /?page=999999 → 400 (6ms)
+03:37:36 ⚠️  Validation failure {"validator":"toSafeInteger","field":"limit","value":"999999","valueType":"string","reason":"Value 999999 exceeds maximum 200"}
+03:37:36 ⚠️  Validation failure {"validator":"validatePagination","field":"pagination","value":"{\"limit\":\"999999\"}","valueType":"object","reason":"limit must be at most 200","url":"/?limit=999999","method":"GET"}
+03:37:36 ⚠️  [mn5htbsrilb0i] GET /?limit=999999 → 400 (4ms)
+03:37:36 ⚠️  [mn5htbt209ra8] POST / → 400 (10ms)
+03:37:36 ⚠️  [mn5htbtivkhkb] POST / → 400 (11ms)
+03:37:36 ⚠️  [mn5htbtzgvnp3] POST / → 400 (5ms)
+03:37:36 customer created {"id":1,"identityField":"test_1774409856168_1@example.com"}
+03:37:36 ⚠️  [mn5htbueycwag] POST / → 400 (7ms)
+03:37:36 invoice created {"id":1,"identityField":"INV-2026-0001"}
+03:37:36 Audit event {"userId":1,"action":"invoice_create","resourceType":"invoice","resourceId":1,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:36 ✅ [mn5htbur5a30l] POST / → 201 (15ms)
+03:37:36 invoice created {"id":2,"identityField":"INV-2026-0002"}
+03:37:36 Audit event {"userId":1,"action":"invoice_create","resourceType":"invoice","resourceId":2,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:36 ✅ [mn5htbvc91ut8] POST / → 201 (11ms)
+03:37:36 customer deleted {"id":1,"cascadedDependents":0}
+03:37:36 customer created {"id":2,"identityField":"test_1774409856168_2@example.com"}
+03:37:36 ⚠️  [mn5htbw71r3nb] POST / → 400 (7ms)
+03:37:36 contract created {"id":1,"identityField":"CTR-2026-0001"}
+03:37:36 Audit event {"userId":1,"action":"contract_create","resourceType":"contract","resourceId":1,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:36 ✅ [mn5htbwm5b1tq] POST / → 201 (11ms)
+03:37:36 contract created {"id":2,"identityField":"CTR-2026-0002"}
+03:37:36 Audit event {"userId":1,"action":"contract_create","resourceType":"contract","resourceId":2,"result":"success","ipAddress":"::ffff:127.0.0.1"}
+03:37:36 ✅ [mn5htbx3zflkj] POST / → 201 (10ms)
+03:37:36 contract deleted {"id":1,"cascadedDependents":0}
+03:37:36 contract deleted {"id":2,"cascadedDependents":0}
+03:37:36 customer deleted {"id":2,"cascadedDependents":0}
+03:37:36 ⚠️  Validation failure {"validator":"toSafeInteger","field":"limit","valueType":"undefined","reason":"Field is required but received undefined"}
+03:37:36 ⚠️  Validation failure {"validator":"validatePagination","field":"pagination","value":"{\"search\":\"NONEXISTENT_CUSTOMER_XYZ123\"}","valueType":"object","reason":"limit is required","url":"/?search=NONEXISTENT_CUSTOMER_XYZ123","method":"GET"}
+03:37:36 ⚠️  [mn5htbxxaewq4] GET /?search=NONEXISTENT_CUSTOMER_XYZ123 → 400 (5ms)
+03:37:36 ⚠️  Validation failure {"validator":"toSafeInteger","field":"limit","valueType":"undefined","reason":"Field is required but received undefined"}
+03:37:36 ⚠️  Validation failure {"validator":"validatePagination","field":"pagination","value":"{\"search\":\"'\\\";--\"}","valueType":"object","reason":"limit is required","url":"/?search=%27%22%3B--","method":"GET"}
+03:37:36 ⚠️  [mn5htby7zy3uw] GET /?search=%27%22%3B-- → 400 (5ms)
+03:37:36 ⚠️  Validation failure {"validator":"toSafeInteger","field":"limit","valueType":"undefined","reason":"Field is required but received undefined"}
+03:37:36 ⚠️  Validation failure {"validator":"validatePagination","field":"pagination","value":"{\"search\":\"'; DROP TABLE customers; --\"}","valueType":"object","reason":"limit is required","url":"/?search=%27%3B%20DROP%20TABLE%20customers%3B%20--","method":"GET"}
+03:37:36 ⚠️  [mn5htbyitgyap] GET /?search=%27%3B%20DROP%20TABLE%20customers%3B%20-- → 400 (5ms)
+03:37:36 ⚠️  Validation failure {"validator":"toSafeInteger","field":"limit","valueType":"undefined","reason":"Field is required but received undefined"}
+03:37:36 ⚠️  Validation failure {"validator":"validatePagination","field":"pagination","value":"{}","valueType":"object","reason":"limit is required","url":"/","method":"GET"}
+03:37:36 ⚠️  [mn5htbyth28h4] GET / → 400 (5ms)
+03:37:36 ⚠️  [mn5htbz3hiy4n] GET /1'%20OR%20'1'='1 → 404 (5ms)
+  console.log
+    [dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] }
+
+      at _log (node_modules/dotenv/lib/main.js:139:11)
+
+03:37:36 Using individual DB environment variables {"host":"localhost","port":5432,"database":"tross_dev"}
+03:37:36 🧪 Using TEST database {"host":"localhost","port":5433,"database":"tross_test"}
+03:37:37 Token pair generated {"userId":1,"tokenId":"939f11f2-f11a-4d64-aef3-ab589a944715","ipAddress":"127.0.0.1"}
+03:37:37 Query error {"error":"insert or update on table \"refresh_tokens\" violates foreign key constraint \"refresh_tokens_user_id_fkey\"","code":"23503"}
+03:37:37 Error generating token pair {"error":"insert or update on table \"refresh_tokens\" violates foreign key constraint \"refresh_tokens_user_id_fkey\"","userId":99999}
+03:37:37 Token pair generated {"userId":1,"tokenId":"2193b97b-c655-4d3c-a3d2-df9ac2b25e2e","ipAddress":null}
+03:37:37 Token pair generated {"userId":1,"tokenId":"a4f3d5e5-ff55-4983-8c19-c360d8aba55c","ipAddress":null}
+03:37:38 Token pair generated {"userId":1,"tokenId":"f1f45a89-ce13-477b-9f6f-384cf5a256d4","ipAddress":null}
+03:37:38 Token pair generated {"userId":1,"tokenId":"54370baf-9d2a-4f8d-ad1f-3beb0c231f5c","ipAddress":null}
+03:37:38 Token pair generated {"userId":1,"tokenId":"b058f27d-35d5-4636-953c-bf213f8e7787","ipAddress":null}
+03:37:38 Token pair generated {"userId":1,"tokenId":"52fd81a2-1a17-4b74-88e6-36b3d0b4dfb1","ipAddress":null}
+03:37:38 Token pair generated {"userId":1,"tokenId":"0489c1d1-249e-4721-8e96-13cf032a1e82","ipAddress":"192.168.1.1"}
+03:37:38 Refresh token revoked {"tokenId":"52fd81a2-1a17-4b74-88e6-36b3d0b4dfb1","reason":"rotated"}
+03:37:38 Access token refreshed {"userId":1,"oldTokenId":"52fd81a2-1a17-4b74-88e6-36b3d0b4dfb1","ipAddress":"192.168.1.1"}
+03:37:38 Token pair generated {"userId":1,"tokenId":"ce3e3583-8508-49f8-950b-8fc65505e950","ipAddress":null}
+03:37:38 Token pair generated {"userId":1,"tokenId":"df8fbe35-267e-419a-8415-30dee107a9e6","ipAddress":null}
+03:37:38 Refresh token revoked {"tokenId":"ce3e3583-8508-49f8-950b-8fc65505e950","reason":"rotated"}
+03:37:38 Access token refreshed {"userId":1,"oldTokenId":"ce3e3583-8508-49f8-950b-8fc65505e950","ipAddress":null}
+03:37:39 Token pair generated {"userId":1,"tokenId":"c24b609f-d8eb-4f95-8589-5f632b2ad322","ipAddress":null}
+03:37:39 Refresh token not found or invalid {"tokenId":"c24b609f-d8eb-4f95-8589-5f632b2ad322","userId":1}
+03:37:39 Error refreshing token {"error":"Invalid refresh token"}
+03:37:39 Token pair generated {"userId":1,"tokenId":"c7ed3b32-adf2-4227-9824-2bd8c6283b8f","ipAddress":null}
+03:37:39 Refresh token not found or invalid {"tokenId":"c7ed3b32-adf2-4227-9824-2bd8c6283b8f","userId":1}
+03:37:39 Error refreshing token {"error":"Invalid refresh token"}
+03:37:39 Token pair generated {"userId":1,"tokenId":"00700141-1b5c-4dc7-8be6-02dbf9d6694c","ipAddress":null}
+03:37:39 Refresh token hash mismatch {"tokenId":"00700141-1b5c-4dc7-8be6-02dbf9d6694c","userId":1}
+03:37:39 Error refreshing token {"error":"Invalid refresh token"}
+03:37:39 Token pair generated {"userId":1,"tokenId":"a8ab6d97-80b1-4d72-82d2-9b10bf322fda","ipAddress":null}
+03:37:39 Refresh token revoked {"tokenId":"a8ab6d97-80b1-4d72-82d2-9b10bf322fda","reason":"user_logout"}
+03:37:40 Token pair generated {"userId":1,"tokenId":"61b257b1-eb88-4c53-b6d8-8be17c15c42a","ipAddress":null}
+03:37:40 Token pair generated {"userId":1,"tokenId":"2a54ba90-24f4-45b1-ac0e-e7d712aec678","ipAddress":null}
+03:37:40 Token pair generated {"userId":1,"tokenId":"caab6978-f64a-4e39-a6b5-b1b02051fd97","ipAddress":null}
+03:37:40 All user tokens revoked {"userId":1,"reason":"security_breach","count":3}
+03:37:40 All user tokens revoked {"userId":1,"reason":"logout_all","count":0}
+03:37:40 Token pair generated {"userId":1,"tokenId":"79e7f546-3970-48cc-8b8c-598053dd0a59","ipAddress":null}
+03:37:40 Expired tokens cleaned up {"count":1}
+03:37:40 Token pair generated {"userId":1,"tokenId":"abc10988-9cbd-4c48-98b7-2b844f63e0b2","ipAddress":null}
+03:37:41 Token pair generated {"userId":1,"tokenId":"dfb9a3f6-a3fa-40d1-9d98-98bbe4a05bb9","ipAddress":"127.0.0.1"}
+03:37:41 Token pair generated {"userId":1,"tokenId":"68e20e1c-7192-4e70-8cfa-09d490a725b2","ipAddress":"192.168.1.1"}
+03:37:41 Token pair generated {"userId":1,"tokenId":"ff5a6fdf-dd21-4917-9145-49528c951ba3","ipAddress":null}
+03:37:41 Token pair generated {"userId":1,"tokenId":"9b426e8e-3d58-4cb5-a92a-bb2008e9de3a","ipAddress":null}
+03:37:41 Token pair generated {"userId":1,"tokenId":"cf075306-5715-43b9-b7ed-17731e51d560","ipAddress":null}
+03:37:41 Token pair generated {"userId":1,"tokenId":"cad34289-98bd-444b-a39f-84b5ae6b56e4","ipAddress":null}
+03:37:41 Token pair generated {"userId":1,"tokenId":"89972681-3d01-4732-afda-ec74bfda1e13","ipAddress":null}
+  console.log
+    [dotenv@17.3.1] injecting env (0) from .env -- tip: 🤖 agentic secret storage: https://dotenvx.com/as2
+
+      at _log (node_modules/dotenv/lib/main.js:139:11)
+
+03:37:41 Using individual DB environment variables {"host":"localhost","port":5432,"database":"tross_dev"}
+03:37:41 🧪 Using TEST database {"host":"localhost","port":5433,"database":"tross_test"}
+  console.log
+    [dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+
+      at _log (node_modules/dotenv/lib/main.js:139:11)
+
+03:37:41 Using individual DB environment variables {"host":"localhost","port":5432,"database":"tross_dev"}
+03:37:41 🧪 Using TEST database {"host":"localhost","port":5433,"database":"tross_test"}
+  console.log
+    [dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  override existing env vars with { override: true }
+
+      at _log (node_modules/dotenv/lib/main.js:139:11)
+
+03:37:42 CORS allowed origins configured {"count":2}
+03:37:42 ✅ [mn5htgad2iufe] GET / → 200 (19ms)
+03:37:42 Security Event {"event":"AUTH_MISSING_TOKEN","url":"/"}
+03:37:42 ⚠️  [mn5htgb53b01p] GET / → 401 (5ms)
+03:37:42 ✅ [mn5htgbh0igz0] GET / → 200 (7ms)
+03:37:42 ✅ [mn5htgbuxt878] GET / → 200 (6ms)
+03:37:42 ✅ [mn5htgcedvkhq] GET / → 200 (16ms)
+03:37:42 ✅ [mn5htgcmpswjt] GET / → 200 (55ms)
+03:37:42 ✅ [mn5htgckx6qzg] GET / → 200 (63ms)
+03:37:42 ✅ [mn5htgcgxk6tj] GET / → 200 (70ms)
+03:37:42 ✅ [mn5htgcjbnyem] GET / → 200 (71ms)
+03:37:42 ✅ [mn5htger86ow1] GET /users → 200 (53ms)
+03:37:42 ✅ [mn5htggiv3c8m] GET /roles → 200 (38ms)
+03:37:42 ✅ [mn5htghw1xmey] GET /nonexistent_table → 200 (34ms)
+03:37:42 Security Event {"event":"AUTH_MISSING_TOKEN","url":"/users"}
+03:37:42 ⚠️  [mn5htgj2wcp5i] GET /users → 401 (5ms)
+03:37:42 ✅ [mn5htgjeqv9nj] GET /users → 200 (37ms)
+03:37:42 ✅ [mn5htgklan6sq] GET /users → 200 (36ms)
+03:37:42 ✅ [mn5htglrx5vy5] GET /users → 200 (34ms)
+03:37:42 ✅ [mn5htgmwntmwm] GET /users → 200 (36ms)
+03:37:42 ✅ [mn5htgo2f4krn] GET /users → 200 (36ms)
+03:37:42 ✅ [mn5htgp8xqxcx] GET /roles → 200 (32ms)
+03:37:42 ✅ [mn5htgqajrflx] GET /users/options/role_id → 200 (64ms)
+03:37:42 Security Event {"event":"AUTH_MISSING_TOKEN","url":"/users/options/role_id"}
+03:37:42 ⚠️  [mn5htgs9vgns6] GET /users/options/role_id → 401 (4ms)
+03:37:43 Client error {"error":"Column 'email' is not a foreign key","code":"BAD_REQUEST","url":"/api/schema/users/options/email","method":"GET"}
+03:37:43 ⚠️  [mn5htgskg453f] GET /api/schema/users/options/email → 400 (37ms)
+03:37:43 Client error {"error":"Column 'column' is not a foreign key","code":"BAD_REQUEST","url":"/api/schema/nonexistent/options/column","method":"GET"}
+03:37:43 ⚠️  [mn5htgts98j6n] GET /api/schema/nonexistent/options/column → 400 (29ms)
+03:37:43 ✅ [mn5htgusnw0xg] GET /users/options/role_id → 200 (65ms)
+03:37:43 ✅ [mn5htgws8jh20] GET /users/options/role_id → 200 (64ms)
+03:37:43 ✅ [mn5htgyqtc2rr] GET / → 200 (8ms)
+03:37:43 ✅ [mn5htgz4o03gx] GET /users → 200 (36ms)
+03:37:43 ✅ [mn5hth0a2mdbf] GET /users/options/role_id → 200 (62ms)
+03:37:43 ✅ [mn5hth27dyin4] GET / → 200 (6ms)
+03:37:43 ✅ [mn5hth2mfrl2u] GET / → 200 (14ms)
+03:37:43 ✅ [mn5hth2o4zevw] GET /users → 200 (57ms)
+03:37:43 ✅ [mn5hth2qyaed2] GET /users/options/role_id → 200 (89ms)
+  console.log
+    [dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  write to custom object with { processEnv: myObject }
+
+      at _log (node_modules/dotenv/lib/main.js:139:11)
+
+03:37:43 Using individual DB environment variables {"host":"localhost","port":5432,"database":"tross_dev"}
+03:37:43 🧪 Using TEST database {"host":"localhost","port":5433,"database":"tross_test"}
+03:37:43 🔧 Using Development Authentication Strategy (JWT with test users)
+03:37:43 🔄 AUTH_MODE changed: development → auth0
+03:37:43 🔐 Using Auth0 Production Authentication Strategy (OAuth2/OIDC)
+  console.log
+    [dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] }
+
+      at _log (node_modules/dotenv/lib/main.js:139:11)
+
+03:37:43 Using individual DB environment variables {"host":"localhost","port":5432,"database":"tross_dev"}
+03:37:43 🧪 Using TEST database {"host":"localhost","port":5433,"database":"tross_test"}
+  console.log
+    [dotenv@17.3.1] injecting env (0) from .env -- tip: 🔐 prevent committing .env to code: https://dotenvx.com/precommit
+
+      at _log (node_modules/dotenv/lib/main.js:139:11)
+
+03:37:44 CORS allowed origins configured {"count":2}
+03:37:44 ✅ [mn5hthqzhzy0o] GET / → 200 (4ms)
+03:37:44 ✅ [mn5hthrb4lm07] GET / → 200 (4ms)
+03:37:44 ✅ [mn5hthrmde0bk] GET / → 200 (4ms)
+03:37:44 ✅ [mn5hths4ilv0r] GET /databases → 200 (7ms)
+03:37:44 Security Event {"event":"AUTH_MISSING_TOKEN","url":"/databases"}
+03:37:44 ⚠️  [mn5hthsityotr] GET /databases → 401 (4ms)
+03:37:44 ✅ [mn5hthssp3h57] GET /databases → 200 (5ms)
+03:37:44 ✅ [mn5htht3wfapd] GET /databases → 200 (4ms)
+03:37:44 ✅ [mn5hthtea522f] GET /databases → 200 (4ms)
+03:37:44 ✅ [mn5hthtolxqb0] GET /databases → 200 (4ms)
+03:37:44 ⚠️  [mn5hthufndf20] GET / → 503 (31ms)
+03:37:44 ⚠️  [mn5hthuz1ga0t] GET / → 503 (16ms)
+03:37:44 ⚠️  [mn5hthv0aqqkg] GET / → 503 (21ms)
+03:37:44 ⚠️  [mn5hthv29alo3] GET / → 503 (25ms)
+03:37:44 ⚠️  [mn5hthv420n8s] GET / → 503 (30ms)
+03:37:44 ⚠️  [mn5hthv6k5kaj] GET / → 503 (34ms)
+03:37:44 ⚠️  [mn5hthui0rden] GET / → 503 (76ms)
+03:37:44 ⚠️  [mn5hthuuxwxer] GET / → 503 (67ms)
+03:37:44 ⚠️  [mn5hthuqyjjp0] GET / → 503 (75ms)
+03:37:44 ⚠️  [mn5hthumjhk4i] GET / → 503 (81ms)
+03:37:44 ✅ [mn5hthxmg3rqr] GET /databases → 200 (13ms)
+03:37:44 ✅ [mn5hthxdbrdtm] GET /databases → 200 (24ms)
+03:37:44 ✅ [mn5hthxhq3s4e] GET /databases → 200 (25ms)
+03:37:44 ✅ [mn5hthxflmatx] GET /databases → 200 (29ms)
+03:37:44 ✅ [mn5hthxjppkp2] GET /databases → 200 (32ms)
+03:37:44 ⚠️  [mn5hthyr4erif] GET / → 503 (4ms)
+03:37:44 ✅ [mn5hthz1vz4i5] GET /databases → 200 (5ms)
+03:37:44 ⚠️  [mn5hthzcu9rnd] GET / → 503 (4ms)
+03:37:44 ⚠️  [mn5hthzlucxrk] GET / → 503 (4ms)
+03:37:44 ⚠️  [mn5hthzvducei] GET / → 503 (4ms)
+03:37:44 ✅ [mn5hti067bwe1] GET /ready → 200 (9ms)
+03:37:44 ✅ [mn5hti0o2kboe] GET /ready → 200 (4ms)
+03:37:44 Security Event {"event":"AUTH_MISSING_TOKEN","url":"/storage"}
+03:37:44 ⚠️  [mn5hti0yg88in] GET /storage → 401 (3ms)
+03:37:44 Security Event {"event":"AUTH_INSUFFICIENT_ROLE","url":"/storage","userId":2,"userRole":"user","minimumRole":"admin"}
+03:37:44 ⚠️  [mn5hti17jqm43] GET /storage → 403 (4ms)
+03:37:45 ✅ [mn5hti1hkprz7] GET /storage → 200 (553ms)
+03:37:45 ✅ [mn5htih1xj1nk] GET /storage → 200 (165ms)
+03:37:45 ✅ [mn5htilsk3s05] GET /storage → 200 (176ms)
+  console.log
+    [dotenv@17.3.1] injecting env (0) from .env -- tip: 🛠️  run anywhere with `dotenvx run -- yourcommand`
+
+      at _log (node_modules/dotenv/lib/main.js:139:11)
+
+03:37:45 Using individual DB environment variables {"host":"localhost","port":5432,"database":"tross_dev"}
+03:37:45 🧪 Using TEST database {"host":"localhost","port":5433,"database":"tross_test"}
+  console.log
+    [dotenv@17.3.1] injecting env (0) from .env -- tip: 🤖 agentic secret storage: https://dotenvx.com/as2
+
+      at _log (node_modules/dotenv/lib/main.js:139:11)
+
+03:37:45 CORS allowed origins configured {"count":2}
+03:37:46 ✅ [mn5htj3y7yubv] GET / → 200 (23ms)
+03:37:46 Client error {"error":"work_order not found","code":"NOT_FOUND","url":"/api/work_orders/2/files","method":"GET"}
+03:37:46 ⚠️  [mn5htj4sn4550] GET /api/work_orders/2/files → 404 (7ms)
+03:37:46 Client error {"error":"work_order not found","code":"NOT_FOUND","url":"/api/work_orders/1/files","method":"GET"}
+03:37:46 ⚠️  [mn5htj5536mhu] GET /api/work_orders/1/files → 404 (7ms)
+03:37:46 Client error {"error":"work_order not found","code":"NOT_FOUND","url":"/api/work_orders/2/files","method":"POST"}
+03:37:46 ⚠️  [mn5htj5lvvnn0] POST /api/work_orders/2/files → 404 (8ms)
+03:37:46 Client error {"error":"work_order not found","code":"NOT_FOUND","url":"/api/work_orders/2/files/1","method":"DELETE"}
+03:37:46 ⚠️  [mn5htj5ylwqq7] DELETE /api/work_orders/2/files/1 → 404 (6ms)
+03:37:46 ✅ [mn5htj6eyasdm] GET / → 200 (6ms)
+03:37:46 Client error {"error":"work_order not found","code":"NOT_FOUND","url":"/api/work_orders/1/files","method":"GET"}
+03:37:46 ⚠️  [mn5htj6q627t0] GET /api/work_orders/1/files → 404 (7ms)
+03:37:46 Client error {"error":"work_order not found","code":"NOT_FOUND","url":"/api/work_orders/1/files","method":"POST"}
+03:37:46 ⚠️  [mn5htj75868pv] POST /api/work_orders/1/files → 404 (7ms)
+03:37:46 ✅ [mn5htj7iy3s42] GET / → 200 (6ms)
+03:37:46 ✅ [mn5htj7te7m4k] GET / → 200 (6ms)
+03:37:46 ✅ [mn5htj85x34ym] GET / → 200 (6ms)
+03:37:46 Client error {"error":"work_order not found","code":"NOT_FOUND","url":"/api/work_orders/999999/files","method":"GET"}
+03:37:46 ⚠️  [mn5htj8im85de] GET /api/work_orders/999999/files → 404 (7ms)
+03:37:46 Client error {"error":"work_order not found","code":"NOT_FOUND","url":"/api/work_orders/999999/files","method":"GET"}
+03:37:46 ⚠️  [mn5htj8toxdlh] GET /api/work_orders/999999/files → 404 (6ms)
+  console.log
+    [dotenv@17.3.1] injecting env (0) from .env -- tip: ⚡️ secrets for agents: https://dotenvx.com/as2
+
+      at _log (node_modules/dotenv/lib/main.js:139:11)
+
+03:37:46 Using individual DB environment variables {"host":"localhost","port":5432,"database":"tross_dev"}
+03:37:46 🧪 Using TEST database {"host":"localhost","port":5433,"database":"tross_test"}
+  console.log
+    [dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] }
+
+      at _log (node_modules/dotenv/lib/main.js:139:11)
+
+03:37:46 CORS allowed origins configured {"count":2}
+03:37:46 🔧 Dev auth: Generated token for admin@tross.dev (admin)
+03:37:46 ✅ [mn5htjla2880e] GET /token?role=admin → 200 (3ms)
+03:37:46 ✅ [mn5htjljm6vve] GET / → 200 (22ms)
+03:37:46 ✅ [mn5htjmc8c5d9] GET / → 200 (1ms)
+03:37:46 ✅ [mn5htjmxpdyqk] GET / → 200 (1ms)
+03:37:46 ✅ [mn5htjn0k7h2y] GET / → 200 (1ms)
+03:37:46 ✅ [mn5htjn3353gr] GET / → 200 (1ms)
+03:37:46 ✅ [mn5htjn6hep7f] GET / → 200 (1ms)
+03:37:46 ✅ [mn5htjn9tiutr] GET / → 200 (1ms)
+03:37:46 ✅ [mn5htjncsibla] GET / → 200 (1ms)
+03:37:46 ✅ [mn5htjnfgqe1e] GET / → 200 (1ms)
+03:37:46 ✅ [mn5htjnih79vk] GET / → 200 (2ms)
+03:37:46 ✅ [mn5htjnli2igd] GET / → 200 (2ms)
+03:37:46 ✅ [mn5htjnohq0ti] GET / → 200 (2ms)
+03:37:56 Query error {"error":"Query read timeout"}
+03:37:56 ✅ [mn5htrepxpc5l] GET / → 200 (18ms)
+03:37:56 ✅ [mn5htrfqdvyos] GET / → 200 (2ms)
+03:37:56 ⚠️  Validation failure {"validator":"toSafeInteger","field":"limit","valueType":"undefined","reason":"Field is required but received undefined"}
+03:37:56 ⚠️  Validation failure {"validator":"validatePagination","field":"pagination","value":"{}","valueType":"object","reason":"limit is required","url":"/","method":"GET"}
+03:37:56 ⚠️  [mn5htrfy8jh2z] GET / → 400 (4ms)
+03:37:56 ✅ [mn5htrg5aj90d] GET / → 200 (1ms)
+03:37:56 ✅ [mn5htrgullika] GET / → 200 (4ms)
+  console.log
+    [dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  write to custom object with { processEnv: myObject }
+
+      at _log (node_modules/dotenv/lib/main.js:139:11)
+
+03:37:56 Using individual DB environment variables {"host":"localhost","port":5432,"database":"tross_dev"}
+03:37:56 🧪 Using TEST database {"host":"localhost","port":5433,"database":"tross_test"}
+  console.log
+    [dotenv@17.3.1] injecting env (0) from .env -- tip: 🛡️ auth for agents: https://vestauth.com
+
+      at _log (node_modules/dotenv/lib/main.js:139:11)
+
+03:37:57 CORS allowed origins configured {"count":2}
+03:37:57 Security Event {"event":"AUTH_MISSING_TOKEN","url":"/all"}
+03:37:57 ⚠️  [mn5htrubod427] GET /all → 401 (13ms)
+03:37:57 Security Event {"event":"AUTH_INSUFFICIENT_PERMISSION","url":"/all","userId":3,"userRole":"viewer","resource":"audit_logs","operation":"read"}
+03:37:57 ⚠️  [mn5htrv4q71hh] GET /all → 403 (13ms)
+03:37:57 ✅ [mn5htrvzfqiq6] GET /all → 200 (39ms)
+03:37:57 ✅ [mn5htrxc88a32] GET /all?limit=5 → 200 (8ms)
+03:37:57 ✅ [mn5htrxqa8y2q] GET /all?offset=10 → 200 (7ms)
+03:37:57 ✅ [mn5htry447wlx] GET /all?filter=data → 200 (7ms)
+03:37:57 ✅ [mn5htryi7dqwq] GET /all?filter=auth → 200 (7ms)
+03:37:57 ⚠️  Validation failure {"validator":"toSafeInteger","field":"limit","value":"1000","valueType":"string","reason":"Value 1000 exceeds maximum 500"}
+03:37:57 ⚠️  Validation failure {"validator":"validatePagination","field":"pagination","value":"{\"limit\":\"1000\"}","valueType":"object","reason":"limit must be at most 500","url":"/all?limit=1000","method":"GET"}
+03:37:57 ⚠️  [mn5htryzccrom] GET /all?limit=1000 → 400 (7ms)
+03:37:57 ✅ [mn5htrzfghwqj] GET /all → 200 (8ms)
+03:37:57 Security Event {"event":"AUTH_MISSING_TOKEN","url":"/user/1"}
+(node:3040) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use asycn/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:3040) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(node:3040) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use asycn/await or an external async flow control mechanism instead.
+PASS integration __tests__/integration/auth-api.test.js
+  Auth API Endpoints - Integration Tests
+    GET /api/auth/me - Get Current User Profile
+      ✓ should return 401 without authentication (34 ms)
+      ✓ should return user profile with valid token (25 ms)
+      ✓ should include user name in response (15 ms)
+      ✓ should include role information (11 ms)
+      ✓ should return correct data for different user roles (19 ms)
+      ✓ should return 403 with invalid token format (9 ms)
+    PUT /api/auth/me - Update User Profile
+      ✓ should return 401 without authentication (17 ms)
+      ✓ should update first name (20 ms)
+      ✓ should update last name (21 ms)
+      ✓ should update both first and last name (17 ms)
+      ✓ should return 400 with no valid fields (11 ms)
+      ✓ should reject disallowed field updates (11 ms)
+      ✓ should validate first_name length (11 ms)
+      ✓ should persist updates to database (26 ms)
+    Profile Update Validation
+      ✓ should trim whitespace from names (16 ms)
+      ✓ should reject empty string names (10 ms)
+      ✓ should handle special characters in names (15 ms)
+    Auth Endpoints - Response Format
+      ✓ should return proper content-type (9 ms)
+      ✓ should include timestamp in success responses (9 ms)
+      ✓ should include timestamp in error responses (10 ms)
+      ✓ should return consistent error format (11 ms)
+    Auth Endpoints - Performance
+      ✓ should respond quickly to profile requests (9 ms)
+      ✓ should handle concurrent profile requests (67 ms)
+    Auth Endpoints - Security
+      ✓ should not leak sensitive data in responses (11 ms)
+      ✓ should not allow updating other users profiles (32 ms)
+      ✓ should validate authorization header format (26 ms)
+    POST /api/auth/logout - Logout Current Session
+      ✓ should return 401 without authentication (12 ms)
+      ✓ should logout successfully with valid token (14 ms)
+      ✓ should handle logout without refresh token (13 ms)
+      ✓ should create audit log entry for logout (12 ms)
+    POST /api/auth/logout-all - Logout All Devices
+      ✓ should return 401 without authentication (10 ms)
+      ✓ should logout from all devices (15 ms)
+      ✓ should return count of revoked tokens (15 ms)
+      ✓ should work for users with no active tokens (14 ms)
+    GET /api/auth/sessions - Get Active Sessions
+      ✓ should return 401 without authentication (9 ms)
+      ✓ should return array of active sessions (12 ms)
+      ✓ should return session details without sensitive data (11 ms)
+      ✓ should handle users with no active sessions (11 ms)
+      ✓ should include session metadata (11 ms)
+    POST /api/auth/refresh - Token Refresh
+      ✓ should return 400 without refresh token (9 ms)
+      ✓ should return 400 with invalid refresh token format (13 ms)
+      ✓ should handle expired refresh token (10 ms)
+      ✓ should enforce rate limiting on refresh endpoint (84 ms)
+    Authentication Middleware - Token Validation
+      ✓ should reject requests with expired tokens (10 ms)
+      ✓ should reject requests with malformed tokens (7 ms)
+      ✓ should handle missing Authorization header (10 ms)
+      ✓ should reject tokens with wrong signature (8 ms)
+      ✓ should handle *** case-insensitively (11 ms)
+    Audit Trail Verification
+      ✓ should log profile updates in audit trail (18 ms)
+      ✓ should log logout events in audit trail (12 ms)
+      ✓ should log logout-all events with token count (14 ms)
+(node:3040) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use asycn/await or an external async flow control mechanism instead.
+PASS integration __tests__/integration/admin-api.test.js
+  Admin API - Integration Tests
+    Authorization
+      ✓ should return 401 without authentication (29 ms)
+      ✓ should return 403 for non-admin users (26 ms)
+      ✓ should return 403 for manager users (27 ms)
+      ✓ should return 200 for admin users (37 ms)
+    GET /api/admin/system/sessions
+      ✓ should return empty array when no active sessions (27 ms)
+      ✓ should return active sessions with user info (31 ms)
+      ✓ should not return expired sessions (29 ms)
+    POST /api/admin/system/sessions/:userId/force-logout
+      ✓ should suspend user and revoke their tokens (52 ms)
+      ✓ should return 400 when trying to logout self (27 ms)
+      ✓ should return 404 for non-existent user (34 ms)
+      ✓ should return 400 for invalid user ID (27 ms)
+    POST /api/admin/system/sessions/:userId/reactivate
+      ✓ should reactivate a suspended user (37 ms)
+      ✓ should return 404 for user not suspended (28 ms)
+    DELETE /api/admin/system/sessions/:sessionId
+      ✓ should revoke a specific session (30 ms)
+      ✓ should return 404 for non-existent session (26 ms)
+      ✓ should return 400 for invalid session ID (23 ms)
+    GET /api/admin/entities
+      ✓ should return list of all entities (24 ms)
+      ✓ should include known entities (23 ms)
+    GET /api/admin/:entity
+      ✓ should return entity metadata with RLS matrix (23 ms)
+      ✓ should return entity metadata with field access matrix (23 ms)
+      ✓ should return validation rules (22 ms)
+      ✓ should return 404 for unknown entity (22 ms)
+      ✓ should return raw metadata for /:entity/raw (23 ms)
+    GET /api/admin/system/logs/data
+      ✓ should return paginated data logs (48 ms)
+      ✓ should filter by resourceType (32 ms)
+      ✓ should filter by action (31 ms)
+      ✓ should support pagination parameters (29 ms)
+    GET /api/admin/system/logs/auth
+      ✓ should return paginated auth logs (29 ms)
+      ✓ should filter by action type (28 ms)
+      ✓ should include user agent information (28 ms)
+    GET /api/admin/system/logs/summary
+      ✓ should return log summary for default period (27 ms)
+      ✓ should accept period parameter (25 ms)
+    GET /api/admin/system/config/permissions
+      ✓ should return permissions.json content (23 ms)
+    GET /api/admin/system/config/validation
+      ✓ should return derived validation rules from entity metadata (24 ms)
+    GET /api/admin/system/maintenance
+      ✓ should return current maintenance mode status (27 ms)
+    PUT /api/admin/system/maintenance
+      ✓ should enable maintenance mode (49 ms)
+      ✓ should disable maintenance mode (63 ms)
+      ✓ should return 400 when enabled is not boolean (40 ms)
+      ✓ should return 400 when enabled is missing (39 ms)
+    GET /api/admin/system/settings
+      ✓ should return all system settings (24 ms)
+    GET /api/admin/system/settings/:key
+      ✓ should return a specific setting (24 ms)
+      ✓ should return 404 for unknown setting (36 ms)
+    PUT /api/admin/system/settings/:key
+      ✓ should update a setting value (29 ms)
+      ✓ should return 400 when value is missing (24 ms)
+(node:3040) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use asycn/await or an external async flow control mechanism instead.
+PASS integration __tests__/integration/batch-operations.test.js
+  Batch Operations Integration Tests
+    Batch Create
+      ✓ creates multiple records in single transaction (49 ms)
+      ✓ returns detailed results for each operation (16 ms)
+    Batch Update
+      ✓ updates multiple records atomically (44 ms)
+    Batch Delete
+      ✓ deletes multiple records (42 ms)
+    Transaction Guarantees
+      ✓ rolls back all operations on error (default behavior) (16 ms)
+      ✓ commits partial success with continueOnError=true (22 ms)
+    Mixed Operations
+      ✓ handles create, update, delete in single batch (36 ms)
+    RLS Enforcement
+      ✓ fails batch if user lacks access to any record (pre-validation) (21 ms)
+    Validation
+      ✓ rejects empty operations array (11 ms)
+      ✓ rejects operations exceeding max limit (13 ms)
+      ✓ rejects invalid operation type (11 ms)
+    Idempotent Batch
+      ✓ same idempotency key returns cached batch result (39 ms)
+(node:3040) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use asycn/await or an external async flow control mechanism instead.
+PASS integration __tests__/integration/idempotency.test.js
+  Idempotency Integration Tests
+    Store and Replay
+      ✓ returns cached response on replay with same key (48 ms)
+      ✓ allows different keys for same payload (51 ms)
+      ✓ works without idempotency key (opt-in behavior) (34 ms)
+    Payload Mismatch
+      ✓ returns 422 when same key used with different payload (31 ms)
+    User Scoping
+      ✓ scopes idempotency keys per user (41 ms)
+      ✓ allows same key for different users (38 ms)
+    Concurrent Requests
+      ✓ handles race condition - exactly one request creates record (58 ms)
+    Cleanup
+      ✓ runNow() removes expired keys from database (10 ms)
+      ✓ background task runNow() executes cleanup (10 ms)
+    Key Validation
+      ✓ rejects invalid key format (12 ms)
+      ✓ rejects key exceeding max length (13 ms)
+PASS integration __tests__/integration/auth0-integration.test.js
+  Auth0Strategy Integration Tests
+    Provider Identification
+      ✓ should return "auth0" as provider name (2 ms)
+      ✓ should initialize with Auth0 config (2 ms)
+    Authentication Flow
+      ✓ should authenticate with valid authorization code (6 ms)
+      ✓ should throw error when authorization code is missing (16 ms)
+      ✓ should handle token exchange failure (9 ms)
+      ✓ should handle user info retrieval failure (3 ms)
+      ✓ should handle local user creation failure (3 ms)
+      ✓ should use default callback URL when not provided (5 ms)
+    Token Verification
+      ✓ should verify valid Auth0 token (1 ms)
+      ✓ should reject expired token (2 ms)
+      ✓ should reject token with invalid signature (2 ms)
+      ✓ should reject token with wrong audience (2 ms)
+    User Profile Mapping
+      ✓ should map Auth0 user profile to local format (1 ms)
+      ✓ should handle missing optional fields (1 ms)
+      ✓ should split name when given_name and family_name missing (1 ms)
+    Token Refresh
+      ✓ should refresh access token with refresh token (2 ms)
+      ✓ should throw error when refresh token is invalid (2 ms)
+    Logout
+      ✓ should generate logout URL (2 ms)
+      ✓ should use default return URL when not provided (2 ms)
+    User Profile Retrieval
+      ✓ should get user profile with access token (1 ms)
+    Error Handling & Edge Cases
+      ✓ should handle network errors gracefully (3 ms)
+      ✓ should handle malformed Auth0 responses (3 ms)
+      ✓ should reject invalid email format from Auth0 (4 ms)
+(node:3040) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use asycn/await or an external async flow control mechanism instead.
+PASS integration __tests__/integration/rate-limiting.test.js
+  Rate Limiting (P1-6)
+    Test Environment Rate Limiting
+      ✓ should bypass rate limiting in test environment (140 ms)
+      ✓ should bypass rate limiting in development environment (67 ms)
+    Production Rate Limiting - API Limiter
+      ✓ should use environment-based rate limit configuration (1 ms)
+      ✓ should return 429 status with proper error message when rate limit exceeded (1 ms)
+      ✓ should include rate limit headers in response (11 ms)
+    Production Rate Limiting - Auth Limiter
+      ✓ should have stricter limits for authentication endpoints (1 ms)
+      ✓ should not count successful authentication attempts against limit (1 ms)
+      ✓ should use environment variables for auth rate limits (1 ms)
+    Production Rate Limiting - Refresh Token Limiter
+      ✓ should enforce refresh token limits (1 ms)
+      ✓ should use environment variables for refresh rate limits (1 ms)
+    Rate Limit Error Responses
+      ✓ should return standardized error format for rate limit violations (1 ms)
+      ✓ should have TOO_MANY_REQUESTS status code constant defined (1 ms)
+    Rate Limiting Logging
+      ✓ should log rate limit violations for security monitoring (1 ms)
+      ✓ should log security-relevant information for brute force detection (1 ms)
+    Rate Limit Headers
+      ✓ should enable standardHeaders for rate limit information (1 ms)
+      ✓ should disable legacy X-RateLimit headers
+    Rate Limiter Configuration Validation
+      ✓ apiLimiter should use environment variables for configuration
+      ✓ authLimiter should use environment variables and skip successful requests
+      ✓ refreshLimiter should use environment variables (1 ms)
+    Environment-Based Rate Limiter Export
+      ✓ should export bypass limiter in test/dev environments (3 ms)
+      ✓ should export actual rate limiters in production (1 ms)
+    Rate Limiting Security Considerations
+      ✓ should protect against brute force attacks with auth limiter (1 ms)
+      ✓ should protect against DoS attacks with general API limiter (1 ms)
+    Auth0 Password Handling
+      ✓ should NOT have passwordResetLimiter - Auth0 handles passwords
+(node:3040) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use asycn/await or an external async flow control mechanism instead.
+PASS integration __tests__/integration/edge-cases-boundaries.test.js
+  Boundary Condition Tests
+    Pagination Boundaries
+      ✓ should handle page=0 gracefully (treat as page 1) (16 ms)
+      ✓ should handle negative page numbers (treat as page 1) (27 ms)
+      ✓ should handle limit=0 gracefully (12 ms)
+      ✓ should handle extremely large page numbers (11 ms)
+      ✓ should handle extremely large limit values (10 ms)
+    String Length Boundaries
+      ✓ should reject empty string for required name field (16 ms)
+      ✓ should reject extremely long strings (SQL injection attempt) (18 ms)
+      ✓ should handle single character names (10 ms)
+    Numeric Boundaries
+      ✓ should handle negative amounts for invoices (credit memos) (12 ms)
+      ✓ should handle zero amounts (21 ms)
+      ✓ should handle very large decimal values (16 ms)
+    Date Boundaries
+      ✓ should reject invalid date formats (14 ms)
+      ✓ should reject end_date before start_date (18 ms)
+      ✓ should handle same start and end dates (15 ms)
+    Empty Data Set Handling
+      ✓ should return empty array when filtering returns no results (10 ms)
+      ✓ should handle searches with special characters gracefully (11 ms)
+    SQL Injection Prevention
+      ✓ should prevent SQL injection in search parameters (21 ms)
+      ✓ should prevent SQL injection in ID parameters (11 ms)
+(node:3040) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use asycn/await or an external async flow control mechanism instead.
+PASS integration __tests__/integration/db/token-service-db.test.js
+  TokenService - Integration Tests (Real DB)
+    generateTokenPair()
+      ✓ should store refresh token in REAL database (324 ms)
+      ✓ should enforce foreign key constraint on user_id (213 ms)
+      ✓ should set correct expiration timestamp in database (239 ms)
+      ✓ should create unique token_id for each token (338 ms)
+      ✓ should handle NULL ip_address and user_agent (211 ms)
+    refreshAccessToken()
+      ✓ should generate new token with REAL database verification (334 ms)
+      ✓ should update last_used_at timestamp (341 ms)
+      ✓ should reject expired token (database-level check) (220 ms)
+      ✓ should reject revoked token (database-level check) (207 ms)
+      ✓ should reject if token hash does not match (333 ms)
+    revokeToken()
+      ✓ should set revoked_at timestamp in database (209 ms)
+      ✓ should handle non-existent token gracefully (145 ms)
+    revokeAllUserTokens()
+      ✓ should revoke multiple tokens for a user (332 ms)
+      ✓ should return 0 for user with no tokens (142 ms)
+    cleanupExpiredTokens()
+      ✓ should delete expired tokens from database (207 ms)
+      ✓ should not delete unexpired tokens (198 ms)
+    getUserTokens()
+      ✓ should return all tokens for a user from database (272 ms)
+      ✓ should return empty array for user with no tokens (145 ms)
+    Concurrent Operations
+      ✓ should handle concurrent token generation without conflicts (266 ms)
+PASS integration __tests__/integration/error-response-security.test.js
+  Error Response Security Audit
+    Production Error Sanitization
+      ✓ should NOT expose stack traces in production (15 ms)
+      ✓ should NOT expose database error details (7 ms)
+      ✓ should NOT expose file paths in errors (6 ms)
+      ✓ should NOT expose Auth0 configuration details (7 ms)
+      ✓ should NOT expose JWT secrets or tokens (6 ms)
+      ✓ should NOT expose internal module names (7 ms)
+      ✓ should use generic error message for validation errors (6 ms)
+      ✓ should NOT expose environment variables (6 ms)
+    Development vs Production Error Details
+      ✓ should provide detailed errors in development mode (6 ms)
+      ✓ should sanitize errors in production mode (6 ms)
+    Sensitive Data Patterns
+      ✓ should NOT expose Email addresses in production errors (12 ms)
+      ✓ should NOT expose IP addresses in production errors (6 ms)
+      ✓ should NOT expose File paths (Unix) in production errors (6 ms)
+      ✓ should NOT expose File paths (Windows) in production errors (6 ms)
+      ✓ should NOT expose Database connection strings in production errors (6 ms)
+      ✓ should NOT expose Auth0 domains in production errors (6 ms)
+    HTTP Status Code Consistency
+      ✓ should return 500 for internal errors (7 ms)
+      ✓ should preserve custom status codes (6 ms)
+      ✓ should preserve validation errors (400) (7 ms)
+    Error Response Structure
+      ✓ should always return JSON error responses (6 ms)
+      ✓ should include timestamp in error response (7 ms)
+      ✓ should NOT include request details in error response (6 ms)
+(node:3040) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use asycn/await or an external async flow control mechanism instead.
+PASS integration __tests__/integration/schema-api.test.js
+  Schema Endpoints - Integration Tests
+    GET /api/schema - List All Tables
+      ✓ should return 200 with list of tables (28 ms)
+      ✓ should return 401 without authentication (12 ms)
+      ✓ should include expected tables (14 ms)
+      ✓ should include table metadata (13 ms)
+      ✓ should handle concurrent requests (90 ms)
+    GET /api/schema/:tableName - Get Table Schema
+      ✓ should return schema for users table (62 ms)
+      ✓ should return schema for roles table (46 ms)
+      ✓ should return error for non-existent table (46 ms)
+      ✓ should return 401 without authentication (13 ms)
+      ✓ should include column metadata (43 ms)
+      ✓ should include primary key column (42 ms)
+      ✓ should identify foreign key relationships (40 ms)
+      ✓ should include UI metadata (labels, types) (42 ms)
+      ✓ should identify searchable columns (42 ms)
+      ✓ should identify readonly columns (38 ms)
+    GET /api/schema/:tableName/options/:column - Get FK Options
+      ✓ should return role options for users.role_id (70 ms)
+      ✓ should return 401 without authentication (10 ms)
+      ✓ should return 400 for non-FK column (44 ms)
+      ✓ should return error for non-existent table (36 ms)
+      ✓ should return options with value and label (72 ms)
+      ✓ should return actual role data (70 ms)
+    Schema Endpoints - Performance
+      ✓ should respond quickly for table list (14 ms)
+      ✓ should respond quickly for table schema (42 ms)
+      ✓ should respond quickly for FK options (68 ms)
+    Schema Endpoints - Response Format
+      ✓ should return proper content-type (12 ms)
+      ✓ should include timestamp in all responses (102 ms)
+PASS integration __tests__/integration/auth-flow.test.js
+  Authentication Flow Integration
+    Public Endpoints
+      ✓ should access public endpoint without authentication (17 ms)
+      ✓ should access health endpoint (8 ms)
+    Protected Endpoints
+      ✓ should reject access without token (7 ms)
+      ✓ should reject invalid token format (7 ms)
+      ✓ should allow access with valid token (7 ms)
+    Role-Based Access Control
+      ✓ should allow admin access to admin endpoint (14 ms)
+      ✓ should deny non-admin access to admin endpoint (7 ms)
+    Authentication Provider Integration
+      ✓ should use development authentication in test environment (3 ms)
+      ✓ should switch auth providers based on environment (4 ms)
+    Token Validation
+      ✓ should validate token expiration (7 ms)
+      ✓ should validate different user roles (24 ms)
+    Error Handling
+      ✓ should handle malformed JWT gracefully (7 ms)
+      ✓ should include timestamps in all error responses (7 ms)
+(node:3040) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use asycn/await or an external async flow control mechanism instead.
+PASS integration __tests__/integration/health-api.test.js
+  Health Endpoints - Integration Tests
+    GET /api/health - Basic Health Check
+      ✓ should include uptime greater than or equal to 0 (12 ms)
+      ✓ should have valid timestamp (11 ms)
+      ✓ should verify database connectivity (11 ms)
+    GET /api/health/databases - Database Health Check
+      ✓ should return 200 when database is healthy (21 ms)
+      ✓ should return 401 without authentication (10 ms)
+      ✓ should include database metrics (11 ms)
+      ✓ should have fast response time (10 ms)
+      ✓ should have reasonable connection usage (10 ms)
+      ✓ should determine status based on metrics (10 ms)
+    Health Check - Error Scenarios
+      ✓ should handle concurrent health checks (116 ms)
+      ✓ should handle concurrent database health checks (55 ms)
+    Health Check - Performance
+      ✓ basic health check should respond quickly (10 ms)
+      ✓ database health check should respond within timeout (10 ms)
+    Health Check - Response Format
+      ✓ should return proper content-type headers (10 ms)
+      ✓ should not expose sensitive information (10 ms)
+      ✓ should include all required fields (10 ms)
+    GET /api/health/ready - Storage Configuration
+      ✓ should include storage configuration in readiness check (16 ms)
+      ✓ should report storage provider type (12 ms)
+    GET /api/health/storage - Deep Storage Check
+      ✓ should require authentication (10 ms)
+      ✓ should require admin role (10 ms)
+      ✓ should return storage health details for admin (560 ms)
+      ✓ should include response time when storage is checked (171 ms)
+      ✓ should not expose sensitive information (182 ms)
+PASS integration __tests__/integration/parent-rls-files.test.js
+  Parent RLS for File Sub-Routes
+    Customer RLS on Work Order Files
+      ✓ Customer A can list files on their own work order (30 ms)
+      ✓ Customer A CANNOT list files on Customer B work order (returns 404) (13 ms)
+      ✓ Customer B CANNOT list files on Customer A work order (returns 404) (13 ms)
+      ✓ Customer A CANNOT upload to Customer B work order (returns 404) (16 ms)
+      ✓ Customer A CANNOT delete file on Customer B work order (returns 404) (12 ms)
+    Technician RLS on Work Order Files
+      ✓ Technician can list files on assigned work order (16 ms)
+      ✓ Technician CANNOT list files on unassigned work order (returns 404) (12 ms)
+      ✓ Technician CANNOT upload to unassigned work order (returns 404) (15 ms)
+    Admin access (null filterConfig)
+      ✓ Admin can list files on any work order (23 ms)
+      ✓ Admin can access assigned and unassigned work orders (12 ms)
+    Non-existent work orders
+      ✓ Should return 404 for non-existent work order (any role) (24 ms)
+(node:3040) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use asycn/await or an external async flow control mechanism instead.
+PASS integration __tests__/integration/timeout.test.js (10.49 s)
+  Timeout Architecture
+    Request Timeout Middleware
+      ✓ should timeout long-running requests (28 ms)
+      ✓ should add request timing metadata (8 ms)
+      ✓ should handle concurrent requests without timeout issues (66 ms)
+    Database Query Timeouts
+      ✓ should have query timeouts configured (1 ms)
+      ✓ should prevent hanging on database connection failure
+      ✓ should timeout long-running queries (10005 ms)
+    Timeout Hierarchy Validation
+      ✓ should have proper timeout hierarchy (2 ms)
+      ✓ should have health check timeout less than request timeout (1 ms)
+      ✓ should have monitoring thresholds configured (1 ms)
+    Timeout Error Responses
+      ✓ should return proper error format on timeout (2 ms)
+      ✓ should include timeout metadata in error response (1 ms)
+    Slow Request Detection
+      ✓ should track request duration (29 ms)
+      ✓ should identify slow requests (1 ms)
+    Production Timeout Configuration
+      ✓ should have reasonable production timeouts (2 ms)
+      ✓ should have faster test timeouts (1 ms)
+    Graceful Timeout Handling
+      ✓ should not leak resources on timeout (40 ms)
+      ✓ should cleanup on request completion (23 ms)
+(node:3040) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use asycn/await or an external async flow control mechanism instead.
+PASS integration __tests__/integration/audit-api.test.js
+  Audit API Endpoints - Integration Tests
+    GET /api/audit/all - Get All Audit Logs (Admin)
+      ✓ should return 401 without authentication (29 ms)
+      ✓ should return 403 for non-admin users (29 ms)
+      ✓ should return audit logs for admin (53 ms)
+      ✓ should respect limit parameter (16 ms)
+      ✓ should respect offset parameter (13 ms)
+      ✓ should accept filter parameter for data actions (13 ms)
+      ✓ should accept filter parameter for auth actions (16 ms)
+      ✓ should reject limit above maximum with 400 (16 ms)
+      ✓ should return pagination metadata (18 ms)
+    GET /api/audit/user/:userId - Get User Audit Trail
+      ✓ should return 401 without authentication (21 ms)
+      ✓ should return 400 for invalid user ID (13 ms)
+      ✓ should return 403 for non-admin viewing other user (15 ms)
+      ✓ should allow users to view own audit trail (15 ms)
+      ✓ should allow admin to view any user audit trail (23 ms)
+      ✓ should respect limit parameter (12 ms)
+      ✓ should return empty array for user with no activity (13 ms)
+    GET /api/audit/:resourceType/:resourceId - Get Resource Audit Trail
+      ✓ should return 401 without authentication (9 ms)
+      ✓ should return 400 for invalid resource ID (14 ms)
+      ✓ should return 403 when lacking read permission on resource type (10 ms)
+      ✓ should return audit trail for accessible resource type (10 ms)
+      ✓ should respect limit parameter (12 ms)
+      ✓ should work with singular resource type (auto-pluralization) (11 ms)
+      ✓ should return empty array for resource with no audit history (10 ms)
+      ✓ should handle various resource types (29 ms)
+    Audit Log Response Format
+      ✓ should format dates as ISO strings (12 ms)
+      ✓ should include standard audit fields (13 ms)
+(node:3040) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use asycn/await or an external async flow control mechanism instead.
+PASS integration __tests__/integration/files-api.test.js
+  Files API Endpoints - Integration Tests
+    POST /api/:tableName/:id/files - Upload File
+      ✓ should return 401 without authentication (16 ms)
+      ✓ should return 403 without update permission on entity (31 ms)
+      ✓ should return 400 for invalid entity ID (13 ms)
+      ✓ should return 400 for disallowed MIME type (13 ms)
+      ✓ should return 400 for empty file body (13 ms)
+      ✓ should return 404 for non-existent entity (27 ms)
+    GET /api/:tableName/:id/files - List Files
+      ✓ should return 401 without authentication (19 ms)
+      ✓ should return 403 without read permission on entity (21 ms)
+      ✓ should return 400 for invalid entity ID (19 ms)
+      ✓ should return empty array for entity with no files (28 ms)
+      ✓ should accept category filter (23 ms)
+    GET /api/:tableName/:id/files/:fileId - Get Single File
+      ✓ should return 401 without authentication (38 ms)
+      ✓ should return 400 for invalid file ID (11 ms)
+      ✓ should return 404 for non-existent file (14 ms)
+    DELETE /api/:tableName/:id/files/:fileId - Delete File
+      ✓ should return 401 without authentication (10 ms)
+      ✓ should return 400 for invalid file ID (10 ms)
+      ✓ should return 404 for non-existent file (13 ms)
+PASS integration __tests__/integration/api-documentation.test.js
+  API Documentation Verification
+    Swagger Specification
+      ✓ should have valid OpenAPI 3.0 specification (2 ms)
+      ✓ should have API metadata (10 ms)
+      ✓ should have server configuration (1 ms)
+      ✓ should define security schemes
+    API Path Coverage
+      ✓ should document core API paths (1 ms)
+      ✓ should document HTTP methods for each path (3 ms)
+    Authentication Documentation
+      ✓ should define *** scheme (1 ms)
+      ✓ protected endpoints should reference security (1 ms)
+    Response Schema Documentation
+      ✓ should define core response schemas
+      ✓ response schemas should have required properties
+    Error Response Documentation
+      ✓ should document error responses
+    Request Body Documentation
+      ✓ POST endpoints should document request bodies (1 ms)
+      ✓ PUT/PATCH endpoints should document request bodies (1 ms)
+    Documentation Completeness
+      ✓ all paths should have operation descriptions or summaries (4 ms)
+      ✓ all paths should have tags for organization (11 ms)
+    Swagger UI Endpoint
+      ✓ should have Swagger specification available
+(node:3040) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use asycn/await or an external async flow control mechanism instead.
+PASS integration __tests__/integration/auth0-api.test.js
+  Auth0 API Endpoints - Integration Tests
+    POST /api/auth0/callback - Exchange Auth Code
+      ✓ should return 400 when code is missing (15 ms)
+      ✓ should return 401 for invalid authorization code (104 ms)
+      ✓ should accept redirect_uri parameter (30 ms)
+    POST /api/auth0/validate - Validate ID Token (PKCE)
+      ✓ should return 400 when id_token is missing (9 ms)
+      ✓ should return 401 for invalid ID token (10 ms)
+      ✓ should return 401 for malformed JWT (10 ms)
+      ✓ should return 401 for expired token (19 ms)
+    POST /api/auth0/refresh - Refresh Access Token
+      ✓ should return 400 when refresh_token is missing (8 ms)
+      ✓ should return 401 for invalid refresh token (16 ms)
+      ✓ should return 401 for empty refresh token (8 ms)
+    GET /api/auth0/logout - Get Logout URL
+      ✓ should return logout URL (10 ms)
+      ✓ should return valid Auth0 logout URL format when configured
+      ✓ should not require authentication (8 ms)
+      ✓ should include helpful message (9 ms)
+    Rate Limiting
+      ✓ should apply rate limiting to refresh endpoint (19 ms)
+    Request Validation
+      ✓ should validate callback request body (8 ms)
+      ✓ should validate token request body (9 ms)
+      ✓ should handle missing Content-Type gracefully (17 ms)
+PASS integration __tests__/integration/migrations.test.js
+  Database Migration System
+    Migration Tracking Table
+      ✓ should create schema_migrations table on first run (31 ms)
+      ✓ schema_migrations should have required columns (11 ms)
+      ✓ version column should have unique constraint (5 ms)
+    Migration Execution
+      ✓ should handle migrations (pending or none) (14 ms)
+      ✓ dry run should not modify database (14 ms)
+      ✓ should record migration metadata (11 ms)
+    Migration Idempotency
+      ✓ should not reapply already applied migrations (17 ms)
+    Migration Integrity
+      ✓ should verify migration checksums (3 ms)
+      ✓ should detect missing migration files (6 ms)
+    Migration Ordering
+      ✓ should apply migrations in version order (9 ms)
+    Error Handling
+      ✓ should handle database connection errors gracefully (12 ms)
+PASS integration __tests__/integration/db-connection-adapter.test.js
+  Database Connection - Deployment Adapter Integration
+    getDatabaseConfig Integration
+      ✓ should use deployment-adapter for database configuration (3 ms)
+      ✓ should support DATABASE_URL format (Railway/Heroku) (2 ms)
+      ✓ should support individual env vars (AWS/local) (3 ms)
+    Database Connection Pool
+      ✓ should connect to test database successfully (17 ms)
+      ✓ should use test database configuration (port 5433) (1 ms)
+      ✓ should execute simple query (2 ms)
+      ✓ should handle pool connection and release (2 ms)
+    Platform-Agnostic Configuration
+      ✓ should work with default local development config (2 ms)
+      ✓ should respect custom pool sizes from env vars (2 ms)
+    Connection Error Handling
+      ✓ should handle connection with existing pool gracefully (9 ms)
+FAIL integration __tests__/integration/all-entities.test.js
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › crud › POST /api/assets - creates with required fields only
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › crud › POST /api/assets - creates with required fields only
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › crud › POST /api/assets - fails without name
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › crud › POST /api/assets - fails without name
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › crud › POST /api/assets - fails without unit_id
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › crud › POST /api/assets - fails without unit_id
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › crud › POST /api/assets - fails without asset_type
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › crud › POST /api/assets - fails without asset_type
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › crud › GET /api/assets/:id - returns entity
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › crud › GET /api/assets/:id - returns entity
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › crud › GET /api/assets/:id - returns 404 for non-existent
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › crud › GET /api/assets/:id - returns 404 for non-existent
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › crud › GET /api/assets - returns array with entity
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › crud › GET /api/assets - returns array with entity
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › crud › PATCH /api/assets/:id - updates is_active
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › crud › PATCH /api/assets/:id - updates is_active
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › crud › PATCH /api/assets/:id - rejects update to unit_id
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › crud › PATCH /api/assets/:id - rejects update to unit_id
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › crud › PATCH /api/assets/:id - rejects update to property_id
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › crud › PATCH /api/assets/:id - rejects update to property_id
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › crud › DELETE /api/assets/:id - removes entity
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › crud › DELETE /api/assets/:id - removes entity
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › crud › DELETE /api/assets/:id - cascades to dependents
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › crud › DELETE /api/assets/:id - cascades to dependents
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › validation › POST /api/assets - rejects invalid unit_id reference
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › validation › POST /api/assets - rejects invalid unit_id reference
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › validation › GET /api/assets?search=<injection> - handles SQL injection safely
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › validation › GET /api/assets?search=<injection> - handles SQL injection safely
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › validation › GET /api/assets/abc - returns 400 for invalid ID
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › validation › GET /api/assets/abc - returns 400 for invalid ID
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › validation › GET /api/assets/undefined - returns 400 for invalid ID
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › validation › GET /api/assets/undefined - returns 400 for invalid ID
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › validation › GET /api/assets/null - returns 400 for invalid ID
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › validation › GET /api/assets/null - returns 400 for invalid ID
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › validation › GET /api/assets/-1 - returns 400 for out-of-range ID
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › validation › GET /api/assets/-1 - returns 400 for out-of-range ID
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › validation › GET /api/assets/0 - returns 400 for out-of-range ID
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › validation › GET /api/assets/0 - returns 400 for out-of-range ID
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › validation › GET /api/assets/99999999999999999999 - returns 400 for out-of-range ID
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › validation › GET /api/assets/99999999999999999999 - returns 400 for out-of-range ID
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › validation › POST /api/assets - rejects empty string for name
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › validation › POST /api/assets - rejects empty string for name
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › validation › POST /api/assets - unknown fields stripped
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › validation › POST /api/assets - unknown fields stripped
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › relationships › POST /api/assets - accepts valid unit_id reference
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › relationships › POST /api/assets - accepts valid unit_id reference
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › rls › GET /api/assets - returns 401 without auth
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › rls › GET /api/assets - returns 401 without auth
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › rls › POST /api/assets - returns 403 for customer role
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › rls › POST /api/assets - returns 403 for customer role
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › rls › POST /api/assets - returns 403 for technician role
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › rls › POST /api/assets - returns 403 for technician role
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › rls › PATCH /api/assets/:id - returns 403 for customer role
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › rls › PATCH /api/assets/:id - returns 403 for customer role
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › rls › PATCH /api/assets/:id - returns 403 for technician role
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › rls › PATCH /api/assets/:id - returns 403 for technician role
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › rls › DELETE /api/assets/:id - returns 403 for customer role
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › rls › DELETE /api/assets/:id - returns 403 for customer role
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › rls › DELETE /api/assets/:id - returns 403 for technician role
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › rls › DELETE /api/assets/:id - returns 403 for technician role
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › rls › DELETE /api/assets/:id - returns 403 for dispatcher role
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › rls › DELETE /api/assets/:id - returns 403 for dispatcher role
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › search › GET /api/assets?search=<term> - searches correctly
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › search › GET /api/assets?search=<term> - searches correctly
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › search › GET /api/assets?limit=1 - returns limited results
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › search › GET /api/assets?limit=1 - returns limited results
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › search › GET /api/assets?sortBy=id&sortOrder=asc - sorts ascending
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › search › GET /api/assets?sortBy=id&sortOrder=asc - sorts ascending
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › search › GET /api/assets?sortBy=id&sortOrder=desc - sorts descending
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › search › GET /api/assets?sortBy=id&sortOrder=desc - sorts descending
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › search › GET /api/assets?sortBy=hackerField - rejects invalid sort field
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › search › GET /api/assets?sortBy=hackerField - rejects invalid sort field
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › search › GET /api/assets?sortOrder=invalid - rejects invalid sort order
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › search › GET /api/assets?sortOrder=invalid - rejects invalid sort order
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › search › GET /api/assets?page=-1 - rejects negative page
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › search › GET /api/assets?page=-1 - rejects negative page
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › search › GET /api/assets?page=0 - rejects zero page
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › search › GET /api/assets?page=0 - rejects zero page
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › search › GET /api/assets?limit=10000 - rejects excessive limit
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › search › GET /api/assets?limit=10000 - rejects excessive limit
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › lifecycle › POST /api/assets - sets created_at automatically
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › lifecycle › POST /api/assets - sets created_at automatically
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › lifecycle › POST /api/assets - defaults is_active to true
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › lifecycle › POST /api/assets - defaults is_active to true
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › lifecycle › GET /api/assets - excludes inactive records by default
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › lifecycle › GET /api/assets - excludes inactive records by default
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › response › GET /api/assets - returns application/json content-type
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › response › GET /api/assets - returns application/json content-type
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › response › GET /api/assets - returns consistent success format
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › response › GET /api/assets - returns consistent success format
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › response › GET /api/assets/:id - returns single entity format
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › response › GET /api/assets/:id - returns single entity format
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › response › GET /api/assets/99999 - returns consistent error format
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › response › GET /api/assets/99999 - returns consistent error format
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › response › POST /api/assets with invalid data - returns error format
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › response › POST /api/assets with invalid data - returns error format
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › response › GET /api/assets - includes pagination metadata
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › response › GET /api/assets - includes pagination metadata
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › audit › POST /api/assets - generates audit log entry
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › audit › POST /api/assets - generates audit log entry
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › audit › PATCH /api/assets/:id - generates audit log with changes
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › audit › PATCH /api/assets/:id - generates audit log with changes
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › audit › DELETE /api/assets/:id - generates audit log entry
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › audit › DELETE /api/assets/:id - generates audit log entry
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › fieldAccess › GET /api/assets/:id - hides restricted fields from customer role
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › fieldAccess › GET /api/assets/:id - hides restricted fields from customer role
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › fieldAccess › GET /api/assets/:id - admin sees all non-sensitive fields
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › fieldAccess › GET /api/assets/:id - admin sees all non-sensitive fields
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › fieldAccess › GET /api/assets/:id - technician sees role-appropriate fields
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › fieldAccess › GET /api/assets/:id - technician sees role-appropriate fields
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › rlsFilter › GET /api/assets - customer sees only assets in linked units (multi-hop RLS)
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › rlsFilter › GET /api/assets - customer sees only assets in linked units (multi-hop RLS)
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › error › PATCH /api/assets/99999 - returns 404 for non-existent
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › error › PATCH /api/assets/99999 - returns 404 for non-existent
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › error › DELETE /api/assets/99999 - returns 404 for non-existent
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › error › DELETE /api/assets/99999 - returns 404 for non-existent
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › error › GET /api/assets - returns 401 without auth
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › error › GET /api/assets - returns 401 without auth
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › error › POST /api/assets - returns 401 without auth
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › error › POST /api/assets - returns 401 without auth
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › error › POST /api/assets - returns 400 for invalid JSON
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › error › POST /api/assets - returns 400 for invalid JSON
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › error › POST /api/assets - returns 400 for empty body
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › error › POST /api/assets - returns 400 for empty body
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › error › POST /api/assets - rejects null for name
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › error › POST /api/assets - rejects null for name
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › error › POST /api/assets - rejects null for unit_id
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › error › POST /api/assets - rejects null for unit_id
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › error › POST /api/assets - rejects null for asset_type
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › error › POST /api/assets - rejects null for asset_type
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › error › POST /api/assets - handles XSS payload without error
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › error › POST /api/assets - handles XSS payload without error
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › error › GET /api/assets?page=-1 - handles negative page
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › error › GET /api/assets?page=-1 - handles negative page
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › error › GET /api/assets?limit=0 - handles zero limit
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › error › GET /api/assets?limit=0 - handles zero limit
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › error › GET /api/assets?limit=10000 - handles excessive limit
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › error › GET /api/assets?limit=10000 - handles excessive limit
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › error › GET /api/assets?sort=fake_field - rejects invalid sort field
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › error › GET /api/assets?sort=fake_field - rejects invalid sort field
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › error › GET /api/assets/99999 - error has consistent structure
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › error › GET /api/assets/99999 - error has consistent structure
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › error › PATCH /api/assets/:id - handles concurrent updates
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › error › PATCH /api/assets/:id - handles concurrent updates
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › error › POST /api/assets - handles name exceeding maxLength gracefully
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › error › POST /api/assets - handles name exceeding maxLength gracefully
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › error › POST /api/assets - rejects invalid date for install_date
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › error › POST /api/assets - rejects invalid date for install_date
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › error › GET /api/assets/-1 - returns 400 for negative ID
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › asset › asset Integration Tests › error › GET /api/assets/-1 - returns 400 for negative ID
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › contract › contract Integration Tests › crud › POST /api/contracts - creates with required fields only
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › contract › contract Integration Tests › crud › POST /api/contracts - creates with required fields only
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › contract › contract Integration Tests › crud › POST /api/contracts - fails without customer_id
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › contract › contract Integration Tests › crud › POST /api/contracts - fails without customer_id
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › contract › contract Integration Tests › crud › POST /api/contracts - fails without start_date
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › contract › contract Integration Tests › crud › POST /api/contracts - fails without start_date
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › contract › contract Integration Tests › crud › GET /api/contracts/:id - returns entity
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › contract › contract Integration Tests › crud › GET /api/contracts/:id - returns entity
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › contract › contract Integration Tests › crud › GET /api/contracts/:id - returns 404 for non-existent
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › contract › contract Integration Tests › crud › GET /api/contracts/:id - returns 404 for non-existent
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › contract › contract Integration Tests › crud › GET /api/contracts - returns array with entity
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › contract › contract Integration Tests › crud › GET /api/contracts - returns array with entity
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › contract › contract Integration Tests › crud › PATCH /api/contracts/:id - updates is_active
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › contract › contract Integration Tests › crud › PATCH /api/contracts/:id - updates is_active
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › contract › contract Integration Tests › crud › PATCH /api/contracts/:id - rejects update to contract_number
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › contract › contract Integration Tests › crud › PATCH /api/contracts/:id - rejects update to contract_number
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › contract › contract Integration Tests › crud › DELETE /api/contracts/:id - removes entity
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › contract › contract Integration Tests › crud › DELETE /api/contracts/:id - removes entity
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › contract › contract Integration Tests › crud › DELETE /api/contracts/:id - cascades to dependents
+  ● All Entities Integration Tests › Generic CRUD Entities (17 total) › contract › contract Integration Tests › crud › DELETE /api/contracts/:id - cascades to dependents
+  ● All Entities Intnpm error Lifecycle script `test:integration` failed with error:
+npm error code 1
+npm error path /home/runner/work/tross/tross/backend
+npm error workspace backend@1.0.0
+npm error location /home/runner/work/tross/tross/backend
+npm error command failed
+npm error command sh -c node scripts/run-integration-tests.js
+03:37:57 ⚠️  [mn5hts065
+Error: Process completed with exit code 1.

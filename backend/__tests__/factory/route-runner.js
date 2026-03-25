@@ -60,6 +60,10 @@ function runRouteTests(routeName, options = {}) {
       if (ctx?.cleanup) await ctx.cleanup();
     });
 
+    afterAll(async () => {
+      if (ctx?.cleanupFixtures) await ctx.cleanupFixtures();
+    });
+
     // Run scenarios for each endpoint
     for (const endpoint of routeMeta.endpoints) {
       // Skip if in skipEndpoints list

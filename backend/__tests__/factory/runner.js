@@ -55,6 +55,10 @@ function runEntityTests(entityName, options = {}) {
       if (ctx) await ctx.cleanup();
     });
 
+    afterAll(async () => {
+      if (ctx) await ctx.cleanupFixtures();
+    });
+
     // Run each scenario category
     for (const category of categoriesToRun) {
       const categoryScenarios = scenarios[category];
