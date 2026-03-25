@@ -13,11 +13,28 @@
 const { spawnSync } = require('child_process');
 const path = require('path');
 
-// Run Jest with integration config, capturing output to detect test results
-// Use --no-color to ensure clean output for regex parsing in CI
+// Build Jest arguments
+// --bail=false ensures ALL failures are shown (not just first)
+// --verbose shows full test names and details
+const jestArgs = [
+  'jest',
+  '--selectProjects', 'integration',
+  '--forceExit',
+  '--no-color',
+  '--bail=false',  // Show ALL failures, not just first
+];
+
+// In CI, add verbose mode for more detail
+if (process.env.CI === 'true' || process.env.DEBUG_TESTS === 'true') {
+  jestArgs.push('--verbose');
+  console.log('[run-integration-tests] Running with verbose output');
+}
+
+console.log('[run-integration-tests] Jest args:', jestArgs.join(' '));
+
 const result = spawnSync(
   'npx',
-  ['jest', '--selectProjects', 'integration', '--forceExit', '--no-color'],
+  jestArgs,
   {
     stdio: ['inherit', 'pipe', 'pipe'],
     shell: true,

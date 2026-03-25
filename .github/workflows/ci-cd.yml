@@ -120,6 +120,8 @@ jobs:
           TEST_DB_USER: postgres
           TEST_DB_PASSWORD: test123
           NODE_ENV: test
+          # Debug mode: verbose output, trace test registration
+          DEBUG_TESTS: 'true'
           # MUST MATCH: TEST_JWT_SECRET in backend/config/test-constants.js
           JWT_SECRET: test-only-jwt-secret-do-not-use-in-production
           STORAGE_PROVIDER: r2
