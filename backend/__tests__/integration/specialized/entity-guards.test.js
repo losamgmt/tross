@@ -27,14 +27,30 @@ describe("Entity-Specific Guards - Specialized Tests", () => {
   });
 
   describe("User Self-Deletion Prevention", () => {
-    test("should prevent self-deletion", async () => {
+    test("should prevent self-deletion with appropriate error message", async () => {
       // Attempt to delete self (the admin user from test setup)
       const response = await request(app)
-        .delete(`/api/users/${adminUser.userId}`)
+        .delete(`/api/users/${adminUser.user.id}`)
         .set("Authorization", `Bearer ${adminToken}`);
 
-      // Should be forbidden or have specific error
-      expect([400, 403]).toContain(response.status);
+      // Should return 400 Bad Request
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+      // Message contains the self-deletion prevention reason
+      expect(response.body.message).toMatch(/cannot delete.*own account/i);
+    });
+
+    test("should allow deleting other users", async () => {
+      // Create a different test user
+      const otherUser = await createTestUser("technician");
+
+      const response = await request(app)
+        .delete(`/api/users/${otherUser.user.id}`)
+        .set("Authorization", `Bearer ${adminToken}`);
+
+      // Admin should be able to delete other users
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
     });
   });
 

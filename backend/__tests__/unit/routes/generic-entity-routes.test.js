@@ -73,8 +73,8 @@ jest.mock("../../../utils/request-helpers", () => ({
 
 jest.mock("../../../middleware/auth", () => {
   const passMiddleware = (req, res, next) => {
-    req.user = { user_id: 1, role: "admin" };
-    req.dbUser = { id: 1, role: "admin" }; // Route handlers use req.dbUser.role
+    req.user = { user_id: 999, role: "admin" };
+    req.dbUser = { id: 999, role: "admin" }; // Use ID 999 to avoid self-deletion prevention
     next();
   };
   return {
@@ -90,7 +90,7 @@ jest.mock("../../../middleware/row-level-security", () => {
   const rlsMiddleware = (req, res, next) => {
     req.rlsContext = {
       filterConfig: null, // All records
-      userId: 1,
+      userId: 999,
       customerProfileId: null,
       technicianProfileId: null,
       role: req.dbUser?.role || "admin",
@@ -558,8 +558,8 @@ describe.each(ENTITIES)(
         // Arrange - routes call delete() directly, not findById first
         GenericEntityService.delete.mockResolvedValue(null);
 
-        // Act
-        const response = await request(app).delete(`${routePath}/999`);
+        // Act - Use ID 888 to avoid self-deletion prevention (user ID is 999)
+        const response = await request(app).delete(`${routePath}/888`);
 
         // Assert
         expect(response.status).toBe(HTTP_STATUS.NOT_FOUND);
