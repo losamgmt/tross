@@ -336,6 +336,14 @@ function createEntityRouter(entityName, _options = {}) {
       const entityId = req.validated.id;
       const auditContext = buildAuditContext(req);
 
+      // SELF-DELETION PREVENTION: Users cannot delete themselves
+      if (entityName === 'user' && req.dbUser?.id === entityId) {
+        return ResponseFormatter.badRequest(
+          res,
+          'Users cannot delete their own account',
+        );
+      }
+
       const deleted = await GenericEntityService.delete(entityName, entityId, {
         auditContext,
       });

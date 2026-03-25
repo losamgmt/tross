@@ -12,39 +12,22 @@ const {
   cleanupTestDatabase,
 } = require("../../helpers/test-db");
 const { getUniqueValues } = require("../../helpers/test-helpers");
-const GenericEntityService = require("../../../services/generic-entity-service");
 const db = require("../../../db/connection");
-const { verifyJwt } = require("../../../utils/jwt-helper");
-const { TEST_JWT_SECRET } = require("../../../config/test-constants");
 
 describe("Audit Logging - Specialized Tests", () => {
   let adminUser;
   let adminToken;
+  let adminUserId;
 
   beforeAll(async () => {
     adminUser = await createTestUser("admin");
     adminToken = adminUser.token;
+    adminUserId = adminUser.user.id; // Direct access - no lookup needed
   });
 
   afterAll(async () => {
     await cleanupTestDatabase();
   });
-
-  /**
-   * Helper to get authenticated user from token
-   */
-  async function getAuthenticatedUserId(token) {
-    const decoded = await verifyJwt(
-      token,
-      TEST_JWT_SECRET,
-    );
-    const user = await GenericEntityService.findByField(
-      "user",
-      "auth0_id",
-      decoded.sub,
-    );
-    return user?.id;
-  }
 
   describe("Role CRUD Audit Logging", () => {
     test("should log role creation in audit_logs", async () => {
@@ -59,7 +42,6 @@ describe("Audit Logging - Specialized Tests", () => {
       expect(response.status).toBe(201);
 
       const roleId = response.body.data.id;
-      const userId = await getAuthenticatedUserId(adminToken);
 
       const auditResult = await db.query(
         `SELECT * FROM audit_logs 
@@ -67,7 +49,7 @@ describe("Audit Logging - Specialized Tests", () => {
          AND resource_id = $1 
          AND user_id = $2
          ORDER BY created_at DESC LIMIT 1`,
-        [roleId, userId],
+        [roleId, adminUserId],
       );
 
       expect(auditResult.rows.length).toBe(1);
@@ -92,15 +74,13 @@ describe("Audit Logging - Specialized Tests", () => {
         .set("Authorization", `Bearer ${adminToken}`)
         .send({ name: updatedRoleName });
 
-      const userId = await getAuthenticatedUserId(adminToken);
-
       const auditResult = await db.query(
         `SELECT * FROM audit_logs 
          WHERE action = 'role_update' 
          AND resource_id = $1 
          AND user_id = $2
          ORDER BY created_at DESC LIMIT 1`,
-        [roleId, userId],
+        [roleId, adminUserId],
       );
 
       expect(auditResult.rows.length).toBe(1);
@@ -124,15 +104,13 @@ describe("Audit Logging - Specialized Tests", () => {
         .delete(`/api/roles/${roleId}`)
         .set("Authorization", `Bearer ${adminToken}`);
 
-      const userId = await getAuthenticatedUserId(adminToken);
-
       const auditResult = await db.query(
         `SELECT * FROM audit_logs 
          WHERE action = 'role_delete' 
          AND resource_id = $1 
          AND user_id = $2
          ORDER BY created_at DESC LIMIT 1`,
-        [roleId, userId],
+        [roleId, adminUserId],
       );
 
       expect(auditResult.rows.length).toBe(1);
