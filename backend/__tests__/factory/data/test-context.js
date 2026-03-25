@@ -36,6 +36,7 @@ function buildTestContext(app, db) {
   // Created once per suite, reused by all tests needing these dependencies
   // ==========================================================================
   const fixtures = {};
+  const fixtureIds = new Set(); // Track fixture IDs to exclude from cleanup
 
   /**
    * Get or create a test user for a role
@@ -90,8 +91,12 @@ function buildTestContext(app, db) {
       return fixtures[parentEntityName].id;
     }
 
-    // No fixture - create the entity (which may recursively create its own deps)
+    // No fixture - create the entity AS A FIXTURE so it persists across tests.
+    // This auto-created parent will survive cleanup() and be deleted in cleanupFixtures().
     const parent = await factory.create(parentEntityName);
+    const parentMeta = entityFactory.getMetadata(parentEntityName);
+    fixtures[parentEntityName] = parent;
+    fixtureIds.add(`${parentMeta.tableName}:${parent.id}`);
     return parent.id;
   }
 
@@ -303,13 +308,17 @@ function buildTestContext(app, db) {
     /**
      * Create a shared fixture (call in beforeAll).
      * Fixtures are cached and reused across tests in the suite.
+     * IMPORTANT: Fixtures are NOT deleted in afterEach cleanup.
      * @param {string} entityName - The entity type to create
      * @param {Object} [overrides] - Optional field overrides
      * @returns {Promise<Object>} The created entity
      */
     async createFixture(entityName, overrides = {}) {
+      const meta = entityFactory.getMetadata(entityName);
       const entity = await this.create(entityName, overrides);
       fixtures[entityName] = entity;
+      // Mark this entity ID as a fixture so cleanup() skips it
+      fixtureIds.add(`${meta.tableName}:${entity.id}`);
       return entity;
     },
 
@@ -352,23 +361,55 @@ function buildTestContext(app, db) {
     expect: null,
 
     /**
-     * Cleanup all created entities (call in afterEach)
+     * Cleanup all created entities EXCEPT fixtures (call in afterEach)
+     * Fixtures persist across tests and are cleaned up in afterAll.
      */
     async cleanup() {
       // Delete in reverse order to respect FK constraints
+      // Skip fixtures - they persist across tests in the suite
       for (const { table, id } of createdEntities.reverse()) {
+        const fixtureKey = `${table}:${id}`;
+        if (fixtureIds.has(fixtureKey)) {
+          continue; // Skip fixtures
+        }
         try {
           await db.query(`DELETE FROM ${table} WHERE id = $1`, [id]);
         } catch (err) {
           // Ignore cleanup errors (may already be deleted)
         }
       }
+      // Remove non-fixture entries from createdEntities
+      const fixtureEntries = createdEntities.filter(
+        ({ table, id }) => fixtureIds.has(`${table}:${id}`),
+      );
       createdEntities.length = 0;
+      createdEntities.push(...fixtureEntries);
     },
 
     /**
-     * Cleanup fixtures only (call in afterAll)
-     * Clears fixture references but actual entities cleaned up in cleanup()
+     * Cleanup fixtures (call in afterAll)
+     * Deletes fixture entities from database and clears references.
+     */
+    async cleanupFixtures() {
+      // Delete fixtures in reverse order (respects FK constraints)
+      const fixtureEntries = createdEntities.filter(
+        ({ table, id }) => fixtureIds.has(`${table}:${id}`),
+      );
+      for (const { table, id } of fixtureEntries.reverse()) {
+        try {
+          await db.query(`DELETE FROM ${table} WHERE id = $1`, [id]);
+        } catch (err) {
+          // Ignore cleanup errors
+        }
+      }
+      // Clear all tracking
+      createdEntities.length = 0;
+      fixtureIds.clear();
+      Object.keys(fixtures).forEach((key) => delete fixtures[key]);
+    },
+
+    /**
+     * @deprecated Use cleanupFixtures() instead
      */
     clearFixtures() {
       Object.keys(fixtures).forEach((key) => delete fixtures[key]);
