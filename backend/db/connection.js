@@ -208,6 +208,113 @@ const query = async (text, params) => {
 
 const getClient = () => pool.connect();
 
+// ============================================================================
+// CONVENIENCE QUERY METHODS (pg-promise style)
+// ============================================================================
+// These helpers provide cleaner semantics for common query patterns.
+// They wrap the standard query() method with result expectations.
+//
+// Usage:
+//   const user = await db.oneOrNone('SELECT * FROM users WHERE id = $1', [id]);
+//   const users = await db.manyOrNone('SELECT * FROM users WHERE active = true');
+// ============================================================================
+
+/**
+ * Create an error with query context for debugging.
+ * @private
+ */
+const createQueryError = (message, text, rowCount) => {
+  const queryPreview = text.length > 100 ? text.substring(0, 100) + '...' : text;
+  const err = new Error(`${message} [Query: ${queryPreview}]`);
+  err.query = text;
+  err.rowCount = rowCount;
+  return err;
+};
+
+/**
+ * Execute query expecting 0 or 1 row. Returns row or null.
+ *
+ * @param {string} text - SQL query
+ * @param {Array} [params] - Query parameters
+ * @returns {Promise<Object|null>} Single row or null
+ * @throws {Error} If query returns more than 1 row
+ */
+const oneOrNone = async (text, params) => {
+  const result = await query(text, params);
+  if (result.rows.length > 1) {
+    throw createQueryError(
+      `Expected 0 or 1 row, got ${result.rows.length}`,
+      text,
+      result.rows.length
+    );
+  }
+  return result.rows[0] || null;
+};
+
+/**
+ * Execute query expecting exactly 1 row. Throws if not found.
+ *
+ * @param {string} text - SQL query
+ * @param {Array} [params] - Query parameters
+ * @returns {Promise<Object>} Single row
+ * @throws {Error} If query returns 0 or more than 1 row
+ */
+const one = async (text, params) => {
+  const result = await query(text, params);
+  if (result.rows.length === 0) {
+    throw createQueryError('Expected 1 row, got none', text, 0);
+  }
+  if (result.rows.length > 1) {
+    throw createQueryError(
+      `Expected 1 row, got ${result.rows.length}`,
+      text,
+      result.rows.length
+    );
+  }
+  return result.rows[0];
+};
+
+/**
+ * Execute query expecting 0 or more rows. Returns array (possibly empty).
+ *
+ * @param {string} text - SQL query
+ * @param {Array} [params] - Query parameters
+ * @returns {Promise<Array>} Array of rows
+ */
+const manyOrNone = async (text, params) => {
+  const result = await query(text, params);
+  return result.rows;
+};
+
+/**
+ * Execute query expecting 1 or more rows. Throws if empty.
+ *
+ * @param {string} text - SQL query
+ * @param {Array} [params] - Query parameters
+ * @returns {Promise<Array>} Array of rows
+ * @throws {Error} If query returns 0 rows
+ */
+const many = async (text, params) => {
+  const result = await query(text, params);
+  if (result.rows.length === 0) {
+    throw createQueryError('Expected at least 1 row, got none', text, 0);
+  }
+  return result.rows;
+};
+
+/**
+ * Execute a command expecting no result rows (INSERT/UPDATE/DELETE).
+ * Returns affected row count for verification.
+ *
+ * @param {string} text - SQL command
+ * @param {Array} [params] - Command parameters
+ * @returns {Promise<number>} Number of affected rows
+ */
+const none = async (text, params) => {
+  const result = await query(text, params);
+  return result.rowCount;
+};
+
 // Test connection with retry logic
 const testConnection = async (retries = 3, delay = 1000) => {
   for (let attempt = 1; attempt <= retries; attempt++) {
@@ -281,10 +388,18 @@ if (isTest) {
 const end = () => pool.end();
 
 module.exports = {
+  // Core methods
   query,
   getClient,
   testConnection,
   end,
   closePool,
   pool,
+  
+  // Convenience methods (pg-promise style)
+  oneOrNone,
+  one,
+  manyOrNone,
+  many,
+  none,
 };
