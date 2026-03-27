@@ -26,9 +26,6 @@ concurrency:
 env:
   NODE_VERSION: "24" # Match Railway production (nixpacks.toml)
   FLUTTER_VERSION: "3.38.7" # Includes Dart 3.10.x (satisfies >=3.9.2 <4.0.0)
-  # Force GitHub Actions to use Node.js 24 (actions/checkout, etc.)
-  # See: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   # ============================================================================
@@ -40,12 +37,12 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 1 # Shallow clone for speed
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
@@ -101,12 +98,12 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 1 # Shallow clone for speed
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
@@ -143,12 +140,12 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 1 # Shallow clone for speed
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
@@ -232,7 +229,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 1 # Shallow clone for speed
 
@@ -276,7 +273,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 1 # Shallow clone for speed
 
@@ -293,7 +290,7 @@ jobs:
         run: cd frontend && flutter build web --no-tree-shake-icons --dart-define=USE_PROD_BACKEND=true
 
       - name: Upload web build
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: github.ref == 'refs/heads/main'
         with:
           name: web-build
@@ -311,12 +308,12 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 1 # Shallow clone for speed
 
       - name: Setup Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: "zulu"
           java-version: "17"
@@ -329,7 +326,7 @@ jobs:
           cache: true
 
       - name: Cache Gradle packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.gradle/caches
@@ -346,7 +343,7 @@ jobs:
         run: cd frontend && flutter build apk --release --dart-define=USE_PROD_BACKEND=true
 
       - name: Upload Release APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: android-release-apk
           path: frontend/build/app/outputs/flutter-apk/app-release.apk
@@ -363,7 +360,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 1 # Shallow clone for speed
 
@@ -388,7 +385,7 @@ jobs:
           ls -la "$GITHUB_WORKSPACE/frontend/build/"
 
       - name: Upload iOS Build
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ios-unsigned-ipa
           path: frontend/build/ios-release-unsigned.ipa
@@ -405,12 +402,12 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 1 # Shallow clone for speed
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
@@ -447,7 +444,7 @@ jobs:
           CI: true
 
       - name: Upload Playwright report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-report
