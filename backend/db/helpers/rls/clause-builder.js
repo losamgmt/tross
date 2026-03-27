@@ -13,7 +13,7 @@
  */
 
 const { parseFilter } = require('./filter-parser');
-const { getContextValue, matchRules } = require('./rule-matcher');
+const { matchRules, resolveValue } = require('./rule-matcher');
 const { sanitizeIdentifier } = require('../../../utils/sql-safety');
 const AppError = require('../../../utils/app-error');
 const { logger } = require('../../../config/logger');
@@ -28,9 +28,15 @@ const { RLS_ENGINE } = require('../../../config/constants');
  * @param {number} paramOffset - Starting parameter offset
  * @param {number} [aliasCounter=0] - Counter for generating unique aliases
  * @param {Object} [allMetadata=null] - All entity metadata (required for parent access)
+ * @param {number} [depth=0] - Current recursion depth (for cycle prevention)
  * @returns {{ clause: string, params: Array, nextOffset: number, nextAliasCounter: number }}
+ * @throws {AppError} Unknown access type
+ * @throws {AppError} Direct access missing field
+ * @throws {AppError} Junction depth limit exceeded
+ * @throws {AppError} Junction missing required configuration
+ * @throws {AppError} Parent entity not found in metadata
  */
-function buildAccessClause(access, rlsContext, tableAlias, paramOffset, aliasCounter = 0, allMetadata = null) {
+function buildAccessClause(access, rlsContext, tableAlias, paramOffset, aliasCounter = 0, allMetadata = null, depth = 0) {
   // null = full access
   if (access === null) {
     logger.debug('RLS full access (null rule)');
@@ -44,10 +50,10 @@ function buildAccessClause(access, rlsContext, tableAlias, paramOffset, aliasCou
       return buildDirectClause(access, rlsContext, tableAlias, paramOffset, aliasCounter);
 
     case 'junction':
-      return buildJunctionClause(access, rlsContext, tableAlias, paramOffset, aliasCounter);
+      return buildJunctionClause(access, rlsContext, tableAlias, paramOffset, aliasCounter, depth);
 
     case 'parent':
-      return buildParentClause(access, rlsContext, tableAlias, paramOffset, aliasCounter, allMetadata);
+      return buildParentClause(access, rlsContext, tableAlias, paramOffset, aliasCounter, allMetadata, depth);
 
     default:
       throw new AppError(`Unknown RLS access type: ${type}`, 500, 'INTERNAL_ERROR');
@@ -59,6 +65,11 @@ function buildAccessClause(access, rlsContext, tableAlias, paramOffset, aliasCou
  *
  * Example: { type: 'direct', field: 'customer_profile_id', value: 'customerProfileId' }
  * Result: "t.customer_profile_id = $1" with [contextValue]
+ *
+ * Supports explicit syntax:
+ *   value: { ref: 'userId' }      - context reference (preferred)
+ *   value: { literal: 'active' }  - literal value (for static matches)
+ *   value: 'userId'               - legacy string (context ref only, no fallback)
  */
 function buildDirectClause(access, rlsContext, tableAlias, paramOffset, aliasCounter) {
   const { field, value = 'userId' } = access;
@@ -69,21 +80,44 @@ function buildDirectClause(access, rlsContext, tableAlias, paramOffset, aliasCou
 
   // Validate and sanitize field name
   const safeField = sanitizeIdentifier(field, 'access.field');
-  const contextValue = getContextValue(rlsContext, value);
 
-  if (contextValue === undefined || contextValue === null) {
-    // No context value = no access
-    logger.debug('RLS direct access denied - missing context value', { field, valueKey: value });
+  // Resolve value using explicit or legacy syntax
+  const resolved = resolveValue(value, rlsContext);
+
+  // For direct access, legacy strings must resolve to context values (no literal fallback)
+  // Only explicit { literal: ... } syntax allows non-context values
+  const isLegacyString = typeof value === 'string';
+  const isExplicitLiteral = value && typeof value === 'object' && 'literal' in value;
+
+  if (!resolved.resolved) {
+    // Explicit ref that didn't resolve
+    logger.debug('RLS direct access denied - ref not in context', { field, value });
+    return { clause: 'FALSE', params: [], nextOffset: paramOffset, nextAliasCounter: aliasCounter };
+  }
+
+  if (isLegacyString && !resolved.isRef) {
+    // Legacy string that didn't match a context key - original behavior: deny
+    logger.debug('RLS direct access denied - legacy string not in context', { field, value });
+    return { clause: 'FALSE', params: [], nextOffset: paramOffset, nextAliasCounter: aliasCounter };
+  }
+
+  if (resolved.isRef && (resolved.value === undefined || resolved.value === null)) {
+    // Context ref resolved but value is null/undefined
+    logger.debug('RLS direct access denied - context value is null', { field, value });
     return { clause: 'FALSE', params: [], nextOffset: paramOffset, nextAliasCounter: aliasCounter };
   }
 
   const columnRef = tableAlias ? `${tableAlias}.${safeField}` : safeField;
 
-  logger.debug('RLS direct access clause built', { field: safeField, valueKey: value });
+  logger.debug('RLS direct access clause built', {
+    field: safeField,
+    isRef: resolved.isRef,
+    isLiteral: isExplicitLiteral,
+  });
 
   return {
     clause: `${columnRef} = $${paramOffset}`,
-    params: [contextValue],
+    params: [resolved.value],
     nextOffset: paramOffset + 1,
     nextAliasCounter: aliasCounter,
   };
@@ -109,9 +143,25 @@ function buildDirectClause(access, rlsContext, tableAlias, paramOffset, aliasCou
  *   WHERE j0.unit_id = t.id
  *   AND j0.customer_profile_id = $1
  * )
+ *
+ * @param {number} [depth=0] - Current recursion depth (for nested through chains)
  */
-function buildJunctionClause(access, rlsContext, tableAlias, paramOffset, aliasCounter = 0) {
+function buildJunctionClause(access, rlsContext, tableAlias, paramOffset, aliasCounter = 0, depth = 0) {
   const { junction } = access;
+
+  // Runtime depth check for nested junctions (through chains)
+  if (depth >= RLS_ENGINE.MAX_HOPS) {
+    logger.error('RLS junction depth limit exceeded at runtime', {
+      depth,
+      maxHops: RLS_ENGINE.MAX_HOPS,
+      junction: junction?.table,
+    });
+    throw new AppError(
+      `RLS junction chain exceeds maximum depth of ${RLS_ENGINE.MAX_HOPS}`,
+      500,
+      'INTERNAL_ERROR',
+    );
+  }
 
   if (!junction) {
     throw new AppError('Junction access requires junction config', 400, 'BAD_REQUEST');
@@ -168,6 +218,7 @@ function buildJunctionClause(access, rlsContext, tableAlias, paramOffset, aliasC
       junctionAlias,
       currentOffset,
       nextAliasCounter,
+      depth + 1, // Increment depth for nested through
     );
 
     // Handle denial from nested junction
@@ -201,21 +252,19 @@ function buildJunctionClause(access, rlsContext, tableAlias, paramOffset, aliasC
 /**
  * Resolve filter values that reference context
  *
- * { customer_profile_id: 'customerProfileId' } + context.customerProfileId = 123
- * → { customer_profile_id: 123 }
+ * Supports explicit syntax:
+ *   { customer_profile_id: { ref: 'customerProfileId' } }  - explicit reference
+ *   { status: { literal: 'active' } }                      - explicit literal
+ *   { customer_profile_id: 'customerProfileId' }           - legacy string
+ *
+ * Legacy format: tries context lookup first, falls back to literal.
  */
 function resolveFilterValues(filter, rlsContext) {
   const resolved = {};
 
   for (const [field, value] of Object.entries(filter)) {
-    // If value is a string and exists as key in context, resolve it
-    const resolvedValue = getContextValue(rlsContext, value);
-    if (resolvedValue !== undefined) {
-      resolved[field] = resolvedValue;
-    } else {
-      // Keep literal value
-      resolved[field] = value;
-    }
+    const result = resolveValue(value, rlsContext);
+    resolved[field] = result.value;
   }
 
   return resolved;
@@ -297,10 +346,26 @@ function combineClausesOr(clauses) {
  * @param {number} paramOffset - Starting parameter offset
  * @param {number} aliasCounter - Counter for generating unique aliases
  * @param {Object} allMetadata - All entity metadata for parent lookup
+ * @param {number} [depth=0] - Current recursion depth (for cycle prevention)
  * @returns {{ clause: string, params: Array, nextOffset: number, nextAliasCounter: number }}
  */
-function buildParentClause(access, rlsContext, tableAlias, paramOffset, aliasCounter, allMetadata) {
+function buildParentClause(access, rlsContext, tableAlias, paramOffset, aliasCounter, allMetadata, depth = 0) {
   const { parentEntity, foreignKey, polymorphic } = access;
+
+  // Runtime depth check - prevents infinite recursion from cycles
+  if (depth >= RLS_ENGINE.MAX_HOPS) {
+    logger.error('RLS parent chain depth limit exceeded at runtime', {
+      depth,
+      maxHops: RLS_ENGINE.MAX_HOPS,
+      parentEntity: parentEntity || 'polymorphic',
+    });
+    throw new AppError(
+      `RLS parent chain exceeds maximum depth of ${RLS_ENGINE.MAX_HOPS}. ` +
+      'Check for circular parent references in entity metadata.',
+      500,
+      'INTERNAL_ERROR',
+    );
+  }
 
   // foreignKey is required for all parent access
   if (!foreignKey) {
@@ -312,15 +377,15 @@ function buildParentClause(access, rlsContext, tableAlias, paramOffset, aliasCou
 
   // Determine which path: static parent or polymorphic
   if (polymorphic) {
-    return buildPolymorphicParentClause(access, rlsContext, tableAlias, paramOffset, aliasCounter, allMetadata);
+    return buildPolymorphicParentClause(access, rlsContext, tableAlias, paramOffset, aliasCounter, allMetadata, depth);
   }
 
   if (!parentEntity) {
     throw new AppError('Parent access requires either parentEntity or polymorphic config', 400, 'BAD_REQUEST');
   }
 
-  // Static parent - existing behavior
-  return buildStaticParentClause(parentEntity, safeForeignKey, rlsContext, tableAlias, paramOffset, aliasCounter, allMetadata);
+  // Static parent - pass depth for chain tracking
+  return buildStaticParentClause(parentEntity, safeForeignKey, rlsContext, tableAlias, paramOffset, aliasCounter, allMetadata, depth);
 }
 
 /**
@@ -333,9 +398,10 @@ function buildParentClause(access, rlsContext, tableAlias, paramOffset, aliasCou
  * @param {number} paramOffset - Parameter offset
  * @param {number} aliasCounter - Alias counter
  * @param {Object} allMetadata - All entity metadata
+ * @param {number} [depth=0] - Current recursion depth (for cycle prevention)
  * @returns {{ clause: string, params: Array, nextOffset: number, nextAliasCounter: number }}
  */
-function buildStaticParentClause(parentEntity, safeForeignKey, rlsContext, tableAlias, paramOffset, aliasCounter, allMetadata) {
+function buildStaticParentClause(parentEntity, safeForeignKey, rlsContext, tableAlias, paramOffset, aliasCounter, allMetadata, depth = 0) {
   // Get parent metadata
   if (!allMetadata || !allMetadata[parentEntity]) {
     throw new AppError(`Parent entity '${parentEntity}' not found in metadata`, 500, 'INTERNAL_ERROR');
@@ -385,7 +451,8 @@ function buildStaticParentClause(parentEntity, safeForeignKey, rlsContext, table
         parentAlias,
         currentOffset,
         nextAliasCounter,
-        allMetadata, // Pass for nested parent chains
+        allMetadata,
+        depth + 1, // Increment depth for parent chain tracking
       );
       clauseResults.push(result);
       currentOffset = result.nextOffset;
@@ -441,9 +508,10 @@ function buildStaticParentClause(parentEntity, safeForeignKey, rlsContext, table
  * @param {number} paramOffset - Parameter offset
  * @param {number} aliasCounter - Alias counter
  * @param {Object} allMetadata - All entity metadata
+ * @param {number} [depth=0] - Current recursion depth (for cycle prevention)
  * @returns {{ clause: string, params: Array, nextOffset: number, nextAliasCounter: number }}
  */
-function buildPolymorphicParentClause(access, rlsContext, tableAlias, paramOffset, aliasCounter, allMetadata) {
+function buildPolymorphicParentClause(access, rlsContext, tableAlias, paramOffset, aliasCounter, allMetadata, depth = 0) {
   const { foreignKey, polymorphic } = access;
   const { typeColumn, allowedTypes } = polymorphic;
 
@@ -483,6 +551,7 @@ function buildPolymorphicParentClause(access, rlsContext, tableAlias, paramOffse
   }
 
   // Build the parent clause using static parent logic
+  // Pass depth through - it was already checked/incremented in buildParentClause
   const result = buildStaticParentClause(
     parentType,
     safeForeignKey,
@@ -491,6 +560,7 @@ function buildPolymorphicParentClause(access, rlsContext, tableAlias, paramOffse
     paramOffset,
     aliasCounter,
     allMetadata,
+    depth,
   );
 
   // If parent clause is FALSE, return immediately

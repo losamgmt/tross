@@ -9,10 +9,11 @@
  * - METADATA-DRIVEN: Uses relationship definitions from entity metadata
  * - PURE: No side effects, returns new data structures
  * - SECURE: Uses parameterized queries throughout
+ * - RLS-AWARE: Applies row-level security to related entities
  *
  * USAGE:
- *   const loaded = await loadRelationships(entityName, ['units', 'invoices'], parentRecords);
- *   // Returns parentRecords with units: [...] and invoices: [...] attached
+ *   const loaded = await loadRelationships(entityName, ['units', 'invoices'], parentRecords, { rlsContext });
+ *   // Returns parentRecords with units: [...] and invoices: [...] attached (RLS-filtered)
  *
  * @module relationship-loader
  */
@@ -20,10 +21,72 @@
 const db = require('../connection');
 const { logger } = require('../../config/logger');
 const allMetadata = require('../../config/models');
+const { buildRLSFilter } = require('./rls');
 
 // ============================================================================
 // HELPERS
 // ============================================================================
+
+/**
+ * Escape special regex characters in a string
+ * @param {string} str - String to escape
+ * @returns {string} Escaped string safe for regex
+ */
+function escapeRegExp(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Find entity metadata by table name
+ * @param {string} tableName - Database table name (e.g., 'work_orders')
+ * @returns {Object|null} Entity metadata or null
+ */
+function _findMetadataByTable(tableName) {
+  for (const [_entityKey, metadata] of Object.entries(allMetadata)) {
+    if (metadata.tableName === tableName) {
+      return metadata;
+    }
+  }
+  return null;
+}
+
+/**
+ * Build RLS clause for a related entity
+ * @param {string} tableName - Target table name
+ * @param {string} tableAlias - Alias used in query
+ * @param {Object} rlsContext - RLS context from request
+ * @param {number} paramOffset - Starting param index
+ * @returns {{ clause: string, params: array, nextOffset: number }}
+ */
+function _buildRelatedRLS(tableName, tableAlias, rlsContext, paramOffset) {
+  if (!rlsContext) {
+    return { clause: '', params: [], nextOffset: paramOffset };
+  }
+
+  const targetMetadata = _findMetadataByTable(tableName);
+  if (!targetMetadata || !targetMetadata.rlsRules || targetMetadata.rlsRules.length === 0) {
+    return { clause: '', params: [], nextOffset: paramOffset };
+  }
+
+  const rlsResult = buildRLSFilter(rlsContext, targetMetadata, 'read', paramOffset, allMetadata);
+
+  if (!rlsResult.applied || !rlsResult.clause) {
+    return { clause: '', params: [], nextOffset: paramOffset };
+  }
+
+  // Replace table alias in clause (buildRLSFilter uses tableName as alias)
+  // Escape tableName for regex to handle special characters safely
+  const adjustedClause = rlsResult.clause.replace(
+    new RegExp(`\\b${escapeRegExp(targetMetadata.tableName)}\\.`, 'g'),
+    `${tableAlias}.`,
+  );
+
+  return {
+    clause: adjustedClause,
+    params: rlsResult.params,
+    nextOffset: paramOffset + rlsResult.params.length,
+  };
+}
 
 /**
  * Build SELECT clause from fields array
@@ -73,13 +136,15 @@ function groupByKey(records, keyField) {
  *   FROM target_table t
  *   INNER JOIN junction_table j ON t.id = j.target_key
  *   WHERE j.source_key IN ($1, $2, ...)
+ *   AND (RLS clause)
  *
  * @param {string} relationshipName - Name of relationship (for logging)
  * @param {Object} relDef - Relationship definition from metadata
  * @param {number[]} parentIds - Array of parent entity IDs
+ * @param {Object} [rlsContext] - RLS context for filtering
  * @returns {Promise<Map<number, Object[]>>} Map of parentId -> related records
  */
-async function loadManyToMany(relationshipName, relDef, parentIds) {
+async function loadManyToMany(relationshipName, relDef, parentIds, rlsContext = null) {
   if (!parentIds || parentIds.length === 0) {
     return new Map();
   }
@@ -102,7 +167,14 @@ async function loadManyToMany(relationshipName, relDef, parentIds) {
     ? fields.map((f) => `t.${f}`).join(', ')
     : 't.*';
 
+  // Build params and RLS
+  const params = [...parentIds];
   const placeholders = parentIds.map((_, i) => `$${i + 1}`).join(', ');
+
+  // Apply RLS to the target entity
+  const rls = _buildRelatedRLS(table, 't', rlsContext, parentIds.length + 1);
+  const rlsClause = rls.clause ? `AND ${rls.clause}` : '';
+  params.push(...rls.params);
 
   const query = `
     SELECT ${selectFields}, j.${foreignKey} as _parent_id
@@ -110,16 +182,18 @@ async function loadManyToMany(relationshipName, relDef, parentIds) {
     INNER JOIN ${through} j ON t.id = j.${targetKey}
     WHERE j.${foreignKey} IN (${placeholders})
       AND j.is_active = true
+      ${rlsClause}
     ORDER BY t.id
   `;
 
   logger.debug('loadManyToMany query', {
     relationship: relationshipName,
     parentCount: parentIds.length,
+    rlsApplied: !!rls.clause,
   });
 
   try {
-    const result = await db.query(query, parentIds);
+    const result = await db.query(query, params);
 
     // Group by parent ID
     const grouped = groupByKey(result.rows, '_parent_id');
@@ -148,13 +222,15 @@ async function loadManyToMany(relationshipName, relDef, parentIds) {
  *   SELECT id, field1, field2, parent_fk
  *   FROM child_table
  *   WHERE parent_fk IN ($1, $2, ...)
+ *   AND (RLS clause)
  *
  * @param {string} relationshipName - Name of relationship (for logging)
  * @param {Object} relDef - Relationship definition from metadata
  * @param {number[]} parentIds - Array of parent entity IDs
+ * @param {Object} [rlsContext] - RLS context for filtering
  * @returns {Promise<Map<number, Object[]>>} Map of parentId -> related records
  */
-async function loadHasMany(relationshipName, relDef, parentIds) {
+async function loadHasMany(relationshipName, relDef, parentIds, rlsContext = null) {
   if (!parentIds || parentIds.length === 0) {
     return new Map();
   }
@@ -166,23 +242,32 @@ async function loadHasMany(relationshipName, relDef, parentIds) {
     ? [...new Set([...fields, foreignKey])].map((f) => f).join(', ')
     : '*';
 
+  // Build params and RLS
+  const params = [...parentIds];
   const placeholders = parentIds.map((_, i) => `$${i + 1}`).join(', ');
+
+  // Apply RLS to the related entity
+  const rls = _buildRelatedRLS(table, table, rlsContext, parentIds.length + 1);
+  const rlsClause = rls.clause ? `AND ${rls.clause}` : '';
+  params.push(...rls.params);
 
   const query = `
     SELECT ${selectFields}
     FROM ${table}
     WHERE ${foreignKey} IN (${placeholders})
       AND is_active = true
+      ${rlsClause}
     ORDER BY id
   `;
 
   logger.debug('loadHasMany query', {
     relationship: relationshipName,
     parentCount: parentIds.length,
+    rlsApplied: !!rls.clause,
   });
 
   try {
-    const result = await db.query(query, parentIds);
+    const result = await db.query(query, params);
 
     // Group by foreign key
     const grouped = groupByKey(result.rows, foreignKey);
@@ -213,11 +298,12 @@ async function loadHasMany(relationshipName, relDef, parentIds) {
  * @param {string} relationshipName - Name of relationship
  * @param {Object} relDef - Relationship definition
  * @param {number[]} parentIds - Array of parent entity IDs
+ * @param {Object} [rlsContext] - RLS context for filtering
  * @returns {Promise<Map<number, Object>>} Map of parentId -> single related record
  */
-async function loadHasOne(relationshipName, relDef, parentIds) {
+async function loadHasOne(relationshipName, relDef, parentIds, rlsContext = null) {
   // Load as hasMany, then flatten to single record
-  const hasManyResult = await loadHasMany(relationshipName, relDef, parentIds);
+  const hasManyResult = await loadHasMany(relationshipName, relDef, parentIds, rlsContext);
 
   const result = new Map();
   for (const [parentId, records] of hasManyResult) {
@@ -238,17 +324,21 @@ async function loadHasOne(relationshipName, relDef, parentIds) {
  * @param {string} entityName - Parent entity name (e.g., 'customer')
  * @param {string[]} includeRelationships - Relationship names to load (e.g., ['units', 'invoices'])
  * @param {Object[]} parentRecords - Array of parent records (must have primary key)
- * @returns {Promise<Object[]>} Parent records with relationships attached
+ * @param {Object} [options={}] - Options
+ * @param {Object} [options.rlsContext] - RLS context to apply to related entities
+ * @returns {Promise<Object[]>} Parent records with relationships attached (RLS-filtered)
  *
  * @example
  *   const customers = [{ id: 1, name: 'Alice' }, { id: 2, name: 'Bob' }];
- *   const result = await loadRelationships('customer', ['units'], customers);
+ *   const result = await loadRelationships('customer', ['units'], customers, { rlsContext });
  *   // Returns: [
  *   //   { id: 1, name: 'Alice', units: [{ id: 10, unit_identifier: '4A' }] },
  *   //   { id: 2, name: 'Bob', units: [] }
  *   // ]
  */
-async function loadRelationships(entityName, includeRelationships, parentRecords) {
+async function loadRelationships(entityName, includeRelationships, parentRecords, options = {}) {
+  const { rlsContext = null } = options;
+
   if (!includeRelationships || includeRelationships.length === 0) {
     return parentRecords;
   }
@@ -289,13 +379,13 @@ async function loadRelationships(entityName, includeRelationships, parentRecords
     let loaded;
     switch (relDef.type) {
       case 'manyToMany':
-        loaded = await loadManyToMany(relName, relDef, parentIds);
+        loaded = await loadManyToMany(relName, relDef, parentIds, rlsContext);
         break;
       case 'hasMany':
-        loaded = await loadHasMany(relName, relDef, parentIds);
+        loaded = await loadHasMany(relName, relDef, parentIds, rlsContext);
         break;
       case 'hasOne':
-        loaded = await loadHasOne(relName, relDef, parentIds);
+        loaded = await loadHasOne(relName, relDef, parentIds, rlsContext);
         break;
       case 'belongsTo':
         // belongsTo is already handled by buildDefaultIncludesClauses JOINs

@@ -15,7 +15,7 @@
  * @module db/helpers/rls
  */
 
-const { matchRules, getContextValue, isValidAccessType } = require('./rule-matcher');
+const { matchRules, getContextValue, isValidAccessType, resolveValue } = require('./rule-matcher');
 const { buildAccessClause, buildParentClause, combineClausesOr } = require('./clause-builder');
 const { getCachedClause, cacheClause, clearCache, invalidateEntity } = require('./sql-cache');
 const { validateAllRules: validateAllMetadataRules } = require('./path-validator');
@@ -45,7 +45,8 @@ function buildRLSFilter(rlsContext, metadata, operation = 'read', paramOffset = 
   const { role } = rlsContext;
   const tableName = metadata.tableName;
   const tableAlias = tableName;
-  const entityType = metadata.entityType;
+  // FIX: Use entityKey (the correct field name in metadata), fallback to tableName
+  const entityType = metadata.entityKey || metadata.tableName;
 
   // Only use rlsRules (no legacy fallback)
   const rules = metadata.rlsRules;
@@ -56,12 +57,30 @@ function buildRLSFilter(rlsContext, metadata, operation = 'read', paramOffset = 
     return { clause: '', params: [], applied: false };
   }
 
+  // ===== CACHE CHECK =====
+  // Check for cached deterministic outcomes (full-access or deny).
+  // Complex clauses with params are not cached (they depend on rlsContext values + paramOffset).
+  const cached = getCachedClause(entityType, operation, role);
+  if (cached) {
+    if (cached.outcome === 'full-access') {
+      logger.debug('RLS cache hit: full access', { entity: entityType, role, operation });
+      return { clause: '', params: [], applied: true, noFilter: true };
+    }
+    if (cached.outcome === 'deny') {
+      logger.debug('RLS cache hit: deny', { entity: entityType, role, operation });
+      return { clause: '1=0', params: [], applied: true };
+    }
+    // outcome === 'filtered' means we have a clause-based filter that needs fresh params
+    // Fall through to rebuild with current rlsContext
+  }
+
   // Match applicable rules
   const matchedRules = matchRules(rules, role, operation);
 
   if (matchedRules.length === 0) {
     // No matching rules = deny
     logger.debug('RLS access denied - no matching rules', { entity: entityType, role, operation });
+    cacheClause(entityType, operation, role, { outcome: 'deny' });
     return { clause: '1=0', params: [], applied: true };
   }
 
@@ -69,6 +88,7 @@ function buildRLSFilter(rlsContext, metadata, operation = 'read', paramOffset = 
   const hasFullAccess = matchedRules.some(r => r.access === null);
   if (hasFullAccess) {
     logger.debug('RLS full access granted', { entity: entityType, role, operation });
+    cacheClause(entityType, operation, role, { outcome: 'full-access' });
     return { clause: '', params: [], applied: true, noFilter: true };
   }
 
@@ -89,12 +109,21 @@ function buildRLSFilter(rlsContext, metadata, operation = 'read', paramOffset = 
 
   if (combined.clause === 'TRUE') {
     logger.debug('RLS full access via TRUE clause', { entity: entityType, role, operation });
+    cacheClause(entityType, operation, role, { outcome: 'full-access' });
     return { clause: '', params: [], applied: true, noFilter: true };
   }
 
   if (combined.clause === 'FALSE') {
     logger.debug('RLS access denied via FALSE clause', { entity: entityType, role, operation });
+    cacheClause(entityType, operation, role, { outcome: 'deny' });
     return { clause: '1=0', params: [], applied: true };
+  }
+
+  // Cache that this is a filtered result (so we skip rule matching on subsequent calls)
+  // Full clause caching with param rebasing not implemented yet - would require
+  // storing clause template and context keys, then rebasing $N positions at runtime.
+  if (!cached) {
+    cacheClause(entityType, operation, role, { outcome: 'filtered' });
   }
 
   logger.debug('RLS filter applied', {
@@ -138,6 +167,7 @@ module.exports = {
   matchRules,
   getContextValue,
   isValidAccessType,
+  resolveValue,
   buildAccessClause,
   buildParentClause,
   combineClausesOr,
