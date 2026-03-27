@@ -254,17 +254,46 @@ function printFailingSuites(suites) {
   }
 }
 
-function printRawFailures(output) {
+function printRawFailures(output, jestExit) {
   console.log('');
   console.log('  FAILURES (raw):');
 
+  // When Jest crashes (null exit), show more context
+  const isCrash = jestExit === null;
+
+  // Error patterns - broader set for crash scenarios
+  const ERROR_PATTERNS = [
+    /FAIL /,
+    /[✕✗]/,
+    /Expected/,
+    /Received/,
+    /Error:/,
+    /TypeError:/,
+    /ReferenceError:/,
+    /SyntaxError:/,
+    /Cannot find/,
+    /is not a function/,
+    /is not defined/,
+    /ECONNREFUSED/,
+    /ETIMEDOUT/,
+    /Connection terminated/,
+    /relation "[^"]+" does not exist/,
+  ];
+
   const lines = output.split('\n').filter(line =>
-    line.includes('FAIL ') ||
-    line.includes('✕') ||
-    line.includes('✗') ||
-    line.includes('Expected') ||
-    line.includes('Received'),
+    ERROR_PATTERNS.some(pattern => pattern.test(line)),
   );
+
+  if (lines.length === 0 && isCrash) {
+    // No matched patterns - show last N lines of output for crash diagnosis
+    console.log('    (No specific error patterns found - showing tail of output)');
+    const allLines = output.split('\n').filter(l => l.trim());
+    const tailLines = allLines.slice(-LIMITS.maxRawFailLines);
+    for (const line of tailLines) {
+      console.log(`    ${line.trim()}`);
+    }
+    return;
+  }
 
   for (const line of lines.slice(0, LIMITS.maxRawFailLines)) {
     console.log(`    ${line.trim()}`);
@@ -303,8 +332,8 @@ function main() {
     const parsed = parseRawOutput(output);
     printSummary(parsed.passed);
     printStats(parsed.stats, elapsed);
-    if (parsed.hasFailures) {
-      printRawFailures(output);
+    if (parsed.hasFailures || result.status === null) {
+      printRawFailures(output, result.status);
     }
     // Trust parsed results over Jest exit code (Connection terminated causes exit 1)
     exitCode = parsed.passed ? 0 : 1;
