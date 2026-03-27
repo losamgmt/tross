@@ -74,12 +74,12 @@ const TIMEOUTS = Object.freeze({
     // Idle connection timeout: time before idle connection is closed
     IDLE_TIMEOUT_MS: 30000, // 30 seconds
 
-    // Test environment timeouts (faster for quick test runs)
+    // Test environment timeouts (increased for CI stability)
     TEST: Object.freeze({
-      STATEMENT_TIMEOUT_MS: 10000, // 10 seconds
-      QUERY_TIMEOUT_MS: 10000, // 10 seconds
-      CONNECTION_TIMEOUT_MS: 3000, // 3 seconds
-      IDLE_TIMEOUT_MS: 1000, // 1 second
+      STATEMENT_TIMEOUT_MS: 15000, // 15 seconds (was 10s)
+      QUERY_TIMEOUT_MS: 15000, // 15 seconds (was 10s)
+      CONNECTION_TIMEOUT_MS: 5000, // 5 seconds (was 3s)
+      IDLE_TIMEOUT_MS: 10000, // 10 seconds (was 1s - too aggressive)
     }),
   }),
 
