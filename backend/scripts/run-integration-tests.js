@@ -1,141 +1,332 @@
 #!/usr/bin/env node
 /**
- * Integration Test Runner
+ * Integration Test Runner - Clean CI Output
  *
- * Runs Jest integration tests and handles the "Connection terminated" error
- * that occurs when pg connections are forcefully closed by --forceExit.
+ * Runs Jest integration tests and produces clean, scannable output for CI.
  *
  * Exit codes:
  *   0 - All tests passed
  *   1 - One or more tests failed
+ *
+ * Environment:
+ *   DEBUG_TESTS=true - Enable verbose debug output
  */
 
 const { spawnSync } = require('child_process');
 const path = require('path');
+const fs = require('fs');
 
-// Build Jest arguments
-// --bail=false ensures ALL failures are shown (not just first)
-// --verbose shows full test names and details
-const jestArgs = [
-  'jest',
-  '--selectProjects', 'integration',
-  '--forceExit',
-  '--no-color',
-  '--bail=false',  // Show ALL failures, not just first
-];
+// ============================================================================
+// CONFIGURATION
+// ============================================================================
 
-// In CI, add verbose mode for more detail
-if (process.env.CI === 'true' || process.env.DEBUG_TESTS === 'true') {
-  jestArgs.push('--verbose');
-  console.log('[run-integration-tests] Running with verbose output');
+const CONFIG = Object.freeze({
+  backendDir: path.join(__dirname, '..'),
+  jsonOutputFile: path.join(__dirname, '..', 'test-results.json'),
+});
+
+const LIMITS = Object.freeze({
+  lineWidth: 67,
+  testNameMax: 60,
+  errorLineMax: 62,
+  errorLinesToShow: 3,
+  maxFailuresShown: 10,
+  maxRawFailLines: 30,
+});
+
+// Pre-computed dividers (DRY)
+const DIV = Object.freeze({
+  double: '═'.repeat(LIMITS.lineWidth),
+  single: '─'.repeat(LIMITS.lineWidth),
+  doubleIndent: '═'.repeat(LIMITS.lineWidth - 2),
+  singleIndent: '─'.repeat(LIMITS.lineWidth - 2),
+});
+
+const DEBUG = process.env.DEBUG_TESTS === 'true';
+
+// ============================================================================
+// UTILITIES
+// ============================================================================
+
+/** Conditional debug logging */
+function debug(message) {
+  if (DEBUG) {
+    console.log(`  [DEBUG] ${message}`);
+  }
 }
 
-console.log('[run-integration-tests] Jest args:', jestArgs.join(' '));
+/** Truncate string, optionally with prefix for truncated content */
+function truncate(str, maxLen, prefix = '') {
+  if (str.length <= maxLen) {
+    return str;
+  }
+  return prefix + str.slice(-(maxLen - prefix.length));
+}
 
-const result = spawnSync(
-  'npx',
-  jestArgs,
-  {
+/** Clean error message for display */
+function cleanError(msg) {
+  return msg
+    .replace(/\u001b\[[0-9;]*m/g, '') // ANSI codes
+    .replace(/\n\s*at\s+.*$/gm, '') // Stack traces
+    .replace(/\n{2,}/g, '\n') // Collapse blanks
+    .trim();
+}
+
+// ============================================================================
+// TEST EXECUTION
+// ============================================================================
+
+function runTests() {
+  const args = [
+    'jest',
+    '--selectProjects', 'integration',
+    '--forceExit',
+    '--bail=false',
+    '--json',
+    `--outputFile=${CONFIG.jsonOutputFile}`,
+    '--silent',
+    ...process.argv.slice(2),
+  ];
+
+  debug(`Command: npx ${args.join(' ')}`);
+  debug(`CWD: ${CONFIG.backendDir}`);
+
+  const startTime = Date.now();
+
+  // Build command string (avoids DEP0190 warning with shell:true + args array)
+  const command = `npx ${args.join(' ')}`;
+  const result = spawnSync(command, [], {
     stdio: ['inherit', 'pipe', 'pipe'],
     shell: true,
-    cwd: path.join(__dirname, '..'),
+    cwd: CONFIG.backendDir,
     encoding: 'utf-8',
-  },
-);
+    env: {
+      ...process.env,
+      FORCE_COLOR: '0',
+      DOTENV_CONFIG_QUIET: 'true',
+    },
+  });
 
-// Always print stdout (test results)
-if (result.stdout) {
-  process.stdout.write(result.stdout);
+  const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+
+  return { result, elapsed };
 }
 
-// Combine output for analysis
-const output = (result.stdout || '') + (result.stderr || '');
-
-// Debug: Show what we captured for troubleshooting CI issues
-const debugCI = process.env.CI === 'true' || process.env.DEBUG_TESTS;
-if (debugCI) {
-  console.log('\n[DEBUG] Exit status:', result.status);
-  console.log('[DEBUG] Output length:', output.length);
+function loadJsonResults() {
+  try {
+    if (fs.existsSync(CONFIG.jsonOutputFile)) {
+      const data = fs.readFileSync(CONFIG.jsonOutputFile, 'utf-8');
+      fs.unlinkSync(CONFIG.jsonOutputFile);
+      return JSON.parse(data);
+    }
+  } catch (err) {
+    debug(`JSON parse error: ${err.message}`);
+  }
+  return null;
 }
 
 // ============================================================================
-// PARSE JEST OUTPUT - Handle all formats:
-// - "Test Suites: 32 passed, 32 total"           (all pass)
-// - "Test Suites: 1 failed, 31 passed, 32 total" (some fail)
-// - "Tests: 1795 passed, 1795 total"             (all pass)
-// - "Tests: 5 failed, 1790 passed, 1795 total"   (some fail)
+// RESULT PARSING
 // ============================================================================
 
-// Check for explicit failures FIRST (most reliable signal)
-const hasFailedSuites = /Test Suites:.*\d+\s*failed/.test(output);
-const hasFailedTests = /Tests:.*\d+\s*failed/.test(output);
-const hasFailures = hasFailedSuites || hasFailedTests;
-
-// Match passed/total counts with flexible pattern (allows "failed, " prefix)
-// This uses .*? to skip any "N failed, " that may precede "N passed"
-const suiteMatch = output.match(/Test Suites:.*?(\d+)\s*passed,\s*(\d+)\s*total/);
-const testMatch = output.match(/Tests:.*?(\d+)\s*passed,\s*(\d+)\s*total/);
-
-if (debugCI) {
-  console.log('[DEBUG] Has failures:', hasFailures);
-  console.log('[DEBUG] Suite match:', suiteMatch ? `${suiteMatch[1]}/${suiteMatch[2]}` : 'none');
-  console.log('[DEBUG] Test match:', testMatch ? `${testMatch[1]}/${testMatch[2]}` : 'none');
+function parseJsonResults(json) {
+  const suites = json.testResults || [];
+  return {
+    passed: json.numFailedTests === 0 && json.success !== false,
+    stats: {
+      passedTests: json.numPassedTests || 0,
+      failedTests: json.numFailedTests || 0,
+      totalTests: json.numTotalTests || 0,
+      passedSuites: suites.filter(s => s.numFailingTests === 0).length,
+      failedSuites: suites.filter(s => s.numFailingTests > 0).length,
+      totalSuites: suites.length,
+    },
+    suites,
+  };
 }
 
-const allSuitesPassed = suiteMatch && suiteMatch[1] === suiteMatch[2] && !hasFailedSuites;
-const allTestsPassed = testMatch && testMatch[1] === testMatch[2] && !hasFailedTests;
-const testsRan = suiteMatch || testMatch;
+function parseRawOutput(output) {
+  const suiteMatch = output.match(/Test Suites:.*?(\d+)\s*passed.*?(\d+)\s*total/);
+  const testMatch = output.match(/Tests:.*?(\d+)\s*passed.*?(\d+)\s*total/);
+  const hasFailures = output.includes('FAIL ') || /[1-9]\d*\s*failed/.test(output);
 
-// Check for the known pg cleanup error (not a real test failure)
-const hasConnectionTerminated = output.includes('Connection terminated') ||
-  (result.stderr && result.stderr.includes('Connection terminated'));
+  return {
+    passed: !hasFailures && (suiteMatch || testMatch),
+    stats: {
+      passedTests: testMatch ? parseInt(testMatch[1], 10) : 0,
+      failedTests: 0,
+      totalTests: testMatch ? parseInt(testMatch[2], 10) : 0,
+      passedSuites: suiteMatch ? parseInt(suiteMatch[1], 10) : 0,
+      failedSuites: 0,
+      totalSuites: suiteMatch ? parseInt(suiteMatch[2], 10) : 0,
+    },
+    hasFailures,
+    output,
+  };
+}
 
-// Filter and print stderr (suppress pg cleanup noise)
-if (result.stderr) {
-  const lines = result.stderr.split('\n');
-  const filteredLines = lines.filter(
-    (line) =>
-      !line.includes('Connection terminated') &&
-      !line.includes('Error.captureStackTrace') &&
-      !line.includes('node_modules/pg/lib/client.js') &&
-      !line.includes('[Error: Connection terminated]') &&
-      line.trim() !== '' &&
-      line.trim() !== '^',
+// ============================================================================
+// OUTPUT FORMATTING
+// ============================================================================
+
+function printHeader() {
+  console.log('');
+  console.log(DIV.double);
+  console.log('  INTEGRATION TESTS');
+  console.log(DIV.double);
+  console.log('');
+}
+
+function printFooter() {
+  console.log('');
+  console.log(DIV.double);
+  console.log('');
+}
+
+function printSummary(passed) {
+  console.log(DIV.single);
+  console.log(`  ${passed ? '✅' : '❌'}  ${passed ? 'ALL TESTS PASSED' : 'SOME TESTS FAILED'}`);
+  console.log(DIV.single);
+}
+
+function printStats(stats, elapsed) {
+  if (stats.totalSuites > 0) {
+    console.log(`  Suites:  ${stats.passedSuites} passed, ${stats.failedSuites} failed, ${stats.totalSuites} total`);
+  }
+  if (stats.totalTests > 0) {
+    console.log(`  Tests:   ${stats.passedTests} passed, ${stats.failedTests} failed, ${stats.totalTests} total`);
+  }
+  console.log(`  Time:    ${elapsed}s`);
+  console.log(DIV.single);
+}
+
+function printPassingSuites(suites) {
+  const passing = suites.filter(s => s.numFailingTests === 0);
+  if (passing.length === 0) {
+    return;
+  }
+
+  console.log('');
+  console.log('  PASSED:');
+  for (const suite of passing) {
+    const name = path.basename(suite.name, '.test.js');
+    console.log(`    ✓ ${name} (${suite.numPassingTests})`);
+  }
+}
+
+function printFailingSuites(suites) {
+  const failing = suites.filter(s => s.numFailingTests > 0);
+  if (failing.length === 0) {
+    return;
+  }
+
+  console.log('');
+  console.log(`  ${DIV.doubleIndent}`);
+  console.log('  FAILURES:');
+  console.log(`  ${DIV.doubleIndent}`);
+
+  for (const suite of failing) {
+    const suiteName = path.basename(suite.name, '.test.js');
+    console.log('');
+    console.log(`  ❌ ${suiteName}`);
+    console.log(`  ${DIV.singleIndent}`);
+
+    const failedTests = (suite.assertionResults || [])
+      .filter(t => t.status === 'failed')
+      .map(t => ({
+        name: t.ancestorTitles.concat(t.title).join(' › '),
+        error: t.failureMessages?.[0] ? cleanError(t.failureMessages[0]) : null,
+      }));
+
+    for (const test of failedTests.slice(0, LIMITS.maxFailuresShown)) {
+      console.log(`    ✗ ${truncate(test.name, LIMITS.testNameMax, '...')}`);
+      if (test.error) {
+        for (const line of test.error.split('\n').slice(0, LIMITS.errorLinesToShow)) {
+          console.log(`        ${truncate(line, LIMITS.errorLineMax)}`);
+        }
+      }
+      console.log('');
+    }
+
+    if (failedTests.length > LIMITS.maxFailuresShown) {
+      console.log(`    ... and ${failedTests.length - LIMITS.maxFailuresShown} more failures`);
+    }
+  }
+}
+
+function printRawFailures(output) {
+  console.log('');
+  console.log('  FAILURES (raw):');
+
+  const lines = output.split('\n').filter(line =>
+    line.includes('FAIL ') ||
+    line.includes('✕') ||
+    line.includes('✗') ||
+    line.includes('Expected') ||
+    line.includes('Received'),
   );
-  const filteredStderr = filteredLines.join('\n').trim();
-  if (filteredStderr) {
-    process.stderr.write(filteredStderr + '\n');
+
+  for (const line of lines.slice(0, LIMITS.maxRawFailLines)) {
+    console.log(`    ${line.trim()}`);
   }
 }
 
 // ============================================================================
-// EXIT CODE LOGIC - Priority order:
-// 1. Explicit failures → exit 1
-// 2. Confirmed all passed → exit 0
-// 3. Jest exited 0 → exit 0
-// 4. Only pg cleanup error (no failure indicators) → exit 0
-// 5. Unknown → preserve original exit code
+// MAIN
 // ============================================================================
 
-if (hasFailures) {
-  // Explicit failures detected - this is definitive
-  console.error('\n❌ Some tests failed');
-  process.exit(1);
-} else if (testsRan && allSuitesPassed && allTestsPassed) {
-  // All tests confirmed passing
-  if (hasConnectionTerminated) {
-    console.log('\n✅ All tests passed (pg cleanup warning suppressed)');
+function main() {
+  printHeader();
+  process.stdout.write('  Running tests...');
+
+  const { result, elapsed } = runTests();
+
+  // Clear progress indicator
+  process.stdout.write('\r                    \r');
+
+  const json = loadJsonResults();
+  let exitCode;
+
+  if (json) {
+    // JSON path - most reliable
+    debug('Using JSON results');
+    const parsed = parseJsonResults(json);
+    printSummary(parsed.passed);
+    printStats(parsed.stats, elapsed);
+    printPassingSuites(parsed.suites);
+    printFailingSuites(parsed.suites);
+    exitCode = parsed.passed ? 0 : 1;
+  } else {
+    // Fallback: parse raw output
+    debug(`Fallback mode - Jest exit: ${result.status}`);
+    const output = (result.stdout || '') + (result.stderr || '');
+    const parsed = parseRawOutput(output);
+    printSummary(parsed.passed);
+    printStats(parsed.stats, elapsed);
+    if (parsed.hasFailures) {
+      printRawFailures(output);
+    }
+    // Trust parsed results over Jest exit code (Connection terminated causes exit 1)
+    exitCode = parsed.passed ? 0 : 1;
   }
-  process.exit(0);
-} else if (result.status === 0) {
-  // Jest exited cleanly with no failures
-  process.exit(0);
-} else if (hasConnectionTerminated && !hasFailures && testsRan) {
-  // Exit code 1 due to pg cleanup, but no test failures detected
-  console.log('\n✅ All tests passed (pg cleanup warning suppressed)');
-  process.exit(0);
-} else {
-  // Unknown state - preserve original exit code for safety
-  console.error('\n⚠️ Could not determine test status, using Jest exit code');
-  process.exit(result.status || 1);
+
+  printFooter();
+  debug(`Exiting with code ${exitCode}`);
+
+  // Explicit, synchronous exit
+  process.exitCode = exitCode;
 }
+
+// Run with error boundary
+let finalExitCode = 0;
+try {
+  main();
+  finalExitCode = process.exitCode || 0;
+} catch (err) {
+  console.error('Test runner error:', err.message);
+  finalExitCode = 1;
+}
+
+process.exit(finalExitCode);
+
+process.exit(finalExitCode);
