@@ -38,10 +38,10 @@ describe("Timeouts Configuration", () => {
 
     test("should define DATABASE test timeouts", () => {
       expect(TIMEOUTS.DATABASE.TEST).toBeDefined();
-      expect(TIMEOUTS.DATABASE.TEST.STATEMENT_TIMEOUT_MS).toBe(10000);
-      expect(TIMEOUTS.DATABASE.TEST.QUERY_TIMEOUT_MS).toBe(10000);
-      expect(TIMEOUTS.DATABASE.TEST.CONNECTION_TIMEOUT_MS).toBe(3000);
-      expect(TIMEOUTS.DATABASE.TEST.IDLE_TIMEOUT_MS).toBe(1000);
+      expect(TIMEOUTS.DATABASE.TEST.STATEMENT_TIMEOUT_MS).toBe(15000);
+      expect(TIMEOUTS.DATABASE.TEST.QUERY_TIMEOUT_MS).toBe(15000);
+      expect(TIMEOUTS.DATABASE.TEST.CONNECTION_TIMEOUT_MS).toBe(5000);
+      expect(TIMEOUTS.DATABASE.TEST.IDLE_TIMEOUT_MS).toBe(10000);
     });
 
     test("should define SERVICES timeouts", () => {
@@ -103,8 +103,8 @@ describe("Timeouts Configuration", () => {
 
       // Assert
       expect(config.database).toBe(TIMEOUTS.DATABASE.TEST);
-      expect(config.database.STATEMENT_TIMEOUT_MS).toBe(10000);
-      expect(config.database.QUERY_TIMEOUT_MS).toBe(10000);
+      expect(config.database.STATEMENT_TIMEOUT_MS).toBe(15000);
+      expect(config.database.QUERY_TIMEOUT_MS).toBe(15000);
     });
 
     test("should accept environment parameter", () => {
@@ -114,7 +114,7 @@ describe("Timeouts Configuration", () => {
 
       // Assert
       expect(prodConfig.database.statementTimeoutMs).toBe(20000);
-      expect(testConfig.database.STATEMENT_TIMEOUT_MS).toBe(10000);
+      expect(testConfig.database.STATEMENT_TIMEOUT_MS).toBe(15000);
     });
   });
 

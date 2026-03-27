@@ -104,13 +104,13 @@ describe("Timeout Architecture", () => {
         await db.query("SELECT pg_sleep(30)"); // 30 seconds - should timeout
 
         // If we get here, timeout didn't work (or query completed impossibly fast)
-        // In test environment, statement_timeout is 10s, so this should fail
+        // In test environment, statement_timeout is 15s, so this should fail
       } catch (error) {
         // Expected: Query should timeout
         // PostgreSQL error code for statement timeout: 57014
         expect(error.message).toMatch(/timeout|canceling statement/i);
       }
-    }, 15000); // Test timeout higher than DB timeout
+    }, 20000); // Test timeout higher than DB timeout (15s)
   });
 
   describe("Timeout Hierarchy Validation", () => {
