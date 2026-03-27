@@ -54,7 +54,7 @@ export default [
       eqeqeq: ["error", "always"],
       "no-eval": "error",
       "no-implied-eval": "error",
-      "no-multi-spaces": "warn",
+      "no-multi-spaces": ["warn", { ignoreEOLComments: true }],
       "no-return-await": "warn",
       "no-unused-vars": [
         "warn",

@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - RLS Cache Bug (2026-03-27)
+
+#### Root Cause
+- RLS SQL cache used `metadata.entityType` (undefined) instead of `metadata.entityKey` for cache keys
+- All entities shared one cache slot (`"undefined:read:customer"`), causing incorrect RLS results in full test suite runs
+- Junction-based RLS tests passed individually but failed when run with other tests
+
+#### Fix
+- Changed `db/helpers/rls/index.js` line 48 to use `metadata.entityKey || metadata.tableName`
+- Cache keys now properly unique per entity: `"unit:read:customer"`, `"asset:read:customer"`, etc.
+
+### Added - Database Management Layer (2026-03-27)
+
+#### New Files
+
+| File | Purpose |
+|------|---------|
+| `db/database-manager.js` | Centralized connection management with health checks |
+| `db/cascade-helper.js` | Entity deletion order derived from metadata |
+| `utils/startup-validator.js` | Schema validation at startup |
+
+#### Features
+- **Connection Management**: Unified pool access, health monitoring, graceful shutdown
+- **Cascade Helper**: Topologically sorted entity deletion for clean test teardown
+- **Startup Validation**: Fail-fast schema checks before server accepts requests
+
+#### Test Coverage
+- **67 new unit tests** across 3 test files
+- All tests use centralized mocks for database operations
+
 ### Added - Enterprise Backend Features (2026-03-11)
 
 #### Idempotency Layer (Retry-Safe Mutations)

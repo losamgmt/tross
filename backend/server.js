@@ -23,6 +23,7 @@ const {
   initializeFromDatabase: initRoleHierarchy,
 } = require('./config/role-hierarchy-loader');
 const backgroundTasks = require('./services/background-tasks');
+const { validateStartupOrExit } = require('./utils/startup-validator');
 
 // Environment Validation
 // Comprehensive validation of all environment variables at startup
@@ -36,42 +37,8 @@ if (!isTestMode()) {
   }
 }
 
-// Legacy production checks (kept for backwards compatibility)
-// Note: Most validation now handled by env-validator.js
-if (isProduction()) {
-  // Validate DB_PASSWORD strength
-  if (
-    process.env.DB_PASSWORD === 'tross123' ||
-    process.env.DB_PASSWORD.length < 12
-  ) {
-    logger.error(
-      '❌ FATAL: DB_PASSWORD must be a strong password (12+ characters) in production',
-    );
-    logger.error(
-      'Current DB_PASSWORD is weak or uses default development value',
-    );
-    process.exit(1);
-  }
-
-  // Optional: Validate Auth0 configuration if using Auth0
-  if (process.env.AUTH_MODE === 'auth0') {
-    const auth0Required = [
-      'AUTH0_DOMAIN',
-      'AUTH0_CLIENT_ID',
-      'AUTH0_CLIENT_SECRET',
-      'AUTH0_AUDIENCE',
-    ];
-    const auth0Missing = auth0Required.filter((envVar) => !process.env[envVar]);
-    if (auth0Missing.length > 0) {
-      logger.error('❌ FATAL: Missing Auth0 configuration in production', {
-        missing: auth0Missing,
-      });
-      process.exit(1);
-    }
-  }
-
-  logger.info('✅ Production environment validation passed');
-}
+// Note: Additional security validation (dev auth, RLS, Auth0, DB password)
+// is handled by StartupValidator at server start (after DB is connected)
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -442,20 +409,10 @@ if (!isTestMode()) {
           );
         }
 
-        // Validate RLS rules (fail-fast if misconfigured)
-        // This MUST happen after role hierarchy is loaded
-        try {
-          const { validateAllRules } = require('./db/helpers/rls');
-          const allMetadata = require('./config/models');
-          // validateAllRules throws AppError if invalid, otherwise logs success
-          validateAllRules(allMetadata);
-        } catch (rlsError) {
-          logger.error('❌ CRITICAL: RLS validation failed:', rlsError.message);
-          if (isProduction()) {
-            logger.error('   Refusing to start with invalid RLS configuration');
-            process.exit(1);
-          }
-        }
+        // Run consolidated startup validation
+        // Validates: dev auth, RLS rules, JWT config, Auth0 config, DB password
+        const allMetadata = require('./config/models');
+        validateStartupOrExit({ allMetadata, db });
 
         // Validate enum synchronization between Joi and PostgreSQL
         const { validateEnumSync } = require('./utils/validation-sync-checker');

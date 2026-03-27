@@ -31,9 +31,9 @@ const { cascadeDeleteDependents } = require('../db/helpers/cascade-helper');
 // ADR-011: Use new rule-based RLS engine
 const { buildRLSFilter } = require('../db/helpers/rls');
 const {
-  filterOutput,
-  filterOutputArray,
-} = require('../db/helpers/output-filter-helper');
+  stripAuthIdentifiers,
+  stripAuthIdentifiersArray,
+} = require('../db/helpers/auth-identifier-sanitizer');
 const {
   logEntityAudit,
   isAuditEnabled,
@@ -479,6 +479,7 @@ class GenericEntityService {
         entityName,
         options.include,
         [entity],
+        { rlsContext },
       );
       return withRelationships[0] || entity;
     }
@@ -651,8 +652,8 @@ class GenericEntityService {
     // Generate pagination metadata
     const pagination = PaginationService.generateMetadata(page, limit, total);
 
-    // Filter sensitive fields from all records
-    let filteredData = filterOutputArray(result.rows, metadata);
+    // Strip auth identifiers from all records
+    let filteredData = stripAuthIdentifiersArray(result.rows, metadata);
 
     // Load relationships if requested
     if (options.include && options.include.length > 0 && filteredData.length > 0) {
@@ -660,6 +661,7 @@ class GenericEntityService {
         entityName,
         options.include,
         filteredData,
+        { rlsContext },
       );
     }
 
@@ -783,9 +785,9 @@ class GenericEntityService {
     // Execute query
     const result = await db.query(query, params);
 
-    // Return first row or null (with sensitive fields filtered)
+    // Return first row or null (with auth identifiers stripped)
     const record = result.rows[0] || null;
-    return record ? filterOutput(record, metadata) : null;
+    return record ? stripAuthIdentifiers(record, metadata) : null;
   }
 
   /**
@@ -1020,8 +1022,8 @@ class GenericEntityService {
       identityField: result.rows[0]?.[metadata.identityField],
     });
 
-    // Filter sensitive fields from response
-    const filteredResult = filterOutput(result.rows[0], metadata);
+    // Strip auth identifiers from response
+    const filteredResult = stripAuthIdentifiers(result.rows[0], metadata);
 
     // Log audit event (blocking to ensure audit is written before response)
     if (options.auditContext && isAuditEnabled(entityName)) {
@@ -1338,9 +1340,9 @@ class GenericEntityService {
         cascadedDependents: cascadeResult.totalDeleted,
       });
 
-      // Filter sensitive fields from response
-      const filteredResult = filterOutput(deleteResult.rows[0], metadata);
-      const filteredOldValues = filterOutput(recordBeforeDelete, metadata);
+      // Strip auth identifiers from response
+      const filteredResult = stripAuthIdentifiers(deleteResult.rows[0], metadata);
+      const filteredOldValues = stripAuthIdentifiers(recordBeforeDelete, metadata);
 
       // Log audit event (blocking to ensure audit is written before response)
       if (options.auditContext && isAuditEnabled(entityName)) {
@@ -1575,7 +1577,7 @@ class GenericEntityService {
 
               const query = `INSERT INTO ${tableName} (${columns}) VALUES (${placeholders}) RETURNING *`;
               const dbResult = await client.query(query, values);
-              result = filterOutput(dbResult.rows[0], metadata);
+              result = stripAuthIdentifiers(dbResult.rows[0], metadata);
               stats.created++;
 
               // Audit (blocking to ensure audit is written before transaction completes)
@@ -1640,12 +1642,12 @@ class GenericEntityService {
 
               const query = `UPDATE ${tableName} SET ${setClause} WHERE ${primaryKey} = $1 RETURNING *`;
               const dbResult = await client.query(query, values);
-              result = filterOutput(dbResult.rows[0], metadata);
+              result = stripAuthIdentifiers(dbResult.rows[0], metadata);
               stats.updated++;
 
               // Audit with oldValues (blocking to ensure audit is written before transaction completes)
               if (auditContext && isAuditEnabled(entityName)) {
-                const filteredOld = filterOutput(oldRecord, metadata);
+                const filteredOld = stripAuthIdentifiers(oldRecord, metadata);
                 await logEntityAudit(
                   'update',
                   entityName,
@@ -1680,12 +1682,12 @@ class GenericEntityService {
               // Delete the record
               const query = `DELETE FROM ${tableName} WHERE ${primaryKey} = $1 RETURNING *`;
               const dbResult = await client.query(query, [safeId]);
-              result = filterOutput(dbResult.rows[0], metadata);
+              result = stripAuthIdentifiers(dbResult.rows[0], metadata);
               stats.deleted++;
 
               // Audit with oldValues (blocking to ensure audit is written before transaction completes)
               if (auditContext && isAuditEnabled(entityName)) {
-                const filteredOld = filterOutput(oldRecord, metadata);
+                const filteredOld = stripAuthIdentifiers(oldRecord, metadata);
                 await logEntityAudit(
                   'delete',
                   entityName,

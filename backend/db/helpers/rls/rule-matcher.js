@@ -111,9 +111,74 @@ function isValidAccessType(type) {
   return RLS_ENGINE.ACCESS_TYPES.includes(type);
 }
 
+/**
+ * Resolve a value spec to its actual value
+ *
+ * Supports three formats:
+ * 1. Explicit reference: { ref: 'userId' } - resolves from rlsContext
+ * 2. Explicit literal:   { literal: 'active' } - uses value directly
+ * 3. Legacy string:      'userId' - attempts context lookup, falls back to literal
+ *
+ * The explicit syntax eliminates ambiguity between context keys and literal values.
+ *
+ * @param {Object|string} valueSpec - Value specification
+ * @param {Object} rlsContext - Context containing userId, profile IDs, etc.
+ * @returns {{ value: *, isRef: boolean, resolved: boolean }}
+ *   - value: The resolved value
+ *   - isRef: Whether this was a context reference
+ *   - resolved: Whether resolution succeeded (false if ref key not in context)
+ */
+function resolveValue(valueSpec, rlsContext) {
+  // Explicit reference: { ref: 'userId' }
+  if (valueSpec && typeof valueSpec === 'object' && 'ref' in valueSpec) {
+    const key = valueSpec.ref;
+    const value = getContextValue(rlsContext, key);
+    return {
+      value,
+      isRef: true,
+      resolved: value !== undefined && value !== null,
+    };
+  }
+
+  // Explicit literal: { literal: 'active' }
+  if (valueSpec && typeof valueSpec === 'object' && 'literal' in valueSpec) {
+    return {
+      value: valueSpec.literal,
+      isRef: false,
+      resolved: true,
+    };
+  }
+
+  // Legacy string format - attempt context lookup first
+  if (typeof valueSpec === 'string') {
+    const contextValue = getContextValue(rlsContext, valueSpec);
+    if (contextValue !== undefined) {
+      return {
+        value: contextValue,
+        isRef: true,
+        resolved: true,
+      };
+    }
+    // Fall back to literal (for backward compat with filter values)
+    return {
+      value: valueSpec,
+      isRef: false,
+      resolved: true,
+    };
+  }
+
+  // Non-string primitives are literals
+  return {
+    value: valueSpec,
+    isRef: false,
+    resolved: true,
+  };
+}
+
 module.exports = {
   matchRules,
   getContextValue,
   isValidAccessType,
   isValidContextKey,
+  resolveValue,
 };

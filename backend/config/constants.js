@@ -566,6 +566,62 @@ const MODEL_ERRORS = Object.freeze({
   }),
 });
 
+// ============================================================================
+// CASCADE DELETE STRATEGIES
+// ============================================================================
+/**
+ * Strategies for handling dependent records during parent deletion.
+ * Used by: db/helpers/cascade-helper.js
+ *
+ * SSOT: Single source of truth for cascade operation types.
+ */
+const CASCADE_STRATEGIES = Object.freeze({
+  CASCADE: 'cascade',   // Delete dependent records
+  RESTRICT: 'restrict', // Block delete if dependents exist
+  NULLIFY: 'nullify',   // Set FK to NULL
+  SOFT: 'soft',         // Set soft-delete column to false
+});
+
+// ============================================================================
+// DATABASE MANAGER
+// ============================================================================
+/**
+ * Database initialization modes.
+ * Used by: db/database-manager.js
+ *
+ * SSOT: Single source of truth for DB init strategies.
+ */
+const DATABASE_MANAGER = Object.freeze({
+  MODES: Object.freeze({
+    INIT: 'init',       // Apply schema.sql + seed-data.sql (dev/pre-production)
+    MIGRATE: 'migrate', // Apply versioned migrations (production)
+  }),
+});
+
+// ============================================================================
+// STARTUP VALIDATION
+// ============================================================================
+/**
+ * Security validation constants for server startup checks.
+ * Used by: utils/startup-validator.js
+ *
+ * SSOT: Single source of truth for startup security thresholds.
+ * References DATABASE.PROD and DATABASE.DEV for password validation.
+ */
+const STARTUP_VALIDATION = Object.freeze({
+  // Minimum password length for production (references DATABASE.PROD.MIN_PASSWORD_LENGTH)
+  MIN_PASSWORD_LENGTH: DATABASE.PROD.MIN_PASSWORD_LENGTH,
+
+  // Known weak/default passwords to reject in production
+  // Derived from development defaults - never allow these in prod
+  WEAK_PASSWORDS: Object.freeze([
+    DATABASE.DEV.PASSWORD,  // 'tross123'
+    'password',
+    'postgres',
+    '123456',
+  ]),
+});
+
 module.exports = Object.freeze({
   ENVIRONMENTS,
   DATABASE_PERFORMANCE,
@@ -593,6 +649,9 @@ module.exports = Object.freeze({
   HEALTH,
   API_ENDPOINTS,
   MODEL_ERRORS,
+  CASCADE_STRATEGIES,
+  DATABASE_MANAGER,
+  STARTUP_VALIDATION,
   // Also export helper functions from derived-constants
   getNamePatternMap: derivedConstants.getNamePatternMap,
   getNamePattern: derivedConstants.getNamePattern,
