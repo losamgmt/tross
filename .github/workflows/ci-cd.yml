@@ -26,6 +26,9 @@ concurrency:
 env:
   NODE_VERSION: "24" # Match Railway production (nixpacks.toml)
   FLUTTER_VERSION: "3.38.7" # Includes Dart 3.10.x (satisfies >=3.9.2 <4.0.0)
+  # Force GitHub Actions to use Node.js 24 (actions/checkout, etc.)
+  # See: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   # ============================================================================
