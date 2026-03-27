@@ -40,7 +40,7 @@ module.exports = async () => {
 
     testLogger.log("✅ Test database schema ready!");
 
-    // Close the pool - tests will create their own connections
+    // Close the pool - globalSetup runs in separate process, tests use their own pool
     await pool.end();
   } catch (error) {
     testLogger.error("❌ Global test database setup failed:", error.message);

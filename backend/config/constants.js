@@ -105,10 +105,10 @@ const DATABASE = Object.freeze({
     USER: 'postgres', // SAME as dev for simplicity
     PASSWORD: 'tross123', // SAME as dev for simplicity
     POOL: Object.freeze({
-      MIN: 1,
-      MAX: 5,
-      IDLE_TIMEOUT_MS: 1000,
-      CONNECTION_TIMEOUT_MS: 3000,
+      MIN: 2,
+      MAX: 10, // Increased for CI stability (16 entities + fixtures)
+      IDLE_TIMEOUT_MS: 10000, // 10 seconds (was 1s - too aggressive for CI)
+      CONNECTION_TIMEOUT_MS: 5000, // 5 seconds (was 3s)
     }),
   }),
   PROD: Object.freeze({
