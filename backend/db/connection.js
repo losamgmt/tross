@@ -245,7 +245,7 @@ const oneOrNone = async (text, params) => {
     throw createQueryError(
       `Expected 0 or 1 row, got ${result.rows.length}`,
       text,
-      result.rows.length
+      result.rows.length,
     );
   }
   return result.rows[0] || null;
@@ -268,7 +268,7 @@ const one = async (text, params) => {
     throw createQueryError(
       `Expected 1 row, got ${result.rows.length}`,
       text,
-      result.rows.length
+      result.rows.length,
     );
   }
   return result.rows[0];
@@ -395,7 +395,7 @@ module.exports = {
   end,
   closePool,
   pool,
-  
+
   // Convenience methods (pg-promise style)
   oneOrNone,
   one,
