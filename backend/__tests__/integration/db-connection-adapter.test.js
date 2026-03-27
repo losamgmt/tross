@@ -4,7 +4,7 @@
  */
 
 const { getDatabaseConfig } = require("../../config/deployment-adapter");
-const { pool, testConnection, closePool } = require("../../db/connection");
+const { pool, testConnection } = require("../../db/connection");
 
 describe("Database Connection - Deployment Adapter Integration", () => {
   // Store original env vars
@@ -13,8 +13,7 @@ describe("Database Connection - Deployment Adapter Integration", () => {
   afterAll(async () => {
     // Restore original env vars
     process.env = { ...originalEnv };
-    // Close pool connection
-    await closePool();
+    // Note: Pool cleanup handled by global teardown - don't close here
   });
 
   describe("getDatabaseConfig Integration", () => {

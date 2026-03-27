@@ -31,7 +31,7 @@ describe("Timeout Architecture", () => {
   });
 
   afterAll(async () => {
-    await db.end();
+    // Note: Pool cleanup handled by global teardown - don't close here
   });
 
   describe("Request Timeout Middleware", () => {
