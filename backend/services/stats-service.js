@@ -16,6 +16,7 @@
  */
 
 const allMetadata = require('../config/models');
+const { getFilterableFields } = require('../config/metadata-accessors');
 const { logger } = require('../config/logger');
 const db = require('../db/connection');
 const QueryBuilderService = require('./query-builder-service');
@@ -53,7 +54,8 @@ class StatsService {
    */
   static async count(entityName, req, filters = {}) {
     const metadata = this._getMetadata(entityName);
-    const { tableName, filterableFields = [] } = metadata;
+    const { tableName } = metadata;
+    const filterableFields = getFilterableFields(metadata);
 
     // Build RLS filter - ADR-011: include operation for rule matching
     const rlsResult = buildRLSFilter(req.rlsContext, metadata, 'read', 0);
@@ -109,7 +111,8 @@ class StatsService {
    */
   static async countGrouped(entityName, req, groupByField, filters = {}) {
     const metadata = this._getMetadata(entityName);
-    const { tableName, filterableFields = [] } = metadata;
+    const { tableName } = metadata;
+    const filterableFields = getFilterableFields(metadata);
 
     // Validate groupByField is filterable
     if (!filterableFields.includes(groupByField)) {
@@ -182,7 +185,8 @@ class StatsService {
    */
   static async sum(entityName, req, field, filters = {}) {
     const metadata = this._getMetadata(entityName);
-    const { tableName, filterableFields = [] } = metadata;
+    const { tableName } = metadata;
+    const filterableFields = getFilterableFields(metadata);
 
     // SECURITY: Validate field is a numeric/summable field before interpolation
     // Build list of allowed sum fields from metadata

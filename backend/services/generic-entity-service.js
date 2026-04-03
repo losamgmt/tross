@@ -21,6 +21,11 @@
  */
 
 const allMetadata = require('../config/models');
+const {
+  getSearchableFields,
+  getFilterableFields,
+  getSortableFields,
+} = require('../config/metadata-accessors');
 const { logger } = require('../config/logger');
 const db = require('../db/connection');
 const { toSafeInteger } = require('../validators/type-coercion');
@@ -541,13 +546,15 @@ class GenericEntityService {
     // Extract query-building metadata
     const {
       tableName,
-      searchableFields = [],
-      filterableFields = [],
-      sortableFields = [],
       defaultSort = { field: 'id', order: 'ASC' },
       defaultIncludes = [],
       relationships = {},
     } = metadata;
+
+    // Use accessors for field properties (supports both legacy arrays and field-level)
+    const searchableFields = getSearchableFields(metadata);
+    const filterableFields = getFilterableFields(metadata);
+    const sortableFields = getSortableFields(metadata);
 
     // Build SELECT and JOIN clauses for default includes
     let selectClause = `${tableName}.*`;
@@ -723,10 +730,10 @@ class GenericEntityService {
     const {
       tableName,
       primaryKey,
-      filterableFields = [],
       defaultIncludes = [],
       relationships = {},
     } = metadata;
+    const filterableFields = getFilterableFields(metadata);
 
     // Validate field is filterable (security: prevent arbitrary column access)
     // SYSTEMIC: Primary key is ALWAYS allowed (for findById to work)
@@ -833,7 +840,8 @@ class GenericEntityService {
     // Get metadata (throws if invalid entityName)
     const metadata = this._getMetadata(entityName);
 
-    const { tableName, filterableFields = [] } = metadata;
+    const { tableName } = metadata;
+    const filterableFields = getFilterableFields(metadata);
 
     // Build filter clause
     const filterResult = QueryBuilderService.buildFilterClause(
