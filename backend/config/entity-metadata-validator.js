@@ -1042,7 +1042,7 @@ function validateFieldLevelAccess(meta, errors) {
   const roleBasedKeys = ['read', 'update', 'delete'];
 
   for (const [fieldName, fieldDef] of Object.entries(fields)) {
-    if (!fieldDef.access) continue;
+    if (!fieldDef.access) { continue; }
 
     const access = fieldDef.access;
     if (typeof access !== 'object' || access === null) {
@@ -1060,7 +1060,7 @@ function validateFieldLevelAccess(meta, errors) {
     // Validate role-based access format
     for (const op of ['create', 'read', 'update', 'delete']) {
       const value = access[op];
-      if (value === undefined) continue;
+      if (value === undefined) { continue; }
 
       if (!validAccessValues.has(value)) {
         errors.add(
@@ -1090,7 +1090,7 @@ function validateBeforeChangeHooks(meta, errors) {
 
   for (const [fieldName, fieldDef] of Object.entries(fields)) {
     const hooks = fieldDef.beforeChange;
-    if (!hooks) continue;
+    if (!hooks) { continue; }
 
     if (!Array.isArray(hooks)) {
       errors.add(`fields.${fieldName}.beforeChange`, 'Must be an array');
@@ -1189,7 +1189,7 @@ function validateAfterChangeHooks(meta, errors) {
 
   for (const [fieldName, fieldDef] of Object.entries(fields)) {
     const hooks = fieldDef.afterChange;
-    if (!hooks) continue;
+    if (!hooks) { continue; }
 
     if (!Array.isArray(hooks)) {
       errors.add(`fields.${fieldName}.afterChange`, 'Must be an array');
