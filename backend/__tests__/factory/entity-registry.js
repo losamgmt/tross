@@ -23,6 +23,7 @@
 
 const allMetadata = require("../../config/models");
 const { RLS_RESOURCE_TYPES } = require("../../config/constants");
+const { getRequiredFields } = require("../../config/metadata-accessors");
 
 // ============================================================================
 // REQUIRED METADATA FIELDS
@@ -31,11 +32,13 @@ const { RLS_RESOURCE_TYPES } = require("../../config/constants");
 /**
  * Fields required for ALL entities to be testable by the factory system.
  * If an entity lacks any of these, tests cannot run reliably.
+ * 
+ * NOTE: requiredFields removed - now validated via accessor to support
+ * both legacy arrays and field-level required: true properties.
  */
 const REQUIRED_FIELDS = [
   "tableName", // Database table name (for API routes)
   "primaryKey", // Primary key field (usually 'id')
-  "requiredFields", // Fields required for entity creation
   "identityField", // Human-readable identifier field
 ];
 
@@ -168,9 +171,10 @@ function validateEntityMetadata() {
       }
     }
 
-    // Validate requiredFields is an array
-    if (meta.requiredFields && !Array.isArray(meta.requiredFields)) {
-      errors.push(`${entityName}: requiredFields must be an array`);
+    // Validate requiredFields exists (via accessor - supports both legacy and field-level)
+    const requiredFields = getRequiredFields(meta);
+    if (!Array.isArray(requiredFields)) {
+      errors.push(`${entityName}: requiredFields must be an array (via accessor)`);
     }
 
     // Validate fieldAccess is an object (if present)

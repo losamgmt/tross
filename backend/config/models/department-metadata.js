@@ -84,9 +84,8 @@ module.exports = {
   // CRUD CONFIGURATION
   // ============================================================================
 
-  requiredFields: ['name'],
-
-  immutableFields: [],
+  // NOTE: requiredFields, immutableFields now defined at field level
+  // (see fields section below)
 
   displayColumns: ['name', 'description', 'manager_id', 'status'],
 
@@ -144,27 +143,22 @@ module.exports = {
   // SEARCH CONFIGURATION
   // ============================================================================
 
-  searchableFields: ['name', 'description'],
+  // NOTE: searchableFields now defined at field level
+  // (see fields section below)
 
   // ============================================================================
   // FILTER CONFIGURATION
   // ============================================================================
 
-  filterableFields: [
-    'id',
-    'name',
-    'manager_id',
-    'is_active',
-    'status',
-    'created_at',
-    'updated_at',
-  ],
+  // NOTE: filterableFields now defined at field level
+  // (see fields section below)
 
   // ============================================================================
   // SORT CONFIGURATION
   // ============================================================================
 
-  sortableFields: ['id', 'name', 'status', 'created_at', 'updated_at'],
+  // NOTE: sortableFields now defined at field level
+  // (see fields section below)
 
   defaultSort: {
     field: 'name',
@@ -172,29 +166,61 @@ module.exports = {
   },
 
   // ============================================================================
-  // FIELD DEFINITIONS
+  // FIELD DEFINITIONS (FIELD-CENTRIC: all properties on field itself)
   // ============================================================================
 
   fields: {
     // TIER 1: Universal Entity Contract Fields
-    id: { type: 'integer', readonly: true },
-    name: { ...FIELD.NAME, required: true, maxLength: 100 },
-    is_active: { type: 'boolean', default: true },
-    created_at: { type: 'timestamp', readonly: true },
-    updated_at: { type: 'timestamp', readonly: true },
+    id: {
+      type: 'integer',
+      readonly: true,
+      filterable: true,
+      sortable: true,
+    },
+    name: {
+      ...FIELD.NAME,
+      required: true,
+      maxLength: 100,
+      searchable: true,
+      filterable: true,
+      sortable: true,
+    },
+    is_active: {
+      type: 'boolean',
+      default: true,
+      filterable: true,
+    },
+    created_at: {
+      type: 'timestamp',
+      readonly: true,
+      filterable: true,
+      sortable: true,
+    },
+    updated_at: {
+      type: 'timestamp',
+      readonly: true,
+      filterable: true,
+      sortable: true,
+    },
 
     // TIER 2: Entity-Specific Lifecycle Field
     status: {
       type: 'enum',
       enumKey: 'status',
       default: 'active',
+      filterable: true,
+      sortable: true,
     },
 
     // Entity-specific fields
-    description: { type: 'text' },
+    description: {
+      type: 'text',
+      searchable: true,
+    },
     manager_id: {
       type: 'foreignKey',
       references: 'user',
+      filterable: true,
     },
   },
 };

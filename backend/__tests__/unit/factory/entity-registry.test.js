@@ -24,6 +24,7 @@ const {
   REQUIRED_FIELDS,
   RLS_REQUIRED_FIELDS,
 } = require("../../factory/entity-registry");
+const { getRequiredFields } = require("../../../config/metadata-accessors");
 
 describe("Entity Registry", () => {
   // ==========================================================================
@@ -105,11 +106,13 @@ describe("Entity Registry", () => {
     });
 
     test.each(getAllEntityNames())(
-      "%s has requiredFields array",
+      "%s has resolvable requiredFields",
       (entityName) => {
         const meta = getEntityMetadata(entityName);
-        expect(meta.requiredFields).toBeDefined();
-        expect(Array.isArray(meta.requiredFields)).toBe(true);
+        // Use accessor - supports both legacy array and field-level properties
+        const requiredFields = getRequiredFields(meta);
+        expect(requiredFields).toBeDefined();
+        expect(Array.isArray(requiredFields)).toBe(true);
       },
     );
 
@@ -254,6 +257,7 @@ describe("Entity Registry", () => {
 
       for (const entityName of entities) {
         const meta = getEntityMetadata(entityName);
+        const requiredFields = getRequiredFields(meta);
 
         // Basic structure checks
         expect(meta.tableName).toBeDefined();
@@ -262,12 +266,12 @@ describe("Entity Registry", () => {
         // requiredFields should not include the primary key
         // Exception: preferences uses shared PK pattern where id = user_id
         if (entityName !== "preferences") {
-          expect(meta.requiredFields).not.toContain("id");
+          expect(requiredFields).not.toContain("id");
         }
 
         // requiredFields should not include timestamps
-        expect(meta.requiredFields).not.toContain("created_at");
-        expect(meta.requiredFields).not.toContain("updated_at");
+        expect(requiredFields).not.toContain("created_at");
+        expect(requiredFields).not.toContain("updated_at");
       }
     });
 

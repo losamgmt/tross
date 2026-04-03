@@ -73,7 +73,12 @@ function logDeprecationWarning(entityKey, property) {
 
 /**
  * Get all required fields for an entity.
- * Reads from field-level `required: true` first, falls back to `requiredFields[]`.
+ *
+ * Migration strategy (safe for partial migrations):
+ * - If legacy `requiredFields` array exists → use it (with deprecation warning)
+ * - If NO legacy array → derive from field-level `required: true`
+ *
+ * This ensures entities are not broken during incremental migration.
  *
  * @param {Object} metadata - Entity metadata
  * @returns {string[]} Array of required field names
@@ -82,25 +87,24 @@ function getRequiredFields(metadata) {
   const fields = metadata.fields || {};
   const entityKey = metadata.entityKey || 'unknown';
 
-  // Collect from field-level properties
+  // Get legacy array
+  const fromArray = metadata.requiredFields;
+
+  // If legacy array exists (even if empty), use it
+  // This ensures we don't break entities during partial migration
+  if (Array.isArray(fromArray)) {
+    if (fromArray.length > 0) {
+      logDeprecationWarning(entityKey, 'requiredFields');
+    }
+    return fromArray;
+  }
+
+  // No legacy array → derive from field-level properties
   const fromFields = Object.entries(fields)
     .filter(([_, fieldDef]) => fieldDef.required === true)
     .map(([fieldName]) => fieldName);
 
-  // Get legacy array
-  const fromArray = metadata.requiredFields || [];
-
-  // If field-level properties exist, use them exclusively
-  if (fromFields.length > 0) {
-    return fromFields;
-  }
-
-  // Fall back to legacy array (with deprecation warning)
-  if (fromArray.length > 0) {
-    logDeprecationWarning(entityKey, 'requiredFields');
-  }
-
-  return fromArray;
+  return fromFields;
 }
 
 /**
@@ -128,7 +132,10 @@ function isFieldRequired(metadata, fieldName) {
 
 /**
  * Get all immutable fields for an entity.
- * Reads from field-level `immutable: true` first, falls back to `immutableFields[]`.
+ *
+ * Migration strategy (safe for partial migrations):
+ * - If legacy `immutableFields` array exists → use it (with deprecation warning)
+ * - If NO legacy array → derive from field-level `immutable: true`
  *
  * @param {Object} metadata - Entity metadata
  * @returns {string[]} Array of immutable field names
@@ -137,25 +144,23 @@ function getImmutableFields(metadata) {
   const fields = metadata.fields || {};
   const entityKey = metadata.entityKey || 'unknown';
 
-  // Collect from field-level properties
+  // Get legacy array
+  const fromArray = metadata.immutableFields;
+
+  // If legacy array exists (even if empty), use it
+  if (Array.isArray(fromArray)) {
+    if (fromArray.length > 0) {
+      logDeprecationWarning(entityKey, 'immutableFields');
+    }
+    return fromArray;
+  }
+
+  // No legacy array → derive from field-level properties
   const fromFields = Object.entries(fields)
     .filter(([_, fieldDef]) => fieldDef.immutable === true)
     .map(([fieldName]) => fieldName);
 
-  // Get legacy array
-  const fromArray = metadata.immutableFields || [];
-
-  // If field-level properties exist, use them exclusively
-  if (fromFields.length > 0) {
-    return fromFields;
-  }
-
-  // Fall back to legacy array (with deprecation warning)
-  if (fromArray.length > 0) {
-    logDeprecationWarning(entityKey, 'immutableFields');
-  }
-
-  return fromArray;
+  return fromFields;
 }
 
 /**
@@ -183,7 +188,10 @@ function isFieldImmutable(metadata, fieldName) {
 
 /**
  * Get all searchable fields for an entity.
- * Reads from field-level `searchable: true` first, falls back to `searchableFields[]`.
+ *
+ * Migration strategy (safe for partial migrations):
+ * - If legacy `searchableFields` array exists → use it (with deprecation warning)
+ * - If NO legacy array → derive from field-level `searchable: true`
  *
  * @param {Object} metadata - Entity metadata
  * @returns {string[]} Array of searchable field names
@@ -192,25 +200,23 @@ function getSearchableFields(metadata) {
   const fields = metadata.fields || {};
   const entityKey = metadata.entityKey || 'unknown';
 
-  // Collect from field-level properties
+  // Get legacy array
+  const fromArray = metadata.searchableFields;
+
+  // If legacy array exists (even if empty), use it
+  if (Array.isArray(fromArray)) {
+    if (fromArray.length > 0) {
+      logDeprecationWarning(entityKey, 'searchableFields');
+    }
+    return fromArray;
+  }
+
+  // No legacy array → derive from field-level properties
   const fromFields = Object.entries(fields)
     .filter(([_, fieldDef]) => fieldDef.searchable === true)
     .map(([fieldName]) => fieldName);
 
-  // Get legacy array
-  const fromArray = metadata.searchableFields || [];
-
-  // If field-level properties exist, use them exclusively
-  if (fromFields.length > 0) {
-    return fromFields;
-  }
-
-  // Fall back to legacy array (with deprecation warning)
-  if (fromArray.length > 0) {
-    logDeprecationWarning(entityKey, 'searchableFields');
-  }
-
-  return fromArray;
+  return fromFields;
 }
 
 /**
@@ -238,7 +244,10 @@ function isFieldSearchable(metadata, fieldName) {
 
 /**
  * Get all filterable fields for an entity.
- * Reads from field-level `filterable: true` first, falls back to `filterableFields[]`.
+ *
+ * Migration strategy (safe for partial migrations):
+ * - If legacy `filterableFields` array exists → use it (with deprecation warning)
+ * - If NO legacy array → derive from field-level `filterable: true`
  *
  * @param {Object} metadata - Entity metadata
  * @returns {string[]} Array of filterable field names
@@ -247,25 +256,23 @@ function getFilterableFields(metadata) {
   const fields = metadata.fields || {};
   const entityKey = metadata.entityKey || 'unknown';
 
-  // Collect from field-level properties
+  // Get legacy array
+  const fromArray = metadata.filterableFields;
+
+  // If legacy array exists (even if empty), use it
+  if (Array.isArray(fromArray)) {
+    if (fromArray.length > 0) {
+      logDeprecationWarning(entityKey, 'filterableFields');
+    }
+    return fromArray;
+  }
+
+  // No legacy array → derive from field-level properties
   const fromFields = Object.entries(fields)
     .filter(([_, fieldDef]) => fieldDef.filterable === true)
     .map(([fieldName]) => fieldName);
 
-  // Get legacy array
-  const fromArray = metadata.filterableFields || [];
-
-  // If field-level properties exist, use them exclusively
-  if (fromFields.length > 0) {
-    return fromFields;
-  }
-
-  // Fall back to legacy array (with deprecation warning)
-  if (fromArray.length > 0) {
-    logDeprecationWarning(entityKey, 'filterableFields');
-  }
-
-  return fromArray;
+  return fromFields;
 }
 
 /**
@@ -293,7 +300,10 @@ function isFieldFilterable(metadata, fieldName) {
 
 /**
  * Get all sortable fields for an entity.
- * Reads from field-level `sortable: true` first, falls back to `sortableFields[]`.
+ *
+ * Migration strategy (safe for partial migrations):
+ * - If legacy `sortableFields` array exists → use it (with deprecation warning)
+ * - If NO legacy array → derive from field-level `sortable: true`
  *
  * @param {Object} metadata - Entity metadata
  * @returns {string[]} Array of sortable field names
@@ -302,25 +312,23 @@ function getSortableFields(metadata) {
   const fields = metadata.fields || {};
   const entityKey = metadata.entityKey || 'unknown';
 
-  // Collect from field-level properties
+  // Get legacy array
+  const fromArray = metadata.sortableFields;
+
+  // If legacy array exists (even if empty), use it
+  if (Array.isArray(fromArray)) {
+    if (fromArray.length > 0) {
+      logDeprecationWarning(entityKey, 'sortableFields');
+    }
+    return fromArray;
+  }
+
+  // No legacy array → derive from field-level properties
   const fromFields = Object.entries(fields)
     .filter(([_, fieldDef]) => fieldDef.sortable === true)
     .map(([fieldName]) => fieldName);
 
-  // Get legacy array
-  const fromArray = metadata.sortableFields || [];
-
-  // If field-level properties exist, use them exclusively
-  if (fromFields.length > 0) {
-    return fromFields;
-  }
-
-  // Fall back to legacy array (with deprecation warning)
-  if (fromArray.length > 0) {
-    logDeprecationWarning(entityKey, 'sortableFields');
-  }
-
-  return fromArray;
+  return fromFields;
 }
 
 /**
