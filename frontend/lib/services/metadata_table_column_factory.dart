@@ -340,20 +340,20 @@ class MetadataTableColumnFactory {
   static Widget _buildForeignKeyCell(FieldDefinition fieldDef, dynamic value) {
     if (value == null) return TableCellBuilders.textCell('—');
 
-    final relatedEntity = fieldDef.relatedEntity;
+    final referencedEntity = fieldDef.references;
 
     // Display field fallback chain: field → related entity → constant default
     String displayField;
     if (fieldDef.displayField != null) {
       displayField = fieldDef.displayField!;
-    } else if (relatedEntity != null &&
-        EntityMetadataRegistry.has(relatedEntity)) {
-      displayField = EntityMetadataRegistry.get(relatedEntity).displayField;
+    } else if (referencedEntity != null &&
+        EntityMetadataRegistry.has(referencedEntity)) {
+      displayField = EntityMetadataRegistry.get(referencedEntity).displayField;
     } else {
       displayField = FieldConstants.defaultDisplayField;
     }
 
-    if (relatedEntity == null) {
+    if (referencedEntity == null) {
       // No relationship defined, just show the ID
       return TableCellBuilders.textCell('ID: $value');
     }
@@ -361,7 +361,7 @@ class MetadataTableColumnFactory {
     // Use async cell widget for FK lookup
     return ForeignKeyLookupCell(
       entityId: value is int ? value : int.tryParse(value.toString()) ?? 0,
-      relatedEntity: relatedEntity,
+      references: referencedEntity,
       displayField: displayField,
     );
   }

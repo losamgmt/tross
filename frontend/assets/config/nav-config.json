@@ -184,6 +184,10 @@
     }
   ],
   "entityPlacements": {
+    "approval_request": {
+      "group": "admin",
+      "order": 5
+    },
     "asset": {
       "group": "customers",
       "order": 4
@@ -208,13 +212,49 @@
       "group": "finance",
       "order": 2
     },
+    "maintenance_schedule": {
+      "group": "work",
+      "order": 6
+    },
+    "payment": {
+      "group": "finance",
+      "order": 2
+    },
     "property": {
       "group": "customers",
       "order": 2
     },
+    "purchase_order": {
+      "group": "resources",
+      "order": 4
+    },
+    "quote": {
+      "group": "work",
+      "order": 2
+    },
+    "receipt": {
+      "group": "finance",
+      "order": 3
+    },
+    "recommendation": {
+      "group": "work",
+      "order": 4
+    },
     "role": {
       "group": "admin",
       "order": 2
+    },
+    "service_agreement": {
+      "group": "work",
+      "order": 7
+    },
+    "service_template": {
+      "group": "work",
+      "order": 5
+    },
+    "subcontractor": {
+      "group": "resources",
+      "order": 3
     },
     "technician": {
       "group": "resources",
@@ -230,6 +270,10 @@
     },
     "vendor": {
       "group": "resources",
+      "order": 3
+    },
+    "visit": {
+      "group": "work",
       "order": 3
     },
     "work_order": {

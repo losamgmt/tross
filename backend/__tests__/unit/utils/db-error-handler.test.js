@@ -68,8 +68,8 @@ describe("db-error-handler", () => {
         tableName: "contracts",
         identityField: "contract_number",
         fields: {
-          customer_id: { type: "foreignKey", relatedEntity: "customer" },
-          technician_id: { type: "foreignKey", relatedEntity: "technician" },
+          customer_id: { type: "foreignKey", references: "customer" },
+          technician_id: { type: "foreignKey", references: "technician" },
         },
       };
 
@@ -77,7 +77,7 @@ describe("db-error-handler", () => {
 
       expect(config.entityName).toBe("Contract");
       expect(config.uniqueFields.contract_number).toBe("Contract Number");
-      // Display names derived from relatedEntity (title-cased)
+      // Display names derived from references (title-cased)
       expect(config.foreignKeys.customer_id).toBe("Customer");
       expect(config.foreignKeys.technician_id).toBe("Technician");
     });

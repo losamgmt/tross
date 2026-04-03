@@ -432,17 +432,17 @@ module.exports = {
     auth0_id: { type: 'string', maxLength: 255, readonly: true },
     first_name: FIELD.FIRST_NAME,
     last_name: FIELD.LAST_NAME,
-    role_id: { type: 'foreignKey', relatedEntity: 'role' },
+    role_id: { type: 'foreignKey', references: 'role' },
 
     // Multi-profile FKs - can be linked on create or edit
     customer_profile_id: {
       type: 'foreignKey',
-      relatedEntity: 'customer',
+      references: 'customer',
       description: 'FK to customers table - links user to customer profile',
     },
     technician_profile_id: {
       type: 'foreignKey',
-      relatedEntity: 'technician',
+      references: 'technician',
       description: 'FK to technicians table - links user to technician profile',
     },
   },

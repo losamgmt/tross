@@ -1,0 +1,183 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "actions-schema.json",
+  "title": "Tross Workflow Actions Schema",
+  "description": "Schema for validating actions.json - the central registry of workflow actions",
+  "type": "object",
+  "required": ["actions"],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "$comment": {
+      "type": "string"
+    },
+    "_documentation": {
+      "type": "object",
+      "description": "Documentation block (not validated)"
+    },
+    "actions": {
+      "type": "object",
+      "description": "Map of action_id → action definition",
+      "additionalProperties": {
+        "$ref": "#/definitions/action"
+      }
+    }
+  },
+  "definitions": {
+    "action": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["notification", "create_entity", "update_entity", "compute"],
+          "description": "Action type determines which handler processes this action"
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of what this action does"
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "notification" } } },
+          "then": { "$ref": "#/definitions/notificationAction" }
+        },
+        {
+          "if": { "properties": { "type": { "const": "create_entity" } } },
+          "then": { "$ref": "#/definitions/createEntityAction" }
+        },
+        {
+          "if": { "properties": { "type": { "const": "update_entity" } } },
+          "then": { "$ref": "#/definitions/updateEntityAction" }
+        },
+        {
+          "if": { "properties": { "type": { "const": "compute" } } },
+          "then": { "$ref": "#/definitions/computeAction" }
+        }
+      ]
+    },
+    "notificationAction": {
+      "type": "object",
+      "required": ["template", "recipient"],
+      "properties": {
+        "template": {
+          "type": "string",
+          "description": "Notification template name"
+        },
+        "recipient": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "field": { "type": "string", "description": "Field containing user ID" }
+              },
+              "required": ["field"]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "role": { "type": "string", "description": "Role to notify (e.g., 'manager')" }
+              },
+              "required": ["role"]
+            }
+          ],
+          "description": "Who receives the notification"
+        },
+        "channels": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["in_app", "email", "sms"] },
+          "description": "Notification channels (defaults to ['in_app'])"
+        }
+      }
+    },
+    "createEntityAction": {
+      "type": "object",
+      "required": ["entity"],
+      "properties": {
+        "entity": {
+          "type": "string",
+          "description": "Entity key to create (e.g., 'quote')"
+        },
+        "copyFields": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Fields to copy from source record"
+        },
+        "mapping": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Map source field → target field (for renaming)"
+        },
+        "setFields": {
+          "type": "object",
+          "description": "Static values or { field: 'name' } references"
+        }
+      }
+    },
+    "updateEntityAction": {
+      "type": "object",
+      "required": ["target", "updates"],
+      "properties": {
+        "target": {
+          "type": "object",
+          "properties": {
+            "entity": {
+              "oneOf": [
+                { "type": "string" },
+                { "type": "object", "properties": { "field": { "type": "string" } } }
+              ]
+            },
+            "id": {
+              "oneOf": [
+                { "type": "string" },
+                { "type": "object", "properties": { "field": { "type": "string" } } }
+              ]
+            }
+          },
+          "required": ["entity", "id"],
+          "description": "Which record to update"
+        },
+        "updates": {
+          "type": "object",
+          "description": "Field updates to apply"
+        },
+        "when": {
+          "type": "object",
+          "description": "Optional condition (e.g., { compute: 'invoice_fully_paid' })"
+        }
+      }
+    },
+    "computeAction": {
+      "type": "object",
+      "required": ["target", "formula"],
+      "properties": {
+        "target": {
+          "type": "string",
+          "description": "Field to compute (e.g., 'invoice.total_amount')"
+        },
+        "formula": {
+          "type": "string",
+          "description": "Computation formula (e.g., 'SUM(line_items.amount)')"
+        }
+      }
+    },
+    "fieldReference": {
+      "type": "object",
+      "properties": {
+        "field": { "type": "string" }
+      },
+      "required": ["field"],
+      "description": "Reference to a field value from context"
+    },
+    "computeReference": {
+      "type": "object",
+      "properties": {
+        "compute": { "type": "string" }
+      },
+      "required": ["compute"],
+      "description": "Reference to a computed value"
+    }
+  }
+}

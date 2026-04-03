@@ -314,7 +314,7 @@ module.exports = {
     // Parent reference
     property_id: {
       type: 'foreignKey',
-      relatedEntity: 'property',
+      references: 'property',
       required: true,
       displayFields: ['name'],
       displayTemplate: '{name}',

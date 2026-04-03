@@ -523,7 +523,7 @@ function stringTooLongRejected(meta, ctx) {
  * Tests: Invalid date strings are rejected
  */
 function invalidDateRejected(meta, ctx) {
-  const { fields, entityName, tableName } = meta;
+  const { fields, entityName, tableName, fieldAccess } = meta;
   const caps = getCapabilities(meta);
   if (!fields) return;
   if (!caps.canCreate) return;
@@ -532,6 +532,8 @@ function invalidDateRejected(meta, ctx) {
     .filter(([_, def]) => ["date", "datetime", "timestamp"].includes(def.type))
     .map(([name]) => name)
     .filter((name) => !["created_at", "updated_at"].includes(name))
+    // Skip fields that are not writable on create (create: 'none')
+    .filter((name) => fieldAccess?.[name]?.create !== "none")
     .slice(0, 1);
 
   for (const field of dateFields) {

@@ -131,17 +131,16 @@ void main() {
 
           if (fieldMeta.type == FieldType.foreignKey) {
             expect(
-              fieldMeta.relatedEntity,
+              fieldMeta.references,
               isNotNull,
-              reason:
-                  '$entityName.$fieldName: ForeignKey must have relatedEntity',
+              reason: '$entityName.$fieldName: ForeignKey must have references',
             );
             expect(
-              EntityTestRegistry.has(fieldMeta.relatedEntity!),
+              EntityTestRegistry.has(fieldMeta.references!),
               isTrue,
               reason:
                   '$entityName.$fieldName references unknown entity: '
-                  '${fieldMeta.relatedEntity}',
+                  '${fieldMeta.references}',
             );
           }
         }

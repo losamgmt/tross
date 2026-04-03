@@ -454,9 +454,11 @@ let _swaggerEntitySchemas = null;
 /**
  * Map metadata field type to OpenAPI type
  * @param {Object} field - Field definition from metadata
+ * @param {string} [fieldName] - Field name (for enumKey fallback)
+ * @param {Object} [enums] - Entity's enums object for resolving enumKey references
  * @returns {Object} OpenAPI property definition
  */
-function metadataFieldToOpenAPI(field) {
+function metadataFieldToOpenAPI(field, fieldName = null, enums = {}) {
   const base = {};
 
   switch (field.type) {
@@ -487,8 +489,27 @@ function metadataFieldToOpenAPI(field) {
 
     case 'enum':
       base.type = 'string';
-      if (field.values && field.values.length > 0) {
-        base.enum = [...field.values]; // Clone to avoid mutation
+      // Resolve enum values: check field.values first, then resolve enumKey
+      let enumValues = field.values;
+      if (!enumValues && field.enumKey) {
+        // Resolve enumKey reference from entity's enums
+        const enumKey = field.enumKey;
+        const enumDef = enums[enumKey];
+        if (enumDef && typeof enumDef === 'object') {
+          enumValues = enumDef;
+        }
+      }
+      if (!enumValues && fieldName && enums[fieldName]) {
+        // Fallback: use fieldName as enumKey
+        enumValues = enums[fieldName];
+      }
+      if (enumValues) {
+        // Handle both array values and object values (extract keys from objects)
+        if (Array.isArray(enumValues)) {
+          base.enum = [...enumValues];
+        } else if (typeof enumValues === 'object') {
+          base.enum = Object.keys(enumValues);
+        }
       }
       break;
 
@@ -550,9 +571,10 @@ function buildEntitySchema(entityName, entityMetadata) {
 
   const properties = {};
   const required = [];
+  const enums = entityMetadata.enums || {};
 
   for (const [fieldName, fieldDef] of Object.entries(entityMetadata.fields)) {
-    properties[fieldName] = metadataFieldToOpenAPI(fieldDef);
+    properties[fieldName] = metadataFieldToOpenAPI(fieldDef, fieldName, enums);
 
     // Check if required
     if (fieldDef.required) {

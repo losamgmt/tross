@@ -10,6 +10,7 @@ enum ResourceType {
   // ═══════════════════════════════════════════════════════════════════════════
   // Entity Resources (from backend metadata)
   // ═══════════════════════════════════════════════════════════════════════════
+  approvalRequests('approval_requests'),
   assets,
   auditLogs('audit_logs'),
   contracts,
@@ -18,16 +19,29 @@ enum ResourceType {
   departments,
   inventory,
   invoices,
+  maintenanceSchedules('maintenance_schedules'),
   notifications,
+  payments,
   preferences,
   properties,
   propertyRoles('property_roles'),
+  purchaseOrders('purchase_orders'),
+  quotes,
+  receipts,
+  recommendations,
   roles,
   savedViews('saved_views'),
+  serviceAgreementItems('service_agreement_items'),
+  serviceAgreements('service_agreements'),
+  serviceTemplates('service_templates'),
+  subcontractors,
   technicians,
   units,
   users,
   vendors,
+  visits,
+  visitSubcontractors('visit_subcontractors'),
+  visitTechnicians('visit_technicians'),
   workOrders('work_orders'),
 
   // ═══════════════════════════════════════════════════════════════════════════

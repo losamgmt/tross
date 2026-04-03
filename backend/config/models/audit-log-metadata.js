@@ -124,7 +124,7 @@ module.exports = {
     },
     user_id: {
       type: 'foreignKey',
-      relatedEntity: 'user',
+      references: 'user',
       required: false,
       readOnly: true,
     },

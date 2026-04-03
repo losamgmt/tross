@@ -287,7 +287,7 @@ module.exports = {
     },
     user_id: {
       type: 'foreignKey',
-      relatedEntity: 'user',
+      references: 'user',
       required: true,
       readonly: true,
       description: 'Notification recipient (FK to users)',

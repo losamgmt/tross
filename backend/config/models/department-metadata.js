@@ -194,7 +194,7 @@ module.exports = {
     description: { type: 'text' },
     manager_id: {
       type: 'foreignKey',
-      relatedEntity: 'user',
+      references: 'user',
     },
   },
 };

@@ -39,7 +39,8 @@ class FieldDefinition {
   final String? description;
 
   // Foreign key relationship fields
-  final String? relatedEntity; // e.g., 'role', 'customer'
+  final String?
+  references; // e.g., 'role', 'customer' - aligns with SQL REFERENCES
   final String? displayField; // Single field fallback e.g., 'name', 'email'
   final List<String>?
   displayFields; // Multiple fields e.g., ['company_name', 'email']
@@ -47,8 +48,7 @@ class FieldDefinition {
   displayTemplate; // Format string e.g., '{company_name} - {email}'
 
   /// Check if this is a foreign key field
-  bool get isForeignKey =>
-      type == FieldType.foreignKey || relatedEntity != null;
+  bool get isForeignKey => type == FieldType.foreignKey || references != null;
 
   /// Get color name for an enum value (or null for default/neutral)
   String? getValueColor(String value) => enumValueColors?[value];
@@ -67,7 +67,7 @@ class FieldDefinition {
     this.enumValueColors,
     this.pattern,
     this.description,
-    this.relatedEntity,
+    this.references,
     this.displayField,
     this.displayFields,
     this.displayTemplate,
@@ -110,7 +110,7 @@ class FieldDefinition {
       enumValueColors: enumValueColors,
       pattern: json['pattern'] as String?,
       description: json['description'] as String?,
-      relatedEntity: json['relatedEntity'] as String?,
+      references: json['references'] as String?,
       displayField: json['displayField'] as String?,
       displayFields: (json['displayFields'] as List<dynamic>?)?.cast<String>(),
       displayTemplate: json['displayTemplate'] as String?,

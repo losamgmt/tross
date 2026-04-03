@@ -170,13 +170,13 @@ void main() {
         const field = FieldDefinition(
           name: 'customer_id',
           type: FieldType.foreignKey,
-          relatedEntity: 'customer',
+          references: 'customer',
           displayField: 'company_name',
         );
 
         expect(field.type, FieldType.foreignKey);
         expect(field.isForeignKey, true);
-        expect(field.relatedEntity, 'customer');
+        expect(field.references, 'customer');
         expect(field.displayField, 'company_name');
       });
 
@@ -184,7 +184,7 @@ void main() {
         const field = FieldDefinition(
           name: 'user_id',
           type: FieldType.foreignKey,
-          relatedEntity: 'user',
+          references: 'user',
           displayFields: ['first_name', 'last_name'],
           displayTemplate: '{first_name} {last_name}',
         );
@@ -194,11 +194,11 @@ void main() {
         expect(field.displayTemplate, '{first_name} {last_name}');
       });
 
-      test('isForeignKey true when relatedEntity set', () {
+      test('isForeignKey true when references set', () {
         const field = FieldDefinition(
           name: 'role_id',
           type: FieldType.integer,
-          relatedEntity: 'role',
+          references: 'role',
         );
 
         expect(field.isForeignKey, true);

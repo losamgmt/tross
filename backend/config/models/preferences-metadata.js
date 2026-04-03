@@ -135,7 +135,7 @@ module.exports = {
   fields: {
     id: {
       type: 'foreignKey',
-      relatedEntity: 'user',
+      references: 'user',
       required: true,
       readonly: true,
       // This is a 1:1 PK-FK relationship - preferences.id = users.id

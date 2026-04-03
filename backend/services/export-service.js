@@ -180,9 +180,15 @@ class ExportService {
       filterOptions.is_active = true;
     }
 
+    // Ensure is_active is always filterable if the entity has it
+    let effectiveFilterableFields = [...filterableFields];
+    if (metadata.fields?.is_active && !effectiveFilterableFields.includes('is_active')) {
+      effectiveFilterableFields.push('is_active');
+    }
+
     const filters = QueryBuilderService.buildFilterClause(
       filterOptions,
-      filterableFields,
+      effectiveFilterableFields,
       search ? search.paramOffset : 0,
       tableName,
     );

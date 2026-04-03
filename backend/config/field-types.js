@@ -58,8 +58,8 @@ const TYPE_TO_SQL = Object.freeze({
 
   // Numeric types
   integer: () => 'INTEGER',
-  decimal: (fieldDef) => `DECIMAL(12,${fieldDef.precision || 2})`,
-  currency: (fieldDef) => `DECIMAL(12,${fieldDef.precision || 2})`,
+  decimal: (fieldDef) => `DECIMAL(${fieldDef.precision || 12},${fieldDef.scale || 2})`,
+  currency: (fieldDef) => `DECIMAL(${fieldDef.precision || 12},${fieldDef.scale || 2})`,
 
   // Boolean
   boolean: () => 'BOOLEAN',
@@ -706,13 +706,13 @@ function createJunctionForeignKeys(entity1, entity2, options = {}) {
   return {
     [fk1]: {
       type: 'foreignKey',
-      relatedEntity: entity1,
+      references: entity1,
       required,
       description: `Reference to the ${entity1} in this relationship`,
     },
     [fk2]: {
       type: 'foreignKey',
-      relatedEntity: entity2,
+      references: entity2,
       required,
       description: `Reference to the ${entity2} in this relationship`,
     },

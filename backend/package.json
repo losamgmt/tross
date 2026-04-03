@@ -6,7 +6,7 @@
   "scripts": {
     "test": "jest --forceExit",
     "test:unit": "jest --selectProjects unit --forceExit",
-    "test:integration": "node scripts/run-integration-tests.js",
+    "test:integration": "jest --selectProjects integration --forceExit",
     "test:all": "jest --forceExit",
     "dev": "node server.js",
     "dev:railway": "cross-env DB_ENV=railway node server.js",

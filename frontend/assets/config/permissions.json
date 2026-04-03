@@ -129,6 +129,62 @@
         "description": "Derived from read permission - nav visibility follows read access"
       }
     },
+    "approval_requests": {
+      "description": "approval_requests resource",
+      "rowLevelSecurity": [
+        {
+          "id": "customer-own-requests",
+          "description": "Customers see requests they created",
+          "roles": "customer",
+          "operations": [
+            "read"
+          ],
+          "access": {
+            "type": "direct",
+            "field": "requested_by",
+            "value": "userId"
+          }
+        },
+        {
+          "id": "staff-full-access",
+          "description": "Dispatcher+ see all approval requests",
+          "roles": [
+            "dispatcher",
+            "manager",
+            "admin"
+          ],
+          "operations": "*",
+          "access": null
+        }
+      ],
+      "permissions": {
+        "create": {
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Entity-level override - create requires customer"
+        },
+        "read": {
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Entity-level override - read requires customer"
+        },
+        "update": {
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Entity-level override - update requires customer"
+        },
+        "delete": {
+          "minimumRole": "manager",
+          "minimumPriority": 4,
+          "description": "Entity-level override - delete requires manager"
+        }
+      },
+      "navVisibility": {
+        "minimumRole": "customer",
+        "minimumPriority": 1,
+        "description": "Explicit navVisibility - minimum role to see in nav menus"
+      }
+    },
     "assets": {
       "description": "assets resource",
       "rowLevelSecurity": [
@@ -563,6 +619,62 @@
         "description": "Explicit navVisibility - minimum role to see in nav menus"
       }
     },
+    "maintenance_schedules": {
+      "description": "maintenance_schedules resource",
+      "rowLevelSecurity": [
+        {
+          "id": "customer-own-schedules",
+          "description": "Customers see their own maintenance schedules",
+          "roles": "customer",
+          "operations": [
+            "read"
+          ],
+          "access": {
+            "type": "direct",
+            "field": "customer_id",
+            "value": "customer_profile_id"
+          }
+        },
+        {
+          "id": "staff-full-access",
+          "description": "Dispatcher+ see all maintenance schedules",
+          "roles": [
+            "dispatcher",
+            "manager",
+            "admin"
+          ],
+          "operations": "*",
+          "access": null
+        }
+      ],
+      "permissions": {
+        "create": {
+          "minimumRole": "manager",
+          "minimumPriority": 4,
+          "description": "Entity-level override - create requires manager"
+        },
+        "read": {
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Entity-level override - read requires customer"
+        },
+        "update": {
+          "minimumRole": "manager",
+          "minimumPriority": 4,
+          "description": "Entity-level override - update requires manager"
+        },
+        "delete": {
+          "minimumRole": "manager",
+          "minimumPriority": 4,
+          "description": "Entity-level override - delete requires manager"
+        }
+      },
+      "navVisibility": {
+        "minimumRole": "manager",
+        "minimumPriority": 4,
+        "description": "Explicit navVisibility - minimum role to see in nav menus"
+      }
+    },
     "notifications": {
       "description": "notifications resource",
       "rowLevelSecurity": [
@@ -605,6 +717,64 @@
         "minimumRole": "customer",
         "minimumPriority": 1,
         "description": "Derived from read permission - nav visibility follows read access"
+      }
+    },
+    "payments": {
+      "description": "payments resource",
+      "rowLevelSecurity": [
+        {
+          "id": "customer-own-payments",
+          "description": "Customers can view their own payments",
+          "roles": [
+            "customer"
+          ],
+          "operations": [
+            "read"
+          ],
+          "access": {
+            "type": "direct",
+            "field": "customer_id",
+            "value": "customer_profile_id"
+          }
+        },
+        {
+          "id": "staff-full-access",
+          "description": "Dispatcher+ see all payments",
+          "roles": [
+            "dispatcher",
+            "manager",
+            "admin"
+          ],
+          "operations": "*",
+          "access": null
+        }
+      ],
+      "permissions": {
+        "create": {
+          "minimumRole": "dispatcher",
+          "minimumPriority": 3,
+          "description": "Entity-level override - create requires dispatcher"
+        },
+        "read": {
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Entity-level override - read requires customer"
+        },
+        "update": {
+          "minimumRole": "manager",
+          "minimumPriority": 4,
+          "description": "Entity-level override - update requires manager"
+        },
+        "delete": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "Entity-level override - delete requires admin"
+        }
+      },
+      "navVisibility": {
+        "minimumRole": "dispatcher",
+        "minimumPriority": 3,
+        "description": "Explicit navVisibility - minimum role to see in nav menus"
       }
     },
     "preferences": {
@@ -800,6 +970,201 @@
         "description": "Derived from read permission - nav visibility follows read access"
       }
     },
+    "purchase_orders": {
+      "description": "purchase_orders resource",
+      "rowLevelSecurity": [
+        {
+          "id": "staff-full-access",
+          "description": "Technician+ see all purchase orders",
+          "roles": [
+            "technician",
+            "dispatcher",
+            "manager",
+            "admin"
+          ],
+          "operations": "*",
+          "access": null
+        }
+      ],
+      "permissions": {
+        "create": {
+          "minimumRole": "technician",
+          "minimumPriority": 2,
+          "description": "Entity-level override - create requires technician"
+        },
+        "read": {
+          "minimumRole": "technician",
+          "minimumPriority": 2,
+          "description": "Entity-level override - read requires technician"
+        },
+        "update": {
+          "minimumRole": "technician",
+          "minimumPriority": 2,
+          "description": "Entity-level override - update requires technician"
+        },
+        "delete": {
+          "minimumRole": "manager",
+          "minimumPriority": 4,
+          "description": "Entity-level override - delete requires manager"
+        }
+      },
+      "navVisibility": {
+        "minimumRole": "technician",
+        "minimumPriority": 2,
+        "description": "Explicit navVisibility - minimum role to see in nav menus"
+      }
+    },
+    "quotes": {
+      "description": "quotes resource",
+      "rowLevelSecurity": [
+        {
+          "id": "customer-own-quotes",
+          "description": "Customers see their own quotes",
+          "roles": "customer",
+          "operations": "*",
+          "access": {
+            "type": "direct",
+            "field": "customer_id",
+            "value": "customer_profile_id"
+          }
+        },
+        {
+          "id": "staff-full-access",
+          "description": "Dispatcher+ see all quotes",
+          "roles": [
+            "dispatcher",
+            "manager",
+            "admin"
+          ],
+          "operations": "*",
+          "access": null
+        }
+      ],
+      "permissions": {
+        "create": {
+          "minimumRole": "dispatcher",
+          "minimumPriority": 3,
+          "description": "Entity-level override - create requires dispatcher"
+        },
+        "read": {
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Entity-level override - read requires customer"
+        },
+        "update": {
+          "minimumRole": "dispatcher",
+          "minimumPriority": 3,
+          "description": "Entity-level override - update requires dispatcher"
+        },
+        "delete": {
+          "minimumRole": "manager",
+          "minimumPriority": 4,
+          "description": "Entity-level override - delete requires manager"
+        }
+      },
+      "navVisibility": {
+        "minimumRole": "dispatcher",
+        "minimumPriority": 3,
+        "description": "Explicit navVisibility - minimum role to see in nav menus"
+      }
+    },
+    "receipts": {
+      "description": "receipts resource",
+      "rowLevelSecurity": [
+        {
+          "id": "staff-full-access",
+          "description": "Dispatcher+ see all receipts",
+          "roles": [
+            "dispatcher",
+            "manager",
+            "admin"
+          ],
+          "operations": "*",
+          "access": null
+        }
+      ],
+      "permissions": {
+        "create": {
+          "minimumRole": "dispatcher",
+          "minimumPriority": 3,
+          "description": "Entity-level override - create requires dispatcher"
+        },
+        "read": {
+          "minimumRole": "dispatcher",
+          "minimumPriority": 3,
+          "description": "Entity-level override - read requires dispatcher"
+        },
+        "update": {
+          "minimumRole": "manager",
+          "minimumPriority": 4,
+          "description": "Entity-level override - update requires manager"
+        },
+        "delete": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "Entity-level override - delete requires admin"
+        }
+      },
+      "navVisibility": {
+        "minimumRole": "dispatcher",
+        "minimumPriority": 3,
+        "description": "Explicit navVisibility - minimum role to see in nav menus"
+      }
+    },
+    "recommendations": {
+      "description": "recommendations resource",
+      "rowLevelSecurity": [
+        {
+          "id": "customer-own-recommendations",
+          "description": "Customers see their own recommendations",
+          "roles": "customer",
+          "operations": "*",
+          "access": {
+            "type": "direct",
+            "field": "customer_id",
+            "value": "customer_profile_id"
+          }
+        },
+        {
+          "id": "staff-full-access",
+          "description": "Dispatcher+ see all recommendations",
+          "roles": [
+            "dispatcher",
+            "manager",
+            "admin"
+          ],
+          "operations": "*",
+          "access": null
+        }
+      ],
+      "permissions": {
+        "create": {
+          "minimumRole": "technician",
+          "minimumPriority": 2,
+          "description": "Entity-level override - create requires technician"
+        },
+        "read": {
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Entity-level override - read requires customer"
+        },
+        "update": {
+          "minimumRole": "technician",
+          "minimumPriority": 2,
+          "description": "Entity-level override - update requires technician"
+        },
+        "delete": {
+          "minimumRole": "manager",
+          "minimumPriority": 4,
+          "description": "Entity-level override - delete requires manager"
+        }
+      },
+      "navVisibility": {
+        "minimumRole": "technician",
+        "minimumPriority": 2,
+        "description": "Explicit navVisibility - minimum role to see in nav menus"
+      }
+    },
     "roles": {
       "description": "roles resource",
       "rowLevelSecurity": [
@@ -892,6 +1257,206 @@
         "minimumRole": "customer",
         "minimumPriority": 1,
         "description": "Derived from read permission - nav visibility follows read access"
+      }
+    },
+    "service_agreement_items": {
+      "description": "service_agreement_items resource",
+      "rowLevelSecurity": [
+        {
+          "id": "customer-via-agreement",
+          "description": "Customers see items via their service agreement",
+          "roles": "customer",
+          "operations": [
+            "read"
+          ],
+          "access": {
+            "type": "parent",
+            "foreignKey": "service_agreement_id",
+            "parentEntity": "service_agreement"
+          }
+        },
+        {
+          "id": "staff-full-access",
+          "description": "Staff see all agreement items",
+          "roles": [
+            "dispatcher",
+            "manager",
+            "admin"
+          ],
+          "operations": "*",
+          "access": null
+        }
+      ],
+      "permissions": {
+        "create": {
+          "minimumRole": "manager",
+          "minimumPriority": 4,
+          "description": "Entity-level override - create requires manager"
+        },
+        "read": {
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Entity-level override - read requires customer"
+        },
+        "update": {
+          "minimumRole": "manager",
+          "minimumPriority": 4,
+          "description": "Entity-level override - update requires manager"
+        },
+        "delete": {
+          "minimumRole": "manager",
+          "minimumPriority": 4,
+          "description": "Entity-level override - delete requires manager"
+        }
+      },
+      "navVisibility": {
+        "minimumRole": "customer",
+        "minimumPriority": 1,
+        "description": "Derived from read permission - nav visibility follows read access"
+      }
+    },
+    "service_agreements": {
+      "description": "service_agreements resource",
+      "rowLevelSecurity": [
+        {
+          "id": "customer-own-agreements",
+          "description": "Customers see their own service agreements",
+          "roles": "customer",
+          "operations": [
+            "read"
+          ],
+          "access": {
+            "type": "direct",
+            "field": "customer_id",
+            "value": "customer_profile_id"
+          }
+        },
+        {
+          "id": "staff-full-access",
+          "description": "Dispatcher+ see all service agreements",
+          "roles": [
+            "dispatcher",
+            "manager",
+            "admin"
+          ],
+          "operations": "*",
+          "access": null
+        }
+      ],
+      "permissions": {
+        "create": {
+          "minimumRole": "manager",
+          "minimumPriority": 4,
+          "description": "Entity-level override - create requires manager"
+        },
+        "read": {
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Entity-level override - read requires customer"
+        },
+        "update": {
+          "minimumRole": "manager",
+          "minimumPriority": 4,
+          "description": "Entity-level override - update requires manager"
+        },
+        "delete": {
+          "minimumRole": "manager",
+          "minimumPriority": 4,
+          "description": "Entity-level override - delete requires manager"
+        }
+      },
+      "navVisibility": {
+        "minimumRole": "manager",
+        "minimumPriority": 4,
+        "description": "Explicit navVisibility - minimum role to see in nav menus"
+      }
+    },
+    "service_templates": {
+      "description": "service_templates resource",
+      "rowLevelSecurity": [
+        {
+          "id": "staff-full-access",
+          "description": "Technician+ see all service templates",
+          "roles": [
+            "technician",
+            "dispatcher",
+            "manager",
+            "admin"
+          ],
+          "operations": "*",
+          "access": null
+        }
+      ],
+      "permissions": {
+        "create": {
+          "minimumRole": "manager",
+          "minimumPriority": 4,
+          "description": "Entity-level override - create requires manager"
+        },
+        "read": {
+          "minimumRole": "technician",
+          "minimumPriority": 2,
+          "description": "Entity-level override - read requires technician"
+        },
+        "update": {
+          "minimumRole": "manager",
+          "minimumPriority": 4,
+          "description": "Entity-level override - update requires manager"
+        },
+        "delete": {
+          "minimumRole": "manager",
+          "minimumPriority": 4,
+          "description": "Entity-level override - delete requires manager"
+        }
+      },
+      "navVisibility": {
+        "minimumRole": "manager",
+        "minimumPriority": 4,
+        "description": "Explicit navVisibility - minimum role to see in nav menus"
+      }
+    },
+    "subcontractors": {
+      "description": "subcontractors resource",
+      "rowLevelSecurity": [
+        {
+          "id": "staff-full-access",
+          "description": "Technician+ see all subcontractors",
+          "roles": [
+            "technician",
+            "dispatcher",
+            "manager",
+            "admin"
+          ],
+          "operations": "*",
+          "access": null
+        }
+      ],
+      "permissions": {
+        "create": {
+          "minimumRole": "manager",
+          "minimumPriority": 4,
+          "description": "Entity-level override - create requires manager"
+        },
+        "read": {
+          "minimumRole": "technician",
+          "minimumPriority": 2,
+          "description": "Entity-level override - read requires technician"
+        },
+        "update": {
+          "minimumRole": "manager",
+          "minimumPriority": 4,
+          "description": "Entity-level override - update requires manager"
+        },
+        "delete": {
+          "minimumRole": "admin",
+          "minimumPriority": 5,
+          "description": "Entity-level override - delete requires admin"
+        }
+      },
+      "navVisibility": {
+        "minimumRole": "manager",
+        "minimumPriority": 4,
+        "description": "Explicit navVisibility - minimum role to see in nav menus"
       }
     },
     "system_settings": {
@@ -1121,6 +1686,169 @@
           "minimumRole": "admin",
           "minimumPriority": 5,
           "description": "Entity-level override - delete requires admin"
+        }
+      },
+      "navVisibility": {
+        "minimumRole": "dispatcher",
+        "minimumPriority": 3,
+        "description": "Explicit navVisibility - minimum role to see in nav menus"
+      }
+    },
+    "visit_subcontractors": {
+      "description": "visit_subcontractors resource",
+      "rowLevelSecurity": [
+        {
+          "id": "staff-full-access",
+          "description": "Staff see all subcontractor assignments",
+          "roles": [
+            "technician",
+            "dispatcher",
+            "manager",
+            "admin"
+          ],
+          "operations": "*",
+          "access": null
+        }
+      ],
+      "permissions": {
+        "create": {
+          "minimumRole": "dispatcher",
+          "minimumPriority": 3,
+          "description": "Entity-level override - create requires dispatcher"
+        },
+        "read": {
+          "minimumRole": "technician",
+          "minimumPriority": 2,
+          "description": "Entity-level override - read requires technician"
+        },
+        "update": {
+          "minimumRole": "dispatcher",
+          "minimumPriority": 3,
+          "description": "Entity-level override - update requires dispatcher"
+        },
+        "delete": {
+          "minimumRole": "dispatcher",
+          "minimumPriority": 3,
+          "description": "Entity-level override - delete requires dispatcher"
+        }
+      },
+      "navVisibility": {
+        "minimumRole": "technician",
+        "minimumPriority": 2,
+        "description": "Derived from read permission - nav visibility follows read access"
+      }
+    },
+    "visit_technicians": {
+      "description": "visit_technicians resource",
+      "rowLevelSecurity": [
+        {
+          "id": "technician-own-assignments",
+          "description": "Technicians see visits they are assigned to",
+          "roles": "technician",
+          "operations": "*",
+          "access": {
+            "type": "direct",
+            "field": "technician_id",
+            "value": "technician_profile_id"
+          }
+        },
+        {
+          "id": "staff-full-access",
+          "description": "Dispatcher+ see all assignments",
+          "roles": [
+            "dispatcher",
+            "manager",
+            "admin"
+          ],
+          "operations": "*",
+          "access": null
+        }
+      ],
+      "permissions": {
+        "create": {
+          "minimumRole": "dispatcher",
+          "minimumPriority": 3,
+          "description": "Entity-level override - create requires dispatcher"
+        },
+        "read": {
+          "minimumRole": "technician",
+          "minimumPriority": 2,
+          "description": "Entity-level override - read requires technician"
+        },
+        "update": {
+          "minimumRole": "dispatcher",
+          "minimumPriority": 3,
+          "description": "Entity-level override - update requires dispatcher"
+        },
+        "delete": {
+          "minimumRole": "dispatcher",
+          "minimumPriority": 3,
+          "description": "Entity-level override - delete requires dispatcher"
+        }
+      },
+      "navVisibility": {
+        "minimumRole": "technician",
+        "minimumPriority": 2,
+        "description": "Derived from read permission - nav visibility follows read access"
+      }
+    },
+    "visits": {
+      "description": "visits resource",
+      "rowLevelSecurity": [
+        {
+          "id": "customer-via-work-order",
+          "description": "Customers see visits for their work orders",
+          "roles": "customer",
+          "operations": "*",
+          "access": {
+            "type": "parent",
+            "foreignKey": "work_order_id",
+            "parentEntity": "work_order"
+          }
+        },
+        {
+          "id": "technician-via-work-order",
+          "description": "Technicians see visits for their assigned work orders",
+          "roles": "technician",
+          "operations": "*",
+          "access": {
+            "type": "parent",
+            "foreignKey": "work_order_id",
+            "parentEntity": "work_order"
+          }
+        },
+        {
+          "id": "staff-full-access",
+          "description": "Dispatcher+ see all visits",
+          "roles": [
+            "dispatcher",
+            "manager",
+            "admin"
+          ],
+          "operations": "*",
+          "access": null
+        }
+      ],
+      "permissions": {
+        "create": {
+          "minimumRole": "dispatcher",
+          "minimumPriority": 3,
+          "description": "Entity-level override - create requires dispatcher"
+        },
+        "read": {
+          "minimumRole": "customer",
+          "minimumPriority": 1,
+          "description": "Entity-level override - read requires customer"
+        },
+        "update": {
+          "minimumRole": "technician",
+          "minimumPriority": 2,
+          "description": "Entity-level override - update requires technician"
+        },
+        "delete": {
+          "minimumRole": "manager",
+          "minimumPriority": 4,
+          "description": "Entity-level override - delete requires manager"
         }
       },
       "navVisibility": {

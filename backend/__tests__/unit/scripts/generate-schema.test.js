@@ -139,7 +139,7 @@ describe("generate-schema normalize phase", () => {
     it("creates FK reference for foreignKey fields", () => {
       const col = normalizeField(
         "customer_id",
-        { type: "foreignKey", relatedEntity: "customer" },
+        { type: "foreignKey", references: "customer" },
         {},
       );
       expect(col.references).toBe("customers(id)");
@@ -210,7 +210,7 @@ describe("generate-schema normalize phase", () => {
         ...mockRaw,
         fields: {
           ...mockRaw.fields,
-          customer_id: { type: "foreignKey", relatedEntity: "customer" },
+          customer_id: { type: "foreignKey", references: "customer" },
         },
       };
       const entity = normalizeEntity(rawWithFk);
@@ -313,6 +313,7 @@ describe("generate-schema generate phase", () => {
     });
 
     it("includes REFERENCES when present", () => {
+      // REFERENCES is now deferred to ALTER TABLE - collectForeignKeys captures it
       const col = {
         name: "customer_id",
         sqlType: "UUID",
@@ -320,8 +321,17 @@ describe("generate-schema generate phase", () => {
         references: "customers(id)",
         order: 1,
       };
-      const sql = generateColumnSql(col);
-      expect(sql).toContain("REFERENCES customers(id)");
+      const collectForeignKeys = [];
+      const sql = generateColumnSql(col, collectForeignKeys, "orders");
+      // REFERENCES not inline anymore
+      expect(sql).not.toContain("REFERENCES");
+      // FK constraint collected for later
+      expect(collectForeignKeys).toHaveLength(1);
+      expect(collectForeignKeys[0]).toEqual({
+        tableName: "orders",
+        columnName: "customer_id",
+        references: "customers(id)",
+      });
     });
   });
 

@@ -100,11 +100,19 @@ function buildDefaultIncludesClauses(
 ) {
   const joinParts = [];
   const selectParts = [];
+  const usedAliases = new Set();
 
   for (const relName of defaultIncludes) {
     const rel = relationships[relName];
     if (rel && rel.type === 'belongsTo') {
-      const relAlias = relName.charAt(0); // 'r' for role, 'c' for customer
+      // Generate unique alias: first letter, then add numbers if collision
+      let baseAlias = relName.charAt(0);
+      let relAlias = baseAlias;
+      let counter = 1;
+      while (usedAliases.has(relAlias)) {
+        relAlias = `${baseAlias}${counter++}`;
+      }
+      usedAliases.add(relAlias);
       const identityField = getRelatedIdentityField(rel.table);
 
       // Include all configured fields from relationship, or just identity field as fallback
@@ -191,7 +199,7 @@ async function deriveComputedFKValues(entityName, data, metadata) {
       continue;
     }
 
-    const sourceEntity = sourceFieldDef.relatedEntity;
+    const sourceEntity = sourceFieldDef.references;
     const sourceMetadata = allMetadata[sourceEntity];
     if (!sourceMetadata) {
       logger.warn('derivedFrom references unknown entity', {
@@ -203,7 +211,7 @@ async function deriveComputedFKValues(entityName, data, metadata) {
     }
 
     // Look up the source entity to get the derived value
-    // The derived field name in the source is inferred from this field's relatedEntity
+    // The derived field name in the source is inferred from this field's references
     // e.g., property_id derivedFrom unit_id → look up unit.property_id
     try {
       const sourceRecord = await db.oneOrNone(
@@ -574,9 +582,16 @@ class GenericEntityService {
       filterOptions.is_active = true;
     }
 
+    // Ensure is_active is always filterable if the entity has it
+    // This guarantees the is_active filter works even if filterableFields is empty
+    let effectiveFilterableFields = [...filterableFields];
+    if (metadata.fields?.is_active && !effectiveFilterableFields.includes('is_active')) {
+      effectiveFilterableFields.push('is_active');
+    }
+
     const filters = QueryBuilderService.buildFilterClause(
       filterOptions,
-      filterableFields,
+      effectiveFilterableFields,
       search ? search.paramOffset : 0,
       tableName,
     );

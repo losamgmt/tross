@@ -247,22 +247,22 @@ function validateRequiredFields(meta, errors) {
 
 /**
  * Validate foreign keys reference valid entities
- * FK fields are identified by type: 'foreignKey' with relatedEntity in fields section
+ * FK fields are identified by type: 'foreignKey' with references in fields section
  */
 function validateForeignKeys(meta, errors, allMetadata) {
   const fkFields = extractForeignKeyFields(meta);
   const allEntityKeys = new Set(Object.keys(allMetadata));
 
   for (const [fkField, fkDef] of Object.entries(fkFields)) {
-    if (!fkDef.relatedEntity) {
-      errors.add(`fields.${fkField}`, 'FK field missing relatedEntity property');
+    if (!fkDef.references) {
+      errors.add(`fields.${fkField}`, 'FK field missing references property');
       continue;
     }
 
-    if (!allEntityKeys.has(fkDef.relatedEntity)) {
+    if (!allEntityKeys.has(fkDef.references)) {
       errors.add(
         `fields.${fkField}`,
-        `References unknown entity '${fkDef.relatedEntity}'`,
+        `References unknown entity '${fkDef.references}'`,
       );
     }
   }
@@ -624,13 +624,13 @@ function validateJunctionConfig(meta, errors, allMetadata) {
   if (!fields[fk1]) {
     errors.add(
       'junctionFor',
-      `FK field '${fk1}' not found in fields. Add: ${fk1}: { type: 'foreignKey', relatedEntity: '${config.entity1}' }`,
+      `FK field '${fk1}' not found in fields. Add: ${fk1}: { type: 'foreignKey', references: '${config.entity1}' }`,
     );
   }
   if (!fields[fk2]) {
     errors.add(
       'junctionFor',
-      `FK field '${fk2}' not found in fields. Add: ${fk2}: { type: 'foreignKey', relatedEntity: '${config.entity2}' }`,
+      `FK field '${fk2}' not found in fields. Add: ${fk2}: { type: 'foreignKey', references: '${config.entity2}' }`,
     );
   }
 }
@@ -982,6 +982,266 @@ function validateNavPlacement(meta, errors) {
   }
 }
 
+// ============================================================================
+// FIELD-CENTRIC VALIDATION (Phase 2A Migration Support)
+// ============================================================================
+
+/**
+ * Valid field-level boolean properties.
+ * These are being migrated from entity-level arrays to field-level properties.
+ */
+const VALID_FIELD_BOOLEAN_PROPS = new Set([
+  'required',
+  'immutable',
+  'searchable',
+  'filterable',
+  'sortable',
+  'readonly',
+]);
+
+/**
+ * Validate field-level boolean properties.
+ * Accepts both legacy arrays and new field-level properties (migration support).
+ *
+ * @param {Object} meta - Entity metadata
+ * @param {Object} errors - ValidationErrors collector
+ */
+function validateFieldLevelBooleans(meta, errors) {
+  const fields = meta.fields || {};
+
+  for (const [fieldName, fieldDef] of Object.entries(fields)) {
+    for (const prop of VALID_FIELD_BOOLEAN_PROPS) {
+      if (prop in fieldDef && typeof fieldDef[prop] !== 'boolean') {
+        errors.add(
+          `fields.${fieldName}.${prop}`,
+          `Must be a boolean, got '${typeof fieldDef[prop]}'`,
+        );
+      }
+    }
+  }
+}
+
+/**
+ * Validate field-level role-based access properties (Phase 2A migration).
+ *
+ * NOTE: fields.*.access can have TWO different formats:
+ * 1. UI mode access: { create: 'required', edit: 'editable', view: 'read' }
+ * 2. Role-based access: { create: 'customer', read: 'any', update: 'dispatcher', delete: 'none' }
+ *
+ * This validator only checks format #2 (role-based). We detect it by looking for
+ * `read` or `update` or `delete` keys (which don't exist in UI mode format).
+ *
+ * @param {Object} meta - Entity metadata
+ * @param {Object} errors - ValidationErrors collector
+ */
+function validateFieldLevelAccess(meta, errors) {
+  const fields = meta.fields || {};
+  const validAccessValues = getValidAccessValues();
+
+  // Keys that indicate NEW role-based access format (vs legacy UI mode format)
+  const roleBasedKeys = ['read', 'update', 'delete'];
+
+  for (const [fieldName, fieldDef] of Object.entries(fields)) {
+    if (!fieldDef.access) continue;
+
+    const access = fieldDef.access;
+    if (typeof access !== 'object' || access === null) {
+      // Skip if it's not an object - could be legacy format
+      continue;
+    }
+
+    // Check if this looks like role-based access (has read/update/delete keys)
+    const isRoleBasedAccess = roleBasedKeys.some((key) => key in access);
+    if (!isRoleBasedAccess) {
+      // This is UI mode access format, skip validation
+      continue;
+    }
+
+    // Validate role-based access format
+    for (const op of ['create', 'read', 'update', 'delete']) {
+      const value = access[op];
+      if (value === undefined) continue;
+
+      if (!validAccessValues.has(value)) {
+        errors.add(
+          `fields.${fieldName}.access.${op}`,
+          `Invalid value '${value}'. Valid: ${[...validAccessValues].join(', ')}`,
+        );
+      }
+    }
+  }
+}
+
+/**
+ * Valid hook event patterns.
+ */
+const VALID_HOOK_EVENTS = new Set(['create', 'change', 'delete']);
+
+/**
+ * Validate beforeChange hooks on fields.
+ *
+ * @param {Object} meta - Entity metadata
+ * @param {Object} errors - ValidationErrors collector
+ */
+function validateBeforeChangeHooks(meta, errors) {
+  const fields = meta.fields || {};
+  const roleHierarchy = getRoleHierarchy();
+  const validBypassRoles = new Set([...roleHierarchy, '*']);
+
+  for (const [fieldName, fieldDef] of Object.entries(fields)) {
+    const hooks = fieldDef.beforeChange;
+    if (!hooks) continue;
+
+    if (!Array.isArray(hooks)) {
+      errors.add(`fields.${fieldName}.beforeChange`, 'Must be an array');
+      continue;
+    }
+
+    for (let i = 0; i < hooks.length; i++) {
+      const hook = hooks[i];
+      const prefix = `fields.${fieldName}.beforeChange[${i}]`;
+
+      if (!hook || typeof hook !== 'object') {
+        errors.add(prefix, 'Must be an object');
+        continue;
+      }
+
+      // 'on' is required
+      if (!hook.on) {
+        errors.add(`${prefix}.on`, 'Required property');
+      } else if (typeof hook.on !== 'string') {
+        errors.add(`${prefix}.on`, 'Must be a string');
+      } else {
+        // Validate event pattern: 'create', 'change', 'delete', or 'value→value'
+        const isSimpleEvent = VALID_HOOK_EVENTS.has(hook.on);
+        const isTransition = hook.on.includes('→');
+        if (!isSimpleEvent && !isTransition) {
+          errors.add(
+            `${prefix}.on`,
+            `Invalid event '${hook.on}'. Use 'create', 'change', 'delete', or 'oldValue→newValue'`,
+          );
+        }
+      }
+
+      // Validate 'when' condition if present
+      if (hook.when !== undefined) {
+        if (typeof hook.when !== 'object' || hook.when === null) {
+          errors.add(`${prefix}.when`, 'Must be an object with field, operator, value');
+        } else {
+          if (!hook.when.field) {
+            errors.add(`${prefix}.when.field`, 'Required when using condition');
+          }
+          if (!hook.when.operator) {
+            errors.add(`${prefix}.when.operator`, 'Required when using condition');
+          }
+        }
+      }
+
+      // Validate 'blocked' if present
+      if (hook.blocked !== undefined && typeof hook.blocked !== 'boolean') {
+        errors.add(`${prefix}.blocked`, 'Must be a boolean');
+      }
+
+      // Validate 'bypassRoles' if present
+      if (hook.bypassRoles !== undefined) {
+        if (!Array.isArray(hook.bypassRoles)) {
+          errors.add(`${prefix}.bypassRoles`, 'Must be an array of roles');
+        } else {
+          for (const role of hook.bypassRoles) {
+            if (!validBypassRoles.has(role)) {
+              errors.add(
+                `${prefix}.bypassRoles`,
+                `Invalid role '${role}'. Valid: ${[...validBypassRoles].join(', ')}`,
+              );
+            }
+          }
+        }
+      }
+
+      // Validate 'requiresApproval' if present
+      if (hook.requiresApproval !== undefined) {
+        if (typeof hook.requiresApproval !== 'object' || hook.requiresApproval === null) {
+          errors.add(`${prefix}.requiresApproval`, 'Must be an object');
+        } else if (!hook.requiresApproval.approver) {
+          errors.add(`${prefix}.requiresApproval.approver`, 'Required property');
+        }
+      }
+
+      // beforeChange cannot have 'do' (that's for afterChange)
+      if (hook.do !== undefined) {
+        errors.add(
+          `${prefix}.do`,
+          "'do' is forbidden in beforeChange hooks (use afterChange for actions)",
+        );
+      }
+    }
+  }
+}
+
+/**
+ * Validate afterChange hooks on fields.
+ *
+ * @param {Object} meta - Entity metadata
+ * @param {Object} errors - ValidationErrors collector
+ */
+function validateAfterChangeHooks(meta, errors) {
+  const fields = meta.fields || {};
+
+  for (const [fieldName, fieldDef] of Object.entries(fields)) {
+    const hooks = fieldDef.afterChange;
+    if (!hooks) continue;
+
+    if (!Array.isArray(hooks)) {
+      errors.add(`fields.${fieldName}.afterChange`, 'Must be an array');
+      continue;
+    }
+
+    for (let i = 0; i < hooks.length; i++) {
+      const hook = hooks[i];
+      const prefix = `fields.${fieldName}.afterChange[${i}]`;
+
+      if (!hook || typeof hook !== 'object') {
+        errors.add(prefix, 'Must be an object');
+        continue;
+      }
+
+      // 'on' is required
+      if (!hook.on) {
+        errors.add(`${prefix}.on`, 'Required property');
+      } else if (typeof hook.on !== 'string') {
+        errors.add(`${prefix}.on`, 'Must be a string');
+      }
+
+      // 'do' is required for afterChange
+      if (!hook.do) {
+        errors.add(`${prefix}.do`, 'Required property (action ID or inline action)');
+      } else if (typeof hook.do !== 'string' && typeof hook.do !== 'object') {
+        errors.add(`${prefix}.do`, 'Must be a string (action ID) or object (inline action)');
+      }
+
+      // afterChange cannot have blocking properties
+      if (hook.blocked !== undefined) {
+        errors.add(
+          `${prefix}.blocked`,
+          "'blocked' is forbidden in afterChange hooks (change already committed)",
+        );
+      }
+      if (hook.requiresApproval !== undefined) {
+        errors.add(
+          `${prefix}.requiresApproval`,
+          "'requiresApproval' is forbidden in afterChange hooks (use beforeChange)",
+        );
+      }
+      if (hook.bypassRoles !== undefined) {
+        errors.add(
+          `${prefix}.bypassRoles`,
+          "'bypassRoles' is forbidden in afterChange hooks (use beforeChange)",
+        );
+      }
+    }
+  }
+}
+
 /**
  * Validate a single entity's metadata
  */
@@ -1025,6 +1285,12 @@ function validateEntity(entityName, meta, allMetadata) {
   validateRelationships(meta, errors, allMetadata);
   validateJunctionConfig(meta, errors, allMetadata);
   validateUniqueConstraints(meta, errors);
+
+  // Field-centric validation (Phase 2A migration support)
+  validateFieldLevelBooleans(meta, errors);
+  validateFieldLevelAccess(meta, errors);
+  validateBeforeChangeHooks(meta, errors);
+  validateAfterChangeHooks(meta, errors);
 
   return errors;
 }

@@ -141,13 +141,13 @@ function normalizeEntity(raw) {
     if (sharedPrimaryKey && skipForSharedPK.has(tier1.name)) continue;
     
     // For sharedPrimaryKey entities, replace SERIAL PRIMARY KEY with INTEGER PRIMARY KEY + FK
-    // FK reference is now in fields.id (type: 'foreignKey', relatedEntity: 'user')
+    // FK reference is now in fields.id (type: 'foreignKey', references: 'user')
     if (sharedPrimaryKey && tier1.name === 'id') {
       const idFieldDef = raw.fields?.id;
-      if (idFieldDef?.type === 'foreignKey' && idFieldDef.relatedEntity) {
+      if (idFieldDef?.type === 'foreignKey' && idFieldDef.references) {
         // Get the related entity's table name from metadata
-        const relatedEntityMeta = require(`../backend/config/models`)[idFieldDef.relatedEntity];
-        const refTable = relatedEntityMeta?.tableName || pluralizeTable(idFieldDef.relatedEntity);
+        const relatedEntityMeta = require(`../backend/config/models`)[idFieldDef.references];
+        const refTable = relatedEntityMeta?.tableName || pluralizeTable(idFieldDef.references);
         columns.push({
           name: 'id',
           sqlType: 'INTEGER',
@@ -261,8 +261,8 @@ function normalizeField(fieldName, fieldDef, metadata) {
   }
 
   // FK reference
-  if (fieldDef.type === 'foreignKey' && fieldDef.relatedEntity) {
-    references = `${pluralizeTable(fieldDef.relatedEntity)}(id)`;
+  if (fieldDef.type === 'foreignKey' && fieldDef.references) {
+    references = `${pluralizeTable(fieldDef.references)}(id)`;
   }
 
   return { name: fieldName, sqlType, constraints, references, check, order: 0 };
@@ -413,7 +413,7 @@ function sortByDependencies(entities) {
 // GENERATE
 // ============================================================================
 
-function generateColumnSql(column) {
+function generateColumnSql(column, collectForeignKeys = null, tableName = null) {
   const parts = [column.name, column.sqlType];
 
   // Add constraints in order: UNIQUE, NOT NULL, DEFAULT
@@ -426,15 +426,20 @@ function generateColumnSql(column) {
     parts.push(`CHECK (${column.check})`);
   }
 
-  // REFERENCES
-  if (column.references) {
-    parts.push(`REFERENCES ${column.references}`);
+  // REFERENCES - defer to ALTER TABLE to avoid forward reference issues
+  if (column.references && collectForeignKeys && tableName) {
+    // Collect FK constraint to add later via ALTER TABLE
+    collectForeignKeys.push({
+      tableName,
+      columnName: column.name,
+      references: column.references,
+    });
   }
 
   return parts.join(' ');
 }
 
-function generateTableSql(entity) {
+function generateTableSql(entity, collectForeignKeys = null) {
   const { tableName, entityKey, columns } = entity;
   const lines = [];
 
@@ -448,7 +453,7 @@ function generateTableSql(entity) {
 
   // Sort columns by order
   const sortedCols = [...columns].sort((a, b) => a.order - b.order);
-  const colLines = sortedCols.map((col) => `    ${generateColumnSql(col)}`);
+  const colLines = sortedCols.map((col) => `    ${generateColumnSql(col, collectForeignKeys, tableName)}`);
   lines.push(colLines.join(',\n'));
 
   lines.push(');');
@@ -467,7 +472,16 @@ function generateIndexSql(entity) {
 // ASSEMBLE
 // ============================================================================
 
-function assembleSchema(statements, timestamp = new Date().toISOString()) {
+function assembleSchema(statements, foreignKeysOrTimestamp = [], timestampArg = null) {
+  // Backwards compatibility: if second arg is string, it's the old timestamp-only signature
+  let foreignKeys, timestamp;
+  if (typeof foreignKeysOrTimestamp === 'string') {
+    foreignKeys = [];
+    timestamp = foreignKeysOrTimestamp;
+  } else {
+    foreignKeys = foreignKeysOrTimestamp;
+    timestamp = timestampArg || new Date().toISOString();
+  }
   const header = `-- ============================================================================
 -- GENERATED SCHEMA - SINGLE SOURCE OF TRUTH
 -- ============================================================================
@@ -490,7 +504,23 @@ function assembleSchema(statements, timestamp = new Date().toISOString()) {
     return parts.join('\n');
   }).join('\n');
 
-  return header + body;
+  // Add deferred FK constraints after all tables are created
+  let fkSection = '';
+  if (foreignKeys.length > 0) {
+    const fkLines = [
+      '-- ============================================================================',
+      '-- FOREIGN KEY CONSTRAINTS (deferred to avoid forward reference issues)',
+      '-- ============================================================================',
+    ];
+    for (const fk of foreignKeys) {
+      const constraintName = `fk_${fk.tableName}_${fk.columnName}`;
+      fkLines.push(`ALTER TABLE ${fk.tableName} ADD CONSTRAINT ${constraintName} FOREIGN KEY (${fk.columnName}) REFERENCES ${fk.references};`);
+    }
+    fkLines.push('');
+    fkSection = fkLines.join('\n');
+  }
+
+  return header + body + fkSection;
 }
 
 // ============================================================================
@@ -544,14 +574,15 @@ function generateSchema(options = {}) {
     return { success: true, entities };
   }
 
-  // Phase 5: GENERATE
+  // Phase 5: GENERATE - collect FK constraints for deferred output
+  const foreignKeys = [];
   const statements = sorted.map((entity) => ({
-    table: generateTableSql(entity),
+    table: generateTableSql(entity, foreignKeys),
     indexes: generateIndexSql(entity),
   }));
 
-  // Phase 6: ASSEMBLE
-  const sql = assembleSchema(statements);
+  // Phase 6: ASSEMBLE - includes deferred FK constraints
+  const sql = assembleSchema(statements, foreignKeys);
 
   return { success: true, sql, entities };
 }

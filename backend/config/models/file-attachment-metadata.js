@@ -368,7 +368,7 @@ module.exports = {
     // Upload tracking
     uploaded_by: {
       type: 'foreignKey',
-      relatedEntity: 'user',
+      references: 'user',
       readonly: true,
     },
 

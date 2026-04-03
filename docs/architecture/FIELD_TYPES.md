@@ -71,17 +71,17 @@ JSONB is **only** for truly dynamic user-defined data:
 
 ## Foreign Key Pattern
 
-Foreign keys use `type: 'foreignKey'` with `relatedEntity`:
+Foreign keys use `type: 'foreignKey'` with `references`:
 
 ```javascript
 manager_id: {
   type: 'foreignKey',
-  relatedEntity: 'user',      // Required: target entity key (snake_case)
+  references: 'user',         // Required: target entity key (snake_case) - aligns with SQL REFERENCES
   displayField: 'email',      // Optional: field shown in dropdowns
 }
 ```
 
-The sync script reads `relatedEntity` to populate frontend metadata. Do **not** use `references` or other custom properties—they will be ignored.
+The sync script reads `references` to populate frontend metadata and schema generation uses it for SQL `REFERENCES` constraints.
 
 ---
 
