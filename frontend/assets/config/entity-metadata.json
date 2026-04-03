@@ -1438,18 +1438,18 @@
     "filterableFields": [
       "id",
       "name",
-      "manager_id",
       "is_active",
-      "status",
       "created_at",
-      "updated_at"
+      "updated_at",
+      "status",
+      "manager_id"
     ],
     "sortableFields": [
       "id",
       "name",
-      "status",
       "created_at",
-      "updated_at"
+      "updated_at",
+      "status"
     ],
     "displayColumns": [
       "name",
