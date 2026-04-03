@@ -78,7 +78,7 @@ describe("sync-entity-metadata", () => {
       expect(result).toEqual({ type: "enum", values: ["active", "inactive"] });
     });
 
-    it("transforms foreignKey fields with relatedEntity", () => {
+    it("transforms foreignKey fields with references", () => {
       const allModels = {
         role: {
           tableName: "roles",
@@ -87,12 +87,12 @@ describe("sync-entity-metadata", () => {
       };
       const result = transformField(
         "role_id",
-        { type: "foreignKey", relatedEntity: "role" },
+        { type: "foreignKey", references: "role" },
         {},
         allModels,
       );
       expect(result.type).toBe("foreignKey");
-      expect(result.relatedEntity).toBe("role");
+      expect(result.references).toBe("role");
       expect(result.displayField).toBe("name");
     });
 
@@ -106,16 +106,16 @@ describe("sync-entity-metadata", () => {
       };
       const result = transformField(
         "user_id",
-        { type: "foreignKey", relatedEntity: "user", displayField: "email" },
+        { type: "foreignKey", references: "user", displayField: "email" },
         {},
         allModels,
       );
       expect(result.type).toBe("foreignKey");
-      expect(result.relatedEntity).toBe("user");
+      expect(result.references).toBe("user");
       expect(result.displayField).toBe("email"); // Uses explicit over inferred
     });
 
-    it("does not transform integer fields without relatedEntity as FK", () => {
+    it("does not transform integer fields without references as FK", () => {
       // Integer fields stay as integers unless explicitly typed as foreignKey
       const result = transformField(
         "count",
@@ -124,7 +124,7 @@ describe("sync-entity-metadata", () => {
         {},
       );
       expect(result.type).toBe("integer");
-      expect(result.relatedEntity).toBeUndefined();
+      expect(result.references).toBeUndefined();
     });
   });
 

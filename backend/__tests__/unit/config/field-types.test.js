@@ -631,12 +631,12 @@ describe("field-types", () => {
       expect(deriveSqlType(fieldDef)).toBe("INTEGER");
     });
 
-    it("should derive DECIMAL with precision for currency", () => {
-      const fieldDef = { type: "currency", precision: 4 };
-      expect(deriveSqlType(fieldDef)).toBe("DECIMAL(12,4)");
+    it("should derive DECIMAL with scale for currency", () => {
+      const fieldDef = { type: "currency", precision: 10, scale: 4 };
+      expect(deriveSqlType(fieldDef)).toBe("DECIMAL(10,4)");
     });
 
-    it("should derive DECIMAL(12,2) for currency without precision", () => {
+    it("should derive DECIMAL(12,2) for currency without precision/scale", () => {
       const fieldDef = { type: "currency" };
       expect(deriveSqlType(fieldDef)).toBe("DECIMAL(12,2)");
     });

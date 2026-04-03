@@ -79,7 +79,7 @@ function getPluralForm(singular) {
 /**
  * Transform backend field definition to frontend format
  *
- * SINGLE CODE PATH: Foreign keys MUST use `type: 'foreignKey', relatedEntity: '...'`
+ * SINGLE CODE PATH: Foreign keys MUST use `type: 'foreignKey', references: '...'`
  * No legacy fallbacks - all FKs must be explicitly declared in field definitions.
  */
 function transformField(fieldName, fieldDef, enums, allModels) {
@@ -91,11 +91,11 @@ function transformField(fieldName, fieldDef, enums, allModels) {
     return relatedMeta?.displayField || relatedMeta?.identityField || "name";
   };
 
-  // Foreign key handling - SINGLE PATH: type + relatedEntity required
-  if (fieldDef.type === "foreignKey" && fieldDef.relatedEntity) {
-    result.relatedEntity = fieldDef.relatedEntity;
+  // Foreign key handling - SINGLE PATH: type + references required
+  if (fieldDef.type === "foreignKey" && fieldDef.references) {
+    result.references = fieldDef.references;
     result.displayField =
-      fieldDef.displayField || getDisplayFieldForEntity(fieldDef.relatedEntity);
+      fieldDef.displayField || getDisplayFieldForEntity(fieldDef.references);
   }
 
   // Copy other properties

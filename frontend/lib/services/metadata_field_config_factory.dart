@@ -666,7 +666,7 @@ class MetadataFieldConfigFactory {
   ///
   /// Display field priority:
   /// 1. fieldDef.displayField (per-field override in source entity)
-  /// 2. relatedEntity.displayField (entity-level default from target entity)
+  /// 2. referencedEntity.displayField (entity-level default from target entity)
   /// 3. 'name' (hardcoded fallback)
   ///
   /// Returns null if entityService is not provided (FK fields require async loading).
@@ -679,25 +679,25 @@ class MetadataFieldConfigFactory {
     required bool readOnly,
     required GenericEntityService? entityService,
   }) {
-    final relatedEntity = fieldDef.relatedEntity;
+    final referencedEntity = fieldDef.references;
 
     // Determine display field with proper fallback chain
     String displayField;
     if (fieldDef.displayField != null) {
       // Priority 1: Per-field override
       displayField = fieldDef.displayField!;
-    } else if (relatedEntity != null &&
-        meta.EntityMetadataRegistry.has(relatedEntity)) {
+    } else if (referencedEntity != null &&
+        meta.EntityMetadataRegistry.has(referencedEntity)) {
       // Priority 2: Related entity's displayField
       displayField = meta.EntityMetadataRegistry.get(
-        relatedEntity,
+        referencedEntity,
       ).displayField;
     } else {
       // Priority 3: Hardcoded fallback
       displayField = 'name';
     }
 
-    if (relatedEntity == null) {
+    if (referencedEntity == null) {
       // Fallback to number input if no relationship defined
       return FieldConfig<Map<String, dynamic>, dynamic>(
         fieldName: fieldName,
@@ -733,7 +733,7 @@ class MetadataFieldConfigFactory {
       placeholder: 'Select $displayLabel',
       asyncItemsLoader: () async {
         // Load related entities using GenericEntityService
-        final result = await entityService.getAll(relatedEntity);
+        final result = await entityService.getAll(referencedEntity);
         return result.data;
       },
       valueField: 'id',

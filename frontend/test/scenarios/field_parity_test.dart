@@ -127,29 +127,28 @@ void main() {
 
         for (final fk in foreignKeyFields) {
           expect(
-            fk.value.relatedEntity,
+            fk.value.references,
             isNotNull,
-            reason:
-                '$entityName.${fk.key}: Foreign key must have relatedEntity',
+            reason: '$entityName.${fk.key}: Foreign key must have references',
           );
           expect(
-            EntityTestRegistry.has(fk.value.relatedEntity!),
+            EntityTestRegistry.has(fk.value.references!),
             isTrue,
             reason:
-                '$entityName.${fk.key}: Related entity "${fk.value.relatedEntity}" must exist',
+                '$entityName.${fk.key}: Referenced entity "${fk.value.references}" must exist',
           );
 
           // If displayField is specified, it must exist in related entity
           if (fk.value.displayField != null) {
-            final relatedMetadata = EntityTestRegistry.get(
-              fk.value.relatedEntity!,
+            final referencedMetadata = EntityTestRegistry.get(
+              fk.value.references!,
             );
             expect(
-              relatedMetadata.fields.containsKey(fk.value.displayField),
+              referencedMetadata.fields.containsKey(fk.value.displayField),
               isTrue,
               reason:
                   '$entityName.${fk.key}: Display field "${fk.value.displayField}" '
-                  'must exist in ${fk.value.relatedEntity}',
+                  'must exist in ${fk.value.references}',
             );
           }
         }

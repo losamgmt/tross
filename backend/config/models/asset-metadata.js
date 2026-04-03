@@ -295,7 +295,7 @@ module.exports = {
     // Parent reference - the unit this asset belongs to
     unit_id: {
       type: 'foreignKey',
-      relatedEntity: 'unit',
+      references: 'unit',
       required: true,
       displayFields: ['unit_identifier'],
       displayTemplate: '{unit_identifier}',
@@ -304,7 +304,7 @@ module.exports = {
     // Denormalized property_id - auto-populated from unit for efficient filtering
     property_id: {
       type: 'foreignKey',
-      relatedEntity: 'property',
+      references: 'property',
       computed: true,
       derivedFrom: 'unit_id',
       displayFields: ['name'],

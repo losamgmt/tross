@@ -63,7 +63,7 @@
  * @property {string[]} [values] - DEPRECATED: Use enumKey. Direct enum values array
  * @property {string} [pattern] - Regex pattern for validation
  * @property {string} [description] - Field documentation
- * @property {string} [relatedEntity] - For foreignKey: target entity name
+ * @property {string} [references] - For foreignKey: target entity name (aligns with SQL REFERENCES)
  * @property {string} [displayField] - For foreignKey: field to show in dropdowns
  * @property {string[]} [displayFields] - For foreignKey: multiple fields to display
  * @property {string} [displayTemplate] - For foreignKey: template string for display
@@ -350,7 +350,7 @@
  *
  * @typedef {Object} SummaryConfigObject
  * @property {string[]} groupableFields - REQUIRED: Fields that can be used with group_by parameter.
- *   Must be FK fields (relatedEntity) or enum fields. Defines valid grouping dimensions.
+ *   Must be FK fields (references) or enum fields. Defines valid grouping dimensions.
  * @property {string[]} [summableFields] - Numeric fields that can be summed (e.g., totals, amounts).
  *   Must be integer, decimal, number, or currency type. Defaults to [].
  * @property {string[] | null} [breakdownFields] - Enum fields that get automatic count_by_X breakdowns.
@@ -415,7 +415,7 @@
  * @property {Object.<string, FieldAccessConfig>} [fieldAccess] - Per-field CRUD access levels
  *
  * @property {Object.<string, FieldDefinition>} [fields] - Field definitions with types/validation
- *   FK fields use type: 'foreignKey' with relatedEntity, displayField, displayFields, displayTemplate
+ *   FK fields use type: 'foreignKey' with references, displayField, displayFields, displayTemplate
  * @property {Object.<string, EnumDefinition>} [enums] - Enum definitions with labels/colors
  * @property {Object.<string, RelationshipDefinition>} [relationships] - JOIN configuration
  * @property {string[]} [defaultIncludes] - Relationships to auto-include in queries

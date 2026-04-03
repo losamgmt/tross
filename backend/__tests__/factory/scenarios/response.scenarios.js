@@ -102,8 +102,12 @@ function errorFormat(meta, ctx) {
     },
   );
 
-  // Only test POST error format if create is enabled
-  if (caps.canCreate) {
+  // Only test POST error format if create is enabled AND entity has required fields
+  // If no required fields, empty payload is valid
+  // Check requiredFields array (user-submitted required fields)
+  // Note: fields[x].required mark validation requirements, not API-level requirements
+  const hasRequiredFields = (meta.requiredFields?.length > 0);
+  if (caps.canCreate && hasRequiredFields) {
     ctx.it(
       `POST /api/${meta.tableName} with invalid data - returns error format`,
       async () => {

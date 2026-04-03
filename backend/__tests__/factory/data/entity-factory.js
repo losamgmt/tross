@@ -181,8 +181,8 @@ function getDependencyOrder(entityName) {
   for (const [fkField, fkDef] of Object.entries(extractForeignKeyFields(meta))) {
     // Skip optional FKs (not in requiredFields)
     if (!meta.requiredFields?.includes(fkField)) continue;
-    // relatedEntity is the entity name directly - no conversion needed
-    deps.push(fkDef.relatedEntity);
+    // references is the entity name directly - no conversion needed
+    deps.push(fkDef.references);
   }
 
   return deps;
@@ -201,8 +201,8 @@ async function createWithParents(entityName, ctx, overrides = {}) {
   for (const [fkField, fkDef] of Object.entries(extractForeignKeyFields(meta))) {
     if (!meta.requiredFields?.includes(fkField)) continue;
 
-    // relatedEntity is the entity name directly - no conversion needed
-    const parentName = fkDef.relatedEntity;
+    // references is the entity name directly - no conversion needed
+    const parentName = fkDef.references;
     const parent = await ctx.factory.create(parentName);
     parents[parentName] = parent;
     payload[fkField] = parent.id;

@@ -42,8 +42,8 @@ function fkReferencesValidParent(meta, ctx) {
       `POST /api/${meta.tableName} - accepts valid ${fkField} reference`,
       async () => {
         // Create parent entity first (the one we're specifically testing)
-        // relatedEntity is the entity name directly - no conversion needed
-        const parentName = fkDef.relatedEntity;
+        // references is the entity name directly - no conversion needed
+        const parentName = fkDef.references;
         const parent = await ctx.factory.create(parentName);
         const auth = await ctx.authHeader("admin");
 

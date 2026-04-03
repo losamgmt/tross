@@ -249,13 +249,13 @@ module.exports = {
   identityField: 'name',           // Human-readable unique field
   namePattern: 'SIMPLE',           // SIMPLE, HUMAN, or COMPUTED
   
-  // For foreign keys, use relatedEntity (NOT references)
+  // Foreign keys use 'references' (aligns with SQL REFERENCES syntax)
   fields: {
     id: { ...FIELD.ID },
     name: { ...FIELD.TEXT_REQUIRED, maxLength: 100 },
     manager_id: {
       type: 'foreignKey',
-      relatedEntity: 'user',       // Target entity key
+      references: 'user',          // Target entity key
       displayField: 'email',       // Field for dropdowns
     },
     ...createAuditFields(),

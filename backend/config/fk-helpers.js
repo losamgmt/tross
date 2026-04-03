@@ -2,7 +2,7 @@
  * Foreign Key Helpers
  *
  * SSOT: FK definitions live in entity metadata `fields` section with
- * `type: 'foreignKey'` and `relatedEntity`.
+ * `type: 'foreignKey'` and `references`.
  *
  * This module provides utilities to extract FK info from metadata,
  * eliminating the need for a separate `foreignKeys` section.
@@ -25,8 +25,8 @@ function snakeToTitleCase(str) {
  *
  * Returns an object mapping FK field names to their config:
  * {
- *   customer_id: { relatedEntity: 'customer', displayField: 'email' },
- *   role_id: { relatedEntity: 'role', displayField: 'name' }
+ *   customer_id: { references: 'customer', displayField: 'email' },
+ *   role_id: { references: 'role', displayField: 'name' }
  * }
  *
  * @param {object} meta - Entity metadata with `fields` property
@@ -37,9 +37,9 @@ function extractForeignKeyFields(meta) {
   const fields = meta.fields || {};
 
   for (const [fieldName, fieldDef] of Object.entries(fields)) {
-    if (fieldDef.type === 'foreignKey' && fieldDef.relatedEntity) {
+    if (fieldDef.type === 'foreignKey' && fieldDef.references) {
       result[fieldName] = {
-        relatedEntity: fieldDef.relatedEntity,
+        references: fieldDef.references,
         displayField: fieldDef.displayField,
         displayFields: fieldDef.displayFields,
         displayTemplate: fieldDef.displayTemplate,
@@ -61,7 +61,7 @@ function getForeignKeyFieldNames(meta) {
   const fields = meta.fields || {};
 
   for (const [fieldName, fieldDef] of Object.entries(fields)) {
-    if (fieldDef.type === 'foreignKey' && fieldDef.relatedEntity) {
+    if (fieldDef.type === 'foreignKey' && fieldDef.references) {
       result.add(fieldName);
     }
   }
@@ -83,14 +83,14 @@ function buildFkDisplayNames(meta, allModels = {}) {
   const fields = meta.fields || {};
 
   for (const [fieldName, fieldDef] of Object.entries(fields)) {
-    if (fieldDef.type === 'foreignKey' && fieldDef.relatedEntity) {
+    if (fieldDef.type === 'foreignKey' && fieldDef.references) {
       // Try to get display name from related entity metadata
-      const relatedMeta = allModels[fieldDef.relatedEntity];
+      const relatedMeta = allModels[fieldDef.references];
       if (relatedMeta?.displayName) {
         result[fieldName] = relatedMeta.displayName;
       } else {
-        // Fallback: title-case the relatedEntity
-        result[fieldName] = snakeToTitleCase(fieldDef.relatedEntity);
+        // Fallback: title-case the references
+        result[fieldName] = snakeToTitleCase(fieldDef.references);
       }
     }
   }
@@ -108,11 +108,11 @@ function buildFkDisplayNames(meta, allModels = {}) {
  */
 function getFkTargetTable(meta, fkFieldName, allModels) {
   const fieldDef = meta.fields?.[fkFieldName];
-  if (!fieldDef || fieldDef.type !== 'foreignKey' || !fieldDef.relatedEntity) {
+  if (!fieldDef || fieldDef.type !== 'foreignKey' || !fieldDef.references) {
     return null;
   }
 
-  const relatedMeta = allModels[fieldDef.relatedEntity];
+  const relatedMeta = allModels[fieldDef.references];
   return relatedMeta?.tableName || null;
 }
 

@@ -407,7 +407,7 @@ module.exports = {
     // Entity-specific fields
     customer_id: {
       type: 'foreignKey',
-      relatedEntity: 'customer',
+      references: 'customer',
       required: true,
     },
     start_date: { type: 'date', required: true },

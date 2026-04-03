@@ -83,8 +83,8 @@ function buildTestContext(app, db) {
    * @returns {Promise<number>} The ID to use for the FK
    */
   async function resolveFkDependency(fkField, fkDef) {
-    // relatedEntity is the entity name directly - no conversion needed
-    const parentEntityName = fkDef.relatedEntity;
+    // references is the entity name directly - no conversion needed
+    const parentEntityName = fkDef.references;
 
     // Check if we have a fixture for this entity type
     if (fixtures[parentEntityName]) {
@@ -288,7 +288,7 @@ function buildTestContext(app, db) {
       // Find an entity that has FK to this parent
       const childEntities = Object.entries(allMetadata).filter(([_, meta]) => {
         return Object.values(extractForeignKeyFields(meta)).some(
-          (fk) => fk.relatedEntity === parentEntityName,
+          (fk) => fk.references === parentEntityName,
         );
       });
 
@@ -298,7 +298,7 @@ function buildTestContext(app, db) {
 
       const [childName, childMeta] = childEntities[0];
       const fkField = Object.entries(extractForeignKeyFields(childMeta)).find(
-        ([_, fk]) => fk.relatedEntity === parentEntityName,
+        ([_, fk]) => fk.references === parentEntityName,
       )[0];
 
       const child = await this.create(childName, { [fkField]: parent.id });
@@ -338,7 +338,7 @@ function buildTestContext(app, db) {
     return Object.entries(allMetadata)
       .filter(([_, meta]) => {
         return Object.values(extractForeignKeyFields(meta)).some(
-          (fk) => fk.relatedEntity === entityName,
+          (fk) => fk.references === entityName,
         );
       })
       .map(([name, meta]) => ({ name, ...meta }));

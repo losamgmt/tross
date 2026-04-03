@@ -67,14 +67,14 @@ console.log('');
 const entityKeys = Object.keys(m);
 
 for (const [name, meta] of Object.entries(m)) {
-  // Extract FK fields from fields section (type: 'foreignKey' with relatedEntity)
+  // Extract FK fields from fields section (type: 'foreignKey' with references)
   const fks = extractForeignKeyFields(meta);
 
   for (const [fkField, fkConfig] of Object.entries(fks)) {
-    if (fkConfig.relatedEntity) {
-      if (entityKeys.indexOf(fkConfig.relatedEntity) === -1) {
+    if (fkConfig.references) {
+      if (entityKeys.indexOf(fkConfig.references) === -1) {
         console.log(name + '.' + fkField + ':');
-        console.log('  ⚠ References unknown entity:', fkConfig.relatedEntity);
+        console.log('  ⚠ References unknown entity:', fkConfig.references);
         issues++;
       }
     }

@@ -1,0 +1,24 @@
+{
+  "$schema": "./actions-schema.json",
+  "$comment": "SINGLE SOURCE OF TRUTH for workflow actions. Add actions here; code in action-handlers.js interprets them.",
+  
+  "_documentation": {
+    "description": "Central registry of all workflow actions referenced by metadata hooks.",
+    "usage": "In metadata: afterChange: [{ on: 'approved', do: 'create_quote_from_recommendation' }]",
+    "types": {
+      "notification": "Send notification to user(s)",
+      "create_entity": "Create a new entity record from context",
+      "update_entity": "Update an existing entity record",
+      "compute": "Recalculate a derived/computed value"
+    },
+    "patterns": {
+      "copyFields": "Array of field names to copy from source record",
+      "mapping": "Object mapping source field → target field name",
+      "setFields": "Object with static values or { field: 'fieldName' } references"
+    }
+  },
+
+  "actions": {
+    
+  }
+}

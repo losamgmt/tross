@@ -443,11 +443,11 @@ module.exports = {
     // Entity-specific fields
     work_order_id: {
       type: 'foreignKey',
-      relatedEntity: 'work_order',
+      references: 'work_order',
     },
     customer_id: {
       type: 'foreignKey',
-      relatedEntity: 'customer',
+      references: 'customer',
       required: true,
     },
     amount: { ...FIELD.CURRENCY, required: true },

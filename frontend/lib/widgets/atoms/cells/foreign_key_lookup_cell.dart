@@ -7,7 +7,7 @@
 /// ```dart
 /// ForeignKeyLookupCell(
 ///   entityId: customerId,
-///   relatedEntity: 'customer',
+///   references: 'customer',
 ///   displayField: 'name',
 /// )
 /// ```
@@ -25,13 +25,13 @@ final Map<String, String> _fkLookupCache = {};
 /// Widget that loads and displays a foreign key's related entity display name
 class ForeignKeyLookupCell extends StatefulWidget {
   final int entityId;
-  final String relatedEntity;
+  final String references;
   final String displayField;
 
   const ForeignKeyLookupCell({
     super.key,
     required this.entityId,
-    required this.relatedEntity,
+    required this.references,
     required this.displayField,
   });
 
@@ -43,7 +43,7 @@ class _ForeignKeyLookupCellState extends State<ForeignKeyLookupCell> {
   String? _displayValue;
   bool _isLoading = true;
 
-  String get _cacheKey => '${widget.relatedEntity}:${widget.entityId}';
+  String get _cacheKey => '${widget.references}:${widget.entityId}';
 
   @override
   void initState() {
@@ -66,7 +66,7 @@ class _ForeignKeyLookupCellState extends State<ForeignKeyLookupCell> {
     try {
       final entityService = context.read<GenericEntityService>();
       final entity = await entityService.getById(
-        widget.relatedEntity,
+        widget.references,
         widget.entityId,
       );
       final display =

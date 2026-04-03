@@ -43,13 +43,13 @@ Understanding how metadata flows from JSON → Models → UI.
 |----------|------|-------|---------|
 | 1 | [lib/services/entity_metadata.dart](../frontend/lib/services/entity_metadata.dart) | ~200 | EntityMetadataRegistry - singleton that loads `entity-metadata.json` and provides runtime access |
 | 2 | [lib/models/entity_metadata.dart](../frontend/lib/models/entity_metadata.dart) | ~400 | EntityMetadata class - complete entity definition including fieldGroups, displayColumns, etc. |
-| 3 | [lib/models/field_definition.dart](../frontend/lib/models/field_definition.dart) | ~150 | FieldDefinition class - field types including `foreignKey`, `relatedEntity`, `displayField` |
+| 3 | [lib/models/field_definition.dart](../frontend/lib/models/field_definition.dart) | ~150 | FieldDefinition class - field types including `foreignKey`, `references`, `displayField` |
 
 **Key Insights:**
 - EntityMetadataRegistry is initialized in `main.dart` at app startup
 - Metadata is loaded from `assets/config/entity-metadata.json` (synced from backend)
 - M:M metadata already exists: `isJunction`, `junctionFor`, `relationships` (including `manyToMany` type)
-- FK fields have `relatedEntity` and `displayField` for lookup display
+- FK fields have `references` and `displayField` for lookup display
 
 ### Phase 2: Generic Entity Service (20 min)
 

@@ -364,23 +364,23 @@ DEBUG=knex:query
 
 ### FK Test Fails: "Expected: not null"
 
-**Error**: `field_parity_test` fails with "Foreign key must have relatedEntity"
+**Error**: `field_parity_test` fails with "Foreign key must have references"
 
-**Cause**: Using wrong property for foreign keys in metadata.
+**Cause**: Missing `references` property in foreign key field definition.
 
 **Solution**:
 
 ```javascript
-// ❌ Wrong (invented syntax)
+// ❌ Wrong (missing references property)
 manager_id: {
   type: 'foreignKey',
-  references: { table: 'users' },  // Does not sync to frontend
+  // references is required but missing
 }
 
 // ✅ Correct
 manager_id: {
   type: 'foreignKey',
-  relatedEntity: 'user',          // This is what sync script reads
+  references: 'user',             // Target entity key (aligns with SQL REFERENCES)
 }
 ```
 

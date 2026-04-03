@@ -239,7 +239,7 @@ module.exports = {
     },
     user_id: {
       type: 'foreignKey',
-      relatedEntity: 'user',
+      references: 'user',
       required: true,
       readonly: true,
       description: 'Owner user ID (FK to users)',

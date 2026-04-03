@@ -328,6 +328,26 @@ module.exports = {
       delete: 'none',
     },
 
+    // AUDIT TEST: service_region - dispatcher+ manages, all can read
+    service_region: {
+      create: 'dispatcher',
+      read: 'customer',
+      update: 'dispatcher',
+      delete: 'none',
+    },
+    // Polymorphic origin tracking
+    origin_type: {
+      create: 'dispatcher',
+      read: 'customer',
+      update: 'none', // Immutable once set
+      delete: 'none',
+    },
+    origin_id: {
+      create: 'dispatcher',
+      read: 'customer',
+      update: 'none', // Immutable once set
+      delete: 'none',
+    },
     // Location address fields - customer creates, dispatcher+ edits
     ...createAddressFieldAccess('location', 'customer', {
       updateRole: 'dispatcher',
@@ -351,6 +371,20 @@ module.exports = {
       normal: { color: 'primary', label: 'Normal' },
       high: { color: 'warning', label: 'High' },
       urgent: { color: 'error', label: 'Urgent' },
+    },
+    // AUDIT TEST: service_region enum for propagation verification
+    serviceRegion: {
+      north: { color: 'blue', label: 'North Region' },
+      south: { color: 'green', label: 'South Region' },
+      east: { color: 'orange', label: 'East Region' },
+      west: { color: 'purple', label: 'West Region' },
+    },
+    // Polymorphic origin tracking - where this work order originated
+    originType: {
+      direct: { color: 'secondary', label: 'Direct' },
+      quote: { color: 'info', label: 'From Quote' },
+      recommendation: { color: 'success', label: 'From Recommendation' },
+      maintenance_schedule: { color: 'warning', label: 'From Schedule' },
     },
   },
 
@@ -450,10 +484,13 @@ module.exports = {
     'is_active',
     'status',
     'priority',
+    'service_region', // AUDIT TEST
     'scheduled_start',
     'scheduled_end',
     'created_at',
     'updated_at',
+    'origin_type',
+    'origin_id',
   ],
 
   // ============================================================================
@@ -517,14 +554,14 @@ module.exports = {
     },
     customer_id: {
       type: 'foreignKey',
-      relatedEntity: 'customer',
+      references: 'customer',
       displayFields: ['first_name', 'last_name', 'email'],
       displayTemplate: '{first_name} {last_name} - {email}',
       required: true,
     },
     property_id: {
       type: 'foreignKey',
-      relatedEntity: 'property',
+      references: 'property',
       displayFields: ['name', 'address_city'],
       displayTemplate: '{name} - {address_city}',
       description: 'Property for this work order (auto-populated from unit when set)',
@@ -533,14 +570,14 @@ module.exports = {
     },
     unit_id: {
       type: 'foreignKey',
-      relatedEntity: 'unit',
+      references: 'unit',
       displayFields: ['unit_identifier'],
       displayTemplate: '{unit_identifier}',
       description: 'Specific unit for this work order',
     },
     assigned_technician_id: {
       type: 'foreignKey',
-      relatedEntity: 'technician',
+      references: 'technician',
       displayFields: ['first_name', 'last_name', 'email'],
       displayTemplate: '{first_name} {last_name} - {email}',
     },
@@ -548,7 +585,26 @@ module.exports = {
     scheduled_end: { type: 'timestamp' },
     completed_at: { type: 'timestamp' },
 
+    // AUDIT TEST: service_region for propagation verification
+    service_region: {
+      type: 'enum',
+      enumKey: 'serviceRegion',
+      description: 'Geographic service region for routing and analytics',
+    },
+
     // Flat address fields for work location (using field-types generators)
     ...createAddressFields('location'),
+
+    // Polymorphic origin tracking - where this work order came from
+    origin_type: {
+      type: 'enum',
+      enumKey: 'originType',
+      default: 'direct',
+      description: 'Source type that created this work order',
+    },
+    origin_id: {
+      type: 'integer',
+      description: 'ID of the source entity (quote, recommendation, or schedule)',
+    },
   },
 };
