@@ -30,6 +30,16 @@ const {
   capitalize,
 } = require("./lib/string-utils");
 
+// Metadata accessor functions - derive values from field-level properties
+// when legacy arrays are not present (supports field-centric migration)
+const {
+  getRequiredFields,
+  getImmutableFields,
+  getSearchableFields,
+  getFilterableFields,
+  getSortableFields,
+} = require("../backend/config/metadata-accessors");
+
 // Import all backend metadata
 const backendModels = require(path.join(BACKEND_MODELS_DIR, "index.js"));
 
@@ -228,12 +238,13 @@ function transformModel(entityName, backendMeta, allModels) {
   // Frontend can confidently access without null checks.
   // ============================================================================
 
-  // Arrays - ALWAYS emit (empty array if none)
-  result.requiredFields = backendMeta.requiredFields ?? [];
-  result.immutableFields = backendMeta.immutableFields ?? [];
-  result.searchableFields = backendMeta.searchableFields ?? [];
-  result.filterableFields = backendMeta.filterableFields ?? [];
-  result.sortableFields = backendMeta.sortableFields ?? [];
+  // Arrays - Use accessor functions to support field-centric migration
+  // Accessors derive values from field-level properties when legacy arrays absent
+  result.requiredFields = getRequiredFields(backendMeta);
+  result.immutableFields = getImmutableFields(backendMeta);
+  result.searchableFields = getSearchableFields(backendMeta);
+  result.filterableFields = getFilterableFields(backendMeta);
+  result.sortableFields = getSortableFields(backendMeta);
   result.displayColumns = backendMeta.displayColumns ?? [];
 
   // Default sort - ALWAYS emit (sensible default if none)
