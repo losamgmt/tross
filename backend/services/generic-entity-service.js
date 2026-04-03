@@ -106,7 +106,7 @@ function buildDefaultIncludesClauses(
     const rel = relationships[relName];
     if (rel && rel.type === 'belongsTo') {
       // Generate unique alias: first letter, then add numbers if collision
-      let baseAlias = relName.charAt(0);
+      const baseAlias = relName.charAt(0);
       let relAlias = baseAlias;
       let counter = 1;
       while (usedAliases.has(relAlias)) {
@@ -584,7 +584,7 @@ class GenericEntityService {
 
     // Ensure is_active is always filterable if the entity has it
     // This guarantees the is_active filter works even if filterableFields is empty
-    let effectiveFilterableFields = [...filterableFields];
+    const effectiveFilterableFields = [...filterableFields];
     if (metadata.fields?.is_active && !effectiveFilterableFields.includes('is_active')) {
       effectiveFilterableFields.push('is_active');
     }

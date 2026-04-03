@@ -181,7 +181,7 @@ class ExportService {
     }
 
     // Ensure is_active is always filterable if the entity has it
-    let effectiveFilterableFields = [...filterableFields];
+    const effectiveFilterableFields = [...filterableFields];
     if (metadata.fields?.is_active && !effectiveFilterableFields.includes('is_active')) {
       effectiveFilterableFields.push('is_active');
     }
