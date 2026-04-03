@@ -65,16 +65,29 @@ describe('metadata-accessors', () => {
       expect(getRequiredFields(meta)).toEqual(['name', 'email']);
     });
 
-    it('prefers field-level over legacy array', () => {
+    it('uses legacy array when present for migration safety', () => {
       const meta = {
         entityKey: 'test',
         fields: {
           name: { type: 'string', required: true },
           email: { type: 'string' }, // NOT required at field level
         },
-        requiredFields: ['name', 'email', 'phone'], // Legacy has more
+        requiredFields: ['name', 'email', 'phone'], // Legacy array exists
       };
-      // Field-level wins - only 'name' has required: true
+      // Legacy array takes precedence during migration period
+      expect(getRequiredFields(meta)).toEqual(['name', 'email', 'phone']);
+    });
+
+    it('derives from field-level when no legacy array exists', () => {
+      const meta = {
+        entityKey: 'test',
+        fields: {
+          name: { type: 'string', required: true },
+          email: { type: 'string' }, // NOT required at field level
+        },
+        // No requiredFields array - derive from field-level
+      };
+      // Only 'name' has required: true
       expect(getRequiredFields(meta)).toEqual(['name']);
     });
   });
