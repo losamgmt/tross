@@ -30,6 +30,11 @@
  *   const { error, value } = schema.validate(req.body);
  */
 
+const {
+  getRequiredFields,
+  getImmutableFields,
+} = require('../config/metadata-accessors');
+
 const Joi = require('joi');
 const {
   loadValidationRules,
@@ -163,7 +168,7 @@ function deriveCreatableFields(metadata, userRole) {
  */
 function deriveUpdateableFields(metadata, userRole) {
   const fieldAccess = metadata.fieldAccess || {};
-  const immutableFields = new Set(metadata.immutableFields || []);
+  const immutableFields = new Set(getImmutableFields(metadata));
 
   return Object.keys(fieldAccess).filter((field) => {
     // Skip immutable fields
@@ -227,7 +232,7 @@ function buildEntitySchema(entityName, operation, metadata, userRole) {
 
     // Required fields must be present and valid
     // BUT only if the user's role can create them
-    const requiredFields = (metadata.requiredFields || []).filter((field) => {
+    const requiredFields = getRequiredFields(metadata).filter((field) => {
       // If role-aware, only require fields user can create
       return !normalizedRole || createableSet.has(field);
     });

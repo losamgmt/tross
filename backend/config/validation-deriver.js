@@ -17,6 +17,7 @@
  */
 
 const allMetadata = require('./models');
+const { getRequiredFields } = require('./metadata-accessors');
 const { FIELD, ADDRESS_SUFFIXES } = require('./field-types');
 const { ALL_SUBDIVISIONS, SUPPORTED_COUNTRIES } = require('./geo-standards');
 
@@ -427,9 +428,9 @@ function generateDefaultErrorMessages(fieldName, validation) {
 /**
  * Derive composite validation (create/update schemas) for an entity
  *
- * PRIORITY ORDER for required fields:
- * 1. metadata.requiredFields - explicit list from entity metadata (source of truth)
- * 2. Fallback: derive from fields[x].required if no explicit list
+ * Uses getRequiredFields accessor which:
+ * - Returns field-level required properties if any exist (new format)
+ * - Falls back to metadata.requiredFields array (legacy format)
  *
  * @param {string} entityName - Entity name (snake_case)
  * @param {Object} metadata - Entity metadata
@@ -437,38 +438,19 @@ function generateDefaultErrorMessages(fieldName, validation) {
  */
 function deriveCompositeValidation(entityName, metadata) {
   const fields = metadata.fields || {};
-  let requiredFields;
-  let optionalFields;
 
-  // Use explicit requiredFields from metadata if defined (source of truth)
-  if (metadata.requiredFields && Array.isArray(metadata.requiredFields)) {
-    requiredFields = [...metadata.requiredFields];
-    optionalFields = [];
+  // Use accessor to get required fields (handles both legacy arrays and field-level)
+  const requiredFields = getRequiredFields(metadata);
+  const requiredSet = new Set(requiredFields);
 
-    // All non-readonly fields not in requiredFields are optional
-    for (const [fieldName, fieldDef] of Object.entries(fields)) {
-      if (fieldDef.readonly) {
-        continue;
-      }
-      if (!requiredFields.includes(fieldName)) {
-        optionalFields.push(fieldName);
-      }
+  // All non-readonly fields not in requiredFields are optional
+  const optionalFields = [];
+  for (const [fieldName, fieldDef] of Object.entries(fields)) {
+    if (fieldDef.readonly) {
+      continue;
     }
-  } else {
-    // Fallback: derive from field definitions
-    requiredFields = [];
-    optionalFields = [];
-
-    for (const [fieldName, fieldDef] of Object.entries(fields)) {
-      if (fieldDef.readonly) {
-        continue;
-      }
-
-      if (fieldDef.required) {
-        requiredFields.push(fieldName);
-      } else {
-        optionalFields.push(fieldName);
-      }
+    if (!requiredSet.has(fieldName)) {
+      optionalFields.push(fieldName);
     }
   }
 

@@ -9,6 +9,10 @@
 const { toSafePagination } = require('./type-coercion');
 const { logValidationFailure } = require('./validation-logger');
 const ResponseFormatter = require('../utils/response-formatter');
+const {
+  getFilterableFields,
+  getSortableFields,
+} = require('../config/metadata-accessors');
 
 /**
  * Validate pagination query parameters
@@ -212,19 +216,13 @@ function validateSort(
  *   //         req.validated.query.sortBy, req.validated.query.sortOrder
  *
  * @param {Object} metadata - Model metadata from config/models
- * @param {string[]} metadata.searchableFields - Fields that can be searched
- * @param {string[]} metadata.filterableFields - Fields that can be filtered
- * @param {string[]} metadata.sortableFields - Fields that can be sorted
- * @param {Object} metadata.defaultSort - Default sort configuration
  * @returns {Function} Express middleware
  */
 function validateQuery(metadata) {
-  const {
-    searchableFields: _searchableFields = [],
-    filterableFields = [],
-    sortableFields = [],
-    defaultSort: _defaultSort = { field: 'id', order: 'ASC' },
-  } = metadata;
+  // Use accessors for field properties (supports both legacy arrays and field-level)
+  const filterableFields = getFilterableFields(metadata);
+  const sortableFields = getSortableFields(metadata);
+  const { defaultSort: _defaultSort = { field: 'id', order: 'ASC' } } = metadata;
 
   return (req, res, next) => {
     try {

@@ -42,6 +42,10 @@ const { getClientIp, getUserAgent } = require('../utils/request-helpers');
 const { asyncHandler } = require('../middleware/utils');
 const AppError = require('../utils/app-error');
 const allMetadata = require('../config/models');
+const {
+  getRequiredFields,
+  getImmutableFields,
+} = require('../config/metadata-accessors');
 
 // ============================================================================
 // MIDDLEWARE: All admin routes require authentication + admin role
@@ -410,8 +414,8 @@ router.get(
         validation.entities[entityName] = {
           tableName: metadata.tableName,
           fields: metadata.fields,
-          requiredFields: metadata.requiredFields || [],
-          immutableFields: metadata.immutableFields || [],
+          requiredFields: getRequiredFields(metadata),
+          immutableFields: getImmutableFields(metadata),
         };
       }
     }
