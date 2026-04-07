@@ -17,7 +17,14 @@ const {
   FIELD_ACCESS_LEVELS: FAL,
   UNIVERSAL_FIELD_ACCESS,
 } = require('../constants');
-const { NAME_PATTERNS } = require('../field-types');
+const {
+  NAME_PATTERNS,
+  TIER1_FIELDS,
+  withTraits,
+  TRAITS,
+  TRAIT_SETS,
+  createForeignKey,
+} = require('../field-types');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -84,10 +91,6 @@ module.exports = {
   // ============================================================================
   // CRUD CONFIGURATION
   // ============================================================================
-
-  requiredFields: ['amount'],
-
-  immutableFields: ['receipt_number'],
 
   displayColumns: ['receipt_number', 'work_order_id', 'description', 'amount', 'receipt_date', 'status'],
 
@@ -159,58 +162,49 @@ module.exports = {
   },
 
   // ============================================================================
-  // FIELDS (Phase 1: Minimal - Phase 3: Full fields)
+  // FIELDS (with embedded traits for query capabilities)
   // ============================================================================
 
   fields: {
-    // TIER 1: Universal Entity Contract Fields
-    id: { type: 'integer', readonly: true },
-    is_active: { type: 'boolean', default: true },
-    created_at: { type: 'timestamp', readonly: true },
-    updated_at: { type: 'timestamp', readonly: true },
+    // TIER 1: Universal Entity Contract Fields (field-centric)
+    ...TIER1_FIELDS.WITH_STATUS,
+    // Override status default (workflow entity - pending→verified→approved, not active/inactive)
+    status: withTraits(
+      { type: 'enum', enumKey: 'status', default: 'pending' },
+      TRAIT_SETS.LOOKUP,
+    ),
 
-    receipt_number: {
-      type: 'string',
-      required: true,
-      maxLength: 20,
-      description: 'Auto-generated receipt identifier (RCT-YYYY-NNNN)',
-    },
-    description: {
-      type: 'text',
-      description: 'Description of expense',
-    },
-    amount: {
-      type: 'decimal',
-      precision: 10,
-      scale: 2,
-      required: true,
-      description: 'Receipt amount',
-    },
-    receipt_date: {
-      type: 'date',
-      description: 'Date of receipt',
-    },
-    notes: {
-      type: 'text',
-      description: 'Internal notes',
-    },
-    status: {
-      type: 'enum',
-      enumKey: 'status',
-      default: 'pending',
-    },
-    // FK fields
-    work_order_id: {
-      type: 'foreignKey',
-      references: 'work_order',
+    // Identity field - auto-generated, immutable
+    receipt_number: withTraits(
+      { type: 'string', maxLength: 20, description: 'Auto-generated receipt identifier (RCT-YYYY-NNNN)' },
+      TRAITS.IMMUTABLE, TRAIT_SETS.IDENTITY,
+    ),
+
+    // Content fields
+    description: withTraits(
+      { type: 'text', description: 'Description of expense' },
+      TRAIT_SETS.FULLTEXT,
+    ),
+    amount: withTraits(
+      { type: 'decimal', precision: 10, scale: 2, description: 'Receipt amount' },
+      TRAITS.REQUIRED, TRAIT_SETS.SORTABLE,
+    ),
+    receipt_date: withTraits(
+      { type: 'date', description: 'Date of receipt' },
+      TRAIT_SETS.LOOKUP,
+    ),
+    notes: { type: 'text', description: 'Internal notes' },
+
+    // FK fields with embedded traits
+    work_order_id: createForeignKey('work_order', {
       displayFields: ['work_order_number'],
       displayTemplate: '{work_order_number}',
-    },
-    purchase_order_id: {
-      type: 'foreignKey',
-      references: 'purchase_order',
+      traits: TRAIT_SETS.LOOKUP,
+    }),
+    purchase_order_id: createForeignKey('purchase_order', {
       displayFields: ['po_number'],
       displayTemplate: '{po_number}',
-    },
+      traits: TRAIT_SETS.LOOKUP,
+    }),
   },
 };

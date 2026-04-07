@@ -14,7 +14,14 @@ const {
   FIELD_ACCESS_LEVELS: FAL,
   UNIVERSAL_FIELD_ACCESS,
 } = require('../constants');
-const { FIELD, NAME_PATTERNS } = require('../field-types');
+const {
+  FIELD,
+  NAME_PATTERNS,
+  TIER1_FIELDS,
+  withTraits,
+  TRAITS,
+  TRAIT_SETS,
+} = require('../field-types');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -135,16 +142,6 @@ module.exports = {
   // ============================================================================
   // CRUD CONFIGURATION (for GenericEntityService)
   // ============================================================================
-
-  /**
-   * Fields required when creating a new entity
-   */
-  requiredFields: ['email', 'first_name', 'last_name'],
-
-  /**
-   * Fields that cannot be modified after creation (beyond universal immutables: id, created_at)
-   */
-  immutableFields: [],
 
   /**
    * Default columns to display in table views (ordered)
@@ -275,44 +272,18 @@ module.exports = {
 
   // ============================================================================
   // SEARCH CONFIGURATION (Text Search with ILIKE)
+  // Derived from field traits - see fields section
   // ============================================================================
-
-  searchableFields: ['first_name', 'last_name', 'email', 'license_number'],
 
   // ============================================================================
   // FILTER CONFIGURATION (Exact Match & Operators)
+  // Derived from field traits - see fields section
   // ============================================================================
-
-  filterableFields: [
-    'id',
-    'email',
-    'first_name',
-    'last_name',
-    'license_number',
-    'is_active',
-    'status',
-    'availability',
-    'created_at',
-    'updated_at',
-  ],
 
   // ============================================================================
   // SORT CONFIGURATION
+  // Derived from field traits - see fields section
   // ============================================================================
-
-  sortableFields: [
-    'id',
-    'email',
-    'first_name',
-    'last_name',
-    'license_number',
-    'is_active',
-    'status',
-    'availability',
-    'hourly_rate',
-    'created_at',
-    'updated_at',
-  ],
 
   defaultSort: {
     field: 'created_at',
@@ -320,41 +291,51 @@ module.exports = {
   },
 
   // ============================================================================
-  // FIELD DEFINITIONS (for validation & documentation)
+  // FIELD DEFINITIONS (with embedded traits for query capabilities)
   // ============================================================================
 
   fields: {
-    // TIER 1: Universal Entity Contract Fields
-    id: { type: 'integer', readonly: true },
-    email: { ...FIELD.EMAIL, required: true },
-    is_active: { type: 'boolean', default: true },
-    created_at: { type: 'timestamp', readonly: true },
-    updated_at: { type: 'timestamp', readonly: true },
-
-    // TIER 2: Entity-Specific Lifecycle Field
-    status: {
-      type: 'enum',
-      enumKey: 'status',
-      default: 'pending',
-    },
+    // TIER 1: Universal Entity Contract Fields (field-centric)
+    ...TIER1_FIELDS.WITH_STATUS,
 
     // Operational availability (separate from lifecycle status)
-    availability: {
-      type: 'enum',
-      enumKey: 'availability',
-      default: 'available',
-    },
+    availability: withTraits(
+      { type: 'enum', enumKey: 'availability', default: 'available' },
+      TRAIT_SETS.LOOKUP,
+    ),
 
-    // HUMAN entity name fields
-    first_name: { ...FIELD.FIRST_NAME, required: true },
-    last_name: { ...FIELD.LAST_NAME, required: true },
+    // HUMAN entity identity fields - REQUIRED + IDENTITY traits
+    email: withTraits(
+      { ...FIELD.EMAIL, description: 'Technician email (identity field)' },
+      TRAITS.REQUIRED, TRAIT_SETS.IDENTITY,
+    ),
+    first_name: withTraits(
+      { ...FIELD.FIRST_NAME, description: 'Technician first name' },
+      TRAITS.REQUIRED, TRAIT_SETS.SEARCHABLE_LOOKUP,
+    ),
+    last_name: withTraits(
+      { ...FIELD.LAST_NAME, description: 'Technician last name' },
+      TRAITS.REQUIRED, TRAIT_SETS.SEARCHABLE_LOOKUP,
+    ),
 
-    // Entity-specific fields
-    license_number: FIELD.IDENTIFIER,
-    hourly_rate: FIELD.CURRENCY,
+    // Entity-specific fields with embedded traits
+    license_number: withTraits(
+      { ...FIELD.IDENTIFIER, description: 'License number' },
+      TRAIT_SETS.SEARCHABLE_LOOKUP,
+    ),
+    hourly_rate: withTraits(
+      { ...FIELD.CURRENCY, description: 'Hourly rate' },
+      TRAIT_SETS.SORTABLE,
+    ),
 
-    // Skills and certifications as comma-separated text (flat, no JSONB)
-    certifications: { type: 'text', maxLength: 1000 },
-    skills: { type: 'text', maxLength: 500 },
+    // Skills and certifications - text fields with search
+    certifications: withTraits(
+      { type: 'text', maxLength: 1000, description: 'Certifications (comma-separated)' },
+      TRAIT_SETS.FULLTEXT,
+    ),
+    skills: withTraits(
+      { type: 'text', maxLength: 500, description: 'Skills (comma-separated)' },
+      TRAIT_SETS.FULLTEXT,
+    ),
   },
 };

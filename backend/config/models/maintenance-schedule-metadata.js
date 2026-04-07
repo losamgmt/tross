@@ -17,7 +17,14 @@ const {
   FIELD_ACCESS_LEVELS: FAL,
   UNIVERSAL_FIELD_ACCESS,
 } = require('../constants');
-const { NAME_PATTERNS } = require('../field-types');
+const {
+  NAME_PATTERNS,
+  TIER1_FIELDS,
+  withTraits,
+  TRAITS,
+  TRAIT_SETS,
+  createForeignKey,
+} = require('../field-types');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -99,10 +106,6 @@ module.exports = {
   // ============================================================================
   // CRUD CONFIGURATION
   // ============================================================================
-
-  requiredFields: ['customer_id', 'frequency', 'next_due_date'],
-
-  immutableFields: ['schedule_number'],
 
   displayColumns: ['schedule_number', 'customer_id', 'frequency', 'next_due_date', 'status'],
 
@@ -200,70 +203,55 @@ module.exports = {
   },
 
   // ============================================================================
-  // FIELDS (Phase 1: Minimal - Phase 3: Full fields)
+  // FIELDS (with embedded traits for query capabilities)
   // ============================================================================
 
   fields: {
-    // TIER 1: Universal Entity Contract Fields
-    id: { type: 'integer', readonly: true },
-    is_active: { type: 'boolean', default: true },
-    created_at: { type: 'timestamp', readonly: true },
-    updated_at: { type: 'timestamp', readonly: true },
+    // TIER 1: Universal Entity Contract Fields (field-centric)
+    ...TIER1_FIELDS.WITH_STATUS,
 
-    schedule_number: {
-      type: 'string',
-      required: true,
-      maxLength: 20,
-      description: 'Auto-generated schedule identifier (MS-YYYY-NNNN)',
-    },
-    frequency: {
-      type: 'enum',
-      enumKey: 'frequency',
-      required: true,
-      description: 'Recurrence frequency',
-    },
+    // Identity field - auto-generated, immutable
+    schedule_number: withTraits(
+      { type: 'string', maxLength: 20, description: 'Auto-generated schedule identifier (MS-YYYY-NNNN)' },
+      TRAITS.IMMUTABLE, TRAIT_SETS.IDENTITY,
+    ),
+
+    // Schedule fields
+    frequency: withTraits(
+      { type: 'enum', enumKey: 'frequency', description: 'Recurrence frequency' },
+      TRAITS.REQUIRED, TRAIT_SETS.LOOKUP,
+    ),
     frequency_interval: {
       type: 'integer',
       default: 1,
       description: 'Multiplier for frequency (e.g., 2 weeks = biweekly)',
     },
-    next_due_date: {
-      type: 'date',
-      required: true,
-      description: 'Next scheduled service date',
-    },
-    last_generated_date: {
-      type: 'date',
-      description: 'Date of last auto-generated work order',
-    },
-    notes: {
-      type: 'text',
-      description: 'Internal notes',
-    },
-    status: {
-      type: 'enum',
-      enumKey: 'status',
-      default: 'active',
-    },
-    // FK fields
-    customer_id: {
-      type: 'foreignKey',
-      references: 'customer',
+    next_due_date: withTraits(
+      { type: 'date', description: 'Next scheduled service date' },
+      TRAITS.REQUIRED, TRAIT_SETS.LOOKUP,
+    ),
+    last_generated_date: withTraits(
+      { type: 'date', readonly: true, description: 'Date of last auto-generated work order' },
+      TRAIT_SETS.LOOKUP,
+    ),
+    notes: { type: 'text', description: 'Internal notes' },
+
+    // FK fields with embedded traits
+    customer_id: createForeignKey('customer', {
       required: true,
       displayFields: ['first_name', 'last_name'],
       displayTemplate: '{first_name} {last_name}',
-    },
-    asset_id: {
-      type: 'foreignKey',
-      references: 'asset',
+      traits: TRAIT_SETS.LOOKUP,
+    }),
+    asset_id: createForeignKey('asset', {
       displayFields: ['name', 'model'],
       displayTemplate: '{name}',
-    },
-    service_template_id: {
-      type: 'foreignKey',
-      references: 'service_template',
+      traits: TRAIT_SETS.LOOKUP,
+    }),
+    service_template_id: createForeignKey('service_template', {
       displayFields: ['name'],
       displayTemplate: '{name}',
-    },
+      traits: TRAIT_SETS.LOOKUP,
+    }),
   },
 };

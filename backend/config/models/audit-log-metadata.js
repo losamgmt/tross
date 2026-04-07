@@ -12,6 +12,13 @@
  * - No RLS filtering - admins see all, others see nothing
  */
 
+const {
+  TIER1,
+  withTraits,
+  TRAITS,
+  TRAIT_SETS,
+} = require('../field-types');
+
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
   // Entity key (singular, for API params and lookups)
@@ -97,74 +104,55 @@ module.exports = {
    */
   namePattern: null,
 
-  // Field definitions
+  // Field definitions (Field-Centric: all fields readonly as this is system-only)
 
   fields: {
-    id: {
-      type: 'integer',
-      required: false, // Auto-generated
-      readOnly: true,
-    },
-    action: {
-      type: 'string',
-      maxLength: 50,
-      required: true,
-      readOnly: true,
-    },
-    resource_type: {
-      type: 'string',
-      maxLength: 100,
-      required: true,
-      readOnly: true,
-    },
-    resource_id: {
-      type: 'integer',
-      required: false,
-      readOnly: true,
-    },
-    user_id: {
-      type: 'foreignKey',
-      references: 'user',
-      required: false,
-      readOnly: true,
-    },
-    ip_address: {
-      type: 'string',
-      maxLength: 45,
-      required: false,
-      readOnly: true,
-    },
-    user_agent: {
-      type: 'text',
-      required: false,
-      readOnly: true,
-    },
-    old_values: {
-      type: 'jsonb',
-      required: false,
-      readOnly: true,
-    },
-    new_values: {
-      type: 'jsonb',
-      required: false,
-      readOnly: true,
-    },
-    result: {
-      type: 'string',
-      maxLength: 20,
-      required: false,
-      readOnly: true,
-    },
-    error_message: {
-      type: 'text',
-      required: false,
-      readOnly: true,
-    },
-    created_at: {
-      type: 'timestamp',
-      required: false,
-      readOnly: true,
-    },
+    id: TIER1.ID,
+    action: withTraits(
+      { type: 'string', maxLength: 50 },
+      TRAITS.READONLY,
+      TRAIT_SETS.LOOKUP,
+    ),
+    resource_type: withTraits(
+      { type: 'string', maxLength: 100 },
+      TRAITS.READONLY,
+      TRAIT_SETS.FILTER_ONLY,
+    ),
+    resource_id: withTraits(
+      { type: 'integer' },
+      TRAITS.READONLY,
+      TRAIT_SETS.FILTER_ONLY,
+    ),
+    user_id: withTraits(
+      { type: 'foreignKey', references: 'user' },
+      TRAITS.READONLY,
+      TRAIT_SETS.FILTER_ONLY,
+    ),
+    ip_address: withTraits(
+      { type: 'string', maxLength: 45 },
+      TRAITS.READONLY,
+    ),
+    user_agent: withTraits(
+      { type: 'text' },
+      TRAITS.READONLY,
+    ),
+    old_values: withTraits(
+      { type: 'jsonb' },
+      TRAITS.READONLY,
+    ),
+    new_values: withTraits(
+      { type: 'jsonb' },
+      TRAITS.READONLY,
+    ),
+    result: withTraits(
+      { type: 'string', maxLength: 20 },
+      TRAITS.READONLY,
+    ),
+    error_message: withTraits(
+      { type: 'text' },
+      TRAITS.READONLY,
+    ),
+    created_at: withTraits(TIER1.CREATED_AT, TRAIT_SETS.FILTER_ONLY),
   },
 
   // ============================================================================
@@ -255,22 +243,6 @@ module.exports = {
   // ============================================================================
 
   /**
-   * Fields that can be used for filtering
-   */
-  filterableFields: [
-    'action',
-    'resource_type',
-    'resource_id',
-    'user_id',
-    'created_at',
-  ],
-
-  /**
-   * Fields that can be used for sorting
-   */
-  sortableFields: ['id', 'action', 'created_at'],
-
-  /**
    * Default sort configuration
    */
   defaultSort: {
@@ -296,8 +268,8 @@ module.exports = {
 
   /**
    * Read-only entity - no create/update/delete via API
+   * No updateableFields since this is a system table.
    */
-  requiredFields: [],
   updateableFields: [],
 
   /**

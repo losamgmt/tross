@@ -17,7 +17,14 @@ const {
   FIELD_ACCESS_LEVELS: FAL,
   UNIVERSAL_FIELD_ACCESS,
 } = require('../constants');
-const { NAME_PATTERNS } = require('../field-types');
+const {
+  NAME_PATTERNS,
+  TIER1_FIELDS,
+  withTraits,
+  TRAITS,
+  TRAIT_SETS,
+  createForeignKey,
+} = require('../field-types');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -113,10 +120,6 @@ module.exports = {
   // CRUD CONFIGURATION
   // ============================================================================
 
-  requiredFields: ['work_order_id', 'scheduled_start'],
-
-  immutableFields: ['visit_number'],
-
   displayColumns: ['visit_number', 'work_order_id', 'status', 'scheduled_start', 'scheduled_end'],
 
   // ============================================================================
@@ -193,55 +196,52 @@ module.exports = {
   },
 
   // ============================================================================
-  // FIELDS (Phase 1: Minimal - Phase 3: Full fields)
+  // FIELDS (with embedded traits for query capabilities)
   // ============================================================================
 
   fields: {
-    // TIER 1: Universal Entity Contract Fields
-    id: { type: 'integer', readonly: true },
-    is_active: { type: 'boolean', default: true },
-    created_at: { type: 'timestamp', readonly: true },
-    updated_at: { type: 'timestamp', readonly: true },
+    // TIER 1: Universal Entity Contract Fields (field-centric)
+    ...TIER1_FIELDS.WITH_STATUS,
+    // Override status default (workflow entity - scheduled→confirmed→completed, not active/inactive)
+    status: withTraits(
+      { type: 'enum', enumKey: 'status', default: 'scheduled' },
+      TRAIT_SETS.LOOKUP,
+    ),
 
-    visit_number: {
-      type: 'string',
-      required: true,
-      maxLength: 20,
-      description: 'Auto-generated visit identifier (VIS-YYYY-NNNN)',
-    },
-    scheduled_start: {
-      type: 'timestamp',
-      required: true,
-      description: 'Scheduled start time',
-    },
-    scheduled_end: {
-      type: 'timestamp',
-      description: 'Scheduled end time',
-    },
-    actual_start: {
-      type: 'timestamp',
-      description: 'Actual start time (recorded by technician)',
-    },
-    actual_end: {
-      type: 'timestamp',
-      description: 'Actual end time (recorded by technician)',
-    },
-    notes: {
-      type: 'text',
-      description: 'Visit notes',
-    },
-    status: {
-      type: 'enum',
-      enumKey: 'status',
-      default: 'scheduled',
-    },
+    // Identity field - auto-generated, immutable
+    visit_number: withTraits(
+      { type: 'string', maxLength: 20, description: 'Auto-generated visit identifier (VIS-YYYY-NNNN)' },
+      TRAITS.IMMUTABLE, TRAIT_SETS.IDENTITY,
+    ),
+
+    // Scheduling fields
+    scheduled_start: withTraits(
+      { type: 'timestamp', description: 'Scheduled start time' },
+      TRAITS.REQUIRED, TRAIT_SETS.LOOKUP,
+    ),
+    scheduled_end: withTraits(
+      { type: 'timestamp', description: 'Scheduled end time' },
+      TRAIT_SETS.LOOKUP,
+    ),
+
+    // Actual times - recorded by technician
+    actual_start: withTraits(
+      { type: 'timestamp', description: 'Actual start time (recorded by technician)' },
+      TRAIT_SETS.LOOKUP,
+    ),
+    actual_end: withTraits(
+      { type: 'timestamp', description: 'Actual end time (recorded by technician)' },
+      TRAIT_SETS.LOOKUP,
+    ),
+
+    notes: { type: 'text', description: 'Visit notes' },
+
     // FK fields
-    work_order_id: {
-      type: 'foreignKey',
-      references: 'work_order',
+    work_order_id: createForeignKey('work_order', {
       required: true,
       displayFields: ['work_order_number', 'name'],
       displayTemplate: '{work_order_number}',
-    },
+      traits: TRAIT_SETS.LOOKUP,
+    }),
   },
 };

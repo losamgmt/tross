@@ -10,7 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tross/services/entity_metadata.dart';
 
 /// CORE business entities that must always exist.
-/// Used for pre-initialization tests only.
+/// Used for pre-initialization smoke tests only.
 /// NOTE: After initialization, use EntityTestRegistry.allEntityNames instead!
 /// This list should be a SUBSET of what's in entity-metadata.json.
 const coreBusinessEntities = <String>[
@@ -24,17 +24,33 @@ const coreBusinessEntities = <String>[
   'inventory',
 ];
 
-/// @deprecated Use EntityTestRegistry.allEntityNames after initialization.
-/// This exists only for backward compatibility with tests that need
-/// entity names before registry initialization.
+/// DEPRECATED: Use EntityTestRegistry.allEntityNames inside test bodies instead.
+///
+/// This constant exists for backward compatibility with tests that use the
+/// `for (entity in allKnownEntities) { test(...) }` pattern at declaration time.
+///
+/// LIMITATION: This list is static and may become out of sync with
+/// entity-metadata.json. For SSOT compliance, prefer:
+/// ```dart
+/// test('all entities work', () {
+///   for (final entity in EntityTestRegistry.allEntityNames) {
+///     // test logic here with entity
+///   }
+/// });
+/// ```
+///
+/// TODO: Migrate all usages to dynamic EntityTestRegistry.allEntityNames pattern
 const allKnownEntities = <String>[
-  ...coreBusinessEntities,
   'approval_request',
   'asset',
   'audit_log',
+  'contract',
+  'customer',
   'customer_unit',
   'department',
   'file_attachment',
+  'inventory',
+  'invoice',
   'maintenance_schedule',
   'notification',
   'payment',
@@ -45,16 +61,20 @@ const allKnownEntities = <String>[
   'quote',
   'receipt',
   'recommendation',
+  'role',
   'saved_view',
   'service_agreement',
   'service_agreement_item',
   'service_template',
   'subcontractor',
+  'technician',
   'unit',
+  'user',
   'vendor',
   'visit',
   'visit_subcontractor',
   'visit_technician',
+  'work_order',
 ];
 
 /// Test-friendly wrapper for EntityMetadataRegistry

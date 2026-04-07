@@ -20,7 +20,13 @@ const {
   FIELD_ACCESS_LEVELS: FAL,
   UNIVERSAL_FIELD_ACCESS,
 } = require('../constants');
-const { NAME_PATTERNS } = require('../field-types');
+const {
+  NAME_PATTERNS,
+  TIER1_FIELDS,
+  withTraits,
+  TRAITS,
+  TRAIT_SETS,
+} = require('../field-types');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -87,10 +93,6 @@ module.exports = {
   // CRUD CONFIGURATION
   // ============================================================================
 
-  requiredFields: ['name'],
-
-  immutableFields: [],
-
   displayColumns: ['name', 'description', 'estimated_duration', 'status'],
 
   // ============================================================================
@@ -125,38 +127,39 @@ module.exports = {
   relationships: {},
 
   // ============================================================================
-  // FIELDS (Phase 1: Minimal - Phase 3: Full fields)
+  // FIELD DEFINITIONS (Field-Centric: traits embedded in field definitions)
   // ============================================================================
 
   fields: {
     // TIER 1: Universal Entity Contract Fields
-    id: { type: 'integer', readonly: true },
-    is_active: { type: 'boolean', default: true },
-    created_at: { type: 'timestamp', readonly: true },
-    updated_at: { type: 'timestamp', readonly: true },
+    ...TIER1_FIELDS.WITH_STATUS,
 
-    name: {
-      type: 'string',
-      required: true,
-      maxLength: 200,
-      description: 'Service template name (e.g., "Quarterly HVAC Inspection")',
-    },
-    description: {
-      type: 'text',
-      description: 'Detailed description of the service',
-    },
-    estimated_duration: {
-      type: 'integer',
-      description: 'Estimated duration in minutes',
-    },
+    // Entity-specific fields
+    name: withTraits(
+      {
+        type: 'string',
+        maxLength: 200,
+        description: 'Service template name (e.g., "Quarterly HVAC Inspection")',
+      },
+      TRAIT_SETS.IDENTITY,
+    ),
+    description: withTraits(
+      {
+        type: 'text',
+        description: 'Detailed description of the service',
+      },
+      TRAITS.SEARCHABLE,
+    ),
+    estimated_duration: withTraits(
+      {
+        type: 'integer',
+        description: 'Estimated duration in minutes',
+      },
+      TRAIT_SETS.LOOKUP,
+    ),
     notes: {
       type: 'text',
       description: 'Internal notes',
-    },
-    status: {
-      type: 'enum',
-      enumKey: 'status',
-      default: 'active',
     },
   },
 };

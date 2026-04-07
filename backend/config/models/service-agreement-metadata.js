@@ -17,7 +17,14 @@ const {
   FIELD_ACCESS_LEVELS: FAL,
   UNIVERSAL_FIELD_ACCESS,
 } = require('../constants');
-const { NAME_PATTERNS } = require('../field-types');
+const {
+  NAME_PATTERNS,
+  TIER1_FIELDS,
+  withTraits,
+  TRAITS,
+  TRAIT_SETS,
+  createForeignKey,
+} = require('../field-types');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -100,10 +107,6 @@ module.exports = {
   // CRUD CONFIGURATION
   // ============================================================================
 
-  requiredFields: ['customer_id', 'start_date'],
-
-  immutableFields: ['agreement_number'],
-
   displayColumns: ['agreement_number', 'customer_id', 'start_date', 'end_date', 'status'],
 
   // ============================================================================
@@ -161,52 +164,41 @@ module.exports = {
   },
 
   // ============================================================================
-  // FIELDS (Phase 1: Minimal - Phase 3: Full fields)
+  // FIELDS (with embedded traits for query capabilities)
   // ============================================================================
 
   fields: {
-    // TIER 1: Universal Entity Contract Fields
-    id: { type: 'integer', readonly: true },
-    is_active: { type: 'boolean', default: true },
-    created_at: { type: 'timestamp', readonly: true },
-    updated_at: { type: 'timestamp', readonly: true },
+    // TIER 1: Universal Entity Contract Fields (field-centric)
+    ...TIER1_FIELDS.WITH_STATUS,
 
-    agreement_number: {
-      type: 'string',
-      required: true,
-      maxLength: 20,
-      description: 'Auto-generated agreement identifier (SA-YYYY-NNNN)',
-    },
-    start_date: {
-      type: 'date',
-      required: true,
-      description: 'Agreement start date',
-    },
-    end_date: {
-      type: 'date',
-      description: 'Agreement end date',
-    },
+    // Identity field - auto-generated, immutable
+    agreement_number: withTraits(
+      { type: 'string', maxLength: 20, description: 'Auto-generated agreement identifier (SA-YYYY-NNNN)' },
+      TRAITS.IMMUTABLE, TRAIT_SETS.IDENTITY,
+    ),
+
+    // Date fields with traits
+    start_date: withTraits(
+      { type: 'date', description: 'Agreement start date' },
+      TRAITS.REQUIRED, TRAIT_SETS.LOOKUP,
+    ),
+    end_date: withTraits(
+      { type: 'date', description: 'Agreement end date' },
+      TRAIT_SETS.LOOKUP,
+    ),
     auto_renewal: {
       type: 'boolean',
       default: false,
       description: 'Whether agreement auto-renews',
     },
-    notes: {
-      type: 'text',
-      description: 'Internal notes',
-    },
-    status: {
-      type: 'enum',
-      enumKey: 'status',
-      default: 'draft',
-    },
-    // FK fields
-    customer_id: {
-      type: 'foreignKey',
-      references: 'customer',
+    notes: { type: 'text', description: 'Internal notes' },
+
+    // FK fields with embedded traits
+    customer_id: createForeignKey('customer', {
       required: true,
       displayFields: ['first_name', 'last_name', 'email'],
       displayTemplate: '{first_name} {last_name}',
-    },
+      traits: TRAIT_SETS.LOOKUP,
+    }),
   },
 };

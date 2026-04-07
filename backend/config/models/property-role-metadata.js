@@ -18,9 +18,11 @@
 
 const { UNIVERSAL_FIELD_ACCESS } = require('../constants');
 const {
-  JUNCTION,
-  createJunctionForeignKeys,
+  createJunctionFields,
   createJunctionUniqueConstraint,
+  withTraits,
+  TRAITS,
+  TRAIT_SETS,
 } = require('../field-types');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
@@ -127,11 +129,7 @@ module.exports = {
   // CRUD CONFIGURATION
   // ============================================================================
 
-  requiredFields: ['customer_id', 'property_id', 'role'],
-
-  immutableFields: ['customer_id', 'property_id'], // Cannot change the relationship, only the role
-
-  displayColumns: ['customer_id', 'property_id', 'role', 'status'],
+  displayColumns: ['customer_id', 'property_id', 'role', 'is_active'],
 
   // ============================================================================
   // FIELD-LEVEL ACCESS CONTROL
@@ -139,7 +137,6 @@ module.exports = {
 
   fieldAccess: {
     ...UNIVERSAL_FIELD_ACCESS,
-    ...JUNCTION.FIELD_ACCESS,
 
     // Junction FK fields - must be explicitly defined for Joi schema to include them
     customer_id: {
@@ -222,40 +219,8 @@ module.exports = {
   dependents: [],
 
   // ============================================================================
-  // SEARCH CONFIGURATION
-  // ============================================================================
-
-  searchableFields: [],
-
-  // ============================================================================
-  // FILTER CONFIGURATION
-  // ============================================================================
-
-  filterableFields: [
-    'id',
-    'customer_id',
-    'property_id',
-    'role',
-    'status',
-    'effective_date',
-    'end_date',
-    'created_at',
-    'updated_at',
-  ],
-
-  // ============================================================================
   // SORT CONFIGURATION
   // ============================================================================
-
-  sortableFields: [
-    'id',
-    'role',
-    'status',
-    'effective_date',
-    'end_date',
-    'created_at',
-    'updated_at',
-  ],
 
   defaultSort: {
     field: 'created_at',
@@ -263,42 +228,36 @@ module.exports = {
   },
 
   // ============================================================================
-  // FIELD DEFINITIONS
+  // FIELD DEFINITIONS (Field-Centric: traits embedded in field definitions)
   // ============================================================================
 
-  fields: {
-    // TIER 1: Universal Entity Contract Fields
-    id: { type: 'integer', readonly: true },
-    is_active: { type: 'boolean', default: true },
-    created_at: { type: 'timestamp', readonly: true },
-    updated_at: { type: 'timestamp', readonly: true },
-
-    // TIER 2: Entity-Specific Lifecycle Field
-    status: {
-      type: 'enum',
-      enumKey: 'status',
-      default: 'active',
+  fields: createJunctionFields('customer', 'property', {
+    extraFields: {
+      // Management/board role at this property (required)
+      role: withTraits(
+        {
+          type: 'enum',
+          enumKey: 'role',
+          description: 'Management/board role at this property',
+        },
+        TRAITS.REQUIRED,
+        TRAIT_SETS.LOOKUP,
+      ),
+      // Temporal validity
+      effective_date: withTraits(
+        {
+          type: 'date',
+          description: 'Date this role became effective',
+        },
+        TRAIT_SETS.LOOKUP,
+      ),
+      end_date: withTraits(
+        {
+          type: 'date',
+          description: 'Date this role ended (null if active)',
+        },
+        TRAIT_SETS.LOOKUP,
+      ),
     },
-
-    // Junction foreign keys (using helper)
-    ...createJunctionForeignKeys('customer', 'property'),
-
-    // Role at this property
-    role: {
-      type: 'enum',
-      enumKey: 'role',
-      required: true,
-      description: 'Management/board role at this property',
-    },
-
-    // Temporal validity
-    effective_date: {
-      type: 'date',
-      description: 'Date this role became effective',
-    },
-    end_date: {
-      type: 'date',
-      description: 'Date this role ended (null if active)',
-    },
-  },
+  }),
 };

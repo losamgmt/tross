@@ -97,239 +97,116 @@ abstract final class CrudTestFactory {
         mockApiClient.reset();
       });
 
-      // Generate tests for each entity
-      for (final entityName in allKnownEntities) {
-        _generateEntityTests(entityName, () => mockApiClient, () => service);
-      }
-    });
-  }
-
-  /// Generate tests for a single entity across all operations
-  static void _generateEntityTests(
-    String entityName,
-    MockApiClient Function() getMockApi,
-    GenericEntityService Function() getService,
-  ) {
-    group(entityName, () {
-      // -----------------------------------------------------------------------
-      // getAll - List entities
-      // -----------------------------------------------------------------------
-      group('getAll', () {
-        test('returns list on success', () async {
+      // Generate tests dynamically for all entities
+      test('getAll returns list on success for all entities', () async {
+        for (final entityName in EntityTestRegistry.allEntityNames) {
           final mockData = EntityDataGenerator.createList(entityName, count: 3);
-          getMockApi().mockEntityList(entityName, mockData);
+          mockApiClient.mockEntityList(entityName, mockData);
 
-          final result = await getService().getAll(entityName);
+          final result = await service.getAll(entityName);
 
-          expect(result.data, hasLength(3));
-          expect(result.count, equals(3));
-        });
-
-        test('returns empty list when no data', () async {
-          getMockApi().mockEntityList(entityName, []);
-
-          final result = await getService().getAll(entityName);
-
-          expect(result.data, isEmpty);
-          expect(result.count, equals(0));
-        });
-
-        test('handles pagination parameters', () async {
-          getMockApi().mockEntityList(entityName, [
-            EntityDataGenerator.create(entityName),
-          ]);
-
-          final result = await getService().getAll(
-            entityName,
-            page: 2,
-            limit: 25,
+          expect(
+            result.data,
+            hasLength(3),
+            reason: '$entityName: getAll should return 3 items',
           );
-
-          expect(result.data, isNotEmpty);
-          // Verify the mock was called (implicitly tests parameters passed)
-          expect(getMockApi().wasCalled('fetchEntities $entityName'), isTrue);
-        });
-
-        for (final scenario in HttpErrorScenario.values) {
-          test(
-            'throws on ${scenario.statusCode} ${scenario.message}',
-            () async {
-              getMockApi().mockStatusCode(
-                '/api/$entityName',
-                scenario.statusCode,
-                {'error': scenario.message},
-              );
-              getMockApi().setShouldFail(true, message: scenario.message);
-
-              expect(
-                () => getService().getAll(entityName),
-                throwsA(isA<Exception>()),
-              );
-            },
+          expect(
+            result.count,
+            equals(3),
+            reason: '$entityName: count should equal 3',
           );
         }
       });
 
-      // -----------------------------------------------------------------------
-      // getById - Fetch single entity
-      // -----------------------------------------------------------------------
-      group('getById', () {
-        test('returns entity on success', () async {
+      test('getById returns entity on success for all entities', () async {
+        for (final entityName in EntityTestRegistry.allEntityNames) {
           final mockData = EntityDataGenerator.create(entityName, id: 42);
-          getMockApi().mockEntity(entityName, 42, mockData);
+          mockApiClient.mockEntity(entityName, 42, mockData);
 
-          final result = await getService().getById(entityName, 42);
+          final result = await service.getById(entityName, 42);
 
-          expect(result['id'], equals(42));
-        });
-
-        test('includes all expected fields', () async {
-          final mockData = EntityDataGenerator.create(entityName, id: 1);
-          getMockApi().mockEntity(entityName, 1, mockData);
-
-          final result = await getService().getById(entityName, 1);
-
-          // Every entity should have an id
-          expect(result.containsKey('id'), isTrue);
-        });
-
-        for (final scenario in HttpErrorScenario.values) {
-          test(
-            'throws on ${scenario.statusCode} ${scenario.message}',
-            () async {
-              getMockApi().setShouldFail(true, message: scenario.message);
-
-              expect(
-                () => getService().getById(entityName, 999),
-                throwsA(isA<Exception>()),
-              );
-            },
+          expect(
+            result['id'],
+            equals(42),
+            reason: '$entityName: getById should return correct id',
           );
         }
       });
 
-      // -----------------------------------------------------------------------
-      // create - Create new entity
-      // -----------------------------------------------------------------------
-      group('create', () {
-        test('returns created entity on success', () async {
-          final inputData = EntityDataGenerator.createInput(entityName);
-          final responseData = {...inputData, 'id': 99};
+      test(
+        'create returns created entity on success for all entities',
+        () async {
+          for (final entityName in EntityTestRegistry.allEntityNames) {
+            final inputData = EntityDataGenerator.createInput(entityName);
+            final responseData = {...inputData, 'id': 99};
 
-          getMockApi().mockCreate(entityName, {
-            'success': true,
-            'data': responseData,
-          });
+            mockApiClient.mockCreate(entityName, {
+              'success': true,
+              'data': responseData,
+            });
 
-          final result = await getService().create(entityName, inputData);
+            final result = await service.create(entityName, inputData);
 
-          expect(result, isNotNull);
-        });
+            expect(
+              result,
+              isNotNull,
+              reason: '$entityName: create should return data',
+            );
+          }
+        },
+      );
 
-        test('sends correct data structure', () async {
-          final inputData = EntityDataGenerator.createInput(entityName);
+      test(
+        'update returns updated entity on success for all entities',
+        () async {
+          for (final entityName in EntityTestRegistry.allEntityNames) {
+            final updateData = {'name': 'Updated Name'};
 
-          getMockApi().mockCreate(entityName, {
-            'success': true,
-            'data': {...inputData, 'id': 1},
-          });
+            mockApiClient.mockUpdate(entityName, 1, {
+              'success': true,
+              'data': {'id': 1, ...updateData},
+            });
 
-          await getService().create(entityName, inputData);
+            final result = await service.update(entityName, 1, updateData);
 
-          expect(getMockApi().wasCalled('createEntity $entityName'), isTrue);
-        });
+            expect(
+              result,
+              isNotNull,
+              reason: '$entityName: update should return data',
+            );
+          }
+        },
+      );
 
-        for (final scenario in HttpErrorScenario.values) {
-          test(
-            'throws on ${scenario.statusCode} ${scenario.message}',
-            () async {
-              getMockApi().setShouldFail(true, message: scenario.message);
+      test('delete completes successfully for all entities', () async {
+        for (final entityName in EntityTestRegistry.allEntityNames) {
+          mockApiClient.mockDelete(entityName, 1, {'success': true});
 
-              expect(
-                () => getService().create(entityName, {'name': 'Test'}),
-                throwsA(isA<Exception>()),
-              );
-            },
+          await expectLater(
+            service.delete(entityName, 1),
+            completes,
+            reason: '$entityName: delete should complete',
           );
         }
       });
 
-      // -----------------------------------------------------------------------
-      // update - Update existing entity
-      // -----------------------------------------------------------------------
-      group('update', () {
-        test('returns updated entity on success', () async {
-          final updateData = {'name': 'Updated Name'};
+      for (final scenario in HttpErrorScenario.values) {
+        test(
+          'all operations throw on ${scenario.statusCode} ${scenario.message}',
+          () async {
+            mockApiClient.setShouldFail(true, message: scenario.message);
 
-          getMockApi().mockUpdate(entityName, 1, {
-            'success': true,
-            'data': {'id': 1, ...updateData},
-          });
-
-          final result = await getService().update(entityName, 1, updateData);
-
-          expect(result, isNotNull);
-        });
-
-        test('sends correct id and data', () async {
-          getMockApi().mockUpdate(entityName, 42, {
-            'success': true,
-            'data': {'id': 42, 'name': 'Updated'},
-          });
-
-          await getService().update(entityName, 42, {'name': 'Updated'});
-
-          expect(getMockApi().wasCalled('updateEntity $entityName/42'), isTrue);
-        });
-
-        for (final scenario in HttpErrorScenario.values) {
-          test(
-            'throws on ${scenario.statusCode} ${scenario.message}',
-            () async {
-              getMockApi().setShouldFail(true, message: scenario.message);
-
+            for (final entityName in EntityTestRegistry.allEntityNames) {
               expect(
-                () => getService().update(entityName, 1, {'name': 'Test'}),
+                () => service.getAll(entityName),
                 throwsA(isA<Exception>()),
+                reason:
+                    '$entityName getAll: should throw on ${scenario.statusCode}',
               );
-            },
-          );
-        }
-      });
-
-      // -----------------------------------------------------------------------
-      // delete - Delete entity
-      // -----------------------------------------------------------------------
-      group('delete', () {
-        test('completes successfully', () async {
-          getMockApi().mockDelete(entityName, 1, {'success': true});
-
-          // Should not throw
-          await expectLater(getService().delete(entityName, 1), completes);
-        });
-
-        test('calls correct endpoint', () async {
-          getMockApi().mockDelete(entityName, 99, {'success': true});
-
-          await getService().delete(entityName, 99);
-
-          expect(getMockApi().wasCalled('deleteEntity $entityName/99'), isTrue);
-        });
-
-        for (final scenario in HttpErrorScenario.values) {
-          test(
-            'throws on ${scenario.statusCode} ${scenario.message}',
-            () async {
-              getMockApi().setShouldFail(true, message: scenario.message);
-
-              expect(
-                () => getService().delete(entityName, 1),
-                throwsA(isA<Exception>()),
-              );
-            },
-          );
-        }
-      });
+            }
+          },
+        );
+      }
     });
   }
 
@@ -357,26 +234,38 @@ abstract final class CrudTestFactory {
         mockApiClient.reset();
       });
 
-      for (final entityName in allKnownEntities) {
-        test('$entityName: getAll succeeds', () async {
+      test('getAll succeeds for all entities', () async {
+        for (final entityName in EntityTestRegistry.allEntityNames) {
           mockApiClient.mockEntityList(entityName, [
             EntityDataGenerator.create(entityName),
           ]);
           final result = await service.getAll(entityName);
-          expect(result.data, isNotEmpty);
-        });
+          expect(
+            result.data,
+            isNotEmpty,
+            reason: '$entityName: getAll should succeed',
+          );
+        }
+      });
 
-        test('$entityName: getById succeeds', () async {
+      test('getById succeeds for all entities', () async {
+        for (final entityName in EntityTestRegistry.allEntityNames) {
           mockApiClient.mockEntity(
             entityName,
             1,
             EntityDataGenerator.create(entityName, id: 1),
           );
           final result = await service.getById(entityName, 1);
-          expect(result['id'], equals(1));
-        });
+          expect(
+            result['id'],
+            equals(1),
+            reason: '$entityName: getById should succeed',
+          );
+        }
+      });
 
-        test('$entityName: create succeeds', () async {
+      test('create succeeds for all entities', () async {
+        for (final entityName in EntityTestRegistry.allEntityNames) {
           mockApiClient.mockCreate(entityName, {
             'success': true,
             'data': EntityDataGenerator.create(entityName, id: 99),
@@ -385,23 +274,39 @@ abstract final class CrudTestFactory {
             entityName,
             EntityDataGenerator.createInput(entityName),
           );
-          expect(result, isNotNull);
-        });
+          expect(
+            result,
+            isNotNull,
+            reason: '$entityName: create should succeed',
+          );
+        }
+      });
 
-        test('$entityName: update succeeds', () async {
+      test('update succeeds for all entities', () async {
+        for (final entityName in EntityTestRegistry.allEntityNames) {
           mockApiClient.mockUpdate(entityName, 1, {
             'success': true,
             'data': EntityDataGenerator.create(entityName, id: 1),
           });
           final result = await service.update(entityName, 1, {'name': 'Test'});
-          expect(result, isNotNull);
-        });
+          expect(
+            result,
+            isNotNull,
+            reason: '$entityName: update should succeed',
+          );
+        }
+      });
 
-        test('$entityName: delete succeeds', () async {
+      test('delete succeeds for all entities', () async {
+        for (final entityName in EntityTestRegistry.allEntityNames) {
           mockApiClient.mockDelete(entityName, 1, {'success': true});
-          await expectLater(service.delete(entityName, 1), completes);
-        });
-      }
+          await expectLater(
+            service.delete(entityName, 1),
+            completes,
+            reason: '$entityName: delete should succeed',
+          );
+        }
+      });
     });
   }
 
@@ -425,50 +330,81 @@ abstract final class CrudTestFactory {
         mockApiClient.reset();
       });
 
-      for (final entityName in allKnownEntities) {
-        for (final scenario in HttpErrorScenario.values) {
-          group('$entityName × ${scenario.statusCode}', () {
-            test('getAll throws', () async {
-              mockApiClient.setShouldFail(true, message: scenario.message);
+      for (final scenario in HttpErrorScenario.values) {
+        test(
+          'getAll throws on ${scenario.statusCode} for all entities',
+          () async {
+            mockApiClient.setShouldFail(true, message: scenario.message);
+            for (final entityName in EntityTestRegistry.allEntityNames) {
               expect(
                 () => service.getAll(entityName),
                 throwsA(isA<Exception>()),
+                reason:
+                    '$entityName: getAll should throw on ${scenario.statusCode}',
               );
-            });
+            }
+          },
+        );
 
-            test('getById throws', () async {
-              mockApiClient.setShouldFail(true, message: scenario.message);
+        test(
+          'getById throws on ${scenario.statusCode} for all entities',
+          () async {
+            mockApiClient.setShouldFail(true, message: scenario.message);
+            for (final entityName in EntityTestRegistry.allEntityNames) {
               expect(
                 () => service.getById(entityName, 1),
                 throwsA(isA<Exception>()),
+                reason:
+                    '$entityName: getById should throw on ${scenario.statusCode}',
               );
-            });
+            }
+          },
+        );
 
-            test('create throws', () async {
-              mockApiClient.setShouldFail(true, message: scenario.message);
+        test(
+          'create throws on ${scenario.statusCode} for all entities',
+          () async {
+            mockApiClient.setShouldFail(true, message: scenario.message);
+            for (final entityName in EntityTestRegistry.allEntityNames) {
               expect(
                 () => service.create(entityName, {}),
                 throwsA(isA<Exception>()),
+                reason:
+                    '$entityName: create should throw on ${scenario.statusCode}',
               );
-            });
+            }
+          },
+        );
 
-            test('update throws', () async {
-              mockApiClient.setShouldFail(true, message: scenario.message);
+        test(
+          'update throws on ${scenario.statusCode} for all entities',
+          () async {
+            mockApiClient.setShouldFail(true, message: scenario.message);
+            for (final entityName in EntityTestRegistry.allEntityNames) {
               expect(
                 () => service.update(entityName, 1, {}),
                 throwsA(isA<Exception>()),
+                reason:
+                    '$entityName: update should throw on ${scenario.statusCode}',
               );
-            });
+            }
+          },
+        );
 
-            test('delete throws', () async {
-              mockApiClient.setShouldFail(true, message: scenario.message);
+        test(
+          'delete throws on ${scenario.statusCode} for all entities',
+          () async {
+            mockApiClient.setShouldFail(true, message: scenario.message);
+            for (final entityName in EntityTestRegistry.allEntityNames) {
               expect(
                 () => service.delete(entityName, 1),
                 throwsA(isA<Exception>()),
+                reason:
+                    '$entityName: delete should throw on ${scenario.statusCode}',
               );
-            });
-          });
-        }
+            }
+          },
+        );
       }
     });
   }

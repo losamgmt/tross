@@ -24,10 +24,10 @@ void main() {
   });
 
   group('EntityFormModal - Create Mode', () {
-    for (final entityName in allKnownEntities) {
-      testWidgets('$entityName - renders create modal with correct title', (
-        tester,
-      ) async {
+    testWidgets('renders create modal with correct title for all entities', (
+      tester,
+    ) async {
+      for (final entityName in EntityTestRegistry.allEntityNames) {
         final metadata = EntityTestRegistry.get(entityName);
 
         await pumpTestWidget(
@@ -37,13 +37,23 @@ void main() {
         );
 
         // Should show "Create [Entity]" title
-        expect(find.textContaining('Create'), findsWidgets);
-        expect(find.textContaining(metadata.displayName), findsWidgets);
-      });
+        expect(
+          find.textContaining('Create'),
+          findsWidgets,
+          reason: '$entityName: should show Create in title',
+        );
+        expect(
+          find.textContaining(metadata.displayName),
+          findsWidgets,
+          reason: '$entityName: should show display name in title',
+        );
+      }
+    });
 
-      testWidgets('$entityName - shows add icon for create mode', (
-        tester,
-      ) async {
+    testWidgets('shows add icon for create mode for all entities', (
+      tester,
+    ) async {
+      for (final entityName in EntityTestRegistry.allEntityNames) {
         await pumpTestWidget(
           tester,
           EntityFormModal(entityName: entityName, mode: FormMode.create),
@@ -51,12 +61,18 @@ void main() {
         );
 
         // Create mode should have add icon on submit button
-        expect(find.byIcon(Icons.add), findsWidgets);
-      });
+        expect(
+          find.byIcon(Icons.add),
+          findsWidgets,
+          reason: '$entityName: create mode should have add icon',
+        );
+      }
+    });
 
-      testWidgets('$entityName - renders form fields without crash', (
-        tester,
-      ) async {
+    testWidgets('renders form fields without crash for all entities', (
+      tester,
+    ) async {
+      for (final entityName in EntityTestRegistry.allEntityNames) {
         await pumpTestWidget(
           tester,
           EntityFormModal(entityName: entityName, mode: FormMode.create),
@@ -64,19 +80,27 @@ void main() {
         );
 
         // Should render without error
-        expect(tester.takeException(), isNull);
+        expect(
+          tester.takeException(),
+          isNull,
+          reason: '$entityName: should render without error',
+        );
 
         // Should have Cancel button
-        expect(find.text('Cancel'), findsOneWidget);
-      });
-    }
+        expect(
+          find.text('Cancel'),
+          findsOneWidget,
+          reason: '$entityName: should have Cancel button',
+        );
+      }
+    });
   });
 
   group('EntityFormModal - Edit Mode', () {
-    for (final entityName in allKnownEntities) {
-      testWidgets('$entityName - renders edit modal with correct title', (
-        tester,
-      ) async {
+    testWidgets('renders edit modal with correct title for all entities', (
+      tester,
+    ) async {
+      for (final entityName in EntityTestRegistry.allEntityNames) {
         final metadata = EntityTestRegistry.get(entityName);
         final testData = entityName.testData();
 
@@ -91,13 +115,23 @@ void main() {
         );
 
         // Should show "Edit [Entity]" title
-        expect(find.textContaining('Edit'), findsWidgets);
-        expect(find.textContaining(metadata.displayName), findsWidgets);
-      });
+        expect(
+          find.textContaining('Edit'),
+          findsWidgets,
+          reason: '$entityName: should show Edit in title',
+        );
+        expect(
+          find.textContaining(metadata.displayName),
+          findsWidgets,
+          reason: '$entityName: should show display name in title',
+        );
+      }
+    });
 
-      testWidgets('$entityName - shows save icon for edit mode', (
-        tester,
-      ) async {
+    testWidgets('shows save icon for edit mode for all entities', (
+      tester,
+    ) async {
+      for (final entityName in EntityTestRegistry.allEntityNames) {
         final testData = entityName.testData();
 
         await pumpTestWidget(
@@ -111,12 +145,18 @@ void main() {
         );
 
         // Edit mode should have save icon on submit button
-        expect(find.byIcon(Icons.save), findsWidgets);
-      });
+        expect(
+          find.byIcon(Icons.save),
+          findsWidgets,
+          reason: '$entityName: edit mode should have save icon',
+        );
+      }
+    });
 
-      testWidgets('$entityName - loads with initial values without crash', (
-        tester,
-      ) async {
+    testWidgets('loads with initial values without crash for all entities', (
+      tester,
+    ) async {
+      for (final entityName in EntityTestRegistry.allEntityNames) {
         final testData = entityName.testData();
 
         await pumpTestWidget(
@@ -130,16 +170,20 @@ void main() {
         );
 
         // Should render without error
-        expect(tester.takeException(), isNull);
-      });
-    }
+        expect(
+          tester.takeException(),
+          isNull,
+          reason: '$entityName: should render without error',
+        );
+      }
+    });
   });
 
   group('EntityFormModal - View Mode', () {
-    for (final entityName in allKnownEntities) {
-      testWidgets('$entityName - renders view modal as read-only', (
-        tester,
-      ) async {
+    testWidgets('renders view modal as read-only for all entities', (
+      tester,
+    ) async {
+      for (final entityName in EntityTestRegistry.allEntityNames) {
         final metadata = EntityTestRegistry.get(entityName);
         final testData = entityName.testData();
 
@@ -154,15 +198,29 @@ void main() {
         );
 
         // Should show "View [Entity]" title
-        expect(find.textContaining('View'), findsWidgets);
-        expect(find.textContaining(metadata.displayName), findsWidgets);
+        expect(
+          find.textContaining('View'),
+          findsWidgets,
+          reason: '$entityName: should show View in title',
+        );
+        expect(
+          find.textContaining(metadata.displayName),
+          findsWidgets,
+          reason: '$entityName: should show display name in title',
+        );
 
         // View mode should NOT have submit button (save/add)
         // Only Cancel button should be visible
-        expect(find.text('Cancel'), findsOneWidget);
-      });
+        expect(
+          find.text('Cancel'),
+          findsOneWidget,
+          reason: '$entityName: should have Cancel button',
+        );
+      }
+    });
 
-      testWidgets('$entityName - renders without crash', (tester) async {
+    testWidgets('renders without crash for all entities', (tester) async {
+      for (final entityName in EntityTestRegistry.allEntityNames) {
         final testData = entityName.testData();
 
         await pumpTestWidget(
@@ -176,16 +234,22 @@ void main() {
         );
 
         // Should render without error
-        expect(tester.takeException(), isNull);
-      });
-    }
+        expect(
+          tester.takeException(),
+          isNull,
+          reason: '$entityName: should render without error',
+        );
+      }
+    });
   });
 
   group('EntityFormModal - Custom Title', () {
-    for (final entityName in allKnownEntities) {
-      testWidgets('$entityName - allows custom title override', (tester) async {
-        const customTitle = 'Custom Modal Title';
+    testWidgets('allows custom title override for all entities', (
+      tester,
+    ) async {
+      const customTitle = 'Custom Modal Title';
 
+      for (final entityName in EntityTestRegistry.allEntityNames) {
         await pumpTestWidget(
           tester,
           EntityFormModal(
@@ -197,21 +261,25 @@ void main() {
         );
 
         // Should show custom title instead of auto-generated one
-        expect(find.text(customTitle), findsOneWidget);
-      });
-    }
+        expect(
+          find.text(customTitle),
+          findsOneWidget,
+          reason: '$entityName: should show custom title',
+        );
+      }
+    });
   });
 
   group('EntityFormModal - Field Filtering', () {
-    for (final entityName in allKnownEntities) {
-      testWidgets('$entityName - works with includeFields filter', (
-        tester,
-      ) async {
+    testWidgets('works with includeFields filter for all entities', (
+      tester,
+    ) async {
+      for (final entityName in EntityTestRegistry.allEntityNames) {
         final metadata = EntityTestRegistry.get(entityName);
 
         // Get first non-id field for testing
         final fields = metadata.fields.keys.where((f) => f != 'id').toList();
-        if (fields.isEmpty) return; // Skip if no non-id fields
+        if (fields.isEmpty) continue; // Skip if no non-id fields
 
         final includeFields = [fields.first];
 
@@ -226,12 +294,18 @@ void main() {
         );
 
         // Should render without error
-        expect(tester.takeException(), isNull);
-      });
+        expect(
+          tester.takeException(),
+          isNull,
+          reason: '$entityName: should render without error with includeFields',
+        );
+      }
+    });
 
-      testWidgets('$entityName - works with excludeFields filter', (
-        tester,
-      ) async {
+    testWidgets('works with excludeFields filter for all entities', (
+      tester,
+    ) async {
+      for (final entityName in EntityTestRegistry.allEntityNames) {
         await pumpTestWidget(
           tester,
           EntityFormModal(
@@ -243,8 +317,12 @@ void main() {
         );
 
         // Should render without error
-        expect(tester.takeException(), isNull);
-      });
-    }
+        expect(
+          tester.takeException(),
+          isNull,
+          reason: '$entityName: should render without error with excludeFields',
+        );
+      }
+    });
   });
 }

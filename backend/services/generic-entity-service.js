@@ -25,6 +25,8 @@ const {
   getSearchableFields,
   getFilterableFields,
   getSortableFields,
+  getRequiredFields,
+  getImmutableFields,
 } = require('../config/metadata-accessors');
 const { logger } = require('../config/logger');
 const db = require('../db/connection');
@@ -929,7 +931,8 @@ class GenericEntityService {
     // Get metadata (throws if invalid entityName)
     const metadata = this._getMetadata(entityName);
 
-    const { tableName, requiredFields = [] } = metadata;
+    const { tableName } = metadata;
+    const requiredFields = getRequiredFields(metadata);
 
     // Validate data is an object
     if (!data || typeof data !== 'object' || Array.isArray(data)) {
@@ -1094,10 +1097,10 @@ class GenericEntityService {
     const {
       tableName,
       primaryKey,
-      immutableFields = [],
       identityField,
       systemProtected,
     } = metadata;
+    const immutableFields = getImmutableFields(metadata);
 
     // Validate and coerce ID (throws on invalid)
     // silent: true - IDs from controllers are strings, coercion is expected
@@ -1496,12 +1499,9 @@ class GenericEntityService {
       }
     }
 
-    const {
-      tableName,
-      primaryKey,
-      requiredFields = [],
-      immutableFields = [],
-    } = metadata;
+    const { tableName, primaryKey } = metadata;
+    const requiredFields = getRequiredFields(metadata);
+    const immutableFields = getImmutableFields(metadata);
     const { continueOnError = false, auditContext, rlsContext } = options;
 
     // ─────────────────────────────────────────────────────────────────────────

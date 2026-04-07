@@ -14,7 +14,13 @@
  */
 
 const { FIELD_ACCESS_LEVELS: FAL } = require('../constants');
-const { FIELD } = require('../field-types');
+const {
+  FIELD,
+  TIER1,
+  withTraits,
+  TRAITS,
+  TRAIT_SETS,
+} = require('../field-types');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -138,16 +144,6 @@ module.exports = {
   // ============================================================================
 
   /**
-   * Fields required when creating a new saved view
-   */
-  requiredFields: ['user_id', 'entity_name', 'view_name', 'settings'],
-
-  /**
-   * Fields that cannot be modified after creation
-   */
-  immutableFields: ['id', 'user_id'],
-
-  /**
    * Default columns to display in table views (ordered)
    * Used by admin panel for viewing saved views
    */
@@ -186,26 +182,8 @@ module.exports = {
   dependents: [],
 
   // ============================================================================
-  // SEARCH/FILTER/SORT CONFIGURATION
+  // SORT CONFIGURATION
   // ============================================================================
-
-  searchableFields: ['view_name'],
-
-  filterableFields: [
-    'user_id',
-    'entity_name',
-    'is_default',
-    'created_at',
-    'updated_at',
-  ],
-
-  sortableFields: [
-    'view_name',
-    'entity_name',
-    'is_default',
-    'created_at',
-    'updated_at',
-  ],
 
   defaultSort: {
     field: 'view_name',
@@ -228,47 +206,63 @@ module.exports = {
   },
 
   // ============================================================================
-  // FIELD DEFINITIONS
+  // FIELD DEFINITIONS (Field-Centric: traits embedded in field definitions)
   // ============================================================================
 
   fields: {
-    id: {
-      type: 'integer',
-      readonly: true,
-      description: 'Primary key',
-    },
-    user_id: {
-      type: 'foreignKey',
-      references: 'user',
-      required: true,
-      readonly: true,
-      description: 'Owner user ID (FK to users)',
-    },
-    entity_name: {
-      type: 'string',
-      required: true,
-      maxLength: 50,
-      description: 'Which entity this view applies to',
-    },
-    view_name: {
-      ...FIELD.NAME,
-      required: true,
-      maxLength: 100,
-      description: 'User-defined name for this view',
-    },
-    settings: {
-      type: 'jsonb',
-      required: true,
-      default: {},
-      description: 'View configuration (hiddenColumns, density, filters, sort)',
-    },
-    is_default: {
-      type: 'boolean',
-      default: false,
-      description: 'Whether this is the default view for this entity',
-    },
-    created_at: { type: 'timestamp', readonly: true },
-    updated_at: { type: 'timestamp', readonly: true },
+    id: TIER1.ID,
+
+    // Owner - system-set, immutable
+    user_id: withTraits(
+      {
+        type: 'foreignKey',
+        references: 'user',
+        description: 'Owner user ID (FK to users)',
+      },
+      TRAITS.REQUIRED,
+      TRAITS.IMMUTABLE,
+      TRAITS.READONLY,
+      TRAIT_SETS.FILTER_ONLY,
+    ),
+
+    // View definition
+    entity_name: withTraits(
+      {
+        type: 'string',
+        maxLength: 50,
+        description: 'Which entity this view applies to',
+      },
+      TRAITS.REQUIRED,
+      TRAIT_SETS.LOOKUP,
+    ),
+    view_name: withTraits(
+      {
+        ...FIELD.NAME,
+        maxLength: 100,
+        description: 'User-defined name for this view',
+      },
+      TRAIT_SETS.IDENTITY,
+    ),
+    settings: withTraits(
+      {
+        type: 'jsonb',
+        default: {},
+        description: 'View configuration (hiddenColumns, density, filters, sort)',
+      },
+      TRAITS.REQUIRED,
+    ),
+    is_default: withTraits(
+      {
+        type: 'boolean',
+        default: false,
+        description: 'Whether this is the default view for this entity',
+      },
+      TRAIT_SETS.LOOKUP,
+    ),
+
+    // Timestamps
+    created_at: TIER1.CREATED_AT,
+    updated_at: TIER1.UPDATED_AT,
   },
 
   // ============================================================================

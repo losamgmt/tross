@@ -17,6 +17,7 @@ const entityFactory = require("./entity-factory");
 const allMetadata = require("../../../config/models");
 const { createTestUser } = require("../../helpers/test-db");
 const { extractForeignKeyFields } = require("../../../config/fk-helpers");
+const { getRequiredFields } = require("../../../config/metadata-accessors");
 
 /**
  * Build test context for a given app instance
@@ -114,10 +115,11 @@ function buildTestContext(app, db) {
     async buildMinimalWithFKs(entityName, overrides = {}) {
       const meta = entityFactory.getMetadata(entityName);
       const payload = entityFactory.buildMinimal(entityName, overrides);
+      const requiredFields = getRequiredFields(meta);
 
       // Handle required FK dependencies - use fixtures or create parents
       for (const [fkField, fkDef] of Object.entries(extractForeignKeyFields(meta))) {
-        if (!meta.requiredFields?.includes(fkField)) continue;
+        if (!requiredFields.includes(fkField)) continue;
         if (payload[fkField] || overrides[fkField]) continue; // Already provided
 
         payload[fkField] = await resolveFkDependency(fkField, fkDef);
@@ -136,10 +138,11 @@ function buildTestContext(app, db) {
     async create(entityName, overrides = {}) {
       const meta = entityFactory.getMetadata(entityName);
       const payload = entityFactory.buildMinimal(entityName, overrides);
+      const requiredFields = getRequiredFields(meta);
 
       // Handle required FK dependencies - use fixtures or create parents
       for (const [fkField, fkDef] of Object.entries(extractForeignKeyFields(meta))) {
-        if (!meta.requiredFields?.includes(fkField)) continue;
+        if (!requiredFields.includes(fkField)) continue;
         if (payload[fkField] || overrides[fkField]) continue; // Already provided
 
         payload[fkField] = await resolveFkDependency(fkField, fkDef);

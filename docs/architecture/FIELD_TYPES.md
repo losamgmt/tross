@@ -102,9 +102,115 @@ See `backend/config/field-types.js` for full generator API.
 
 ---
 
+## Field Traits System (Field-Centric Architecture)
+
+**Status:** ✅ Migration Complete (April 2026)
+
+All 34 entities have been migrated to the field-centric architecture. Field properties (required, immutable, searchable, filterable, sortable) are now defined directly on field definitions instead of separate arrays.
+
+### Atomic Traits
+
+```javascript
+const { TRAITS } = require('../field-types');
+
+// 6 atomic field properties
+TRAITS.REQUIRED    // required: true
+TRAITS.IMMUTABLE   // immutable: true
+TRAITS.SEARCHABLE  // searchable: true
+TRAITS.FILTERABLE  // filterable: true
+TRAITS.SORTABLE    // sortable: true
+TRAITS.READONLY    // readonly: true
+```
+
+### Composite Trait Sets
+
+```javascript
+const { TRAIT_SETS } = require('../field-types');
+
+// Pre-composed for common patterns
+TRAIT_SETS.IDENTITY      // SEARCHABLE + FILTERABLE + SORTABLE (name fields)
+TRAIT_SETS.PK            // READONLY + IMMUTABLE + FILTERABLE + SORTABLE (primary key)
+TRAIT_SETS.LOOKUP        // FILTERABLE + SORTABLE (dropdown/filter fields)
+TRAIT_SETS.FILTER_ONLY   // FILTERABLE (foreign keys, filters)
+TRAIT_SETS.TIMESTAMP     // READONLY + FILTERABLE + SORTABLE (created_at, updated_at)
+TRAIT_SETS.FULLTEXT      // SEARCHABLE (text fields)
+TRAIT_SETS.JUNCTION_FK   // REQUIRED + IMMUTABLE + FILTERABLE (M:M FKs)
+TRAIT_SETS.SEARCHABLE_LOOKUP // SEARCHABLE + FILTERABLE + SORTABLE
+```
+
+### withTraits() Helper
+
+Compose field definitions with traits:
+
+```javascript
+const { withTraits, FIELD, TRAITS, TRAIT_SETS } = require('../field-types');
+
+fields: {
+  name: withTraits(FIELD.NAME, TRAITS.REQUIRED, TRAIT_SETS.IDENTITY),
+  description: withTraits(FIELD.DESCRIPTION, TRAITS.SEARCHABLE),
+  status: withTraits({ type: 'enum', enumKey: 'status' }, TRAIT_SETS.LOOKUP),
+}
+```
+
+### TIER1_FIELDS (Standard Field Groups)
+
+Spread-ready groups for standard entity fields:
+
+```javascript
+const { TIER1_FIELDS } = require('../field-types');
+
+// All entities get core fields
+fields: {
+  ...TIER1_FIELDS.CORE,     // id, is_active, created_at, updated_at
+  // or
+  ...TIER1_FIELDS.WITH_STATUS,  // CORE + status enum
+  
+  // Entity-specific fields
+  name: withTraits(FIELD.NAME, TRAITS.REQUIRED, TRAIT_SETS.IDENTITY),
+}
+```
+
+### Foreign Key Helpers
+
+```javascript
+const { createForeignKey, createJunctionFields } = require('../field-types');
+
+// Standard FK with default FILTER_ONLY traits
+customer_id: createForeignKey('customer', { required: true, traits: TRAIT_SETS.LOOKUP })
+
+// Junction table with full M:M structure
+fields: {
+  ...createJunctionFields('visit', 'technician'),  // Creates id, FKs, timestamps
+}
+```
+
+### Entity Categories
+
+| Category | Field Pattern | Example Entities |
+|----------|---------------|------------------|
+| Standard | `TIER1_FIELDS.CORE/WITH_STATUS` | customer, work_order, invoice |
+| Junction | `createJunctionFields()` | visit_technician, customer_unit |
+| System | `TIER1.*` individual + `withTraits` | audit_log, notification, preferences |
+
+### Accessor Functions
+
+All consumers use accessor functions that derive values from field-level properties:
+
+```javascript
+const { getRequiredFields, getSearchableFields } = require('../metadata-accessors');
+
+// These extract values from field definitions
+const required = getRequiredFields(metadata);  // ['name', 'email']
+const searchable = getSearchableFields(metadata);  // ['name', 'description']
+```
+
+---
+
 ## See Also
 
 - [Database Architecture](DATABASE_ARCHITECTURE.md) - Entity Contract and database patterns
 - [Validation Architecture](VALIDATION_ARCHITECTURE.md) - How types flow to Joi validation
+- [Metadata SSOT Audit](METADATA-SSOT-AUDIT.md) - Complete architecture audit
 - `backend/config/field-types.js` - Definitive field type definitions
+- `backend/config/metadata-accessors.js` - Accessor functions for field properties
 - `backend/config/geo-standards.js` - State/province/country enums

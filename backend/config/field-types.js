@@ -101,6 +101,248 @@ function deriveSqlType(fieldDef) {
 }
 
 // ============================================================================
+// FIELD TRAITS SYSTEM
+// ============================================================================
+
+/**
+ * ATOMIC TRAITS - Individual CRUD-behavior properties.
+ * These are the building blocks for all field configurations.
+ *
+ * Use these for fine-grained control when TRAIT_SETS don't fit.
+ *
+ * @example
+ * withTraits(FIELD.NAME, TRAITS.REQUIRED, TRAITS.SEARCHABLE)
+ */
+const TRAITS = Object.freeze({
+  /** Field must be provided on create */
+  REQUIRED: Object.freeze({ required: true }),
+
+  /** Field cannot be updated after creation */
+  IMMUTABLE: Object.freeze({ immutable: true }),
+
+  /** Field is included in full-text search */
+  SEARCHABLE: Object.freeze({ searchable: true }),
+
+  /** Field can be used in WHERE clauses */
+  FILTERABLE: Object.freeze({ filterable: true }),
+
+  /** Field can be used in ORDER BY */
+  SORTABLE: Object.freeze({ sortable: true }),
+
+  /** Field is system-managed (not user-editable) */
+  READONLY: Object.freeze({ readonly: true }),
+});
+
+/**
+ * COMPOSITE TRAITS - Common trait combinations with semantic names.
+ * Use these for standard patterns instead of listing individual traits.
+ *
+ * @example
+ * withTraits(FIELD.NAME, TRAIT_SETS.IDENTITY)
+ */
+const TRAIT_SETS = Object.freeze({
+  /**
+   * Identity field: The primary user-facing identifier.
+   * Used for: name, email, title fields that identify the record.
+   * Includes: required, searchable, filterable, sortable
+   */
+  IDENTITY: Object.freeze({
+    required: true,
+    searchable: true,
+    filterable: true,
+    sortable: true,
+  }),
+
+  /**
+   * Junction FK: Foreign keys in M:M junction tables.
+   * Required on create, cannot change, filterable for queries.
+   * Includes: required, immutable, filterable
+   */
+  JUNCTION_FK: Object.freeze({
+    required: true,
+    immutable: true,
+    filterable: true,
+  }),
+
+  /**
+   * Timestamp: System-managed date/time fields.
+   * Readonly, useful for filtering and sorting.
+   * Includes: readonly, filterable, sortable
+   */
+  TIMESTAMP: Object.freeze({
+    readonly: true,
+    filterable: true,
+    sortable: true,
+  }),
+
+  /**
+   * Primary Key: Auto-generated ID field.
+   * Includes: readonly, filterable, sortable
+   */
+  PK: Object.freeze({
+    readonly: true,
+    filterable: true,
+    sortable: true,
+  }),
+
+  /**
+   * Lookup: Fields for filtering and sorting but not searching.
+   * Used for: status enums, dates, numeric fields.
+   * Includes: filterable, sortable
+   */
+  LOOKUP: Object.freeze({
+    filterable: true,
+    sortable: true,
+  }),
+
+  /**
+   * Filter-only: Fields for filtering but not sorting.
+   * Used for: boolean flags, FK references.
+   * Includes: filterable
+   */
+  FILTER_ONLY: Object.freeze({
+    filterable: true,
+  }),
+
+  /**
+   * Fulltext: Fields for text search only.
+   * Used for: description, notes, comments.
+   * Includes: searchable
+   */
+  FULLTEXT: Object.freeze({
+    searchable: true,
+  }),
+
+  /**
+   * Searchable Lookup: Search + filter + sort.
+   * Used for: names that aren't the primary identity.
+   * Includes: searchable, filterable, sortable
+   */
+  SEARCHABLE_LOOKUP: Object.freeze({
+    searchable: true,
+    filterable: true,
+    sortable: true,
+  }),
+});
+
+/**
+ * Compose a field definition with traits.
+ * Merges base field properties with one or more trait objects.
+ *
+ * @param {Object} baseField - Base field definition (type, maxLength, etc.)
+ * @param {...Object} traits - Trait objects to merge (TRAITS.*, TRAIT_SETS.*, or custom)
+ * @returns {Object} Frozen field definition with all properties merged
+ *
+ * @example
+ * // Using atomic traits
+ * name: withTraits(FIELD.NAME, TRAITS.REQUIRED, TRAITS.SEARCHABLE)
+ *
+ * // Using trait sets
+ * name: withTraits(FIELD.NAME, TRAIT_SETS.IDENTITY)
+ *
+ * // Custom combination
+ * priority: withTraits({ type: 'integer' }, TRAIT_SETS.LOOKUP, TRAITS.REQUIRED)
+ */
+function withTraits(baseField, ...traits) {
+  return Object.freeze({
+    ...baseField,
+    ...traits.reduce((acc, trait) => ({ ...acc, ...trait }), {}),
+  });
+}
+
+// ============================================================================
+// TIER 1: ENTITY CONTRACT FIELDS
+// ============================================================================
+
+/**
+ * Standard Tier 1 fields that appear in every entity (Entity Contract v2.0).
+ * Pre-composed with appropriate traits.
+ *
+ * Use TIER1 for individual fields, TIER1_FIELDS for spread-ready groups.
+ */
+const TIER1 = Object.freeze({
+  /**
+   * Primary key - auto-generated, readonly, filterable, sortable.
+   */
+  ID: Object.freeze({
+    type: 'integer',
+    ...TRAIT_SETS.PK,
+  }),
+
+  /**
+   * Soft-delete flag - defaults true, filterable for active-only queries.
+   */
+  IS_ACTIVE: Object.freeze({
+    type: 'boolean',
+    default: true,
+    filterable: true,
+  }),
+
+  /**
+   * Creation timestamp - readonly, filterable, sortable.
+   */
+  CREATED_AT: Object.freeze({
+    type: 'timestamp',
+    ...TRAIT_SETS.TIMESTAMP,
+  }),
+
+  /**
+   * Update timestamp - readonly, filterable, sortable.
+   */
+  UPDATED_AT: Object.freeze({
+    type: 'timestamp',
+    ...TRAIT_SETS.TIMESTAMP,
+  }),
+
+  /**
+   * Standard status enum - filterable, sortable.
+   * Note: enumKey must be set in entity metadata if enum values differ.
+   */
+  STATUS: Object.freeze({
+    type: 'enum',
+    enumKey: 'status',
+    default: 'active',
+    ...TRAIT_SETS.LOOKUP,
+  }),
+});
+
+/**
+ * Spread-ready Tier 1 field groups for entity metadata.
+ * Use these to include standard fields with a single spread.
+ *
+ * @example
+ * fields: {
+ *   ...TIER1_FIELDS.CORE,
+ *   name: withTraits(FIELD.NAME, TRAIT_SETS.IDENTITY),
+ *   // ... entity-specific fields
+ * }
+ */
+const TIER1_FIELDS = Object.freeze({
+  /**
+   * Core fields for all entities (without status).
+   * Includes: id, is_active, created_at, updated_at
+   */
+  CORE: Object.freeze({
+    id: TIER1.ID,
+    is_active: TIER1.IS_ACTIVE,
+    created_at: TIER1.CREATED_AT,
+    updated_at: TIER1.UPDATED_AT,
+  }),
+
+  /**
+   * Core fields plus standard status enum.
+   * Includes: id, is_active, created_at, updated_at, status
+   */
+  WITH_STATUS: Object.freeze({
+    id: TIER1.ID,
+    is_active: TIER1.IS_ACTIVE,
+    created_at: TIER1.CREATED_AT,
+    updated_at: TIER1.UPDATED_AT,
+    status: TIER1.STATUS,
+  }),
+});
+
+// ============================================================================
 // STANDARD SINGLE-FIELD DEFINITIONS
 // ============================================================================
 
@@ -685,6 +927,9 @@ const JUNCTION = Object.freeze({
  * Generate foreign key fields for a junction entity.
  * Creates properly configured FK fields for both sides of the relationship.
  *
+ * DEPRECATED: Use createJunctionFields() for complete junction entity fields.
+ * This function is retained for backwards compatibility.
+ *
  * @param {string} entity1 - First entity key (e.g., 'customer')
  * @param {string} entity2 - Second entity key (e.g., 'property')
  * @param {Object} [options={}] - Configuration options
@@ -720,6 +965,107 @@ function createJunctionForeignKeys(entity1, entity2, options = {}) {
 }
 
 /**
+ * Generate complete fields for a junction entity.
+ * Includes Tier 1 fields + FK fields with full JUNCTION_FK traits.
+ *
+ * This is the PREFERRED way to define junction entity fields.
+ * Replaces the pattern of spreading JUNCTION.CORE_FIELDS + createJunctionForeignKeys().
+ *
+ * @param {string} entity1 - First entity key (e.g., 'visit')
+ * @param {string} entity2 - Second entity key (e.g., 'technician')
+ * @param {Object} [options] - Configuration options
+ * @param {boolean} [options.withIsActive=true] - Include is_active field
+ * @param {Object} [options.extraFields={}] - Additional fields to include
+ * @returns {Object} Complete fields object for junction entity
+ *
+ * @example
+ * // Basic junction
+ * fields: createJunctionFields('visit', 'technician')
+ * // Produces: id, visit_id, technician_id, is_active, created_at, updated_at
+ *
+ * // With extra fields
+ * fields: createJunctionFields('customer', 'property', {
+ *   extraFields: {
+ *     is_primary: { type: 'boolean', default: false, filterable: true },
+ *   }
+ * })
+ */
+function createJunctionFields(entity1, entity2, options = {}) {
+  const { withIsActive = true, extraFields = {} } = options;
+  const fk1 = foreignKeyFieldName(entity1);
+  const fk2 = foreignKeyFieldName(entity2);
+
+  return Object.freeze({
+    // Tier 1: Primary Key
+    id: TIER1.ID,
+
+    // Junction FKs with full traits
+    [fk1]: Object.freeze({
+      type: 'foreignKey',
+      references: entity1,
+      ...TRAIT_SETS.JUNCTION_FK,
+    }),
+    [fk2]: Object.freeze({
+      type: 'foreignKey',
+      references: entity2,
+      ...TRAIT_SETS.JUNCTION_FK,
+    }),
+
+    // Optional is_active
+    ...(withIsActive && { is_active: TIER1.IS_ACTIVE }),
+
+    // Tier 1: Timestamps
+    created_at: TIER1.CREATED_AT,
+    updated_at: TIER1.UPDATED_AT,
+
+    // Extra fields
+    ...extraFields,
+  });
+}
+
+/**
+ * Generate a single foreign key field with configurable traits.
+ *
+ * @param {string} entity - Target entity key (e.g., 'customer')
+ * @param {Object} [options] - Configuration options
+ * @param {boolean} [options.required=false] - Whether FK is required
+ * @param {Object} [options.traits=TRAIT_SETS.FILTER_ONLY] - Traits to apply
+ * @param {string} [options.displayField] - Field to display from related entity
+ * @returns {Object} FK field definition with traits
+ *
+ * @example
+ * // Optional FK, filterable only (default)
+ * manager_id: createForeignKey('user')
+ *
+ * // Required FK, filterable and sortable
+ * customer_id: createForeignKey('customer', {
+ *   required: true,
+ *   traits: TRAIT_SETS.LOOKUP
+ * })
+ *
+ * // Junction-style FK (required, immutable, filterable)
+ * work_order_id: createForeignKey('work_order', {
+ *   required: true,
+ *   traits: TRAIT_SETS.JUNCTION_FK
+ * })
+ */
+function createForeignKey(entity, options = {}) {
+  const {
+    required = false,
+    traits = TRAIT_SETS.FILTER_ONLY,
+    displayField,
+  } = options;
+
+  return Object.freeze({
+    type: 'foreignKey',
+    references: entity,
+    ...(required && { required: true }),
+    ...(displayField && { displayField }),
+    ...traits,
+  });
+}
+
+/**
  * Generate a standard unique constraint for a junction entity.
  * Prevents duplicate relationships between the same pair of entities.
  *
@@ -750,6 +1096,15 @@ module.exports = {
   // Name patterns (re-exported for convenience)
   NAME_PATTERNS,
 
+  // Field Traits System (NEW)
+  TRAITS,
+  TRAIT_SETS,
+  withTraits,
+
+  // Tier 1 Entity Contract Fields (NEW)
+  TIER1,
+  TIER1_FIELDS,
+
   // Standard field definitions
   FIELD,
 
@@ -759,6 +1114,9 @@ module.exports = {
 
   // Naming conventions
   foreignKeyFieldName,
+
+  // Foreign key helper (NEW)
+  createForeignKey,
 
   // Address constants
   ADDRESS_SUFFIXES,
@@ -777,6 +1135,7 @@ module.exports = {
 
   // Junction entity helpers
   JUNCTION,
-  createJunctionForeignKeys,
+  createJunctionForeignKeys, // DEPRECATED: use createJunctionFields
+  createJunctionFields, // NEW: preferred
   createJunctionUniqueConstraint,
 };

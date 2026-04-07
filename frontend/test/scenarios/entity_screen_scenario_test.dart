@@ -35,8 +35,8 @@ void main() {
 
   group('EntityScreen Scenario Tests', () {
     group('Renders for Each Entity', () {
-      for (final entityName in allKnownEntities) {
-        testWidgets('EntityScreen renders for $entityName', (tester) async {
+      testWidgets('EntityScreen renders for all entities', (tester) async {
+        for (final entityName in EntityTestRegistry.allEntityNames) {
           // Arrange - mock entity list response
           mockApiClient.mockEntityList(entityName, [
             EntityDataGenerator.create(entityName),
@@ -46,20 +46,28 @@ void main() {
           await _pumpEntityScreen(tester, entityName, mockApiClient);
 
           // Assert - screen should render without error
-          expect(tester.takeException(), isNull);
+          expect(
+            tester.takeException(),
+            isNull,
+            reason: '$entityName: EntityScreen should render without error',
+          );
 
           // Should find some content (title or table)
           final hasContent = find.byType(Scaffold).evaluate().isNotEmpty;
-          expect(hasContent, isTrue, reason: 'Screen should have a Scaffold');
-        });
-      }
+          expect(
+            hasContent,
+            isTrue,
+            reason: '$entityName: Screen should have a Scaffold',
+          );
+        }
+      });
     });
 
     group('Shows Loading State', () {
-      for (final entityName in allKnownEntities) {
-        testWidgets('EntityScreen shows loading for $entityName', (
-          tester,
-        ) async {
+      testWidgets('EntityScreen shows loading for all entities', (
+        tester,
+      ) async {
+        for (final entityName in EntityTestRegistry.allEntityNames) {
           // Arrange - don't settle, capture loading state
           mockApiClient.mockEntityList(entityName, [
             EntityDataGenerator.create(entityName),
@@ -83,17 +91,21 @@ void main() {
 
           // Don't hard-fail if no loading indicator - some screens may render instantly
           if (hasLoadingIndicator) {
-            expect(find.byType(CircularProgressIndicator), findsWidgets);
+            expect(
+              find.byType(CircularProgressIndicator),
+              findsWidgets,
+              reason: '$entityName: should show loading indicator',
+            );
           }
-        });
-      }
+        }
+      });
     });
 
     group('Handles API Errors', () {
-      for (final entityName in allKnownEntities) {
-        testWidgets('EntityScreen handles error for $entityName', (
-          tester,
-        ) async {
+      testWidgets('EntityScreen handles error for all entities', (
+        tester,
+      ) async {
+        for (final entityName in EntityTestRegistry.allEntityNames) {
           // Arrange - configure mock to fail
           mockApiClient.setShouldFail(true, message: 'Network error');
 
@@ -115,17 +127,20 @@ void main() {
           expect(
             hasErrorIndicator,
             isTrue,
-            reason: 'Screen should show error indicator for $entityName',
+            reason: '$entityName: Screen should show error indicator',
           );
-        });
-      }
+          
+          // Reset mock for next entity
+          mockApiClient.setShouldFail(false);
+        }
+      });
     });
 
     group('Displays Entity Data', () {
-      for (final entityName in allKnownEntities) {
-        testWidgets('EntityScreen displays data for $entityName', (
-          tester,
-        ) async {
+      testWidgets('EntityScreen displays data for all entities', (
+        tester,
+      ) async {
+        for (final entityName in EntityTestRegistry.allEntityNames) {
           // Arrange - generate realistic mock data
           final testData = EntityDataGenerator.createList(entityName, count: 3);
           mockApiClient.mockEntityList(entityName, testData);
@@ -143,19 +158,19 @@ void main() {
           expect(
             hasTable,
             isTrue,
-            reason: 'Screen should display data container for $entityName',
+            reason: '$entityName: Screen should display data container',
           );
-        });
-      }
+        }
+      });
     });
   });
 
   group('EntityDetailScreen Scenario Tests', () {
     group('Renders for Each Entity', () {
-      for (final entityName in allKnownEntities) {
-        testWidgets('EntityDetailScreen renders for $entityName', (
-          tester,
-        ) async {
+      testWidgets('EntityDetailScreen renders for all entities', (
+        tester,
+      ) async {
+        for (final entityName in EntityTestRegistry.allEntityNames) {
           // Arrange
           final testEntity = EntityDataGenerator.create(entityName);
           const testId = 1;
@@ -170,17 +185,25 @@ void main() {
           );
 
           // Assert
-          expect(tester.takeException(), isNull);
-          expect(find.byType(Scaffold), findsWidgets);
-        });
-      }
+          expect(
+            tester.takeException(),
+            isNull,
+            reason: '$entityName: EntityDetailScreen should render without error',
+          );
+          expect(
+            find.byType(Scaffold),
+            findsWidgets,
+            reason: '$entityName: should have Scaffold',
+          );
+        }
+      });
     });
 
     group('Shows Loading State', () {
-      for (final entityName in allKnownEntities) {
-        testWidgets('EntityDetailScreen shows loading for $entityName', (
-          tester,
-        ) async {
+      testWidgets('EntityDetailScreen shows loading for all entities', (
+        tester,
+      ) async {
+        for (final entityName in EntityTestRegistry.allEntityNames) {
           // Arrange
           final testEntity = EntityDataGenerator.create(entityName);
           const testId = 1;
@@ -203,17 +226,21 @@ void main() {
               .evaluate()
               .isNotEmpty;
           if (hasLoadingIndicator) {
-            expect(find.byType(CircularProgressIndicator), findsWidgets);
+            expect(
+              find.byType(CircularProgressIndicator),
+              findsWidgets,
+              reason: '$entityName: should show loading indicator',
+            );
           }
-        });
-      }
+        }
+      });
     });
 
     group('Handles Not Found Errors', () {
-      for (final entityName in allKnownEntities) {
-        testWidgets('EntityDetailScreen handles 404 for $entityName', (
-          tester,
-        ) async {
+      testWidgets('EntityDetailScreen handles 404 for all entities', (
+        tester,
+      ) async {
+        for (final entityName in EntityTestRegistry.allEntityNames) {
           // Arrange - configure mock to fail with not found
           mockApiClient.setShouldFail(true, message: 'Not found');
 
@@ -238,17 +265,20 @@ void main() {
           expect(
             hasErrorIndicator,
             isTrue,
-            reason: 'Screen should show error for not found $entityName',
+            reason: '$entityName: Screen should show error for not found',
           );
-        });
-      }
+          
+          // Reset mock for next entity
+          mockApiClient.setShouldFail(false);
+        }
+      });
     });
 
     group('Displays Entity Details', () {
-      for (final entityName in allKnownEntities) {
-        testWidgets('EntityDetailScreen displays details for $entityName', (
-          tester,
-        ) async {
+      testWidgets('EntityDetailScreen displays details for all entities', (
+        tester,
+      ) async {
+        for (final entityName in EntityTestRegistry.allEntityNames) {
           // Arrange
           final testEntity = EntityDataGenerator.create(entityName);
           const testId = 1;
@@ -273,10 +303,10 @@ void main() {
           expect(
             hasDetailContent,
             isTrue,
-            reason: 'Screen should display entity details for $entityName',
+            reason: '$entityName: Screen should display entity details',
           );
-        });
-      }
+        }
+      });
     });
   });
 }

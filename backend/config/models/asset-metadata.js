@@ -17,7 +17,15 @@ const {
   FIELD_ACCESS_LEVELS: FAL,
   UNIVERSAL_FIELD_ACCESS,
 } = require('../constants');
-const { FIELD, NAME_PATTERNS } = require('../field-types');
+const {
+  FIELD,
+  NAME_PATTERNS,
+  TIER1_FIELDS,
+  withTraits,
+  TRAITS,
+  TRAIT_SETS,
+  createForeignKey,
+} = require('../field-types');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -125,10 +133,6 @@ module.exports = {
   // CRUD CONFIGURATION
   // ============================================================================
 
-  requiredFields: ['name', 'unit_id', 'asset_type'],
-
-  immutableFields: ['unit_id', 'property_id'], // Cannot move asset to different unit
-
   displayColumns: [
     'name',
     'asset_type',
@@ -231,42 +235,8 @@ module.exports = {
   ],
 
   // ============================================================================
-  // SEARCH CONFIGURATION
-  // ============================================================================
-
-  searchableFields: ['name', 'manufacturer', 'model', 'serial_number'],
-
-  // ============================================================================
-  // FILTER CONFIGURATION
-  // ============================================================================
-
-  filterableFields: [
-    'id',
-    'name',
-    'asset_type',
-    'unit_id',
-    'property_id', // Denormalized for efficient property-level filtering
-    'manufacturer',
-    'is_active',
-    'status',
-    'created_at',
-    'updated_at',
-  ],
-
-  // ============================================================================
   // SORT CONFIGURATION
   // ============================================================================
-
-  sortableFields: [
-    'id',
-    'name',
-    'asset_type',
-    'manufacturer',
-    'status',
-    'install_date',
-    'created_at',
-    'updated_at',
-  ],
 
   defaultSort: {
     field: 'name',
@@ -274,57 +244,57 @@ module.exports = {
   },
 
   // ============================================================================
-  // FIELD DEFINITIONS
+  // FIELD DEFINITIONS (Field-Centric: traits embedded in field definitions)
   // ============================================================================
 
   fields: {
     // TIER 1: Universal Entity Contract Fields
-    id: { type: 'integer', readonly: true },
-    name: { ...FIELD.NAME, required: true, maxLength: 200 },
-    is_active: { type: 'boolean', default: true },
-    created_at: { type: 'timestamp', readonly: true },
-    updated_at: { type: 'timestamp', readonly: true },
+    ...TIER1_FIELDS.WITH_STATUS,
 
-    // TIER 2: Entity-Specific Lifecycle Field
-    status: {
-      type: 'enum',
-      enumKey: 'status',
-      default: 'active',
-    },
-
-    // Parent reference - the unit this asset belongs to
-    unit_id: {
-      type: 'foreignKey',
-      references: 'unit',
+    // Parent references
+    unit_id: createForeignKey('unit', {
       required: true,
+      immutable: true,
       displayFields: ['unit_identifier'],
       displayTemplate: '{unit_identifier}',
-    },
-
-    // Denormalized property_id - auto-populated from unit for efficient filtering
-    property_id: {
-      type: 'foreignKey',
-      references: 'property',
-      computed: true,
-      derivedFrom: 'unit_id',
-      displayFields: ['name'],
-      displayTemplate: '{name}',
-    },
+    }),
+    property_id: withTraits(
+      {
+        type: 'foreignKey',
+        references: 'property',
+        computed: true,
+        derivedFrom: 'unit_id',
+        displayFields: ['name'],
+        displayTemplate: '{name}',
+      },
+      TRAITS.IMMUTABLE,
+      TRAIT_SETS.FILTER_ONLY,
+    ),
 
     // Entity-specific fields
-    asset_type: {
-      type: 'enum',
-      enumKey: 'asset_type',
-      required: true,
-    },
-    manufacturer: FIELD.NAME,
-    model: FIELD.NAME,
-    serial_number: {
-      type: 'string',
-      maxLength: 100,
-      description: 'Manufacturer serial number',
-    },
-    install_date: { type: 'date' },
+    name: withTraits(
+      { ...FIELD.NAME, maxLength: 200 },
+      TRAIT_SETS.IDENTITY,
+    ),
+    asset_type: withTraits(
+      {
+        type: 'enum',
+        enumKey: 'asset_type',
+      },
+      TRAITS.REQUIRED,
+      TRAIT_SETS.LOOKUP,
+    ),
+    manufacturer: withTraits(FIELD.NAME, TRAITS.SEARCHABLE, TRAIT_SETS.LOOKUP),
+    model: withTraits(FIELD.NAME, TRAITS.SEARCHABLE, TRAIT_SETS.FILTER_ONLY),
+    serial_number: withTraits(
+      {
+        type: 'string',
+        maxLength: 100,
+        description: 'Manufacturer serial number',
+      },
+      TRAITS.SEARCHABLE,
+    ),
+    install_date: withTraits({ type: 'date' }, TRAIT_SETS.LOOKUP),
     last_service_date: { type: 'date' },
     next_service_date: { type: 'date' },
     warranty_expiry: { type: 'date' },

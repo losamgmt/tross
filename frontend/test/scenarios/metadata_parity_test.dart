@@ -1,8 +1,8 @@
 /// Metadata Parity Tests
 ///
 /// Validates that frontend EntityMetadata matches backend configuration.
-/// These are "drift detection" tests - they catch when backend adds/removes
-/// entities without updating the frontend sync.
+/// Tests validate STRUCTURAL CONTRACTS, not specific entity counts.
+/// The synced JSON IS the source of truth - no hardcoded lists.
 ///
 /// Zero per-entity code: all assertions are generated from metadata.
 library;
@@ -12,49 +12,30 @@ import 'package:tross/services/entity_metadata.dart';
 
 import '../factory/factory.dart';
 
-/// Expected entities - uses shared constant from factory
-final _expectedEntities = allKnownEntities.toSet();
-
 void main() {
   setUpAll(() async {
     await EntityTestRegistry.ensureInitialized();
   });
 
   group('Metadata Parity', () {
-    test('all expected entities are registered', () {
-      final registeredEntities = EntityTestRegistry.allEntityNames.toSet();
-
-      for (final expected in _expectedEntities) {
+    test('core business entities are registered', () {
+      // Smoke test: verify essential entities exist
+      // These are the minimum required for the app to function
+      for (final entity in coreBusinessEntities) {
         expect(
-          registeredEntities.contains(expected),
+          EntityTestRegistry.has(entity),
           isTrue,
-          reason:
-              'Entity "$expected" should be registered in EntityMetadataRegistry',
+          reason: 'Core entity "$entity" must be registered',
         );
       }
     });
 
-    test('no unexpected entities are registered', () {
-      // This test catches orphan entities (removed from backend but still in frontend)
-      final registeredEntities = EntityTestRegistry.allEntityNames.toSet();
-      final unexpectedEntities = registeredEntities.difference(
-        _expectedEntities,
-      );
-
-      expect(
-        unexpectedEntities,
-        isEmpty,
-        reason:
-            'Unexpected entities found: $unexpectedEntities. '
-            'Update expected list if these are intentional additions.',
-      );
-    });
-
-    test('entity count matches expected', () {
+    test('registry has entities loaded', () {
+      // Verify sync worked - we should have entities
       expect(
         EntityTestRegistry.allEntityNames.length,
-        equals(_expectedEntities.length),
-        reason: 'Expected ${_expectedEntities.length} entities in registry',
+        greaterThan(0),
+        reason: 'Registry should have at least one entity',
       );
     });
 

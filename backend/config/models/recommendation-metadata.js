@@ -14,7 +14,14 @@
  */
 
 const { UNIVERSAL_FIELD_ACCESS } = require('../constants');
-const { NAME_PATTERNS } = require('../field-types');
+const {
+  NAME_PATTERNS,
+  TIER1_FIELDS,
+  withTraits,
+  TRAITS,
+  TRAIT_SETS,
+  createForeignKey,
+} = require('../field-types');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -88,10 +95,6 @@ module.exports = {
   // ============================================================================
   // CRUD CONFIGURATION
   // ============================================================================
-
-  requiredFields: ['customer_id', 'title'],
-
-  immutableFields: ['recommendation_number'],
 
   displayColumns: ['recommendation_number', 'customer_id', 'title', 'status', 'created_at'],
 
@@ -190,59 +193,50 @@ module.exports = {
   },
 
   // ============================================================================
-  // FIELDS (Phase 1: Minimal - Phase 3: Full fields)
+  // FIELDS (with embedded traits for query capabilities)
   // ============================================================================
 
   fields: {
-    // TIER 1: Universal Entity Contract Fields
-    id: { type: 'integer', readonly: true },
-    is_active: { type: 'boolean', default: true },
-    created_at: { type: 'timestamp', readonly: true },
-    updated_at: { type: 'timestamp', readonly: true },
+    // TIER 1: Universal Entity Contract Fields (field-centric)
+    ...TIER1_FIELDS.WITH_STATUS,
+    // Override status default (workflow entity - draft→open→approved, not active/inactive)
+    status: withTraits(
+      { type: 'enum', enumKey: 'status', default: 'draft' },
+      TRAIT_SETS.LOOKUP,
+    ),
 
-    recommendation_number: {
-      type: 'string',
-      required: true,
-      maxLength: 20,
-      description: 'Auto-generated recommendation identifier (REC-YYYY-NNNN)',
-    },
-    title: {
-      type: 'string',
-      required: true,
-      maxLength: 200,
-      description: 'Recommendation title',
-    },
-    description: {
-      type: 'text',
-      description: 'Detailed recommendation description',
-    },
-    priority: {
-      type: 'enum',
-      enumKey: 'priority',
-      default: 'normal',
-    },
-    notes: {
-      type: 'text',
-      description: 'Internal notes',
-    },
-    status: {
-      type: 'enum',
-      enumKey: 'status',
-      default: 'draft',
-    },
-    // FK fields
-    customer_id: {
-      type: 'foreignKey',
-      references: 'customer',
+    // Identity field - auto-generated, immutable
+    recommendation_number: withTraits(
+      { type: 'string', maxLength: 20, description: 'Auto-generated recommendation identifier (REC-YYYY-NNNN)' },
+      TRAITS.IMMUTABLE, TRAIT_SETS.IDENTITY,
+    ),
+
+    // Content fields
+    title: withTraits(
+      { type: 'string', maxLength: 200, description: 'Recommendation title' },
+      TRAITS.REQUIRED, TRAIT_SETS.SEARCHABLE_LOOKUP,
+    ),
+    description: withTraits(
+      { type: 'text', description: 'Detailed recommendation description' },
+      TRAIT_SETS.FULLTEXT,
+    ),
+    priority: withTraits(
+      { type: 'enum', enumKey: 'priority', default: 'normal' },
+      TRAIT_SETS.LOOKUP,
+    ),
+    notes: { type: 'text', description: 'Internal notes' },
+
+    // FK fields with embedded traits
+    customer_id: createForeignKey('customer', {
       required: true,
       displayFields: ['first_name', 'last_name'],
       displayTemplate: '{first_name} {last_name}',
-    },
-    asset_id: {
-      type: 'foreignKey',
-      references: 'asset',
+      traits: TRAIT_SETS.LOOKUP,
+    }),
+    asset_id: createForeignKey('asset', {
       displayFields: ['name', 'asset_type'],
       displayTemplate: '{name}',
-    },
+      traits: TRAIT_SETS.LOOKUP,
+    }),
   },
 };
