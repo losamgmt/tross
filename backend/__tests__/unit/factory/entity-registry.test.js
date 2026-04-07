@@ -24,7 +24,7 @@ const {
   REQUIRED_FIELDS,
   RLS_REQUIRED_FIELDS,
 } = require("../../factory/entity-registry");
-const { getRequiredFields } = require("../../../config/metadata-accessors");
+const { getRequiredFields, getSearchableFields } = require("../../../config/metadata-accessors");
 
 describe("Entity Registry", () => {
   // ==========================================================================
@@ -206,11 +206,18 @@ describe("Entity Registry", () => {
       expect(withFields).toContain("role");
     });
 
-    test("getEntitiesWithFeature finds entities with searchableFields", () => {
-      const withSearch = getEntitiesWithFeature("searchableFields");
+    test("entities have searchable fields derivable via accessor", () => {
+      // After field-centric migration, searchableFields is derived from field traits
+      // This test verifies that at least some entities have searchable fields
+      const allEntities = getAllEntityNames();
+      const entitiesWithSearch = allEntities.filter((entityName) => {
+        const metadata = getEntityMetadata(entityName);
+        const searchableFields = getSearchableFields(metadata);
+        return searchableFields.length > 0;
+      });
 
       // Most entities should be searchable
-      expect(withSearch.length).toBeGreaterThan(0);
+      expect(entitiesWithSearch.length).toBeGreaterThan(0);
     });
 
     test("getEntitiesWithFeature finds entities with unique identity", () => {

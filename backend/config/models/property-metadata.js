@@ -17,6 +17,9 @@ const {
 const {
   FIELD,
   NAME_PATTERNS,
+  TIER1_FIELDS,
+  withTraits,
+  TRAIT_SETS,
   createAddressFields,
   createAddressFieldAccess,
 } = require('../field-types');
@@ -154,10 +157,6 @@ module.exports = {
   // CRUD CONFIGURATION
   // ============================================================================
 
-  requiredFields: ['name'],
-
-  immutableFields: [],
-
   displayColumns: [
     'name',
     'property_type',
@@ -264,39 +263,8 @@ module.exports = {
   ],
 
   // ============================================================================
-  // SEARCH CONFIGURATION
-  // ============================================================================
-
-  searchableFields: ['name', 'address_city', 'address_state'],
-
-  // ============================================================================
-  // FILTER CONFIGURATION
-  // ============================================================================
-
-  filterableFields: [
-    'id',
-    'name',
-    'property_type',
-    'is_active',
-    'status',
-    'address_city',
-    'address_state',
-    'created_at',
-    'updated_at',
-  ],
-
-  // ============================================================================
   // SORT CONFIGURATION
   // ============================================================================
-
-  sortableFields: [
-    'id',
-    'name',
-    'property_type',
-    'status',
-    'created_at',
-    'updated_at',
-  ],
 
   defaultSort: {
     field: 'name',
@@ -304,30 +272,26 @@ module.exports = {
   },
 
   // ============================================================================
-  // FIELD DEFINITIONS
+  // FIELD DEFINITIONS (Field-Centric: traits embedded in field definitions)
   // ============================================================================
 
   fields: {
     // TIER 1: Universal Entity Contract Fields
-    id: { type: 'integer', readonly: true },
-    name: { ...FIELD.NAME, required: true, maxLength: 200 },
-    is_active: { type: 'boolean', default: true },
-    created_at: { type: 'timestamp', readonly: true },
-    updated_at: { type: 'timestamp', readonly: true },
-
-    // TIER 2: Entity-Specific Lifecycle Field
-    status: {
-      type: 'enum',
-      enumKey: 'status',
-      default: 'active',
-    },
+    ...TIER1_FIELDS.WITH_STATUS,
 
     // Entity-specific fields
-    property_type: {
-      type: 'enum',
-      enumKey: 'property_type',
-      default: 'residential',
-    },
+    name: withTraits(
+      { ...FIELD.NAME, maxLength: 200 },
+      TRAIT_SETS.IDENTITY,
+    ),
+    property_type: withTraits(
+      {
+        type: 'enum',
+        enumKey: 'property_type',
+        default: 'residential',
+      },
+      TRAIT_SETS.LOOKUP,
+    ),
     access_instructions: {
       type: 'text',
       maxLength: 2000,
@@ -335,7 +299,10 @@ module.exports = {
     },
     notes: { type: 'text' },
 
-    // Address fields (using flat structure like customer)
-    ...createAddressFields('address'),
+    // Address fields (using flat structure)
+    ...createAddressFields('address', {
+      citySearchable: true,
+      stateSearchable: true,
+    }),
   },
 };

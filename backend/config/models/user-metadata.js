@@ -14,7 +14,15 @@ const {
   FIELD_ACCESS_LEVELS: FAL,
   UNIVERSAL_FIELD_ACCESS,
 } = require('../constants');
-const { FIELD, NAME_PATTERNS } = require('../field-types');
+const {
+  FIELD,
+  NAME_PATTERNS,
+  TIER1_FIELDS,
+  withTraits,
+  TRAITS,
+  TRAIT_SETS,
+  createForeignKey,
+} = require('../field-types');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -168,18 +176,6 @@ module.exports = {
   // ============================================================================
 
   /**
-   * Fields required when creating a new entity
-   */
-  requiredFields: ['email', 'first_name', 'last_name'],
-
-  /**
-   * Fields that cannot be modified after creation (beyond universal immutables: id, created_at)
-   * - email: User identity, cannot change
-   * - auth0_id: Auth binding, cannot change
-   */
-  immutableFields: ['email', 'auth0_id'],
-
-  /**
    * Default columns to display in table views (ordered)
    * Used by admin panel and frontend table widgets
    */
@@ -277,57 +273,6 @@ module.exports = {
     },
   ],
 
-  // ============================================================================
-  // SEARCH CONFIGURATION (Text Search with ILIKE)
-  // ============================================================================
-
-  /**
-   * Fields that support text search (ILIKE %term%)
-   * These are concatenated with OR for full-text search
-   */
-  searchableFields: ['first_name', 'last_name', 'email'],
-
-  // ============================================================================
-  // FILTER CONFIGURATION (Exact Match & Operators)
-  // ============================================================================
-
-  /**
-   * Fields that can be used in WHERE clauses
-   * Supports: exact match, gt, gte, lt, lte, in, not
-   */
-  filterableFields: [
-    'id',
-    'email',
-    'auth0_id',
-    'first_name',
-    'last_name',
-    'role_id',
-    'is_active',
-    'status',
-    'created_at',
-    'updated_at',
-  ],
-
-  // ============================================================================
-  // SORT CONFIGURATION
-  // ============================================================================
-
-  /**
-   * Fields that can be used in ORDER BY clauses
-   * All non-sensitive fields are sortable by default
-   */
-  sortableFields: [
-    'id',
-    'email',
-    'first_name',
-    'last_name',
-    'role_id',
-    'is_active',
-    'status',
-    'created_at',
-    'updated_at',
-  ],
-
   /**
    * Default sort when no sortBy specified
    */
@@ -414,36 +359,36 @@ module.exports = {
   // ============================================================================
 
   fields: {
-    // TIER 1: Universal Entity Contract Fields
-    id: { type: 'integer', readonly: true },
-    email: { ...FIELD.EMAIL, required: true },
-    is_active: { type: 'boolean', default: true },
-    created_at: { type: 'timestamp', readonly: true },
-    updated_at: { type: 'timestamp', readonly: true },
+    // TIER 1: Universal Entity Contract Fields (id, is_active, created_at, updated_at, status)
+    ...TIER1_FIELDS.WITH_STATUS,
+    // Override is_active to add sortable (entity-specific requirement)
+    is_active: withTraits({ type: 'boolean', default: true }, TRAITS.FILTERABLE, TRAITS.SORTABLE),
 
-    // TIER 2: Entity-Specific Lifecycle Field
-    status: {
-      type: 'enum',
-      enumKey: 'status',
-      default: 'pending',
-    },
+    // Primary identity field - required, immutable, fully queryable
+    email: withTraits(FIELD.EMAIL, TRAITS.REQUIRED, TRAITS.IMMUTABLE, TRAIT_SETS.IDENTITY),
 
-    // Entity-specific fields
-    auth0_id: { type: 'string', maxLength: 255, readonly: true },
-    first_name: FIELD.FIRST_NAME,
-    last_name: FIELD.LAST_NAME,
-    role_id: { type: 'foreignKey', references: 'role' },
+    // Auth0 binding - immutable, filterable only (not searchable/sortable), readonly
+    auth0_id: withTraits(
+      { type: 'string', maxLength: 255, readonly: true },
+      TRAITS.IMMUTABLE,
+      TRAITS.FILTERABLE,
+    ),
 
-    // Multi-profile FKs - can be linked on create or edit
-    customer_profile_id: {
-      type: 'foreignKey',
-      references: 'customer',
+    // Human name fields - required, fully queryable
+    first_name: withTraits(FIELD.FIRST_NAME, TRAITS.REQUIRED, TRAIT_SETS.IDENTITY),
+    last_name: withTraits(FIELD.LAST_NAME, TRAITS.REQUIRED, TRAIT_SETS.IDENTITY),
+
+    // Role assignment - lookupable (filterable + sortable)
+    role_id: createForeignKey('role', { traits: TRAIT_SETS.LOOKUP }),
+
+    // Multi-profile FKs - admin managed, no query traits
+    customer_profile_id: createForeignKey('customer', {
+      traits: {},
       description: 'FK to customers table - links user to customer profile',
-    },
-    technician_profile_id: {
-      type: 'foreignKey',
-      references: 'technician',
+    }),
+    technician_profile_id: createForeignKey('technician', {
+      traits: {},
       description: 'FK to technicians table - links user to technician profile',
-    },
+    }),
   },
 };

@@ -14,7 +14,14 @@
  */
 
 const { UNIVERSAL_FIELD_ACCESS } = require('../constants');
-const { NAME_PATTERNS } = require('../field-types');
+const {
+  NAME_PATTERNS,
+  TIER1_FIELDS,
+  withTraits,
+  TRAITS,
+  TRAIT_SETS,
+  createForeignKey,
+} = require('../field-types');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -81,10 +88,6 @@ module.exports = {
   // ============================================================================
   // CRUD CONFIGURATION
   // ============================================================================
-
-  requiredFields: ['vendor_id', 'description'],
-
-  immutableFields: ['po_number'],
 
   displayColumns: ['po_number', 'vendor_id', 'description', 'total_amount', 'status'],
 
@@ -172,55 +175,46 @@ module.exports = {
   },
 
   // ============================================================================
-  // FIELDS (Phase 1: Minimal - Phase 3: Full fields)
+  // FIELDS (with embedded traits for query capabilities)
   // ============================================================================
 
   fields: {
-    // TIER 1: Universal Entity Contract Fields
-    id: { type: 'integer', readonly: true },
-    is_active: { type: 'boolean', default: true },
-    created_at: { type: 'timestamp', readonly: true },
-    updated_at: { type: 'timestamp', readonly: true },
+    // TIER 1: Universal Entity Contract Fields (field-centric)
+    ...TIER1_FIELDS.WITH_STATUS,
+    // Override status default (workflow entity - draft→submitted→approved, not active/inactive)
+    status: withTraits(
+      { type: 'enum', enumKey: 'status', default: 'draft' },
+      TRAIT_SETS.LOOKUP,
+    ),
 
-    po_number: {
-      type: 'string',
-      required: true,
-      maxLength: 20,
-      description: 'Auto-generated PO identifier (PO-YYYY-NNNN)',
-    },
-    description: {
-      type: 'text',
-      required: true,
-      description: 'Description of items being ordered',
-    },
-    total_amount: {
-      type: 'decimal',
-      precision: 10,
-      scale: 2,
-      description: 'Total order amount',
-    },
-    notes: {
-      type: 'text',
-      description: 'Internal notes',
-    },
-    status: {
-      type: 'enum',
-      enumKey: 'status',
-      default: 'draft',
-    },
-    // FK fields
-    vendor_id: {
-      type: 'foreignKey',
-      references: 'vendor',
+    // Identity field - auto-generated, immutable
+    po_number: withTraits(
+      { type: 'string', maxLength: 20, description: 'Auto-generated PO identifier (PO-YYYY-NNNN)' },
+      TRAITS.IMMUTABLE, TRAIT_SETS.IDENTITY,
+    ),
+
+    // Content fields
+    description: withTraits(
+      { type: 'text', description: 'Description of items being ordered' },
+      TRAITS.REQUIRED, TRAIT_SETS.FULLTEXT,
+    ),
+    total_amount: withTraits(
+      { type: 'decimal', precision: 10, scale: 2, description: 'Total order amount' },
+      TRAIT_SETS.SORTABLE,
+    ),
+    notes: { type: 'text', description: 'Internal notes' },
+
+    // FK fields with embedded traits
+    vendor_id: createForeignKey('vendor', {
       required: true,
       displayFields: ['company_name'],
       displayTemplate: '{company_name}',
-    },
-    work_order_id: {
-      type: 'foreignKey',
-      references: 'work_order',
+      traits: TRAIT_SETS.LOOKUP,
+    }),
+    work_order_id: createForeignKey('work_order', {
       displayFields: ['work_order_number'],
       displayTemplate: '{work_order_number}',
-    },
+      traits: TRAIT_SETS.LOOKUP,
+    }),
   },
 };

@@ -66,108 +66,113 @@ abstract final class WidgetTestFactory {
         await PermissionService.initialize();
       });
 
-      for (final entityName in allKnownEntities) {
-        group(entityName, () {
-          testWidgets('admin role can access modification actions', (
-            tester,
-          ) async {
-            // Skip entities with parentDerived rlsResource - they inherit permissions
-            // from their parent entity context (e.g., file_attachment)
-            final metadata = EntityTestRegistry.tryGet(entityName);
-            if (metadata != null && !metadata.rlsResource.isRealResource) {
-              return; // Skip test
-            }
+      testWidgets('admin role can access modification actions for all entities',
+          (tester) async {
+        final failures = <String>[];
 
-            // Skip read-only entities where admin can't update OR delete
-            // (e.g., audit_log is system-only)
-            final resourceType = ResourceType.fromString(
-              metadata?.rlsResource.toBackendString() ?? entityName,
-            );
-            // Skip if resource type is not recognized
-            if (resourceType == null) {
-              return;
-            }
-            final canUpdate = PermissionService.hasPermission(
-              'admin',
-              resourceType,
-              CrudOperation.update,
-            );
-            final canDelete = PermissionService.hasPermission(
-              'admin',
-              resourceType,
-              CrudOperation.delete,
-            );
-            if (!canUpdate && !canDelete) {
-              return; // Skip read-only entities
-            }
+        for (final entityName in EntityTestRegistry.allEntityNames) {
+          // Skip entities with parentDerived rlsResource - they inherit permissions
+          // from their parent entity context (e.g., file_attachment)
+          final metadata = EntityTestRegistry.tryGet(entityName);
+          if (metadata != null && !metadata.rlsResource.isRealResource) {
+            continue; // Skip this entity
+          }
 
-            final entity = EntityDataGenerator.create(entityName);
+          // Skip read-only entities where admin can't update OR delete
+          // (e.g., audit_log is system-only)
+          final resourceType = ResourceType.fromString(
+            metadata?.rlsResource.toBackendString() ?? entityName,
+          );
+          // Skip if resource type is not recognized
+          if (resourceType == null) {
+            continue;
+          }
+          final canUpdate = PermissionService.hasPermission(
+            'admin',
+            resourceType,
+            CrudOperation.update,
+          );
+          final canDelete = PermissionService.hasPermission(
+            'admin',
+            resourceType,
+            CrudOperation.delete,
+          );
+          if (!canUpdate && !canDelete) {
+            continue; // Skip read-only entities
+          }
 
-            await tester.pumpWidget(
-              _buildActionTestWrapper(
-                entityName: entityName,
-                entity: entity,
-                userRole: 'admin',
-              ),
-            );
+          final entity = EntityDataGenerator.create(entityName);
 
-            // Admin should have access to actions (ActionMenu rendered with items)
-            final actionMenu = tester.widget<ActionMenu>(
-              find.byType(ActionMenu),
-            );
-            expect(
-              actionMenu.actions,
-              isNotEmpty,
-              reason: 'Admin should have access to actions for $entityName',
-            );
-          });
+          await tester.pumpWidget(
+            _buildActionTestWrapper(
+              entityName: entityName,
+              entity: entity,
+              userRole: 'admin',
+            ),
+          );
 
-          testWidgets('permission enforcement is consistent', (tester) async {
-            // Skip entities with parentDerived rlsResource
-            final metadata = EntityTestRegistry.tryGet(entityName);
-            if (metadata != null && !metadata.rlsResource.isRealResource) {
-              return; // Skip test
-            }
+          // Admin should have access to actions (ActionMenu rendered with items)
+          final actionMenu = tester.widget<ActionMenu>(
+            find.byType(ActionMenu),
+          );
+          if (actionMenu.actions.isEmpty) {
+            failures.add('$entityName: Admin should have access to actions');
+          }
+        }
 
-            // Test that high-priority roles have >= actions than low-priority roles
-            final entity = EntityDataGenerator.create(entityName);
+        expect(failures, isEmpty, reason: failures.join('\n'));
+      });
 
-            // Get admin action count
-            await tester.pumpWidget(
-              _buildActionTestWrapper(
-                entityName: entityName,
-                entity: entity,
-                userRole: 'admin',
-              ),
-            );
-            final adminMenu = tester.widget<ActionMenu>(
-              find.byType(ActionMenu),
-            );
-            final adminActionCount = adminMenu.actions.length;
+      testWidgets('permission enforcement is consistent across all entities',
+          (tester) async {
+        final failures = <String>[];
 
-            // Get customer action count
-            await tester.pumpWidget(
-              _buildActionTestWrapper(
-                entityName: entityName,
-                entity: entity,
-                userRole: 'customer',
-              ),
-            );
-            final customerMenu = tester.widget<ActionMenu>(
-              find.byType(ActionMenu),
-            );
-            final customerActionCount = customerMenu.actions.length;
+        for (final entityName in EntityTestRegistry.allEntityNames) {
+          // Skip entities with parentDerived rlsResource
+          final metadata = EntityTestRegistry.tryGet(entityName);
+          if (metadata != null && !metadata.rlsResource.isRealResource) {
+            continue; // Skip this entity
+          }
 
-            // Admin should have >= actions as customer (higher privilege = more access)
-            expect(
-              adminActionCount,
-              greaterThanOrEqualTo(customerActionCount),
-              reason:
-                  'Admin should have at least as many actions as customer for $entityName',
+          // Test that high-priority roles have >= actions than low-priority roles
+          final entity = EntityDataGenerator.create(entityName);
+
+          // Get admin action count
+          await tester.pumpWidget(
+            _buildActionTestWrapper(
+              entityName: entityName,
+              entity: entity,
+              userRole: 'admin',
+            ),
+          );
+          final adminMenu = tester.widget<ActionMenu>(
+            find.byType(ActionMenu),
+          );
+          final adminActionCount = adminMenu.actions.length;
+
+          // Get customer action count
+          await tester.pumpWidget(
+            _buildActionTestWrapper(
+              entityName: entityName,
+              entity: entity,
+              userRole: 'customer',
+            ),
+          );
+          final customerMenu = tester.widget<ActionMenu>(
+            find.byType(ActionMenu),
+          );
+          final customerActionCount = customerMenu.actions.length;
+
+          // Admin should have >= actions as customer (higher privilege = more access)
+          if (adminActionCount < customerActionCount) {
+            failures.add(
+              '$entityName: Admin ($adminActionCount) should have >= actions as customer ($customerActionCount)',
             );
-          });
-        });
-      }
+          }
+        }
+
+        expect(failures, isEmpty, reason: failures.join('\n'));
+      });
 
       // Special case: self-protection
       testWidgets('user cannot delete themselves', (tester) async {
@@ -213,59 +218,90 @@ abstract final class WidgetTestFactory {
         await EntityTestRegistry.ensureInitialized();
       });
 
-      for (final entityName in allKnownEntities) {
-        group(entityName, () {
-          testWidgets('row actions render without error', (tester) async {
-            final entity = EntityDataGenerator.create(entityName);
+      testWidgets('row actions render without error for all entities',
+          (tester) async {
+        final failures = <String>[];
 
-            // Should not throw
-            await tester.pumpWidget(
-              _buildActionTestWrapper(
-                entityName: entityName,
-                entity: entity,
-                userRole: 'admin',
-              ),
-            );
+        for (final entityName in EntityTestRegistry.allEntityNames) {
+          final entity = EntityDataGenerator.create(entityName);
 
-            // If we get here without exception, the test passes
-            expect(tester.takeException(), isNull);
-          });
+          await tester.pumpWidget(
+            _buildActionTestWrapper(
+              entityName: entityName,
+              entity: entity,
+              userRole: 'admin',
+            ),
+          );
 
-          testWidgets('toolbar actions render without error', (tester) async {
-            // Should not throw
-            await tester.pumpWidget(
-              _buildToolbarTestWrapper(
-                entityName: entityName,
-                userRole: 'admin',
-              ),
-            );
+          final exception = tester.takeException();
+          if (exception != null) {
+            failures.add('$entityName: $exception');
+          }
+        }
 
-            expect(tester.takeException(), isNull);
-          });
+        expect(failures, isEmpty, reason: failures.join('\n'));
+      });
 
-          testWidgets('form fields render without error', (tester) async {
-            final entity = EntityDataGenerator.create(entityName);
+      testWidgets('toolbar actions render without error for all entities',
+          (tester) async {
+        final failures = <String>[];
 
-            // Should not throw
-            await tester.pumpWidget(
-              _buildFormTestWrapper(entityName: entityName, entity: entity),
-            );
+        for (final entityName in EntityTestRegistry.allEntityNames) {
+          await tester.pumpWidget(
+            _buildToolbarTestWrapper(
+              entityName: entityName,
+              userRole: 'admin',
+            ),
+          );
 
-            expect(tester.takeException(), isNull);
-          });
+          final exception = tester.takeException();
+          if (exception != null) {
+            failures.add('$entityName: $exception');
+          }
+        }
 
-          testWidgets('form fields render with minimal data', (tester) async {
-            final entity = EntityDataGenerator.createMinimal(entityName);
+        expect(failures, isEmpty, reason: failures.join('\n'));
+      });
 
-            // Should not throw even with minimal data
-            await tester.pumpWidget(
-              _buildFormTestWrapper(entityName: entityName, entity: entity),
-            );
+      testWidgets('form fields render without error for all entities',
+          (tester) async {
+        final failures = <String>[];
 
-            expect(tester.takeException(), isNull);
-          });
-        });
-      }
+        for (final entityName in EntityTestRegistry.allEntityNames) {
+          final entity = EntityDataGenerator.create(entityName);
+
+          await tester.pumpWidget(
+            _buildFormTestWrapper(entityName: entityName, entity: entity),
+          );
+
+          final exception = tester.takeException();
+          if (exception != null) {
+            failures.add('$entityName: $exception');
+          }
+        }
+
+        expect(failures, isEmpty, reason: failures.join('\n'));
+      });
+
+      testWidgets('form fields render with minimal data for all entities',
+          (tester) async {
+        final failures = <String>[];
+
+        for (final entityName in EntityTestRegistry.allEntityNames) {
+          final entity = EntityDataGenerator.createMinimal(entityName);
+
+          await tester.pumpWidget(
+            _buildFormTestWrapper(entityName: entityName, entity: entity),
+          );
+
+          final exception = tester.takeException();
+          if (exception != null) {
+            failures.add('$entityName: $exception');
+          }
+        }
+
+        expect(failures, isEmpty, reason: failures.join('\n'));
+      });
     });
   }
 
@@ -285,82 +321,92 @@ abstract final class WidgetTestFactory {
         await EntityTestRegistry.ensureInitialized();
       });
 
-      for (final entityName in allKnownEntities) {
-        group(entityName, () {
-          testWidgets('user can interact with form', (tester) async {
-            final entity = EntityDataGenerator.create(entityName);
-            bool formChanged = false;
+      testWidgets('user can interact with forms for all entities',
+          (tester) async {
+        final failures = <String>[];
 
-            await tester.pumpWidget(
-              _buildInteractiveFormWrapper(
-                entityName: entityName,
-                entity: entity,
-                onChanged: (_) => formChanged = true,
-              ),
-            );
+        for (final entityName in EntityTestRegistry.allEntityNames) {
+          final entity = EntityDataGenerator.create(entityName);
+          bool formChanged = false;
 
-            // Try multiple interaction strategies since entities have
-            // different field types. The goal is to verify SOME interaction
-            // triggers onChanged - not that every field type is tested.
+          await tester.pumpWidget(
+            _buildInteractiveFormWrapper(
+              entityName: entityName,
+              entity: entity,
+              onChanged: (_) => formChanged = true,
+            ),
+          );
 
-            // Strategy 1: Try entering text into TextFormField first (usually visible)
-            // (Avoids DropdownMenu's filter TextField which doesn't trigger onChanged)
-            final textFormFields = find.byType(TextFormField);
-            if (textFormFields.evaluate().isNotEmpty) {
-              await tester.enterText(textFormFields.first, 'test input');
-              await tester.pump();
-              if (formChanged) return; // Success!
-            }
+          // Try multiple interaction strategies since entities have
+          // different field types. The goal is to verify SOME interaction
+          // triggers onChanged - not that every field type is tested.
 
-            // Strategy 2: Try interacting with a BooleanToggle (may need scroll)
-            final booleanToggles = find.byType(BooleanToggle);
-            if (booleanToggles.evaluate().isNotEmpty) {
-              // Ensure widget is scrolled into view before tapping
-              await tester.ensureVisible(booleanToggles.first);
-              await tester.pumpAndSettle();
-              await tester.tap(booleanToggles.first);
-              await tester.pump();
-              if (formChanged) return; // Success!
-            }
+          // Strategy 1: Try entering text into TextFormField first (usually visible)
+          // (Avoids DropdownMenu's filter TextField which doesn't trigger onChanged)
+          final textFormFields = find.byType(TextFormField);
+          if (textFormFields.evaluate().isNotEmpty) {
+            await tester.enterText(textFormFields.first, 'test input');
+            await tester.pump();
+            if (formChanged) continue; // Success for this entity!
+          }
 
-            // Strategy 3: Try interacting with an IconButton (number +/- buttons)
-            final iconButtons = find.byType(IconButton);
-            if (iconButtons.evaluate().isNotEmpty) {
-              await tester.ensureVisible(iconButtons.first);
-              await tester.pumpAndSettle();
-              await tester.tap(iconButtons.first);
-              await tester.pump();
-              if (formChanged) return; // Success!
-            }
+          // Strategy 2: Try interacting with a BooleanToggle (may need scroll)
+          final booleanToggles = find.byType(BooleanToggle);
+          if (booleanToggles.evaluate().isNotEmpty) {
+            // Ensure widget is scrolled into view before tapping
+            await tester.ensureVisible(booleanToggles.first);
+            await tester.pumpAndSettle();
+            await tester.tap(booleanToggles.first);
+            await tester.pump();
+            if (formChanged) continue; // Success for this entity!
+          }
 
-            // If we found interactive elements but none triggered changes,
-            // the test should fail. If no interactive elements were found,
-            // skip gracefully (edge case entities with no editable fields).
-            final hasInteractiveElements =
-                booleanToggles.evaluate().isNotEmpty ||
-                iconButtons.evaluate().isNotEmpty ||
-                textFormFields.evaluate().isNotEmpty;
+          // Strategy 3: Try interacting with an IconButton (number +/- buttons)
+          final iconButtons = find.byType(IconButton);
+          if (iconButtons.evaluate().isNotEmpty) {
+            await tester.ensureVisible(iconButtons.first);
+            await tester.pumpAndSettle();
+            await tester.tap(iconButtons.first);
+            await tester.pump();
+            if (formChanged) continue; // Success for this entity!
+          }
 
-            expect(
-              formChanged || !hasInteractiveElements,
-              isTrue,
-              reason: 'Form should respond to user input',
-            );
-          });
+          // If we found interactive elements but none triggered changes,
+          // the test should fail. If no interactive elements were found,
+          // skip gracefully (edge case entities with no editable fields).
+          final hasInteractiveElements =
+              booleanToggles.evaluate().isNotEmpty ||
+              iconButtons.evaluate().isNotEmpty ||
+              textFormFields.evaluate().isNotEmpty;
 
-          testWidgets('form preserves valid initial values', (tester) async {
-            final entity = EntityDataGenerator.create(entityName);
+          if (hasInteractiveElements && !formChanged) {
+            failures.add('$entityName: Form should respond to user input');
+          }
+        }
 
-            await tester.pumpWidget(
-              _buildFormTestWrapper(entityName: entityName, entity: entity),
-            );
+        expect(failures, isEmpty, reason: failures.join('\n'));
+      });
 
-            // Form should render without clearing values
-            // (no exception means values were handled correctly)
-            expect(tester.takeException(), isNull);
-          });
-        });
-      }
+      testWidgets('forms preserve valid initial values for all entities',
+          (tester) async {
+        final failures = <String>[];
+
+        for (final entityName in EntityTestRegistry.allEntityNames) {
+          final entity = EntityDataGenerator.create(entityName);
+
+          await tester.pumpWidget(
+            _buildFormTestWrapper(entityName: entityName, entity: entity),
+          );
+
+          // Form should render without clearing values
+          final exception = tester.takeException();
+          if (exception != null) {
+            failures.add('$entityName: $exception');
+          }
+        }
+
+        expect(failures, isEmpty, reason: failures.join('\n'));
+      });
     });
   }
 

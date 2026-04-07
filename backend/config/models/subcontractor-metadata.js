@@ -20,7 +20,13 @@ const {
   FIELD_ACCESS_LEVELS: FAL,
   UNIVERSAL_FIELD_ACCESS,
 } = require('../constants');
-const { FIELD } = require('../field-types');
+const {
+  FIELD,
+  TIER1_FIELDS,
+  withTraits,
+  TRAITS,
+  TRAIT_SETS,
+} = require('../field-types');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -95,10 +101,6 @@ module.exports = {
   // CRUD CONFIGURATION
   // ============================================================================
 
-  requiredFields: ['company_name'],
-
-  immutableFields: [],
-
   displayColumns: ['company_name', 'contact_name', 'email', 'status'],
 
   // ============================================================================
@@ -135,37 +137,28 @@ module.exports = {
   relationships: {},
 
   // ============================================================================
-  // FIELDS (Phase 1: Minimal - Phase 3: Full fields)
+  // FIELDS (with embedded traits for query capabilities)
   // ============================================================================
 
   fields: {
-    // TIER 1: Universal Entity Contract Fields
-    id: { type: 'integer', readonly: true },
-    is_active: { type: 'boolean', default: true },
-    created_at: { type: 'timestamp', readonly: true },
-    updated_at: { type: 'timestamp', readonly: true },
+    // TIER 1: Universal Entity Contract Fields (field-centric)
+    ...TIER1_FIELDS.WITH_STATUS,
 
-    company_name: {
-      type: 'string',
-      required: true,
-      maxLength: 200,
-      description: 'Subcontractor company name',
-    },
-    contact_name: {
-      type: 'string',
-      maxLength: 100,
-      description: 'Primary contact person',
-    },
-    email: FIELD.EMAIL,
-    phone: FIELD.PHONE,
-    notes: {
-      type: 'text',
-      description: 'Internal notes',
-    },
-    status: {
-      type: 'enum',
-      enumKey: 'status',
-      default: 'active',
-    },
+    // Identity field - company_name with REQUIRED + IDENTITY traits
+    company_name: withTraits(
+      { type: 'string', maxLength: 200, description: 'Subcontractor company name' },
+      TRAITS.REQUIRED, TRAIT_SETS.IDENTITY,
+    ),
+
+    // Contact fields with searchable traits
+    contact_name: withTraits(
+      { type: 'string', maxLength: 100, description: 'Primary contact person' },
+      TRAIT_SETS.SEARCHABLE_LOOKUP,
+    ),
+    email: withTraits(FIELD.EMAIL, TRAIT_SETS.SEARCHABLE_LOOKUP),
+    phone: withTraits(FIELD.PHONE, TRAIT_SETS.FULLTEXT),
+
+    // Notes - no query traits (internal only)
+    notes: { type: 'text', description: 'Internal notes' },
   },
 };

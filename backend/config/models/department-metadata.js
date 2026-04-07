@@ -14,7 +14,15 @@ const {
   FIELD_ACCESS_LEVELS: FAL,
   UNIVERSAL_FIELD_ACCESS,
 } = require('../constants');
-const { FIELD, NAME_PATTERNS } = require('../field-types');
+const {
+  FIELD,
+  NAME_PATTERNS,
+  TIER1_FIELDS,
+  withTraits,
+  TRAITS,
+  TRAIT_SETS,
+  createForeignKey,
+} = require('../field-types');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -170,57 +178,16 @@ module.exports = {
   // ============================================================================
 
   fields: {
-    // TIER 1: Universal Entity Contract Fields
-    id: {
-      type: 'integer',
-      readonly: true,
-      filterable: true,
-      sortable: true,
-    },
-    name: {
-      ...FIELD.NAME,
-      required: true,
-      maxLength: 100,
-      searchable: true,
-      filterable: true,
-      sortable: true,
-    },
-    is_active: {
-      type: 'boolean',
-      default: true,
-      filterable: true,
-    },
-    created_at: {
-      type: 'timestamp',
-      readonly: true,
-      filterable: true,
-      sortable: true,
-    },
-    updated_at: {
-      type: 'timestamp',
-      readonly: true,
-      filterable: true,
-      sortable: true,
-    },
-
-    // TIER 2: Entity-Specific Lifecycle Field
-    status: {
-      type: 'enum',
-      enumKey: 'status',
-      default: 'active',
-      filterable: true,
-      sortable: true,
-    },
+    // TIER 1: Universal Entity Contract Fields (via TIER1_FIELDS.WITH_STATUS)
+    ...TIER1_FIELDS.WITH_STATUS,
 
     // Entity-specific fields
-    description: {
-      type: 'text',
-      searchable: true,
-    },
-    manager_id: {
-      type: 'foreignKey',
-      references: 'user',
-      filterable: true,
-    },
+    name: withTraits(
+      { ...FIELD.NAME, maxLength: 100 },
+      TRAITS.REQUIRED,
+      TRAIT_SETS.IDENTITY,
+    ),
+    description: withTraits(FIELD.DESCRIPTION, TRAITS.SEARCHABLE),
+    manager_id: createForeignKey('user'),
   },
 };

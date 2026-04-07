@@ -14,7 +14,15 @@ const {
   FIELD_ACCESS_LEVELS: FAL,
   UNIVERSAL_FIELD_ACCESS,
 } = require('../constants');
-const { FIELD, NAME_PATTERNS } = require('../field-types');
+const {
+  FIELD,
+  NAME_PATTERNS,
+  TIER1_FIELDS,
+  withTraits,
+  TRAITS,
+  TRAIT_SETS,
+  createForeignKey,
+} = require('../field-types');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -156,18 +164,6 @@ module.exports = {
   // ============================================================================
   // CRUD CONFIGURATION (for GenericEntityService)
   // ============================================================================
-
-  /**
-   * Fields required when creating a new entity
-   * contract_number is auto-generated
-   */
-  requiredFields: ['customer_id', 'start_date'],
-
-  /**
-   * Fields that cannot be modified after creation (beyond universal immutables: id, created_at)
-   * - contract_number: Audit trail identity, cannot change
-   */
-  immutableFields: ['contract_number'],
 
   /**
    * Default columns to display in table views (ordered)
@@ -318,53 +314,16 @@ module.exports = {
   ],
 
   // ============================================================================
-  // SEARCH CONFIGURATION (Text Search with ILIKE)
+  // SEARCH CONFIGURATION (Derived from field traits)
   // ============================================================================
 
-  /**
-   * Fields that support text search (ILIKE %term%)
-   * These are concatenated with OR for full-text search
-   */
-  searchableFields: ['contract_number', 'name', 'summary'],
-
   // ============================================================================
-  // FILTER CONFIGURATION (Exact Match & Operators)
+  // FILTER CONFIGURATION (Derived from field traits)
   // ============================================================================
-
-  /**
-   * Fields that can be used in WHERE clauses
-   * Supports: exact match, gt, gte, lt, lte, in, not
-   */
-  filterableFields: [
-    'id',
-    'contract_number',
-    'customer_id',
-    'is_active',
-    'status',
-    'start_date',
-    'end_date',
-    'billing_cycle',
-    'created_at',
-    'updated_at',
-  ],
 
   // ============================================================================
   // SORT CONFIGURATION
   // ============================================================================
-
-  /**
-   * Fields that can be used in ORDER BY clauses
-   */
-  sortableFields: [
-    'id',
-    'contract_number',
-    'status',
-    'value',
-    'start_date',
-    'end_date',
-    'created_at',
-    'updated_at',
-  ],
 
   /**
    * Default sort when no sortBy specified
@@ -375,48 +334,41 @@ module.exports = {
   },
 
   // ============================================================================
-  // FIELD DEFINITIONS (for validation & documentation)
+  // FIELD DEFINITIONS (with embedded traits for query capabilities)
   // ============================================================================
 
   fields: {
-    // TIER 1: Universal Entity Contract Fields
-    id: { type: 'integer', readonly: true },
-    contract_number: {
-      ...FIELD.IDENTIFIER,
-      readonly: true, // Auto-generated: CTR-YYYY-NNNN
-      pattern: '^CTR-[0-9]{4}-[0-9]+$',
-      errorMessages: {
-        pattern: 'Contract number must be in format CTR-YYYY-NNNN',
-      },
-    },
-    is_active: { type: 'boolean', default: true },
-    created_at: { type: 'timestamp', readonly: true },
-    updated_at: { type: 'timestamp', readonly: true },
+    // TIER 1: Universal Entity Contract Fields (field-centric)
+    ...TIER1_FIELDS.WITH_STATUS,
 
-    // TIER 2: Entity-Specific Lifecycle Field
-    status: {
-      type: 'enum',
-      enumKey: 'status',
-      default: 'draft',
-    },
+    // Identity field - auto-generated, immutable
+    contract_number: withTraits(
+      {
+        ...FIELD.IDENTIFIER,
+        readonly: true,
+        pattern: '^CTR-[0-9]{4}-[0-9]+$',
+        errorMessages: { pattern: 'Contract number must be in format CTR-YYYY-NNNN' },
+      },
+      TRAITS.IMMUTABLE, TRAIT_SETS.IDENTITY,
+    ),
 
     // COMPUTED entity name field - optional because computed from template
-    name: FIELD.NAME,
-    summary: FIELD.SUMMARY,
+    name: withTraits(FIELD.NAME, TRAIT_SETS.SEARCHABLE_LOOKUP),
+    summary: withTraits(FIELD.SUMMARY, TRAIT_SETS.FULLTEXT),
 
-    // Entity-specific fields
-    customer_id: {
-      type: 'foreignKey',
-      references: 'customer',
-      required: true,
-    },
-    start_date: { type: 'date', required: true },
-    end_date: { type: 'date' },
-    terms: FIELD.TERMS,
-    value: FIELD.CURRENCY,
-    billing_cycle: {
-      type: 'enum',
-      enumKey: 'billing_cycle',
-    },
+    // FK fields with embedded traits
+    customer_id: createForeignKey('customer', { required: true, traits: TRAIT_SETS.LOOKUP }),
+
+    // Date fields
+    start_date: withTraits({ type: 'date', description: 'Contract start date' }, TRAITS.REQUIRED, TRAIT_SETS.LOOKUP),
+    end_date: withTraits({ type: 'date', description: 'Contract end date' }, TRAIT_SETS.LOOKUP),
+
+    // Contract terms
+    terms: withTraits(FIELD.TERMS, TRAIT_SETS.FULLTEXT),
+    value: withTraits(FIELD.CURRENCY, TRAIT_SETS.SORTABLE),
+    billing_cycle: withTraits(
+      { type: 'enum', enumKey: 'billing_cycle', description: 'Billing frequency' },
+      TRAIT_SETS.LOOKUP,
+    ),
   },
 };

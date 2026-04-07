@@ -14,7 +14,14 @@ const {
   FIELD_ACCESS_LEVELS: FAL,
   UNIVERSAL_FIELD_ACCESS,
 } = require('../constants');
-const { FIELD, NAME_PATTERNS } = require('../field-types');
+const {
+  FIELD,
+  NAME_PATTERNS,
+  TIER1_FIELDS,
+  withTraits,
+  TRAITS,
+  TRAIT_SETS,
+} = require('../field-types');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -85,10 +92,6 @@ module.exports = {
   // CRUD CONFIGURATION
   // ============================================================================
 
-  requiredFields: ['name'],
-
-  immutableFields: [],
-
   displayColumns: ['name', 'contact_email', 'phone', 'status'],
 
   // ============================================================================
@@ -135,29 +138,8 @@ module.exports = {
   ],
 
   // ============================================================================
-  // SEARCH CONFIGURATION
-  // ============================================================================
-
-  searchableFields: ['name', 'contact_email'],
-
-  // ============================================================================
-  // FILTER CONFIGURATION
-  // ============================================================================
-
-  filterableFields: [
-    'id',
-    'name',
-    'is_active',
-    'status',
-    'created_at',
-    'updated_at',
-  ],
-
-  // ============================================================================
   // SORT CONFIGURATION
   // ============================================================================
-
-  sortableFields: ['id', 'name', 'status', 'created_at', 'updated_at'],
 
   defaultSort: {
     field: 'name',
@@ -165,26 +147,19 @@ module.exports = {
   },
 
   // ============================================================================
-  // FIELD DEFINITIONS
+  // FIELD DEFINITIONS (Field-Centric: traits embedded in field definitions)
   // ============================================================================
 
   fields: {
     // TIER 1: Universal Entity Contract Fields
-    id: { type: 'integer', readonly: true },
-    name: { ...FIELD.NAME, required: true, maxLength: 100 },
-    is_active: { type: 'boolean', default: true },
-    created_at: { type: 'timestamp', readonly: true },
-    updated_at: { type: 'timestamp', readonly: true },
-
-    // TIER 2: Entity-Specific Lifecycle Field
-    status: {
-      type: 'enum',
-      enumKey: 'status',
-      default: 'active',
-    },
+    ...TIER1_FIELDS.WITH_STATUS,
 
     // Entity-specific fields
-    contact_email: FIELD.EMAIL,
+    name: withTraits(
+      { ...FIELD.NAME, maxLength: 100 },
+      TRAIT_SETS.IDENTITY,
+    ),
+    contact_email: withTraits(FIELD.EMAIL, TRAITS.SEARCHABLE, TRAIT_SETS.FILTER_ONLY),
     phone: FIELD.PHONE,
     notes: { type: 'text' },
   },

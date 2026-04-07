@@ -21,9 +21,14 @@
 const {
   FIELD_ACCESS_LEVELS: FAL,
   RLS_RESOURCE_TYPES,
-  // No NAME_PATTERNS - this is a system table
 } = require('../constants');
-const { FIELD } = require('../field-types');
+const {
+  FIELD,
+  TIER1,
+  withTraits,
+  TRAITS,
+  TRAIT_SETS,
+} = require('../field-types');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -183,33 +188,6 @@ module.exports = {
   // ============================================================================
 
   /**
-   * Fields required when creating a new file attachment
-   * (handled by route/service, not GenericEntityService)
-   */
-  requiredFields: [
-    'entity_type',
-    'entity_id',
-    'original_filename',
-    'storage_key',
-    'mime_type',
-    'file_size',
-  ],
-
-  /**
-   * Fields that cannot be modified after creation
-   * - All file metadata is immutable (can only delete and re-upload)
-   */
-  immutableFields: [
-    'entity_type',
-    'entity_id',
-    'original_filename',
-    'storage_key',
-    'mime_type',
-    'file_size',
-    'uploaded_by',
-  ],
-
-  /**
    * Default columns to display in table views (ordered)
    * Used by admin panel for viewing file attachments
    */
@@ -311,71 +289,78 @@ module.exports = {
   // ============================================================================
 
   /**
-   * Fields that can be used in filters
-   */
-  filterableFields: [
-    'entity_type',
-    'entity_id',
-    'mime_type',
-    'category',
-    'is_active',
-    'uploaded_by',
-  ],
-
-  /**
-   * Fields that can be sorted by
-   */
-  sortableFields: ['original_filename', 'file_size', 'created_at', 'category'],
-
-  /**
-   * Fields included in search
-   */
-  searchableFields: ['original_filename', 'description'],
-
-  /**
    * Default sort order
    */
   defaultSort: { field: 'created_at', order: 'desc' },
 
   // ============================================================================
-  // FIELD DEFINITIONS
+  // FIELD DEFINITIONS (Field-Centric: traits embedded in field definitions)
   // ============================================================================
-  // Matches schema.sql file_attachments table structure
 
   fields: {
     // Primary key
-    id: { type: 'integer', readonly: true },
+    id: TIER1.ID,
 
-    // Polymorphic reference fields
-    entity_type: { type: 'string', required: true, maxLength: 50 },
-    entity_id: { type: 'integer', required: true },
+    // Polymorphic reference fields - immutable after creation
+    entity_type: withTraits(
+      { type: 'string', maxLength: 50 },
+      TRAITS.REQUIRED,
+      TRAITS.IMMUTABLE,
+      TRAIT_SETS.FILTER_ONLY,
+    ),
+    entity_id: withTraits(
+      { type: 'integer' },
+      TRAITS.REQUIRED,
+      TRAITS.IMMUTABLE,
+      TRAIT_SETS.FILTER_ONLY,
+    ),
 
-    // File metadata
-    original_filename: { ...FIELD.NAME, required: true },
-    storage_key: {
-      type: 'string',
-      required: true,
-      maxLength: 500,
-      readonly: true,
-    },
-    mime_type: { type: 'string', required: true, maxLength: 100 },
-    file_size: { type: 'integer', required: true },
+    // File metadata - immutable after upload
+    original_filename: withTraits(
+      { ...FIELD.NAME },
+      TRAITS.REQUIRED,
+      TRAITS.IMMUTABLE,
+      TRAITS.SEARCHABLE,
+      TRAIT_SETS.LOOKUP,
+    ),
+    storage_key: withTraits(
+      { type: 'string', maxLength: 500 },
+      TRAITS.REQUIRED,
+      TRAITS.IMMUTABLE,
+      TRAITS.READONLY,
+    ),
+    mime_type: withTraits(
+      { type: 'string', maxLength: 100 },
+      TRAITS.REQUIRED,
+      TRAITS.IMMUTABLE,
+      TRAIT_SETS.FILTER_ONLY,
+    ),
+    file_size: withTraits(
+      { type: 'integer' },
+      TRAITS.REQUIRED,
+      TRAITS.IMMUTABLE,
+      TRAIT_SETS.LOOKUP,
+    ),
 
-    // Categorization
-    category: { type: 'string', maxLength: 50, default: 'attachment' },
-    description: FIELD.DESCRIPTION,
+    // Categorization - can be updated
+    category: withTraits(
+      { type: 'string', maxLength: 50, default: 'attachment' },
+      TRAIT_SETS.LOOKUP,
+    ),
+    description: withTraits(FIELD.DESCRIPTION, TRAITS.SEARCHABLE),
 
-    // Upload tracking
-    uploaded_by: {
-      type: 'foreignKey',
-      references: 'user',
-      readonly: true,
-    },
+    // Upload tracking - immutable
+    uploaded_by: withTraits(
+      { type: 'foreignKey', references: 'user' },
+      TRAITS.IMMUTABLE,
+      TRAITS.READONLY,
+      TRAIT_SETS.FILTER_ONLY,
+    ),
 
     // Soft delete and timestamps
-    is_active: { type: 'boolean', default: true },
-    created_at: { type: 'timestamp', readonly: true },
-    updated_at: { type: 'timestamp', readonly: true },
+    is_active: withTraits(TIER1.IS_ACTIVE, TRAIT_SETS.FILTER_ONLY),
+    created_at: TIER1.CREATED_AT,
+    updated_at: TIER1.UPDATED_AT,
   },
 
   // ============================================================================

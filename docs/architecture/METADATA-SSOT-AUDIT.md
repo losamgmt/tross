@@ -331,6 +331,84 @@ The audit found no blocking issues. The architecture is well-designed and consis
 
 ---
 
+## Field-Centric Migration (Completed April 6, 2026)
+
+### Status: ✅ COMPLETE
+
+All 34 entities have been migrated from legacy arrays to field-centric trait definitions.
+
+### What Changed
+
+**Before (Legacy Format):**
+```javascript
+requiredFields: ['name', 'email'],
+searchableFields: ['name', 'description'],
+filterableFields: ['id', 'name', 'status', 'created_at'],
+sortableFields: ['id', 'name', 'created_at'],
+immutableFields: [],
+```
+
+**After (Field-Centric):**
+```javascript
+fields: {
+  ...TIER1_FIELDS.WITH_STATUS,
+  name: withTraits(FIELD.NAME, TRAITS.REQUIRED, TRAIT_SETS.IDENTITY),
+  description: withTraits(FIELD.DESCRIPTION, TRAITS.SEARCHABLE),
+  customer_id: createForeignKey('customer', { required: true }),
+}
+```
+
+### Entity Classification
+
+| Category | Count | Pattern Used |
+|----------|-------|--------------|
+| Standard entities | 23 | `TIER1_FIELDS.CORE` or `TIER1_FIELDS.WITH_STATUS` |
+| Junction tables | 5 | `createJunctionFields(entity1, entity2)` |
+| System entities | 6 | `TIER1.*` individual fields + `withTraits` |
+
+### Key Infrastructure
+
+| Component | Purpose |
+|-----------|---------|
+| `TRAITS` | 6 atomic traits (REQUIRED, IMMUTABLE, SEARCHABLE, FILTERABLE, SORTABLE, READONLY) |
+| `TRAIT_SETS` | 8 pre-composed sets (IDENTITY, PK, LOOKUP, FILTER_ONLY, TIMESTAMP, etc.) |
+| `withTraits()` | Composes base field definition with traits |
+| `TIER1_FIELDS.CORE` | id, is_active, created_at, updated_at |
+| `TIER1_FIELDS.WITH_STATUS` | CORE + status enum |
+| `createForeignKey()` | FK with configurable traits |
+| `createJunctionFields()` | Complete M:M junction structure |
+
+### Accessor Functions (Derivation)
+
+All consumers now use accessor functions that derive values from field-level properties:
+
+```javascript
+const { getRequiredFields, getImmutableFields } = require('../metadata-accessors');
+
+// Returns array derived from fields where required: true
+const required = getRequiredFields(metadata);
+```
+
+### Consumers Updated
+
+- `GenericEntityService` - Uses `getRequiredFields()`, `getImmutableFields()`
+- `sync-entity-metadata.js` - Uses all 5 accessors for frontend JSON generation
+- `validation-deriver.js` - Uses `getRequiredFields()`
+- Test factories - Uses accessor functions for behavioral tests
+
+### Verification
+
+```bash
+# No legacy arrays remain (except role-metadata.js protected record config)
+grep -r "requiredFields:\|searchableFields:\|filterableFields:" backend/config/models/
+# Should return 0 matches for root-level arrays
+
+# All 5248 tests pass
+npm test --workspace=backend
+```
+
+---
+
 ## Phase 2A-0 Infrastructure (Added April 3, 2026)
 
 New infrastructure supporting the field-centric migration:

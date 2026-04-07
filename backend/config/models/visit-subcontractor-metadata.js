@@ -15,8 +15,7 @@
 
 const { UNIVERSAL_FIELD_ACCESS } = require('../constants');
 const {
-  JUNCTION,
-  createJunctionForeignKeys,
+  createJunctionFields,
   createJunctionUniqueConstraint,
 } = require('../field-types');
 
@@ -114,10 +113,6 @@ module.exports = {
   // CRUD CONFIGURATION
   // ============================================================================
 
-  requiredFields: ['visit_id', 'subcontractor_id'],
-
-  immutableFields: ['visit_id', 'subcontractor_id'], // Cannot modify junction keys
-
   displayColumns: ['visit_id', 'subcontractor_id'],
 
   // ============================================================================
@@ -126,7 +121,6 @@ module.exports = {
 
   fieldAccess: {
     ...UNIVERSAL_FIELD_ACCESS,
-    ...JUNCTION.FIELD_ACCESS,
 
     // Junction FK fields
     visit_id: {
@@ -179,32 +173,8 @@ module.exports = {
   dependents: [],
 
   // ============================================================================
-  // SEARCH CONFIGURATION
-  // ============================================================================
-
-  searchableFields: [],
-
-  // ============================================================================
-  // FILTER CONFIGURATION
-  // ============================================================================
-
-  filterableFields: [
-    'id',
-    'visit_id',
-    'subcontractor_id',
-    'created_at',
-    'updated_at',
-  ],
-
-  // ============================================================================
   // SORT CONFIGURATION
   // ============================================================================
-
-  sortableFields: [
-    'id',
-    'created_at',
-    'updated_at',
-  ],
 
   defaultSort: {
     field: 'created_at',
@@ -212,17 +182,8 @@ module.exports = {
   },
 
   // ============================================================================
-  // FIELD DEFINITIONS
+  // FIELD DEFINITIONS (Field-Centric: traits embedded in field definitions)
   // ============================================================================
 
-  fields: {
-    // TIER 1: Universal Entity Contract Fields
-    id: { type: 'integer', readonly: true },
-    is_active: { type: 'boolean', default: true },
-    created_at: { type: 'timestamp', readonly: true },
-    updated_at: { type: 'timestamp', readonly: true },
-
-    // Junction foreign keys (using helper)
-    ...createJunctionForeignKeys('visit', 'subcontractor'),
-  },
+  fields: createJunctionFields('visit', 'subcontractor'),
 };

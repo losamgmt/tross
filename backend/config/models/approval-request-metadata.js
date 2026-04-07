@@ -27,7 +27,14 @@
  */
 
 const { UNIVERSAL_FIELD_ACCESS } = require('../constants');
-const { NAME_PATTERNS } = require('../field-types');
+const {
+  NAME_PATTERNS,
+  TIER1_FIELDS,
+  withTraits,
+  TRAITS,
+  TRAIT_SETS,
+  createForeignKey,
+} = require('../field-types');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -121,10 +128,6 @@ module.exports = {
   // ============================================================================
   // CRUD CONFIGURATION
   // ============================================================================
-
-  requiredFields: ['target_entity', 'target_id', 'target_field', 'proposed_value', 'approver_role', 'requested_by'],
-
-  immutableFields: ['request_number', 'target_entity', 'target_id', 'target_field', 'previous_value', 'requested_by'],
 
   displayColumns: ['request_number', 'target_entity', 'status', 'approver_role', 'created_at'],
 
@@ -258,83 +261,71 @@ module.exports = {
   },
 
   // ============================================================================
-  // FIELDS (Phase 1: Core - Phase 3: Full fields)
+  // FIELDS (with embedded traits for query capabilities)
   // ============================================================================
 
   fields: {
-    // TIER 1: Universal Entity Contract Fields
-    id: { type: 'integer', readonly: true },
-    is_active: { type: 'boolean', default: true },
-    created_at: { type: 'timestamp', readonly: true },
-    updated_at: { type: 'timestamp', readonly: true },
+    // TIER 1: Universal Entity Contract Fields (field-centric)
+    ...TIER1_FIELDS.WITH_STATUS,
+    // Override status default to 'pending' (not 'active' like standard entities)
+    status: withTraits(
+      { type: 'enum', enumKey: 'status', default: 'pending' },
+      TRAIT_SETS.LOOKUP,
+    ),
 
-    request_number: {
-      type: 'string',
-      required: true,
-      maxLength: 20,
-      description: 'Auto-generated approval request identifier (APR-YYYY-NNNN)',
-    },
-    // Polymorphic target reference
-    target_entity: {
-      type: 'enum',
-      enumKey: 'target_entity',
-      required: true,
-      description: 'Entity type being approved',
-    },
-    target_id: {
-      type: 'uuid',
-      required: true,
-      description: 'ID of the entity being approved',
-    },
-    target_field: {
-      type: 'string',
-      required: true,
-      maxLength: 100,
-      description: 'Field being changed (e.g., "status")',
-    },
+    // Identity field - auto-generated, immutable
+    request_number: withTraits(
+      { type: 'string', maxLength: 20, description: 'Auto-generated approval request identifier (APR-YYYY-NNNN)' },
+      TRAITS.IMMUTABLE, TRAIT_SETS.IDENTITY,
+    ),
+
+    // Polymorphic target reference - all immutable after creation
+    target_entity: withTraits(
+      { type: 'enum', enumKey: 'target_entity', description: 'Entity type being approved' },
+      TRAITS.REQUIRED, TRAITS.IMMUTABLE, TRAIT_SETS.LOOKUP,
+    ),
+    target_id: withTraits(
+      { type: 'uuid', description: 'ID of the entity being approved' },
+      TRAITS.REQUIRED, TRAITS.IMMUTABLE,
+    ),
+    target_field: withTraits(
+      { type: 'string', maxLength: 100, description: 'Field being changed (e.g., "status")' },
+      TRAITS.REQUIRED, TRAITS.IMMUTABLE,
+    ),
+
     // Change values (JSON serialized)
-    previous_value: {
-      type: 'json',
-      description: 'Previous value before change (for history)',
-    },
-    proposed_value: {
-      type: 'json',
-      required: true,
-      description: 'Proposed new value',
-    },
+    previous_value: withTraits(
+      { type: 'json', description: 'Previous value before change (for history)' },
+      TRAITS.IMMUTABLE,
+    ),
+    proposed_value: withTraits(
+      { type: 'json', description: 'Proposed new value' },
+      TRAITS.REQUIRED,
+    ),
+
     // Approval configuration
-    approver_role: {
-      type: 'enum',
-      enumKey: 'approver_role',
+    approver_role: withTraits(
+      { type: 'enum', enumKey: 'approver_role', description: 'Minimum role required to approve' },
+      TRAITS.REQUIRED, TRAIT_SETS.LOOKUP,
+    ),
+
+    // Decision fields
+    decision_notes: { type: 'text', description: 'Notes from approver on decision' },
+    decided_at: withTraits(
+      { type: 'timestamp', description: 'When decision was made' },
+      TRAIT_SETS.LOOKUP,
+    ),
+
+    // FK fields for tracking requester and approver
+    requested_by: createForeignKey('user', {
       required: true,
-      description: 'Minimum role required to approve',
-    },
-    // Decision
-    decision_notes: {
-      type: 'text',
-      description: 'Notes from approver on decision',
-    },
-    decided_at: {
-      type: 'timestamp',
-      description: 'When decision was made',
-    },
-    status: {
-      type: 'enum',
-      enumKey: 'status',
-      default: 'pending',
-    },
-    // FK fields
-    requested_by: {
-      type: 'foreignKey',
-      references: 'user',
-      required: true,
+      immutable: true,
       description: 'User who created this approval request',
-    },
-    approved_by: {
-      type: 'foreignKey',
-      references: 'user',
-      required: false,
+      traits: TRAIT_SETS.LOOKUP,
+    }),
+    approved_by: createForeignKey('user', {
       description: 'User who approved/rejected (null = pending)',
-    },
+      traits: TRAIT_SETS.LOOKUP,
+    }),
   },
 };

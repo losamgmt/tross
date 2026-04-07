@@ -19,6 +19,11 @@ const {
   NAME_PATTERNS,
   createAddressFields,
   createAddressFieldAccess,
+  TIER1_FIELDS,
+  withTraits,
+  TRAITS,
+  TRAIT_SETS,
+  createForeignKey,
 } = require('../field-types');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
@@ -208,17 +213,6 @@ module.exports = {
   // ============================================================================
   // CRUD CONFIGURATION (for GenericEntityService)
   // ============================================================================
-
-  /**
-   * Fields required when creating a new entity
-   * work_order_number is auto-generated, name is computed
-   */
-  requiredFields: ['customer_id'],
-
-  /**
-   * Fields that cannot be modified after creation
-   */
-  immutableFields: ['work_order_number'],
 
   /**
    * Default columns to display in table views (ordered)
@@ -464,51 +458,16 @@ module.exports = {
   ],
 
   // ============================================================================
-  // SEARCH CONFIGURATION (Text Search with ILIKE)
+  // SEARCH CONFIGURATION (Derived from field traits)
   // ============================================================================
 
-  searchableFields: ['work_order_number', 'name', 'summary'],
-
   // ============================================================================
-  // FILTER CONFIGURATION (Exact Match & Operators)
+  // FILTER CONFIGURATION (Derived from field traits)
   // ============================================================================
-
-  filterableFields: [
-    'id',
-    'work_order_number',
-    'name',
-    'customer_id',
-    'unit_id',
-    'property_id',
-    'assigned_technician_id',
-    'is_active',
-    'status',
-    'priority',
-    'service_region', // AUDIT TEST
-    'scheduled_start',
-    'scheduled_end',
-    'created_at',
-    'updated_at',
-    'origin_type',
-    'origin_id',
-  ],
 
   // ============================================================================
   // SORT CONFIGURATION
   // ============================================================================
-
-  sortableFields: [
-    'id',
-    'work_order_number',
-    'name',
-    'priority',
-    'status',
-    'scheduled_start',
-    'scheduled_end',
-    'completed_at',
-    'created_at',
-    'updated_at',
-  ],
 
   defaultSort: {
     field: 'created_at',
@@ -516,95 +475,88 @@ module.exports = {
   },
 
   // ============================================================================
-  // FIELD DEFINITIONS (for validation & documentation)
+  // FIELD DEFINITIONS (with embedded traits for query capabilities)
   // ============================================================================
 
   fields: {
-    // TIER 1: Universal Entity Contract Fields
-    id: { type: 'integer', readonly: true },
-    work_order_number: {
-      ...FIELD.IDENTIFIER,
-      readonly: true, // Auto-generated: WO-YYYY-NNNN
-      pattern: '^WO-[0-9]{4}-[0-9]+$',
-      errorMessages: {
-        pattern: 'Work order number must be in format WO-YYYY-NNNN',
-      },
-    },
-    is_active: { type: 'boolean', default: true },
-    created_at: { type: 'timestamp', readonly: true },
-    updated_at: { type: 'timestamp', readonly: true },
+    // TIER 1: Universal Entity Contract Fields (field-centric)
+    ...TIER1_FIELDS.WITH_STATUS,
+    // Override status default (workflow entity - pending→scheduled→completed, not active/inactive)
+    status: withTraits(
+      { type: 'enum', enumKey: 'status', default: 'pending' },
+      TRAIT_SETS.LOOKUP,
+    ),
 
-    // TIER 2: Entity-Specific Lifecycle Field
-    status: {
-      type: 'enum',
-      enumKey: 'status',
-      default: 'pending',
-    },
+    // Identity field - auto-generated, immutable
+    work_order_number: withTraits(
+      {
+        ...FIELD.IDENTIFIER,
+        readonly: true,
+        pattern: '^WO-[0-9]{4}-[0-9]+$',
+        errorMessages: { pattern: 'Work order number must be in format WO-YYYY-NNNN' },
+      },
+      TRAITS.IMMUTABLE, TRAIT_SETS.IDENTITY,
+    ),
 
     // COMPUTED entity name field (aliased as "Title" in UI)
-    // Optional because it's computed from template: {customer}: {summary}: {work_order_number}
-    name: FIELD.NAME,
-    summary: FIELD.SUMMARY,
+    name: withTraits(FIELD.NAME, TRAIT_SETS.SEARCHABLE_LOOKUP),
+    summary: withTraits(FIELD.SUMMARY, TRAIT_SETS.FULLTEXT),
 
-    // Entity-specific fields
-    priority: {
-      type: 'enum',
-      enumKey: 'priority',
-      default: 'normal',
-    },
-    customer_id: {
-      type: 'foreignKey',
-      references: 'customer',
+    // Priority enum
+    priority: withTraits(
+      { type: 'enum', enumKey: 'priority', default: 'normal' },
+      TRAIT_SETS.LOOKUP,
+    ),
+
+    // FK fields with embedded traits
+    customer_id: createForeignKey('customer', {
+      required: true,
       displayFields: ['first_name', 'last_name', 'email'],
       displayTemplate: '{first_name} {last_name} - {email}',
-      required: true,
-    },
-    property_id: {
-      type: 'foreignKey',
-      references: 'property',
+      traits: TRAIT_SETS.LOOKUP,
+    }),
+    property_id: createForeignKey('property', {
       displayFields: ['name', 'address_city'],
       displayTemplate: '{name} - {address_city}',
       description: 'Property for this work order (auto-populated from unit when set)',
       computed: true,
       derivedFrom: 'unit_id',
-    },
-    unit_id: {
-      type: 'foreignKey',
-      references: 'unit',
+      traits: TRAIT_SETS.LOOKUP,
+    }),
+    unit_id: createForeignKey('unit', {
       displayFields: ['unit_identifier'],
       displayTemplate: '{unit_identifier}',
       description: 'Specific unit for this work order',
-    },
-    assigned_technician_id: {
-      type: 'foreignKey',
-      references: 'technician',
+      traits: TRAIT_SETS.LOOKUP,
+    }),
+    assigned_technician_id: createForeignKey('technician', {
       displayFields: ['first_name', 'last_name', 'email'],
       displayTemplate: '{first_name} {last_name} - {email}',
-    },
-    scheduled_start: { type: 'timestamp' },
-    scheduled_end: { type: 'timestamp' },
-    completed_at: { type: 'timestamp' },
+      traits: TRAIT_SETS.LOOKUP,
+    }),
+
+    // Scheduling fields
+    scheduled_start: withTraits({ type: 'timestamp' }, TRAIT_SETS.LOOKUP),
+    scheduled_end: withTraits({ type: 'timestamp' }, TRAIT_SETS.LOOKUP),
+    completed_at: withTraits({ type: 'timestamp' }, TRAIT_SETS.LOOKUP),
 
     // AUDIT TEST: service_region for propagation verification
-    service_region: {
-      type: 'enum',
-      enumKey: 'serviceRegion',
-      description: 'Geographic service region for routing and analytics',
-    },
+    service_region: withTraits(
+      { type: 'enum', enumKey: 'serviceRegion', description: 'Geographic service region for routing and analytics' },
+      TRAIT_SETS.LOOKUP,
+    ),
 
     // Flat address fields for work location (using field-types generators)
-    ...createAddressFields('location'),
+    ...createAddressFields('location', { searchable: true }),
 
     // Polymorphic origin tracking - where this work order came from
-    origin_type: {
-      type: 'enum',
-      enumKey: 'originType',
-      default: 'direct',
-      description: 'Source type that created this work order',
-    },
-    origin_id: {
-      type: 'integer',
-      description: 'ID of the source entity (quote, recommendation, or schedule)',
-    },
+    origin_type: withTraits(
+      { type: 'enum', enumKey: 'originType', default: 'direct', description: 'Source type that created this work order' },
+      TRAITS.IMMUTABLE, TRAIT_SETS.LOOKUP,
+    ),
+    origin_id: withTraits(
+      { type: 'integer', description: 'ID of the source entity (quote, recommendation, or schedule)' },
+      TRAITS.IMMUTABLE, TRAIT_SETS.FILTER_ONLY,
+    ),
   },
 };

@@ -14,7 +14,14 @@ const {
   FIELD_ACCESS_LEVELS: FAL,
   UNIVERSAL_FIELD_ACCESS,
 } = require('../constants');
-const { FIELD, NAME_PATTERNS } = require('../field-types');
+const {
+  FIELD,
+  NAME_PATTERNS,
+  TIER1_FIELDS,
+  withTraits,
+  TRAITS,
+  TRAIT_SETS,
+} = require('../field-types');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -140,17 +147,6 @@ module.exports = {
   // ============================================================================
   // CRUD CONFIGURATION (for GenericEntityService)
   // ============================================================================
-
-  /**
-   * Fields required when creating a new entity
-   */
-  requiredFields: ['name', 'sku'],
-
-  /**
-   * Fields that cannot be modified after creation (beyond universal immutables: id, created_at)
-   * - sku: Barcode/lookup identity, cannot change
-   */
-  immutableFields: ['sku'],
 
   /**
    * Default columns to display in table views (ordered)
@@ -286,54 +282,8 @@ module.exports = {
   ],
 
   // ============================================================================
-  // SEARCH CONFIGURATION (Text Search with ILIKE)
-  // ============================================================================
-
-  /**
-   * Fields that support text search (ILIKE %term%)
-   * These are concatenated with OR for full-text search
-   */
-  searchableFields: ['name', 'sku', 'description'],
-
-  // ============================================================================
-  // FILTER CONFIGURATION (Exact Match & Operators)
-  // ============================================================================
-
-  /**
-   * Fields that can be used in WHERE clauses
-   * Supports: exact match, gt, gte, lt, lte, in, not
-   */
-  filterableFields: [
-    'id',
-    'name',
-    'sku',
-    'is_active',
-    'status',
-    'quantity',
-    'reorder_level',
-    'location',
-    'supplier',
-    'created_at',
-    'updated_at',
-  ],
-
-  // ============================================================================
   // SORT CONFIGURATION
   // ============================================================================
-
-  /**
-   * Fields that can be used in ORDER BY clauses
-   */
-  sortableFields: [
-    'id',
-    'name',
-    'sku',
-    'status',
-    'quantity',
-    'unit_cost',
-    'created_at',
-    'updated_at',
-  ],
 
   /**
    * Default sort when no sortBy specified
@@ -344,31 +294,39 @@ module.exports = {
   },
 
   // ============================================================================
-  // FIELD DEFINITIONS (for validation & documentation)
+  // FIELD DEFINITIONS (Field-Centric: traits embedded in field definitions)
   // ============================================================================
 
   fields: {
     // TIER 1: Universal Entity Contract Fields
-    id: { type: 'integer', readonly: true },
-    name: { ...FIELD.NAME, required: true },
-    is_active: { type: 'boolean', default: true },
-    created_at: { type: 'timestamp', readonly: true },
-    updated_at: { type: 'timestamp', readonly: true },
+    ...TIER1_FIELDS.CORE,
 
-    // TIER 2: Entity-Specific Lifecycle Field
-    status: {
-      type: 'enum',
-      enumKey: 'status',
-      default: 'in_stock',
-    },
+    // Status with inventory-specific default
+    status: withTraits(
+      {
+        type: 'enum',
+        enumKey: 'status',
+        default: 'in_stock',
+      },
+      TRAIT_SETS.LOOKUP,
+    ),
+
+    // Identity fields
+    name: withTraits({ ...FIELD.NAME }, TRAIT_SETS.IDENTITY),
+    sku: withTraits(
+      { ...FIELD.SKU },
+      TRAITS.REQUIRED,
+      TRAITS.IMMUTABLE,
+      TRAITS.SEARCHABLE,
+      TRAIT_SETS.LOOKUP,
+    ),
 
     // Entity-specific fields
-    sku: { ...FIELD.SKU, required: true },
-    description: FIELD.DESCRIPTION,
-    quantity: { type: 'integer', default: 0 },
-    reorder_level: { type: 'integer', default: 10 },
-    unit_cost: FIELD.CURRENCY,
-    location: FIELD.NAME,
-    supplier: FIELD.NAME,
+    description: withTraits(FIELD.DESCRIPTION, TRAITS.SEARCHABLE),
+    quantity: withTraits({ type: 'integer', default: 0 }, TRAIT_SETS.LOOKUP),
+    reorder_level: withTraits({ type: 'integer', default: 10 }, TRAIT_SETS.FILTER_ONLY),
+    unit_cost: withTraits(FIELD.CURRENCY, TRAIT_SETS.LOOKUP),
+    location: withTraits(FIELD.NAME, TRAIT_SETS.FILTER_ONLY),
+    supplier: withTraits(FIELD.NAME, TRAIT_SETS.FILTER_ONLY),
   },
 };

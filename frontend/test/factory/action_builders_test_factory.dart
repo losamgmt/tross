@@ -79,91 +79,114 @@ abstract final class ActionBuildersTestFactory {
 
   static void _generateRowActionItemTests() {
     group('Row Action Items', () {
-      for (final entityName in allKnownEntities) {
-        group(entityName, () {
-          testWidgets('admin sees edit and delete action items', (
-            tester,
-          ) async {
-            final testData = entityName.testData();
-            late List<ActionItem> actionItems;
+      testWidgets('admin sees edit and delete action items for all entities', (
+        tester,
+      ) async {
+        for (final entityName in EntityTestRegistry.allEntityNames) {
+          final testData = entityName.testData();
+          late List<ActionItem> actionItems;
 
-            await tester.pumpWidget(
-              _buildTestableContext(
-                child: Builder(
-                  builder: (context) {
-                    actionItems =
-                        GenericTableActionBuilders.buildRowActionItems(
-                          context,
-                          entityName: entityName,
-                          entity: testData,
-                          userRole: 'admin',
-                          onRefresh: () {},
-                        );
-                    return const SizedBox.shrink();
-                  },
-                ),
+          await tester.pumpWidget(
+            _buildTestableContext(
+              child: Builder(
+                builder: (context) {
+                  actionItems = GenericTableActionBuilders.buildRowActionItems(
+                    context,
+                    entityName: entityName,
+                    entity: testData,
+                    userRole: 'admin',
+                    onRefresh: () {},
+                  );
+                  return const SizedBox.shrink();
+                },
               ),
-            );
+            ),
+          );
 
-            // Admin should see both edit and delete
-            expect(actionItems.length, greaterThanOrEqualTo(2));
-            expect(actionItems.any((a) => a.id == 'edit'), isTrue);
-            expect(actionItems.any((a) => a.id == 'delete'), isTrue);
-          });
+          // Admin should see both edit and delete
+          expect(
+            actionItems.length,
+            greaterThanOrEqualTo(2),
+            reason: '$entityName: admin should have at least 2 row actions',
+          );
+          expect(
+            actionItems.any((a) => a.id == 'edit'),
+            isTrue,
+            reason: '$entityName: admin should have edit action',
+          );
+          expect(
+            actionItems.any((a) => a.id == 'delete'),
+            isTrue,
+            reason: '$entityName: admin should have delete action',
+          );
+        }
+      });
 
-          testWidgets('viewer has limited or no action items', (tester) async {
-            final testData = entityName.testData();
-            late List<ActionItem> actionItems;
+      testWidgets('viewer has limited or no action items for all entities', (
+        tester,
+      ) async {
+        for (final entityName in EntityTestRegistry.allEntityNames) {
+          final testData = entityName.testData();
+          late List<ActionItem> actionItems;
 
-            await tester.pumpWidget(
-              _buildTestableContext(
-                child: Builder(
-                  builder: (context) {
-                    actionItems =
-                        GenericTableActionBuilders.buildRowActionItems(
-                          context,
-                          entityName: entityName,
-                          entity: testData,
-                          userRole: 'viewer',
-                          onRefresh: () {},
-                        );
-                    return const SizedBox.shrink();
-                  },
-                ),
+          await tester.pumpWidget(
+            _buildTestableContext(
+              child: Builder(
+                builder: (context) {
+                  actionItems = GenericTableActionBuilders.buildRowActionItems(
+                    context,
+                    entityName: entityName,
+                    entity: testData,
+                    userRole: 'viewer',
+                    onRefresh: () {},
+                  );
+                  return const SizedBox.shrink();
+                },
               ),
-            );
+            ),
+          );
 
-            // Viewer has limited permissions - returns valid list
-            expect(actionItems, isA<List<ActionItem>>());
-          });
+          // Viewer has limited permissions - returns valid list
+          expect(
+            actionItems,
+            isA<List<ActionItem>>(),
+            reason: '$entityName: viewer should get valid action list',
+          );
+        }
+      });
 
-          testWidgets('null role has no action items', (tester) async {
-            final testData = entityName.testData();
-            late List<ActionItem> actionItems;
+      testWidgets('null role has no action items for all entities', (
+        tester,
+      ) async {
+        for (final entityName in EntityTestRegistry.allEntityNames) {
+          final testData = entityName.testData();
+          late List<ActionItem> actionItems;
 
-            await tester.pumpWidget(
-              _buildTestableContext(
-                child: Builder(
-                  builder: (context) {
-                    actionItems =
-                        GenericTableActionBuilders.buildRowActionItems(
-                          context,
-                          entityName: entityName,
-                          entity: testData,
-                          userRole: null,
-                          onRefresh: () {},
-                        );
-                    return const SizedBox.shrink();
-                  },
-                ),
+          await tester.pumpWidget(
+            _buildTestableContext(
+              child: Builder(
+                builder: (context) {
+                  actionItems = GenericTableActionBuilders.buildRowActionItems(
+                    context,
+                    entityName: entityName,
+                    entity: testData,
+                    userRole: null,
+                    onRefresh: () {},
+                  );
+                  return const SizedBox.shrink();
+                },
               ),
-            );
+            ),
+          );
 
-            // No role = no action items
-            expect(actionItems, isEmpty);
-          });
-        });
-      }
+          // No role = no action items
+          expect(
+            actionItems,
+            isEmpty,
+            reason: '$entityName: null role should have no row actions',
+          );
+        }
+      });
     });
   }
 
@@ -173,90 +196,122 @@ abstract final class ActionBuildersTestFactory {
 
   static void _generateToolbarActionItemTests() {
     group('Toolbar Action Items', () {
-      for (final entityName in allKnownEntities) {
-        group(entityName, () {
-          testWidgets('admin gets refresh, create, and export items', (
-            tester,
-          ) async {
-            late List<ActionItem> actionItems;
+      testWidgets('admin gets refresh, create, and export items for all entities', (
+        tester,
+      ) async {
+        for (final entityName in EntityTestRegistry.allEntityNames) {
+          late List<ActionItem> actionItems;
 
-            await tester.pumpWidget(
-              _buildTestableContext(
-                child: Builder(
-                  builder: (context) {
-                    actionItems =
-                        GenericTableActionBuilders.buildToolbarActionItems(
-                          context,
-                          entityName: entityName,
-                          userRole: 'admin',
-                          onRefresh: () {},
-                        );
-                    return const SizedBox.shrink();
-                  },
-                ),
+          await tester.pumpWidget(
+            _buildTestableContext(
+              child: Builder(
+                builder: (context) {
+                  actionItems =
+                      GenericTableActionBuilders.buildToolbarActionItems(
+                        context,
+                        entityName: entityName,
+                        userRole: 'admin',
+                        onRefresh: () {},
+                      );
+                  return const SizedBox.shrink();
+                },
               ),
-            );
+            ),
+          );
 
-            // Admin should have refresh, create, and export
-            expect(actionItems.length, equals(3));
-            expect(actionItems.any((a) => a.id == 'refresh'), isTrue);
-            expect(actionItems.any((a) => a.id == 'create'), isTrue);
-            expect(actionItems.any((a) => a.id == 'export'), isTrue);
-          });
+          // Admin should have refresh, create, and export
+          expect(
+            actionItems.length,
+            equals(3),
+            reason: '$entityName: admin should have 3 toolbar actions',
+          );
+          expect(
+            actionItems.any((a) => a.id == 'refresh'),
+            isTrue,
+            reason: '$entityName: admin should have refresh action',
+          );
+          expect(
+            actionItems.any((a) => a.id == 'create'),
+            isTrue,
+            reason: '$entityName: admin should have create action',
+          );
+          expect(
+            actionItems.any((a) => a.id == 'export'),
+            isTrue,
+            reason: '$entityName: admin should have export action',
+          );
+        }
+      });
 
-          testWidgets('viewer has refresh and export but no create', (
-            tester,
-          ) async {
-            late List<ActionItem> actionItems;
+      testWidgets('viewer has refresh and export but no create for all entities', (
+        tester,
+      ) async {
+        for (final entityName in EntityTestRegistry.allEntityNames) {
+          late List<ActionItem> actionItems;
 
-            await tester.pumpWidget(
-              _buildTestableContext(
-                child: Builder(
-                  builder: (context) {
-                    actionItems =
-                        GenericTableActionBuilders.buildToolbarActionItems(
-                          context,
-                          entityName: entityName,
-                          userRole: 'viewer',
-                          onRefresh: () {},
-                        );
-                    return const SizedBox.shrink();
-                  },
-                ),
+          await tester.pumpWidget(
+            _buildTestableContext(
+              child: Builder(
+                builder: (context) {
+                  actionItems =
+                      GenericTableActionBuilders.buildToolbarActionItems(
+                        context,
+                        entityName: entityName,
+                        userRole: 'viewer',
+                        onRefresh: () {},
+                      );
+                  return const SizedBox.shrink();
+                },
               ),
-            );
+            ),
+          );
 
-            // Viewer should have refresh (always) but may not have create
-            expect(actionItems.any((a) => a.id == 'refresh'), isTrue);
-          });
+          // Viewer should have refresh (always) but may not have create
+          expect(
+            actionItems.any((a) => a.id == 'refresh'),
+            isTrue,
+            reason: '$entityName: viewer should have refresh action',
+          );
+        }
+      });
 
-          testWidgets('null role has only refresh', (tester) async {
-            late List<ActionItem> actionItems;
+      testWidgets('null role has only refresh for all entities', (
+        tester,
+      ) async {
+        for (final entityName in EntityTestRegistry.allEntityNames) {
+          late List<ActionItem> actionItems;
 
-            await tester.pumpWidget(
-              _buildTestableContext(
-                child: Builder(
-                  builder: (context) {
-                    actionItems =
-                        GenericTableActionBuilders.buildToolbarActionItems(
-                          context,
-                          entityName: entityName,
-                          userRole: null,
-                          onRefresh: () {},
-                        );
-                    return const SizedBox.shrink();
-                  },
-                ),
+          await tester.pumpWidget(
+            _buildTestableContext(
+              child: Builder(
+                builder: (context) {
+                  actionItems =
+                      GenericTableActionBuilders.buildToolbarActionItems(
+                        context,
+                        entityName: entityName,
+                        userRole: null,
+                        onRefresh: () {},
+                      );
+                  return const SizedBox.shrink();
+                },
               ),
-            );
+            ),
+          );
 
-            // Everyone should have refresh
-            expect(actionItems.any((a) => a.id == 'refresh'), isTrue);
-            // But no create without role
-            expect(actionItems.any((a) => a.id == 'create'), isFalse);
-          });
-        });
-      }
+          // Everyone should have refresh
+          expect(
+            actionItems.any((a) => a.id == 'refresh'),
+            isTrue,
+            reason: '$entityName: null role should have refresh action',
+          );
+          // But no create without role
+          expect(
+            actionItems.any((a) => a.id == 'create'),
+            isFalse,
+            reason: '$entityName: null role should not have create action',
+          );
+        }
+      });
     });
   }
 
@@ -271,48 +326,58 @@ abstract final class ActionBuildersTestFactory {
       for (final role in _testRoles) {
         final roleLabel = role ?? 'unauthenticated';
 
-        group('Role: $roleLabel', () {
-          for (final entityName in allKnownEntities) {
-            testWidgets('$entityName respects $roleLabel permissions', (
-              tester,
-            ) async {
-              final testData = entityName.testData();
-              late List<ActionItem> rowItems;
-              late List<ActionItem> toolbarItems;
+        testWidgets('all entities respect $roleLabel permissions', (
+          tester,
+        ) async {
+          for (final entityName in EntityTestRegistry.allEntityNames) {
+            final testData = entityName.testData();
+            late List<ActionItem> rowItems;
+            late List<ActionItem> toolbarItems;
 
-              await tester.pumpWidget(
-                _buildTestableContext(
-                  child: Builder(
-                    builder: (context) {
-                      rowItems = GenericTableActionBuilders.buildRowActionItems(
-                        context,
-                        entityName: entityName,
-                        entity: testData,
-                        userRole: role,
-                        onRefresh: () {},
-                      );
+            await tester.pumpWidget(
+              _buildTestableContext(
+                child: Builder(
+                  builder: (context) {
+                    rowItems = GenericTableActionBuilders.buildRowActionItems(
+                      context,
+                      entityName: entityName,
+                      entity: testData,
+                      userRole: role,
+                      onRefresh: () {},
+                    );
 
-                      toolbarItems =
-                          GenericTableActionBuilders.buildToolbarActionItems(
-                            context,
-                            entityName: entityName,
-                            userRole: role,
-                            onRefresh: () {},
-                          );
+                    toolbarItems =
+                        GenericTableActionBuilders.buildToolbarActionItems(
+                          context,
+                          entityName: entityName,
+                          userRole: role,
+                          onRefresh: () {},
+                        );
 
-                      return const SizedBox.shrink();
-                    },
-                  ),
+                    return const SizedBox.shrink();
+                  },
                 ),
-              );
+              ),
+            );
 
-              // Both should return valid lists
-              expect(rowItems, isA<List<ActionItem>>());
-              expect(toolbarItems, isA<List<ActionItem>>());
+            // Both should return valid lists
+            expect(
+              rowItems,
+              isA<List<ActionItem>>(),
+              reason: '$entityName: $roleLabel should get valid row actions',
+            );
+            expect(
+              toolbarItems,
+              isA<List<ActionItem>>(),
+              reason: '$entityName: $roleLabel should get valid toolbar actions',
+            );
 
-              // Toolbar always has refresh
-              expect(toolbarItems.any((a) => a.id == 'refresh'), isTrue);
-            });
+            // Toolbar always has refresh
+            expect(
+              toolbarItems.any((a) => a.id == 'refresh'),
+              isTrue,
+              reason: '$entityName: $roleLabel should have refresh action',
+            );
           }
         });
       }

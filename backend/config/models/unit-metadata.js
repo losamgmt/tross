@@ -18,7 +18,14 @@ const {
   FIELD_ACCESS_LEVELS: FAL,
   UNIVERSAL_FIELD_ACCESS,
 } = require('../constants');
-const { FIELD } = require('../field-types');
+const {
+  FIELD,
+  TIER1_FIELDS,
+  withTraits,
+  TRAITS,
+  TRAIT_SETS,
+  createForeignKey,
+} = require('../field-types');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -124,10 +131,6 @@ module.exports = {
   // ============================================================================
   // CRUD CONFIGURATION
   // ============================================================================
-
-  requiredFields: ['unit_identifier', 'property_id', 'ownership_type'],
-
-  immutableFields: ['property_id'], // Cannot move unit to different property
 
   displayColumns: [
     'unit_identifier',
@@ -251,42 +254,16 @@ module.exports = {
   ],
 
   // ============================================================================
-  // SEARCH CONFIGURATION
+  // SEARCH CONFIGURATION (Derived from field traits)
   // ============================================================================
 
-  searchableFields: ['unit_identifier', 'notes'],
-
   // ============================================================================
-  // FILTER CONFIGURATION
+  // FILTER CONFIGURATION (Derived from field traits)
   // ============================================================================
-
-  filterableFields: [
-    'id',
-    'unit_identifier',
-    'property_id',
-    'ownership_type',
-    'unit_category',
-    'floor',
-    'is_active',
-    'status',
-    'created_at',
-    'updated_at',
-  ],
 
   // ============================================================================
   // SORT CONFIGURATION
   // ============================================================================
-
-  sortableFields: [
-    'id',
-    'unit_identifier',
-    'ownership_type',
-    'unit_category',
-    'floor',
-    'status',
-    'created_at',
-    'updated_at',
-  ],
 
   defaultSort: {
     field: 'unit_identifier',
@@ -294,64 +271,49 @@ module.exports = {
   },
 
   // ============================================================================
-  // FIELD DEFINITIONS
+  // FIELD DEFINITIONS (with embedded traits for query capabilities)
   // ============================================================================
 
   fields: {
-    // TIER 1: Universal Entity Contract Fields
-    id: { type: 'integer', readonly: true },
-    is_active: { type: 'boolean', default: true },
-    created_at: { type: 'timestamp', readonly: true },
-    updated_at: { type: 'timestamp', readonly: true },
+    // TIER 1: Universal Entity Contract Fields (field-centric)
+    ...TIER1_FIELDS.WITH_STATUS,
 
-    // TIER 2: Entity-Specific Lifecycle Field
-    status: {
-      type: 'enum',
-      enumKey: 'status',
-      default: 'active',
-    },
-
-    // Parent reference
-    property_id: {
-      type: 'foreignKey',
-      references: 'property',
+    // Parent reference - immutable
+    property_id: createForeignKey('property', {
       required: true,
+      immutable: true,
       displayFields: ['name'],
       displayTemplate: '{name}',
-    },
+      traits: TRAIT_SETS.LOOKUP,
+    }),
 
-    // Identity field
-    unit_identifier: {
-      ...FIELD.NAME,
-      required: true,
-      maxLength: 50,
-      description: 'Unit number/name (e.g., "4A", "Lobby", "Parking-L1")',
-    },
+    // Identity field - searchable, filterable, sortable
+    unit_identifier: withTraits(
+      { ...FIELD.NAME, maxLength: 50, description: 'Unit number/name (e.g., "4A", "Lobby", "Parking-L1")' },
+      TRAITS.REQUIRED, TRAIT_SETS.SEARCHABLE_LOOKUP,
+    ),
 
     // Ownership classification
-    ownership_type: {
-      type: 'enum',
-      enumKey: 'ownership_type',
-      required: true,
-      description: 'Whether this is a private unit or common area',
-    },
+    ownership_type: withTraits(
+      { type: 'enum', enumKey: 'ownership_type', description: 'Whether this is a private unit or common area' },
+      TRAITS.REQUIRED, TRAIT_SETS.LOOKUP,
+    ),
 
     // Optional category
-    unit_category: {
-      type: 'enum',
-      enumKey: 'unit_category',
-      description: 'Type of unit (residential, commercial, amenity, etc.)',
-    },
+    unit_category: withTraits(
+      { type: 'enum', enumKey: 'unit_category', description: 'Type of unit (residential, commercial, amenity, etc.)' },
+      TRAIT_SETS.LOOKUP,
+    ),
 
     // Optional details
-    floor: {
-      type: 'integer',
-      description: 'Floor number (can be negative for basement levels)',
-    },
-    square_footage: {
-      type: 'integer',
-      description: 'Square footage of the unit',
-    },
-    notes: { type: 'text' },
+    floor: withTraits(
+      { type: 'integer', description: 'Floor number (can be negative for basement levels)' },
+      TRAIT_SETS.LOOKUP,
+    ),
+    square_footage: withTraits(
+      { type: 'integer', description: 'Square footage of the unit' },
+      TRAIT_SETS.SORTABLE,
+    ),
+    notes: withTraits({ type: 'text' }, TRAIT_SETS.FULLTEXT),
   },
 };

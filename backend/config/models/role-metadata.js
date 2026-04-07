@@ -15,7 +15,14 @@ const {
   UNIVERSAL_FIELD_ACCESS,
 } = require('../constants');
 const { getRoleHierarchy } = require('../role-hierarchy-loader');
-const { FIELD, NAME_PATTERNS } = require('../field-types');
+const {
+  FIELD,
+  NAME_PATTERNS,
+  TIER1_FIELDS,
+  withTraits,
+  TRAITS,
+  TRAIT_SETS,
+} = require('../field-types');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -127,21 +134,6 @@ module.exports = {
   // ============================================================================
   // CRUD CONFIGURATION (for GenericEntityService)
   // ============================================================================
-
-  /**
-   * Fields required when creating a new entity
-   * Note: priority is required at DB level (NOT NULL, no DEFAULT)
-   */
-  requiredFields: ['name', 'priority'],
-
-  /**
-   * Fields that CANNOT be modified during UPDATE (immutable after creation)
-   * All other fields in the table are allowed.
-   * Universal immutables (id, created_at) are always excluded automatically via ENTITY_FIELDS constant.
-   *
-   * Empty array = only universal immutables apply (all business fields are editable)
-   */
-  immutableFields: [],
 
   /**
    * Default columns to display in table views (ordered)
@@ -258,54 +250,8 @@ module.exports = {
   },
 
   // ============================================================================
-  // SEARCH CONFIGURATION (Text Search with ILIKE)
-  // ============================================================================
-
-  /**
-   * Fields that support text search (ILIKE %term%)
-   * These are concatenated with OR for full-text search
-   */
-  searchableFields: ['name', 'description'],
-
-  // ============================================================================
-  // FILTER CONFIGURATION (Exact Match & Operators)
-  // ============================================================================
-
-  /**
-   * Fields that can be used in WHERE clauses
-   * Supports: exact match, gt, gte, lt, lte, in, not
-   */
-  filterableFields: [
-    'id',
-    'name',
-    'description',
-    'priority',
-    'status',
-    'is_active',
-    'is_system_role',
-    'created_at',
-    'updated_at',
-  ],
-
-  // ============================================================================
   // SORT CONFIGURATION
   // ============================================================================
-
-  /**
-   * Fields that can be used in ORDER BY clauses
-   * All fields are sortable by default
-   */
-  sortableFields: [
-    'id',
-    'name',
-    'description',
-    'priority',
-    'status',
-    'is_active',
-    'is_system_role',
-    'created_at',
-    'updated_at',
-  ],
 
   /**
    * Default sort when no sortBy specified
@@ -362,51 +308,55 @@ module.exports = {
   },
 
   // ============================================================================
-  // FIELD DEFINITIONS (for validation & documentation)
+  // FIELD DEFINITIONS (Field-Centric: traits embedded in field definitions)
   // ============================================================================
 
   fields: {
     // TIER 1: Universal Entity Contract Fields
-    id: { type: 'integer', readonly: true },
-    // Role name - uses FIELD.NAME with custom validation for role-specific pattern
-    // Must be unique for ON CONFLICT in seeds
-    name: {
-      ...FIELD.NAME,
-      required: true,
-      unique: true,
-      minLength: 2,
-      maxLength: 100,
-      pattern: '^[a-zA-Z0-9\\s_-]+$',
-      trim: true,
-      errorMessages: {
-        required: 'Role name is required',
-        minLength: 'Role name must be at least 2 characters',
-        maxLength: 'Role name cannot exceed 100 characters',
-        pattern:
-          'Role name can only contain letters, numbers, spaces, underscores, and hyphens',
+    ...TIER1_FIELDS.WITH_STATUS,
+
+    // Override status with custom description
+    status: withTraits(
+      {
+        type: 'enum',
+        enumKey: 'status',
+        default: 'active',
+        description: 'Role lifecycle state - disabled roles cannot be newly assigned',
       },
-    },
-    is_active: { type: 'boolean', default: true },
-    created_at: { type: 'timestamp', readonly: true },
-    updated_at: { type: 'timestamp', readonly: true },
+      TRAIT_SETS.LOOKUP,
+    ),
 
-    // TIER 2: Lifecycle status
-    status: {
-      type: 'enum',
-      enumKey: 'status',
-      default: 'active',
-      description:
-        'Role lifecycle state - disabled roles cannot be newly assigned',
-    },
+    // Role name - identity field with custom validation
+    name: withTraits(
+      {
+        ...FIELD.NAME,
+        unique: true,
+        minLength: 2,
+        maxLength: 100,
+        pattern: '^[a-zA-Z0-9\\s_-]+$',
+        trim: true,
+        errorMessages: {
+          required: 'Role name is required',
+          minLength: 'Role name must be at least 2 characters',
+          maxLength: 'Role name cannot exceed 100 characters',
+          pattern: 'Role name can only contain letters, numbers, spaces, underscores, and hyphens',
+        },
+      },
+      TRAIT_SETS.IDENTITY,
+    ),
 
-    // Entity-specific fields
-    description: FIELD.DESCRIPTION,
-    // Priority starts at 10 in examples to avoid seed data (priorities 1-5)
-    priority: {
-      type: 'integer',
-      required: true,
-      min: 1,
-      examples: { valid: [10, 20, 30] },
-    },
+    // Description - searchable text
+    description: withTraits(FIELD.DESCRIPTION, TRAITS.SEARCHABLE, TRAIT_SETS.LOOKUP),
+
+    // Priority - hierarchy level (lower = more permissions)
+    priority: withTraits(
+      {
+        type: 'integer',
+        min: 1,
+        examples: { valid: [10, 20, 30] },
+      },
+      TRAITS.REQUIRED,
+      TRAIT_SETS.LOOKUP,
+    ),
   },
 };

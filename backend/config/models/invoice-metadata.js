@@ -14,7 +14,15 @@ const {
   FIELD_ACCESS_LEVELS: _FAL,
   UNIVERSAL_FIELD_ACCESS,
 } = require('../constants');
-const { FIELD, NAME_PATTERNS } = require('../field-types');
+const {
+  FIELD,
+  NAME_PATTERNS,
+  TIER1_FIELDS,
+  withTraits,
+  TRAITS,
+  TRAIT_SETS,
+  createForeignKey,
+} = require('../field-types');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -157,18 +165,6 @@ module.exports = {
   // ============================================================================
   // CRUD CONFIGURATION (for GenericEntityService)
   // ============================================================================
-
-  /**
-   * Fields required when creating a new entity
-   * invoice_number is auto-generated
-   */
-  requiredFields: ['customer_id', 'amount', 'total'],
-
-  /**
-   * Fields that cannot be modified after creation (beyond universal immutables: id, created_at)
-   * - invoice_number: Audit trail identity, cannot change
-   */
-  immutableFields: ['invoice_number'],
 
   /**
    * Default columns to display in table views (ordered)
@@ -353,54 +349,16 @@ module.exports = {
   ],
 
   // ============================================================================
-  // SEARCH CONFIGURATION (Text Search with ILIKE)
+  // SEARCH CONFIGURATION (Derived from field traits)
   // ============================================================================
 
-  /**
-   * Fields that support text search (ILIKE %term%)
-   * These are concatenated with OR for full-text search
-   */
-  searchableFields: ['invoice_number', 'name', 'summary'],
-
   // ============================================================================
-  // FILTER CONFIGURATION (Exact Match & Operators)
+  // FILTER CONFIGURATION (Derived from field traits)
   // ============================================================================
-
-  /**
-   * Fields that can be used in WHERE clauses
-   * Supports: exact match, gt, gte, lt, lte, in, not
-   */
-  filterableFields: [
-    'id',
-    'invoice_number',
-    'customer_id',
-    'work_order_id',
-    'is_active',
-    'status',
-    'due_date',
-    'paid_at',
-    'created_at',
-    'updated_at',
-  ],
 
   // ============================================================================
   // SORT CONFIGURATION
   // ============================================================================
-
-  /**
-   * Fields that can be used in ORDER BY clauses
-   */
-  sortableFields: [
-    'id',
-    'invoice_number',
-    'status',
-    'amount',
-    'total',
-    'due_date',
-    'paid_at',
-    'created_at',
-    'updated_at',
-  ],
 
   /**
    * Default sort when no sortBy specified
@@ -411,49 +369,44 @@ module.exports = {
   },
 
   // ============================================================================
-  // FIELD DEFINITIONS (for validation & documentation)
+  // FIELD DEFINITIONS (with embedded traits for query capabilities)
   // ============================================================================
 
   fields: {
-    // TIER 1: Universal Entity Contract Fields
-    id: { type: 'integer', readonly: true },
-    invoice_number: {
-      ...FIELD.IDENTIFIER,
-      readonly: true, // Auto-generated: INV-YYYY-NNNN
-      pattern: '^INV-[0-9]{4}-[0-9]+$',
-      errorMessages: {
-        pattern: 'Invoice number must be in format INV-YYYY-NNNN',
-      },
-    },
-    is_active: { type: 'boolean', default: true },
-    created_at: { type: 'timestamp', readonly: true },
-    updated_at: { type: 'timestamp', readonly: true },
+    // TIER 1: Universal Entity Contract Fields (field-centric)
+    ...TIER1_FIELDS.WITH_STATUS,
+    // Override status default (workflow entity - draft→sent→paid, not active/inactive)
+    status: withTraits(
+      { type: 'enum', enumKey: 'status', default: 'draft' },
+      TRAIT_SETS.LOOKUP,
+    ),
 
-    // TIER 2: Entity-Specific Lifecycle Field
-    status: {
-      type: 'enum',
-      enumKey: 'status',
-      default: 'draft',
-    },
+    // Identity field - auto-generated, immutable, searchable
+    invoice_number: withTraits(
+      {
+        ...FIELD.IDENTIFIER,
+        readonly: true,
+        pattern: '^INV-[0-9]{4}-[0-9]+$',
+        errorMessages: { pattern: 'Invoice number must be in format INV-YYYY-NNNN' },
+      },
+      TRAITS.IMMUTABLE, TRAIT_SETS.IDENTITY,
+    ),
 
     // COMPUTED entity name field - optional because computed from template
-    name: FIELD.NAME,
-    summary: FIELD.SUMMARY,
+    name: withTraits(FIELD.NAME, TRAIT_SETS.SEARCHABLE_LOOKUP),
+    summary: withTraits(FIELD.SUMMARY, TRAIT_SETS.FULLTEXT),
 
-    // Entity-specific fields
-    work_order_id: {
-      type: 'foreignKey',
-      references: 'work_order',
-    },
-    customer_id: {
-      type: 'foreignKey',
-      references: 'customer',
-      required: true,
-    },
-    amount: { ...FIELD.CURRENCY, required: true },
-    tax: { ...FIELD.CURRENCY, default: 0 },
-    total: { ...FIELD.CURRENCY, required: true },
-    due_date: { type: 'date' },
-    paid_at: { type: 'timestamp' },
+    // FK fields with embedded traits
+    customer_id: createForeignKey('customer', { required: true, traits: TRAIT_SETS.LOOKUP }),
+    work_order_id: createForeignKey('work_order', { traits: TRAIT_SETS.LOOKUP }),
+
+    // Financial fields
+    amount: withTraits({ ...FIELD.CURRENCY, description: 'Invoice amount' }, TRAITS.REQUIRED, TRAIT_SETS.SORTABLE),
+    tax: withTraits({ ...FIELD.CURRENCY, default: 0, description: 'Tax amount' }, TRAIT_SETS.FILTER_ONLY),
+    total: withTraits({ ...FIELD.CURRENCY, description: 'Total amount' }, TRAITS.REQUIRED, TRAIT_SETS.SORTABLE),
+
+    // Date fields
+    due_date: withTraits({ type: 'date', description: 'Payment due date' }, TRAIT_SETS.LOOKUP),
+    paid_at: withTraits({ type: 'timestamp', description: 'Payment timestamp' }, TRAIT_SETS.LOOKUP),
   },
 };

@@ -25,8 +25,8 @@ void main() {
   });
 
   group('AppDataTable - Cross Entity Rendering', () {
-    for (final entityName in allKnownEntities) {
-      testWidgets('$entityName - renders table with data', (tester) async {
+    testWidgets('renders table with data for all entities', (tester) async {
+      for (final entityName in EntityTestRegistry.allEntityNames) {
         final testData = entityName.testDataList(count: 3);
 
         // Build columns using factory (requires context for provider access)
@@ -50,13 +50,23 @@ void main() {
         );
 
         // Table should render data
-        expect(find.byType(AppDataTable<Map<String, dynamic>>), findsOneWidget);
+        expect(
+          find.byType(AppDataTable<Map<String, dynamic>>),
+          findsOneWidget,
+          reason: '$entityName: should render table',
+        );
 
         // Should not show loading or error
-        expect(find.byType(CircularProgressIndicator), findsNothing);
-      });
+        expect(
+          find.byType(CircularProgressIndicator),
+          findsNothing,
+          reason: '$entityName: should not show loading',
+        );
+      }
+    });
 
-      testWidgets('$entityName - shows loading state', (tester) async {
+    testWidgets('shows loading state for all entities', (tester) async {
+      for (final entityName in EntityTestRegistry.allEntityNames) {
         await pumpTestWidget(
           tester,
           Builder(
@@ -75,10 +85,16 @@ void main() {
           withProviders: true,
         );
 
-        expect(find.byType(CircularProgressIndicator), findsOneWidget);
-      });
+        expect(
+          find.byType(CircularProgressIndicator),
+          findsOneWidget,
+          reason: '$entityName: should show loading indicator',
+        );
+      }
+    });
 
-      testWidgets('$entityName - shows empty state', (tester) async {
+    testWidgets('shows empty state for all entities', (tester) async {
+      for (final entityName in EntityTestRegistry.allEntityNames) {
         final metadata = EntityTestRegistry.get(entityName);
 
         await pumpTestWidget(
@@ -100,12 +116,18 @@ void main() {
           withProviders: true,
         );
 
-        expect(find.textContaining('No'), findsWidgets);
-      });
+        expect(
+          find.textContaining('No'),
+          findsWidgets,
+          reason: '$entityName: should show empty message',
+        );
+      }
+    });
 
-      testWidgets('$entityName - shows error state', (tester) async {
-        const errorMessage = 'Failed to load data';
-
+    testWidgets('shows error state for all entities', (tester) async {
+      const errorMessage = 'Failed to load data';
+      
+      for (final entityName in EntityTestRegistry.allEntityNames) {
         await pumpTestWidget(
           tester,
           Builder(
@@ -125,16 +147,20 @@ void main() {
           withProviders: true,
         );
 
-        expect(find.text(errorMessage), findsOneWidget);
-      });
-    }
+        expect(
+          find.text(errorMessage),
+          findsOneWidget,
+          reason: '$entityName: should show error message',
+        );
+      }
+    });
   });
 
   group('AppDataTable - Column Generation', () {
-    for (final entityName in allKnownEntities) {
-      testWidgets('$entityName - generates correct number of columns', (
-        tester,
-      ) async {
+    testWidgets('generates correct number of columns for all entities', (
+      tester,
+    ) async {
+      for (final entityName in EntityTestRegistry.allEntityNames) {
         final metadata = EntityTestRegistry.get(entityName);
         final testData = entityName.testDataList(count: 1);
 
@@ -167,10 +193,18 @@ void main() {
               .length;
         }
 
-        expect(columns.length, equals(expectedCount));
-      });
+        expect(
+          columns.length,
+          equals(expectedCount),
+          reason: '$entityName: should have $expectedCount columns',
+        );
+      }
+    });
 
-      testWidgets('$entityName - column ids match field names', (tester) async {
+    testWidgets('column ids match field names for all entities', (
+      tester,
+    ) async {
+      for (final entityName in EntityTestRegistry.allEntityNames) {
         final metadata = EntityTestRegistry.get(entityName);
         final testData = entityName.testDataList(count: 1);
 
@@ -198,10 +232,10 @@ void main() {
           expect(
             metadata.fields.containsKey(column.id),
             isTrue,
-            reason: 'Column ${column.id} not found in $entityName fields',
+            reason: '$entityName: Column ${column.id} not found in fields',
           );
         }
-      });
-    }
+      }
+    });
   });
 }

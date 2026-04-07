@@ -38,9 +38,8 @@ void main() {
     });
 
     group('MetadataTableColumnFactory.forEntity', () {
-      // Use allKnownEntities (const) to avoid initialization order issue
-      for (final entityName in allKnownEntities) {
-        testWidgets('$entityName - generates columns', (tester) async {
+      testWidgets('generates columns for all entities', (tester) async {
+        for (final entityName in EntityTestRegistry.allEntityNames) {
           await tester.pumpWidget(
             MaterialApp(
               home: Provider<GenericEntityService>.value(
@@ -53,12 +52,24 @@ void main() {
                     );
 
                     // Should generate at least one column
-                    expect(columns, isNotEmpty);
+                    expect(
+                      columns,
+                      isNotEmpty,
+                      reason: '$entityName: should generate columns',
+                    );
 
                     // Each column should have required properties
                     for (final column in columns) {
-                      expect(column.id, isNotEmpty);
-                      expect(column.label, isNotEmpty);
+                      expect(
+                        column.id,
+                        isNotEmpty,
+                        reason: '$entityName: column should have id',
+                      );
+                      expect(
+                        column.label,
+                        isNotEmpty,
+                        reason: '$entityName: column should have label',
+                      );
                     }
 
                     return const SizedBox();
@@ -67,13 +78,13 @@ void main() {
               ),
             ),
           );
-        });
-      }
+        }
+      });
     });
 
     group('MetadataFieldConfigFactory.forEntity', () {
-      for (final entityName in allKnownEntities) {
-        testWidgets('$entityName - generates field configs', (tester) async {
+      testWidgets('generates field configs for all entities', (tester) async {
+        for (final entityName in EntityTestRegistry.allEntityNames) {
           await tester.pumpWidget(
             MaterialApp(
               home: Provider<GenericEntityService>.value(
@@ -87,7 +98,11 @@ void main() {
 
                     // May be empty for some entities (e.g., role with few editable fields)
                     // But configs should be a valid list
-                    expect(configs, isA<List>());
+                    expect(
+                      configs,
+                      isA<List>(),
+                      reason: '$entityName: should return a list',
+                    );
 
                     return const SizedBox();
                   },
@@ -95,11 +110,13 @@ void main() {
               ),
             ),
           );
-        });
+        }
+      });
 
-        testWidgets('$entityName - forEdit marks immutable as readonly', (
-          tester,
-        ) async {
+      testWidgets('forEdit marks immutable as readonly for all entities', (
+        tester,
+      ) async {
+        for (final entityName in EntityTestRegistry.allEntityNames) {
           await tester.pumpWidget(
             MaterialApp(
               home: Provider<GenericEntityService>.value(
@@ -112,7 +129,11 @@ void main() {
                       forEdit: true,
                     );
 
-                    expect(configs, isA<List>());
+                    expect(
+                      configs,
+                      isA<List>(),
+                      reason: '$entityName: forEdit should return a list',
+                    );
 
                     return const SizedBox();
                   },
@@ -120,8 +141,8 @@ void main() {
               ),
             ),
           );
-        });
-      }
+        }
+      });
     });
 
     group('MetadataTableColumnFactory - Cell Builders', () {

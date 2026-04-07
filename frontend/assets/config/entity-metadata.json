@@ -23,6 +23,7 @@
     "displayName": "Approval Request",
     "displayNamePlural": "Approval Requests",
     "requiredFields": [
+      "request_number",
       "target_entity",
       "target_id",
       "target_field",
@@ -35,12 +36,36 @@
       "target_entity",
       "target_id",
       "target_field",
-      "previous_value",
-      "requested_by"
+      "previous_value"
     ],
-    "searchableFields": [],
-    "filterableFields": [],
-    "sortableFields": [],
+    "searchableFields": [
+      "request_number"
+    ],
+    "filterableFields": [
+      "id",
+      "is_active",
+      "created_at",
+      "updated_at",
+      "status",
+      "request_number",
+      "target_entity",
+      "approver_role",
+      "decided_at",
+      "requested_by",
+      "approved_by"
+    ],
+    "sortableFields": [
+      "id",
+      "created_at",
+      "updated_at",
+      "status",
+      "request_number",
+      "target_entity",
+      "approver_role",
+      "decided_at",
+      "requested_by",
+      "approved_by"
+    ],
     "displayColumns": [
       "request_number",
       "target_entity",
@@ -126,6 +151,27 @@
         "type": "timestamp",
         "readonly": true
       },
+      "status": {
+        "type": "enum",
+        "default": "pending",
+        "values": {
+          "pending": {
+            "color": "warning"
+          },
+          "approved": {
+            "color": "success"
+          },
+          "rejected": {
+            "color": "error"
+          },
+          "cancelled": {
+            "color": "secondary"
+          },
+          "expired": {
+            "color": "secondary"
+          }
+        }
+      },
       "request_number": {
         "type": "string",
         "required": true,
@@ -188,27 +234,6 @@
       },
       "decided_at": {
         "type": "timestamp"
-      },
-      "status": {
-        "type": "enum",
-        "default": "pending",
-        "values": {
-          "pending": {
-            "color": "warning"
-          },
-          "approved": {
-            "color": "success"
-          },
-          "rejected": {
-            "color": "error"
-          },
-          "cancelled": {
-            "color": "secondary"
-          },
-          "expired": {
-            "color": "secondary"
-          }
-        }
       },
       "requested_by": {
         "type": "foreignKey",
@@ -275,12 +300,11 @@
     "displayName": "Asset",
     "displayNamePlural": "Assets",
     "requiredFields": [
-      "name",
       "unit_id",
+      "name",
       "asset_type"
     ],
     "immutableFields": [
-      "unit_id",
       "property_id"
     ],
     "searchableFields": [
@@ -291,25 +315,27 @@
     ],
     "filterableFields": [
       "id",
-      "name",
-      "asset_type",
+      "is_active",
+      "created_at",
+      "updated_at",
+      "status",
       "unit_id",
       "property_id",
+      "name",
+      "asset_type",
       "manufacturer",
-      "is_active",
-      "status",
-      "created_at",
-      "updated_at"
+      "model",
+      "install_date"
     ],
     "sortableFields": [
       "id",
+      "created_at",
+      "updated_at",
+      "status",
       "name",
       "asset_type",
       "manufacturer",
-      "status",
-      "install_date",
-      "created_at",
-      "updated_at"
+      "install_date"
     ],
     "displayColumns": [
       "name",
@@ -374,11 +400,6 @@
         "type": "integer",
         "readonly": true
       },
-      "name": {
-        "type": "string",
-        "required": true,
-        "maxLength": 200
-      },
       "is_active": {
         "type": "boolean",
         "default": true
@@ -419,6 +440,11 @@
         "type": "foreignKey",
         "references": "property",
         "displayField": "name"
+      },
+      "name": {
+        "type": "string",
+        "required": true,
+        "maxLength": 200
       },
       "asset_type": {
         "type": "enum",
@@ -523,6 +549,7 @@
     "immutableFields": [],
     "searchableFields": [],
     "filterableFields": [
+      "id",
       "action",
       "resource_type",
       "resource_id",
@@ -557,13 +584,11 @@
       },
       "action": {
         "type": "string",
-        "required": true,
         "readonly": true,
         "maxLength": 50
       },
       "resource_type": {
         "type": "string",
-        "required": true,
         "readonly": true,
         "maxLength": 100
       },
@@ -634,6 +659,7 @@
     "displayName": "Contract",
     "displayNamePlural": "Contracts",
     "requiredFields": [
+      "contract_number",
       "customer_id",
       "start_date"
     ],
@@ -643,29 +669,33 @@
     "searchableFields": [
       "contract_number",
       "name",
-      "summary"
+      "summary",
+      "terms"
     ],
     "filterableFields": [
       "id",
-      "contract_number",
-      "customer_id",
       "is_active",
+      "created_at",
+      "updated_at",
       "status",
+      "contract_number",
+      "name",
+      "customer_id",
       "start_date",
       "end_date",
-      "billing_cycle",
-      "created_at",
-      "updated_at"
+      "billing_cycle"
     ],
     "sortableFields": [
       "id",
-      "contract_number",
+      "created_at",
+      "updated_at",
       "status",
-      "value",
+      "contract_number",
+      "name",
+      "customer_id",
       "start_date",
       "end_date",
-      "created_at",
-      "updated_at"
+      "billing_cycle"
     ],
     "displayColumns": [
       "contract_number",
@@ -688,12 +718,6 @@
         "type": "integer",
         "readonly": true
       },
-      "contract_number": {
-        "type": "string",
-        "readonly": true,
-        "maxLength": 100,
-        "pattern": "^CTR-[0-9]{4}-[0-9]+$"
-      },
       "is_active": {
         "type": "boolean",
         "default": true
@@ -708,7 +732,7 @@
       },
       "status": {
         "type": "enum",
-        "default": "draft",
+        "default": "active",
         "values": {
           "draft": {
             "color": "secondary"
@@ -726,6 +750,13 @@
             "color": "error"
           }
         }
+      },
+      "contract_number": {
+        "type": "string",
+        "required": true,
+        "readonly": true,
+        "maxLength": 100,
+        "pattern": "^CTR-[0-9]{4}-[0-9]+$"
       },
       "name": {
         "type": "string",
@@ -819,34 +850,34 @@
     ],
     "immutableFields": [],
     "searchableFields": [
+      "email",
       "first_name",
       "last_name",
-      "email",
       "phone",
       "organization_name"
     ],
     "filterableFields": [
       "id",
+      "is_active",
+      "created_at",
+      "updated_at",
+      "status",
       "email",
       "first_name",
       "last_name",
       "phone",
-      "organization_name",
-      "is_active",
-      "status",
-      "created_at",
-      "updated_at"
+      "organization_name"
     ],
     "sortableFields": [
       "id",
+      "created_at",
+      "updated_at",
+      "status",
       "email",
       "first_name",
       "last_name",
-      "organization_name",
-      "is_active",
-      "status",
-      "created_at",
-      "updated_at"
+      "phone",
+      "organization_name"
     ],
     "displayColumns": [
       "first_name",
@@ -931,11 +962,6 @@
         "type": "integer",
         "readonly": true
       },
-      "email": {
-        "type": "email",
-        "required": true,
-        "maxLength": 255
-      },
       "is_active": {
         "type": "boolean",
         "default": true
@@ -950,7 +976,7 @@
       },
       "status": {
         "type": "enum",
-        "default": "pending",
+        "default": "active",
         "values": {
           "pending": {
             "color": "warning"
@@ -962,6 +988,11 @@
             "color": "error"
           }
         }
+      },
+      "email": {
+        "type": "email",
+        "required": true,
+        "maxLength": 255
       },
       "first_name": {
         "type": "string",
@@ -1289,27 +1320,26 @@
       "id",
       "customer_id",
       "unit_id",
-      "role",
-      "status",
-      "effective_date",
-      "end_date",
+      "is_active",
       "created_at",
-      "updated_at"
+      "updated_at",
+      "role",
+      "effective_date",
+      "end_date"
     ],
     "sortableFields": [
       "id",
-      "role",
-      "status",
-      "effective_date",
-      "end_date",
       "created_at",
-      "updated_at"
+      "updated_at",
+      "role",
+      "effective_date",
+      "end_date"
     ],
     "displayColumns": [
       "customer_id",
       "unit_id",
       "role",
-      "status"
+      "is_active"
     ],
     "defaultSort": {
       "field": "created_at",
@@ -1324,30 +1354,6 @@
         "type": "integer",
         "readonly": true
       },
-      "is_active": {
-        "type": "boolean",
-        "default": true
-      },
-      "created_at": {
-        "type": "timestamp",
-        "readonly": true
-      },
-      "updated_at": {
-        "type": "timestamp",
-        "readonly": true
-      },
-      "status": {
-        "type": "enum",
-        "default": "active",
-        "values": {
-          "active": {
-            "color": "success"
-          },
-          "inactive": {
-            "color": "secondary"
-          }
-        }
-      },
       "customer_id": {
         "type": "foreignKey",
         "references": "customer",
@@ -1359,6 +1365,18 @@
         "references": "unit",
         "displayField": "unit_identifier",
         "required": true
+      },
+      "is_active": {
+        "type": "boolean",
+        "default": true
+      },
+      "created_at": {
+        "type": "timestamp",
+        "readonly": true
+      },
+      "updated_at": {
+        "type": "timestamp",
+        "readonly": true
       },
       "role": {
         "type": "enum",
@@ -1437,19 +1455,19 @@
     ],
     "filterableFields": [
       "id",
-      "name",
       "is_active",
       "created_at",
       "updated_at",
       "status",
+      "name",
       "manager_id"
     ],
     "sortableFields": [
       "id",
-      "name",
       "created_at",
       "updated_at",
-      "status"
+      "status",
+      "name"
     ],
     "displayColumns": [
       "name",
@@ -1469,11 +1487,6 @@
       "id": {
         "type": "integer",
         "readonly": true
-      },
-      "name": {
-        "type": "string",
-        "required": true,
-        "maxLength": 100
       },
       "is_active": {
         "type": "boolean",
@@ -1499,8 +1512,14 @@
           }
         }
       },
+      "name": {
+        "type": "string",
+        "required": true,
+        "maxLength": 100
+      },
       "description": {
-        "type": "text"
+        "type": "text",
+        "maxLength": 5000
       },
       "manager_id": {
         "type": "foreignKey",
@@ -1560,18 +1579,25 @@
       "description"
     ],
     "filterableFields": [
+      "id",
       "entity_type",
       "entity_id",
+      "original_filename",
       "mime_type",
+      "file_size",
       "category",
+      "uploaded_by",
       "is_active",
-      "uploaded_by"
+      "created_at",
+      "updated_at"
     ],
     "sortableFields": [
+      "id",
       "original_filename",
       "file_size",
+      "category",
       "created_at",
-      "category"
+      "updated_at"
     ],
     "displayColumns": [
       "original_filename",
@@ -1697,26 +1723,27 @@
     ],
     "filterableFields": [
       "id",
+      "is_active",
+      "created_at",
+      "updated_at",
+      "status",
       "name",
       "sku",
-      "is_active",
-      "status",
       "quantity",
       "reorder_level",
+      "unit_cost",
       "location",
-      "supplier",
-      "created_at",
-      "updated_at"
+      "supplier"
     ],
     "sortableFields": [
       "id",
+      "created_at",
+      "updated_at",
+      "status",
       "name",
       "sku",
-      "status",
       "quantity",
-      "unit_cost",
-      "created_at",
-      "updated_at"
+      "unit_cost"
     ],
     "displayColumns": [
       "sku",
@@ -1737,11 +1764,6 @@
       "id": {
         "type": "integer",
         "readonly": true
-      },
-      "name": {
-        "type": "string",
-        "required": true,
-        "maxLength": 255
       },
       "is_active": {
         "type": "boolean",
@@ -1772,6 +1794,11 @@
             "color": "secondary"
           }
         }
+      },
+      "name": {
+        "type": "string",
+        "required": true,
+        "maxLength": 255
       },
       "sku": {
         "type": "string",
@@ -1832,6 +1859,7 @@
     "displayName": "Invoice",
     "displayNamePlural": "Invoices",
     "requiredFields": [
+      "invoice_number",
       "customer_id",
       "amount",
       "total"
@@ -1846,26 +1874,29 @@
     ],
     "filterableFields": [
       "id",
+      "is_active",
+      "created_at",
+      "updated_at",
+      "status",
       "invoice_number",
+      "name",
       "customer_id",
       "work_order_id",
-      "is_active",
-      "status",
+      "tax",
       "due_date",
-      "paid_at",
-      "created_at",
-      "updated_at"
+      "paid_at"
     ],
     "sortableFields": [
       "id",
-      "invoice_number",
-      "status",
-      "amount",
-      "total",
-      "due_date",
-      "paid_at",
       "created_at",
-      "updated_at"
+      "updated_at",
+      "status",
+      "invoice_number",
+      "name",
+      "customer_id",
+      "work_order_id",
+      "due_date",
+      "paid_at"
     ],
     "displayColumns": [
       "invoice_number",
@@ -1887,12 +1918,6 @@
       "id": {
         "type": "integer",
         "readonly": true
-      },
-      "invoice_number": {
-        "type": "string",
-        "readonly": true,
-        "maxLength": 100,
-        "pattern": "^INV-[0-9]{4}-[0-9]+$"
       },
       "is_active": {
         "type": "boolean",
@@ -1930,6 +1955,13 @@
           }
         }
       },
+      "invoice_number": {
+        "type": "string",
+        "required": true,
+        "readonly": true,
+        "maxLength": 100,
+        "pattern": "^INV-[0-9]{4}-[0-9]+$"
+      },
       "name": {
         "type": "string",
         "maxLength": 255
@@ -1938,16 +1970,16 @@
         "type": "string",
         "maxLength": 255
       },
-      "work_order_id": {
-        "type": "foreignKey",
-        "references": "work_order",
-        "displayField": "work_order_number"
-      },
       "customer_id": {
         "type": "foreignKey",
         "references": "customer",
         "displayField": "email",
         "required": true
+      },
+      "work_order_id": {
+        "type": "foreignKey",
+        "references": "work_order",
+        "displayField": "work_order_number"
       },
       "amount": {
         "type": "currency",
@@ -2025,16 +2057,44 @@
     "displayName": "Maintenance Schedule",
     "displayNamePlural": "Maintenance Schedules",
     "requiredFields": [
-      "customer_id",
+      "schedule_number",
       "frequency",
-      "next_due_date"
+      "next_due_date",
+      "customer_id"
     ],
     "immutableFields": [
       "schedule_number"
     ],
-    "searchableFields": [],
-    "filterableFields": [],
-    "sortableFields": [],
+    "searchableFields": [
+      "schedule_number"
+    ],
+    "filterableFields": [
+      "id",
+      "is_active",
+      "created_at",
+      "updated_at",
+      "status",
+      "schedule_number",
+      "frequency",
+      "next_due_date",
+      "last_generated_date",
+      "customer_id",
+      "asset_id",
+      "service_template_id"
+    ],
+    "sortableFields": [
+      "id",
+      "created_at",
+      "updated_at",
+      "status",
+      "schedule_number",
+      "frequency",
+      "next_due_date",
+      "last_generated_date",
+      "customer_id",
+      "asset_id",
+      "service_template_id"
+    ],
     "displayColumns": [
       "schedule_number",
       "customer_id",
@@ -2086,6 +2146,21 @@
         "type": "timestamp",
         "readonly": true
       },
+      "status": {
+        "type": "enum",
+        "default": "active",
+        "values": {
+          "active": {
+            "color": "success"
+          },
+          "paused": {
+            "color": "warning"
+          },
+          "cancelled": {
+            "color": "secondary"
+          }
+        }
+      },
       "schedule_number": {
         "type": "string",
         "required": true,
@@ -2127,25 +2202,11 @@
         "required": true
       },
       "last_generated_date": {
-        "type": "date"
+        "type": "date",
+        "readonly": true
       },
       "notes": {
         "type": "text"
-      },
-      "status": {
-        "type": "enum",
-        "default": "active",
-        "values": {
-          "active": {
-            "color": "success"
-          },
-          "paused": {
-            "color": "warning"
-          },
-          "cancelled": {
-            "color": "secondary"
-          }
-        }
       },
       "customer_id": {
         "type": "foreignKey",
@@ -2223,30 +2284,32 @@
       "type"
     ],
     "immutableFields": [
-      "id",
       "user_id",
       "title",
       "body",
       "type",
       "resource_type",
-      "resource_id",
-      "created_at"
+      "resource_id"
     ],
     "searchableFields": [
       "title",
       "body"
     ],
     "filterableFields": [
+      "id",
       "user_id",
       "type",
-      "is_read",
       "resource_type",
-      "created_at"
+      "is_read",
+      "created_at",
+      "updated_at"
     ],
     "sortableFields": [
-      "created_at",
+      "id",
+      "type",
       "is_read",
-      "type"
+      "created_at",
+      "updated_at"
     ],
     "displayColumns": [
       "title",
@@ -2294,6 +2357,7 @@
         "type": "enum",
         "required": true,
         "readonly": true,
+        "default": "info",
         "values": {
           "info": {
             "color": "info"
@@ -2329,8 +2393,7 @@
         "default": false
       },
       "read_at": {
-        "type": "timestamp",
-        "readonly": true
+        "type": "timestamp"
       },
       "created_at": {
         "type": "timestamp",
@@ -2378,6 +2441,7 @@
     "displayName": "Payment",
     "displayNamePlural": "Payments",
     "requiredFields": [
+      "payment_number",
       "amount",
       "payment_date",
       "customer_id"
@@ -2385,9 +2449,35 @@
     "immutableFields": [
       "payment_number"
     ],
-    "searchableFields": [],
-    "filterableFields": [],
-    "sortableFields": [],
+    "searchableFields": [
+      "payment_number",
+      "reference_number"
+    ],
+    "filterableFields": [
+      "id",
+      "is_active",
+      "created_at",
+      "updated_at",
+      "status",
+      "payment_number",
+      "payment_date",
+      "payment_method",
+      "reference_number",
+      "customer_id",
+      "invoice_id"
+    ],
+    "sortableFields": [
+      "id",
+      "created_at",
+      "updated_at",
+      "status",
+      "payment_number",
+      "payment_date",
+      "payment_method",
+      "reference_number",
+      "customer_id",
+      "invoice_id"
+    ],
     "displayColumns": [
       "payment_number",
       "customer_id",
@@ -2421,6 +2511,27 @@
       "updated_at": {
         "type": "timestamp",
         "readonly": true
+      },
+      "status": {
+        "type": "enum",
+        "default": "pending",
+        "values": {
+          "pending": {
+            "color": "warning"
+          },
+          "completed": {
+            "color": "success"
+          },
+          "failed": {
+            "color": "error"
+          },
+          "refunded": {
+            "color": "secondary"
+          },
+          "cancelled": {
+            "color": "secondary"
+          }
+        }
       },
       "payment_number": {
         "type": "string",
@@ -2467,27 +2578,6 @@
       },
       "notes": {
         "type": "text"
-      },
-      "status": {
-        "type": "enum",
-        "default": "pending",
-        "values": {
-          "pending": {
-            "color": "warning"
-          },
-          "completed": {
-            "color": "success"
-          },
-          "failed": {
-            "color": "error"
-          },
-          "refunded": {
-            "color": "secondary"
-          },
-          "cancelled": {
-            "color": "secondary"
-          }
-        }
       },
       "customer_id": {
         "type": "foreignKey",
@@ -2549,6 +2639,8 @@
     "searchableFields": [],
     "filterableFields": [
       "id",
+      "theme",
+      "density",
       "created_at",
       "updated_at"
     ],
@@ -2621,17 +2713,17 @@
         "type": "boolean",
         "default": true
       },
-      "items_per_page": {
-        "type": "integer",
-        "min": 10,
-        "max": 100,
-        "default": 25
-      },
       "notification_retention_days": {
         "type": "integer",
         "min": 1,
         "max": 365,
         "default": 30
+      },
+      "items_per_page": {
+        "type": "integer",
+        "min": 10,
+        "max": 100,
+        "default": 25
       },
       "auto_refresh_interval": {
         "type": "integer",
@@ -2667,20 +2759,20 @@
         "label": "Notifications_enabled",
         "order": 2
       },
-      "items_per_page": {
-        "type": "integer",
-        "default": 25,
-        "min": 10,
-        "max": 100,
-        "label": "Items_per_page",
-        "order": 3
-      },
       "notification_retention_days": {
         "type": "integer",
         "default": 30,
         "min": 1,
         "max": 365,
         "label": "Notification_retention_days",
+        "order": 3
+      },
+      "items_per_page": {
+        "type": "integer",
+        "default": 25,
+        "min": 10,
+        "max": 100,
+        "label": "Items_per_page",
         "order": 4
       },
       "auto_refresh_interval": {
@@ -2731,28 +2823,24 @@
     ],
     "immutableFields": [],
     "searchableFields": [
-      "name",
-      "address_city",
-      "address_state"
+      "name"
     ],
     "filterableFields": [
       "id",
-      "name",
-      "property_type",
       "is_active",
-      "status",
-      "address_city",
-      "address_state",
       "created_at",
-      "updated_at"
+      "updated_at",
+      "status",
+      "name",
+      "property_type"
     ],
     "sortableFields": [
       "id",
-      "name",
-      "property_type",
-      "status",
       "created_at",
-      "updated_at"
+      "updated_at",
+      "status",
+      "name",
+      "property_type"
     ],
     "displayColumns": [
       "name",
@@ -2811,11 +2899,6 @@
         "type": "integer",
         "readonly": true
       },
-      "name": {
-        "type": "string",
-        "required": true,
-        "maxLength": 200
-      },
       "is_active": {
         "type": "boolean",
         "default": true
@@ -2839,6 +2922,11 @@
             "color": "secondary"
           }
         }
+      },
+      "name": {
+        "type": "string",
+        "required": true,
+        "maxLength": 200
       },
       "property_type": {
         "type": "enum",
@@ -3031,27 +3119,26 @@
       "id",
       "customer_id",
       "property_id",
-      "role",
-      "status",
-      "effective_date",
-      "end_date",
+      "is_active",
       "created_at",
-      "updated_at"
+      "updated_at",
+      "role",
+      "effective_date",
+      "end_date"
     ],
     "sortableFields": [
       "id",
-      "role",
-      "status",
-      "effective_date",
-      "end_date",
       "created_at",
-      "updated_at"
+      "updated_at",
+      "role",
+      "effective_date",
+      "end_date"
     ],
     "displayColumns": [
       "customer_id",
       "property_id",
       "role",
-      "status"
+      "is_active"
     ],
     "defaultSort": {
       "field": "created_at",
@@ -3066,30 +3153,6 @@
         "type": "integer",
         "readonly": true
       },
-      "is_active": {
-        "type": "boolean",
-        "default": true
-      },
-      "created_at": {
-        "type": "timestamp",
-        "readonly": true
-      },
-      "updated_at": {
-        "type": "timestamp",
-        "readonly": true
-      },
-      "status": {
-        "type": "enum",
-        "default": "active",
-        "values": {
-          "active": {
-            "color": "success"
-          },
-          "inactive": {
-            "color": "secondary"
-          }
-        }
-      },
       "customer_id": {
         "type": "foreignKey",
         "references": "customer",
@@ -3101,6 +3164,18 @@
         "references": "property",
         "displayField": "name",
         "required": true
+      },
+      "is_active": {
+        "type": "boolean",
+        "default": true
+      },
+      "created_at": {
+        "type": "timestamp",
+        "readonly": true
+      },
+      "updated_at": {
+        "type": "timestamp",
+        "readonly": true
       },
       "role": {
         "type": "enum",
@@ -3182,15 +3257,36 @@
     "displayName": "Purchase Order",
     "displayNamePlural": "Purchase Orders",
     "requiredFields": [
-      "vendor_id",
-      "description"
+      "po_number",
+      "description",
+      "vendor_id"
     ],
     "immutableFields": [
       "po_number"
     ],
-    "searchableFields": [],
-    "filterableFields": [],
-    "sortableFields": [],
+    "searchableFields": [
+      "po_number",
+      "description"
+    ],
+    "filterableFields": [
+      "id",
+      "is_active",
+      "created_at",
+      "updated_at",
+      "status",
+      "po_number",
+      "vendor_id",
+      "work_order_id"
+    ],
+    "sortableFields": [
+      "id",
+      "created_at",
+      "updated_at",
+      "status",
+      "po_number",
+      "vendor_id",
+      "work_order_id"
+    ],
     "displayColumns": [
       "po_number",
       "vendor_id",
@@ -3223,21 +3319,6 @@
         "type": "timestamp",
         "readonly": true
       },
-      "po_number": {
-        "type": "string",
-        "required": true,
-        "maxLength": 20
-      },
-      "description": {
-        "type": "text",
-        "required": true
-      },
-      "total_amount": {
-        "type": "decimal"
-      },
-      "notes": {
-        "type": "text"
-      },
       "status": {
         "type": "enum",
         "default": "draft",
@@ -3264,6 +3345,21 @@
             "color": "secondary"
           }
         }
+      },
+      "po_number": {
+        "type": "string",
+        "required": true,
+        "maxLength": 20
+      },
+      "description": {
+        "type": "text",
+        "required": true
+      },
+      "total_amount": {
+        "type": "decimal"
+      },
+      "notes": {
+        "type": "text"
       },
       "vendor_id": {
         "type": "foreignKey",
@@ -3326,14 +3422,37 @@
     "displayName": "Quote",
     "displayNamePlural": "Quotes",
     "requiredFields": [
+      "quote_number",
       "customer_id"
     ],
     "immutableFields": [
       "quote_number"
     ],
-    "searchableFields": [],
-    "filterableFields": [],
-    "sortableFields": [],
+    "searchableFields": [
+      "quote_number",
+      "description"
+    ],
+    "filterableFields": [
+      "id",
+      "is_active",
+      "created_at",
+      "updated_at",
+      "status",
+      "quote_number",
+      "valid_until",
+      "customer_id",
+      "property_id"
+    ],
+    "sortableFields": [
+      "id",
+      "created_at",
+      "updated_at",
+      "status",
+      "quote_number",
+      "valid_until",
+      "customer_id",
+      "property_id"
+    ],
     "displayColumns": [
       "quote_number",
       "customer_id",
@@ -3365,20 +3484,6 @@
         "type": "timestamp",
         "readonly": true
       },
-      "quote_number": {
-        "type": "string",
-        "required": true,
-        "maxLength": 20
-      },
-      "description": {
-        "type": "text"
-      },
-      "notes": {
-        "type": "text"
-      },
-      "valid_until": {
-        "type": "date"
-      },
       "status": {
         "type": "enum",
         "default": "draft",
@@ -3403,6 +3508,23 @@
           }
         }
       },
+      "quote_number": {
+        "type": "string",
+        "required": true,
+        "maxLength": 20
+      },
+      "description": {
+        "type": "text"
+      },
+      "notes": {
+        "type": "text"
+      },
+      "valid_until": {
+        "type": "date"
+      },
+      "total_amount": {
+        "type": "decimal"
+      },
       "customer_id": {
         "type": "foreignKey",
         "references": "customer",
@@ -3413,9 +3535,6 @@
         "type": "foreignKey",
         "references": "property",
         "displayField": "name"
-      },
-      "total_amount": {
-        "type": "decimal"
       }
     },
     "relationships": {
@@ -3468,14 +3587,37 @@
     "displayName": "Receipt",
     "displayNamePlural": "Receipts",
     "requiredFields": [
+      "receipt_number",
       "amount"
     ],
     "immutableFields": [
       "receipt_number"
     ],
-    "searchableFields": [],
-    "filterableFields": [],
-    "sortableFields": [],
+    "searchableFields": [
+      "receipt_number",
+      "description"
+    ],
+    "filterableFields": [
+      "id",
+      "is_active",
+      "created_at",
+      "updated_at",
+      "status",
+      "receipt_number",
+      "receipt_date",
+      "work_order_id",
+      "purchase_order_id"
+    ],
+    "sortableFields": [
+      "id",
+      "created_at",
+      "updated_at",
+      "status",
+      "receipt_number",
+      "receipt_date",
+      "work_order_id",
+      "purchase_order_id"
+    ],
     "displayColumns": [
       "receipt_number",
       "work_order_id",
@@ -3509,24 +3651,6 @@
         "type": "timestamp",
         "readonly": true
       },
-      "receipt_number": {
-        "type": "string",
-        "required": true,
-        "maxLength": 20
-      },
-      "description": {
-        "type": "text"
-      },
-      "amount": {
-        "type": "decimal",
-        "required": true
-      },
-      "receipt_date": {
-        "type": "date"
-      },
-      "notes": {
-        "type": "text"
-      },
       "status": {
         "type": "enum",
         "default": "pending",
@@ -3547,6 +3671,24 @@
             "color": "success"
           }
         }
+      },
+      "receipt_number": {
+        "type": "string",
+        "required": true,
+        "maxLength": 20
+      },
+      "description": {
+        "type": "text"
+      },
+      "amount": {
+        "type": "decimal",
+        "required": true
+      },
+      "receipt_date": {
+        "type": "date"
+      },
+      "notes": {
+        "type": "text"
       },
       "work_order_id": {
         "type": "foreignKey",
@@ -3605,15 +3747,41 @@
     "displayName": "Recommendation",
     "displayNamePlural": "Recommendations",
     "requiredFields": [
-      "customer_id",
-      "title"
+      "recommendation_number",
+      "title",
+      "customer_id"
     ],
     "immutableFields": [
       "recommendation_number"
     ],
-    "searchableFields": [],
-    "filterableFields": [],
-    "sortableFields": [],
+    "searchableFields": [
+      "recommendation_number",
+      "title",
+      "description"
+    ],
+    "filterableFields": [
+      "id",
+      "is_active",
+      "created_at",
+      "updated_at",
+      "status",
+      "recommendation_number",
+      "title",
+      "priority",
+      "customer_id",
+      "asset_id"
+    ],
+    "sortableFields": [
+      "id",
+      "created_at",
+      "updated_at",
+      "status",
+      "recommendation_number",
+      "title",
+      "priority",
+      "customer_id",
+      "asset_id"
+    ],
     "displayColumns": [
       "recommendation_number",
       "customer_id",
@@ -3645,6 +3813,30 @@
       "updated_at": {
         "type": "timestamp",
         "readonly": true
+      },
+      "status": {
+        "type": "enum",
+        "default": "draft",
+        "values": {
+          "draft": {
+            "color": "secondary"
+          },
+          "open": {
+            "color": "info"
+          },
+          "approved": {
+            "color": "success"
+          },
+          "rejected": {
+            "color": "error"
+          },
+          "converted": {
+            "color": "success"
+          },
+          "cancelled": {
+            "color": "secondary"
+          }
+        }
       },
       "recommendation_number": {
         "type": "string",
@@ -3679,30 +3871,6 @@
       },
       "notes": {
         "type": "text"
-      },
-      "status": {
-        "type": "enum",
-        "default": "draft",
-        "values": {
-          "draft": {
-            "color": "secondary"
-          },
-          "open": {
-            "color": "info"
-          },
-          "approved": {
-            "color": "success"
-          },
-          "rejected": {
-            "color": "error"
-          },
-          "converted": {
-            "color": "success"
-          },
-          "cancelled": {
-            "color": "secondary"
-          }
-        }
       },
       "customer_id": {
         "type": "foreignKey",
@@ -3770,25 +3938,22 @@
     ],
     "filterableFields": [
       "id",
+      "is_active",
+      "created_at",
+      "updated_at",
+      "status",
       "name",
       "description",
-      "priority",
-      "status",
-      "is_active",
-      "is_system_role",
-      "created_at",
-      "updated_at"
+      "priority"
     ],
     "sortableFields": [
       "id",
+      "created_at",
+      "updated_at",
+      "status",
       "name",
       "description",
-      "priority",
-      "status",
-      "is_active",
-      "is_system_role",
-      "created_at",
-      "updated_at"
+      "priority"
     ],
     "displayColumns": [
       "name",
@@ -3822,13 +3987,6 @@
         "type": "integer",
         "readonly": true
       },
-      "name": {
-        "type": "string",
-        "required": true,
-        "maxLength": 100,
-        "minLength": 2,
-        "pattern": "^[a-zA-Z0-9\\s_-]+$"
-      },
       "is_active": {
         "type": "boolean",
         "default": true
@@ -3852,6 +4010,13 @@
             "color": "error"
           }
         }
+      },
+      "name": {
+        "type": "string",
+        "required": true,
+        "maxLength": 100,
+        "minLength": 2,
+        "pattern": "^[a-zA-Z0-9\\s_-]+$"
       },
       "description": {
         "type": "text",
@@ -3899,22 +4064,24 @@
       "settings"
     ],
     "immutableFields": [
-      "id",
       "user_id"
     ],
     "searchableFields": [
       "view_name"
     ],
     "filterableFields": [
+      "id",
       "user_id",
       "entity_name",
+      "view_name",
       "is_default",
       "created_at",
       "updated_at"
     ],
     "sortableFields": [
-      "view_name",
+      "id",
       "entity_name",
+      "view_name",
       "is_default",
       "created_at",
       "updated_at"
@@ -4020,6 +4187,7 @@
       "id",
       "service_agreement_id",
       "service_template_id",
+      "is_active",
       "created_at",
       "updated_at"
     ],
@@ -4045,18 +4213,6 @@
         "type": "integer",
         "readonly": true
       },
-      "is_active": {
-        "type": "boolean",
-        "default": true
-      },
-      "created_at": {
-        "type": "timestamp",
-        "readonly": true
-      },
-      "updated_at": {
-        "type": "timestamp",
-        "readonly": true
-      },
       "service_agreement_id": {
         "type": "foreignKey",
         "references": "service_agreement",
@@ -4068,6 +4224,18 @@
         "references": "service_template",
         "displayField": "name",
         "required": true
+      },
+      "is_active": {
+        "type": "boolean",
+        "default": true
+      },
+      "created_at": {
+        "type": "timestamp",
+        "readonly": true
+      },
+      "updated_at": {
+        "type": "timestamp",
+        "readonly": true
       }
     },
     "relationships": {
@@ -4123,15 +4291,37 @@
     "displayName": "Service Agreement",
     "displayNamePlural": "Service Agreements",
     "requiredFields": [
-      "customer_id",
-      "start_date"
+      "agreement_number",
+      "start_date",
+      "customer_id"
     ],
     "immutableFields": [
       "agreement_number"
     ],
-    "searchableFields": [],
-    "filterableFields": [],
-    "sortableFields": [],
+    "searchableFields": [
+      "agreement_number"
+    ],
+    "filterableFields": [
+      "id",
+      "is_active",
+      "created_at",
+      "updated_at",
+      "status",
+      "agreement_number",
+      "start_date",
+      "end_date",
+      "customer_id"
+    ],
+    "sortableFields": [
+      "id",
+      "created_at",
+      "updated_at",
+      "status",
+      "agreement_number",
+      "start_date",
+      "end_date",
+      "customer_id"
+    ],
     "displayColumns": [
       "agreement_number",
       "customer_id",
@@ -4183,6 +4373,27 @@
         "type": "timestamp",
         "readonly": true
       },
+      "status": {
+        "type": "enum",
+        "default": "active",
+        "values": {
+          "draft": {
+            "color": "secondary"
+          },
+          "pending": {
+            "color": "warning"
+          },
+          "active": {
+            "color": "success"
+          },
+          "expired": {
+            "color": "error"
+          },
+          "cancelled": {
+            "color": "secondary"
+          }
+        }
+      },
       "agreement_number": {
         "type": "string",
         "required": true,
@@ -4201,27 +4412,6 @@
       },
       "notes": {
         "type": "text"
-      },
-      "status": {
-        "type": "enum",
-        "default": "draft",
-        "values": {
-          "draft": {
-            "color": "secondary"
-          },
-          "pending": {
-            "color": "warning"
-          },
-          "active": {
-            "color": "success"
-          },
-          "expired": {
-            "color": "error"
-          },
-          "cancelled": {
-            "color": "secondary"
-          }
-        }
       },
       "customer_id": {
         "type": "foreignKey",
@@ -4270,9 +4460,27 @@
       "name"
     ],
     "immutableFields": [],
-    "searchableFields": [],
-    "filterableFields": [],
-    "sortableFields": [],
+    "searchableFields": [
+      "name",
+      "description"
+    ],
+    "filterableFields": [
+      "id",
+      "is_active",
+      "created_at",
+      "updated_at",
+      "status",
+      "name",
+      "estimated_duration"
+    ],
+    "sortableFields": [
+      "id",
+      "created_at",
+      "updated_at",
+      "status",
+      "name",
+      "estimated_duration"
+    ],
     "displayColumns": [
       "name",
       "description",
@@ -4304,6 +4512,18 @@
         "type": "timestamp",
         "readonly": true
       },
+      "status": {
+        "type": "enum",
+        "default": "active",
+        "values": {
+          "active": {
+            "color": "success"
+          },
+          "inactive": {
+            "color": "secondary"
+          }
+        }
+      },
       "name": {
         "type": "string",
         "required": true,
@@ -4317,18 +4537,6 @@
       },
       "notes": {
         "type": "text"
-      },
-      "status": {
-        "type": "enum",
-        "default": "active",
-        "values": {
-          "active": {
-            "color": "success"
-          },
-          "inactive": {
-            "color": "secondary"
-          }
-        }
       }
     },
     "relationships": {},
@@ -4356,9 +4564,31 @@
       "company_name"
     ],
     "immutableFields": [],
-    "searchableFields": [],
-    "filterableFields": [],
-    "sortableFields": [],
+    "searchableFields": [
+      "company_name",
+      "contact_name",
+      "email",
+      "phone"
+    ],
+    "filterableFields": [
+      "id",
+      "is_active",
+      "created_at",
+      "updated_at",
+      "status",
+      "company_name",
+      "contact_name",
+      "email"
+    ],
+    "sortableFields": [
+      "id",
+      "created_at",
+      "updated_at",
+      "status",
+      "company_name",
+      "contact_name",
+      "email"
+    ],
     "displayColumns": [
       "company_name",
       "contact_name",
@@ -4409,6 +4639,21 @@
         "type": "timestamp",
         "readonly": true
       },
+      "status": {
+        "type": "enum",
+        "default": "active",
+        "values": {
+          "active": {
+            "color": "success"
+          },
+          "inactive": {
+            "color": "secondary"
+          },
+          "suspended": {
+            "color": "error"
+          }
+        }
+      },
       "company_name": {
         "type": "string",
         "required": true,
@@ -4428,21 +4673,6 @@
       },
       "notes": {
         "type": "text"
-      },
-      "status": {
-        "type": "enum",
-        "default": "active",
-        "values": {
-          "active": {
-            "color": "success"
-          },
-          "inactive": {
-            "color": "secondary"
-          },
-          "suspended": {
-            "color": "error"
-          }
-        }
       }
     },
     "relationships": {},
@@ -4473,35 +4703,35 @@
     ],
     "immutableFields": [],
     "searchableFields": [
+      "email",
       "first_name",
       "last_name",
-      "email",
-      "license_number"
+      "license_number",
+      "certifications",
+      "skills"
     ],
     "filterableFields": [
       "id",
+      "is_active",
+      "created_at",
+      "updated_at",
+      "status",
+      "availability",
       "email",
       "first_name",
       "last_name",
-      "license_number",
-      "is_active",
-      "status",
-      "availability",
-      "created_at",
-      "updated_at"
+      "license_number"
     ],
     "sortableFields": [
       "id",
+      "created_at",
+      "updated_at",
+      "status",
+      "availability",
       "email",
       "first_name",
       "last_name",
-      "license_number",
-      "is_active",
-      "status",
-      "availability",
-      "hourly_rate",
-      "created_at",
-      "updated_at"
+      "license_number"
     ],
     "displayColumns": [
       "first_name",
@@ -4533,11 +4763,6 @@
         "type": "integer",
         "readonly": true
       },
-      "email": {
-        "type": "email",
-        "required": true,
-        "maxLength": 255
-      },
       "is_active": {
         "type": "boolean",
         "default": true
@@ -4552,7 +4777,7 @@
       },
       "status": {
         "type": "enum",
-        "default": "pending",
+        "default": "active",
         "values": {
           "pending": {
             "color": "warning"
@@ -4579,6 +4804,11 @@
             "color": "secondary"
           }
         }
+      },
+      "email": {
+        "type": "email",
+        "required": true,
+        "maxLength": 255
       },
       "first_name": {
         "type": "string",
@@ -4662,38 +4892,37 @@
     "displayName": "Unit",
     "displayNamePlural": "Units",
     "requiredFields": [
-      "unit_identifier",
       "property_id",
+      "unit_identifier",
       "ownership_type"
     ],
-    "immutableFields": [
-      "property_id"
-    ],
+    "immutableFields": [],
     "searchableFields": [
       "unit_identifier",
       "notes"
     ],
     "filterableFields": [
       "id",
-      "unit_identifier",
+      "is_active",
+      "created_at",
+      "updated_at",
+      "status",
       "property_id",
+      "unit_identifier",
       "ownership_type",
       "unit_category",
-      "floor",
-      "is_active",
-      "status",
-      "created_at",
-      "updated_at"
+      "floor"
     ],
     "sortableFields": [
       "id",
+      "created_at",
+      "updated_at",
+      "status",
+      "property_id",
       "unit_identifier",
       "ownership_type",
       "unit_category",
-      "floor",
-      "status",
-      "created_at",
-      "updated_at"
+      "floor"
     ],
     "displayColumns": [
       "unit_identifier",
@@ -4907,32 +5136,32 @@
       "auth0_id"
     ],
     "searchableFields": [
+      "email",
       "first_name",
-      "last_name",
-      "email"
+      "last_name"
     ],
     "filterableFields": [
       "id",
+      "is_active",
+      "created_at",
+      "updated_at",
+      "status",
       "email",
       "auth0_id",
       "first_name",
       "last_name",
-      "role_id",
-      "is_active",
-      "status",
-      "created_at",
-      "updated_at"
+      "role_id"
     ],
     "sortableFields": [
       "id",
+      "is_active",
+      "created_at",
+      "updated_at",
+      "status",
       "email",
       "first_name",
       "last_name",
-      "role_id",
-      "is_active",
-      "status",
-      "created_at",
-      "updated_at"
+      "role_id"
     ],
     "displayColumns": [
       "first_name",
@@ -4964,11 +5193,6 @@
         "type": "integer",
         "readonly": true
       },
-      "email": {
-        "type": "email",
-        "required": true,
-        "maxLength": 255
-      },
       "is_active": {
         "type": "boolean",
         "default": true
@@ -4983,7 +5207,7 @@
       },
       "status": {
         "type": "enum",
-        "default": "pending",
+        "default": "active",
         "values": {
           "pending": {
             "color": "warning"
@@ -4996,6 +5220,11 @@
           }
         }
       },
+      "email": {
+        "type": "email",
+        "required": true,
+        "maxLength": 255
+      },
       "auth0_id": {
         "type": "string",
         "readonly": true,
@@ -5003,10 +5232,12 @@
       },
       "first_name": {
         "type": "string",
+        "required": true,
         "maxLength": 100
       },
       "last_name": {
         "type": "string",
+        "required": true,
         "maxLength": 100
       },
       "role_id": {
@@ -5098,18 +5329,19 @@
     ],
     "filterableFields": [
       "id",
-      "name",
       "is_active",
-      "status",
       "created_at",
-      "updated_at"
+      "updated_at",
+      "status",
+      "name",
+      "contact_email"
     ],
     "sortableFields": [
       "id",
-      "name",
-      "status",
       "created_at",
-      "updated_at"
+      "updated_at",
+      "status",
+      "name"
     ],
     "displayColumns": [
       "name",
@@ -5129,11 +5361,6 @@
       "id": {
         "type": "integer",
         "readonly": true
-      },
-      "name": {
-        "type": "string",
-        "required": true,
-        "maxLength": 100
       },
       "is_active": {
         "type": "boolean",
@@ -5158,6 +5385,11 @@
             "color": "secondary"
           }
         }
+      },
+      "name": {
+        "type": "string",
+        "required": true,
+        "maxLength": 100
       },
       "contact_email": {
         "type": "email",
@@ -5194,15 +5426,41 @@
     "displayName": "Visit",
     "displayNamePlural": "Visits",
     "requiredFields": [
-      "work_order_id",
-      "scheduled_start"
+      "visit_number",
+      "scheduled_start",
+      "work_order_id"
     ],
     "immutableFields": [
       "visit_number"
     ],
-    "searchableFields": [],
-    "filterableFields": [],
-    "sortableFields": [],
+    "searchableFields": [
+      "visit_number"
+    ],
+    "filterableFields": [
+      "id",
+      "is_active",
+      "created_at",
+      "updated_at",
+      "status",
+      "visit_number",
+      "scheduled_start",
+      "scheduled_end",
+      "actual_start",
+      "actual_end",
+      "work_order_id"
+    ],
+    "sortableFields": [
+      "id",
+      "created_at",
+      "updated_at",
+      "status",
+      "visit_number",
+      "scheduled_start",
+      "scheduled_end",
+      "actual_start",
+      "actual_end",
+      "work_order_id"
+    ],
     "displayColumns": [
       "visit_number",
       "work_order_id",
@@ -5264,27 +5522,6 @@
         "type": "timestamp",
         "readonly": true
       },
-      "visit_number": {
-        "type": "string",
-        "required": true,
-        "maxLength": 20
-      },
-      "scheduled_start": {
-        "type": "timestamp",
-        "required": true
-      },
-      "scheduled_end": {
-        "type": "timestamp"
-      },
-      "actual_start": {
-        "type": "timestamp"
-      },
-      "actual_end": {
-        "type": "timestamp"
-      },
-      "notes": {
-        "type": "text"
-      },
       "status": {
         "type": "enum",
         "default": "scheduled",
@@ -5308,6 +5545,27 @@
             "color": "error"
           }
         }
+      },
+      "visit_number": {
+        "type": "string",
+        "required": true,
+        "maxLength": 20
+      },
+      "scheduled_start": {
+        "type": "timestamp",
+        "required": true
+      },
+      "scheduled_end": {
+        "type": "timestamp"
+      },
+      "actual_start": {
+        "type": "timestamp"
+      },
+      "actual_end": {
+        "type": "timestamp"
+      },
+      "notes": {
+        "type": "text"
       },
       "work_order_id": {
         "type": "foreignKey",
@@ -5361,6 +5619,7 @@
       "id",
       "visit_id",
       "subcontractor_id",
+      "is_active",
       "created_at",
       "updated_at"
     ],
@@ -5386,18 +5645,6 @@
         "type": "integer",
         "readonly": true
       },
-      "is_active": {
-        "type": "boolean",
-        "default": true
-      },
-      "created_at": {
-        "type": "timestamp",
-        "readonly": true
-      },
-      "updated_at": {
-        "type": "timestamp",
-        "readonly": true
-      },
       "visit_id": {
         "type": "foreignKey",
         "references": "visit",
@@ -5409,6 +5656,18 @@
         "references": "subcontractor",
         "displayField": "company_name",
         "required": true
+      },
+      "is_active": {
+        "type": "boolean",
+        "default": true
+      },
+      "created_at": {
+        "type": "timestamp",
+        "readonly": true
+      },
+      "updated_at": {
+        "type": "timestamp",
+        "readonly": true
       }
     },
     "relationships": {
@@ -5472,6 +5731,7 @@
       "id",
       "visit_id",
       "technician_id",
+      "is_active",
       "created_at",
       "updated_at"
     ],
@@ -5497,18 +5757,6 @@
         "type": "integer",
         "readonly": true
       },
-      "is_active": {
-        "type": "boolean",
-        "default": true
-      },
-      "created_at": {
-        "type": "timestamp",
-        "readonly": true
-      },
-      "updated_at": {
-        "type": "timestamp",
-        "readonly": true
-      },
       "visit_id": {
         "type": "foreignKey",
         "references": "visit",
@@ -5520,6 +5768,18 @@
         "references": "technician",
         "displayField": "email",
         "required": true
+      },
+      "is_active": {
+        "type": "boolean",
+        "default": true
+      },
+      "created_at": {
+        "type": "timestamp",
+        "readonly": true
+      },
+      "updated_at": {
+        "type": "timestamp",
+        "readonly": true
       }
     },
     "relationships": {
@@ -5580,10 +5840,13 @@
     "displayName": "Work Order",
     "displayNamePlural": "Work Orders",
     "requiredFields": [
+      "work_order_number",
       "customer_id"
     ],
     "immutableFields": [
-      "work_order_number"
+      "work_order_number",
+      "origin_type",
+      "origin_id"
     ],
     "searchableFields": [
       "work_order_number",
@@ -5592,34 +5855,41 @@
     ],
     "filterableFields": [
       "id",
-      "work_order_number",
-      "name",
-      "customer_id",
-      "unit_id",
-      "property_id",
-      "assigned_technician_id",
       "is_active",
-      "status",
-      "priority",
-      "service_region",
-      "scheduled_start",
-      "scheduled_end",
       "created_at",
       "updated_at",
+      "status",
+      "work_order_number",
+      "name",
+      "priority",
+      "customer_id",
+      "property_id",
+      "unit_id",
+      "assigned_technician_id",
+      "scheduled_start",
+      "scheduled_end",
+      "completed_at",
+      "service_region",
       "origin_type",
       "origin_id"
     ],
     "sortableFields": [
       "id",
+      "created_at",
+      "updated_at",
+      "status",
       "work_order_number",
       "name",
       "priority",
-      "status",
+      "customer_id",
+      "property_id",
+      "unit_id",
+      "assigned_technician_id",
       "scheduled_start",
       "scheduled_end",
       "completed_at",
-      "created_at",
-      "updated_at"
+      "service_region",
+      "origin_type"
     ],
     "displayColumns": [
       "work_order_number",
@@ -5706,12 +5976,6 @@
         "type": "integer",
         "readonly": true
       },
-      "work_order_number": {
-        "type": "string",
-        "readonly": true,
-        "maxLength": 100,
-        "pattern": "^WO-[0-9]{4}-[0-9]+$"
-      },
       "is_active": {
         "type": "boolean",
         "default": true
@@ -5744,6 +6008,13 @@
             "color": "error"
           }
         }
+      },
+      "work_order_number": {
+        "type": "string",
+        "required": true,
+        "readonly": true,
+        "maxLength": 100,
+        "pattern": "^WO-[0-9]{4}-[0-9]+$"
       },
       "name": {
         "type": "string",

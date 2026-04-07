@@ -17,7 +17,14 @@ const {
   FIELD_ACCESS_LEVELS: FAL,
   UNIVERSAL_FIELD_ACCESS,
 } = require('../constants');
-const { NAME_PATTERNS } = require('../field-types');
+const {
+  NAME_PATTERNS,
+  TIER1_FIELDS,
+  withTraits,
+  TRAITS,
+  TRAIT_SETS,
+  createForeignKey,
+} = require('../field-types');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -102,10 +109,6 @@ module.exports = {
   // CRUD CONFIGURATION
   // ============================================================================
 
-  requiredFields: ['customer_id'],
-
-  immutableFields: ['quote_number'],
-
   displayColumns: ['quote_number', 'customer_id', 'status', 'created_at'],
 
   // ============================================================================
@@ -177,58 +180,50 @@ module.exports = {
   },
 
   // ============================================================================
-  // FIELDS (Phase 1: Minimal - Phase 3: Full fields)
+  // FIELDS (with embedded traits for query capabilities)
   // ============================================================================
 
   fields: {
-    // TIER 1: Universal Entity Contract Fields
-    id: { type: 'integer', readonly: true },
-    is_active: { type: 'boolean', default: true },
-    created_at: { type: 'timestamp', readonly: true },
-    updated_at: { type: 'timestamp', readonly: true },
+    // TIER 1: Universal Entity Contract Fields (field-centric)
+    ...TIER1_FIELDS.WITH_STATUS,
+    // Override status default (workflow entity - draft→sent→accepted, not active/inactive)
+    status: withTraits(
+      { type: 'enum', enumKey: 'status', default: 'draft' },
+      TRAIT_SETS.LOOKUP,
+    ),
 
-    quote_number: {
-      type: 'string',
-      required: true,
-      maxLength: 20,
-      description: 'Auto-generated quote identifier (QT-YYYY-NNNN)',
-    },
-    description: {
-      type: 'text',
-      description: 'Quote description/summary',
-    },
-    notes: {
-      type: 'text',
-      description: 'Internal notes',
-    },
-    valid_until: {
-      type: 'date',
-      description: 'Quote expiration date',
-    },
-    status: {
-      type: 'enum',
-      enumKey: 'status',
-      default: 'draft',
-    },
-    // FK fields
-    customer_id: {
-      type: 'foreignKey',
-      references: 'customer',
+    // Identity field - auto-generated, immutable
+    quote_number: withTraits(
+      { type: 'string', maxLength: 20, description: 'Auto-generated quote identifier (QT-YYYY-NNNN)' },
+      TRAITS.IMMUTABLE, TRAIT_SETS.IDENTITY,
+    ),
+
+    // Content fields
+    description: withTraits(
+      { type: 'text', description: 'Quote description/summary' },
+      TRAIT_SETS.FULLTEXT,
+    ),
+    notes: { type: 'text', description: 'Internal notes' },
+    valid_until: withTraits(
+      { type: 'date', description: 'Quote expiration date' },
+      TRAIT_SETS.LOOKUP,
+    ),
+    total_amount: withTraits(
+      { type: 'decimal', precision: 10, scale: 2, description: 'Total quote amount' },
+      TRAIT_SETS.SORTABLE,
+    ),
+
+    // FK fields with embedded traits
+    customer_id: createForeignKey('customer', {
       required: true,
       displayFields: ['first_name', 'last_name', 'email'],
       displayTemplate: '{first_name} {last_name}',
-    },
-    property_id: {
-      type: 'foreignKey',
-      references: 'property',
+      traits: TRAIT_SETS.LOOKUP,
+    }),
+    property_id: createForeignKey('property', {
       displayFields: ['name', 'address_city'],
       displayTemplate: '{name}',
-    },
-    total_amount: {
-      type: 'decimal',
-      precision: 10,
-      scale: 2,
-      description: 'Total quote amount',
-    },
+      traits: TRAIT_SETS.LOOKUP,
+    }),
   },
 };

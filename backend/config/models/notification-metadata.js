@@ -15,7 +15,13 @@
  */
 
 const { FIELD_ACCESS_LEVELS: FAL } = require('../constants');
-const { FIELD } = require('../field-types');
+const {
+  FIELD,
+  TIER1,
+  withTraits,
+  TRAITS,
+  TRAIT_SETS,
+} = require('../field-types');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -136,25 +142,6 @@ module.exports = {
   // ============================================================================
 
   /**
-   * Fields required when creating a new notification (system use only)
-   */
-  requiredFields: ['user_id', 'title', 'type'],
-
-  /**
-   * Fields that cannot be modified after creation
-   */
-  immutableFields: [
-    'id',
-    'user_id',
-    'title',
-    'body',
-    'type',
-    'resource_type',
-    'resource_id',
-    'created_at',
-  ],
-
-  /**
    * Default columns to display in table views (ordered)
    */
   displayColumns: ['title', 'type', 'is_read', 'created_at'],
@@ -240,20 +227,8 @@ module.exports = {
   dependents: [],
 
   // ============================================================================
-  // SEARCH/FILTER/SORT CONFIGURATION
+  // SORT CONFIGURATION
   // ============================================================================
-
-  searchableFields: ['title', 'body'],
-
-  filterableFields: [
-    'user_id',
-    'type',
-    'is_read',
-    'resource_type',
-    'created_at',
-  ],
-
-  sortableFields: ['created_at', 'is_read', 'type'],
 
   defaultSort: {
     field: 'created_at',
@@ -276,73 +251,95 @@ module.exports = {
   },
 
   // ============================================================================
-  // FIELD DEFINITIONS
+  // FIELD DEFINITIONS (Field-Centric: traits embedded in field definitions)
   // ============================================================================
 
   fields: {
-    id: {
-      type: 'integer',
-      readonly: true,
-      description: 'Primary key',
-    },
-    user_id: {
-      type: 'foreignKey',
-      references: 'user',
-      required: true,
-      readonly: true,
-      description: 'Notification recipient (FK to users)',
-    },
-    title: {
-      ...FIELD.TITLE,
-      required: true,
-      readonly: true,
-      description: 'Notification title/summary',
-    },
-    body: {
-      type: 'text',
-      required: false,
-      readonly: true,
-      description: 'Full notification message (optional)',
-    },
-    type: {
-      type: 'enum',
-      enumKey: 'type',
-      required: true,
-      readonly: true,
-      description: 'Notification type for UI styling',
-    },
-    resource_type: {
-      type: 'string',
-      required: false,
-      maxLength: 50,
-      readonly: true,
-      description: 'Related entity type (work_order, invoice, etc.)',
-    },
-    resource_id: {
-      type: 'integer',
-      required: false,
-      readonly: true,
-      description: 'Related entity ID for navigation',
-    },
-    is_read: {
-      type: 'boolean',
-      default: false,
-      description: 'Whether notification has been read',
-    },
+    // Primary key
+    id: TIER1.ID,
+
+    // Owner - system-set FK, immutable
+    user_id: withTraits(
+      {
+        type: 'foreignKey',
+        references: 'user',
+        description: 'Notification recipient (FK to users)',
+      },
+      TRAITS.REQUIRED,
+      TRAITS.IMMUTABLE,
+      TRAITS.READONLY,
+      TRAIT_SETS.FILTER_ONLY,
+    ),
+
+    // Content fields - system-created, immutable
+    title: withTraits(
+      {
+        ...FIELD.TITLE,
+        description: 'Notification title/summary',
+      },
+      TRAITS.REQUIRED,
+      TRAITS.IMMUTABLE,
+      TRAITS.READONLY,
+      TRAITS.SEARCHABLE,
+    ),
+    body: withTraits(
+      {
+        type: 'text',
+        description: 'Full notification message (optional)',
+      },
+      TRAITS.IMMUTABLE,
+      TRAITS.READONLY,
+      TRAITS.SEARCHABLE,
+    ),
+    type: withTraits(
+      {
+        type: 'enum',
+        enumKey: 'type',
+        default: 'info',
+        description: 'Notification type for UI styling',
+      },
+      TRAITS.REQUIRED,
+      TRAITS.IMMUTABLE,
+      TRAITS.READONLY,
+      TRAIT_SETS.LOOKUP,
+    ),
+
+    // Navigation context - system-set, immutable
+    resource_type: withTraits(
+      {
+        type: 'string',
+        maxLength: 50,
+        description: 'Related entity type (for navigation)',
+      },
+      TRAITS.IMMUTABLE,
+      TRAITS.READONLY,
+      TRAIT_SETS.FILTER_ONLY,
+    ),
+    resource_id: withTraits(
+      {
+        type: 'integer',
+        description: 'Related entity ID (for navigation)',
+      },
+      TRAITS.IMMUTABLE,
+      TRAITS.READONLY,
+    ),
+
+    // Read status - user-updatable
+    is_read: withTraits(
+      {
+        type: 'boolean',
+        default: false,
+        description: 'Whether user has read this notification',
+      },
+      TRAIT_SETS.LOOKUP,
+    ),
     read_at: {
       type: 'timestamp',
-      readonly: true,
       description: 'When notification was marked as read',
     },
-    created_at: {
-      type: 'timestamp',
-      readonly: true,
-      description: 'When notification was created',
-    },
-    updated_at: {
-      type: 'timestamp',
-      readonly: true,
-      description: 'Last update timestamp',
-    },
+
+    // Timestamps
+    created_at: withTraits(TIER1.CREATED_AT, TRAIT_SETS.FILTER_ONLY),
+    updated_at: TIER1.UPDATED_AT,
   },
 };

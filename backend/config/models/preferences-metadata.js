@@ -6,6 +6,12 @@
  */
 
 const { FIELD_ACCESS_LEVELS: FAL } = require('../constants');
+const {
+  TIER1,
+  withTraits,
+  TRAITS,
+  TRAIT_SETS,
+} = require('../field-types');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -92,11 +98,7 @@ module.exports = {
     },
   },
 
-  requiredFields: ['id'],
-  immutableFields: ['id'],
-  searchableFields: [],
-  filterableFields: ['id', 'created_at', 'updated_at'],
-  sortableFields: ['id', 'created_at', 'updated_at'],
+  // Legacy arrays removed - traits now on field definitions
 
   defaultSort: {
     field: 'created_at',
@@ -133,38 +135,40 @@ module.exports = {
   dependents: [],
 
   fields: {
-    id: {
-      type: 'foreignKey',
-      references: 'user',
-      required: true,
-      readonly: true,
-      // This is a 1:1 PK-FK relationship - preferences.id = users.id
-    },
-    theme: {
-      type: 'enum',
-      enumKey: 'theme',
-      default: 'system',
-    },
-    density: {
-      type: 'enum',
-      enumKey: 'density',
-      default: 'comfortable',
-    },
-    notifications_enabled: {
-      type: 'boolean',
-      default: true,
-    },
-    items_per_page: {
-      type: 'integer',
-      min: 10,
-      max: 100,
-      default: 25,
-    },
+    // Shared PK with users - id IS the user_id
+    id: withTraits(
+      { type: 'foreignKey', references: 'user' },
+      TRAITS.REQUIRED,
+      TRAITS.IMMUTABLE,
+      TRAITS.READONLY,
+      TRAIT_SETS.LOOKUP,
+    ),
+
+    // Appearance settings
+    theme: withTraits(
+      { type: 'enum', enumKey: 'theme', default: 'system' },
+      TRAIT_SETS.FILTER_ONLY,
+    ),
+    density: withTraits(
+      { type: 'enum', enumKey: 'density', default: 'comfortable' },
+      TRAIT_SETS.FILTER_ONLY,
+    ),
+
+    // Notification settings
+    notifications_enabled: { type: 'boolean', default: true },
     notification_retention_days: {
       type: 'integer',
       min: 1,
       max: 365,
       default: 30,
+    },
+
+    // Data settings
+    items_per_page: {
+      type: 'integer',
+      min: 10,
+      max: 100,
+      default: 25,
     },
     auto_refresh_interval: {
       type: 'integer',
@@ -172,8 +176,10 @@ module.exports = {
       max: 300,
       default: 0,
     },
-    created_at: { type: 'timestamp', readonly: true },
-    updated_at: { type: 'timestamp', readonly: true },
+
+    // Timestamps
+    created_at: TIER1.CREATED_AT,
+    updated_at: TIER1.UPDATED_AT,
   },
 
   // ============================================================================

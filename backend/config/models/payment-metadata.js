@@ -17,7 +17,14 @@ const {
   FIELD_ACCESS_LEVELS: FAL,
   UNIVERSAL_FIELD_ACCESS,
 } = require('../constants');
-const { NAME_PATTERNS } = require('../field-types');
+const {
+  NAME_PATTERNS,
+  TIER1_FIELDS,
+  withTraits,
+  TRAITS,
+  TRAIT_SETS,
+  createForeignKey,
+} = require('../field-types');
 
 /** @type {import('./entity-metadata.types').EntityMetadata} */
 module.exports = {
@@ -94,10 +101,6 @@ module.exports = {
   // ============================================================================
   // CRUD CONFIGURATION
   // ============================================================================
-
-  requiredFields: ['amount', 'payment_date', 'customer_id'],
-
-  immutableFields: ['payment_number'],
 
   displayColumns: ['payment_number', 'customer_id', 'invoice_id', 'amount', 'payment_date', 'payment_method', 'status'],
 
@@ -194,66 +197,54 @@ module.exports = {
   },
 
   // ============================================================================
-  // FIELDS (Phase 1: Minimal - Phase 3: Full fields)
+  // FIELDS (with embedded traits for query capabilities)
   // ============================================================================
 
   fields: {
-    // TIER 1: Universal Entity Contract Fields
-    id: { type: 'integer', readonly: true },
-    is_active: { type: 'boolean', default: true },
-    created_at: { type: 'timestamp', readonly: true },
-    updated_at: { type: 'timestamp', readonly: true },
+    // TIER 1: Universal Entity Contract Fields (field-centric)
+    ...TIER1_FIELDS.WITH_STATUS,
+    // Override status default (workflow entity - pending→completed, not active/inactive)
+    status: withTraits(
+      { type: 'enum', enumKey: 'status', default: 'pending' },
+      TRAIT_SETS.LOOKUP,
+    ),
 
-    payment_number: {
-      type: 'string',
-      required: true,
-      maxLength: 20,
-      description: 'Auto-generated payment identifier (PMT-YYYY-NNNN)',
-    },
-    amount: {
-      type: 'decimal',
-      precision: 10,
-      scale: 2,
-      required: true,
-      description: 'Payment amount',
-    },
-    payment_date: {
-      type: 'date',
-      required: true,
-      description: 'Date payment received',
-    },
-    payment_method: {
-      type: 'enum',
-      enumKey: 'payment_method',
-      description: 'Payment method used',
-    },
-    reference_number: {
-      type: 'string',
-      maxLength: 50,
-      description: 'External reference (check number, transaction ID)',
-    },
-    notes: {
-      type: 'text',
-      description: 'Internal notes',
-    },
-    status: {
-      type: 'enum',
-      enumKey: 'status',
-      default: 'pending',
-    },
-    // FK fields
-    customer_id: {
-      type: 'foreignKey',
-      references: 'customer',
+    // Identity field - auto-generated, immutable
+    payment_number: withTraits(
+      { type: 'string', maxLength: 20, description: 'Auto-generated payment identifier (PMT-YYYY-NNNN)' },
+      TRAITS.IMMUTABLE, TRAIT_SETS.IDENTITY,
+    ),
+
+    // Financial fields with traits
+    amount: withTraits(
+      { type: 'decimal', precision: 10, scale: 2, description: 'Payment amount' },
+      TRAITS.REQUIRED, TRAIT_SETS.SORTABLE,
+    ),
+    payment_date: withTraits(
+      { type: 'date', description: 'Date payment received' },
+      TRAITS.REQUIRED, TRAIT_SETS.LOOKUP,
+    ),
+    payment_method: withTraits(
+      { type: 'enum', enumKey: 'payment_method', description: 'Payment method used' },
+      TRAIT_SETS.LOOKUP,
+    ),
+    reference_number: withTraits(
+      { type: 'string', maxLength: 50, description: 'External reference (check number, transaction ID)' },
+      TRAIT_SETS.SEARCHABLE_LOOKUP,
+    ),
+    notes: { type: 'text', description: 'Internal notes' },
+
+    // FK fields with embedded traits
+    customer_id: createForeignKey('customer', {
       required: true,
       displayFields: ['display_name'],
       displayTemplate: '{display_name}',
-    },
-    invoice_id: {
-      type: 'foreignKey',
-      references: 'invoice',
+      traits: TRAIT_SETS.LOOKUP,
+    }),
+    invoice_id: createForeignKey('invoice', {
       displayFields: ['invoice_number'],
       displayTemplate: '{invoice_number}',
-    },
+      traits: TRAIT_SETS.LOOKUP,
+    }),
   },
 };
