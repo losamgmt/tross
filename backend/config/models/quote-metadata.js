@@ -33,6 +33,9 @@ module.exports = {
   primaryKey: 'id',
   icon: 'request_quote',
 
+  // Entity traits (workflow: has status lifecycle, auditable: changes tracked)
+  traits: ['workflow', 'auditable'],
+
   // ============================================================================
   // ENTITY CATEGORY
   // ============================================================================

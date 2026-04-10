@@ -19,6 +19,129 @@
   },
 
   "actions": {
+    "notify_customer": {
+      "type": "notification",
+      "template": "status_change",
+      "recipient": { "field": "customer_id" },
+      "description": "Notify customer of status change"
+    },
     
+    "notify_technician": {
+      "type": "notification",
+      "template": "assignment",
+      "recipient": { "field": "assigned_technician_id" },
+      "description": "Notify technician of assignment or schedule change"
+    },
+    
+    "notify_creator": {
+      "type": "notification",
+      "template": "update",
+      "recipient": { "field": "created_by" },
+      "description": "Notify the record creator of updates"
+    },
+    
+    "notify_approvers": {
+      "type": "notification",
+      "template": "approval_required",
+      "recipient": { "role": "manager" },
+      "description": "Notify managers that approval is required"
+    },
+    
+    "create_quote_from_recommendation": {
+      "type": "create_entity",
+      "entity": "quote",
+      "copyFields": ["customer_id", "property_id", "description", "estimated_cost"],
+      "mapping": { "estimated_cost": "total_amount" },
+      "setFields": {
+        "status": "draft",
+        "origin_type": "recommendation",
+        "origin_id": { "field": "id" }
+      },
+      "description": "Create quote from approved recommendation"
+    },
+    
+    "create_work_order_from_quote": {
+      "type": "create_entity",
+      "entity": "work_order",
+      "copyFields": ["customer_id", "property_id", "unit_id", "description"],
+      "setFields": {
+        "status": "open",
+        "origin_type": "quote",
+        "origin_id": { "field": "id" }
+      },
+      "description": "Create work order from accepted quote"
+    },
+    
+    "generate_invoice": {
+      "type": "create_entity",
+      "entity": "invoice",
+      "copyFields": ["customer_id", "property_id"],
+      "setFields": {
+        "status": "draft",
+        "work_order_id": { "field": "id" }
+      },
+      "description": "Generate invoice when work order is completed"
+    },
+    
+    "create_work_order_from_schedule": {
+      "type": "create_entity",
+      "entity": "work_order",
+      "copyFields": ["customer_id", "property_id", "service_template_id"],
+      "setFields": {
+        "status": "scheduled",
+        "origin_type": "maintenance_schedule",
+        "origin_id": { "field": "id" },
+        "scheduled_start": { "compute": "next_occurrence" }
+      },
+      "description": "Create work order from maintenance schedule trigger"
+    },
+    
+    "apply_pending_change": {
+      "type": "update_entity",
+      "target": {
+        "entity": { "field": "target_entity" },
+        "id": { "field": "target_id" }
+      },
+      "updates": {
+        "$dynamic_field": { "field": "proposed_value" }
+      },
+      "description": "Apply approved change from approval_request"
+    },
+    
+    "update_invoice_paid": {
+      "type": "update_entity",
+      "target": { "entity": "invoice", "id": { "field": "invoice_id" } },
+      "updates": { "status": "paid", "paid_at": { "compute": "now" } },
+      "when": { "compute": "invoice_fully_paid" },
+      "description": "Mark invoice as paid when payments equal total"
+    },
+    
+    "update_inventory_from_receipt": {
+      "type": "update_entity",
+      "target": { "entity": "inventory", "id": { "field": "inventory_item_id" } },
+      "updates": { "quantity": { "compute": "quantity + received_quantity" } },
+      "description": "Update inventory quantity when receipt is completed"
+    },
+    
+    "recalculate_invoice_total": {
+      "type": "compute",
+      "target": "invoice.total_amount",
+      "formula": "SUM(line_items.amount)",
+      "description": "Recalculate invoice total from line items"
+    },
+    
+    "recalculate_quote_total": {
+      "type": "compute",
+      "target": "quote.total_amount",
+      "formula": "SUM(line_items.amount)",
+      "description": "Recalculate quote total from line items"
+    },
+    
+    "calculate_next_occurrence": {
+      "type": "compute",
+      "target": "maintenance_schedule.next_occurrence",
+      "formula": "RRULE_NEXT(rrule, last_generated)",
+      "description": "Calculate next scheduled maintenance date"
+    }
   }
 }
