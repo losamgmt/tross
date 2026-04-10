@@ -22,6 +22,7 @@ const {
   getRolePriorityToName,
   getRoleDescriptions,
 } = require('./role-hierarchy-loader');
+const { getNavigation } = require('./metadata-accessors');
 
 // Cache for derived permissions (computed once, reused)
 let cachedPermissions = null;
@@ -202,15 +203,16 @@ function buildResourceConfig(metadata, resourceName) {
   }
 
   // Build navVisibility (for UI navigation filtering)
-  // If explicit navVisibility provided, use it; otherwise fall back to read permission
+  // Uses consolidated navigation property via accessor
   let navVisibility = null;
-  if (metadata.navVisibility) {
-    const navRole = metadata.navVisibility;
+  const navigation = getNavigation(metadata);
+  if (navigation) {
+    const navRole = navigation.visibility;
     const navPriority = getRolePriorityFromName(navRole);
     navVisibility = {
       minimumRole: navRole,
       minimumPriority: navPriority,
-      description: 'Explicit navVisibility - minimum role to see in nav menus',
+      description: 'From navigation.visibility - minimum role to see in nav menus',
     };
   } else if (permissions.read && !permissions.read.disabled) {
     // Fall back to read permission for nav visibility

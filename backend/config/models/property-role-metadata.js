@@ -45,13 +45,22 @@ module.exports = {
   /**
    * Marks this as a junction entity for M:M relationships
    */
-  isJunction: true,
+  // ============================================================================
+  // CONSOLIDATED JUNCTION CONFIGURATION
+  // ============================================================================
+
+  junction: {
+    entities: ['customer', 'property'],
+    uniqueOn: [['customer_id', 'property_id']],
+  },
+
+  isJunction: true, // DEPRECATED: Use junction !== null
 
   /**
    * The two entities this junction connects
    * entity1 is typically the "owner" side
    */
-  junctionFor: {
+  junctionFor: { // DEPRECATED: Use junction.entities
     entity1: 'customer',
     entity2: 'property',
   },
@@ -97,16 +106,35 @@ module.exports = {
   ],
 
   /**
+   * Navigation configuration - consolidated
+   * null = junction tables are managed through the property detail UI
+   */
+  navigation: null,
+
+  /**
    * Junction tables are not shown in navigation
    * They are managed through the property detail UI
+   * DEPRECATED: Use navigation
    */
   navVisibility: null,
 
+  /**
+   * Features configuration - consolidated
+   */
+  features: {
+    fileAttachments: false,
+    summary: null,
+  },
+
+  /**
+   * DEPRECATED: Use features.fileAttachments
+   */
   supportsFileAttachments: false,
 
   /**
    * Summary endpoint configuration for aggregated analytics.
    * Null: Junction table for property-role relationships.
+   * DEPRECATED: Use features.summary
    */
   summaryConfig: null,
 

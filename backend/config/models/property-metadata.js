@@ -97,20 +97,37 @@ module.exports = {
     },
   ],
 
+  // ============================================================================
+  // CONSOLIDATED NAVIGATION & FEATURES
+  // ============================================================================
+
+  navigation: {
+    visibility: 'technician',
+    group: 'customers',
+    order: 2,
+  },
+
+  features: {
+    fileAttachments: true,
+    summary: {
+      groupableFields: ['property_type', 'status'],
+    },
+  },
+
   /**
    * Navigation visibility - minimum role to see this entity in nav menus
    * Properties are in customers group, visible to technician+
    */
-  navVisibility: 'technician',
-  navGroup: 'customers',
-  navOrder: 2,
+  navVisibility: 'technician', // DEPRECATED: Use navigation.visibility
+  navGroup: 'customers', // DEPRECATED: Use navigation.group
+  navOrder: 2, // DEPRECATED: Use navigation.order
 
-  supportsFileAttachments: true,
+  supportsFileAttachments: true, // DEPRECATED: Use features.fileAttachments
 
   /**
    * Summary endpoint configuration for aggregated analytics.
    */
-  summaryConfig: {
+  summaryConfig: { // DEPRECATED: Use features.summary
     groupableFields: ['property_type', 'status'],
   },
 
@@ -222,7 +239,7 @@ module.exports = {
       type: 'hasMany',
       foreignKey: 'property_id',
       table: 'property_roles',
-      fields: ['id', 'customer_id', 'role', 'status'],
+      fields: ['id', 'customer_id', 'role', 'effective_date', 'end_date'],
       description: 'Board members and managers assigned to this property',
     },
     // Property has many work orders (denormalized for filtering)

@@ -62,17 +62,32 @@ module.exports = {
     },
   ],
 
-  navVisibility: 'manager',
-  navGroup: 'admin',
-  navOrder: 2,
+  // ============================================================================
+  // CONSOLIDATED NAVIGATION & FEATURES
+  // ============================================================================
 
-  supportsFileAttachments: false,
+  navigation: {
+    visibility: 'manager',
+    group: 'admin',
+    order: 2,
+  },
+
+  features: {
+    fileAttachments: false,
+    summary: null,
+  },
+
+  navVisibility: 'manager', // DEPRECATED: Use navigation.visibility
+  navGroup: 'admin', // DEPRECATED: Use navigation.group
+  navOrder: 2, // DEPRECATED: Use navigation.order
+
+  supportsFileAttachments: false, // DEPRECATED: Use features.fileAttachments
 
   /**
    * Summary endpoint configuration for aggregated analytics.
    * Null: Departments are not aggregated.
    */
-  summaryConfig: null,
+  summaryConfig: null, // DEPRECATED: Use features.summary
 
   entityPermissions: {
     create: 'admin',

@@ -238,6 +238,138 @@ class SystemSettingsService {
     const flags = await SystemSettingsService.getFeatureFlags();
     return flags[featureName] === true;
   }
+
+  // ===========================================================================
+  // INTEGRATION CREDENTIALS HELPERS
+  // ===========================================================================
+
+  /**
+   * Valid integration providers
+   * @private
+   */
+  static INTEGRATION_PROVIDERS = ['quickbooks', 'stripe'];
+
+  /**
+   * Validate provider name
+   * @private
+   * @param {string} provider - Provider name to validate
+   * @throws {AppError} If provider is invalid
+   */
+  static _validateProvider(provider) {
+    if (!provider || !this.INTEGRATION_PROVIDERS.includes(provider)) {
+      throw new AppError(
+        `Invalid integration provider: ${provider}. Valid: ${this.INTEGRATION_PROVIDERS.join(', ')}`,
+        400,
+        'BAD_REQUEST',
+      );
+    }
+  }
+
+  /**
+   * Get OAuth tokens for an integration
+   *
+   * @param {string} provider - Provider name: 'quickbooks', 'stripe'
+   * @returns {Promise<Object|null>} Tokens object or null if not stored
+   */
+  static async getIntegrationTokens(provider) {
+    this._validateProvider(provider);
+    const setting = await this.getSetting(`integration.${provider}.tokens`);
+    return setting?.value || null;
+  }
+
+  /**
+   * Store OAuth tokens for an integration
+   *
+   * @param {string} provider - Provider name
+   * @param {Object} tokens - Token object (shape varies by provider)
+   * @param {number} userId - Admin user ID for audit trail
+   * @returns {Promise<Object>} The updated setting record
+   */
+  static async setIntegrationTokens(provider, tokens, userId) {
+    this._validateProvider(provider);
+
+    if (!tokens || typeof tokens !== 'object') {
+      throw new AppError('Tokens must be an object', 400, 'BAD_REQUEST');
+    }
+
+    // Add storage timestamp for debugging
+    const tokenData = {
+      ...tokens,
+      stored_at: new Date().toISOString(),
+    };
+
+    const result = await this.updateSetting(
+      `integration.${provider}.tokens`,
+      tokenData,
+      userId,
+    );
+
+    logSecurityEvent('INTEGRATION_TOKENS_UPDATED', {
+      provider,
+      userId,
+      hasAccessToken: !!tokens.access_token,
+      hasRefreshToken: !!tokens.refresh_token,
+      expiresAt: tokens.expires_at,
+    });
+
+    return result;
+  }
+
+  /**
+   * Clear tokens (disconnect integration)
+   *
+   * @param {string} provider - Integration provider name
+   * @param {number} userId - Admin user ID for audit trail
+   * @returns {Promise<boolean>} True if tokens existed and were cleared
+   */
+  static async clearIntegrationTokens(provider, userId) {
+    this._validateProvider(provider);
+
+    const existing = await this.getIntegrationTokens(provider);
+    if (!existing) return false;
+
+    const key = `integration.${provider}.tokens`;
+
+    // NOTE: Using raw SQL DELETE instead of a service method because:
+    // 1. SystemSettingsService doesn't have a deleteSetting() method
+    // 2. Setting value to null would leave a row with null value (not clean)
+    // 3. This is the only place we need delete functionality for now
+    // If more delete use cases arise, consider adding deleteSetting() method.
+    await db(`DELETE FROM system_settings WHERE key = $1`, [key]);
+
+    logSecurityEvent('INTEGRATION_DISCONNECTED', {
+      provider,
+      userId,
+      clearedKey: key,
+    });
+
+    return true;
+  }
+
+  /**
+   * Get non-secret configuration for an integration
+   *
+   * @param {string} provider - Provider name
+   * @returns {Promise<Object|null>} Config object or null if not stored
+   */
+  static async getIntegrationConfig(provider) {
+    this._validateProvider(provider);
+    const setting = await this.getSetting(`integration.${provider}.config`);
+    return setting?.value || null;
+  }
+
+  /**
+   * Store non-secret configuration for an integration
+   *
+   * @param {string} provider - Provider name
+   * @param {Object} config - Configuration object
+   * @param {number} userId - Admin user ID for audit trail
+   * @returns {Promise<Object>} The updated setting record
+   */
+  static async setIntegrationConfig(provider, config, userId) {
+    this._validateProvider(provider);
+    return this.updateSetting(`integration.${provider}.config`, config, userId);
+  }
 }
 
 module.exports = SystemSettingsService;

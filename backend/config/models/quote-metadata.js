@@ -78,13 +78,30 @@ module.exports = {
     delete: 'manager',
   },
 
-  navVisibility: 'dispatcher',
-  navGroup: 'work',
-  navOrder: 2,
+  // ============================================================================
+  // CONSOLIDATED NAVIGATION & FEATURES
+  // ============================================================================
 
-  supportsFileAttachments: true,
+  navigation: {
+    visibility: 'dispatcher',
+    group: 'work',
+    order: 2,
+  },
 
-  summaryConfig: {
+  features: {
+    fileAttachments: true,
+    summary: {
+      groupableFields: ['status', 'customer_id', 'property_id'],
+    },
+  },
+
+  navVisibility: 'dispatcher', // DEPRECATED: Use navigation.visibility
+  navGroup: 'work', // DEPRECATED: Use navigation.group
+  navOrder: 2, // DEPRECATED: Use navigation.order
+
+  supportsFileAttachments: true, // DEPRECATED: Use features.fileAttachments
+
+  summaryConfig: { // DEPRECATED: Use features.summary
     groupableFields: ['status', 'customer_id', 'property_id'],
   },
 

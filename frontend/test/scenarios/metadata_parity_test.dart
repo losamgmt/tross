@@ -152,6 +152,22 @@ void main() {
       }
     });
 
+    // SSOT Compliance: Validate that deprecated allKnownEntities stays in sync
+    // until fully migrated to EntityTestRegistry.allEntityNames
+    test('allKnownEntities matches EntityTestRegistry.allEntityNames', () {
+      final fromJson = EntityTestRegistry.allEntityNames.toList()..sort();
+      final fromConst = allKnownEntities.toList()..sort();
+
+      expect(
+        fromConst,
+        equals(fromJson),
+        reason:
+            'allKnownEntities is out of sync with entity_metadata.json.\n'
+            'Missing from const: ${fromJson.where((e) => !fromConst.contains(e)).toList()}\n'
+            'Extra in const: ${fromConst.where((e) => !fromJson.contains(e)).toList()}',
+      );
+    });
+
     // NOTE: Tests for EntityTestRegistry helper methods (entitiesWithForeignKeys,
     // entitiesWithEnums) are intentionally omitted. Those are implementation
     // details of our test infrastructure, not production metadata contracts.

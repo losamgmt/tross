@@ -535,13 +535,7 @@
     "rlsResource": "audit_logs",
     "icon": "history",
     "supportsFileAttachments": false,
-    "summaryConfig": {
-      "groupableFields": [
-        "resource_type",
-        "action",
-        "user_id"
-      ]
-    },
+    "summaryConfig": null,
     "displayField": "id",
     "displayName": "Audit Log",
     "displayNamePlural": "Audit Logs",
@@ -1274,7 +1268,7 @@
           "id",
           "property_id",
           "role",
-          "status"
+          "is_active"
         ],
         "description": "Board/management roles this customer holds at properties"
       },
@@ -3071,7 +3065,7 @@
           "id",
           "customer_id",
           "role",
-          "status"
+          "is_active"
         ],
         "description": "Board members and managers assigned to this property"
       },

@@ -100,24 +100,42 @@ module.exports = {
     },
   ],
 
+  // ============================================================================
+  // CONSOLIDATED NAVIGATION & FEATURES
+  // ============================================================================
+
+  navigation: {
+    visibility: 'technician',
+    group: 'resources',
+    order: 2,
+  },
+
+  features: {
+    fileAttachments: true,
+    summary: {
+      groupableFields: ['status'],
+      summableFields: ['quantity', 'unit_cost'],
+    },
+  },
+
   /**
    * Navigation visibility - minimum role to see this entity in nav menus
    * Inventory is visible to technician+ (those who use it for work orders)
    */
-  navVisibility: 'technician',
-  navGroup: 'resources',
-  navOrder: 2,
+  navVisibility: 'technician', // DEPRECATED: Use navigation.visibility
+  navGroup: 'resources', // DEPRECATED: Use navigation.group
+  navOrder: 2, // DEPRECATED: Use navigation.order
 
   /**
    * File attachments - whether this entity supports file uploads
    * Inventory: product images, spec sheets, manuals
    */
-  supportsFileAttachments: true,
+  supportsFileAttachments: true, // DEPRECATED: Use features.fileAttachments
 
   /**
    * Summary endpoint configuration for aggregated analytics.
    */
-  summaryConfig: {
+  summaryConfig: { // DEPRECATED: Use features.summary
     groupableFields: ['status'],
     summableFields: ['quantity', 'unit_cost'],
   },

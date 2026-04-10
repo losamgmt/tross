@@ -93,6 +93,67 @@ const ENV_MANIFEST = Object.freeze({
   },
 
   // =========================================================================
+  // STRIPE INTEGRATION - Security Critical
+  // =========================================================================
+  STRIPE_SECRET_KEY: {
+    category: CATEGORY.SECURITY_CRITICAL,
+    description: 'Stripe API secret key (sk_live_xxx or sk_test_xxx)',
+    defaultValue: null,
+    allowDefaultIn: [],
+    skipValidationIn: [ENVIRONMENTS.TEST], // Tests mock Stripe
+    sensitive: true,
+    validator: (val) => val && /^sk_(live|test)_[a-zA-Z0-9]+$/.test(val),
+    errorMessage: 'STRIPE_SECRET_KEY must be a valid Stripe secret key (sk_live_xxx or sk_test_xxx)',
+  },
+
+  STRIPE_WEBHOOK_SECRET: {
+    category: CATEGORY.SECURITY_CRITICAL,
+    description: 'Stripe webhook endpoint signing secret (whsec_xxx)',
+    defaultValue: null,
+    allowDefaultIn: [],
+    skipValidationIn: [ENVIRONMENTS.TEST], // Tests mock webhooks
+    sensitive: true,
+    validator: (val) => val && val.startsWith('whsec_'),
+    errorMessage: 'STRIPE_WEBHOOK_SECRET must be a valid Stripe webhook secret (whsec_xxx)',
+  },
+
+  // =========================================================================
+  // QUICKBOOKS INTEGRATION - Security Critical
+  // =========================================================================
+  QB_CLIENT_ID: {
+    category: CATEGORY.SECURITY_CRITICAL,
+    description: 'QuickBooks OAuth2 client ID',
+    defaultValue: null,
+    allowDefaultIn: [],
+    skipValidationIn: [ENVIRONMENTS.TEST], // Tests mock QuickBooks
+    sensitive: false,
+    validator: (val) => val && val.length > 10,
+    errorMessage: 'QB_CLIENT_ID must be set for QuickBooks integration',
+  },
+
+  QB_CLIENT_SECRET: {
+    category: CATEGORY.SECURITY_CRITICAL,
+    description: 'QuickBooks OAuth2 client secret',
+    defaultValue: null,
+    allowDefaultIn: [],
+    skipValidationIn: [ENVIRONMENTS.TEST], // Tests mock QuickBooks
+    sensitive: true,
+    validator: (val) => val && val.length > 10,
+    errorMessage: 'QB_CLIENT_SECRET must be set for QuickBooks integration',
+  },
+
+  QB_WEBHOOK_VERIFIER_TOKEN: {
+    category: CATEGORY.SECURITY_CRITICAL,
+    description: 'QuickBooks webhook verifier token for signature validation',
+    defaultValue: null,
+    allowDefaultIn: [],
+    skipValidationIn: [ENVIRONMENTS.TEST], // Tests mock webhooks
+    sensitive: true,
+    validator: (val) => val && val.length > 10,
+    errorMessage: 'QB_WEBHOOK_VERIFIER_TOKEN must be set for webhook verification',
+  },
+
+  // =========================================================================
   // OPERATIONAL - Defaults only in development/test
   // =========================================================================
   NODE_ENV: {
@@ -294,6 +355,50 @@ const ENV_MANIFEST = Object.freeze({
     allowDefaultIn: [ENVIRONMENTS.DEVELOPMENT, ENVIRONMENTS.TEST, ENVIRONMENTS.PRODUCTION],
     validator: (val) => ['r2', 's3', 'local', 'none'].includes(val),
     errorMessage: 'STORAGE_PROVIDER must be r2, s3, local, or none',
+  },
+
+  // =========================================================================
+  // INTEGRATION OPTIONAL - Non-critical integration settings
+  // =========================================================================
+  STRIPE_PUBLISHABLE_KEY: {
+    category: CATEGORY.OPTIONAL,
+    description: 'Stripe publishable key for client-side (pk_live_xxx or pk_test_xxx)',
+    defaultValue: null,
+    allowDefaultIn: [ENVIRONMENTS.DEVELOPMENT, ENVIRONMENTS.TEST],
+    skipValidationIn: [ENVIRONMENTS.TEST],
+    sensitive: false,
+    validator: (val) => !val || /^pk_(live|test)_[a-zA-Z0-9]+$/.test(val),
+    errorMessage: 'STRIPE_PUBLISHABLE_KEY must be a valid Stripe publishable key (pk_live_xxx or pk_test_xxx)',
+  },
+
+  QB_ENVIRONMENT: {
+    category: CATEGORY.OPTIONAL,
+    description: 'QuickBooks environment (sandbox or production)',
+    defaultValue: 'sandbox',
+    allowDefaultIn: [ENVIRONMENTS.DEVELOPMENT, ENVIRONMENTS.TEST],
+    validator: (val) => ['sandbox', 'production'].includes(val),
+    errorMessage: 'QB_ENVIRONMENT must be sandbox or production',
+  },
+
+  QB_REDIRECT_URI: {
+    category: CATEGORY.OPTIONAL,
+    description: 'QuickBooks OAuth2 callback URI',
+    defaultValue: 'http://localhost:3001/api/v1/integrations/quickbooks/callback',
+    allowDefaultIn: [ENVIRONMENTS.DEVELOPMENT, ENVIRONMENTS.TEST],
+    validator: (val) => {
+      try {
+        const url = new URL(val);
+        // Production requires HTTPS (OAuth2 security requirement)
+        if (getEnvironment() === ENVIRONMENTS.PRODUCTION) {
+          return url.protocol === 'https:';
+        }
+        // Dev/Test: Allow http (for localhost) or https
+        return ['http:', 'https:'].includes(url.protocol);
+      } catch {
+        return false;
+      }
+    },
+    errorMessage: 'QB_REDIRECT_URI must be a valid URL (HTTPS required in production)',
   },
 });
 

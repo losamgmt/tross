@@ -455,11 +455,12 @@ async function createTestUserWithProfile({ role, profileName } = {}) {
  */
 async function createWorkOrder(customerId, technicianId = null) {
   const pool = getTestPool();
+  const workOrderNumber = `WO-TEST-${Date.now()}`;
   const result = await pool.query(
-    `INSERT INTO work_orders (customer_id, assigned_technician_id)
-     VALUES ($1, $2)
+    `INSERT INTO work_orders (customer_id, assigned_technician_id, work_order_number)
+     VALUES ($1, $2, $3)
      RETURNING id`,
-    [customerId, technicianId],
+    [customerId, technicianId, workOrderNumber],
   );
   return result.rows[0];
 }

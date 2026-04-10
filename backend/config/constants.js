@@ -167,6 +167,19 @@ const FILE_ATTACHMENTS = Object.freeze({
 // Import NAME_PATTERNS from single source of truth
 const { NAME_PATTERNS } = require('./name-patterns');
 
+// Import ENTITY_STRUCTURE and ENTITY_TRAITS from single source of truth
+const {
+  ENTITY_STRUCTURE,
+  ENTITY_TRAITS,
+  hasStructure,
+  hasTrait,
+  isJunction,
+  isSystemTable,
+  hasWorkflow,
+  getTraits,
+  getStructureType,
+} = require('./entity-traits');
+
 // ============================================================================
 // RLS (ROW-LEVEL SECURITY) RESOURCE TYPES
 // ============================================================================
@@ -633,6 +646,16 @@ module.exports = Object.freeze({
   REDIS,
   FILE_ATTACHMENTS,
   NAME_PATTERNS,
+  ENTITY_STRUCTURE,
+  ENTITY_TRAITS,
+  // Entity trait helper functions
+  hasStructure,
+  hasTrait,
+  isJunction,
+  isSystemTable,
+  hasWorkflow,
+  getTraits,
+  getStructureType,
   RLS_RESOURCE_TYPES,
   RLS_ENGINE,
   // NAME_PATTERN_MAP is derived from metadata at runtime

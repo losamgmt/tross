@@ -36,6 +36,17 @@ const {
 // Re-export NAME_PATTERNS for convenience (single import in metadata files)
 const { NAME_PATTERNS } = require('./name-patterns');
 
+// Re-export ENTITY_STRUCTURE and ENTITY_TRAITS for convenience (single import in metadata files)
+const {
+  ENTITY_STRUCTURE,
+  ENTITY_TRAITS,
+  hasStructure,
+  hasTrait,
+  isJunction,
+  isSystemTable,
+  hasWorkflow,
+} = require('./entity-traits');
+
 // ============================================================================
 // TYPE TO SQL MAPPING
 // ============================================================================
@@ -1095,6 +1106,15 @@ function createJunctionUniqueConstraint(entity1, entity2, constraintName) {
 module.exports = {
   // Name patterns (re-exported for convenience)
   NAME_PATTERNS,
+
+  // Entity traits (re-exported for convenience)
+  ENTITY_STRUCTURE,
+  ENTITY_TRAITS,
+  hasStructure,
+  hasTrait,
+  isJunction,
+  isSystemTable,
+  hasWorkflow,
 
   // Field Traits System (NEW)
   TRAITS,

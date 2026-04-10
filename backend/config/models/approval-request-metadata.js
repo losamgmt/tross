@@ -88,13 +88,30 @@ module.exports = {
     delete: 'manager',
   },
 
-  navVisibility: 'customer',
-  navGroup: 'admin',
-  navOrder: 5,
+  // ============================================================================
+  // CONSOLIDATED NAVIGATION & FEATURES
+  // ============================================================================
 
-  supportsFileAttachments: false,
+  navigation: {
+    visibility: 'customer',
+    group: 'admin',
+    order: 5,
+  },
 
-  summaryConfig: {
+  features: {
+    fileAttachments: false,
+    summary: {
+      groupableFields: ['status', 'target_entity', 'approver_role'],
+    },
+  },
+
+  navVisibility: 'customer', // DEPRECATED: Use navigation.visibility
+  navGroup: 'admin', // DEPRECATED: Use navigation.group
+  navOrder: 5, // DEPRECATED: Use navigation.order
+
+  supportsFileAttachments: false, // DEPRECATED: Use features.fileAttachments
+
+  summaryConfig: { // DEPRECATED: Use features.summary
     groupableFields: ['status', 'target_entity', 'approver_role'],
   },
 

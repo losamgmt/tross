@@ -78,19 +78,36 @@ module.exports = {
   ],
 
   /**
+   * Navigation configuration - consolidated
+   * null = saved views are a system table, accessed via table UI not nav
+   */
+  navigation: null,
+
+  /**
    * Navigation visibility - null means not shown in nav menus
    * Saved views are a system table, accessed via table UI not nav
+   * DEPRECATED: Use navigation
    */
   navVisibility: null,
 
   /**
+   * Features configuration - consolidated
+   */
+  features: {
+    fileAttachments: false,
+    summary: null,
+  },
+
+  /**
    * File attachments - whether this entity supports file uploads
+   * DEPRECATED: Use features.fileAttachments
    */
   supportsFileAttachments: false,
 
   /**
    * Summary endpoint configuration for aggregated analytics.
    * Null: Saved views are not aggregated.
+   * DEPRECATED: Use features.summary
    */
   summaryConfig: null,
 

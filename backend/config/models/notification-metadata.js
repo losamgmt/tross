@@ -71,19 +71,36 @@ module.exports = {
   ],
 
   /**
+   * Navigation configuration - consolidated
+   * null = notifications accessed via bell icon tray, not nav
+   */
+  navigation: null,
+
+  /**
    * Navigation visibility - null means not shown in nav menus
    * Notifications accessed via bell icon tray, not nav
+   * DEPRECATED: Use navigation
    */
   navVisibility: null,
 
   /**
+   * Features configuration - consolidated
+   */
+  features: {
+    fileAttachments: false,
+    summary: null,
+  },
+
+  /**
    * File attachments - whether this entity supports file uploads
+   * DEPRECATED: Use features.fileAttachments
    */
   supportsFileAttachments: false,
 
   /**
    * Summary endpoint configuration for aggregated analytics.
    * Null: Notifications are not aggregated.
+   * DEPRECATED: Use features.summary
    */
   summaryConfig: null,
 

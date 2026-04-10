@@ -75,20 +75,37 @@ module.exports = {
     },
   ],
 
+  // ============================================================================
+  // CONSOLIDATED NAVIGATION & FEATURES
+  // ============================================================================
+
+  navigation: {
+    visibility: 'technician',
+    group: 'customers',
+    order: 4,
+  },
+
+  features: {
+    fileAttachments: true,
+    summary: {
+      groupableFields: ['property_id', 'unit_id', 'asset_type', 'status'],
+    },
+  },
+
   /**
    * Navigation visibility - minimum role to see this entity in nav menus
    * Assets are in customers group, visible to technician+
    */
-  navVisibility: 'technician',
-  navGroup: 'customers',
-  navOrder: 4, // After unit
+  navVisibility: 'technician', // DEPRECATED: Use navigation.visibility
+  navGroup: 'customers', // DEPRECATED: Use navigation.group
+  navOrder: 4, // DEPRECATED: Use navigation.order
 
-  supportsFileAttachments: true,
+  supportsFileAttachments: true, // DEPRECATED: Use features.fileAttachments
 
   /**
    * Summary endpoint configuration for aggregated analytics.
    */
-  summaryConfig: {
+  summaryConfig: { // DEPRECATED: Use features.summary
     groupableFields: ['property_id', 'unit_id', 'asset_type', 'status'],
   },
 

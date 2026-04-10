@@ -113,25 +113,43 @@ module.exports = {
     delete: 'manager',
   },
 
+  // ============================================================================
+  // CONSOLIDATED NAVIGATION & FEATURES
+  // ============================================================================
+
+  navigation: {
+    visibility: 'dispatcher',
+    group: 'finance',
+    order: 1,
+  },
+
+  features: {
+    fileAttachments: true,
+    summary: {
+      groupableFields: ['customer_id', 'status'],
+      summableFields: ['value'],
+    },
+  },
+
   /**
    * Navigation visibility - minimum role to see this entity in nav menus
    * Separate from read permission because RLS may restrict actual data access
    * Contracts are financial docs - only dispatcher+ should see in nav
    */
-  navVisibility: 'dispatcher',
-  navGroup: 'finance',
-  navOrder: 1,
+  navVisibility: 'dispatcher', // DEPRECATED: Use navigation.visibility
+  navGroup: 'finance', // DEPRECATED: Use navigation.group
+  navOrder: 1, // DEPRECATED: Use navigation.order
 
   /**
    * File attachments - whether this entity supports file uploads
    * Contracts: signed contracts, amendments, supporting documents
    */
-  supportsFileAttachments: true,
+  supportsFileAttachments: true, // DEPRECATED: Use features.fileAttachments
 
   /**
    * Summary endpoint configuration for aggregated analytics.
    */
-  summaryConfig: {
+  summaryConfig: { // DEPRECATED: Use features.summary
     groupableFields: ['customer_id', 'status'],
     summableFields: ['value'],
   },

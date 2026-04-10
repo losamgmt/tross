@@ -38,6 +38,9 @@ const {
   getSearchableFields,
   getFilterableFields,
   getSortableFields,
+  getNavigation,
+  getFeatures,
+  getJunction,
 } = require("../backend/config/metadata-accessors");
 
 // Import all backend metadata
@@ -207,6 +210,9 @@ function transformPreferenceSchema(schema) {
  * @param {object} allModels - All backend models (for resolving FK display fields)
  */
 function transformModel(entityName, backendMeta, allModels) {
+  // Get consolidated features via accessor
+  const features = getFeatures(backendMeta);
+
   const result = {
     // Entity key (singular, for API params and lookups)
     entityKey: backendMeta.entityKey,
@@ -218,9 +224,9 @@ function transformModel(entityName, backendMeta, allModels) {
     // Material icon for navigation menus and entity displays
     icon: backendMeta.icon,
     // Whether this entity supports file attachments (metadata-driven UI)
-    supportsFileAttachments: backendMeta.supportsFileAttachments,
+    supportsFileAttachments: features.fileAttachments ?? false,
     // Summary endpoint configuration for analytics (null = not summarizable)
-    summaryConfig: backendMeta.summaryConfig ?? null,
+    summaryConfig: features.summary ?? null,
   };
 
   // displayField - what to show when this entity is referenced (e.g., in FK dropdowns)
@@ -334,8 +340,12 @@ function transformModel(entityName, backendMeta, allModels) {
 
   // Junction entity markers (for M:M pivot tables)
   // ALWAYS emit - consistent shape contract
-  result.isJunction = backendMeta.isJunction === true;
-  result.junctionFor = backendMeta.junctionFor ?? null;
+  // Uses getJunction() accessor for consolidated junction property
+  const junctionConfig = getJunction(backendMeta);
+  result.isJunction = junctionConfig !== null;
+  result.junctionFor = junctionConfig
+    ? { entity1: junctionConfig.entities[0], entity2: junctionConfig.entities[1] }
+    : null;
 
   // Default includes (auto-loaded relationships)
   // ALWAYS emit (empty array if none) - consistent shape contract
@@ -356,11 +366,13 @@ function buildEntityPlacements() {
   const placements = {};
 
   for (const [entityName, backendMeta] of Object.entries(backendModels)) {
-    // Only include entities with navGroup (visible in nav)
-    if (backendMeta.navGroup && backendMeta.navVisibility !== null) {
+    // Only include entities with navigation (visible in nav)
+    // Uses getNavigation() accessor for consolidated navigation property
+    const navigation = getNavigation(backendMeta);
+    if (navigation) {
       placements[entityName] = {
-        group: backendMeta.navGroup,
-        order: backendMeta.navOrder ?? 99,
+        group: navigation.group,
+        order: navigation.order ?? 99,
       };
     }
   }

@@ -13,6 +13,7 @@
 
 const { getRoleHierarchy } = require('./role-hierarchy-loader');
 const { RLS_ENGINE } = require('./constants');
+const { ENTITY_STRUCTURE, ENTITY_TRAITS } = require('./entity-traits');
 const { getForeignKeyFieldNames, extractForeignKeyFields } = require('./fk-helpers');
 const { foreignKeyFieldName } = require('./field-types');
 
@@ -569,8 +570,15 @@ function validateRelationships(meta, errors, _allMetadata) {
 /**
  * Validate junction entity configuration.
  * Ensures isJunction entities have proper junctionFor config.
+ *
+ * NOTE: During migration, if junction property is defined, skip legacy validation.
  */
 function validateJunctionConfig(meta, errors, allMetadata) {
+  // Skip legacy validation if using new consolidated junction property
+  if (meta.junction !== undefined) {
+    return;
+  }
+
   // If not a junction, nothing to validate
   if (!meta.isJunction) {
     // Warn if junctionFor is present without isJunction
@@ -632,6 +640,123 @@ function validateJunctionConfig(meta, errors, allMetadata) {
       'junctionFor',
       `FK field '${fk2}' not found in fields. Add: ${fk2}: { type: 'foreignKey', references: '${config.entity2}' }`,
     );
+  }
+}
+
+/**
+ * Validate entity structure type and behavioral traits.
+ *
+ * Supports both legacy (isJunction, isSystemTable, uncountable) and
+ * new (structureType, traits) syntax during migration.
+ */
+function validateEntityTraits(meta, errors) {
+  const validStructureTypes = new Set(Object.values(ENTITY_STRUCTURE));
+  const validTraits = new Set(Object.values(ENTITY_TRAITS));
+
+  // -------------------------------------------------------------------------
+  // Validate structureType (if present)
+  // -------------------------------------------------------------------------
+  if (meta.structureType !== undefined) {
+    if (!validStructureTypes.has(meta.structureType)) {
+      errors.add(
+        'structureType',
+        `Invalid value '${meta.structureType}'. ` +
+          `Must be one of: ${[...validStructureTypes].join(', ')}`,
+      );
+    }
+
+    // Check for conflicting legacy property
+    if (meta.isJunction !== undefined) {
+      const structureIsJunction = meta.structureType === ENTITY_STRUCTURE.JUNCTION;
+      if (structureIsJunction !== meta.isJunction) {
+        errors.add(
+          'structureType',
+          `Conflicts with isJunction: ${meta.isJunction}. ` +
+            'Remove isJunction and use structureType only.',
+        );
+      }
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Validate traits array (if present)
+  // -------------------------------------------------------------------------
+  if (meta.traits !== undefined) {
+    if (!Array.isArray(meta.traits)) {
+      errors.add('traits', 'Must be an array of trait values');
+    } else {
+      // Check for invalid trait values
+      for (const trait of meta.traits) {
+        if (!validTraits.has(trait)) {
+          errors.add(
+            'traits',
+            `Invalid trait '${trait}'. ` +
+              `Must be one of: ${[...validTraits].join(', ')}`,
+          );
+        }
+      }
+
+      // Check for duplicates
+      const seen = new Set();
+      for (const trait of meta.traits) {
+        if (seen.has(trait)) {
+          errors.add('traits', `Duplicate trait '${trait}'`);
+        }
+        seen.add(trait);
+      }
+
+      // Check for conflicts with legacy properties
+      if (meta.isSystemTable !== undefined) {
+        const hasSystemTrait = meta.traits.includes(ENTITY_TRAITS.SYSTEM);
+        if (hasSystemTrait !== meta.isSystemTable) {
+          errors.add(
+            'traits',
+            `Conflicts with isSystemTable: ${meta.isSystemTable}. ` +
+              'Remove isSystemTable and use traits array only.',
+          );
+        }
+      }
+
+      if (meta.uncountable !== undefined) {
+        const hasUncountableTrait = meta.traits.includes(ENTITY_TRAITS.UNCOUNTABLE);
+        if (hasUncountableTrait !== meta.uncountable) {
+          errors.add(
+            'traits',
+            `Conflicts with uncountable: ${meta.uncountable}. ` +
+              'Remove uncountable and use traits array only.',
+          );
+        }
+      }
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Validate identity properties
+  // -------------------------------------------------------------------------
+  if (meta.identityField !== undefined) {
+    const fields = meta.fields || {};
+    if (!fields[meta.identityField]) {
+      errors.add(
+        'identityField',
+        `References field '${meta.identityField}' which does not exist in fields`,
+      );
+    }
+  }
+
+  if (meta.displayFields !== undefined) {
+    if (!Array.isArray(meta.displayFields)) {
+      errors.add('displayFields', 'Must be an array of field names');
+    } else {
+      const fields = meta.fields || {};
+      for (const fieldName of meta.displayFields) {
+        if (!fields[fieldName]) {
+          errors.add(
+            'displayFields',
+            `References field '${fieldName}' which does not exist in fields`,
+          );
+        }
+      }
+    }
   }
 }
 
@@ -707,8 +832,15 @@ function validateDisplayProperties(meta, errors) {
  * Valid values:
  * - true: Entity supports file attachments (shows file UI on detail page)
  * - false: Entity does not support file attachments
+ *
+ * NOTE: During migration, if features.fileAttachments is defined, skip this validation.
  */
 function validateSupportsFileAttachments(meta, errors) {
+  // Skip if using new consolidated features property
+  if (meta.features !== undefined) {
+    return;
+  }
+
   if (!('supportsFileAttachments' in meta)) {
     errors.add(
       'supportsFileAttachments',
@@ -735,8 +867,15 @@ function validateSupportsFileAttachments(meta, errors) {
  * Valid values:
  * - null: Entity is not shown in navigation (system tables, child tables)
  * - Role name: Minimum role required to see entity in nav (e.g., 'admin', 'dispatcher')
+ *
+ * NOTE: During migration, if navigation property is defined, skip this validation.
  */
 function validateNavVisibility(meta, errors) {
+  // Skip if using new consolidated navigation property
+  if (meta.navigation !== undefined) {
+    return;
+  }
+
   // navVisibility is REQUIRED - every entity must explicitly declare it
   if (!('navVisibility' in meta)) {
     errors.add(
@@ -773,8 +912,15 @@ function validateNavVisibility(meta, errors) {
  * Valid values:
  * - null: Entity is not summarizable (junction tables, system tables)
  * - { groupableFields: [...], summableFields?: [...], breakdownFields?: [...], dateFields?: [...] }
+ *
+ * NOTE: During migration, if features.summary is defined, skip this validation.
  */
 function validateSummaryConfig(meta, errors) {
+  // Skip if using new consolidated features property
+  if (meta.features !== undefined) {
+    return;
+  }
+
   // summaryConfig is REQUIRED - every entity must explicitly declare it
   if (!('summaryConfig' in meta)) {
     errors.add(
@@ -934,8 +1080,15 @@ function validateSummaryConfig(meta, errors) {
  *
  * Valid navGroup values: 'people', 'operations', 'finance', 'admin'
  * navOrder: positive integer (lower = higher priority in menu)
+ *
+ * NOTE: During migration, if navigation property is defined, skip this validation.
  */
 function validateNavPlacement(meta, errors) {
+  // Skip if using new consolidated navigation property
+  if (meta.navigation !== undefined) {
+    return;
+  }
+
   const hasNavVisibility =
     'navVisibility' in meta && meta.navVisibility !== null;
 
@@ -978,6 +1131,204 @@ function validateNavPlacement(meta, errors) {
       // This is a warning, not an error - just unexpected
       // errors.add() would fail validation, so we just log info
       // In strict mode this could be an error
+    }
+  }
+}
+
+// ============================================================================
+// CONSOLIDATED PROPERTY VALIDATION (Phase 2B Migration)
+// ============================================================================
+
+/**
+ * Validate consolidated navigation property.
+ * Replaces navVisibility, navGroup, navOrder with single navigation object.
+ *
+ * Valid values:
+ * - null: Entity is not shown in navigation
+ * - { visibility, group, order }: Navigation configuration
+ */
+function validateNavigation(meta, errors) {
+  // Only validate if new navigation property exists
+  if (meta.navigation === undefined) {
+    return;
+  }
+
+  const nav = meta.navigation;
+
+  // null is valid (entity not shown in nav)
+  if (nav === null) {
+    return;
+  }
+
+  // Must be an object
+  if (typeof nav !== 'object') {
+    errors.add('navigation', `Must be null or an object, got '${typeof nav}'`);
+    return;
+  }
+
+  // Validate visibility (required for visible nav)
+  if (!nav.visibility) {
+    errors.add('navigation.visibility', 'Required property for navigation object');
+  } else {
+    const validRoles = getValidEntityPermissionValues();
+    if (!validRoles.has(nav.visibility)) {
+      errors.add(
+        'navigation.visibility',
+        `Invalid value '${nav.visibility}'. Valid: ${[...getRoleHierarchy()].join(', ')}`,
+      );
+    }
+  }
+
+  // Validate group
+  if (!nav.group) {
+    errors.add('navigation.group', 'Required property for navigation object');
+  } else if (!VALID_NAV_GROUPS.has(nav.group)) {
+    errors.add(
+      'navigation.group',
+      `Invalid value '${nav.group}'. Valid: ${[...VALID_NAV_GROUPS].join(', ')}`,
+    );
+  }
+
+  // Validate order
+  if (nav.order === undefined) {
+    errors.add('navigation.order', 'Required property for navigation object');
+  } else if (
+    typeof nav.order !== 'number' ||
+    !Number.isInteger(nav.order) ||
+    nav.order < 0
+  ) {
+    errors.add(
+      'navigation.order',
+      `Invalid value '${nav.order}'. Must be a non-negative integer.`,
+    );
+  }
+}
+
+/**
+ * Validate consolidated features property.
+ * Replaces supportsFileAttachments, summaryConfig with single features object.
+ *
+ * Valid values:
+ * - { fileAttachments: boolean, summary: object|null }
+ */
+function validateFeatures(meta, errors) {
+  // Only validate if new features property exists
+  if (meta.features === undefined) {
+    return;
+  }
+
+  const features = meta.features;
+
+  // Must be an object
+  if (typeof features !== 'object' || features === null) {
+    errors.add('features', `Must be an object, got '${typeof features}'`);
+    return;
+  }
+
+  // Validate fileAttachments (required)
+  if (!('fileAttachments' in features)) {
+    errors.add(
+      'features.fileAttachments',
+      'Required property (true or false)',
+    );
+  } else if (typeof features.fileAttachments !== 'boolean') {
+    errors.add(
+      'features.fileAttachments',
+      `Must be a boolean, got '${typeof features.fileAttachments}'`,
+    );
+  }
+
+  // Validate summary (required, can be null)
+  if (!('summary' in features)) {
+    errors.add(
+      'features.summary',
+      'Required property (null or summary config object)',
+    );
+  } else if (features.summary !== null) {
+    const summary = features.summary;
+    if (typeof summary !== 'object') {
+      errors.add(
+        'features.summary',
+        `Must be null or an object, got '${typeof summary}'`,
+      );
+    } else {
+      // Validate groupableFields (required for non-null summary)
+      if (!Array.isArray(summary.groupableFields) || summary.groupableFields.length === 0) {
+        errors.add(
+          'features.summary.groupableFields',
+          'Must be a non-empty array of field names',
+        );
+      }
+    }
+  }
+}
+
+/**
+ * Validate consolidated junction property.
+ * Replaces junctionFor with single junction object.
+ *
+ * Valid values:
+ * - { entities: ['entity1', 'entity2'], uniqueOn: [['field1', 'field2']] }
+ */
+function validateConsolidatedJunction(meta, errors, allMetadata) {
+  // Only validate if new junction property exists
+  if (meta.junction === undefined) {
+    return;
+  }
+
+  const junction = meta.junction;
+
+  // Must be an object
+  if (typeof junction !== 'object' || junction === null) {
+    errors.add('junction', `Must be an object, got '${typeof junction}'`);
+    return;
+  }
+
+  const allEntityKeys = new Set(Object.keys(allMetadata));
+
+  // Validate entities array (required)
+  if (!Array.isArray(junction.entities) || junction.entities.length < 2) {
+    errors.add(
+      'junction.entities',
+      'Must be an array with at least 2 entity keys',
+    );
+  } else {
+    for (const entity of junction.entities) {
+      if (!allEntityKeys.has(entity)) {
+        errors.add(
+          'junction.entities',
+          `References unknown entity '${entity}'`,
+        );
+      }
+    }
+  }
+
+  // Validate uniqueOn array (required)
+  if (!Array.isArray(junction.uniqueOn) || junction.uniqueOn.length === 0) {
+    errors.add(
+      'junction.uniqueOn',
+      'Must be a non-empty array of field arrays',
+    );
+  } else {
+    const fields = meta.fields || {};
+    for (let i = 0; i < junction.uniqueOn.length; i++) {
+      const fieldSet = junction.uniqueOn[i];
+      if (!Array.isArray(fieldSet) || fieldSet.length < 2) {
+        errors.add(
+          `junction.uniqueOn[${i}]`,
+          'Must be an array with at least 2 field names',
+        );
+        continue;
+      }
+
+      for (const fieldName of fieldSet) {
+        if (!fields[fieldName]) {
+          errors.add(
+            `junction.uniqueOn[${i}]`,
+            `Field '${fieldName}' not found in fields definition`,
+          );
+        }
+      }
     }
   }
 }
@@ -1275,6 +1626,12 @@ function validateEntity(entityName, meta, allMetadata) {
   validateNavPlacement(meta, errors);
   validateSupportsFileAttachments(meta, errors);
   validateSummaryConfig(meta, errors);
+
+  // Consolidated property validators (Phase 2B migration)
+  validateNavigation(meta, errors);
+  validateFeatures(meta, errors);
+  validateConsolidatedJunction(meta, errors, allMetadata);
+
   validateFieldTypes(meta, errors);
   validateFieldAccess(meta, errors);
   validateEntityPermissions(meta, errors);
@@ -1284,6 +1641,7 @@ function validateEntity(entityName, meta, allMetadata) {
   validateRlsRules(meta, errors);
   validateRelationships(meta, errors, allMetadata);
   validateJunctionConfig(meta, errors, allMetadata);
+  validateEntityTraits(meta, errors);
   validateUniqueConstraints(meta, errors);
 
   // Field-centric validation (Phase 2A migration support)

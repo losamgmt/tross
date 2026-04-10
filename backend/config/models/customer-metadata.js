@@ -94,23 +94,40 @@ module.exports = {
     },
   ],
 
+  // ============================================================================
+  // CONSOLIDATED NAVIGATION & FEATURES
+  // ============================================================================
+
+  navigation: {
+    visibility: 'customer',
+    group: 'customers',
+    order: 1,
+  },
+
+  features: {
+    fileAttachments: false,
+    summary: {
+      groupableFields: ['status'],
+    },
+  },
+
   /**
    * Navigation visibility - minimum role to see this entity in nav menus
    * Customers are visible to all authenticated users
    */
-  navVisibility: 'customer',
-  navGroup: 'customers',
-  navOrder: 1,
+  navVisibility: 'customer', // DEPRECATED: Use navigation.visibility
+  navGroup: 'customers', // DEPRECATED: Use navigation.group
+  navOrder: 1, // DEPRECATED: Use navigation.order
 
   /**
    * File attachments - whether this entity supports file uploads
    */
-  supportsFileAttachments: false,
+  supportsFileAttachments: false, // DEPRECATED: Use features.fileAttachments
 
   /**
    * Summary endpoint configuration for aggregated analytics.
    */
-  summaryConfig: {
+  summaryConfig: { // DEPRECATED: Use features.summary
     groupableFields: ['status'],
   },
 
@@ -322,7 +339,7 @@ module.exports = {
       type: 'hasMany',
       foreignKey: 'customer_id',
       table: 'property_roles',
-      fields: ['id', 'property_id', 'role', 'status'],
+      fields: ['id', 'property_id', 'role', 'effective_date', 'end_date'],
       description: 'Board/management roles this customer holds at properties',
     },
     // Optional: User account linked to this customer profile
