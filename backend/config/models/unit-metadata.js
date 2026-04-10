@@ -80,20 +80,38 @@ module.exports = {
     },
   ],
 
+  // ============================================================================
+  // CONSOLIDATED NAVIGATION & FEATURES
+  // ============================================================================
+
+  navigation: {
+    visibility: 'technician',
+    group: 'customers',
+    order: 3,
+  },
+
+  features: {
+    fileAttachments: false,
+    summary: {
+      groupableFields: ['property_id', 'ownership_type', 'unit_category'],
+      summableFields: ['square_footage'],
+    },
+  },
+
   /**
    * Navigation visibility - minimum role to see this entity in nav menus
    * Units are in customers group (they're part of the property hierarchy)
    */
-  navVisibility: 'technician',
-  navGroup: 'customers',
-  navOrder: 3,
+  navVisibility: 'technician', // DEPRECATED: Use navigation.visibility
+  navGroup: 'customers', // DEPRECATED: Use navigation.group
+  navOrder: 3, // DEPRECATED: Use navigation.order
 
-  supportsFileAttachments: false,
+  supportsFileAttachments: false, // DEPRECATED: Use features.fileAttachments
 
   /**
    * Summary endpoint configuration for aggregated analytics.
    */
-  summaryConfig: {
+  summaryConfig: { // DEPRECATED: Use features.summary
     groupableFields: ['property_id', 'ownership_type', 'unit_category'],
     summableFields: ['square_footage'],
   },

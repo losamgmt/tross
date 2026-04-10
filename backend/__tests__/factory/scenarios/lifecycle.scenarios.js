@@ -10,6 +10,7 @@
  */
 
 const { getCapabilities } = require("./scenario-helpers");
+const { isJunctionEntity } = require("../../../config/metadata-accessors");
 
 /**
  * Check if entity has a specific field that is visible to admin (read access)
@@ -109,7 +110,7 @@ function getListExcludesInactiveRecords(meta, ctx) {
   const caps = getCapabilities(meta);
   if (!caps.canCreate) return; // Create disabled = scenario N/A
   if (!hasVisibleField(meta, "is_active")) return; // Entity doesn't have visible is_active
-  if (meta.isJunction) return; // Junction entities have different lifecycle semantics
+  if (isJunctionEntity(meta)) return; // Junction entities have different lifecycle semantics
 
   ctx.it(
     `GET /api/${meta.tableName} - excludes inactive records by default`,

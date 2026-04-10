@@ -81,13 +81,30 @@ module.exports = {
     delete: 'admin',
   },
 
-  navVisibility: 'dispatcher',
-  navGroup: 'finance',
-  navOrder: 2,
+  // ============================================================================
+  // CONSOLIDATED NAVIGATION & FEATURES
+  // ============================================================================
 
-  supportsFileAttachments: true,
+  navigation: {
+    visibility: 'dispatcher',
+    group: 'finance',
+    order: 2,
+  },
 
-  summaryConfig: {
+  features: {
+    fileAttachments: true,
+    summary: {
+      groupableFields: ['status', 'payment_method', 'customer_id', 'invoice_id'],
+    },
+  },
+
+  navVisibility: 'dispatcher', // DEPRECATED: Use navigation.visibility
+  navGroup: 'finance', // DEPRECATED: Use navigation.group
+  navOrder: 2, // DEPRECATED: Use navigation.order
+
+  supportsFileAttachments: true, // DEPRECATED: Use features.fileAttachments
+
+  summaryConfig: { // DEPRECATED: Use features.summary
     groupableFields: ['status', 'payment_method', 'customer_id', 'invoice_id'],
   },
 
@@ -149,6 +166,51 @@ module.exports = {
     },
     reference_number: FAL.DISPATCHER_MANAGED,
     notes: FAL.MANAGER_MANAGED,
+
+    // =========================================================================
+    // STRIPE INTEGRATION FIELDS
+    // =========================================================================
+
+    // Stripe PaymentIntent ID (pi_xxx)
+    stripe_payment_intent_id: {
+      create: 'admin',
+      read: 'dispatcher',
+      update: 'admin',
+      delete: 'none',
+    },
+    // Stripe Charge ID (ch_xxx)
+    stripe_charge_id: {
+      create: 'admin',
+      read: 'dispatcher',
+      update: 'admin',
+      delete: 'none',
+    },
+
+    // =========================================================================
+    // QUICKBOOKS INTEGRATION FIELDS
+    // =========================================================================
+
+    // External ID from QuickBooks
+    qb_payment_id: {
+      create: 'admin',
+      read: 'dispatcher',
+      update: 'admin',
+      delete: 'none',
+    },
+
+    // =========================================================================
+    // GENERIC EXTERNAL REFERENCE
+    // =========================================================================
+
+    // Flexible external reference for any system
+    // Admin-only: This is for internal integration tracking, not customer-visible data.
+    // Customer-visible references should use the existing `reference_number` field.
+    external_ref: {
+      create: 'admin',
+      read: 'admin',
+      update: 'admin',
+      delete: 'none',
+    },
   },
 
   // ============================================================================
@@ -246,5 +308,62 @@ module.exports = {
       displayTemplate: '{invoice_number}',
       traits: TRAIT_SETS.LOOKUP,
     }),
+
+    // =========================================================================
+    // STRIPE INTEGRATION FIELDS
+    // =========================================================================
+
+    // Stripe PaymentIntent ID (pi_xxx)
+    stripe_payment_intent_id: withTraits(
+      {
+        type: 'string',
+        maxLength: 50,
+        description: 'Stripe PaymentIntent ID (pi_xxx)',
+        pattern: '^pi_[a-zA-Z0-9]+$',
+      },
+      TRAIT_SETS.FILTER_ONLY,
+    ),
+
+    // Stripe Charge ID (ch_xxx)
+    stripe_charge_id: withTraits(
+      {
+        type: 'string',
+        maxLength: 50,
+        description: 'Stripe Charge ID (ch_xxx)',
+        pattern: '^ch_[a-zA-Z0-9]+$',
+      },
+      TRAIT_SETS.FILTER_ONLY,
+    ),
+
+    // =========================================================================
+    // QUICKBOOKS INTEGRATION FIELDS
+    // =========================================================================
+
+    // External ID from QuickBooks
+    qb_payment_id: withTraits(
+      {
+        type: 'string',
+        maxLength: 50,
+        description: 'QuickBooks Payment DocNumber',
+        pattern: '^[A-Za-z0-9-]+$',
+      },
+      TRAIT_SETS.FILTER_ONLY,
+    ),
+
+    // =========================================================================
+    // GENERIC EXTERNAL REFERENCE
+    // =========================================================================
+
+    // Flexible external reference for any system
+    // NOTE: Intentionally no pattern constraint - this field accepts any format
+    // to support various external systems (check numbers, wire refs, etc.)
+    external_ref: withTraits(
+      {
+        type: 'string',
+        maxLength: 100,
+        description: 'Generic external system reference ID',
+      },
+      TRAIT_SETS.SEARCHABLE_LOOKUP,
+    ),
   },
 };

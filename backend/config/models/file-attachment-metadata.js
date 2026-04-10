@@ -117,20 +117,37 @@ module.exports = {
   ],
 
   /**
+   * Navigation configuration - consolidated
+   * null = file attachments are child records, accessed from parent entity UI
+   */
+  navigation: null,
+
+  /**
    * Navigation visibility - null means not shown in nav menus
    * File attachments are child records, accessed from parent entity UI
+   * DEPRECATED: Use navigation
    */
   navVisibility: null,
 
   /**
+   * Features configuration - consolidated
+   */
+  features: {
+    fileAttachments: false,
+    summary: null,
+  },
+
+  /**
    * File attachments - whether this entity supports file uploads
    * Note: file_attachment is the attachment entity itself, not a target for attachments
+   * DEPRECATED: Use features.fileAttachments
    */
   supportsFileAttachments: false,
 
   /**
    * Summary endpoint configuration for aggregated analytics.
    * Null: File attachments are not aggregated.
+   * DEPRECATED: Use features.summary
    */
   summaryConfig: null,
 

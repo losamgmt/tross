@@ -92,24 +92,39 @@ module.exports = {
     },
   ],
 
+  // ============================================================================
+  // CONSOLIDATED NAVIGATION & FEATURES
+  // ============================================================================
+
+  navigation: {
+    visibility: 'admin',
+    group: 'admin',
+    order: 1,
+  },
+
+  features: {
+    fileAttachments: false,
+    summary: null,
+  },
+
   /**
    * Navigation visibility - minimum role to see this entity in nav menus
    * Separate from read permission (users can read own record, but shouldn't see Users in nav)
    */
-  navVisibility: 'admin',
-  navGroup: 'admin',
-  navOrder: 1,
+  navVisibility: 'admin', // DEPRECATED: Use navigation.visibility
+  navGroup: 'admin', // DEPRECATED: Use navigation.group
+  navOrder: 1, // DEPRECATED: Use navigation.order
 
   /**
    * File attachments - whether this entity supports file uploads
    */
-  supportsFileAttachments: false,
+  supportsFileAttachments: false, // DEPRECATED: Use features.fileAttachments
 
   /**
    * Summary endpoint configuration for aggregated analytics.
    * Null: Users are not aggregated.
    */
-  summaryConfig: null,
+  summaryConfig: null, // DEPRECATED: Use features.summary
 
   /**
    * Entity-level permission overrides

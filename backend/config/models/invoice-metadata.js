@@ -113,26 +113,44 @@ module.exports = {
     delete: 'manager',
   },
 
+  // ============================================================================
+  // CONSOLIDATED NAVIGATION & FEATURES
+  // ============================================================================
+
+  navigation: {
+    visibility: 'dispatcher',
+    group: 'finance',
+    order: 2,
+  },
+
+  features: {
+    fileAttachments: true,
+    summary: {
+      groupableFields: ['customer_id', 'work_order_id', 'status'],
+      summableFields: ['total', 'tax', 'amount'],
+    },
+  },
+
   /**
    * Navigation visibility - minimum role to see this entity in nav menus
    * Separate from read permission because RLS may restrict actual data access
    * Invoices are financial docs - only dispatcher+ should see in nav
    */
-  navVisibility: 'dispatcher',
-  navGroup: 'finance',
-  navOrder: 2,
+  navVisibility: 'dispatcher', // DEPRECATED: Use navigation.visibility
+  navGroup: 'finance', // DEPRECATED: Use navigation.group
+  navOrder: 2, // DEPRECATED: Use navigation.order
 
   /**
    * File attachments - whether this entity supports file uploads
    * Invoices: invoice PDFs, receipts, payment confirmations
    */
-  supportsFileAttachments: true,
+  supportsFileAttachments: true, // DEPRECATED: Use features.fileAttachments
 
   /**
    * Summary endpoint configuration for aggregated analytics.
    * Enables GET /summaries/invoices?group_by=customer_id
    */
-  summaryConfig: {
+  summaryConfig: { // DEPRECATED: Use features.summary
     groupableFields: ['customer_id', 'work_order_id', 'status'],
     summableFields: ['total', 'tax', 'amount'],
   },
@@ -272,6 +290,39 @@ module.exports = {
       update: 'dispatcher', // Set when payment received
       delete: 'none',
     },
+
+    // =========================================================================
+    // QUICKBOOKS INTEGRATION FIELDS
+    // =========================================================================
+
+    // External ID from QuickBooks (DocNumber)
+    qb_invoice_id: {
+      create: 'admin',
+      read: 'dispatcher',
+      update: 'admin',
+      delete: 'none',
+    },
+    // Sync status enum
+    qb_sync_status: {
+      create: 'admin',
+      read: 'dispatcher',
+      update: 'admin',
+      delete: 'none',
+    },
+    // Last successful sync timestamp
+    qb_synced_at: {
+      create: 'admin',
+      read: 'dispatcher',
+      update: 'admin',
+      delete: 'none',
+    },
+    // Last sync error (restricted - may contain sensitive details)
+    qb_sync_error: {
+      create: 'admin',
+      read: 'admin',
+      update: 'admin',
+      delete: 'none',
+    },
   },
 
   // ============================================================================
@@ -286,6 +337,14 @@ module.exports = {
       overdue: { color: 'warning', label: 'Overdue' },
       cancelled: { color: 'error', label: 'Cancelled' },
       void: { color: 'error', label: 'Void' },
+    },
+    // QuickBooks sync status enum
+    qb_sync_status: {
+      pending: { color: 'secondary', label: 'Pending' },
+      synced: { color: 'success', label: 'Synced' },
+      modified: { color: 'warning', label: 'Modified' },
+      error: { color: 'error', label: 'Error' },
+      skipped: { color: 'secondary', label: 'Skipped' },
     },
   },
 
@@ -408,5 +467,49 @@ module.exports = {
     // Date fields
     due_date: withTraits({ type: 'date', description: 'Payment due date' }, TRAIT_SETS.LOOKUP),
     paid_at: withTraits({ type: 'timestamp', description: 'Payment timestamp' }, TRAIT_SETS.LOOKUP),
+
+    // =========================================================================
+    // QUICKBOOKS INTEGRATION FIELDS
+    // =========================================================================
+
+    // External ID from QuickBooks (DocNumber)
+    qb_invoice_id: withTraits(
+      {
+        type: 'string',
+        maxLength: 50,
+        description: 'QuickBooks Invoice DocNumber',
+        pattern: '^[A-Za-z0-9-]+$',
+      },
+      TRAIT_SETS.FILTER_ONLY,
+    ),
+
+    // Sync status enum
+    qb_sync_status: withTraits(
+      {
+        type: 'enum',
+        enumKey: 'qb_sync_status',
+        default: null,
+        description: 'QuickBooks synchronization status',
+      },
+      TRAIT_SETS.FILTER_ONLY,
+    ),
+
+    // Last successful sync timestamp
+    qb_synced_at: withTraits(
+      {
+        type: 'timestamp',
+        description: 'Timestamp of last successful QuickBooks sync',
+      },
+      TRAIT_SETS.FILTER_ONLY,
+    ),
+
+    // Last sync error (cleared on success)
+    // NOTE: Intentionally no traits - error messages should not be filterable/searchable
+    // as they may contain sensitive details. Admin-only read access via fieldAccess.
+    qb_sync_error: {
+      type: 'text',
+      maxLength: 500,
+      description: 'Last QuickBooks sync error message',
+    },
   },
 };

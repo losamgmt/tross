@@ -39,12 +39,21 @@ module.exports = {
   /**
    * Marks this as a junction entity for M:M relationships
    */
-  isJunction: true,
+  // ============================================================================
+  // CONSOLIDATED JUNCTION CONFIGURATION
+  // ============================================================================
+
+  junction: {
+    entities: ['visit', 'technician'],
+    uniqueOn: [['visit_id', 'technician_id']],
+  },
+
+  isJunction: true, // DEPRECATED: Use junction !== null
 
   /**
    * The two entities this junction connects
    */
-  junctionFor: {
+  junctionFor: { // DEPRECATED: Use junction.entities
     entity1: 'visit',
     entity2: 'technician',
   },
@@ -88,16 +97,35 @@ module.exports = {
   ],
 
   /**
+   * Navigation configuration - consolidated
+   * null = junction tables are managed through the parent entities' UI
+   */
+  navigation: null,
+
+  /**
    * Junction tables are not shown in navigation
    * They are managed through the parent entities' UI
+   * DEPRECATED: Use navigation
    */
   navVisibility: null,
 
+  /**
+   * Features configuration - consolidated
+   */
+  features: {
+    fileAttachments: false,
+    summary: null,
+  },
+
+  /**
+   * DEPRECATED: Use features.fileAttachments
+   */
   supportsFileAttachments: false,
 
   /**
    * Summary endpoint configuration for aggregated analytics.
    * Null: Junction table for visit-technician relationships.
+   * DEPRECATED: Use features.summary
    */
   summaryConfig: null,
 

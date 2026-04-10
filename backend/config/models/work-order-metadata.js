@@ -110,25 +110,49 @@ module.exports = {
     },
   ],
 
+  // ============================================================================
+  // CONSOLIDATED NAVIGATION & FEATURES
+  // ============================================================================
+
+  navigation: {
+    visibility: 'customer',
+    group: 'work',
+    order: 1,
+  },
+
+  features: {
+    fileAttachments: true,
+    summary: {
+      groupableFields: [
+        'customer_id',
+        'property_id',
+        'unit_id',
+        'assigned_technician_id',
+        'status',
+        'priority',
+      ],
+    },
+  },
+
   /**
    * Navigation visibility - minimum role to see this entity in nav menus
    * Work orders are visible to all authenticated users
    */
-  navVisibility: 'customer',
-  navGroup: 'work',
-  navOrder: 1,
+  navVisibility: 'customer', // DEPRECATED: Use navigation.visibility
+  navGroup: 'work', // DEPRECATED: Use navigation.group
+  navOrder: 1, // DEPRECATED: Use navigation.order
 
   /**
    * File attachments - whether this entity supports file uploads
    * Work orders: before/after photos, inspection reports, completion docs
    */
-  supportsFileAttachments: true,
+  supportsFileAttachments: true, // DEPRECATED: Use features.fileAttachments
 
   /**
    * Summary endpoint configuration for aggregated analytics.
    * Enables GET /summaries/work-orders?group_by=unit_id&property_id=123
    */
-  summaryConfig: {
+  summaryConfig: { // DEPRECATED: Use features.summary
     groupableFields: [
       'customer_id',
       'property_id',

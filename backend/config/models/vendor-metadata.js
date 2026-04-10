@@ -61,16 +61,33 @@ module.exports = {
     },
   ],
 
-  navVisibility: 'dispatcher',
-  navGroup: 'resources',
-  navOrder: 3,
+  // ============================================================================
+  // CONSOLIDATED NAVIGATION & FEATURES
+  // ============================================================================
 
-  supportsFileAttachments: false,
+  navigation: {
+    visibility: 'dispatcher',
+    group: 'resources',
+    order: 3,
+  },
+
+  features: {
+    fileAttachments: false,
+    summary: {
+      groupableFields: ['status'],
+    },
+  },
+
+  navVisibility: 'dispatcher', // DEPRECATED: Use navigation.visibility
+  navGroup: 'resources', // DEPRECATED: Use navigation.group
+  navOrder: 3, // DEPRECATED: Use navigation.order
+
+  supportsFileAttachments: false, // DEPRECATED: Use features.fileAttachments
 
   /**
    * Summary endpoint configuration for aggregated analytics.
    */
-  summaryConfig: {
+  summaryConfig: { // DEPRECATED: Use features.summary
     groupableFields: ['status'],
   },
 

@@ -68,18 +68,37 @@ module.exports = {
   ],
 
   /**
+   * Navigation configuration - consolidated
+   * null = not shown in entity nav (accessed via admin Logs section)
+   */
+  navigation: null,
+
+  /**
    * Navigation visibility - null means not shown in entity nav
    * Audit logs are accessed via admin Logs section, not entity list
+   * DEPRECATED: Use navigation
    */
   navVisibility: null,
 
   /**
+   * Features configuration - consolidated
+   */
+  features: {
+    fileAttachments: false,
+    summary: {
+      groupableFields: ['resource_type', 'action', 'user_id'],
+    },
+  },
+
+  /**
    * File attachments - whether this entity supports file uploads
+   * DEPRECATED: Use features.fileAttachments
    */
   supportsFileAttachments: false,
 
   /**
    * Summary endpoint configuration for aggregated analytics.
+   * DEPRECATED: Use features.summary
    */
   summaryConfig: {
     groupableFields: ['resource_type', 'action', 'user_id'],

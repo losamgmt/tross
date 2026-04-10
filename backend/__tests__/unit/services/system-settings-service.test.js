@@ -362,4 +362,292 @@ describe("SystemSettingsService", () => {
       expect(result).toBe(false);
     });
   });
+
+  // ===========================================================================
+  // INTEGRATION CREDENTIALS HELPERS
+  // ===========================================================================
+
+  describe("Integration Credentials - _validateProvider", () => {
+    it("should not throw for valid provider 'quickbooks'", () => {
+      expect(() =>
+        SystemSettingsService._validateProvider("quickbooks"),
+      ).not.toThrow();
+    });
+
+    it("should not throw for valid provider 'stripe'", () => {
+      expect(() =>
+        SystemSettingsService._validateProvider("stripe"),
+      ).not.toThrow();
+    });
+
+    it("should throw AppError for invalid provider", () => {
+      expect(() =>
+        SystemSettingsService._validateProvider("invalid"),
+      ).toThrow("Invalid integration provider: invalid");
+    });
+
+    it("should throw AppError for empty provider", () => {
+      expect(() => SystemSettingsService._validateProvider("")).toThrow(
+        "Invalid integration provider",
+      );
+    });
+
+    it("should throw AppError for null provider", () => {
+      expect(() => SystemSettingsService._validateProvider(null)).toThrow(
+        "Invalid integration provider",
+      );
+    });
+
+    it("should throw AppError for undefined provider", () => {
+      expect(() => SystemSettingsService._validateProvider(undefined)).toThrow(
+        "Invalid integration provider",
+      );
+    });
+  });
+
+  describe("Integration Credentials - getIntegrationTokens", () => {
+    it("should return tokens when stored", async () => {
+      const mockTokens = {
+        access_token: "eyJ...",
+        refresh_token: "AB1...",
+        expires_at: "2026-04-09T18:00:00Z",
+      };
+      db.mockResolvedValue({
+        rows: [{ key: "integration.quickbooks.tokens", value: mockTokens }],
+      });
+
+      const result =
+        await SystemSettingsService.getIntegrationTokens("quickbooks");
+
+      expect(result).toEqual(mockTokens);
+      expect(db).toHaveBeenCalledWith(
+        expect.stringContaining("SELECT"),
+        ["integration.quickbooks.tokens"],
+      );
+    });
+
+    it("should return null when no tokens stored", async () => {
+      db.mockResolvedValue({ rows: [] });
+
+      const result =
+        await SystemSettingsService.getIntegrationTokens("stripe");
+
+      expect(result).toBeNull();
+    });
+
+    it("should throw AppError for invalid provider", async () => {
+      await expect(
+        SystemSettingsService.getIntegrationTokens("paypal"),
+      ).rejects.toThrow("Invalid integration provider");
+    });
+  });
+
+  describe("Integration Credentials - setIntegrationTokens", () => {
+    it("should store tokens with stored_at timestamp", async () => {
+      const mockTokens = {
+        access_token: "eyJ...",
+        refresh_token: "AB1...",
+        expires_at: "2026-04-09T18:00:00Z",
+      };
+      db.mockResolvedValue({
+        rows: [
+          {
+            key: "integration.quickbooks.tokens",
+            value: { ...mockTokens, stored_at: expect.any(String) },
+          },
+        ],
+      });
+
+      const result = await SystemSettingsService.setIntegrationTokens(
+        "quickbooks",
+        mockTokens,
+        1,
+      );
+
+      expect(result).toBeDefined();
+      expect(db).toHaveBeenCalledWith(
+        expect.stringContaining("INSERT INTO system_settings"),
+        expect.arrayContaining(["integration.quickbooks.tokens"]),
+      );
+    });
+
+    it("should log INTEGRATION_TOKENS_UPDATED security event", async () => {
+      const mockTokens = {
+        access_token: "eyJ...",
+        refresh_token: "AB1...",
+        expires_at: "2026-04-09T18:00:00Z",
+      };
+      db.mockResolvedValue({
+        rows: [{ key: "integration.stripe.tokens", value: mockTokens }],
+      });
+
+      await SystemSettingsService.setIntegrationTokens("stripe", mockTokens, 1);
+
+      expect(logSecurityEvent).toHaveBeenCalledWith(
+        "INTEGRATION_TOKENS_UPDATED",
+        expect.objectContaining({
+          provider: "stripe",
+          userId: 1,
+          hasAccessToken: true,
+          hasRefreshToken: true,
+          expiresAt: "2026-04-09T18:00:00Z",
+        }),
+      );
+    });
+
+    it("should throw AppError for invalid provider", async () => {
+      await expect(
+        SystemSettingsService.setIntegrationTokens(
+          "invalid",
+          { access_token: "test" },
+          1,
+        ),
+      ).rejects.toThrow("Invalid integration provider");
+    });
+
+    it("should throw AppError if tokens is not an object", async () => {
+      await expect(
+        SystemSettingsService.setIntegrationTokens("quickbooks", "not-object", 1),
+      ).rejects.toThrow("Tokens must be an object");
+    });
+
+    it("should throw AppError if tokens is null", async () => {
+      await expect(
+        SystemSettingsService.setIntegrationTokens("quickbooks", null, 1),
+      ).rejects.toThrow("Tokens must be an object");
+    });
+
+    it("should throw AppError if tokens is undefined", async () => {
+      await expect(
+        SystemSettingsService.setIntegrationTokens("quickbooks", undefined, 1),
+      ).rejects.toThrow("Tokens must be an object");
+    });
+  });
+
+  describe("Integration Credentials - clearIntegrationTokens", () => {
+    it("should return false if no tokens existed", async () => {
+      db.mockResolvedValue({ rows: [] });
+
+      const result =
+        await SystemSettingsService.clearIntegrationTokens("quickbooks", 1);
+
+      expect(result).toBe(false);
+      expect(logSecurityEvent).not.toHaveBeenCalled();
+    });
+
+    it("should delete tokens and return true if tokens existed", async () => {
+      // First call: getIntegrationTokens finds existing tokens
+      db.mockResolvedValueOnce({
+        rows: [
+          {
+            key: "integration.quickbooks.tokens",
+            value: { access_token: "test" },
+          },
+        ],
+      });
+      // Second call: DELETE
+      db.mockResolvedValueOnce({ rows: [] });
+
+      const result =
+        await SystemSettingsService.clearIntegrationTokens("quickbooks", 1);
+
+      expect(result).toBe(true);
+      expect(db).toHaveBeenCalledWith(
+        expect.stringContaining("DELETE FROM system_settings"),
+        ["integration.quickbooks.tokens"],
+      );
+    });
+
+    it("should log INTEGRATION_DISCONNECTED security event", async () => {
+      db.mockResolvedValueOnce({
+        rows: [
+          {
+            key: "integration.stripe.tokens",
+            value: { access_token: "test" },
+          },
+        ],
+      });
+      db.mockResolvedValueOnce({ rows: [] });
+
+      await SystemSettingsService.clearIntegrationTokens("stripe", 1);
+
+      expect(logSecurityEvent).toHaveBeenCalledWith(
+        "INTEGRATION_DISCONNECTED",
+        expect.objectContaining({
+          provider: "stripe",
+          userId: 1,
+          clearedKey: "integration.stripe.tokens",
+        }),
+      );
+    });
+
+    it("should throw AppError for invalid provider", async () => {
+      await expect(
+        SystemSettingsService.clearIntegrationTokens("invalid", 1),
+      ).rejects.toThrow("Invalid integration provider");
+    });
+  });
+
+  describe("Integration Credentials - getIntegrationConfig", () => {
+    it("should return config when stored", async () => {
+      const mockConfig = {
+        realm_id: "123456789",
+        company_name: "Test Company",
+      };
+      db.mockResolvedValue({
+        rows: [{ key: "integration.quickbooks.config", value: mockConfig }],
+      });
+
+      const result =
+        await SystemSettingsService.getIntegrationConfig("quickbooks");
+
+      expect(result).toEqual(mockConfig);
+    });
+
+    it("should return null when no config stored", async () => {
+      db.mockResolvedValue({ rows: [] });
+
+      const result =
+        await SystemSettingsService.getIntegrationConfig("stripe");
+
+      expect(result).toBeNull();
+    });
+
+    it("should throw AppError for invalid provider", async () => {
+      await expect(
+        SystemSettingsService.getIntegrationConfig("invalid"),
+      ).rejects.toThrow("Invalid integration provider");
+    });
+  });
+
+  describe("Integration Credentials - setIntegrationConfig", () => {
+    it("should store config via updateSetting", async () => {
+      const mockConfig = { realm_id: "123456789" };
+      db.mockResolvedValue({
+        rows: [{ key: "integration.quickbooks.config", value: mockConfig }],
+      });
+
+      const result = await SystemSettingsService.setIntegrationConfig(
+        "quickbooks",
+        mockConfig,
+        1,
+      );
+
+      expect(result).toBeDefined();
+      expect(db).toHaveBeenCalledWith(
+        expect.stringContaining("INSERT INTO system_settings"),
+        expect.arrayContaining(["integration.quickbooks.config"]),
+      );
+    });
+
+    it("should throw AppError for invalid provider", async () => {
+      await expect(
+        SystemSettingsService.setIntegrationConfig(
+          "invalid",
+          { test: true },
+          1,
+        ),
+      ).rejects.toThrow("Invalid integration provider");
+    });
+  });
 });

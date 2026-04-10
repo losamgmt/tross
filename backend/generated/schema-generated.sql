@@ -1,7 +1,7 @@
 -- ============================================================================
 -- GENERATED SCHEMA - SINGLE SOURCE OF TRUTH
 -- ============================================================================
--- Generated: 2026-04-03T20:40:01.420Z
+-- Generated: 2026-04-07T22:28:50.116Z
 -- Command: npm run generate:schema
 --
 -- This file is for REVIEW. Merge changes into backend/schema.sql manually.
@@ -63,9 +63,6 @@ CREATE TABLE IF NOT EXISTS assets (
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_assets_name ON assets(name);
-CREATE INDEX IF NOT EXISTS idx_assets_manufacturer ON assets(manufacturer);
-CREATE INDEX IF NOT EXISTS idx_assets_model ON assets(model);
-CREATE INDEX IF NOT EXISTS idx_assets_serial_number ON assets(serial_number);
 CREATE INDEX IF NOT EXISTS idx_assets_unit_id ON assets(unit_id);
 CREATE INDEX IF NOT EXISTS idx_assets_property_id ON assets(property_id);
 
@@ -77,8 +74,8 @@ CREATE INDEX IF NOT EXISTS idx_assets_property_id ON assets(property_id);
 CREATE TABLE IF NOT EXISTS audit_logs (
     id SERIAL PRIMARY KEY,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    action VARCHAR(50) NOT NULL,
-    resource_type VARCHAR(100) NOT NULL,
+    action VARCHAR(50),
+    resource_type VARCHAR(100),
     resource_id INTEGER,
     user_id INTEGER,
     ip_address VARCHAR(45),
@@ -99,11 +96,11 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS contracts (
     id SERIAL PRIMARY KEY,
-    contract_number VARCHAR(100) UNIQUE,
+    contract_number VARCHAR(100) NOT NULL UNIQUE,
     is_active BOOLEAN DEFAULT true NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    status VARCHAR(25) DEFAULT 'draft' CHECK (status IN ('draft', 'active', 'expired', 'cancelled', 'terminated')),
+    status VARCHAR(25) DEFAULT 'active' CHECK (status IN ('draft', 'active', 'expired', 'cancelled', 'terminated')),
     name VARCHAR(255),
     summary VARCHAR(255),
     customer_id INTEGER NOT NULL,
@@ -116,8 +113,6 @@ CREATE TABLE IF NOT EXISTS contracts (
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_contracts_contract_number ON contracts(contract_number);
-CREATE INDEX IF NOT EXISTS idx_contracts_name ON contracts(name);
-CREATE INDEX IF NOT EXISTS idx_contracts_summary ON contracts(summary);
 CREATE INDEX IF NOT EXISTS idx_contracts_customer_id ON contracts(customer_id);
 
 -- ============================================================================
@@ -131,7 +126,6 @@ CREATE TABLE IF NOT EXISTS customer_units (
     is_active BOOLEAN DEFAULT true NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    status VARCHAR(25) DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
     customer_id INTEGER NOT NULL,
     unit_id INTEGER NOT NULL,
     effective_date DATE,
@@ -156,7 +150,7 @@ CREATE TABLE IF NOT EXISTS customers (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
-    status VARCHAR(25) DEFAULT 'pending' CHECK (status IN ('pending', 'active', 'suspended')),
+    status VARCHAR(25) DEFAULT 'active' CHECK (status IN ('pending', 'active', 'suspended')),
     phone VARCHAR(50),
     organization_name VARCHAR(255),
     billing_line1 VARCHAR(255),
@@ -175,10 +169,6 @@ CREATE TABLE IF NOT EXISTS customers (
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_customers_email ON customers(email);
-CREATE INDEX IF NOT EXISTS idx_customers_first_name ON customers(first_name);
-CREATE INDEX IF NOT EXISTS idx_customers_last_name ON customers(last_name);
-CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone);
-CREATE INDEX IF NOT EXISTS idx_customers_organization_name ON customers(organization_name);
 
 -- ============================================================================
 -- DEPARTMENTS
@@ -198,7 +188,6 @@ CREATE TABLE IF NOT EXISTS departments (
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_departments_name ON departments(name);
-CREATE INDEX IF NOT EXISTS idx_departments_description ON departments(description);
 CREATE INDEX IF NOT EXISTS idx_departments_manager_id ON departments(manager_id);
 
 -- ============================================================================
@@ -224,7 +213,6 @@ CREATE TABLE IF NOT EXISTS file_attachments (
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_file_attachments_original_filename ON file_attachments(original_filename);
-CREATE INDEX IF NOT EXISTS idx_file_attachments_description ON file_attachments(description);
 CREATE INDEX IF NOT EXISTS idx_file_attachments_uploaded_by ON file_attachments(uploaded_by);
 
 -- ============================================================================
@@ -250,8 +238,6 @@ CREATE TABLE IF NOT EXISTS inventory (
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_inventory_sku ON inventory(sku);
-CREATE INDEX IF NOT EXISTS idx_inventory_name ON inventory(name);
-CREATE INDEX IF NOT EXISTS idx_inventory_description ON inventory(description);
 
 -- ============================================================================
 -- INVOICES
@@ -260,15 +246,15 @@ CREATE INDEX IF NOT EXISTS idx_inventory_description ON inventory(description);
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS invoices (
     id SERIAL PRIMARY KEY,
-    invoice_number VARCHAR(100) UNIQUE,
+    invoice_number VARCHAR(100) NOT NULL UNIQUE,
     is_active BOOLEAN DEFAULT true NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     status VARCHAR(25) DEFAULT 'draft' CHECK (status IN ('draft', 'sent', 'paid', 'overdue', 'cancelled', 'void')),
     name VARCHAR(255),
     summary VARCHAR(255),
-    work_order_id INTEGER,
     customer_id INTEGER NOT NULL,
+    work_order_id INTEGER,
     amount DECIMAL(12,2) NOT NULL,
     tax DECIMAL(12,2) DEFAULT 0,
     total DECIMAL(12,2) NOT NULL,
@@ -278,10 +264,8 @@ CREATE TABLE IF NOT EXISTS invoices (
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_invoices_invoice_number ON invoices(invoice_number);
-CREATE INDEX IF NOT EXISTS idx_invoices_name ON invoices(name);
-CREATE INDEX IF NOT EXISTS idx_invoices_summary ON invoices(summary);
-CREATE INDEX IF NOT EXISTS idx_invoices_work_order_id ON invoices(work_order_id);
 CREATE INDEX IF NOT EXISTS idx_invoices_customer_id ON invoices(customer_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_work_order_id ON invoices(work_order_id);
 
 -- ============================================================================
 -- MAINTENANCE_SCHEDULES
@@ -324,7 +308,7 @@ CREATE TABLE IF NOT EXISTS notifications (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     user_id INTEGER NOT NULL,
     body TEXT,
-    type VARCHAR(25) NOT NULL CHECK (type IN ('info', 'success', 'warning', 'error', 'assignment', 'reminder')),
+    type VARCHAR(25) NOT NULL DEFAULT 'info' CHECK (type IN ('info', 'success', 'warning', 'error', 'assignment', 'reminder')),
     resource_type VARCHAR(50),
     resource_id INTEGER,
     is_read BOOLEAN DEFAULT FALSE,
@@ -333,7 +317,6 @@ CREATE TABLE IF NOT EXISTS notifications (
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_notifications_title ON notifications(title);
-CREATE INDEX IF NOT EXISTS idx_notifications_body ON notifications(body);
 CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
 
 -- ============================================================================
@@ -374,8 +357,8 @@ CREATE TABLE IF NOT EXISTS preferences (
     theme VARCHAR(25) DEFAULT 'system' CHECK (theme IN ('system', 'light', 'dark')),
     density VARCHAR(27) DEFAULT 'comfortable' CHECK (density IN ('compact', 'standard', 'comfortable')),
     notifications_enabled BOOLEAN DEFAULT TRUE,
-    items_per_page INTEGER DEFAULT 25,
     notification_retention_days INTEGER DEFAULT 30,
+    items_per_page INTEGER DEFAULT 25,
     auto_refresh_interval INTEGER DEFAULT 0
 );
 
@@ -407,8 +390,6 @@ CREATE TABLE IF NOT EXISTS properties (
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_properties_name ON properties(name);
-CREATE INDEX IF NOT EXISTS idx_properties_address_city ON properties(address_city);
-CREATE INDEX IF NOT EXISTS idx_properties_address_state ON properties(address_state);
 
 -- ============================================================================
 -- PROPERTY_ROLES
@@ -421,7 +402,6 @@ CREATE TABLE IF NOT EXISTS property_roles (
     is_active BOOLEAN DEFAULT true NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    status VARCHAR(25) DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
     customer_id INTEGER NOT NULL,
     property_id INTEGER NOT NULL,
     effective_date DATE,
@@ -472,9 +452,9 @@ CREATE TABLE IF NOT EXISTS quotes (
     description TEXT,
     notes TEXT,
     valid_until DATE,
+    total_amount DECIMAL(10,2),
     customer_id INTEGER NOT NULL,
-    property_id INTEGER,
-    total_amount DECIMAL(10,2)
+    property_id INTEGER
 );
 
 -- Indexes
@@ -550,8 +530,6 @@ CREATE TABLE IF NOT EXISTS roles (
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_roles_priority ON roles(priority);
-CREATE INDEX IF NOT EXISTS idx_roles_name ON roles(name);
-CREATE INDEX IF NOT EXISTS idx_roles_description ON roles(description);
 
 -- ============================================================================
 -- SAVED_VIEWS
@@ -603,7 +581,7 @@ CREATE TABLE IF NOT EXISTS service_agreements (
     is_active BOOLEAN DEFAULT true NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    status VARCHAR(25) DEFAULT 'draft' CHECK (status IN ('draft', 'pending', 'active', 'expired', 'cancelled')),
+    status VARCHAR(25) DEFAULT 'active' CHECK (status IN ('draft', 'pending', 'active', 'expired', 'cancelled')),
     start_date DATE NOT NULL,
     end_date DATE,
     auto_renewal BOOLEAN DEFAULT FALSE,
@@ -669,7 +647,7 @@ CREATE TABLE IF NOT EXISTS technicians (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
-    status VARCHAR(25) DEFAULT 'pending' CHECK (status IN ('pending', 'active', 'suspended')),
+    status VARCHAR(25) DEFAULT 'active' CHECK (status IN ('pending', 'active', 'suspended')),
     availability VARCHAR(25) DEFAULT 'available' CHECK (availability IN ('available', 'on_job', 'off_duty')),
     license_number VARCHAR(100),
     hourly_rate DECIMAL(12,2),
@@ -679,9 +657,6 @@ CREATE TABLE IF NOT EXISTS technicians (
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_technicians_email ON technicians(email);
-CREATE INDEX IF NOT EXISTS idx_technicians_first_name ON technicians(first_name);
-CREATE INDEX IF NOT EXISTS idx_technicians_last_name ON technicians(last_name);
-CREATE INDEX IF NOT EXISTS idx_technicians_license_number ON technicians(license_number);
 
 -- ============================================================================
 -- UNITS
@@ -705,7 +680,6 @@ CREATE TABLE IF NOT EXISTS units (
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_units_unit_identifier ON units(unit_identifier);
-CREATE INDEX IF NOT EXISTS idx_units_notes ON units(notes);
 CREATE INDEX IF NOT EXISTS idx_units_property_id ON units(property_id);
 
 -- ============================================================================
@@ -721,7 +695,7 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
-    status VARCHAR(25) DEFAULT 'pending' CHECK (status IN ('pending', 'active', 'suspended')),
+    status VARCHAR(25) DEFAULT 'active' CHECK (status IN ('pending', 'active', 'suspended')),
     auth0_id VARCHAR(255),
     role_id INTEGER,
     customer_profile_id INTEGER,
@@ -730,8 +704,6 @@ CREATE TABLE IF NOT EXISTS users (
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
-CREATE INDEX IF NOT EXISTS idx_users_first_name ON users(first_name);
-CREATE INDEX IF NOT EXISTS idx_users_last_name ON users(last_name);
 CREATE INDEX IF NOT EXISTS idx_users_role_id ON users(role_id);
 CREATE INDEX IF NOT EXISTS idx_users_customer_profile_id ON users(customer_profile_id);
 CREATE INDEX IF NOT EXISTS idx_users_technician_profile_id ON users(technician_profile_id);
@@ -755,7 +727,6 @@ CREATE TABLE IF NOT EXISTS vendors (
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_vendors_name ON vendors(name);
-CREATE INDEX IF NOT EXISTS idx_vendors_contact_email ON vendors(contact_email);
 
 -- ============================================================================
 -- VISIT_SUBCONTRACTORS
@@ -824,7 +795,7 @@ CREATE INDEX IF NOT EXISTS idx_visits_work_order_id ON visits(work_order_id);
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS work_orders (
     id SERIAL PRIMARY KEY,
-    work_order_number VARCHAR(100) UNIQUE,
+    work_order_number VARCHAR(100) NOT NULL UNIQUE,
     is_active BOOLEAN DEFAULT true NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -852,8 +823,6 @@ CREATE TABLE IF NOT EXISTS work_orders (
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_work_orders_work_order_number ON work_orders(work_order_number);
-CREATE INDEX IF NOT EXISTS idx_work_orders_name ON work_orders(name);
-CREATE INDEX IF NOT EXISTS idx_work_orders_summary ON work_orders(summary);
 CREATE INDEX IF NOT EXISTS idx_work_orders_customer_id ON work_orders(customer_id);
 CREATE INDEX IF NOT EXISTS idx_work_orders_property_id ON work_orders(property_id);
 CREATE INDEX IF NOT EXISTS idx_work_orders_unit_id ON work_orders(unit_id);
@@ -871,8 +840,8 @@ ALTER TABLE customer_units ADD CONSTRAINT fk_customer_units_customer_id FOREIGN 
 ALTER TABLE customer_units ADD CONSTRAINT fk_customer_units_unit_id FOREIGN KEY (unit_id) REFERENCES units(id);
 ALTER TABLE departments ADD CONSTRAINT fk_departments_manager_id FOREIGN KEY (manager_id) REFERENCES users(id);
 ALTER TABLE file_attachments ADD CONSTRAINT fk_file_attachments_uploaded_by FOREIGN KEY (uploaded_by) REFERENCES users(id);
-ALTER TABLE invoices ADD CONSTRAINT fk_invoices_work_order_id FOREIGN KEY (work_order_id) REFERENCES work_orders(id);
 ALTER TABLE invoices ADD CONSTRAINT fk_invoices_customer_id FOREIGN KEY (customer_id) REFERENCES customers(id);
+ALTER TABLE invoices ADD CONSTRAINT fk_invoices_work_order_id FOREIGN KEY (work_order_id) REFERENCES work_orders(id);
 ALTER TABLE maintenance_schedules ADD CONSTRAINT fk_maintenance_schedules_customer_id FOREIGN KEY (customer_id) REFERENCES customers(id);
 ALTER TABLE maintenance_schedules ADD CONSTRAINT fk_maintenance_schedules_asset_id FOREIGN KEY (asset_id) REFERENCES assets(id);
 ALTER TABLE maintenance_schedules ADD CONSTRAINT fk_maintenance_schedules_service_template_id FOREIGN KEY (service_template_id) REFERENCES service_templates(id);

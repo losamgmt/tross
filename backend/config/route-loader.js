@@ -22,6 +22,7 @@
 const allMetadata = require('./models');
 const entityRouters = require('../routes/entities');
 const { createFileSubRouter } = require('../routes/file-sub-router');
+const { getFeatures } = require('./metadata-accessors');
 
 // Derive uncountable entity names from metadata at load time (no hardcoding!)
 const UNCOUNTABLE_ENTITIES = Object.entries(allMetadata)
@@ -124,7 +125,9 @@ function loadFileSubRoutes() {
 
   for (const [entityName, metadata] of Object.entries(allMetadata)) {
     // Only create file sub-routes for entities that support file attachments
-    if (!metadata.supportsFileAttachments) {
+    // Use getFeatures() accessor for consolidated features property
+    const features = getFeatures(metadata);
+    if (!features.fileAttachments) {
       continue;
     }
 

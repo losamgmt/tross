@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Integration Foundation (Phase 0) (2026-04-09)
+
+Foundation infrastructure for QuickBooks and Stripe integrations.
+
+#### New Files
+
+| File | Purpose |
+|------|---------|
+| `utils/webhook-validator.js` | HMAC signature verification (Stripe, QuickBooks, generic) |
+| `migrations/003_add_integration_sync_fields.sql` | DB columns for sync tracking |
+
+#### Extended Files
+
+| File | Changes |
+|------|---------|
+| `services/system-settings-service.js` | +6 methods for integration credential storage |
+| `config/models/invoice-metadata.js` | +4 QuickBooks sync fields |
+| `config/models/payment-metadata.js` | +4 Stripe/QB integration fields |
+| `config/env-manifest.js` | +8 integration environment variables |
+
+#### Features
+
+- **Webhook Signature Validation**: Timing-safe HMAC verification with replay attack prevention (Stripe)
+- **Integration Credentials**: OAuth token storage via SystemSettingsService extension
+- **Sync Status Tracking**: Enum-based status (pending/synced/modified/error/skipped) with timestamps
+- **Environment Variables**: 5 security-critical + 3 optional integration vars with validators
+
+#### Security
+
+- Timing-safe string comparison prevents timing attacks
+- Stripe replay attack prevention via timestamp validation (300s default tolerance)
+- Admin-only access for integration fields
+- HTTPS required for OAuth redirect URI in production
+
+#### Test Coverage
+
+- **88 new tests**: webhook-validator (39), system-settings integration methods (49)
+- **39 env-manifest tests** covering new variables
+
 ### Fixed - RLS Cache Bug (2026-03-27)
 
 #### Root Cause

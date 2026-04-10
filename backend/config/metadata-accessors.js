@@ -459,6 +459,124 @@ function getAllHooks(metadata) {
 }
 
 // ============================================================================
+// NAVIGATION (navVisibility, navGroup, navOrder → navigation)
+// ============================================================================
+
+/**
+ * Get navigation configuration for an entity.
+ * Reads from `navigation: { ... }` first, falls back to legacy nav* properties.
+ *
+ * @param {Object} metadata - Entity metadata
+ * @returns {Object|null} Navigation config { visibility, group, order } or null if hidden
+ */
+function getNavigation(metadata) {
+  const entityKey = metadata.entityKey || 'unknown';
+
+  // Check for new consolidated navigation property
+  if (metadata.navigation !== undefined) {
+    return metadata.navigation;
+  }
+
+  // Fall back to legacy nav* properties
+  const visibility = metadata.navVisibility;
+
+  // If explicitly null, this entity is hidden from navigation
+  if (visibility === null) {
+    return null;
+  }
+
+  // If any legacy nav property exists, use them and warn
+  if (visibility !== undefined) {
+    logDeprecationWarning(entityKey, 'navVisibility');
+    return {
+      visibility: visibility,
+      group: metadata.navGroup || null,
+      order: metadata.navOrder || 0,
+    };
+  }
+
+  // No navigation config
+  return null;
+}
+
+// ============================================================================
+// FEATURES (supportsFileAttachments, summaryConfig → features)
+// ============================================================================
+
+/**
+ * Get features configuration for an entity.
+ * Reads from `features: { ... }` first, falls back to legacy properties.
+ *
+ * @param {Object} metadata - Entity metadata
+ * @returns {Object} Features config { fileAttachments, summary }
+ */
+function getFeatures(metadata) {
+  const entityKey = metadata.entityKey || 'unknown';
+
+  // Check for new consolidated features property
+  if (metadata.features !== undefined) {
+    return metadata.features;
+  }
+
+  // Build from legacy properties
+  const result = {};
+
+  if (metadata.supportsFileAttachments !== undefined) {
+    logDeprecationWarning(entityKey, 'supportsFileAttachments');
+    result.fileAttachments = metadata.supportsFileAttachments;
+  }
+
+  if (metadata.summaryConfig !== undefined) {
+    logDeprecationWarning(entityKey, 'summaryConfig');
+    result.summary = metadata.summaryConfig;
+  }
+
+  return result;
+}
+
+// ============================================================================
+// JUNCTION (junctionFor, isJunction → junction)
+// ============================================================================
+
+/**
+ * Get junction configuration for an entity.
+ * Reads from `junction: { ... }` first, falls back to legacy junctionFor.
+ *
+ * @param {Object} metadata - Entity metadata
+ * @returns {Object|null} Junction config { entities, uniqueOn } or null if not a junction
+ */
+function getJunction(metadata) {
+  const entityKey = metadata.entityKey || 'unknown';
+
+  // Check for new consolidated junction property
+  if (metadata.junction !== undefined) {
+    return metadata.junction;
+  }
+
+  // Fall back to legacy junctionFor property
+  if (metadata.junctionFor) {
+    logDeprecationWarning(entityKey, 'junctionFor');
+    const { entity1, entity2 } = metadata.junctionFor;
+    return {
+      entities: [entity1, entity2],
+      uniqueOn: [[`${entity1}_id`, `${entity2}_id`]],
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Check if an entity is a junction table.
+ *
+ * @param {Object} metadata - Entity metadata
+ * @returns {boolean} True if entity is a junction
+ */
+function isJunctionEntity(metadata) {
+  return getJunction(metadata) !== null;
+}
+
+// ============================================================================
 // MIGRATION HELPERS
 // ============================================================================
 
@@ -526,6 +644,33 @@ function checkLegacyUsage(metadata) {
     if (!hasFieldLevel) {
       legacyProperties.push('fieldAccess');
     }
+  }
+
+  // Check for legacy navigation properties
+  if (metadata.navVisibility !== undefined && metadata.navigation === undefined) {
+    legacyProperties.push('navVisibility');
+  }
+  if (metadata.navGroup !== undefined && metadata.navigation === undefined) {
+    legacyProperties.push('navGroup');
+  }
+  if (metadata.navOrder !== undefined && metadata.navigation === undefined) {
+    legacyProperties.push('navOrder');
+  }
+
+  // Check for legacy feature properties
+  if (metadata.supportsFileAttachments !== undefined && metadata.features === undefined) {
+    legacyProperties.push('supportsFileAttachments');
+  }
+  if (metadata.summaryConfig !== undefined && metadata.features === undefined) {
+    legacyProperties.push('summaryConfig');
+  }
+
+  // Check for legacy junction properties
+  if (metadata.junctionFor !== undefined && metadata.junction === undefined) {
+    legacyProperties.push('junctionFor');
+  }
+  if (metadata.isJunction !== undefined && metadata.junction === undefined) {
+    legacyProperties.push('isJunction');
   }
 
   return {
@@ -607,6 +752,16 @@ module.exports = {
   getBeforeChangeHooks,
   getAfterChangeHooks,
   getAllHooks,
+
+  // Navigation
+  getNavigation,
+
+  // Features
+  getFeatures,
+
+  // Junction
+  getJunction,
+  isJunctionEntity,
 
   // Migration helpers
   checkLegacyUsage,

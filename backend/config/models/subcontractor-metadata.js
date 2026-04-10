@@ -72,13 +72,30 @@ module.exports = {
     delete: 'admin',
   },
 
-  navVisibility: 'manager',
-  navGroup: 'resources',
-  navOrder: 3,
+  // ============================================================================
+  // CONSOLIDATED NAVIGATION & FEATURES
+  // ============================================================================
 
-  supportsFileAttachments: true,
+  navigation: {
+    visibility: 'manager',
+    group: 'resources',
+    order: 3,
+  },
 
-  summaryConfig: {
+  features: {
+    fileAttachments: true,
+    summary: {
+      groupableFields: ['status'],
+    },
+  },
+
+  navVisibility: 'manager', // DEPRECATED: Use navigation.visibility
+  navGroup: 'resources', // DEPRECATED: Use navigation.group
+  navOrder: 3, // DEPRECATED: Use navigation.order
+
+  supportsFileAttachments: true, // DEPRECATED: Use features.fileAttachments
+
+  summaryConfig: { // DEPRECATED: Use features.summary
     groupableFields: ['status'],
   },
 
