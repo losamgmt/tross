@@ -1680,10 +1680,12 @@ describe("GenericEntityService", () => {
       });
 
       test("should only update provided fields", async () => {
-        // Arrange
-        db.query.mockResolvedValue({
-          rows: [{ id: 1, email: "test@example.com", status: "active" }],
-        });
+        // Arrange - findById for hooks + UPDATE + findById refetch
+        const existingRecord = { id: 1, email: "test@example.com", status: "inactive" };
+        db.query
+          .mockResolvedValueOnce({ rows: [existingRecord] }) // findById for hooks
+          .mockResolvedValueOnce({ rows: [{ id: 1 }] }) // UPDATE RETURNING id
+          .mockResolvedValueOnce({ rows: [{ id: 1, email: "test@example.com", status: "active" }] }); // findById refetch
 
         // Act
         await GenericEntityService.update("customer", 1, {
@@ -1691,8 +1693,8 @@ describe("GenericEntityService", () => {
           // email, phone NOT provided - should not be in query
         });
 
-        // Assert
-        const [query] = db.query.mock.calls[0];
+        // Assert - Second call (index 1) is the UPDATE query
+        const [query] = db.query.mock.calls[1];
         expect(query).toContain("status");
         expect(query).not.toContain("email ="); // email not in SET clause
       });
@@ -1811,8 +1813,10 @@ describe("GenericEntityService", () => {
 
     describe("query structure", () => {
       test("should build UPDATE ... SET ... WHERE ... RETURNING query", async () => {
-        // Arrange - UPDATE returns id, then findById re-fetches with JOINs
+        // Arrange - findById for hooks + UPDATE + findById refetch
+        const existingRecord = { id: 1, phone: "555-0000" };
         db.query
+          .mockResolvedValueOnce({ rows: [existingRecord] }) // findById for hooks
           .mockResolvedValueOnce({ rows: [{ id: 1 }] }) // UPDATE RETURNING id
           .mockResolvedValueOnce({ rows: [{ id: 1, phone: "555-1234" }] }); // findById re-fetch
 
@@ -1821,8 +1825,8 @@ describe("GenericEntityService", () => {
           phone: "555-1234",
         });
 
-        // Assert - First call is UPDATE with RETURNING id (not RETURNING *)
-        const [query] = db.query.mock.calls[0];
+        // Assert - Second call (index 1) is the UPDATE query
+        const [query] = db.query.mock.calls[1];
         expect(query).toContain("UPDATE customers");
         expect(query).toContain("SET");
         expect(query).toContain("WHERE id =");
@@ -1830,8 +1834,10 @@ describe("GenericEntityService", () => {
       });
 
       test("should re-fetch entity via findById after update", async () => {
-        // Arrange - UPDATE returns id, then findById re-fetches with JOINs
+        // Arrange - findById for hooks + UPDATE + findById refetch
+        const existingRecord = { id: 1, phone: "555-0000" };
         db.query
+          .mockResolvedValueOnce({ rows: [existingRecord] }) // findById for hooks
           .mockResolvedValueOnce({ rows: [{ id: 1 }] }) // UPDATE RETURNING id
           .mockResolvedValueOnce({ rows: [{ id: 1, phone: "555-1234" }] }); // findById re-fetch
 
@@ -1840,17 +1846,19 @@ describe("GenericEntityService", () => {
           phone: "555-1234",
         });
 
-        // Assert - Second call is SELECT (findById)
-        expect(db.query).toHaveBeenCalledTimes(2);
-        const [selectQuery] = db.query.mock.calls[1];
+        // Assert - Three calls: findById for hooks + UPDATE + findById refetch
+        expect(db.query).toHaveBeenCalledTimes(3);
+        const [selectQuery] = db.query.mock.calls[2];
         expect(selectQuery).toContain("SELECT customers.*");
         expect(selectQuery).toContain("FROM customers");
         expect(selectQuery).toContain("WHERE customers.id = $1");
       });
 
       test("should use parameterized query with $1, $2, etc", async () => {
-        // Arrange
+        // Arrange - findById for hooks + UPDATE + findById refetch
+        const existingRecord = { id: 1, phone: "555-0000", status: "inactive" };
         db.query
+          .mockResolvedValueOnce({ rows: [existingRecord] }) // findById for hooks
           .mockResolvedValueOnce({ rows: [{ id: 1 }] }) // UPDATE RETURNING id
           .mockResolvedValueOnce({
             rows: [{ id: 1, phone: "555-1234", status: "active" }],
@@ -1862,8 +1870,8 @@ describe("GenericEntityService", () => {
           status: "active",
         });
 
-        // Assert
-        const [query, values] = db.query.mock.calls[0];
+        // Assert - Second call (index 1) is the UPDATE query
+        const [query, values] = db.query.mock.calls[1];
         expect(query).toContain("$1");
         expect(query).toContain("$2");
         expect(query).toContain("$3"); // ID is last
@@ -1872,8 +1880,10 @@ describe("GenericEntityService", () => {
       });
 
       test("should use correct table name from metadata", async () => {
-        // Arrange
+        // Arrange - findById for hooks + UPDATE + findById refetch
+        const existingRecord = { id: 1, description: "Old" };
         db.query
+          .mockResolvedValueOnce({ rows: [existingRecord] }) // findById for hooks
           .mockResolvedValueOnce({ rows: [{ id: 1 }] }) // UPDATE RETURNING id
           .mockResolvedValueOnce({ rows: [{ id: 1, description: "Updated" }] }); // findById re-fetch
 
@@ -1882,8 +1892,8 @@ describe("GenericEntityService", () => {
           description: "Updated",
         });
 
-        // Assert
-        const [query] = db.query.mock.calls[0];
+        // Assert - Second call (index 1) is the UPDATE query
+        const [query] = db.query.mock.calls[1];
         expect(query).toContain("UPDATE roles");
       });
     });
@@ -1894,13 +1904,19 @@ describe("GenericEntityService", () => {
 
     describe("works with multiple entities", () => {
       test("should update role entity", async () => {
-        // Arrange - UPDATE returns id, then findById re-fetches
+        // Arrange - findById for hooks + UPDATE + findById re-fetch
+        const existingRole = {
+          id: 1,
+          description: "Old description",
+          is_active: true,
+        };
         const updatedRole = {
           id: 1,
           description: "New description",
           is_active: true,
         };
         db.query
+          .mockResolvedValueOnce({ rows: [existingRole] }) // findById for hooks
           .mockResolvedValueOnce({ rows: [{ id: 1 }] }) // UPDATE RETURNING id
           .mockResolvedValueOnce({ rows: [updatedRole] }); // findById re-fetch
 
@@ -1914,13 +1930,19 @@ describe("GenericEntityService", () => {
       });
 
       test("should update workOrder entity", async () => {
-        // Arrange - UPDATE returns id, then findById re-fetches
+        // Arrange - findById for hooks + UPDATE + findById re-fetch
+        const existingWorkOrder = {
+          id: 1,
+          title: "Old Title",
+          status: "pending",
+        };
         const updatedWorkOrder = {
           id: 1,
           title: "Updated Title",
           status: "in_progress",
         };
         db.query
+          .mockResolvedValueOnce({ rows: [existingWorkOrder] }) // findById for hooks
           .mockResolvedValueOnce({ rows: [{ id: 1 }] }) // UPDATE RETURNING id
           .mockResolvedValueOnce({ rows: [updatedWorkOrder] }); // findById re-fetch
 
@@ -1989,7 +2011,13 @@ describe("GenericEntityService", () => {
       test("should allow updating description on system role", async () => {
         // Arrange
         // description is NOT in immutableFields, so protection check is skipped entirely
-        // UPDATE + re-fetch via findById (for JOINs)
+        // findById for hooks + UPDATE + re-fetch via findById (for JOINs)
+        const existingRole = {
+          id: 1,
+          name: "admin",
+          priority: 100,
+          description: "Admin",
+        };
         const updatedRole = {
           id: 1,
           name: "admin",
@@ -1997,6 +2025,7 @@ describe("GenericEntityService", () => {
           description: "Updated admin description",
         };
         db.query
+          .mockResolvedValueOnce({ rows: [existingRole] }) // findById for hooks
           .mockResolvedValueOnce({ rows: [{ id: 1 }] }) // UPDATE RETURNING id
           .mockResolvedValueOnce({ rows: [updatedRole] }); // findById re-fetch
 
@@ -2008,14 +2037,20 @@ describe("GenericEntityService", () => {
         // Assert
         expect(result.description).toBe("Updated admin description");
         expect(result.name).toBe("admin"); // unchanged
-        // Two query calls: UPDATE + re-fetch via findById
-        expect(db.query).toHaveBeenCalledTimes(2);
+        // Three query calls: findById for hooks + UPDATE + re-fetch via findById
+        expect(db.query).toHaveBeenCalledTimes(3);
       });
 
       test("should allow updating is_active on system role", async () => {
         // Arrange
         // is_active is NOT in immutableFields, so protection check is skipped
-        // UPDATE + re-fetch via findById (for JOINs)
+        // findById for hooks + UPDATE + re-fetch via findById (for JOINs)
+        const existingRole = {
+          id: 3,
+          name: "dispatcher",
+          priority: 60,
+          is_active: true,
+        };
         const updatedRole = {
           id: 3,
           name: "dispatcher",
@@ -2023,6 +2058,7 @@ describe("GenericEntityService", () => {
           is_active: false,
         };
         db.query
+          .mockResolvedValueOnce({ rows: [existingRole] }) // findById for hooks
           .mockResolvedValueOnce({ rows: [{ id: 3 }] }) // UPDATE RETURNING id
           .mockResolvedValueOnce({ rows: [updatedRole] }); // findById re-fetch
 
@@ -2033,17 +2069,17 @@ describe("GenericEntityService", () => {
 
         // Assert
         expect(result.is_active).toBe(false);
-        // Two query calls: UPDATE + re-fetch via findById
-        expect(db.query).toHaveBeenCalledTimes(2);
+        // Three query calls: findById for hooks + UPDATE + re-fetch via findById
+        expect(db.query).toHaveBeenCalledTimes(3);
       });
 
       test("should allow updating priority on non-system role", async () => {
-        // Arrange - findById returns a NON-system role for protection check
+        // Arrange - findById returns a NON-system role, used for hooks AND protection check
         // Then UPDATE + re-fetch for the actual update
         const customRole = { id: 10, name: "custom-role", priority: 25 };
         const updatedRole = { id: 10, name: "custom-role", priority: 99 };
         db.query
-          .mockResolvedValueOnce({ rows: [customRole] }) // Pre-check: findById for system protection
+          .mockResolvedValueOnce({ rows: [customRole] }) // findById for hooks + protection check
           .mockResolvedValueOnce({ rows: [{ id: 10 }] }) // UPDATE RETURNING id
           .mockResolvedValueOnce({ rows: [updatedRole] }); // findById re-fetch
 
@@ -2058,8 +2094,13 @@ describe("GenericEntityService", () => {
 
       test("should not apply protection to non-role entities", async () => {
         // Arrange - customer entity doesn't have systemProtected
+        // findById for hooks + UPDATE + re-fetch via findById (for JOINs)
+        const existingCustomer = { id: 1, email: "old@example.com" };
         const updatedCustomer = { id: 1, email: "new@example.com" };
-        db.query.mockResolvedValue({ rows: [updatedCustomer] });
+        db.query
+          .mockResolvedValueOnce({ rows: [existingCustomer] }) // findById for hooks
+          .mockResolvedValueOnce({ rows: [{ id: 1 }] }) // UPDATE RETURNING id
+          .mockResolvedValueOnce({ rows: [updatedCustomer] }); // findById re-fetch
 
         // Act
         const result = await GenericEntityService.update("customer", 1, {
@@ -2068,9 +2109,9 @@ describe("GenericEntityService", () => {
 
         // Assert
         expect(result.email).toBe("new@example.com");
-        // Two query calls: UPDATE + re-fetch via findByField (for JOINs)
+        // Three query calls: findById for hooks + UPDATE + re-fetch via findById
         // No protection check for non-role entities
-        expect(db.query).toHaveBeenCalledTimes(2);
+        expect(db.query).toHaveBeenCalledTimes(3);
       });
     });
   });

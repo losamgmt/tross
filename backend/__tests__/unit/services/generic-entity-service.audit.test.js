@@ -236,17 +236,19 @@ describe("GenericEntityService - Audit Logging", () => {
       expect(mockLogEntityAudit).not.toHaveBeenCalled();
     });
 
-    test("should NOT fetch old values without auditContext", async () => {
-      // Arrange - update + re-fetch
+    test("should fetch old values for hooks even without auditContext", async () => {
+      // Arrange - findById for hooks + update + re-fetch
       db.query
+        .mockResolvedValueOnce({ rows: [mockOldRecord], rowCount: 1 }) // findById for hooks
         .mockResolvedValueOnce({ rows: [{ id: 1 }], rowCount: 1 }) // update
         .mockResolvedValueOnce({ rows: [mockUpdatedRecord], rowCount: 1 }); // re-fetch
 
       // Act
       await GenericEntityService.update("customer", 1, { phone: "555-9999" });
 
-      // Assert - 2 queries: update + re-fetch (no findById for old values)
-      expect(db.query).toHaveBeenCalledTimes(2);
+      // Assert - 3 queries: findById for hooks + update + re-fetch
+      // (old values now fetched for hook evaluation even without auditContext)
+      expect(db.query).toHaveBeenCalledTimes(3);
     });
 
     test("should return null for non-existent entity (no audit)", async () => {
