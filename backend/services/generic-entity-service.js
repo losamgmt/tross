@@ -33,6 +33,10 @@ const db = require('../db/connection');
 const { toSafeInteger } = require('../validators/type-coercion');
 const PaginationService = require('./pagination-service');
 const QueryBuilderService = require('./query-builder-service');
+const {
+  evaluateBeforeHooks,
+  evaluateAfterHooks,
+} = require('./hook-service');
 const { buildUpdateClause } = require('../db/helpers/update-helper');
 const { cascadeDeleteDependents } = require('../db/helpers/cascade-helper');
 // ADR-011: Use new rule-based RLS engine
@@ -1051,6 +1055,32 @@ class GenericEntityService {
     // Strip auth identifiers from response
     const filteredResult = stripAuthIdentifiers(result.rows[0], metadata);
 
+    // =========================================================================
+    // EVALUATE AFTER-CHANGE HOOKS FOR CREATE (trigger actions)
+    // Hooks are defined in metadata.fields[fieldName].afterChange
+    // For create, oldValue is null/undefined (field didn't exist)
+    // =========================================================================
+    if (metadata.fields) {
+      for (const [fieldName, newValue] of Object.entries(filteredData)) {
+        const fieldMeta = metadata.fields[fieldName];
+        const hooks = fieldMeta?.afterChange;
+        if (hooks && hooks.length > 0) {
+          await evaluateAfterHooks({
+            hooks,
+            oldValue: null,
+            newValue,
+            context: {
+              entity: entityName,
+              record: filteredResult,
+              field: fieldName,
+              user: options.user || options.auditContext?.userId,
+            },
+            operation: 'create',
+          });
+        }
+      }
+    }
+
     // Log audit event (blocking to ensure audit is written before response)
     if (options.auditContext && isAuditEnabled(entityName)) {
       await logEntityAudit(
@@ -1156,36 +1186,6 @@ class GenericEntityService {
     // =========================================================================
     deriveLinkedTimestampDefaults(entityName, filteredData);
 
-    // =========================================================================
-    // SYSTEM PROTECTION CHECK (before any DB operation)
-    // =========================================================================
-    if (systemProtected) {
-      // Check if attempting to modify system-protected immutable fields
-      const attemptedImmutable = (systemProtected.immutableFields || []).filter(
-        (field) => filteredData[field] !== undefined,
-      );
-
-      if (attemptedImmutable.length > 0) {
-        // Need to fetch record to check if it's protected
-        const record = await this.findById(entityName, safeId);
-
-        if (record) {
-          // Use protectedByField if specified, otherwise fall back to identityField
-          const protectionField =
-            systemProtected.protectedByField || identityField;
-          const identityValue = record[protectionField];
-
-          if (systemProtected.values.includes(identityValue)) {
-            throw new AppError(
-              `Cannot modify ${attemptedImmutable.join(', ')} on system ${entityName}: ${identityValue}`,
-              403,
-              'FORBIDDEN',
-            );
-          }
-        }
-      }
-    }
-
     // Use buildUpdateClause with EXCLUSION pattern
     // All fields allowed except those in immutableFields (+ universal immutables)
     // Extract JSONB field names from metadata for proper serialization
@@ -1210,13 +1210,79 @@ class GenericEntityService {
     }
 
     // =========================================================================
-    // CAPTURE OLD VALUES FOR AUDIT (before update)
+    // CAPTURE OLD VALUES (for hooks, audit, and system protection)
+    // Single fetch used by: system protection check, beforeChange hooks,
+    // afterChange hooks, and audit old-vs-new comparison
     // =========================================================================
-    let oldValues = null;
-    if (options.auditContext && isAuditEnabled(entityName)) {
-      const oldRecord = await this.findById(entityName, safeId);
-      if (oldRecord) {
-        oldValues = oldRecord;
+    const oldRecord = await this.findById(entityName, safeId);
+    if (!oldRecord) {
+      return null; // Record doesn't exist
+    }
+
+    // =========================================================================
+    // SYSTEM PROTECTION CHECK (against existing record)
+    // =========================================================================
+    if (systemProtected) {
+      // Check if attempting to modify system-protected immutable fields
+      const attemptedImmutable = (systemProtected.immutableFields || []).filter(
+        (field) => filteredData[field] !== undefined,
+      );
+
+      if (attemptedImmutable.length > 0) {
+        // Use protectedByField if specified, otherwise fall back to identityField
+        const protectionField =
+          systemProtected.protectedByField || identityField;
+        const identityValue = oldRecord[protectionField];
+
+        if (systemProtected.values.includes(identityValue)) {
+          throw new AppError(
+            `Cannot modify ${attemptedImmutable.join(', ')} on system ${entityName}: ${identityValue}`,
+            403,
+            'FORBIDDEN',
+          );
+        }
+      }
+    }
+
+    // =========================================================================
+    // EVALUATE BEFORE-CHANGE HOOKS (may block the update)
+    // Hooks are defined in metadata.fields[fieldName].beforeChange
+    // =========================================================================
+    if (metadata.fields) {
+      for (const [fieldName, newValue] of Object.entries(filteredData)) {
+        const fieldMeta = metadata.fields[fieldName];
+        const hooks = fieldMeta?.beforeChange;
+        if (hooks && hooks.length > 0) {
+          const oldValue = oldRecord[fieldName];
+          const hookResult = await evaluateBeforeHooks({
+            hooks,
+            oldValue,
+            newValue,
+            context: {
+              entity: entityName,
+              record: oldRecord,
+              field: fieldName,
+              user: options.user || options.auditContext?.userId,
+            },
+            operation: 'update',
+          });
+
+          if (!hookResult.allowed) {
+            if (hookResult.requiresApproval) {
+              throw new AppError(
+                hookResult.approvalInfo?.description || 'Change requires approval',
+                202,
+                'APPROVAL_REQUIRED',
+                { approvalInfo: hookResult.approvalInfo },
+              );
+            }
+            throw new AppError(
+              hookResult.blockReason || 'Change blocked by policy',
+              403,
+              'FORBIDDEN',
+            );
+          }
+        }
       }
     }
 
@@ -1255,6 +1321,36 @@ class GenericEntityService {
     // This ensures the returned record has all relationship data
     const updatedRecord = await this.findById(entityName, safeId);
 
+    // =========================================================================
+    // EVALUATE AFTER-CHANGE HOOKS (trigger actions, cannot block)
+    // Hooks are defined in metadata.fields[fieldName].afterChange
+    // Errors are logged but don't fail the request
+    // =========================================================================
+    if (metadata.fields) {
+      for (const [fieldName, newValue] of Object.entries(filteredData)) {
+        const fieldMeta = metadata.fields[fieldName];
+        const hooks = fieldMeta?.afterChange;
+        if (hooks && hooks.length > 0) {
+          const oldValue = oldRecord[fieldName];
+          // Only evaluate if value actually changed
+          if (oldValue !== newValue) {
+            await evaluateAfterHooks({
+              hooks,
+              oldValue,
+              newValue,
+              context: {
+                entity: entityName,
+                record: updatedRecord,
+                field: fieldName,
+                user: options.user || options.auditContext?.userId,
+              },
+              operation: 'update',
+            });
+          }
+        }
+      }
+    }
+
     // Log audit event (blocking to ensure audit is written before response)
     if (options.auditContext && isAuditEnabled(entityName)) {
       await logEntityAudit(
@@ -1262,7 +1358,7 @@ class GenericEntityService {
         entityName,
         updatedRecord,
         options.auditContext,
-        oldValues,
+        oldRecord,
       );
     }
 
