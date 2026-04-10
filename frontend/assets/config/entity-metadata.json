@@ -535,7 +535,13 @@
     "rlsResource": "audit_logs",
     "icon": "history",
     "supportsFileAttachments": false,
-    "summaryConfig": null,
+    "summaryConfig": {
+      "groupableFields": [
+        "resource_type",
+        "action",
+        "user_id"
+      ]
+    },
     "displayField": "id",
     "displayName": "Audit Log",
     "displayNamePlural": "Audit Logs",
@@ -1268,7 +1274,8 @@
           "id",
           "property_id",
           "role",
-          "is_active"
+          "effective_date",
+          "end_date"
         ],
         "description": "Board/management roles this customer holds at properties"
       },
@@ -1878,7 +1885,10 @@
       "work_order_id",
       "tax",
       "due_date",
-      "paid_at"
+      "paid_at",
+      "qb_invoice_id",
+      "qb_sync_status",
+      "qb_synced_at"
     ],
     "sortableFields": [
       "id",
@@ -1995,6 +2005,39 @@
       },
       "paid_at": {
         "type": "timestamp"
+      },
+      "qb_invoice_id": {
+        "type": "string",
+        "maxLength": 50,
+        "pattern": "^[A-Za-z0-9-]+$"
+      },
+      "qb_sync_status": {
+        "type": "enum",
+        "default": null,
+        "values": {
+          "pending": {
+            "color": "secondary"
+          },
+          "synced": {
+            "color": "success"
+          },
+          "modified": {
+            "color": "warning"
+          },
+          "error": {
+            "color": "error"
+          },
+          "skipped": {
+            "color": "secondary"
+          }
+        }
+      },
+      "qb_synced_at": {
+        "type": "timestamp"
+      },
+      "qb_sync_error": {
+        "type": "text",
+        "maxLength": 500
       }
     },
     "relationships": {
@@ -2445,7 +2488,8 @@
     ],
     "searchableFields": [
       "payment_number",
-      "reference_number"
+      "reference_number",
+      "external_ref"
     ],
     "filterableFields": [
       "id",
@@ -2458,7 +2502,11 @@
       "payment_method",
       "reference_number",
       "customer_id",
-      "invoice_id"
+      "invoice_id",
+      "stripe_payment_intent_id",
+      "stripe_charge_id",
+      "qb_payment_id",
+      "external_ref"
     ],
     "sortableFields": [
       "id",
@@ -2470,7 +2518,8 @@
       "payment_method",
       "reference_number",
       "customer_id",
-      "invoice_id"
+      "invoice_id",
+      "external_ref"
     ],
     "displayColumns": [
       "payment_number",
@@ -2583,6 +2632,25 @@
         "type": "foreignKey",
         "references": "invoice",
         "displayField": "invoice_number"
+      },
+      "stripe_payment_intent_id": {
+        "type": "string",
+        "maxLength": 50,
+        "pattern": "^pi_[a-zA-Z0-9]+$"
+      },
+      "stripe_charge_id": {
+        "type": "string",
+        "maxLength": 50,
+        "pattern": "^ch_[a-zA-Z0-9]+$"
+      },
+      "qb_payment_id": {
+        "type": "string",
+        "maxLength": 50,
+        "pattern": "^[A-Za-z0-9-]+$"
+      },
+      "external_ref": {
+        "type": "string",
+        "maxLength": 100
       }
     },
     "relationships": {
@@ -3065,7 +3133,8 @@
           "id",
           "customer_id",
           "role",
-          "is_active"
+          "effective_date",
+          "end_date"
         ],
         "description": "Board members and managers assigned to this property"
       },

@@ -8,15 +8,16 @@ import 'package:tross/models/permission.dart';
 import 'package:tross/providers/auth_provider.dart';
 import 'package:tross/services/generic_entity_service.dart';
 import 'mock_api_client.dart';
+import 'mock_failure_config.dart';
 
 /// Mock GenericEntityService for widget testing
 ///
 /// Provides controllable responses for entity CRUD operations.
-class MockGenericEntityService extends GenericEntityService {
+/// Uses MockFailureMixin for consistent failure handling.
+class MockGenericEntityService extends GenericEntityService
+    with MockFailureMixin {
   final Map<String, List<Map<String, dynamic>>> _entityData = {};
   final List<String> _callHistory = [];
-  bool _shouldFail = false;
-  String _failureMessage = 'Mock service error';
 
   MockGenericEntityService() : super(MockApiClient());
 
@@ -25,12 +26,6 @@ class MockGenericEntityService extends GenericEntityService {
 
   /// Check if a method was called
   bool wasCalled(String method) => _callHistory.contains(method);
-
-  /// Set mock to fail
-  void setShouldFail(bool value, {String? message}) {
-    _shouldFail = value;
-    if (message != null) _failureMessage = message;
-  }
 
   /// Mock entity data for a specific entity type
   void mockEntities(String entityName, List<Map<String, dynamic>> data) {
@@ -48,7 +43,7 @@ class MockGenericEntityService extends GenericEntityService {
     String sortOrder = 'DESC',
   }) async {
     _callHistory.add('getAll:$entityName');
-    if (_shouldFail) throw Exception(_failureMessage);
+    checkFailure();
 
     final data = _entityData[entityName] ?? [];
     return EntityListResult(
@@ -66,7 +61,7 @@ class MockGenericEntityService extends GenericEntityService {
   @override
   Future<Map<String, dynamic>> getById(String entityName, int id) async {
     _callHistory.add('getById:$entityName:$id');
-    if (_shouldFail) throw Exception(_failureMessage);
+    checkFailure();
 
     final data = _entityData[entityName] ?? [];
     return data.firstWhere((e) => e['id'] == id, orElse: () => {'id': id});
@@ -78,7 +73,7 @@ class MockGenericEntityService extends GenericEntityService {
     Map<String, dynamic> data,
   ) async {
     _callHistory.add('create:$entityName');
-    if (_shouldFail) throw Exception(_failureMessage);
+    checkFailure();
     return {...data, 'id': DateTime.now().millisecondsSinceEpoch};
   }
 
@@ -89,22 +84,21 @@ class MockGenericEntityService extends GenericEntityService {
     Map<String, dynamic> data,
   ) async {
     _callHistory.add('update:$entityName:$id');
-    if (_shouldFail) throw Exception(_failureMessage);
+    checkFailure();
     return {...data, 'id': id};
   }
 
   @override
   Future<void> delete(String entityName, int id) async {
     _callHistory.add('delete:$entityName:$id');
-    if (_shouldFail) throw Exception(_failureMessage);
+    checkFailure();
   }
 
   /// Reset all mock state
   void reset() {
     _entityData.clear();
     _callHistory.clear();
-    _shouldFail = false;
-    _failureMessage = 'Mock service error';
+    resetFailure(); // Use mixin's reset method
   }
 }
 

@@ -20,6 +20,11 @@
 ///
 /// // Verify calls
 /// expect(mock.wasCalled('fetchEntities customer'), isTrue);
+///
+/// // NEW: Typed failure configuration (preferred)
+/// mock.setFailure(MockFailureConfig.unauthorized());
+/// mock.setFailure(MockFailureConfig.serverError(persistent: false));
+/// mock.setFailure(MockFailureConfig.disabled);
 /// ```
 library;
 
@@ -27,17 +32,16 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:tross/services/api/api_client.dart';
+import 'mock_failure_config.dart';
 
 /// Mock API client that implements the ApiClient interface for testing
-class MockApiClient implements ApiClient {
+class MockApiClient with MockFailureMixin implements ApiClient {
   // ═══════════════════════════════════════════════════════════════════════════
   // MOCK STATE
   // ═══════════════════════════════════════════════════════════════════════════
 
   final List<String> _callHistory = [];
   final Map<String, dynamic> _mockResponses = {};
-  bool _shouldFail = false;
-  String _failureMessage = 'Mock API Error';
   String? _currentToken;
 
   /// Get call history for verification
@@ -101,13 +105,8 @@ class MockApiClient implements ApiClient {
     _mockResponses[key] = response;
   }
 
-  /// Set mock to fail next request
-  void setShouldFail(bool value, {String? message}) {
-    _shouldFail = value;
-    if (message != null) {
-      _failureMessage = message;
-    }
-  }
+  // NOTE: setShouldFail() is inherited from MockFailureMixin (deprecated)
+  // Prefer using setFailure(MockFailureConfig.xxx()) for new code
 
   /// Set the current mock token
   void setToken(String? token) {
@@ -155,11 +154,10 @@ class MockApiClient implements ApiClient {
     _endpointErrors.clear();
     _endpointStatusCodes.clear();
     _endpointBodies.clear();
-    _shouldFail = false;
-    _failureMessage = 'Mock API Error';
     _currentToken = null;
     _onTokenRefreshNeeded = null;
     _authenticatedRequestHandler = null;
+    resetFailure(); // Reset failure system from mixin
   }
 
   /// Callback for authenticatedRequest - allows full control over response
@@ -224,19 +222,15 @@ class MockApiClient implements ApiClient {
     if (endpoint != null) {
       _checkEndpointError(endpoint);
     }
-    if (_shouldFail) {
-      _shouldFail = false;
-      throw Exception(_failureMessage);
-    }
+    // Use new failure system
+    checkFailure();
     return _mockResponses[key] as T?;
   }
 
   /// Get entity list response with proper default typing
   Map<String, dynamic> _getEntityListResponse(String entityName) {
-    if (_shouldFail) {
-      _shouldFail = false;
-      throw Exception(_failureMessage);
-    }
+    // Use new failure system
+    checkFailure();
 
     final response = _mockResponses['entities:$entityName'];
     if (response != null) {
@@ -297,10 +291,8 @@ class MockApiClient implements ApiClient {
       );
     }
 
-    if (_shouldFail) {
-      _shouldFail = false;
-      throw Exception(_failureMessage);
-    }
+    // Use new failure system
+    checkFailure();
 
     // Check for endpoint-specific status code mocking (supports partial match)
     for (final entry in _endpointStatusCodes.entries) {
@@ -455,10 +447,8 @@ class MockApiClient implements ApiClient {
   @override
   Future<void> deleteEntity(String entityName, int id) async {
     _recordCall('deleteEntity $entityName/$id');
-    if (_shouldFail) {
-      _shouldFail = false;
-      throw Exception(_failureMessage);
-    }
+    // Use new failure system
+    checkFailure();
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
