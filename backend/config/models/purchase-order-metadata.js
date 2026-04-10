@@ -30,6 +30,9 @@ module.exports = {
   primaryKey: 'id',
   icon: 'shopping_cart',
 
+  // Entity traits (workflow: has status lifecycle, auditable: changes tracked)
+  traits: ['workflow', 'auditable'],
+
   // ============================================================================
   // ENTITY CATEGORY
   // ============================================================================

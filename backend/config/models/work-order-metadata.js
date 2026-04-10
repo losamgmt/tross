@@ -40,6 +40,9 @@ module.exports = {
   // Material icon for navigation menus and entity displays
   icon: 'build',
 
+  // Entity traits (workflow: has status lifecycle, auditable: changes tracked)
+  traits: ['workflow', 'auditable'],
+
   // ============================================================================
   // ENTITY CATEGORY (determines name handling pattern)
   // ============================================================================
