@@ -182,7 +182,7 @@
       "navVisibility": {
         "minimumRole": "customer",
         "minimumPriority": 1,
-        "description": "Explicit navVisibility - minimum role to see in nav menus"
+        "description": "From navigation.visibility - minimum role to see in nav menus"
       }
     },
     "assets": {
@@ -237,7 +237,7 @@
       "navVisibility": {
         "minimumRole": "technician",
         "minimumPriority": 2,
-        "description": "Explicit navVisibility - minimum role to see in nav menus"
+        "description": "From navigation.visibility - minimum role to see in nav menus"
       }
     },
     "audit_logs": {
@@ -333,7 +333,7 @@
       "navVisibility": {
         "minimumRole": "dispatcher",
         "minimumPriority": 3,
-        "description": "Explicit navVisibility - minimum role to see in nav menus"
+        "description": "From navigation.visibility - minimum role to see in nav menus"
       }
     },
     "customer_units": {
@@ -443,7 +443,7 @@
       "navVisibility": {
         "minimumRole": "customer",
         "minimumPriority": 1,
-        "description": "Explicit navVisibility - minimum role to see in nav menus"
+        "description": "From navigation.visibility - minimum role to see in nav menus"
       }
     },
     "dashboard": {
@@ -518,7 +518,7 @@
       "navVisibility": {
         "minimumRole": "manager",
         "minimumPriority": 4,
-        "description": "Explicit navVisibility - minimum role to see in nav menus"
+        "description": "From navigation.visibility - minimum role to see in nav menus"
       }
     },
     "inventory": {
@@ -562,7 +562,7 @@
       "navVisibility": {
         "minimumRole": "technician",
         "minimumPriority": 2,
-        "description": "Explicit navVisibility - minimum role to see in nav menus"
+        "description": "From navigation.visibility - minimum role to see in nav menus"
       }
     },
     "invoices": {
@@ -616,7 +616,7 @@
       "navVisibility": {
         "minimumRole": "dispatcher",
         "minimumPriority": 3,
-        "description": "Explicit navVisibility - minimum role to see in nav menus"
+        "description": "From navigation.visibility - minimum role to see in nav menus"
       }
     },
     "maintenance_schedules": {
@@ -672,7 +672,7 @@
       "navVisibility": {
         "minimumRole": "manager",
         "minimumPriority": 4,
-        "description": "Explicit navVisibility - minimum role to see in nav menus"
+        "description": "From navigation.visibility - minimum role to see in nav menus"
       }
     },
     "notifications": {
@@ -774,7 +774,7 @@
       "navVisibility": {
         "minimumRole": "dispatcher",
         "minimumPriority": 3,
-        "description": "Explicit navVisibility - minimum role to see in nav menus"
+        "description": "From navigation.visibility - minimum role to see in nav menus"
       }
     },
     "preferences": {
@@ -912,7 +912,7 @@
       "navVisibility": {
         "minimumRole": "technician",
         "minimumPriority": 2,
-        "description": "Explicit navVisibility - minimum role to see in nav menus"
+        "description": "From navigation.visibility - minimum role to see in nav menus"
       }
     },
     "property_roles": {
@@ -1011,7 +1011,7 @@
       "navVisibility": {
         "minimumRole": "technician",
         "minimumPriority": 2,
-        "description": "Explicit navVisibility - minimum role to see in nav menus"
+        "description": "From navigation.visibility - minimum role to see in nav menus"
       }
     },
     "quotes": {
@@ -1065,7 +1065,7 @@
       "navVisibility": {
         "minimumRole": "dispatcher",
         "minimumPriority": 3,
-        "description": "Explicit navVisibility - minimum role to see in nav menus"
+        "description": "From navigation.visibility - minimum role to see in nav menus"
       }
     },
     "receipts": {
@@ -1108,7 +1108,7 @@
       "navVisibility": {
         "minimumRole": "dispatcher",
         "minimumPriority": 3,
-        "description": "Explicit navVisibility - minimum role to see in nav menus"
+        "description": "From navigation.visibility - minimum role to see in nav menus"
       }
     },
     "recommendations": {
@@ -1162,7 +1162,7 @@
       "navVisibility": {
         "minimumRole": "technician",
         "minimumPriority": 2,
-        "description": "Explicit navVisibility - minimum role to see in nav menus"
+        "description": "From navigation.visibility - minimum role to see in nav menus"
       }
     },
     "roles": {
@@ -1201,7 +1201,7 @@
       "navVisibility": {
         "minimumRole": "admin",
         "minimumPriority": 5,
-        "description": "Explicit navVisibility - minimum role to see in nav menus"
+        "description": "From navigation.visibility - minimum role to see in nav menus"
       }
     },
     "saved_views": {
@@ -1368,7 +1368,7 @@
       "navVisibility": {
         "minimumRole": "manager",
         "minimumPriority": 4,
-        "description": "Explicit navVisibility - minimum role to see in nav menus"
+        "description": "From navigation.visibility - minimum role to see in nav menus"
       }
     },
     "service_templates": {
@@ -1412,7 +1412,7 @@
       "navVisibility": {
         "minimumRole": "manager",
         "minimumPriority": 4,
-        "description": "Explicit navVisibility - minimum role to see in nav menus"
+        "description": "From navigation.visibility - minimum role to see in nav menus"
       }
     },
     "subcontractors": {
@@ -1456,7 +1456,7 @@
       "navVisibility": {
         "minimumRole": "manager",
         "minimumPriority": 4,
-        "description": "Explicit navVisibility - minimum role to see in nav menus"
+        "description": "From navigation.visibility - minimum role to see in nav menus"
       }
     },
     "system_settings": {
@@ -1531,7 +1531,7 @@
       "navVisibility": {
         "minimumRole": "technician",
         "minimumPriority": 2,
-        "description": "Explicit navVisibility - minimum role to see in nav menus"
+        "description": "From navigation.visibility - minimum role to see in nav menus"
       }
     },
     "units": {
@@ -1592,7 +1592,7 @@
       "navVisibility": {
         "minimumRole": "technician",
         "minimumPriority": 2,
-        "description": "Explicit navVisibility - minimum role to see in nav menus"
+        "description": "From navigation.visibility - minimum role to see in nav menus"
       }
     },
     "users": {
@@ -1647,7 +1647,7 @@
       "navVisibility": {
         "minimumRole": "admin",
         "minimumPriority": 5,
-        "description": "Explicit navVisibility - minimum role to see in nav menus"
+        "description": "From navigation.visibility - minimum role to see in nav menus"
       }
     },
     "vendors": {
@@ -1691,7 +1691,7 @@
       "navVisibility": {
         "minimumRole": "dispatcher",
         "minimumPriority": 3,
-        "description": "Explicit navVisibility - minimum role to see in nav menus"
+        "description": "From navigation.visibility - minimum role to see in nav menus"
       }
     },
     "visit_subcontractors": {
@@ -1854,7 +1854,7 @@
       "navVisibility": {
         "minimumRole": "dispatcher",
         "minimumPriority": 3,
-        "description": "Explicit navVisibility - minimum role to see in nav menus"
+        "description": "From navigation.visibility - minimum role to see in nav menus"
       }
     },
     "work_orders": {
@@ -1919,7 +1919,7 @@
       "navVisibility": {
         "minimumRole": "customer",
         "minimumPriority": 1,
-        "description": "Explicit navVisibility - minimum role to see in nav menus"
+        "description": "From navigation.visibility - minimum role to see in nav menus"
       }
     }
   }

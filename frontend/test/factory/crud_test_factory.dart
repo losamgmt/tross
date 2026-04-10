@@ -39,6 +39,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tross/services/generic_entity_service.dart';
 
 import '../mocks/mock_api_client.dart';
+import '../mocks/mock_failure_config.dart';
 import '../helpers/helpers.dart';
 import 'entity_registry.dart';
 import 'entity_data_generator.dart';
@@ -190,24 +191,139 @@ abstract final class CrudTestFactory {
         }
       });
 
-      for (final scenario in HttpErrorScenario.values) {
-        test(
-          'all operations throw on ${scenario.statusCode} ${scenario.message}',
-          () async {
-            mockApiClient.setShouldFail(true, message: scenario.message);
+      // =====================================================================
+      // ERROR PATH TESTS
+      // =====================================================================
+      // Design: Test error handling with ONE representative entity per scenario.
+      // Why? The GenericEntityService uses identical code paths for all entities,
+      // so testing the same behavior 11 times is redundant and wasteful.
+      // If error handling works for 'customer', it works for all entities.
+      // =====================================================================
 
-            for (final entityName in EntityTestRegistry.allEntityNames) {
-              expect(
-                () => service.getAll(entityName),
-                throwsA(isA<Exception>()),
-                reason:
-                    '$entityName getAll: should throw on ${scenario.statusCode}',
+      group('error handling (representative entity)', () {
+        // Use 'customer' as the representative entity for error tests
+        const representativeEntity = 'customer';
+
+        for (final scenario in HttpErrorScenario.values) {
+          test(
+            'getAll throws on ${scenario.statusCode} ${scenario.message}',
+            () async {
+              // Use new persistent failure config
+              mockApiClient.setFailure(
+                MockFailureConfig.fromStatus(
+                  _httpStatusFromScenario(scenario),
+                  message: scenario.message,
+                ),
               );
-            }
-          },
-        );
-      }
+
+              await expectLater(
+                () => service.getAll(representativeEntity),
+                throwsA(isA<Exception>()),
+                reason: 'getAll should throw on ${scenario.statusCode}',
+              );
+
+              mockApiClient.resetFailure();
+            },
+          );
+
+          test(
+            'getById throws on ${scenario.statusCode} ${scenario.message}',
+            () async {
+              mockApiClient.setFailure(
+                MockFailureConfig.fromStatus(
+                  _httpStatusFromScenario(scenario),
+                  message: scenario.message,
+                ),
+              );
+
+              await expectLater(
+                () => service.getById(representativeEntity, 1),
+                throwsA(isA<Exception>()),
+                reason: 'getById should throw on ${scenario.statusCode}',
+              );
+
+              mockApiClient.resetFailure();
+            },
+          );
+
+          test(
+            'create throws on ${scenario.statusCode} ${scenario.message}',
+            () async {
+              mockApiClient.setFailure(
+                MockFailureConfig.fromStatus(
+                  _httpStatusFromScenario(scenario),
+                  message: scenario.message,
+                ),
+              );
+
+              await expectLater(
+                () => service.create(representativeEntity, {'name': 'test'}),
+                throwsA(isA<Exception>()),
+                reason: 'create should throw on ${scenario.statusCode}',
+              );
+
+              mockApiClient.resetFailure();
+            },
+          );
+
+          test(
+            'update throws on ${scenario.statusCode} ${scenario.message}',
+            () async {
+              mockApiClient.setFailure(
+                MockFailureConfig.fromStatus(
+                  _httpStatusFromScenario(scenario),
+                  message: scenario.message,
+                ),
+              );
+
+              await expectLater(
+                () => service.update(representativeEntity, 1, {'name': 'test'}),
+                throwsA(isA<Exception>()),
+                reason: 'update should throw on ${scenario.statusCode}',
+              );
+
+              mockApiClient.resetFailure();
+            },
+          );
+
+          test(
+            'delete throws on ${scenario.statusCode} ${scenario.message}',
+            () async {
+              mockApiClient.setFailure(
+                MockFailureConfig.fromStatus(
+                  _httpStatusFromScenario(scenario),
+                  message: scenario.message,
+                ),
+              );
+
+              await expectLater(
+                () => service.delete(representativeEntity, 1),
+                throwsA(isA<Exception>()),
+                reason: 'delete should throw on ${scenario.statusCode}',
+              );
+
+              mockApiClient.resetFailure();
+            },
+          );
+        }
+      });
     });
+  }
+
+  /// Convert HttpErrorScenario to MockHttpStatus
+  static MockHttpStatus _httpStatusFromScenario(HttpErrorScenario scenario) {
+    switch (scenario) {
+      case HttpErrorScenario.badRequest:
+        return MockHttpStatus.badRequest;
+      case HttpErrorScenario.unauthorized:
+        return MockHttpStatus.unauthorized;
+      case HttpErrorScenario.forbidden:
+        return MockHttpStatus.forbidden;
+      case HttpErrorScenario.notFound:
+        return MockHttpStatus.notFound;
+      case HttpErrorScenario.serverError:
+        return MockHttpStatus.serverError;
+    }
   }
 
   // ===========================================================================
