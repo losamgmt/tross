@@ -5,6 +5,9 @@
  * Runs schema.sql and seed-data.sql with FAIL-FAST behavior.
  * Used by Railway deploy to ensure database is properly initialized.
  * 
+ * USES THE SAME CONNECTION AS THE REST OF THE APP (db/connection.js)
+ * This ensures SSL, connection pooling, and environment detection all work.
+ * 
  * Exit codes:
  *   0 - Success (both schema and seed applied)
  *   1 - Failure (any error - deploy should abort)
@@ -12,7 +15,12 @@
 
 const fs = require('fs').promises;
 const path = require('path');
-const { Client } = require('pg');
+
+// Load environment variables FIRST (before any other requires)
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+
+// Use the SAME database connection as the rest of the app
+const db = require('../db/connection');
 
 const SCHEMA_FILE = path.join(__dirname, '..', 'schema.sql');
 const SEED_FILE = path.join(__dirname, '..', 'seeds', 'seed-data.sql');
@@ -35,34 +43,22 @@ async function initDatabase() {
   log('🚀 Tross Database Initialization (strict mode)', 'blue');
   log('═'.repeat(50), 'blue');
 
-  // Get database URL from environment
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) {
-    log('❌ DATABASE_URL environment variable is not set', 'red');
-    process.exit(1);
-  }
-
-  log(`📡 Connecting to database...`, 'cyan');
-
-  const client = new Client({
-    connectionString: databaseUrl,
-    ssl: databaseUrl.includes('railway') ? { rejectUnauthorized: false } : false,
-  });
-
   try {
-    await client.connect();
-    log('✅ Connected to database', 'green');
+    // Test connection first
+    log('📡 Testing database connection...', 'cyan');
+    const testResult = await db.query('SELECT NOW() as time, current_database() as db');
+    log(`✅ Connected to database: ${testResult.rows[0].db}`, 'green');
 
     // Apply schema
     log('📦 Applying schema.sql...', 'blue');
     const schemaSQL = await fs.readFile(SCHEMA_FILE, 'utf8');
-    await client.query(schemaSQL);
+    await db.query(schemaSQL);
     log('✅ Schema applied successfully', 'green');
 
     // Apply seed data
     log('🌱 Applying seed-data.sql...', 'blue');
     const seedSQL = await fs.readFile(SEED_FILE, 'utf8');
-    await client.query(seedSQL);
+    await db.query(seedSQL);
     log('✅ Seed data applied successfully', 'green');
 
     // Verify key data
@@ -73,25 +69,35 @@ async function initDatabase() {
       { query: "SELECT COUNT(*) FROM users WHERE email IN ('zarika.amber@gmail.com', 'lane.vandeventer@gmail.com')", name: 'admin users', expected: 2 },
       { query: 'SELECT COUNT(*) FROM customers', name: 'customers', min: 1 },
       { query: 'SELECT COUNT(*) FROM properties', name: 'properties', min: 1 },
+      { query: 'SELECT COUNT(*) FROM technicians', name: 'technicians', min: 1 },
+      { query: 'SELECT COUNT(*) FROM work_orders', name: 'work_orders', min: 1 },
     ];
 
+    let allPassed = true;
     for (const check of checks) {
-      const result = await client.query(check.query);
+      const result = await db.query(check.query);
       const count = parseInt(result.rows[0].count);
       
       if (check.expected !== undefined && count !== check.expected) {
         log(`  ⚠️  ${check.name}: ${count} (expected ${check.expected})`, 'yellow');
+        allPassed = false;
       } else if (check.min !== undefined && count < check.min) {
         log(`  ⚠️  ${check.name}: ${count} (expected at least ${check.min})`, 'yellow');
+        allPassed = false;
       } else {
         log(`  ✅ ${check.name}: ${count}`, 'green');
       }
     }
 
     log('═'.repeat(50), 'green');
-    log('✅ Database initialization complete!', 'green');
+    if (allPassed) {
+      log('✅ Database initialization complete!', 'green');
+    } else {
+      log('⚠️ Database initialized but some verification checks failed', 'yellow');
+    }
     
-    await client.end();
+    // Close pool gracefully
+    await db.end();
     process.exit(0);
 
   } catch (error) {
@@ -104,8 +110,17 @@ async function initDatabase() {
     if (error.hint) {
       log(`   Hint: ${error.hint}`, 'yellow');
     }
+    if (error.code) {
+      log(`   Code: ${error.code}`, 'red');
+    }
     
-    await client.end().catch(() => {});
+    // Try to close pool
+    try {
+      await db.end();
+    } catch (e) {
+      // Ignore cleanup errors
+    }
+    
     process.exit(1);
   }
 }
