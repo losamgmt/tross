@@ -1,0 +1,15 @@
+# Railway Nixpacks Configuration
+# Forces Node 24 and configures proper build for monorepo
+
+[phases.setup]
+nixPkgs = ["nodejs-24_x"]
+
+[phases.install]
+cmds = ["npm ci --prefer-offline --no-audit --legacy-peer-deps"]
+
+[phases.build]
+cmds = []
+
+# Note: Start command is defined in railway.json
+# [start]
+# cmd = "cd backend && node scripts/init-db-strict.js && npm start"
