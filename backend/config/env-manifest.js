@@ -364,8 +364,8 @@ const ENV_MANIFEST = Object.freeze({
     category: CATEGORY.OPTIONAL,
     description: 'Stripe publishable key for client-side (pk_live_xxx or pk_test_xxx)',
     defaultValue: null,
-    allowDefaultIn: [ENVIRONMENTS.DEVELOPMENT, ENVIRONMENTS.TEST],
-    skipValidationIn: [ENVIRONMENTS.TEST],
+    allowDefaultIn: [ENVIRONMENTS.DEVELOPMENT, ENVIRONMENTS.TEST, ENVIRONMENTS.PRODUCTION],
+    skipValidationIn: [ENVIRONMENTS.TEST, ENVIRONMENTS.PRODUCTION], // Future integration
     sensitive: false,
     validator: (val) => !val || /^pk_(live|test)_[a-zA-Z0-9]+$/.test(val),
     errorMessage: 'STRIPE_PUBLISHABLE_KEY must be a valid Stripe publishable key (pk_live_xxx or pk_test_xxx)',
@@ -375,7 +375,8 @@ const ENV_MANIFEST = Object.freeze({
     category: CATEGORY.OPTIONAL,
     description: 'QuickBooks environment (sandbox or production)',
     defaultValue: 'sandbox',
-    allowDefaultIn: [ENVIRONMENTS.DEVELOPMENT, ENVIRONMENTS.TEST],
+    allowDefaultIn: [ENVIRONMENTS.DEVELOPMENT, ENVIRONMENTS.TEST, ENVIRONMENTS.PRODUCTION],
+    skipValidationIn: [ENVIRONMENTS.TEST, ENVIRONMENTS.PRODUCTION], // Future integration
     validator: (val) => ['sandbox', 'production'].includes(val),
     errorMessage: 'QB_ENVIRONMENT must be sandbox or production',
   },
@@ -384,7 +385,8 @@ const ENV_MANIFEST = Object.freeze({
     category: CATEGORY.OPTIONAL,
     description: 'QuickBooks OAuth2 callback URI',
     defaultValue: 'http://localhost:3001/api/v1/integrations/quickbooks/callback',
-    allowDefaultIn: [ENVIRONMENTS.DEVELOPMENT, ENVIRONMENTS.TEST],
+    allowDefaultIn: [ENVIRONMENTS.DEVELOPMENT, ENVIRONMENTS.TEST, ENVIRONMENTS.PRODUCTION],
+    skipValidationIn: [ENVIRONMENTS.TEST, ENVIRONMENTS.PRODUCTION], // Future integration
     validator: (val) => {
       try {
         const url = new URL(val);
