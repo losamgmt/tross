@@ -2,6 +2,9 @@
   "name": "tross",
   "version": "1.0.0",
   "description": "Tross - Skills-based work order management system monorepo",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "directories": {
     "doc": "docs"
   },

@@ -1,8 +1,8 @@
 # Railway Nixpacks Configuration
-# Forces Node 24 and configures proper build
+# Forces Node 22 LTS and configures proper build
 
 [phases.setup]
-nixPkgs = ["nodejs-24_x"]
+nixPkgs = ["nodejs_22"]
 
 [phases.install]
 cmds = ["npm ci --prefer-offline --no-audit --legacy-peer-deps"]
