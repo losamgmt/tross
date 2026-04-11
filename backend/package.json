@@ -12,6 +12,8 @@
     "dev:railway": "cross-env DB_ENV=railway node server.js",
     "db:init": "node -e \"require('./scripts/init-database').initializeDatabase().then(() => process.exit(0))\"",
     "db:migrate": "node scripts/run-migrations.js",
+    "db:reset": "node scripts/reset-databases-clean.js --dev-only",
+    "db:reset:all": "node scripts/reset-databases-clean.js",
     "start": "node server.js",
     "health": "node scripts/test-db-connection.js",
     "build": "echo 'Backend build: copying files and preparing for production'",

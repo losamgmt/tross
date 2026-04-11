@@ -87,6 +87,16 @@ async function resetDatabase(config, envName) {
     await appClient.query(schema);
     log('✅ Schema applied', 'green');
 
+    // Apply seed data for DEVELOPMENT only (test DB should start empty)
+    if (envName === 'DEVELOPMENT') {
+      const seedPath = path.join(__dirname, '..', 'seeds', 'seed-data.sql');
+      const seedData = await fs.readFile(seedPath, 'utf8');
+
+      log(`🌱 Applying seed-data.sql to ${envName}...`, 'blue');
+      await appClient.query(seedData);
+      log('✅ Seed data applied', 'green');
+    }
+
     // Verify roles
     const rolesResult = await appClient.query(`
       SELECT id, name, priority 
@@ -133,6 +143,27 @@ async function resetDatabase(config, envName) {
           'blue',
         );
       }
+
+      // Verify demo user
+      const demoCheck = await appClient.query(`
+        SELECT email, status FROM users WHERE email = 'lane.vandeventer@gmail.com'
+      `);
+      if (demoCheck.rows.length > 0) {
+        log(
+          `   ✅ Demo user exists: ${demoCheck.rows[0].email} (status: ${demoCheck.rows[0].status})`,
+          'green',
+        );
+      }
+
+      // Show demo data counts
+      const counts = await appClient.query(`
+        SELECT 
+          (SELECT COUNT(*) FROM customers) as customers,
+          (SELECT COUNT(*) FROM properties) as properties,
+          (SELECT COUNT(*) FROM work_orders) as work_orders
+      `);
+      const c = counts.rows[0];
+      log(`   📊 Demo data: ${c.customers} customers, ${c.properties} properties, ${c.work_orders} work orders`, 'cyan');
     }
   } catch (error) {
     log(`❌ Error applying schema to ${envName}: ${error.message}`, 'red');
