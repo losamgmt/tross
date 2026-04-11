@@ -292,7 +292,9 @@ BEGIN
             'Annual HVAC maintenance and filter replacement', 'completed', 'normal', 'north', 'direct',
             CURRENT_DATE - INTERVAL '14 days',
             '742 Evergreen Terrace', 'Springfield', 'IL', '62701', 'US'
-        ) RETURNING id INTO v_wo_completed_id;
+        )
+        ON CONFLICT (work_order_number) DO UPDATE SET summary = EXCLUDED.summary
+        RETURNING id INTO v_wo_completed_id;
         
         -- Visit for completed work order
         IF v_wo_completed_id IS NOT NULL THEN
@@ -321,7 +323,9 @@ BEGIN
             'Quarterly plumbing inspection - Suite 305', 'scheduled', 'normal', 'south', 'direct',
             CURRENT_DATE + INTERVAL '3 days',
             '500 Commerce Drive', 'Austin', 'TX', '78701', 'US'
-        ) RETURNING id INTO v_wo_scheduled_id;
+        )
+        ON CONFLICT (work_order_number) DO UPDATE SET summary = EXCLUDED.summary
+        RETURNING id INTO v_wo_scheduled_id;
         
         -- Future visit for scheduled work order
         IF v_wo_scheduled_id IS NOT NULL THEN
@@ -346,7 +350,9 @@ BEGIN
             'WO-2026-0003', v_oceanview_id,
             'Pool pump making unusual noise - needs diagnosis', 'pending', 'high', 'east', 'direct',
             '1200 Ocean Boulevard', 'Miami', 'FL', '33139', 'US'
-        ) RETURNING id INTO v_wo_pending_id;
+        )
+        ON CONFLICT (work_order_number) DO UPDATE SET summary = EXCLUDED.summary
+        RETURNING id INTO v_wo_pending_id;
     END IF;
 END $$;
 
