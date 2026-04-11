@@ -14,6 +14,7 @@
 /// ZERO per-entity code - all tests generated from EntityTestRegistry.
 library;
 
+import '../mocks/mock_failure_config.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tross/services/generic_entity_service.dart';
 
@@ -236,31 +237,31 @@ void main() {
     final testEntity = allKnownEntities.first;
 
     test('getAll rethrows API errors', () async {
-      mockApiClient.setShouldFail(true, message: 'Network error');
+      mockApiClient.setFailure(MockFailureConfig.exception('Network error', persistent: false));
 
       expect(() => service.getAll(testEntity), throwsException);
     });
 
     test('getById rethrows API errors', () async {
-      mockApiClient.setShouldFail(true, message: 'Not found');
+      mockApiClient.setFailure(MockFailureConfig.exception('Not found', persistent: false));
 
       expect(() => service.getById(testEntity, 999), throwsException);
     });
 
     test('create rethrows API errors', () async {
-      mockApiClient.setShouldFail(true, message: 'Validation failed');
+      mockApiClient.setFailure(MockFailureConfig.exception('Validation failed', persistent: false));
 
       expect(() => service.create(testEntity, {}), throwsException);
     });
 
     test('update rethrows API errors', () async {
-      mockApiClient.setShouldFail(true, message: 'Conflict');
+      mockApiClient.setFailure(MockFailureConfig.exception('Conflict', persistent: false));
 
       expect(() => service.update(testEntity, 1, {}), throwsException);
     });
 
     test('delete rethrows API errors', () async {
-      mockApiClient.setShouldFail(true, message: 'Forbidden');
+      mockApiClient.setFailure(MockFailureConfig.exception('Forbidden', persistent: false));
 
       expect(() => service.delete(testEntity, 1), throwsException);
     });

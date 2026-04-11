@@ -5,6 +5,7 @@
 /// Uses MockApiClient for DI pattern demonstration.
 library;
 
+import '../mocks/mock_failure_config.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tross/services/preferences_service.dart';
 import 'package:tross/config/preference_keys.dart';
@@ -60,7 +61,7 @@ void main() {
       // These tests verify graceful failure when API is unavailable
 
       test('load returns empty map on error', () async {
-        mockApiClient.setShouldFail(true, message: 'API Error');
+        mockApiClient.setFailure(MockFailureConfig.exception('API Error', persistent: false));
 
         final result = await preferencesService.load('test-token', testUserId);
 
@@ -69,7 +70,7 @@ void main() {
       });
 
       test('update returns null on failure', () async {
-        mockApiClient.setShouldFail(true, message: 'API Error');
+        mockApiClient.setFailure(MockFailureConfig.exception('API Error', persistent: false));
 
         final result = await preferencesService.update(
           'test-token',
@@ -81,7 +82,7 @@ void main() {
       });
 
       test('updateField returns null on failure', () async {
-        mockApiClient.setShouldFail(true, message: 'API Error');
+        mockApiClient.setFailure(MockFailureConfig.exception('API Error', persistent: false));
 
         final result = await preferencesService.updateField(
           'test-token',

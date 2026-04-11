@@ -21,6 +21,7 @@
 /// - Success paths
 library;
 
+import '../mocks/mock_failure_config.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tross/services/stats_service.dart';
 import 'package:tross/services/audit_log_service.dart';
@@ -426,7 +427,7 @@ void main() {
       });
 
       test('rethrows errors from ApiClient', () async {
-        mockApiClient.setShouldFail(true);
+        mockApiClient.setFailure(MockFailureConfig.exception('Mock API Error', persistent: false));
 
         expect(() => service.getAll('customer'), throwsA(isA<Exception>()));
       });
@@ -441,7 +442,7 @@ void main() {
       });
 
       test('rethrows errors from ApiClient', () async {
-        mockApiClient.setShouldFail(true);
+        mockApiClient.setFailure(MockFailureConfig.exception('Mock API Error', persistent: false));
 
         expect(() => service.getById('customer', 1), throwsA(isA<Exception>()));
       });
@@ -460,7 +461,7 @@ void main() {
       });
 
       test('rethrows errors from ApiClient', () async {
-        mockApiClient.setShouldFail(true);
+        mockApiClient.setFailure(MockFailureConfig.exception('Mock API Error', persistent: false));
 
         expect(
           () => service.create('customer', {'name': 'New'}),
@@ -482,7 +483,7 @@ void main() {
       });
 
       test('rethrows errors from ApiClient', () async {
-        mockApiClient.setShouldFail(true);
+        mockApiClient.setFailure(MockFailureConfig.exception('Mock API Error', persistent: false));
 
         expect(
           () => service.update('customer', 1, {'name': 'Updated'}),
@@ -498,7 +499,7 @@ void main() {
       });
 
       test('rethrows errors from ApiClient', () async {
-        mockApiClient.setShouldFail(true);
+        mockApiClient.setFailure(MockFailureConfig.exception('Mock API Error', persistent: false));
 
         expect(() => service.delete('customer', 1), throwsA(isA<Exception>()));
       });

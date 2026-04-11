@@ -10,6 +10,7 @@
 /// - Verify notifyListeners() is called appropriately
 library;
 
+import '../mocks/mock_failure_config.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tross/providers/auth_provider.dart';
 import 'package:tross/models/permission.dart';
@@ -121,7 +122,7 @@ void main() {
       });
 
       test('handles API errors gracefully', () async {
-        mockApiClient.setShouldFail(true, message: 'Network error');
+        mockApiClient.setFailure(MockFailureConfig.exception('Network error', persistent: false));
 
         final result = await authProvider.loginWithTestToken(role: 'admin');
 
@@ -164,7 +165,7 @@ void main() {
       });
 
       test('handles logout errors gracefully', () async {
-        mockApiClient.setShouldFail(true, message: 'Logout failed');
+        mockApiClient.setFailure(MockFailureConfig.exception('Logout failed', persistent: false));
 
         // Should not throw
         await authProvider.logout();
@@ -246,7 +247,7 @@ void main() {
     group('Error Handling', () {
       test('clearError removes current error', () {
         // Trigger an error via failed login
-        mockApiClient.setShouldFail(true, message: 'Test error');
+        mockApiClient.setFailure(MockFailureConfig.exception('Test error', persistent: false));
 
         // Clear the error
         authProvider.clearError();

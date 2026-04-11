@@ -8,6 +8,7 @@
 /// These helpers provide consistent setup for screen tests.
 library;
 
+import '../mocks/mock_failure_config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -125,7 +126,7 @@ class ScreenTestBehaviors {
     Widget screen,
     MockApiClient mockApiClient,
   ) async {
-    mockApiClient.setShouldFail(true, message: 'Test error');
+    mockApiClient.setFailure(MockFailureConfig.exception('Test error', persistent: false));
     await pumpScreen(tester, screen, mockApiClient: mockApiClient);
     await tester.pumpAndSettle();
     // Should show some error indicator

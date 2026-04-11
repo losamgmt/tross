@@ -450,7 +450,7 @@ abstract final class CrudTestFactory {
         test(
           'getAll throws on ${scenario.statusCode} for all entities',
           () async {
-            mockApiClient.setShouldFail(true, message: scenario.message);
+            mockApiClient.setFailure(MockFailureConfig.exception(scenario.message, persistent: false));
             for (final entityName in EntityTestRegistry.allEntityNames) {
               expect(
                 () => service.getAll(entityName),
@@ -465,7 +465,7 @@ abstract final class CrudTestFactory {
         test(
           'getById throws on ${scenario.statusCode} for all entities',
           () async {
-            mockApiClient.setShouldFail(true, message: scenario.message);
+            mockApiClient.setFailure(MockFailureConfig.exception(scenario.message, persistent: false));
             for (final entityName in EntityTestRegistry.allEntityNames) {
               expect(
                 () => service.getById(entityName, 1),
@@ -480,7 +480,7 @@ abstract final class CrudTestFactory {
         test(
           'create throws on ${scenario.statusCode} for all entities',
           () async {
-            mockApiClient.setShouldFail(true, message: scenario.message);
+            mockApiClient.setFailure(MockFailureConfig.exception(scenario.message, persistent: false));
             for (final entityName in EntityTestRegistry.allEntityNames) {
               expect(
                 () => service.create(entityName, {}),
@@ -495,7 +495,7 @@ abstract final class CrudTestFactory {
         test(
           'update throws on ${scenario.statusCode} for all entities',
           () async {
-            mockApiClient.setShouldFail(true, message: scenario.message);
+            mockApiClient.setFailure(MockFailureConfig.exception(scenario.message, persistent: false));
             for (final entityName in EntityTestRegistry.allEntityNames) {
               expect(
                 () => service.update(entityName, 1, {}),
@@ -510,7 +510,7 @@ abstract final class CrudTestFactory {
         test(
           'delete throws on ${scenario.statusCode} for all entities',
           () async {
-            mockApiClient.setShouldFail(true, message: scenario.message);
+            mockApiClient.setFailure(MockFailureConfig.exception(scenario.message, persistent: false));
             for (final entityName in EntityTestRegistry.allEntityNames) {
               expect(
                 () => service.delete(entityName, 1),

@@ -9,6 +9,13 @@
 # packages, and plugins designed to encourage good coding practices.
 include: package:flutter_lints/flutter.yaml
 
+analyzer:
+  errors:
+    # Suppress deprecation warnings for same-package deprecated members in tests
+    # The setShouldFail() method is deprecated in favor of setFailure(MockFailureConfig)
+    # TODO: Migrate all test files to use setFailure() then remove this suppression
+    deprecated_member_use_from_same_package: ignore
+
 linter:
   # The lint rules applied to this project can be customized in the
   # section below to disable rules from the `package:flutter_lints/flutter.yaml`

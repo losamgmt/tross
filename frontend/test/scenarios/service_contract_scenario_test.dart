@@ -12,6 +12,7 @@
 /// Expected impact: ~200 lines of coverage across 15 service files.
 library;
 
+import '../mocks/mock_failure_config.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tross/services/audit_log_service.dart';
 import 'package:tross/services/error_service.dart';
@@ -179,26 +180,26 @@ void main() {
 
       for (final entityName in allKnownEntities) {
         test('$entityName: getAll handles API failure', () async {
-          mockApiClient.setShouldFail(true, message: 'Server error');
+          mockApiClient.setFailure(MockFailureConfig.exception('Server error', persistent: false));
 
           expect(() => service.getAll(entityName), throwsException);
         });
 
         test('$entityName: getById handles API failure', () async {
-          mockApiClient.setShouldFail(true, message: 'Server error');
+          mockApiClient.setFailure(MockFailureConfig.exception('Server error', persistent: false));
 
           expect(() => service.getById(entityName, 1), throwsException);
         });
 
         test('$entityName: create handles API failure', () async {
-          mockApiClient.setShouldFail(true, message: 'Server error');
+          mockApiClient.setFailure(MockFailureConfig.exception('Server error', persistent: false));
           final testData = entityName.testData();
 
           expect(() => service.create(entityName, testData), throwsException);
         });
 
         test('$entityName: update handles API failure', () async {
-          mockApiClient.setShouldFail(true, message: 'Server error');
+          mockApiClient.setFailure(MockFailureConfig.exception('Server error', persistent: false));
           final testData = entityName.testData();
 
           expect(
@@ -208,7 +209,7 @@ void main() {
         });
 
         test('$entityName: delete handles API failure', () async {
-          mockApiClient.setShouldFail(true, message: 'Server error');
+          mockApiClient.setFailure(MockFailureConfig.exception('Server error', persistent: false));
 
           expect(() => service.delete(entityName, 1), throwsException);
         });
@@ -223,13 +224,13 @@ void main() {
       });
 
       test('count handles API failure', () async {
-        mockApiClient.setShouldFail(true, message: 'Server error');
+        mockApiClient.setFailure(MockFailureConfig.exception('Server error', persistent: false));
 
         expect(() => service.count('work_order'), throwsException);
       });
 
       test('sum handles API failure', () async {
-        mockApiClient.setShouldFail(true, message: 'Server error');
+        mockApiClient.setFailure(MockFailureConfig.exception('Server error', persistent: false));
 
         expect(() => service.sum('invoice', 'amount'), throwsException);
       });
@@ -243,7 +244,7 @@ void main() {
       });
 
       test('listFiles handles API failure', () async {
-        mockApiClient.setShouldFail(true, message: 'Server error');
+        mockApiClient.setFailure(MockFailureConfig.exception('Server error', persistent: false));
 
         expect(
           () => service.listFiles(entityKey: 'work_order', entityId: 1),

@@ -7,6 +7,7 @@
 /// (GenericEntityService is tested separately in scenario tests)
 library;
 
+import '../mocks/mock_failure_config.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tross/models/saved_view.dart';
 import 'package:tross/services/saved_view_service.dart';
@@ -97,7 +98,7 @@ void main() {
 
       test('rethrows on API error', () async {
         // Arrange
-        mockApiClient.setShouldFail(true, message: 'Network error');
+        mockApiClient.setFailure(MockFailureConfig.exception('Network error', persistent: false));
 
         // Act & Assert
         expect(
@@ -141,7 +142,7 @@ void main() {
 
       test('returns null on error (graceful fallback)', () async {
         // Arrange
-        mockApiClient.setShouldFail(true, message: 'Server error');
+        mockApiClient.setFailure(MockFailureConfig.exception('Server error', persistent: false));
 
         // Act
         final defaultView = await savedViewService.getDefault('work_order');
@@ -210,7 +211,7 @@ void main() {
 
       test('rethrows on API error', () async {
         // Arrange
-        mockApiClient.setShouldFail(true, message: 'Validation error');
+        mockApiClient.setFailure(MockFailureConfig.exception('Validation error', persistent: false));
 
         // Act & Assert
         expect(
@@ -281,7 +282,7 @@ void main() {
 
       test('rethrows on API error', () async {
         // Arrange
-        mockApiClient.setShouldFail(true, message: 'Not found');
+        mockApiClient.setFailure(MockFailureConfig.exception('Not found', persistent: false));
 
         // Act & Assert
         expect(
@@ -300,7 +301,7 @@ void main() {
 
       test('rethrows on API error', () async {
         // Arrange
-        mockApiClient.setShouldFail(true, message: 'Cannot delete');
+        mockApiClient.setFailure(MockFailureConfig.exception('Cannot delete', persistent: false));
 
         // Act & Assert
         expect(() => savedViewService.delete(999), throwsException);
