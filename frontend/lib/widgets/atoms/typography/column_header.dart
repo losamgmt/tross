@@ -75,6 +75,8 @@ class ColumnHeader extends StatelessWidget {
           ],
         );
       }
+      // Clip overflow to prevent render errors on narrow columns
+      content = ClipRect(child: content);
     } else {
       content = textWidget;
     }
