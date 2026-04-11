@@ -267,7 +267,12 @@ if (!isTest()) {
   try {
     AppConfig.validate();
   } catch (error) {
-    // Logger handles all output consistently
+    // Log the FULL error message clearly so we can debug deploy failures
+    console.error('═'.repeat(60));
+    console.error('CONFIGURATION ERROR - SERVER CANNOT START');
+    console.error('═'.repeat(60));
+    console.error(error.message);
+    console.error('═'.repeat(60));
     logger.error('Configuration Error:', { error: error.message });
     if (isProduction()) {
       // In production, fail fast if configuration is invalid
