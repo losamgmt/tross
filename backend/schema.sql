@@ -307,7 +307,11 @@ CREATE TABLE IF NOT EXISTS invoices (
     tax DECIMAL(12,2) DEFAULT 0,
     total DECIMAL(12,2) NOT NULL,
     due_date DATE,
-    paid_at TIMESTAMPTZ
+    paid_at TIMESTAMPTZ,
+    qb_invoice_id VARCHAR(50),
+    qb_sync_status VARCHAR(25) DEFAULT null CHECK (qb_sync_status IN ('pending', 'synced', 'modified', 'error', 'skipped')),
+    qb_synced_at TIMESTAMPTZ,
+    qb_sync_error TEXT
 );
 
 -- Indexes
@@ -385,7 +389,11 @@ CREATE TABLE IF NOT EXISTS payments (
     reference_number VARCHAR(50),
     notes TEXT,
     customer_id INTEGER NOT NULL,
-    invoice_id INTEGER
+    invoice_id INTEGER,
+    stripe_payment_intent_id VARCHAR(50),
+    stripe_charge_id VARCHAR(50),
+    qb_payment_id VARCHAR(50),
+    external_ref VARCHAR(100)
 );
 
 -- Indexes

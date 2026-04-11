@@ -326,7 +326,7 @@ class SystemSettingsService {
     this._validateProvider(provider);
 
     const existing = await this.getIntegrationTokens(provider);
-    if (!existing) return false;
+    if (!existing) {return false;}
 
     const key = `integration.${provider}.tokens`;
 
@@ -335,7 +335,7 @@ class SystemSettingsService {
     // 2. Setting value to null would leave a row with null value (not clean)
     // 3. This is the only place we need delete functionality for now
     // If more delete use cases arise, consider adding deleteSetting() method.
-    await db(`DELETE FROM system_settings WHERE key = $1`, [key]);
+    await db('DELETE FROM system_settings WHERE key = $1', [key]);
 
     logSecurityEvent('INTEGRATION_DISCONNECTED', {
       provider,

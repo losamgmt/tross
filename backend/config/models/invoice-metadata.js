@@ -438,10 +438,34 @@ module.exports = {
     // TIER 1: Universal Entity Contract Fields (field-centric)
     ...TIER1_FIELDS.WITH_STATUS,
     // Override status default (workflow entity - draft→sent→paid, not active/inactive)
-    status: withTraits(
-      { type: 'enum', enumKey: 'status', default: 'draft' },
-      TRAIT_SETS.LOOKUP,
-    ),
+    // Includes lifecycle hooks for status transitions
+    status: {
+      ...withTraits(
+        { type: 'enum', enumKey: 'status', default: 'draft' },
+        TRAIT_SETS.LOOKUP,
+      ),
+      // Hooks: evaluated during status field changes
+      beforeChange: [
+        {
+          description: 'High-value invoices require manager approval before sending',
+          on: 'change',
+          when: { field: 'total', operator: 'gt', value: 5000 },
+          requiresApproval: { approver: 'manager', reason: 'high_value_invoice' },
+        },
+      ],
+      afterChange: [
+        {
+          description: 'Notify customer when invoice is sent',
+          on: 'draft→sent',
+          do: 'notify',
+        },
+        {
+          description: 'Log payment received',
+          on: 'sent→paid',
+          do: 'log',
+        },
+      ],
+    },
 
     // Identity field - auto-generated, immutable, searchable
     invoice_number: withTraits(

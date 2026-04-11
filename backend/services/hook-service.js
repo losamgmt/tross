@@ -56,13 +56,13 @@ const HOOK_LIMITS = {
  */
 function matchesOn(onPattern, oldValue, newValue, operation = 'update') {
   // Lifecycle patterns
-  if (onPattern === 'create') return operation === 'create';
-  if (onPattern === 'delete') return operation === 'delete';
-  if (onPattern === 'change') return oldValue !== newValue;
+  if (onPattern === 'create') {return operation === 'create';}
+  if (onPattern === 'delete') {return operation === 'delete';}
+  if (onPattern === 'change') {return oldValue !== newValue;}
 
   // Normalize values for comparison (null/undefined → empty string)
-  const oldStr = oldValue == null ? '' : String(oldValue);
-  const newStr = newValue == null ? '' : String(newValue);
+  const oldStr = oldValue === null || oldValue === undefined ? '' : String(oldValue);
+  const newStr = newValue === null || newValue === undefined ? '' : String(newValue);
 
   // Transition patterns (contain →)
   if (onPattern.includes('→')) {
@@ -84,7 +84,7 @@ function matchesOn(onPattern, oldValue, newValue, operation = 'update') {
  * @returns {boolean} True if condition is satisfied
  */
 function evaluateWhen(whenCondition, record) {
-  if (!whenCondition) return true;
+  if (!whenCondition) {return true;}
 
   const { field, operator, value } = whenCondition;
   const fieldValue = record[field];

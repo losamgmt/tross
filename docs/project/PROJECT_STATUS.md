@@ -37,16 +37,16 @@ Routes are defined in `lib/core/routing/`. See code for current mappings.
 
 ## Key Documentation
 
-| Topic                | Document                                                               |
-| -------------------- | ---------------------------------------------------------------------- |
-| **Architecture**     | [ARCHITECTURE.md](architecture/ARCHITECTURE.md)                        |
-| **ADRs**             | [decisions/](architecture/decisions/)                                  |
-| **Entity Naming**    | [ADR-006](architecture/decisions/006-entity-naming-convention.md)      |
-| **File Attachments** | [ADR-007](architecture/decisions/007-file-attachments-architecture.md) |
-| **API Reference**    | [API.md](reference/API.md)                                             |
-| **Authentication**   | [AUTH.md](reference/AUTH.md)                                           |
-| **Testing**          | [TESTING.md](reference/TESTING.md)                                     |
-| **R2/CORS Config**   | [r2-cors-config.md](operations/r2-cors-config.md)                      |
+| Topic                | Document                                                                      |
+| -------------------- | ----------------------------------------------------------------------------- |
+| **Architecture**     | [ARCHITECTURE.md](../architecture/ARCHITECTURE.md)                            |
+| **ADRs**             | [decisions/](../architecture/decisions/)                                      |
+| **Entity Naming**    | [ADR-006](../architecture/decisions/006-entity-naming-convention.md)          |
+| **File Attachments** | [ADR-007](../architecture/decisions/007-file-attachments-architecture.md)     |
+| **API Reference**    | [API.md](../reference/API.md)                                                 |
+| **Authentication**   | [AUTH.md](../reference/AUTH.md)                                               |
+| **Testing**          | [TESTING.md](../reference/TESTING.md)                                         |
+| **R2/CORS Config**   | [r2-cors-config.md](../operations/r2-cors-config.md)                          |
 
 ---
 
@@ -68,8 +68,8 @@ Routes are defined in `lib/core/routing/`. See code for current mappings.
 
 ## Testing
 
-Run `npm test` to execute all tests. See [TESTING.md](reference/TESTING.md) for philosophy and patterns.
+Run `npm test` to execute all tests. See [TESTING.md](../reference/TESTING.md) for philosophy and patterns.
 
 ---
 
-_For architectural decisions, see [ADRs](architecture/decisions/)._
+_For architectural decisions, see [ADRs](../architecture/decisions/)._

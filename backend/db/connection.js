@@ -70,6 +70,8 @@ const railwayDbConfig = {
   statement_timeout: TIMEOUTS.DATABASE.STATEMENT_TIMEOUT_MS,
   query_timeout: TIMEOUTS.DATABASE.QUERY_TIMEOUT_MS,
   application_name: 'tross_dev_railway_test',
+  // Set timezone at connection startup (before any queries)
+  options: '-c timezone=UTC',
 };
 
 // Test database configuration (port 5433, separate from default on 5432)
@@ -89,6 +91,8 @@ const testDbConfig = {
   statement_timeout: TIMEOUTS.DATABASE.TEST.STATEMENT_TIMEOUT_MS,
   query_timeout: TIMEOUTS.DATABASE.TEST.QUERY_TIMEOUT_MS,
   application_name: 'tross_test',
+  // Set timezone at connection startup (before any queries)
+  options: '-c timezone=UTC',
 };
 
 // Default database configuration (standard PostgreSQL port 5432)
@@ -110,6 +114,8 @@ const defaultDbConfig =
       statement_timeout: TIMEOUTS.DATABASE.STATEMENT_TIMEOUT_MS,
       query_timeout: TIMEOUTS.DATABASE.QUERY_TIMEOUT_MS,
       application_name: 'tross_backend',
+      // Set timezone at connection startup (before any queries)
+      options: '-c timezone=UTC',
     }
     : {
       // Individual vars format - merge with pool and timeout config
@@ -121,6 +127,8 @@ const defaultDbConfig =
       statement_timeout: TIMEOUTS.DATABASE.STATEMENT_TIMEOUT_MS,
       query_timeout: TIMEOUTS.DATABASE.QUERY_TIMEOUT_MS,
       application_name: 'tross_backend',
+      // Set timezone at connection startup (before any queries)
+      options: '-c timezone=UTC',
     };
 
 // Create connection pool with appropriate configuration
@@ -159,11 +167,10 @@ if (isTest) {
 }
 
 // Comprehensive pool event logging and error handling
-// Set timezone to UTC on each new connection for consistent TIMESTAMPTZ behavior
-// TIMESTAMPTZ stores as UTC internally; session timezone determines display format
-pool.on('connect', (client) => {
-  client.query('SET timezone = \'UTC\'');
-  logger.debug('New database client connected to pool (timezone set to UTC)');
+// Timezone is now set via the 'options' connection parameter (-c timezone=UTC)
+// which sets it at startup before any queries can be issued, avoiding race conditions.
+pool.on('connect', () => {
+  logger.debug('New database client connected to pool (timezone=UTC via options)');
 });
 
 pool.on('acquire', (_client) => {

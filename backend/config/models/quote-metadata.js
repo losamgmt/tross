@@ -207,10 +207,34 @@ module.exports = {
     // TIER 1: Universal Entity Contract Fields (field-centric)
     ...TIER1_FIELDS.WITH_STATUS,
     // Override status default (workflow entity - draft→sent→accepted, not active/inactive)
-    status: withTraits(
-      { type: 'enum', enumKey: 'status', default: 'draft' },
-      TRAIT_SETS.LOOKUP,
-    ),
+    // Includes lifecycle hooks for status transitions
+    status: {
+      ...withTraits(
+        { type: 'enum', enumKey: 'status', default: 'draft' },
+        TRAIT_SETS.LOOKUP,
+      ),
+      // Hooks: evaluated during status field changes
+      beforeChange: [
+        {
+          description: 'High-value quotes require manager approval',
+          on: 'change',
+          when: { field: 'total_amount', operator: 'gt', value: 10000 },
+          requiresApproval: { approver: 'manager', reason: 'high_value_quote' },
+        },
+      ],
+      afterChange: [
+        {
+          description: 'Notify customer when quote is sent',
+          on: 'draft→sent',
+          do: 'notify',
+        },
+        {
+          description: 'Notify sales team when quote is accepted',
+          on: 'sent→accepted',
+          do: 'notify',
+        },
+      ],
+    },
 
     // Identity field - auto-generated, immutable
     quote_number: withTraits(
