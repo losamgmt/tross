@@ -48,7 +48,7 @@
 ///   group('Error Handling', () {
 ///     serviceErrorTest(
 ///       'handles API failure gracefully',
-///       arrange: () => mockApiClient.setShouldFail(true),
+///       arrange: () => mockApiClient.setFailure(MockFailureConfig.exception('Mock API Error', persistent: false)),
 ///       act: () => service.getItems(),
 ///       expectThrows: true,
 ///     );
@@ -173,7 +173,7 @@ void serviceSuccessTestVoid(
 /// ```dart
 /// serviceErrorTest(
 ///   'handles API failure',
-///   arrange: () => mockApiClient.setShouldFail(true),
+///   arrange: () => mockApiClient.setFailure(MockFailureConfig.exception('Mock API Error', persistent: false)),
 ///   act: () => service.getItems(),
 ///   expectThrows: true,
 /// );

@@ -4,6 +4,7 @@
 /// Focuses on: structure, routing integration, provider dependencies.
 library;
 
+import '../mocks/mock_failure_config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -213,7 +214,7 @@ void main() {
   group('HomeScreen - Error States', () {
     testWidgets('handles API error gracefully', (tester) async {
       // Configure mock to fail
-      mockApiClient.setShouldFail(true, message: 'Dashboard fetch failed');
+      mockApiClient.setFailure(MockFailureConfig.exception('Dashboard fetch failed', persistent: false));
 
       await tester.pumpWidget(buildTestWidget());
       await tester.pumpAndSettle(const Duration(seconds: 5));

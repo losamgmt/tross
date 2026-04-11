@@ -11,6 +11,7 @@
 /// ❌ Don't test: internal implementation, private methods
 library;
 
+import '../../mocks/mock_failure_config.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tross/services/auth/auth_token_service.dart';
 
@@ -153,7 +154,9 @@ void main() {
       });
 
       test('returns null when profile fetch fails', () async {
-        mockApiClient.setShouldFail(true, message: 'Network error');
+        mockApiClient.setFailure(
+          MockFailureConfig.exception('Network error', persistent: false),
+        );
 
         final result = await tokenService.validateToken('token');
 
@@ -187,7 +190,9 @@ void main() {
       });
 
       test('completes without throwing on API error', () async {
-        mockApiClient.setShouldFail(true, message: 'Server error');
+        mockApiClient.setFailure(
+          MockFailureConfig.exception('Server error', persistent: false),
+        );
 
         // Should not throw - returns null on error
         await expectLater(

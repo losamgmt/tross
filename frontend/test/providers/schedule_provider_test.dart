@@ -4,6 +4,7 @@
 /// Following TEST_PHILOSOPHY.md behavioral testing patterns.
 library;
 
+import '../mocks/mock_failure_config.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tross/models/date_range_unit.dart';
@@ -204,7 +205,7 @@ void main() {
       });
 
       test('sets error on failure', () async {
-        mockService.setShouldFail(true, message: 'Network error');
+        mockService.setFailure(MockFailureConfig.exception('Network error', persistent: false));
 
         await provider.loadSchedule();
 

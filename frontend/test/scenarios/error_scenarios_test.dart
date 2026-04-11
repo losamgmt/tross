@@ -22,12 +22,12 @@
 ///   });
 ///
 ///   test('throws on API error', () async {
-///     mockApiClient.setShouldFail(true, message: 'Network error');
+///     mockApiClient.setFailure(MockFailureConfig.exception('Network error', persistent: false));
 ///     expect(() => service.doSomething(), throwsException);
 ///   });
 ///
 ///   test('returns null on graceful fallback', () async {
-///     mockApiClient.setShouldFail(true);
+///     mockApiClient.setFailure(MockFailureConfig.exception('Mock API Error', persistent: false));
 ///     final result = await service.getOptionalData();
 ///     expect(result, isNull); // Graceful fallback
 ///   });
@@ -35,6 +35,7 @@
 /// ```
 library;
 
+import '../mocks/mock_failure_config.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tross/services/error_service.dart';
 import 'package:tross/services/stats_service.dart';
@@ -161,7 +162,12 @@ void main() {
 
       group('Network errors propagate correctly', () {
         test('GenericEntityService rethrows network errors', () async {
-          mockApiClient.setShouldFail(true, message: 'Network unreachable');
+          mockApiClient.setFailure(
+            MockFailureConfig.exception(
+              'Network unreachable',
+              persistent: false,
+            ),
+          );
           final service = GenericEntityService(mockApiClient);
 
           expect(
@@ -177,7 +183,12 @@ void main() {
         });
 
         test('SavedViewService.getForEntity rethrows on API failure', () async {
-          mockApiClient.setShouldFail(true, message: 'Server unavailable');
+          mockApiClient.setFailure(
+            MockFailureConfig.exception(
+              'Server unavailable',
+              persistent: false,
+            ),
+          );
           final entityService = GenericEntityService(mockApiClient);
           final service = SavedViewService(entityService);
 
@@ -187,7 +198,9 @@ void main() {
 
       group('Graceful degradation patterns', () {
         test('SavedViewService.getDefault returns null on error', () async {
-          mockApiClient.setShouldFail(true, message: 'Server error');
+          mockApiClient.setFailure(
+            MockFailureConfig.exception('Server error', persistent: false),
+          );
           final entityService = GenericEntityService(mockApiClient);
           final service = SavedViewService(entityService);
 
@@ -201,7 +214,9 @@ void main() {
         test('original error message is preserved in rethrow', () async {
           const errorMessage =
               'Specific validation error: email format invalid';
-          mockApiClient.setShouldFail(true, message: errorMessage);
+          mockApiClient.setFailure(
+            MockFailureConfig.exception(errorMessage, persistent: false),
+          );
           final service = GenericEntityService(mockApiClient);
 
           try {
@@ -285,8 +300,10 @@ void main() {
         mockApiClient = MockApiClient();
       });
 
-      test('setShouldFail makes next request fail', () async {
-        mockApiClient.setShouldFail(true, message: 'Test failure');
+      test('setFailure makes next request fail', () async {
+        mockApiClient.setFailure(
+          MockFailureConfig.exception('Test failure', persistent: false),
+        );
 
         expect(
           () => mockApiClient.fetchEntities('customer'),
@@ -300,21 +317,28 @@ void main() {
         );
       });
 
-      test('setShouldFail is single-use (resets after failure)', () async {
-        mockApiClient.setShouldFail(true, message: 'First failure');
+      test(
+        'setFailure with persistent: false is single-use (resets after failure)',
+        () async {
+          mockApiClient.setFailure(
+            MockFailureConfig.exception('First failure', persistent: false),
+          );
 
-        // First call fails
-        try {
-          await mockApiClient.fetchEntities('customer');
-        } catch (_) {}
+          // First call fails
+          try {
+            await mockApiClient.fetchEntities('customer');
+          } catch (_) {}
 
-        // Second call should succeed (returns default empty response)
-        final result = await mockApiClient.fetchEntities('customer');
-        expect(result['data'], isEmpty);
-      });
+          // Second call should succeed (returns default empty response)
+          final result = await mockApiClient.fetchEntities('customer');
+          expect(result['data'], isEmpty);
+        },
+      );
 
       test('reset() clears all mock state', () async {
-        mockApiClient.setShouldFail(true);
+        mockApiClient.setFailure(
+          MockFailureConfig.exception('Mock API Error', persistent: false),
+        );
         mockApiClient.mockEntityList('customer', [
           {'id': 1},
         ]);
@@ -440,7 +464,7 @@ void main() {
       // Template for testing API error propagation:
       //
       // test('methodName rethrows on API error', () async {
-      //   mockApiClient.setShouldFail(true, message: 'Network error');
+      //   mockApiClient.setFailure(MockFailureConfig.exception('Network error', persistent: false));
       //
       //   expect(
       //     () => service.methodName(),
@@ -455,7 +479,7 @@ void main() {
       // Template for testing graceful degradation:
       //
       // test('methodName returns null on error (graceful fallback)', () async {
-      //   mockApiClient.setShouldFail(true);
+      //   mockApiClient.setFailure(MockFailureConfig.exception('Mock API Error', persistent: false));
       //
       //   final result = await service.methodName();
       //
@@ -469,7 +493,7 @@ void main() {
       // Template for testing validation errors:
       //
       // test('create throws on validation error', () async {
-      //   mockApiClient.setShouldFail(true, message: 'Validation failed');
+      //   mockApiClient.setFailure(MockFailureConfig.exception('Validation failed', persistent: false));
       //
       //   expect(
       //     () => service.create(invalidData),

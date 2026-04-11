@@ -9,6 +9,7 @@
 /// - Navigation patterns work correctly
 library;
 
+import '../mocks/mock_failure_config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -107,7 +108,7 @@ void main() {
       ) async {
         for (final entityName in EntityTestRegistry.allEntityNames) {
           // Arrange - configure mock to fail
-          mockApiClient.setShouldFail(true, message: 'Network error');
+          mockApiClient.setFailure(MockFailureConfig.exception('Network error', persistent: false));
 
           // Act
           await _pumpEntityScreen(tester, entityName, mockApiClient);
@@ -131,7 +132,7 @@ void main() {
           );
           
           // Reset mock for next entity
-          mockApiClient.setShouldFail(false);
+          mockApiClient.setFailure(MockFailureConfig.disabled);
         }
       });
     });
@@ -242,7 +243,7 @@ void main() {
       ) async {
         for (final entityName in EntityTestRegistry.allEntityNames) {
           // Arrange - configure mock to fail with not found
-          mockApiClient.setShouldFail(true, message: 'Not found');
+          mockApiClient.setFailure(MockFailureConfig.exception('Not found', persistent: false));
 
           // Act
           await _pumpEntityDetailScreen(
@@ -269,7 +270,7 @@ void main() {
           );
           
           // Reset mock for next entity
-          mockApiClient.setShouldFail(false);
+          mockApiClient.setFailure(MockFailureConfig.disabled);
         }
       });
     });

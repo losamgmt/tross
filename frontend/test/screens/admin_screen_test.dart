@@ -11,6 +11,7 @@
 /// The AdminScreen's full functionality is covered by integration/e2e tests.
 library;
 
+import '../mocks/mock_failure_config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -193,7 +194,7 @@ void main() {
 
   group('AdminScreen - Error States', () {
     testWidgets('handles health API error gracefully', (tester) async {
-      mockApiClient.setShouldFail(true, message: 'Health check failed');
+      mockApiClient.setFailure(MockFailureConfig.exception('Health check failed', persistent: false));
 
       await tester.pumpWidget(buildTestWidget());
       await pumpUntilReady(tester);
@@ -207,7 +208,7 @@ void main() {
 
     testWidgets('handles sessions API error gracefully', (tester) async {
       // Reset and set specific endpoint to fail
-      mockApiClient.setShouldFail(false);
+      mockApiClient.setFailure(MockFailureConfig.disabled);
       mockApiClient.mockResponse('/health/databases', {
         'data': {
           'databases': [

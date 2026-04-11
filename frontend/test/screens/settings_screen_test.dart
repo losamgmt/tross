@@ -4,6 +4,7 @@
 /// Focuses on: structure, profile card, preferences display.
 library;
 
+import '../mocks/mock_failure_config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -164,7 +165,7 @@ void main() {
 
   group('SettingsScreen - Error States', () {
     testWidgets('handles API error gracefully', (tester) async {
-      mockApiClient.setShouldFail(true, message: 'Preferences fetch failed');
+      mockApiClient.setFailure(MockFailureConfig.exception('Preferences fetch failed', persistent: false));
 
       await tester.pumpWidget(buildTestWidget());
       await tester.pumpAndSettle(const Duration(seconds: 5));

@@ -105,8 +105,8 @@ class MockApiClient with MockFailureMixin implements ApiClient {
     _mockResponses[key] = response;
   }
 
-  // NOTE: setShouldFail() is inherited from MockFailureMixin (deprecated)
-  // Prefer using setFailure(MockFailureConfig.xxx()) for new code
+  // NOTE: setFailure() is inherited from MockFailureMixin
+  // Use setFailure(MockFailureConfig.xxx()) to configure failure behavior
 
   /// Set the current mock token
   void setToken(String? token) {
