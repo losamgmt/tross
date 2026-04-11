@@ -87,9 +87,9 @@ class WebhookValidator {
   static verify({ payload, signature, secret, algorithm = 'sha256', encoding = 'hex' }) {
     // Return false for missing inputs (consistent with verifyStripe/verifyQuickBooks)
     // This allows callers to handle invalid webhooks uniformly
-    if (!payload && payload !== '') return false;
-    if (!signature) return false;
-    if (!secret) return false;
+    if (!payload && payload !== '') {return false;}
+    if (!signature) {return false;}
+    if (!secret) {return false;}
 
     // NOTE: Not using computeHmac() helper because it's hardcoded to 'hex' encoding.
     // This method supports custom encodings (e.g., 'base64'), so we compute inline.
@@ -115,9 +115,9 @@ class WebhookValidator {
    * @returns {boolean} True if signature valid and timestamp within tolerance
    */
   static verifyStripe(payload, signatureHeader, secret, { toleranceSeconds = 300 } = {}) {
-    if (!signatureHeader) return false;
-    if (!payload && payload !== '') return false;
-    if (!secret) return false;
+    if (!signatureHeader) {return false;}
+    if (!payload && payload !== '') {return false;}
+    if (!secret) {return false;}
 
     // Parse Stripe signature format: t=1234567890,v1=abc123...
     const parts = signatureHeader.split(',').reduce((acc, part) => {
@@ -126,12 +126,12 @@ class WebhookValidator {
       return acc;
     }, {});
 
-    if (!parts.t || !parts.v1) return false;
+    if (!parts.t || !parts.v1) {return false;}
 
     // SECURITY: Validate timestamp to prevent replay attacks
     // Stripe includes timestamp in signature, so attacker can't modify it
     const timestamp = parseInt(parts.t, 10);
-    if (isNaN(timestamp)) return false;
+    if (isNaN(timestamp)) {return false;}
 
     const now = Math.floor(Date.now() / 1000);
     if (Math.abs(now - timestamp) > toleranceSeconds) {
@@ -162,9 +162,9 @@ class WebhookValidator {
    * @returns {boolean} True if signature is valid
    */
   static verifyQuickBooks(payload, signature, secret) {
-    if (!signature) return false;
-    if (!payload && payload !== '') return false;
-    if (!secret) return false;
+    if (!signature) {return false;}
+    if (!payload && payload !== '') {return false;}
+    if (!secret) {return false;}
 
     const computed = crypto
       .createHmac('sha256', secret)

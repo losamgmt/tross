@@ -27,6 +27,10 @@ jest.mock("../../../db/connection", () =>
 jest.mock("../../../config/logger", () => ({
   logger: require("../../mocks").createLoggerMock(),
 }));
+jest.mock("../../../services/hook-service", () => ({
+  evaluateBeforeHooks: jest.fn().mockResolvedValue({ allowed: true }),
+  evaluateAfterHooks: jest.fn().mockResolvedValue({ executed: [] }),
+}));
 
 // ============================================================================
 // IMPORTS - After mocks are set up
@@ -37,6 +41,7 @@ const {
   getRequiredFields,
   getImmutableFields,
 } = require("../../../config/metadata-accessors");
+const hookService = require("../../../services/hook-service");
 
 describe("GenericEntityService", () => {
   // ==========================================================================
@@ -2642,6 +2647,373 @@ describe("GenericEntityService", () => {
           // Reset for next iteration
           jest.clearAllMocks();
         });
+      });
+    });
+  });
+
+  // ==========================================================================
+  // HOOK INTEGRATION TESTS
+  // ==========================================================================
+
+  describe("hook integration", () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+      // Reset hook mocks to default allowed behavior
+      hookService.evaluateBeforeHooks.mockResolvedValue({ allowed: true });
+      hookService.evaluateAfterHooks.mockResolvedValue({ executed: [] });
+    });
+
+    // ------------------------------------------------------------------------
+    // beforeChange hooks in update()
+    // ------------------------------------------------------------------------
+
+    describe("update() beforeChange hooks", () => {
+      test("should call evaluateBeforeHooks for fields with hooks defined", async () => {
+        // Arrange: Mock metadata lookup to include beforeChange hook
+        const existingRecord = { id: 1, status: "draft", amount: 100 };
+        const updatedRecord = { id: 1, status: "approved", amount: 100 };
+
+        // Mock _getMetadata to return entity with beforeChange hooks
+        const originalGetMetadata = GenericEntityService._getMetadata;
+        GenericEntityService._getMetadata = jest.fn().mockReturnValue({
+          tableName: "recommendations",
+          primaryKey: "id",
+          fields: {
+            id: { type: "integer", primaryKey: true },
+            status: {
+              type: "enum",
+              beforeChange: [
+                {
+                  on: { status: "approved" },
+                  when: { field: "amount", gt: 5000 },
+                  action: "requireApproval",
+                },
+              ],
+            },
+            amount: { type: "decimal" },
+          },
+          identityField: "id",
+        });
+
+        db.query
+          .mockResolvedValueOnce({ rows: [existingRecord] }) // findById for hooks
+          .mockResolvedValueOnce({ rows: [{ id: 1 }] }) // UPDATE RETURNING id
+          .mockResolvedValueOnce({ rows: [updatedRecord] }); // findById refetch
+
+        try {
+          // Act
+          await GenericEntityService.update("recommendation", 1, {
+            status: "approved",
+          });
+
+          // Assert: evaluateBeforeHooks was called with correct arguments
+          expect(hookService.evaluateBeforeHooks).toHaveBeenCalledWith(
+            expect.objectContaining({
+              hooks: expect.arrayContaining([
+                expect.objectContaining({ action: "requireApproval" }),
+              ]),
+              oldValue: "draft",
+              newValue: "approved",
+              context: expect.objectContaining({
+                entity: "recommendation",
+                field: "status",
+                record: existingRecord,
+              }),
+              operation: "update",
+            }),
+          );
+        } finally {
+          GenericEntityService._getMetadata = originalGetMetadata;
+        }
+      });
+
+      test("should throw 403 when beforeHook blocks the change", async () => {
+        // Arrange: Hook returns blocked
+        hookService.evaluateBeforeHooks.mockResolvedValueOnce({
+          allowed: false,
+          blockReason: "Policy violation: Cannot approve without manager review",
+        });
+
+        const existingRecord = { id: 1, status: "draft", amount: 10000 };
+
+        const originalGetMetadata = GenericEntityService._getMetadata;
+        GenericEntityService._getMetadata = jest.fn().mockReturnValue({
+          tableName: "recommendations",
+          primaryKey: "id",
+          fields: {
+            id: { type: "integer", primaryKey: true },
+            status: {
+              type: "enum",
+              beforeChange: [
+                {
+                  on: { status: "approved" },
+                  action: "block",
+                },
+              ],
+            },
+          },
+          identityField: "id",
+        });
+
+        db.query.mockResolvedValueOnce({ rows: [existingRecord] }); // findById for hooks
+
+        try {
+          // Act & Assert
+          await expect(
+            GenericEntityService.update("recommendation", 1, { status: "approved" }),
+          ).rejects.toThrow("Policy violation: Cannot approve without manager review");
+
+          // Verify the error has correct status code
+          try {
+            await GenericEntityService.update("recommendation", 1, { status: "approved" });
+          } catch (error) {
+            expect(error.statusCode).toBe(403);
+            expect(error.code).toBe("FORBIDDEN");
+          }
+        } finally {
+          GenericEntityService._getMetadata = originalGetMetadata;
+        }
+      });
+
+      test("should throw 202 when hook requires approval", async () => {
+        // Arrange: Hook returns requiresApproval
+        hookService.evaluateBeforeHooks.mockResolvedValueOnce({
+          allowed: false,
+          requiresApproval: true,
+          approvalInfo: {
+            type: "manager_approval",
+            description: "High-value recommendation requires manager approval",
+            threshold: 5000,
+          },
+        });
+
+        const existingRecord = { id: 1, status: "draft", amount: 10000 };
+
+        const originalGetMetadata = GenericEntityService._getMetadata;
+        GenericEntityService._getMetadata = jest.fn().mockReturnValue({
+          tableName: "recommendations",
+          primaryKey: "id",
+          fields: {
+            id: { type: "integer", primaryKey: true },
+            status: {
+              type: "enum",
+              beforeChange: [
+                {
+                  on: { status: "approved" },
+                  when: { field: "amount", gt: 5000 },
+                  action: "requireApproval",
+                },
+              ],
+            },
+            amount: { type: "decimal" },
+          },
+          identityField: "id",
+        });
+
+        db.query.mockResolvedValueOnce({ rows: [existingRecord] });
+
+        try {
+          // Act & Assert
+          await expect(
+            GenericEntityService.update("recommendation", 1, { status: "approved" }),
+          ).rejects.toThrow("High-value recommendation requires manager approval");
+
+          // Verify the error has correct status code and details
+          try {
+            db.query.mockResolvedValueOnce({ rows: [existingRecord] });
+            await GenericEntityService.update("recommendation", 1, { status: "approved" });
+          } catch (error) {
+            expect(error.statusCode).toBe(202);
+            expect(error.code).toBe("APPROVAL_REQUIRED");
+            expect(error.details).toEqual(
+              expect.objectContaining({
+                approvalInfo: expect.objectContaining({
+                  type: "manager_approval",
+                  threshold: 5000,
+                }),
+              }),
+            );
+          }
+        } finally {
+          GenericEntityService._getMetadata = originalGetMetadata;
+        }
+      });
+
+      test("should not call hooks for fields without beforeChange defined", async () => {
+        // Arrange: Entity with no hooks
+        const existingRecord = { id: 1, phone: "555-1234" };
+        const updatedRecord = { id: 1, phone: "555-9999" };
+
+        db.query
+          .mockResolvedValueOnce({ rows: [existingRecord] })
+          .mockResolvedValueOnce({ rows: [{ id: 1 }] })
+          .mockResolvedValueOnce({ rows: [updatedRecord] });
+
+        // Act: Update customer (which has no hooks defined in actual metadata)
+        await GenericEntityService.update("customer", 1, { phone: "555-9999" });
+
+        // Assert: evaluateBeforeHooks should NOT have been called
+        expect(hookService.evaluateBeforeHooks).not.toHaveBeenCalled();
+      });
+    });
+
+    // ------------------------------------------------------------------------
+    // afterChange hooks in update()
+    // ------------------------------------------------------------------------
+
+    describe("update() afterChange hooks", () => {
+      test("should call evaluateAfterHooks after successful update", async () => {
+        // Arrange
+        const existingRecord = { id: 1, status: "draft" };
+        const updatedRecord = { id: 1, status: "approved" };
+
+        const originalGetMetadata = GenericEntityService._getMetadata;
+        GenericEntityService._getMetadata = jest.fn().mockReturnValue({
+          tableName: "recommendations",
+          primaryKey: "id",
+          fields: {
+            id: { type: "integer", primaryKey: true },
+            status: {
+              type: "enum",
+              afterChange: [
+                {
+                  on: { status: "approved" },
+                  action: "notify",
+                  params: { recipients: ["manager"] },
+                },
+              ],
+            },
+          },
+          identityField: "id",
+        });
+
+        db.query
+          .mockResolvedValueOnce({ rows: [existingRecord] })
+          .mockResolvedValueOnce({ rows: [{ id: 1 }] })
+          .mockResolvedValueOnce({ rows: [updatedRecord] });
+
+        try {
+          // Act
+          await GenericEntityService.update("recommendation", 1, {
+            status: "approved",
+          });
+
+          // Assert: evaluateAfterHooks was called with correct arguments
+          expect(hookService.evaluateAfterHooks).toHaveBeenCalledWith(
+            expect.objectContaining({
+              hooks: expect.arrayContaining([
+                expect.objectContaining({ action: "notify" }),
+              ]),
+              oldValue: "draft",
+              newValue: "approved",
+              context: expect.objectContaining({
+                entity: "recommendation",
+                field: "status",
+              }),
+            }),
+          );
+        } finally {
+          GenericEntityService._getMetadata = originalGetMetadata;
+        }
+      });
+
+      test("should not call afterHooks when beforeHook blocks", async () => {
+        // Arrange: beforeHook blocks the change
+        hookService.evaluateBeforeHooks.mockResolvedValueOnce({
+          allowed: false,
+          blockReason: "Blocked",
+        });
+
+        const existingRecord = { id: 1, status: "draft" };
+
+        const originalGetMetadata = GenericEntityService._getMetadata;
+        GenericEntityService._getMetadata = jest.fn().mockReturnValue({
+          tableName: "recommendations",
+          primaryKey: "id",
+          fields: {
+            id: { type: "integer", primaryKey: true },
+            status: {
+              type: "enum",
+              beforeChange: [{ action: "block" }],
+              afterChange: [{ action: "notify" }],
+            },
+          },
+          identityField: "id",
+        });
+
+        db.query.mockResolvedValueOnce({ rows: [existingRecord] });
+
+        try {
+          // Act
+          await expect(
+            GenericEntityService.update("recommendation", 1, { status: "approved" }),
+          ).rejects.toThrow();
+
+          // Assert: afterHooks should NOT have been called
+          expect(hookService.evaluateAfterHooks).not.toHaveBeenCalled();
+        } finally {
+          GenericEntityService._getMetadata = originalGetMetadata;
+        }
+      });
+    });
+
+    // ------------------------------------------------------------------------
+    // afterChange hooks in create()
+    // ------------------------------------------------------------------------
+
+    describe("create() afterChange hooks", () => {
+      test("should call evaluateAfterHooks on create with oldValue null", async () => {
+        // Arrange
+        const createdRecord = { id: 1, status: "draft", name: "Test" };
+
+        const originalGetMetadata = GenericEntityService._getMetadata;
+        GenericEntityService._getMetadata = jest.fn().mockReturnValue({
+          tableName: "recommendations",
+          primaryKey: "id",
+          fields: {
+            id: { type: "integer", primaryKey: true },
+            status: { type: "enum", default: "draft" },
+            name: {
+              type: "varchar",
+              afterChange: [
+                {
+                  action: "log",
+                  params: { message: "Recommendation created" },
+                },
+              ],
+            },
+          },
+          identityField: "name",
+          displayName: "Recommendation",
+        });
+
+        db.query.mockResolvedValueOnce({ rows: [createdRecord] });
+
+        try {
+          // Act
+          await GenericEntityService.create("recommendation", {
+            name: "Test",
+            status: "draft",
+          });
+
+          // Assert: evaluateAfterHooks was called with oldValue: null
+          expect(hookService.evaluateAfterHooks).toHaveBeenCalledWith(
+            expect.objectContaining({
+              hooks: expect.arrayContaining([
+                expect.objectContaining({ action: "log" }),
+              ]),
+              oldValue: null,
+              newValue: "Test",
+              operation: "create",
+              context: expect.objectContaining({
+                entity: "recommendation",
+                field: "name",
+              }),
+            }),
+          );
+        } finally {
+          GenericEntityService._getMetadata = originalGetMetadata;
+        }
       });
     });
   });

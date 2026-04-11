@@ -23,6 +23,7 @@ const {
   BACKEND_MODELS_DIR,
   ENTITY_METADATA_JSON,
   NAV_CONFIG_JSON,
+  ENTITY_REGISTRY_DART,
 } = require("./lib/paths");
 const {
   snakeToTitleCase,
@@ -412,6 +413,41 @@ function updateNavConfig() {
 }
 
 /**
+ * Update entity_registry.dart with auto-generated allKnownEntities const
+ *
+ * Maintains the static const for Dart test compatibility while keeping it
+ * in sync with backend metadata. This enables per-entity test granularity
+ * in scenario tests that declare test groups at parse time.
+ *
+ * @param {string[]} entities - Sorted list of entity names
+ */
+function updateEntityRegistry(entities) {
+  console.log("\n🔄 Updating entity_registry.dart allKnownEntities...\n");
+
+  const sortedEntities = [...entities].sort();
+  const dartContent = fs.readFileSync(ENTITY_REGISTRY_DART, "utf8");
+
+  // Build the new const declaration
+  const indent = "  ";
+  const entityLines = sortedEntities.map((e) => `${indent}'${e}',`).join("\n");
+  const newConst = `const allKnownEntities = <String>[\n${entityLines}\n];`;
+
+  // Regex to match the existing const declaration
+  // Matches from "const allKnownEntities" to the closing "];"
+  const constRegex = /const allKnownEntities = <String>\[[\s\S]*?\];/;
+
+  if (!constRegex.test(dartContent)) {
+    console.error("  ⚠️  Could not find allKnownEntities const in entity_registry.dart");
+    return;
+  }
+
+  const updatedContent = dartContent.replace(constRegex, newConst);
+  fs.writeFileSync(ENTITY_REGISTRY_DART, updatedContent);
+
+  console.log(`  ✓ Updated allKnownEntities with ${sortedEntities.length} entities`);
+}
+
+/**
  * Main sync function
  */
 function syncMetadata() {
@@ -454,6 +490,9 @@ function syncMetadata() {
   // Also update nav-config.json entityPlacements (SSOT)
   updateNavConfig();
 
+  // Also update entity_registry.dart allKnownEntities (SSOT for test infrastructure)
+  updateEntityRegistry(entities);
+
   return frontendMetadata;
 }
 
@@ -467,6 +506,7 @@ module.exports = {
   transformModel,
   buildEntityPlacements,
   updateNavConfig,
+  updateEntityRegistry,
   syncMetadata,
   PLURAL_OVERRIDES,
 };

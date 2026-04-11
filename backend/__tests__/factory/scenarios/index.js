@@ -21,6 +21,7 @@ const fieldAccessScenarios = require("./field-access.scenarios");
 const rlsFilterScenarios = require("./rls-filter.scenarios");
 const computedScenarios = require("./computed.scenarios");
 const errorScenarios = require("./error.scenarios");
+const hooksScenarios = require("./hooks.scenarios");
 
 // Route and service scenarios have different signatures and are used
 // by their own runners (route-runner.js, service-runner.js)
@@ -42,6 +43,7 @@ module.exports = {
   rlsFilter: rlsFilterScenarios,
   computed: computedScenarios,
   error: errorScenarios,
+  hooks: hooksScenarios,
 
   // Route and service scenarios are exported separately for their runners
   // Do NOT add 'route' or 'service' here - they have different signatures

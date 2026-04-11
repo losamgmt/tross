@@ -37,6 +37,7 @@ Tross documentation hub.
 | ------------------------------------------------------------------ | ----------------------------------- |
 | [Architecture Overview](architecture/ARCHITECTURE.md)              | Core patterns, KISS, security-first |
 | [Database Architecture](architecture/DATABASE_ARCHITECTURE.md)     | Entity Contract v2.0, schema design |
+| [Entity Expansion Design](architecture/ENTITY-EXPANSION-DESIGN.md) | Field-centric metadata redesign     |
 | [Entity Lifecycle](architecture/ENTITY_LIFECYCLE.md)               | `is_active` vs `status` patterns    |
 | [ERD](architecture/ERD.md)                                         | Entity relationship diagram         |
 | [Schema-Driven UI](architecture/SCHEMA_DRIVEN_UI.md)               | Single source of truth              |
@@ -84,6 +85,11 @@ Tross documentation hub.
 
 ## 📋 Project
 
-| Doc                               | Purpose                |
-| --------------------------------- | ---------------------- |
-| [MVP Scope](project/MVP_SCOPE.md) | Original project scope |
+| Doc                                                              | Purpose                        |
+| ---------------------------------------------------------------- | ------------------------------ |
+| [Project Status](project/PROJECT_STATUS.md)                      | Architecture quick reference   |
+| [MVP Scope](project/MVP_SCOPE.md)                                | Original project scope         |
+| [Implementation Plan](project/plans/IMPLEMENTATION-PLAN.md)      | Current implementation roadmap |
+| [Metadata Completion](project/plans/METADATA-COMPLETION-PLAN.md) | 85%→100% completion tracker    |
+| [Audits](project/audits/)                                        | Technical audits & reviews     |
+| [Process](project/process/)                                      | Development process docs       |

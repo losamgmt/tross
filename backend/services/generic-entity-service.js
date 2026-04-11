@@ -915,6 +915,8 @@ class GenericEntityService {
    * @param {Object} data - Entity data to insert
    * @param {Object} [options={}] - Additional options
    * @param {Object} [options.auditContext] - Audit context from buildAuditContext()
+   * @param {boolean} [options.skipHooks] - Skip hook evaluation (prevents recursion)
+   * @param {string|number} [options.user] - User ID for hook/audit context
    * @returns {Promise<Object>} Created entity with all fields (RETURNING *)
    * @throws {Error} If entityName invalid, required fields missing, or DB error
    *
@@ -1059,8 +1061,9 @@ class GenericEntityService {
     // EVALUATE AFTER-CHANGE HOOKS FOR CREATE (trigger actions)
     // Hooks are defined in metadata.fields[fieldName].afterChange
     // For create, oldValue is null/undefined (field didn't exist)
+    // Skip if options.skipHooks is true (prevents recursive hook execution)
     // =========================================================================
-    if (metadata.fields) {
+    if (metadata.fields && !options.skipHooks) {
       for (const [fieldName, newValue] of Object.entries(filteredData)) {
         const fieldMeta = metadata.fields[fieldName];
         const hooks = fieldMeta?.afterChange;
@@ -1104,6 +1107,8 @@ class GenericEntityService {
    * @param {Object} data - Fields to update
    * @param {Object} [options={}] - Additional options
    * @param {Object} [options.auditContext] - Audit context from buildAuditContext()
+   * @param {boolean} [options.skipHooks] - Skip hook evaluation (prevents recursion)
+   * @param {string|number} [options.user] - User ID for hook/audit context
    * @returns {Promise<Object|null>} Updated entity or null if not found
    * @throws {Error} If entityName invalid, id invalid, or no valid fields provided
    *
@@ -1247,8 +1252,9 @@ class GenericEntityService {
     // =========================================================================
     // EVALUATE BEFORE-CHANGE HOOKS (may block the update)
     // Hooks are defined in metadata.fields[fieldName].beforeChange
+    // Skip if options.skipHooks is true (prevents recursive hook execution)
     // =========================================================================
-    if (metadata.fields) {
+    if (metadata.fields && !options.skipHooks) {
       for (const [fieldName, newValue] of Object.entries(filteredData)) {
         const fieldMeta = metadata.fields[fieldName];
         const hooks = fieldMeta?.beforeChange;
@@ -1325,8 +1331,9 @@ class GenericEntityService {
     // EVALUATE AFTER-CHANGE HOOKS (trigger actions, cannot block)
     // Hooks are defined in metadata.fields[fieldName].afterChange
     // Errors are logged but don't fail the request
+    // Skip if options.skipHooks is true (prevents recursive hook execution)
     // =========================================================================
-    if (metadata.fields) {
+    if (metadata.fields && !options.skipHooks) {
       for (const [fieldName, newValue] of Object.entries(filteredData)) {
         const fieldMeta = metadata.fields[fieldName];
         const hooks = fieldMeta?.afterChange;

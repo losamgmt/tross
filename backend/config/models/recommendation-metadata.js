@@ -220,10 +220,34 @@ module.exports = {
     // TIER 1: Universal Entity Contract Fields (field-centric)
     ...TIER1_FIELDS.WITH_STATUS,
     // Override status default (workflow entity - draft→open→approved, not active/inactive)
-    status: withTraits(
-      { type: 'enum', enumKey: 'status', default: 'draft' },
-      TRAIT_SETS.LOOKUP,
-    ),
+    // Includes lifecycle hooks for status transitions
+    status: {
+      ...withTraits(
+        { type: 'enum', enumKey: 'status', default: 'draft' },
+        TRAIT_SETS.LOOKUP,
+      ),
+      // Hooks: evaluated during status field changes
+      beforeChange: [
+        {
+          description: 'Urgent recommendations require manager approval',
+          on: 'change',
+          when: { field: 'priority', operator: 'eq', value: 'urgent' },
+          requiresApproval: { approver: 'manager', reason: 'urgent_priority' },
+        },
+      ],
+      afterChange: [
+        {
+          description: 'Notify customer when recommendation is approved',
+          on: 'draft→approved',
+          do: 'notify',
+        },
+        {
+          description: 'Notify customer when recommendation is rejected',
+          on: 'draft→rejected',
+          do: 'notify',
+        },
+      ],
+    },
 
     // Identity field - auto-generated, immutable
     recommendation_number: withTraits(
