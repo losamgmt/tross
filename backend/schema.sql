@@ -113,6 +113,8 @@ CREATE TABLE IF NOT EXISTS assets (
 CREATE INDEX IF NOT EXISTS idx_assets_name ON assets(name);
 CREATE INDEX IF NOT EXISTS idx_assets_unit_id ON assets(unit_id);
 CREATE INDEX IF NOT EXISTS idx_assets_property_id ON assets(property_id);
+-- Unique constraint for seed data idempotency (asset name unique within unit)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_assets_unit_name_unique ON assets(unit_id, name);
 
 -- ============================================================================
 -- AUDIT_LOGS
@@ -446,6 +448,8 @@ CREATE TABLE IF NOT EXISTS properties (
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_properties_name ON properties(name);
+-- Unique index for seed data idempotency (ON CONFLICT requires unique constraint)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_properties_name_unique ON properties(name);
 
 -- ============================================================================
 -- PROPERTY_ROLES
@@ -737,6 +741,8 @@ CREATE TABLE IF NOT EXISTS units (
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_units_unit_identifier ON units(unit_identifier);
 CREATE INDEX IF NOT EXISTS idx_units_property_id ON units(property_id);
+-- Unique constraint for seed data idempotency (unit_identifier unique within property)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_units_property_identifier_unique ON units(property_id, unit_identifier);
 
 -- ============================================================================
 -- USERS
