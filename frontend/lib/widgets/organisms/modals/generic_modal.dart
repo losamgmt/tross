@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:tross/config/app_spacing.dart';
-import 'package:tross/config/constants.dart';
+import 'package:tross/config/app_sizes.dart';
 import 'package:tross/config/platform_utilities.dart';
 import '../../atoms/atoms.dart';
 
@@ -171,8 +171,8 @@ class _GenericModalState extends State<GenericModal> {
                 controller: _scrollController,
                 thumbVisibility: true,
                 trackVisibility: true,
-                thickness: StyleConstants.scrollbarThickness,
-                radius: Radius.circular(StyleConstants.scrollbarRadius),
+                thickness: context.sizes.scrollbarThickness,
+                radius: Radius.circular(context.sizes.scrollbarRadius),
                 child: SingleChildScrollView(
                   controller: _scrollController,
                   child: Padding(

@@ -24,7 +24,7 @@ module.exports = {
   entityKey: 'visit_subcontractor',
   tableName: 'visit_subcontractors',
   primaryKey: 'id',
-  icon: 'engineering',
+  icon: 'group_add',
 
   // Entity structure type (junction: many-to-many linking table)
   structureType: 'junction',

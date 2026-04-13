@@ -51,6 +51,12 @@ class EntityIconResolver {
     'engineering_outlined': Icons.engineering_outlined,
     'groups': Icons.groups,
     'groups_outlined': Icons.groups_outlined,
+    'group': Icons.group,
+    'group_outlined': Icons.group_outlined,
+    'group_add': Icons.group_add,
+    'group_add_outlined': Icons.group_add_outlined,
+    'person_add': Icons.person_add,
+    'person_add_outlined': Icons.person_add_outlined,
 
     // Business
     'business': Icons.business,
@@ -75,12 +81,18 @@ class EntityIconResolver {
     // Relationships/Links
     'link': Icons.link,
     'link_outlined': Icons.link_outlined,
+    'handshake': Icons.handshake,
+    'handshake_outlined': Icons.handshake_outlined,
 
     // Documents
     'description': Icons.description,
     'description_outlined': Icons.description_outlined,
     'assignment': Icons.assignment,
     'assignment_outlined': Icons.assignment_outlined,
+    'checklist': Icons.checklist,
+    'checklist_outlined': Icons.checklist_outlined,
+    'task': Icons.task,
+    'task_outlined': Icons.task_outlined,
     'receipt': Icons.receipt,
     'receipt_outlined': Icons.receipt_outlined,
     'receipt_long': Icons.receipt_long,
@@ -91,6 +103,32 @@ class EntityIconResolver {
     'attach_file_outlined': Icons.attach_file_outlined,
     'history': Icons.history,
     'history_outlined': Icons.history_outlined,
+
+    // Events/Scheduling
+    'event': Icons.event,
+    'event_outlined': Icons.event_outlined,
+    'schedule': Icons.schedule,
+    'schedule_outlined': Icons.schedule_outlined,
+    'calendar_today': Icons.calendar_today,
+    'calendar_today_outlined': Icons.calendar_today_outlined,
+
+    // Commerce/Quotes/Payments
+    'request_quote': Icons.request_quote,
+    'request_quote_outlined': Icons.request_quote_outlined,
+    'shopping_cart': Icons.shopping_cart,
+    'shopping_cart_outlined': Icons.shopping_cart_outlined,
+    'payments': Icons.payments,
+    'payments_outlined': Icons.payments_outlined,
+    'payment': Icons.payment,
+    'payment_outlined': Icons.payment_outlined,
+
+    // Approvals/Ideas
+    'approval': Icons.approval,
+    'approval_outlined': Icons.approval_outlined,
+    'lightbulb': Icons.lightbulb,
+    'lightbulb_outlined': Icons.lightbulb_outlined,
+    'thumb_up': Icons.thumb_up,
+    'thumb_up_outlined': Icons.thumb_up_outlined,
 
     // Inventory
     'inventory': Icons.inventory,

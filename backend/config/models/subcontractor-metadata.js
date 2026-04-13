@@ -33,7 +33,7 @@ module.exports = {
   entityKey: 'subcontractor',
   tableName: 'subcontractors',
   primaryKey: 'id',
-  icon: 'engineering',
+  icon: 'handyman',
 
   // ============================================================================
   // ENTITY CATEGORY

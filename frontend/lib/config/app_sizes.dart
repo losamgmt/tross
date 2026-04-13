@@ -162,6 +162,90 @@ class AppSizes {
   double get dividerThick => 4.0;
 
   // ============================================================================
+  // LOADING INDICATORS - Progress and spinner sizes
+  // ============================================================================
+
+  /// Small loading indicator (16dp)
+  double get loadingIndicatorSmall => _baseUnit * 2;
+
+  /// Medium loading indicator (24dp)
+  double get loadingIndicatorMedium => _baseUnit * 3;
+
+  /// Large loading indicator (40dp)
+  double get loadingIndicatorLarge => _baseUnit * 5;
+
+  /// Loading indicator stroke width - thin (2dp)
+  double get loadingStrokeThin => 2.0;
+
+  /// Loading indicator stroke width - standard (3dp)
+  double get loadingStrokeStandard => 3.0;
+
+  // ============================================================================
+  // PLACEHOLDERS - Empty state and placeholder heights
+  // ============================================================================
+
+  /// Small placeholder height (120dp) - inline empty states
+  double get placeholderHeightSmall => _baseUnit * 15;
+
+  /// Medium placeholder height (200dp) - standard empty/loading states
+  double get placeholderHeightMedium => _baseUnit * 25;
+
+  /// Large placeholder height (300dp) - full-page empty states
+  double get placeholderHeightLarge => _baseUnit * 37.5;
+
+  // ============================================================================
+  // DRAG HANDLES - Sheet and drawer handles
+  // ============================================================================
+
+  /// Drag handle width (32dp)
+  double get dragHandleWidth => _baseUnit * 4;
+
+  /// Drag handle height (4dp)
+  double get dragHandleHeight => _baseUnit * 0.5;
+
+  // ============================================================================
+  // FIELD MAX WIDTHS - Constrained input widths
+  // ============================================================================
+
+  /// Search field max width (400dp)
+  double get searchMaxWidth => _baseUnit * 50;
+
+  /// Form field max width (600dp)
+  double get formMaxWidth => _baseUnit * 75;
+
+  // ============================================================================
+  // SCROLLBAR - Scrollbar dimensions
+  // ============================================================================
+
+  /// Scrollbar track buffer (16dp) - space to accommodate scrollbar
+  double get scrollbarBuffer => _baseUnit * 2;
+
+  /// Scrollbar thickness (8dp)
+  double get scrollbarThickness => _baseUnit;
+
+  /// Scrollbar radius (4dp)
+  double get scrollbarRadius => _baseUnit * 0.5;
+
+  /// Scrollbar padding (12dp) - padding to prevent overlay
+  double get scrollbarPadding => _baseUnit * 1.5;
+
+  // ============================================================================
+  // CARD DIMENSIONS - Standard card spacing and sizing
+  // ============================================================================
+
+  /// Card margin - small offset for card positioning
+  EdgeInsets get cardMargin => EdgeInsets.only(right: _baseUnit);
+
+  /// Card padding - internal content padding
+  EdgeInsets get cardPadding => EdgeInsets.all(_baseUnit * 1.5);
+
+  /// Card content spacing - gap between title and content
+  double get cardContentSpacing => _baseUnit * 0.75;
+
+  /// Card grid spacing - gap between cards in a grid
+  double get cardGridSpacing => _baseUnit * 1.5;
+
+  // ============================================================================
   // BADGES & CHIPS - Small UI elements
   // ============================================================================
 

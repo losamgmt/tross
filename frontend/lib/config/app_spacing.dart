@@ -5,6 +5,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'responsive_breakpoints.dart';
 
 /// Extension on BuildContext for easy access to spacing
 extension SpacingExtension on BuildContext {
@@ -117,32 +118,33 @@ class AppSpacingConst {
 
 /// Responsive breakpoints for layout decisions
 ///
-/// Centralized breakpoint values for consistent responsive behavior.
-/// Use with LayoutBuilder or MediaQuery.
+/// Application-level breakpoint helpers that delegate to ResponsiveBreakpoints
+/// (Material Design 3 compliant) for core values.
 ///
-/// Breakpoint tiers:
-/// - Mobile: 0 - 599px (single column, drawer nav)
-/// - Tablet: 600 - 899px (2 columns, drawer nav)
-/// - Desktop: 900 - 1199px (multi-column, persistent sidebar)
-/// - Wide Desktop: 1200px+ (expanded layouts, more columns)
+/// See ResponsiveBreakpoints for canonical MD3 window size classes:
+/// - Compact: 0-599px (phones portrait)
+/// - Medium: 600-839px (tablets portrait, phones landscape)
+/// - Expanded: 840-1199px (tablets landscape, small desktops)
+/// - Large: 1200-1599px (desktops)
+/// - Extra Large: 1600px+ (wide desktops)
 class AppBreakpoints {
   AppBreakpoints._();
 
   // ============================================================================
-  // CORE BREAKPOINTS (width thresholds)
+  // CORE BREAKPOINTS - Delegating to ResponsiveBreakpoints (SSOT)
   // ============================================================================
 
-  /// Mobile: 0 - 599px
-  static const double mobile = 600;
+  /// Mobile threshold (end of compact) - from ResponsiveBreakpoints
+  static const double mobile = ResponsiveBreakpoints.compact;
 
-  /// Tablet: 600 - 899px
-  static const double tablet = 900;
+  /// Tablet threshold (start of medium) - from ResponsiveBreakpoints
+  static const double tablet = ResponsiveBreakpoints.medium;
 
-  /// Desktop: 900px+ (persistent sidebar appears here)
-  static const double desktop = 900;
+  /// Desktop threshold (start of expanded) - from ResponsiveBreakpoints
+  static const double desktop = ResponsiveBreakpoints.medium;
 
-  /// Wide desktop: 1200px+ (expanded grid layouts)
-  static const double wideDesktop = 1200;
+  /// Wide desktop threshold (start of expanded) - from ResponsiveBreakpoints
+  static const double wideDesktop = ResponsiveBreakpoints.expanded;
 
   // ============================================================================
   // COMPONENT-SPECIFIC VALUES

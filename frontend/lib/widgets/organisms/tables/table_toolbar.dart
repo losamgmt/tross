@@ -20,6 +20,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import '../../../config/app_sizes.dart';
 import '../../../config/app_spacing.dart';
 import '../../molecules/menus/action_item.dart';
 import '../../molecules/menus/action_menu.dart';
@@ -52,6 +53,7 @@ class TableToolbar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final spacing = context.spacing;
+    final sizes = context.sizes;
     final screenWidth = MediaQuery.of(context).size.width;
 
     // Determine action menu mode based on screen size
@@ -91,7 +93,7 @@ class TableToolbar extends StatelessWidget {
         children: [
           // Leading actions (never overflow) - date pickers, view controls
           if (hasLeading) ...[
-            ..._buildActionWidgets(context, leadingActions, spacing),
+            ..._buildActionWidgets(context, leadingActions, spacing, sizes),
             SizedBox(width: spacing.md),
           ],
 
@@ -99,7 +101,7 @@ class TableToolbar extends StatelessWidget {
           if (onSearch != null)
             Expanded(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 400),
+                constraints: BoxConstraints(maxWidth: sizes.searchMaxWidth),
                 child: DebouncedSearchFilter(
                   searchPlaceholder: searchPlaceholder,
                   onSearchChanged: onSearch,
@@ -124,7 +126,7 @@ class TableToolbar extends StatelessWidget {
           // Trailing actions (never overflow)
           if (trailingActions.isNotEmpty) ...[
             if (hasMiddle) SizedBox(width: spacing.sm),
-            ..._buildActionWidgets(context, trailingActions, spacing),
+            ..._buildActionWidgets(context, trailingActions, spacing, sizes),
           ],
 
           // Legacy trailing widgets support
@@ -145,6 +147,7 @@ class TableToolbar extends StatelessWidget {
     BuildContext context,
     List<ActionItem> actions,
     AppSpacing spacing,
+    AppSizes sizes,
   ) {
     final widgets = <Widget>[];
     for (int i = 0; i < actions.length; i++) {
@@ -160,10 +163,12 @@ class TableToolbar extends StatelessWidget {
             message: action.effectiveTooltip,
             child: IconButton(
               icon: action.isLoading
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                  ? SizedBox(
+                      width: sizes.loadingIndicatorSmall,
+                      height: sizes.loadingIndicatorSmall,
+                      child: CircularProgressIndicator(
+                        strokeWidth: sizes.loadingStrokeThin,
+                      ),
                     )
                   : Icon(action.icon ?? Icons.more_horiz),
               onPressed: action.isInteractive ? action.onTap : null,

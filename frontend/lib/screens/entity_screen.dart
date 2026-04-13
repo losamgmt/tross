@@ -124,72 +124,75 @@ class _EntityScreenState extends State<EntityScreen> {
       pageTitle: metadata.displayNamePlural,
       body: Padding(
         padding: EdgeInsets.all(spacing.lg),
-        child: organisms.RefreshableDataProvider<List<Map<String, dynamic>>>(
-          key: _tableKey,
-          loadData: () async {
-            final entityService = context.read<GenericEntityService>();
-            final result = await entityService.getAll(widget.entityName);
-            return result.data;
-          },
-          errorTitle: 'Failed to Load ${metadata.displayNamePlural}',
-          builder: (context, data) {
-            // Apply client-side filtering
-            final filteredData = _filterData(data, metadata);
+        child: Align(
+          alignment: Alignment.topLeft,
+          child: organisms.RefreshableDataProvider<List<Map<String, dynamic>>>(
+            key: _tableKey,
+            loadData: () async {
+              final entityService = context.read<GenericEntityService>();
+              final result = await entityService.getAll(widget.entityName);
+              return result.data;
+            },
+            errorTitle: 'Failed to Load ${metadata.displayNamePlural}',
+            builder: (context, data) {
+              // Apply client-side filtering
+              final filteredData = _filterData(data, metadata);
 
-            return DashboardCard(
-              child: organisms.FilterableDataTable<Map<String, dynamic>>(
-                // Search
-                onSearchChanged: (value) {
-                  setState(() => _searchQuery = value);
-                },
-                searchPlaceholder:
-                    'Search ${metadata.displayNamePlural.toLowerCase()}...',
-                // Data table props
-                entityName: widget.entityName,
-                columns: MetadataTableColumnFactory.forEntity(
-                  context,
-                  widget.entityName,
-                  onEntityUpdated: _refreshTable,
+              return DashboardCard(
+                child: organisms.FilterableDataTable<Map<String, dynamic>>(
+                  // Search
+                  onSearchChanged: (value) {
+                    setState(() => _searchQuery = value);
+                  },
+                  searchPlaceholder:
+                      'Search ${metadata.displayNamePlural.toLowerCase()}...',
+                  // Data table props
+                  entityName: widget.entityName,
+                  columns: MetadataTableColumnFactory.forEntity(
+                    context,
+                    widget.entityName,
+                    onEntityUpdated: _refreshTable,
+                  ),
+                  data: filteredData,
+                  state: filteredData.isEmpty
+                      ? (data.isEmpty
+                            ? organisms.AppDataTableState.empty
+                            : organisms
+                                  .AppDataTableState
+                                  .empty) // No results from filter
+                      : organisms.AppDataTableState.loaded,
+                  emptyMessage: _searchQuery.isEmpty
+                      ? 'No ${metadata.displayNamePlural} found'
+                      : 'No results for "$_searchQuery"',
+                  toolbarActions:
+                      GenericTableActionBuilders.buildToolbarActionItems(
+                        context,
+                        entityName: widget.entityName,
+                        userRole: userRole,
+                        onRefresh: _refreshTable,
+                      ),
+                  rowActionItems: (entity) =>
+                      GenericTableActionBuilders.buildRowActionItems(
+                        context,
+                        entityName: widget.entityName,
+                        entity: entity,
+                        userRole: userRole,
+                        currentUserId: currentUserId,
+                        onRefresh: _refreshTable,
+                      ),
+                  maxRowActions: GenericTableActionBuilders.maxRowActionCount,
+                  onRowTap: (entity) {
+                    final id = entity['id'];
+                    if (id != null) {
+                      context.go(
+                        AppRoutes.entityDetail(widget.entityName, id as int),
+                      );
+                    }
+                  },
                 ),
-                data: filteredData,
-                state: filteredData.isEmpty
-                    ? (data.isEmpty
-                          ? organisms.AppDataTableState.empty
-                          : organisms
-                                .AppDataTableState
-                                .empty) // No results from filter
-                    : organisms.AppDataTableState.loaded,
-                emptyMessage: _searchQuery.isEmpty
-                    ? 'No ${metadata.displayNamePlural} found'
-                    : 'No results for "$_searchQuery"',
-                toolbarActions:
-                    GenericTableActionBuilders.buildToolbarActionItems(
-                      context,
-                      entityName: widget.entityName,
-                      userRole: userRole,
-                      onRefresh: _refreshTable,
-                    ),
-                rowActionItems: (entity) =>
-                    GenericTableActionBuilders.buildRowActionItems(
-                      context,
-                      entityName: widget.entityName,
-                      entity: entity,
-                      userRole: userRole,
-                      currentUserId: currentUserId,
-                      onRefresh: _refreshTable,
-                    ),
-                maxRowActions: GenericTableActionBuilders.maxRowActionCount,
-                onRowTap: (entity) {
-                  final id = entity['id'];
-                  if (id != null) {
-                    context.go(
-                      AppRoutes.entityDetail(widget.entityName, id as int),
-                    );
-                  }
-                },
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
     );

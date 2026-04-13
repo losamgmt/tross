@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../config/constants.dart';
+import '../../../config/app_borders.dart';
+import '../../../config/app_sizes.dart';
 
 /// TitledCard - Generic molecule for cards with a title header
 ///
@@ -79,21 +80,19 @@ class TitledCard extends StatelessWidget {
         : titleText;
 
     return Card(
-      margin: margin ?? StyleConstants.dbCardMargin,
-      shape: RoundedRectangleBorder(
-        borderRadius: StyleConstants.cardBorderRadius,
-      ),
+      margin: margin ?? context.sizes.cardMargin,
+      shape: RoundedRectangleBorder(borderRadius: AppBorders.radiusSmall),
       // Use theme's surface color by default (null lets Card use theme)
       color: color,
       child: Padding(
-        padding: padding ?? StyleConstants.dbCardPadding,
+        padding: padding ?? context.sizes.cardPadding,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             header,
             if (child != null) ...[
-              SizedBox(height: StyleConstants.dbCardSpacing),
+              SizedBox(height: context.sizes.cardContentSpacing),
               child!,
             ],
           ],

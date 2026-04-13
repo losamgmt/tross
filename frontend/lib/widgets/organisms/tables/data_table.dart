@@ -43,6 +43,9 @@ library;
 import 'package:data_table_2/data_table_2.dart';
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
+import '../../../config/app_borders.dart';
+import '../../../config/app_opacity.dart';
+import '../../../config/app_sizes.dart';
 import '../../../config/app_spacing.dart';
 import '../../../config/table_colors.dart';
 import '../../../config/table_column.dart';
@@ -190,44 +193,36 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
     TableDensity.comfortable => spacing.md,
   };
 
-  /// Shared horizontal padding calculator for action cells
-  /// Desktop inline: zero padding - buttons ARE the content and fill edge-to-edge
-  /// Mobile overflow: minimal padding for visual breathing room
-  double _actionHorizontalPadding(
-    AppSpacing spacing,
-    ActionMenuMode actionMode,
-  ) => actionMode == ActionMenuMode.inline
-      ? 0.0 // Desktop: buttons fill cell, no extra padding needed
-      : spacing.xxs; // Mobile/hybrid: minimal padding
-
   /// ACTION BUTTON SIZE fits WITHIN the row content area (geometric truth)
   /// Buttons are squares that fit inside the row's padded content area.
   /// This ensures action rows have the same height as data rows.
-  double _actionButtonSize(AppSpacing spacing) {
+  double _actionButtonSize(AppSpacing spacing, AppSizes sizes) {
     final vPadding = _actionVerticalPadding(spacing);
-    return _density.rowHeight - 2 * vPadding;
+    return _density.getRowHeight(sizes) - 2 * vPadding;
   }
 
+  /// Gap between action buttons - tight spacing to minimize column width
+  double _actionButtonGap(AppSpacing spacing) => spacing.xs;
+
   /// Computed action cell width based on geometry
-  /// Width = (buttons × buttonSize) + gaps + padding + buffer
-  double _actionCellWidth(ActionMenuMode mode, AppSpacing spacing) {
-    final buttonSize = _actionButtonSize(spacing);
-    final gap = spacing.sm;
-    final hPadding = _actionHorizontalPadding(spacing, mode);
-    // Buffer for subpixel rounding and column spacing
-    const buffer = 8.0;
+  /// Width = (buttons × buttonSize) + gaps (tight, no extra padding)
+  /// This is CONTENT width only - DataTable2's margins are separate
+  double _actionCellWidth(
+    ActionMenuMode mode,
+    AppSpacing spacing,
+    AppSizes sizes,
+  ) {
+    final buttonSize = _actionButtonSize(spacing, sizes);
+    final gap = _actionButtonGap(spacing);
 
     return switch (mode) {
-      // Overflow: 1 button + padding + buffer
-      ActionMenuMode.overflow => buttonSize + 2 * hPadding + buffer,
-      // Inline: N buttons + (N-1) gaps + padding + buffer
-      ActionMenuMode.inline =>
-        widget.maxRowActions * buttonSize +
-            (widget.maxRowActions - 1) * gap +
-            2 * hPadding +
-            buffer,
-      // Hybrid: 2 inline + 1 overflow = 3 buttons + 2 gaps + padding + buffer
-      ActionMenuMode.hybrid => 3 * buttonSize + 2 * gap + 2 * hPadding + buffer,
+      // Overflow: 1 button only
+      ActionMenuMode.overflow => buttonSize,
+      // Inline/Hybrid: Use hybrid width (N inline + 1 overflow)
+      // Inline mode falls back to hybrid when actions > maxInline, so always
+      // reserve hybrid width to prevent overflow
+      ActionMenuMode.inline || ActionMenuMode.hybrid =>
+        (widget.maxRowActions + 1) * buttonSize + widget.maxRowActions * gap,
     };
   }
 
@@ -235,12 +230,13 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
   void _showActionBottomSheet(BuildContext context, List<ActionItem> actions) {
     final theme = Theme.of(context);
     final spacing = context.spacing;
+    final sizes = context.sizes;
 
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: theme.colorScheme.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: AppBorders.radiusTopLarge,
       ),
       builder: (sheetContext) {
         return SafeArea(
@@ -251,14 +247,14 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
               children: [
                 // Drag handle
                 Container(
-                  width: 32,
-                  height: 4,
+                  width: sizes.dragHandleWidth,
+                  height: sizes.dragHandleHeight,
                   margin: EdgeInsets.only(bottom: spacing.md),
                   decoration: BoxDecoration(
                     color: theme.colorScheme.onSurfaceVariant.withValues(
-                      alpha: 0.4,
+                      alpha: AppOpacity.subtle,
                     ),
-                    borderRadius: BorderRadius.circular(2),
+                    borderRadius: BorderRadius.circular(spacing.xxs),
                   ),
                 ),
                 // Action list
@@ -301,19 +297,20 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
 
   /// Show customization options in a bottom sheet
   void _showCustomizationSheet(BuildContext context) {
+    final spacing = context.spacing;
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: AppBorders.radiusTopLarge,
       ),
       builder: (sheetContext) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
             return SafeArea(
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: spacing.paddingLG,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -332,14 +329,14 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    spacing.gapLG,
 
                     // Density selection
                     Text(
                       'Density',
                       style: Theme.of(context).textTheme.titleSmall,
                     ),
-                    const SizedBox(height: 8),
+                    spacing.gapSM,
                     SegmentedButton<TableDensity>(
                       segments: TableDensity.values.map((d) {
                         return ButtonSegment(
@@ -355,14 +352,14 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
                         setSheetState(() {});
                       },
                     ),
-                    const SizedBox(height: 16),
+                    spacing.gapLG,
 
                     // Column visibility
                     Text(
                       'Columns',
                       style: Theme.of(context).textTheme.titleSmall,
                     ),
-                    const SizedBox(height: 8),
+                    spacing.gapSM,
                     ...widget.columns.map((col) {
                       final isHidden = _hiddenColumnIds.contains(col.id);
                       return CheckboxListTile(
@@ -468,9 +465,22 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
     });
   }
 
+  /// Calculate intrinsic table height to enable "hug content" sizing
+  /// Returns: header height + (row height × row count) + dividers
+  double _calculateIntrinsicTableHeight(AppSpacing spacing, AppSizes sizes) {
+    final data = _sortedAndPaginatedData;
+    final rowHeight = _density.getRowHeight(sizes);
+    final headerHeight = rowHeight + spacing.md;
+    final dataHeight = rowHeight * data.length;
+    // Dividers between rows (n rows = n-1 dividers, but also header divider)
+    final dividerHeight = data.length * sizes.dividerThin;
+    return headerHeight + dataHeight + dividerHeight + sizes.scrollbarBuffer;
+  }
+
   @override
   Widget build(BuildContext context) {
     final spacing = context.spacing;
+    final sizes = context.sizes;
 
     // Build toolbar actions including customization
     final allToolbarActions = <ActionItem>[
@@ -488,6 +498,28 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final hasFiniteHeight = constraints.maxHeight.isFinite;
+
+        // Calculate heights for smart sizing
+        final intrinsicTableHeight = _calculateIntrinsicTableHeight(
+          spacing,
+          sizes,
+        );
+        // Account for toolbar and pagination in available space
+        final toolbarHeight = hasToolbarContent
+            ? sizes.buttonHeightXLarge
+            : 0.0;
+        final paginationHeight =
+            widget.paginated && widget.state == AppDataTableState.loaded
+            ? sizes.buttonHeightXLarge + spacing.md * 2
+            : 0.0;
+        final availableForTable = hasFiniteHeight
+            ? constraints.maxHeight - toolbarHeight - paginationHeight
+            : double.infinity;
+
+        // Use MIN(intrinsic, available) - "hug content when small, scroll when large"
+        final tableHeight = hasFiniteHeight
+            ? intrinsicTableHeight.clamp(0.0, availableForTable)
+            : intrinsicTableHeight;
 
         return ConstrainedBox(
           constraints: BoxConstraints(
@@ -508,13 +540,13 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
                       : allToolbarActions,
                 ),
 
-              // Table content (NO padding - extends to edges!)
-              // Use Expanded when we have finite height, otherwise just the content
-              // to avoid "children have non-zero flex but incoming height constraints are unbounded"
-              if (hasFiniteHeight)
-                Expanded(child: _buildTableContent())
-              else
-                _buildTableContent(),
+              // Table content with intrinsic-aware sizing
+              // Uses calculated height to "hug" content when smaller than container
+              // Falls back to available space when content exceeds container
+              SizedBox(
+                height: tableHeight.isFinite ? tableHeight : null,
+                child: _buildTableContent(sizes),
+              ),
 
               // Pagination (with padding)
               if (widget.paginated && widget.state == AppDataTableState.loaded)
@@ -543,17 +575,17 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
   }
 
   /// Builds the main table content using Flutter's native Table widget
-  Widget _buildTableContent() {
+  Widget _buildTableContent(AppSizes sizes) {
     switch (widget.state) {
       case AppDataTableState.loading:
-        return const SizedBox(
-          height: 200,
-          child: Center(child: LoadingIndicator()),
+        return SizedBox(
+          height: sizes.placeholderHeightMedium,
+          child: const Center(child: LoadingIndicator()),
         );
 
       case AppDataTableState.error:
         return SizedBox(
-          height: 200,
+          height: sizes.placeholderHeightMedium,
           child: Center(
             child: Text(
               widget.errorMessage ?? 'An error occurred',
@@ -564,7 +596,7 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
 
       case AppDataTableState.empty:
         return SizedBox(
-          height: 200,
+          height: sizes.placeholderHeightMedium,
           child: EmptyState.noData(
             title: 'No Data',
             message: widget.emptyMessage ?? 'No data available',
@@ -574,7 +606,7 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
       case AppDataTableState.loaded:
         if (_sortedAndPaginatedData.isEmpty) {
           return SizedBox(
-            height: 200,
+            height: sizes.placeholderHeightMedium,
             child: EmptyState.noData(
               title: 'No Results',
               message: widget.emptyMessage ?? 'No data available',
@@ -591,8 +623,10 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
     final hasPointer = _hasPointerCapability(context);
     final data = _sortedAndPaginatedData;
     final spacing = context.spacing;
+    final sizes = context.sizes;
     final colors = TableColors.of(context);
     final actionMode = _getRowActionMode(context);
+    final rowHeight = _density.getRowHeight(sizes);
 
     // Determine if we should show actions column
     final showActionsColumn =
@@ -605,7 +639,7 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
         DataColumn2(
           label: const SizedBox.shrink(), // Empty header for actions
           size: ColumnSize.S,
-          fixedWidth: _actionCellWidth(actionMode, spacing),
+          fixedWidth: _actionCellWidth(actionMode, spacing, sizes),
         ),
       // Data columns - use flexible sizing to prevent assertion on narrow viewports
       for (final column in _visibleColumns)
@@ -635,6 +669,7 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
           showActionsColumn: showActionsColumn,
           actionMode: actionMode,
           spacing: spacing,
+          sizes: sizes,
           colors: colors,
         ),
     ];
@@ -646,17 +681,19 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
       // Pin actions column to the left
       fixedLeftColumns: showActionsColumn ? 1 : 0,
       // Appearance
-      headingRowHeight: _density.rowHeight + spacing.md,
-      dataRowHeight: _density.rowHeight,
-      horizontalMargin: spacing.md,
-      columnSpacing: spacing.md,
-      dividerThickness: 1,
+      headingRowHeight: rowHeight + spacing.md,
+      dataRowHeight: rowHeight,
+      horizontalMargin: spacing.xs, // Minimal edge margin
+      columnSpacing: spacing.sm, // Tight column spacing
+      dividerThickness: sizes.dividerThin,
       // Header styling
       headingRowDecoration: colors.headerDecoration,
       // Scrolling - minWidth ensures horizontal scroll instead of squishing
       minWidth:
           _visibleColumns.length * TableConfig.cellMinWidth +
-          (showActionsColumn ? _actionCellWidth(actionMode, spacing) : 0),
+          (showActionsColumn
+              ? _actionCellWidth(actionMode, spacing, sizes)
+              : 0),
       isHorizontalScrollBarVisible: true,
       isVerticalScrollBarVisible: true,
     );
@@ -669,6 +706,7 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
     required bool showActionsColumn,
     required ActionMenuMode actionMode,
     required AppSpacing spacing,
+    required AppSizes sizes,
     required TableColors colors,
   }) {
     final actionItems = widget.rowActionItems?.call(item) ?? <ActionItem>[];
@@ -687,7 +725,9 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
             ActionMenu(
               actions: actionItems,
               mode: actionMode,
-              buttonSize: _actionButtonSize(spacing),
+              maxInline: widget.maxRowActions,
+              buttonSize: _actionButtonSize(spacing, sizes),
+              buttonGap: _actionButtonGap(spacing),
             ),
           ),
         // Data cells

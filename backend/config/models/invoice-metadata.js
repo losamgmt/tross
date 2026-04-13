@@ -36,7 +36,7 @@ module.exports = {
   primaryKey: 'id',
 
   // Material icon for navigation menus and entity displays
-  icon: 'receipt',
+  icon: 'receipt_long',
 
   // Entity traits (workflow: has status lifecycle, auditable: changes tracked)
   traits: ['workflow', 'auditable'],

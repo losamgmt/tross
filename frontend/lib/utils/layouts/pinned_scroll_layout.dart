@@ -36,7 +36,7 @@
 library;
 
 import 'package:flutter/material.dart';
-import '../../config/constants.dart';
+import '../../config/app_sizes.dart';
 import '../../config/platform_utilities.dart';
 import '../scroll_sync_group.dart';
 
@@ -66,8 +66,8 @@ class PinnedScrollLayout extends StatefulWidget {
   /// Whether to show scrollbars
   final bool showScrollbars;
 
-  /// Scrollbar thickness
-  final double scrollbarThickness;
+  /// Scrollbar thickness (null = use design token default)
+  final double? scrollbarThickness;
 
   /// Padding at the bottom for scrollbar clearance
   final double scrollbarPadding;
@@ -82,7 +82,7 @@ class PinnedScrollLayout extends StatefulWidget {
     this.scrollableHorizontal = true,
     this.scrollableVertical = true,
     this.showScrollbars = true,
-    this.scrollbarThickness = StyleConstants.scrollbarThickness,
+    this.scrollbarThickness,
     this.scrollbarPadding = 4.0,
   });
 
@@ -121,6 +121,10 @@ class _PinnedScrollLayoutState extends State<PinnedScrollLayout> {
     final hasTop = widget.pinnedTop != null;
     final hasBottom = widget.pinnedBottom != null;
 
+    // Use design token default if not explicitly specified
+    final scrollbarThickness =
+        widget.scrollbarThickness ?? context.sizes.scrollbarThickness;
+
     // Build the center content with appropriate scroll wrappers
     Widget centerContent = widget.child;
 
@@ -128,7 +132,7 @@ class _PinnedScrollLayoutState extends State<PinnedScrollLayout> {
     if (widget.showScrollbars && widget.scrollableVertical) {
       centerContent = Padding(
         padding: EdgeInsets.only(
-          bottom: widget.scrollbarThickness + widget.scrollbarPadding,
+          bottom: scrollbarThickness + widget.scrollbarPadding,
         ),
         child: centerContent,
       );
@@ -148,8 +152,8 @@ class _PinnedScrollLayoutState extends State<PinnedScrollLayout> {
               controller: _centerHorizontal,
               thumbVisibility: true,
               trackVisibility: true,
-              thickness: widget.scrollbarThickness,
-              radius: Radius.circular(widget.scrollbarThickness / 2),
+              thickness: scrollbarThickness,
+              radius: Radius.circular(scrollbarThickness / 2),
               notificationPredicate: (notification) => notification.depth == 0,
               child: horizontalScroll,
             )
@@ -169,8 +173,8 @@ class _PinnedScrollLayoutState extends State<PinnedScrollLayout> {
               controller: _centerVertical,
               thumbVisibility: true,
               trackVisibility: true,
-              thickness: widget.scrollbarThickness,
-              radius: Radius.circular(widget.scrollbarThickness / 2),
+              thickness: scrollbarThickness,
+              radius: Radius.circular(scrollbarThickness / 2),
               child: verticalScroll,
             )
           : verticalScroll;
@@ -185,7 +189,7 @@ class _PinnedScrollLayoutState extends State<PinnedScrollLayout> {
         child: Padding(
           padding: EdgeInsets.only(
             bottom: widget.showScrollbars && widget.scrollableVertical
-                ? widget.scrollbarThickness + widget.scrollbarPadding
+                ? scrollbarThickness + widget.scrollbarPadding
                 : 0,
           ),
           child: widget.pinnedLeft,
@@ -202,7 +206,7 @@ class _PinnedScrollLayoutState extends State<PinnedScrollLayout> {
         child: Padding(
           padding: EdgeInsets.only(
             bottom: widget.showScrollbars && widget.scrollableVertical
-                ? widget.scrollbarThickness + widget.scrollbarPadding
+                ? scrollbarThickness + widget.scrollbarPadding
                 : 0,
           ),
           child: widget.pinnedRight,

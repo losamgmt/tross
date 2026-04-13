@@ -17,6 +17,7 @@ export 'app_typography.dart';
 export 'app_borders.dart';
 export 'app_shadows.dart';
 export 'app_animations.dart';
+export 'app_opacity.dart';
 export 'app_theme.dart';
 export 'app_theme_flex.dart'; // FlexColorScheme integration
 

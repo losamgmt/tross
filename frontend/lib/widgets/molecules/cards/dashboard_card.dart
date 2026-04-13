@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../config/constants.dart';
+import '../../../config/app_borders.dart';
+import '../../../config/app_sizes.dart';
 
 /// DashboardCard - Universal molecule for dashboard cards
 ///
@@ -33,13 +34,11 @@ class DashboardCard extends StatelessWidget {
       elevation: elevation,
       // Use theme's surface color by default (null lets Card use theme)
       color: color,
-      margin: margin ?? StyleConstants.dbCardMargin,
+      margin: margin ?? context.sizes.cardMargin,
       clipBehavior: Clip.antiAlias, // Clip children to rounded corners
-      shape: RoundedRectangleBorder(
-        borderRadius: StyleConstants.cardBorderRadius,
-      ),
+      shape: RoundedRectangleBorder(borderRadius: AppBorders.radiusSmall),
       child: Padding(
-        padding: padding ?? StyleConstants.dbCardPadding,
+        padding: padding ?? context.sizes.cardPadding,
         child: child,
       ),
     );
