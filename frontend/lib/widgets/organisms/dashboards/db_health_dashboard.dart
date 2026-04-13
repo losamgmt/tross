@@ -27,7 +27,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../../../models/database_health.dart';
 import '../../../services/database_health_service.dart';
-import '../../../config/constants.dart';
+import '../../../config/app_sizes.dart';
 import '../../molecules/cards/dashboard_card.dart';
 import '../../molecules/layout/refreshable_section.dart';
 import 'cards/database_health_card.dart';
@@ -115,8 +115,8 @@ class DbHealthDashboard extends StatelessWidget {
 
         // Compose status box and database cards in a single responsive row/wrap
         return Wrap(
-          spacing: StyleConstants.cardSpacing,
-          runSpacing: StyleConstants.cardRunSpacing,
+          spacing: context.sizes.cardGridSpacing,
+          runSpacing: context.sizes.cardGridSpacing,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             DashboardCard(

@@ -644,7 +644,7 @@
     "primaryKey": "id",
     "identityField": "contract_number",
     "rlsResource": "contracts",
-    "icon": "description",
+    "icon": "article",
     "supportsFileAttachments": true,
     "summaryConfig": {
       "groupableFields": [
@@ -1842,7 +1842,7 @@
     "primaryKey": "id",
     "identityField": "invoice_number",
     "rlsResource": "invoices",
-    "icon": "receipt",
+    "icon": "receipt_long",
     "supportsFileAttachments": true,
     "summaryConfig": {
       "groupableFields": [
@@ -4613,7 +4613,7 @@
     "primaryKey": "id",
     "identityField": "company_name",
     "rlsResource": "subcontractors",
-    "icon": "engineering",
+    "icon": "handyman",
     "supportsFileAttachments": true,
     "summaryConfig": {
       "groupableFields": [
@@ -5663,7 +5663,7 @@
     "primaryKey": "id",
     "identityField": "id",
     "rlsResource": "visit_subcontractors",
-    "icon": "engineering",
+    "icon": "group_add",
     "supportsFileAttachments": false,
     "summaryConfig": null,
     "displayField": "id",

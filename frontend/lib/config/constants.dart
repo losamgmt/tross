@@ -135,53 +135,6 @@ class AppConstants {
   static const String defaultEmail = '';
 }
 
-// Theme and Style Constants
-class StyleConstants {
-  // Colors (complementing Theme)
-  static const int primaryColorValue = 0xFFCD7F32; // Bronze
-  static const int secondaryColorValue = 0xFFFFB90F; // Honey Yellow
-
-  // Spacing
-  static const double paddingSmall = 8.0;
-  static const double paddingMedium = 16.0;
-  static const double paddingLarge = 24.0;
-  static const double paddingXLarge = 32.0;
-
-  // NOTE: Icon sizes moved to AppSpacing for responsive sizing
-  // Use context.spacing.iconSizeXS/SM/MD/LG/XL instead
-
-  // Border Radius
-  static const double radiusSmall = 4.0;
-  static const double radiusMedium = 8.0;
-  static const double radiusLarge = 16.0;
-
-  // Scrollbar (single source of truth for scrollbar sizing)
-  static const double scrollbarThickness = 8.0;
-  static const double scrollbarRadius = 4.0;
-  static const double scrollbarPadding = 12.0; // Padding to prevent overlay
-
-  // Elevations
-  static const double elevationCard = 4.0;
-  static const double elevationModal = 8.0;
-  static const double elevationAppBar = 2.0;
-
-  // Admin Header Section Spacing
-  static const EdgeInsets headerSectionPadding = EdgeInsets.symmetric(
-    vertical: 16.0,
-    horizontal: 16.0,
-  );
-  static const double cardSpacing = 12.0;
-  static const double cardRunSpacing = 12.0;
-
-  // Card Styling (theme-aware - no hardcoded colors)
-  static const BorderRadius cardBorderRadius = BorderRadius.all(
-    Radius.circular(8.0),
-  );
-  static const EdgeInsets dbCardMargin = EdgeInsets.only(right: 8.0);
-  static const EdgeInsets dbCardPadding = EdgeInsets.all(12.0);
-  static const double dbCardSpacing = 6.0;
-}
-
 // API and Network Constants
 class NetworkConstants {
   static const int httpTimeoutSeconds = 10;

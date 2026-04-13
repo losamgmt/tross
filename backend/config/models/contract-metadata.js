@@ -36,7 +36,7 @@ module.exports = {
   primaryKey: 'id',
 
   // Material icon for navigation menus and entity displays
-  icon: 'description',
+  icon: 'article',
 
   // ============================================================================
   // ENTITY CATEGORY (determines name handling pattern)

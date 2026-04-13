@@ -10,6 +10,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flex_color_scheme/flex_color_scheme.dart';
+import 'app_colors.dart';
 import 'preference_keys.dart';
 
 /// Application theme configuration using FlexColorScheme
@@ -17,17 +18,17 @@ class AppThemeConfig {
   AppThemeConfig._();
 
   // ══════════════════════════════════════════════════════════════════════════
-  // BRAND COLORS - Tross Bronze & Honey
+  // BRAND COLORS - Reference AppColors (Single Source of Truth)
   // ══════════════════════════════════════════════════════════════════════════
 
-  /// Primary brand color - Tross Bronze
-  static const Color brandPrimary = Color(0xFFCD7F32);
+  /// Primary brand color - Tross Bronze (from AppColors)
+  static const Color brandPrimary = AppColors.brandPrimary;
 
-  /// Secondary brand color - Honey Yellow
-  static const Color brandSecondary = Color(0xFFFFB90F);
+  /// Secondary brand color - Honey Yellow (from AppColors)
+  static const Color brandSecondary = AppColors.brandSecondary;
 
-  /// Tertiary brand color - Deep Orange
-  static const Color brandTertiary = Color(0xFFFF6F00);
+  /// Tertiary brand color - Deep Orange (from AppColors)
+  static const Color brandTertiary = AppColors.brandTertiary;
 
   // ══════════════════════════════════════════════════════════════════════════
   // CUSTOM FLEX COLOR SCHEME

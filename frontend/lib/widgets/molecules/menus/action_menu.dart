@@ -15,8 +15,12 @@
 library;
 
 import 'package:flutter/material.dart';
+import '../../../config/app_borders.dart';
+import '../../../config/app_opacity.dart';
+import '../../../config/app_sizes.dart';
 import '../../../config/app_spacing.dart';
 import '../../../config/platform_utilities.dart';
+import '../../../config/table_config.dart';
 import '../../atoms/atoms.dart';
 import 'action_item.dart';
 
@@ -40,7 +44,7 @@ class ActionMenu extends StatelessWidget {
   /// Display mode
   final ActionMenuMode mode;
 
-  /// Max inline actions in hybrid mode (default: 2)
+  /// Max inline actions in hybrid mode
   final int maxInline;
 
   /// Button size for inline/hybrid modes (square buttons)
@@ -48,12 +52,17 @@ class ActionMenu extends StatelessWidget {
   /// When in a table, this should be set to row height for geometric alignment
   final double? buttonSize;
 
+  /// Gap between buttons in inline/hybrid modes
+  /// When null, uses spacing.xs for tight layout
+  final double? buttonGap;
+
   const ActionMenu({
     super.key,
     required this.actions,
     this.mode = ActionMenuMode.inline,
-    this.maxInline = 2,
+    this.maxInline = TableConfig.maxInlineActions,
     this.buttonSize,
+    this.buttonGap,
   });
 
   bool _isLoading(String actionId) =>
@@ -89,15 +98,22 @@ class ActionMenu extends StatelessWidget {
     }
   }
 
-  /// All actions inline
+  /// All actions inline (respects maxInline, overflows the rest)
   Widget _buildInlineActions(BuildContext context, AppSpacing spacing) {
+    final gap = buttonGap ?? spacing.xs;
+
+    // If more actions than maxInline, use hybrid behavior
+    if (actions.length > maxInline) {
+      return _buildHybridActions(context, spacing);
+    }
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: actions.indexed.expand((indexed) {
         final (index, action) = indexed;
         return [
           _buildActionButton(context, action),
-          if (index < actions.length - 1) SizedBox(width: spacing.sm),
+          if (index < actions.length - 1) SizedBox(width: gap),
         ];
       }).toList(),
     );
@@ -106,8 +122,12 @@ class ActionMenu extends StatelessWidget {
   /// All actions in overflow popup
   Widget _buildOverflowMenu(BuildContext context) {
     final theme = Theme.of(context);
-    final size = buttonSize ?? 32.0;
-    final iconSize = (size * 0.5).clamp(16.0, 24.0);
+    final spacing = context.spacing;
+    final size = buttonSize ?? PlatformUtilities.minInteractiveSize;
+    final iconSize = (size * TableConfig.overflowIconSizeRatio).clamp(
+      spacing.iconSizeSM,
+      spacing.iconSizeXL,
+    );
 
     // Constrained overflow button - uses buttonSize for geometric alignment
     return SizedBox(
@@ -133,7 +153,10 @@ class ActionMenu extends StatelessWidget {
         itemBuilder: (ctx) => [
           PopupMenuItem<String>(
             enabled: false,
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            padding: EdgeInsets.symmetric(
+              horizontal: spacing.md,
+              vertical: spacing.sm,
+            ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: actions.indexed.expand((indexed) {
@@ -144,7 +167,7 @@ class ActionMenu extends StatelessWidget {
                     isLoading: _isLoading(action.id),
                     onTap: () => Navigator.of(ctx).pop(action.id),
                   ),
-                  if (index < actions.length - 1) const SizedBox(width: 4),
+                  if (index < actions.length - 1) SizedBox(width: spacing.xs),
                 ];
               }).toList(),
             ),
@@ -156,6 +179,7 @@ class ActionMenu extends StatelessWidget {
 
   /// Hybrid: first N inline, rest in overflow
   Widget _buildHybridActions(BuildContext context, AppSpacing spacing) {
+    final gap = buttonGap ?? spacing.xs;
     final inlineActions = actions.take(maxInline).toList();
     final overflowActions = actions.skip(maxInline).toList();
 
@@ -165,10 +189,7 @@ class ActionMenu extends StatelessWidget {
         // Inline actions
         ...inlineActions.indexed.expand((indexed) {
           final (index, action) = indexed;
-          return [
-            _buildActionButton(context, action),
-            SizedBox(width: spacing.sm),
-          ];
+          return [_buildActionButton(context, action), SizedBox(width: gap)];
         }),
 
         // Overflow menu for remaining
@@ -188,9 +209,14 @@ class ActionMenu extends StatelessWidget {
   /// otherwise falls back to platform-aware TouchTarget defaults
   Widget _buildActionButton(BuildContext context, ActionItem action) {
     final isLoading = _isLoading(action.id);
+    final spacing = context.spacing;
+    final sizes = context.sizes;
     final size = buttonSize ?? PlatformUtilities.minInteractiveSize;
-    // Icon is 60% of button size for visual balance
-    final iconSize = (size * 0.6).clamp(16.0, 24.0);
+    // Icon is sized relative to button for visual balance
+    final iconSize = (size * TableConfig.iconSizeRatio).clamp(
+      spacing.iconSizeSM,
+      spacing.iconSizeXL,
+    );
 
     if (isLoading) {
       return SizedBox(
@@ -200,7 +226,9 @@ class ActionMenu extends StatelessWidget {
           child: SizedBox(
             width: iconSize,
             height: iconSize,
-            child: const CircularProgressIndicator(strokeWidth: 2),
+            child: CircularProgressIndicator(
+              strokeWidth: sizes.loadingStrokeThin,
+            ),
           ),
         ),
       );
@@ -249,8 +277,12 @@ class _ActionOverflowButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final size = buttonSize ?? 32.0;
-    final iconSize = (size * 0.5).clamp(16.0, 24.0);
+    final spacing = context.spacing;
+    final size = buttonSize ?? PlatformUtilities.minInteractiveSize;
+    final iconSize = (size * TableConfig.overflowIconSizeRatio).clamp(
+      spacing.iconSizeSM,
+      spacing.iconSizeXL,
+    );
 
     // Constrained overflow button - uses buttonSize for geometric alignment
     return SizedBox(
@@ -276,7 +308,10 @@ class _ActionOverflowButton extends StatelessWidget {
         itemBuilder: (ctx) => [
           PopupMenuItem<String>(
             enabled: false,
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            padding: EdgeInsets.symmetric(
+              horizontal: spacing.md,
+              vertical: spacing.sm,
+            ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: actions.indexed.expand((indexed) {
@@ -289,7 +324,7 @@ class _ActionOverflowButton extends StatelessWidget {
                       Navigator.of(ctx).pop(action.id);
                     },
                   ),
-                  if (index < actions.length - 1) const SizedBox(width: 4),
+                  if (index < actions.length - 1) SizedBox(width: spacing.xs),
                 ];
               }).toList(),
             ),
@@ -306,10 +341,6 @@ class _CompactButton extends StatelessWidget {
   final bool isLoading;
   final VoidCallback? onTap;
 
-  // Compact buttons in popup use fixed 40x40 sizing
-  static const double _buttonSize = 40.0;
-  static const double _iconSize = 24.0;
-
   const _CompactButton({
     required this.action,
     required this.isLoading,
@@ -319,6 +350,8 @@ class _CompactButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final spacing = context.spacing;
+    final sizes = context.sizes;
     final isInteractive = action.isInteractive && !isLoading;
 
     final color = switch (action.style) {
@@ -329,13 +362,16 @@ class _CompactButton extends StatelessWidget {
 
     if (isLoading) {
       return SizedBox(
-        width: _buttonSize,
-        height: _buttonSize,
+        width: sizes.buttonHeightCompact,
+        height: sizes.buttonHeightCompact,
         child: Center(
           child: SizedBox(
-            width: 16,
-            height: 16,
-            child: CircularProgressIndicator(strokeWidth: 2, color: color),
+            width: sizes.loadingIndicatorSmall,
+            height: sizes.loadingIndicatorSmall,
+            child: CircularProgressIndicator(
+              strokeWidth: sizes.loadingStrokeThin,
+              color: color,
+            ),
           ),
         ),
       );
@@ -345,13 +381,15 @@ class _CompactButton extends StatelessWidget {
       message: action.effectiveTooltip,
       child: InkWell(
         onTap: isInteractive ? onTap : null,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: AppBorders.radiusSmall,
         child: Padding(
-          padding: const EdgeInsets.all(8),
+          padding: EdgeInsets.all(spacing.xxs),
           child: Icon(
             action.icon ?? Icons.circle,
-            size: _iconSize,
-            color: isInteractive ? color : color.withValues(alpha: 0.5),
+            size: spacing.iconSizeMD,
+            color: isInteractive
+                ? color
+                : color.withValues(alpha: AppOpacity.disabled),
           ),
         ),
       ),
