@@ -3,7 +3,7 @@
  * Testing our clean composition-based authentication factory
  */
 
-const { AuthProvider } = require("../../../services/auth");
+const { AuthProvider } = require("../../../services/auth/strategies");
 const { AUTH } = require("../../../config/constants");
 const { setTestEnv } = require("../../helpers/test-helpers");
 

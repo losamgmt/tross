@@ -20,7 +20,7 @@ jest.mock("../../../config/logger", () => ({
   },
 }));
 
-const GenericEntityService = require("../../../services/generic-entity-service");
+const GenericEntityService = require("../../../services/entity/generic-entity-service");
 const db = require("../../../db/connection");
 
 describe("GenericEntityService.count()", () => {

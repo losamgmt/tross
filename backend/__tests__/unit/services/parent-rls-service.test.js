@@ -50,7 +50,7 @@ const {
   createParentRLSChecker,
   getMetadataByTableName,
   buildParentRLSContext,
-} = require('../../../services/parent-rls-service');
+} = require('../../../services/entity/parent-rls-service');
 
 describe('Parent RLS Service', () => {
   // ============================================================================

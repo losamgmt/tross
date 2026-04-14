@@ -7,14 +7,14 @@
 const express = require('express');
 // crypto and User model removed - not used in this file
 const ResponseFormatter = require('../utils/response-formatter');
-const Auth0Strategy = require('../services/auth/Auth0Strategy');
-const tokenService = require('../services/token-service');
-const auditService = require('../services/audit-service');
+const Auth0Strategy = require('../services/auth/strategies/Auth0Strategy');
+const tokenService = require('../services/auth/token-service');
+const auditService = require('../services/audit/audit-service');
 const {
   AuditActions,
   ResourceTypes,
   AuditResults,
-} = require('../services/audit-constants');
+} = require('../services/audit/constants');
 const { logger } = require('../config/logger');
 const { refreshLimiter } = require('../middleware/rate-limit');
 const { getClientIp, getUserAgent } = require('../utils/request-helpers');

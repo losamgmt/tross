@@ -28,7 +28,7 @@ const {
   getEntityActionMap,
   getResourceType,
   getAuditAction,
-} = require('../config/derived-constants');
+} = require('../../config/derived-constants');
 
 const AuditActions = {
   // ============================================================================

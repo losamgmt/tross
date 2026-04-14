@@ -21,7 +21,7 @@ const {
 const { withAuth } = require('../helpers/test-auth');
 const { getUniqueValues } = require('../helpers/test-helpers');
 const { API_OPERATIONS } = require('../../config/api-operations');
-const GenericEntityService = require('../../services/generic-entity-service');
+const GenericEntityService = require('../../services/entity/generic-entity-service');
 
 const { BATCH, IDEMPOTENCY } = API_OPERATIONS;
 

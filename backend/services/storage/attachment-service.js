@@ -14,10 +14,10 @@
  * - files.js route: HTTP concerns, permission checks, request/response
  */
 
-const db = require('../db/connection');
-const { logger } = require('../config/logger');
-const AppError = require('../utils/app-error');
-const allMetadata = require('../config/models');
+const db = require('../../db/connection');
+const { logger } = require('../../config/logger');
+const AppError = require('../../utils/app-error');
+const allMetadata = require('../../config/models');
 
 class FileAttachmentService {
   /**

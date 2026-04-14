@@ -1,475 +1,393 @@
-# Module 03: Base Integration Service
+# Module 03: Integration Runner
 
-**Status:** Design Complete (Revised)  
-**Location:** `backend/services/base-integration-service.js`  
-**Lines of Code:** ~120  
-**Dependencies:** SystemSettingsService (Module 02)
+**Status:** Design Revised (April 2026)  
+**Location:** `backend/services/integrations/runner.js`  
+**Lines of Code:** ~150 estimated  
+**Dependencies:** IntegrationTokenService (Module 02)
 
 ---
 
 ## Purpose
 
-Provide a factory pattern for external integration services (QuickBooks, Stripe).
+Provide a **runner** that executes integration operations with shared infrastructure.
 
 **SRP:** ONLY provides common infrastructure:
-- Lazy client initialization
-- Configuration status checking
-- Health check interface
-- Token management helpers with race condition protection
+- Token validation and refresh with mutex
+- Provider interface enforcement (duck typing)
+- Shared error handling and logging
+- Health check aggregation
 
-Does NOT contain provider-specific logic.
+Does NOT contain provider-specific logic - that lives in `providers/*.js`.
 
 ---
 
-## Pattern Source: StorageService (CORRECTED)
+## Architecture: Runner + Providers
 
-This follows the **actual** proven pattern from `backend/services/storage-service.js`:
+**Pattern:** Composition via runner that delegates to provider scripts.
 
-```javascript
-// ACTUAL StorageService pattern (module-level lazy init + singleton):
-const { logger } = require('../config/logger');
-
-// Module-level lazy initialization
-let s3Client = null;
-const getS3Client = () => { /* create if needed */ };
-const getClient = () => {
-  if (!s3Client) s3Client = getS3Client();
-  return s3Client;
-};
-
-// Instance methods on class
-class StorageService {
-  isConfigured() { return getClient() !== null; }
-  async healthCheck(timeoutMs) { /* ... */ }
-  async upload({ buffer, storageKey }) { /* ... */ }
-}
-
-// Singleton export
-const storageService = new StorageService();
-module.exports = { storageService, StorageService };
+```
+services/integrations/
+├── token-service.js     # Token storage (Module 02) ✅ EXISTS
+├── runner.js            # This module - orchestrates operations
+├── index.js             # Barrel exports
+└── providers/
+    ├── index.js         # Provider registry
+    ├── quickbooks.js    # QB-specific implementation
+    └── stripe.js        # Stripe-specific implementation
 ```
 
-BaseIntegrationService provides a **factory** to create services following this pattern.
+**Key Insight (from service reorganization):** 
+- Auth strategies use this pattern: `auth/strategies/` with factory
+- Providers implement interface via convention, not inheritance
+- Runner enforces interface at runtime via duck typing
 
 ---
 
-## Design Decision: Factory vs. Base Class
+## Design Decision: Runner vs. Base Class
 
-**Decision:** Factory function that creates service instances with shared infrastructure.
+**Decision:** Runner function that validates and executes provider operations.
 
 **Rationale:**
-- Matches actual StorageService pattern (singleton + instance methods)
-- Avoids static class inheritance issues
-- Each integration gets isolated state
-- Testable via instance creation
+- Matches auth/strategies pattern from service reorganization
+- JavaScript lacks interfaces - duck typing + JSDoc is idiomatic
+- Providers are simple modules (easy to test in isolation)
+- Runner validates interface at runtime (fail fast)
+- No inheritance chains to debug
 
 ---
 
-## Interface Design
+## Provider Interface Contract
+
+Each provider module in `providers/*.js` must export these methods:
 
 ```javascript
 /**
- * createIntegrationService - Factory for external integration services
- * 
- * Creates a service following the StorageService singleton pattern.
- * Each service has isolated state (client, tokens, config).
- * 
- * USAGE:
- *   // In quickbooks-service.js
- *   const { createIntegrationService } = require('./base-integration-service');
- *   
- *   const { quickBooksService, QuickBooksService } = createIntegrationService({
- *     provider: 'quickbooks',
- *     createClient: async (tokens, config) => new QuickBooksClient({...}),
- *     healthCheck: async (client) => await client.getCompanyInfo(),
- *   });
- *   
- *   module.exports = { quickBooksService, QuickBooksService };
- * 
- * LIFECYCLE:
- *   1. const client = await service.getClient()  // Lazy init
- *   2. service.isConfigured()                    // Check if ready
- *   3. await service.healthCheck()               // Verify connectivity
- *   4. service.reset()                           // Clear state (testing)
+ * @typedef {Object} IntegrationProvider
+ * Required methods (runner validates these exist):
  */
+module.exports = {
+  // REQUIRED: Health check for this provider
+  healthCheck: async (tokens) => ({ status: 'healthy' }),
+  
+  // REQUIRED: Refresh OAuth tokens
+  refreshToken: async (refreshToken) => ({
+    access_token: '...',
+    refresh_token: '...',
+    expires_at: '2026-04-15T12:00:00Z',
+  }),
+  
+  // OPTIONAL: Provider-specific operations
+  syncInvoice: async (tokens, { invoiceId, data }) => ({ success: true }),
+  syncPayment: async (tokens, { paymentId, data }) => ({ success: true }),
+  createCustomer: async (tokens, { data }) => ({ customerId: '...' }),
+};
 ```
 
 ---
 
-## API Specification
+## Runner API
 
-### `createIntegrationService(options)` → `{ service, ServiceClass }`
+### `runIntegration(provider, operation, options)` → `Promise<Result>`
 
-Factory function to create an integration service.
+Execute an operation on a provider with shared infrastructure.
 
-| Option | Type | Required | Description |
-|--------|------|----------|-------------|
-| `provider` | `string` | Yes | Provider name: `'quickbooks'`, `'stripe'` |
-| `createClient` | `async (tokens, config) → Client` | Yes | Creates provider SDK client |
-| `healthCheck` | `async (client) → void` | Yes | Makes test API call |
-| `refreshToken` | `async (refreshToken) → tokens` | No | Token refresh implementation |
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `provider` | `string` | Provider name: `'quickbooks'`, `'stripe'` |
+| `operation` | `string` | Method name: `'syncInvoice'`, `'healthCheck'`, etc. |
+| `options` | `Object` | Operation-specific options passed to provider |
 
-**Returns:** `{ service: instance, ServiceClass: class }`
+**Returns:** Result from provider method
 
----
-
-### Instance Methods
-
-| Method | Returns | Description |
-|--------|---------|-------------|
-| `isConfigured()` | `boolean` | True if tokens exist and client created |
-| `getClient()` | `Promise<Client\|null>` | Get/create client (lazy init) |
-| `healthCheck(timeoutMs)` | `Promise<HealthResult>` | Verify external connectivity |
-| `getValidToken()` | `Promise<string>` | Get access token, refresh if needed |
-| `reset()` | `void` | Clear all state (for testing) |
+**Throws:** `AppError` if provider not connected or operation unsupported
 
 ---
 
-## Implementation
+## Runner Implementation
 
 ```javascript
+// services/integrations/runner.js
 'use strict';
 
-const SystemSettingsService = require('./system-settings-service');
-const AppError = require('../utils/app-error');
-const { logger } = require('../config/logger');
-const { SYSTEM_USER_ID } = require('../config/constants');
+const IntegrationTokenService = require('./token-service');
+const AppError = require('../../utils/app-error');
+const { logger, logSecurityEvent } = require('../../config/logger');
+const { SYSTEM_USER_ID } = require('../../config/constants');
 
 /**
- * Factory to create integration services following StorageService pattern.
- * 
- * @param {Object} options - Service configuration
- * @param {string} options.provider - Integration provider name
- * @param {Function} options.createClient - Async function to create SDK client
- * @param {Function} options.healthCheck - Async function to verify connectivity
- * @param {Function} [options.refreshToken] - Async function to refresh OAuth token
- * @returns {{ service: Object, ServiceClass: Function }}
+ * Required methods every provider must implement
  */
-function createIntegrationService({ provider, createClient, healthCheck, refreshToken }) {
-  // Validate required options
-  if (!provider) throw new Error('provider is required');
-  if (!createClient) throw new Error('createClient function is required');
-  if (!healthCheck) throw new Error('healthCheck function is required');
+const REQUIRED_METHODS = ['healthCheck', 'refreshToken'];
 
-  // =========================================================================
-  // MODULE-LEVEL STATE (matches StorageService pattern)
-  // =========================================================================
+/**
+ * Token refresh mutex state (per provider)
+ */
+const refreshingProviders = new Set();
+
+/**
+ * Load and validate a provider module
+ * @private
+ */
+function loadProvider(providerName) {
+  IntegrationTokenService._validateProvider(providerName);
   
-  let client = null;
-  let tokens = null;
-  let config = null;
-  let lastHealthCheck = null;
-  let isRefreshing = false;  // Simple mutex for token refresh
-
-  // =========================================================================
-  // PRIVATE HELPERS
-  // =========================================================================
-
-  /**
-   * Load tokens from SystemSettingsService
-   * @private
-   */
-  async function loadTokens() {
-    tokens = await SystemSettingsService.getIntegrationTokens(provider);
-    config = await SystemSettingsService.getIntegrationConfig(provider);
-    return tokens;
+  const provider = require(`./providers/${providerName}`);
+  
+  // Enforce interface via duck typing
+  for (const method of REQUIRED_METHODS) {
+    if (typeof provider[method] !== 'function') {
+      throw new Error(
+        `Provider '${providerName}' missing required method: ${method}`
+      );
+    }
   }
+  
+  return provider;
+}
 
-  /**
-   * Initialize client if not already done
-   * @private
-   */
-  async function initClient() {
-    if (client) return client;
+/**
+ * Get valid tokens, refreshing if needed (with mutex)
+ * @private
+ */
+async function getValidTokens(providerName, provider, bufferMs = 5 * 60 * 1000) {
+  let tokens = await IntegrationTokenService.getTokens(providerName);
+  
+  if (!tokens) {
+    throw new AppError(
+      `${providerName} integration not connected`,
+      401,
+      'INTEGRATION_NOT_CONNECTED'
+    );
+  }
+  
+  const expiresAt = tokens.expires_at ? new Date(tokens.expires_at) : null;
+  const needsRefresh = expiresAt && (expiresAt.getTime() - Date.now() < bufferMs);
+  
+  if (needsRefresh) {
+    // Mutex: wait if another refresh is in progress
+    if (refreshingProviders.has(providerName)) {
+      await new Promise(r => setTimeout(r, 1000));
+      return getValidTokens(providerName, provider, bufferMs);
+    }
     
-    const loadedTokens = await loadTokens();
-    if (!loadedTokens) {
-      logger.debug(`${provider} integration not configured - no tokens`);
-      return null;
-    }
-
     try {
-      client = await createClient(loadedTokens, config);
-      logger.info(`${provider} client initialized`);
-      return client;
-    } catch (error) {
-      logger.error(`Failed to create ${provider} client`, { error: error.message });
-      throw error;
+      refreshingProviders.add(providerName);
+      
+      // Double-check after acquiring mutex
+      tokens = await IntegrationTokenService.getTokens(providerName);
+      const stillNeedsRefresh = new Date(tokens.expires_at).getTime() - Date.now() < bufferMs;
+      
+      if (stillNeedsRefresh) {
+        logger.info(`Refreshing ${providerName} tokens`);
+        const newTokens = await provider.refreshToken(tokens.refresh_token);
+        await IntegrationTokenService.setTokens(providerName, newTokens, SYSTEM_USER_ID);
+        tokens = newTokens;
+        
+        logSecurityEvent('INTEGRATION_TOKEN_REFRESHED', { provider: providerName });
+      }
+    } finally {
+      refreshingProviders.delete(providerName);
     }
   }
+  
+  return tokens;
+}
 
-  // =========================================================================
-  // SERVICE CLASS (instance methods, like StorageService)
-  // =========================================================================
+/**
+ * Run an integration operation with automatic token handling
+ * 
+ * @param {string} providerName - Provider name (e.g., 'quickbooks', 'stripe')
+ * @param {string} operation - Operation method name on the provider
+ * @param {Object} params - Parameters to pass to the operation
+ * @returns {Promise<any>} - Operation result
+ */
+async function run(providerName, operation, params = {}) {
+  const provider = loadProvider(providerName);
+  
+  if (typeof provider[operation] !== 'function') {
+    throw new Error(
+      `Provider '${providerName}' does not support operation: ${operation}`
+    );
+  }
+  
+  const tokens = await getValidTokens(providerName, provider);
+  
+  try {
+    const result = await provider[operation](tokens, params);
+    return result;
+  } catch (error) {
+    // Log but don't expose internal details
+    logger.error(`Integration operation failed: ${providerName}.${operation}`, {
+      error: error.message,
+      code: error.code,
+    });
+    
+    throw new AppError(
+      `${providerName} operation failed: ${operation}`,
+      error.statusCode || 500,
+      'INTEGRATION_OPERATION_FAILED',
+      { provider: providerName, operation }
+    );
+  }
+}
 
-  class IntegrationService {
-    /**
-     * Check if integration is configured (tokens exist)
-     * @returns {boolean}
-     */
-    isConfigured() {
-      return tokens !== null || client !== null;
-    }
-
-    /**
-     * Get configuration info without network call
-     * @returns {{ configured: boolean, provider: string, hasTokens: boolean }}
-     */
-    getConfigurationInfo() {
-      return {
-        configured: this.isConfigured(),
-        provider,
-        hasTokens: tokens !== null,
-        lastHealthCheck,
-      };
-    }
-
-    /**
-     * Get or create the SDK client (lazy initialization)
-     * @returns {Promise<Client|null>}
-     */
-    async getClient() {
-      return initClient();
-    }
-
-    /**
-     * Deep health check - actually pings the external service
-     * @param {number} timeoutMs - Timeout in milliseconds (default: 5000)
-     * @returns {Promise<HealthResult>}
-     */
-    async healthCheck(timeoutMs = 5000) {
-      const start = Date.now();
-
-      if (!this.isConfigured()) {
-        // Try to load tokens first
-        await loadTokens();
-      }
-
-      if (!tokens) {
-        return {
+/**
+ * Run health checks for all or specified providers
+ * 
+ * @param {string[]} [providers] - Provider names (defaults to all)
+ * @returns {Promise<Object>} - Health check results by provider
+ */
+async function healthCheckAll(providers) {
+  const toCheck = providers || ['quickbooks', 'stripe'];
+  const results = {};
+  
+  await Promise.all(toCheck.map(async (providerName) => {
+    try {
+      const provider = loadProvider(providerName);
+      const tokenStatus = await IntegrationTokenService.checkTokenStatus(providerName);
+      
+      if (!tokenStatus.hasTokens) {
+        results[providerName] = {
+          status: 'unconfigured',
           configured: false,
           reachable: false,
-          provider,
-          responseTime: 0,
-          status: 'unconfigured',
-          message: `${provider} not configured (no tokens stored)`,
         };
+        return;
       }
-
-      try {
-        const c = await initClient();
-        if (!c) {
-          return {
-            configured: false,
-            reachable: false,
-            provider,
-            responseTime: Date.now() - start,
-            status: 'error',
-            message: 'Failed to initialize client',
-          };
-        }
-
-        // Create timeout controller
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-        try {
-          await healthCheck(c);
-          clearTimeout(timeoutId);
-          
-          lastHealthCheck = new Date();
-          const responseTime = Date.now() - start;
-
-          logger.debug(`${provider} health check passed`, { responseTime });
-
-          return {
-            configured: true,
-            reachable: true,
-            provider,
-            responseTime,
-            status: 'healthy',
-          };
-        } catch (error) {
-          clearTimeout(timeoutId);
-          throw error;
-        }
-      } catch (error) {
-        const responseTime = Date.now() - start;
-        
-        logger.warn(`${provider} health check failed`, { 
-          error: error.message, 
-          responseTime 
-        });
-
-        return {
-          configured: true,
-          reachable: false,
-          provider,
-          responseTime,
-          status: 'unhealthy',
-          message: error.name === 'AbortError' ? 'Connection timeout' : error.message,
-        };
-      }
+      
+      const tokens = await IntegrationTokenService.getTokens(providerName);
+      const healthy = await provider.healthCheck(tokens);
+      
+      results[providerName] = {
+        status: healthy ? 'healthy' : 'unhealthy',
+        configured: true,
+        reachable: healthy,
+        tokenExpiresAt: tokenStatus.expiresAt,
+      };
+    } catch (error) {
+      results[providerName] = {
+        status: 'error',
+        configured: false,
+        reachable: false,
+        error: error.message,
+      };
     }
+  }));
+  
+  return results;
+}
 
-    /**
-     * Get valid access token, refreshing if needed.
-     * Includes mutex to prevent concurrent refresh race condition.
-     * 
-     * @param {Object} options
-     * @param {number} options.bufferMs - Refresh if expiring within this time (default: 5 min)
-     * @returns {Promise<string>} Access token
-     * @throws {AppError} If not connected or refresh fails
-     */
-    async getValidToken({ bufferMs = 5 * 60 * 1000 } = {}) {
-      if (!tokens) {
-        await loadTokens();
+module.exports = {
+  run,
+  healthCheckAll,
+  // For testing
+  _loadProvider: loadProvider,
+  _getValidTokens: getValidTokens,
+};
+```
+
+---
+
+## Provider Template
+
+```javascript
+// services/integrations/providers/quickbooks.js
+'use strict';
+
+const AppError = require('../../../utils/app-error');
+const { logger } = require('../../../config/logger');
+
+/**
+ * QuickBooks integration provider
+ */
+
+/**
+ * Required: Health check - verify connectivity with QuickBooks
+ * @param {Object} tokens - Access tokens
+ * @returns {Promise<boolean>}
+ */
+async function healthCheck(tokens) {
+  try {
+    const response = await fetch(
+      `https://quickbooks.api.intuit.com/v3/company/${tokens.realm_id}/companyinfo/${tokens.realm_id}`,
+      {
+        headers: { Authorization: `Bearer ${tokens.access_token}` },
       }
-
-      if (!tokens) {
-        throw new AppError(
-          `${provider} not connected`,
-          401,
-          'INTEGRATION_NOT_CONNECTED'
-        );
-      }
-
-      const expiresAt = new Date(tokens.expires_at);
-      const needsRefresh = expiresAt.getTime() - Date.now() < bufferMs;
-
-      if (needsRefresh && refreshToken) {
-        // Simple mutex to prevent concurrent refresh
-        if (isRefreshing) {
-          // Wait and retry
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          return this.getValidToken({ bufferMs });
-        }
-
-        try {
-          isRefreshing = true;
-          
-          // Double-check after acquiring mutex
-          const currentTokens = await SystemSettingsService.getIntegrationTokens(provider);
-          const stillNeedsRefresh = new Date(currentTokens.expires_at).getTime() - Date.now() < bufferMs;
-          
-          if (stillNeedsRefresh) {
-            logger.info(`Refreshing ${provider} token`);
-            const newTokens = await refreshToken(currentTokens.refresh_token);
-            
-            await SystemSettingsService.setIntegrationTokens(
-              provider,
-              newTokens,
-              SYSTEM_USER_ID
-            );
-            
-            tokens = newTokens;
-            client = null; // Force client recreation with new token
-          } else {
-            tokens = currentTokens;
-          }
-        } finally {
-          isRefreshing = false;
-        }
-      }
-
-      return tokens.access_token;
-    }
-
-    /**
-     * Reset all state (for testing/reconnection)
-     */
-    reset() {
-      client = null;
-      tokens = null;
-      config = null;
-      lastHealthCheck = null;
-      isRefreshing = false;
-    }
+    );
+    return response.ok;
+  } catch (error) {
+    logger.warn('QuickBooks health check failed', { error: error.message });
+    return false;
   }
+}
 
-  // Create singleton instance
-  const service = new IntegrationService();
-
+/**
+ * Required: Refresh the OAuth access token
+ * @param {string} refreshToken - Refresh token
+ * @returns {Promise<Object>} - New tokens object
+ */
+async function refreshToken(refreshTokenValue) {
+  const response = await fetch('https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token: refreshTokenValue,
+      client_id: process.env.QB_CLIENT_ID,
+      client_secret: process.env.QB_CLIENT_SECRET,
+    }),
+  });
+  
+  if (!response.ok) {
+    throw new AppError('QuickBooks token refresh failed', 401, 'TOKEN_REFRESH_FAILED');
+  }
+  
+  const data = await response.json();
   return {
-    service,
-    ServiceClass: IntegrationService,
+    access_token: data.access_token,
+    refresh_token: data.refresh_token,
+    expires_at: new Date(Date.now() + data.expires_in * 1000).toISOString(),
+    token_type: data.token_type,
   };
 }
 
-module.exports = { createIntegrationService };
+/**
+ * Optional: Sync an invoice to QuickBooks
+ * @param {Object} tokens - Access tokens
+ * @param {Object} params - { invoice }
+ * @returns {Promise<Object>} - QuickBooks invoice reference
+ */
+async function syncInvoice(tokens, { invoice }) {
+  logger.info('Syncing invoice to QuickBooks', { invoiceId: invoice.id });
+  
+  // Implementation...
+  
+  return { qbInvoiceId: 'QB-123' };
+}
+
+module.exports = {
+  healthCheck,
+  refreshToken,
+  syncInvoice,
+};
 ```
 
 ---
 
-## Usage Example: QuickBooksService
+## Usage Example
 
 ```javascript
-// backend/services/quickbooks-service.js
-'use strict';
+// In a route handler or service
+const IntegrationRunner = require('./services/integrations/runner');
 
-const { createIntegrationService } = require('./base-integration-service');
-const QuickBooks = require('node-quickbooks');
-const AppError = require('../utils/app-error');
-const { logger } = require('../config/logger');
-
-// Create the service using the factory
-const { service: quickBooksService, ServiceClass: QuickBooksService } = createIntegrationService({
-  provider: 'quickbooks',
-  
-  // Create QuickBooks SDK client
-  createClient: async (tokens, config) => {
-    return new QuickBooks({
-      clientId: process.env.QB_CLIENT_ID,
-      clientSecret: process.env.QB_CLIENT_SECRET,
-      accessToken: tokens.access_token,
-      refreshToken: tokens.refresh_token,
-      realmId: tokens.realm_id || config?.realm_id,
-      useSandbox: process.env.NODE_ENV !== 'production',
-    });
-  },
-  
-  // Lightweight health check
-  healthCheck: async (client) => {
-    await client.getCompanyInfo();
-  },
-  
-  // Token refresh (optional - enables auto-refresh)
-  refreshToken: async (refreshTokenValue) => {
-    const response = await fetch('https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type: 'refresh_token',
-        refresh_token: refreshTokenValue,
-        client_id: process.env.QB_CLIENT_ID,
-        client_secret: process.env.QB_CLIENT_SECRET,
-      }),
-    });
-    const data = await response.json();
-    return {
-      access_token: data.access_token,
-      refresh_token: data.refresh_token,
-      expires_at: new Date(Date.now() + data.expires_in * 1000).toISOString(),
-      token_type: data.token_type,
-    };
-  },
+// Run a QuickBooks operation
+const result = await IntegrationRunner.run('quickbooks', 'syncInvoice', {
+  invoice: { id: inv.id, amount: inv.total },
 });
 
-// Add provider-specific methods to the singleton
-quickBooksService.syncInvoice = async function(invoice) {
-  const client = await this.getClient();
-  if (!client) {
-    throw new AppError('QuickBooks not configured', 503, 'SERVICE_UNAVAILABLE');
-  }
-  
-  // Get valid token (refreshes if needed)
-  const accessToken = await this.getValidToken();
-  
-  // ... sync implementation
-  logger.info('Syncing invoice to QuickBooks', { invoiceId: invoice.id });
-};
-
-module.exports = { quickBooksService, QuickBooksService };
+// Health check all integrations
+const health = await IntegrationRunner.healthCheckAll();
+// { quickbooks: { status: 'healthy', ... }, stripe: { status: 'unconfigured', ... } }
 ```
 
 ---
@@ -477,68 +395,38 @@ module.exports = { quickBooksService, QuickBooksService };
 ## Test Plan
 
 ```javascript
-describe('createIntegrationService', () => {
-  // Mock dependencies
-  const mockTokens = {
-    access_token: 'test_access',
-    refresh_token: 'test_refresh',
-    expires_at: new Date(Date.now() + 3600000).toISOString(),
-  };
+describe('IntegrationRunner', () => {
+  describe('run()', () => {
+    it('loads provider and executes operation');
+    it('validates provider has required methods');
+    it('validates provider has requested operation');
+    it('gets valid tokens before running');
+    it('handles operation errors with appropriate AppError');
+  });
   
-  let testService;
-  
-  beforeEach(() => {
-    // Create fresh service for each test
-    const mockClient = { testCall: jest.fn() };
-    const { service } = createIntegrationService({
-      provider: 'test',
-      createClient: async () => mockClient,
-      healthCheck: async (client) => client.testCall(),
-    });
-    testService = service;
-    
-    // Mock SystemSettingsService
-    SystemSettingsService.getIntegrationTokens = jest.fn().mockResolvedValue(mockTokens);
-    SystemSettingsService.getIntegrationConfig = jest.fn().mockResolvedValue({});
-  });
-
-  afterEach(() => {
-    testService.reset();
-  });
-
-  describe('isConfigured()', () => {
-    it('returns false initially');
-    it('returns true after getClient() succeeds');
-    it('returns false if no tokens stored');
-  });
-
-  describe('getClient()', () => {
-    it('creates client on first call');
-    it('returns cached client on subsequent calls');
-    it('returns null if no tokens stored');
-    it('throws if createClient fails');
-  });
-
-  describe('healthCheck()', () => {
-    it('returns unconfigured status if no tokens');
-    it('returns healthy status on success');
-    it('returns unhealthy status on failure');
-    it('respects timeout parameter');
-    it('records lastHealthCheck timestamp on success');
-  });
-
-  describe('getValidToken()', () => {
-    it('returns access token if not expired');
+  describe('getValidTokens() (internal)', () => {
+    it('returns tokens if not expired');
     it('throws INTEGRATION_NOT_CONNECTED if no tokens');
-    it('refreshes token if near expiry and refreshToken provided');
+    it('refreshes token if near expiry');
     it('prevents concurrent refresh (mutex)');
     it('uses double-check locking pattern');
-    it('stores refreshed tokens via SystemSettingsService');
+    it('stores refreshed tokens via token-service');
+    it('logs security event on refresh');
   });
-
-  describe('reset()', () => {
-    it('clears all state');
-    it('allows reinitialization after reset');
+  
+  describe('healthCheckAll()', () => {
+    it('checks all default providers');
+    it('checks only specified providers');
+    it('returns unconfigured status if no tokens');
+    it('returns healthy/unhealthy based on provider.healthCheck()');
+    it('handles provider errors gracefully');
+  });
+  
+  describe('loadProvider() (internal)', () => {
+    it('validates provider name');
+    it('requires healthCheck method');
+    it('requires refreshToken method');
+    it('allows optional operation methods');
   });
 });
 ```
@@ -548,23 +436,23 @@ describe('createIntegrationService', () => {
 ## Design Review
 
 ### Architect ✅
-- [x] Follows ACTUAL StorageService pattern (singleton + instance methods)
-- [x] Factory pattern avoids static class inheritance issues
-- [x] Module-level state isolation per integration
-- [x] Correct import: `const AppError = require('../utils/app-error')`
+- [x] Runner + providers pattern (matches auth/strategies)
+- [x] Duck typing for interface enforcement (idiomatic JS)
+- [x] Tokens delegated to dedicated token-service
+- [x] Clear separation: orchestration vs. provider-specific logic
 
 ### Designer ✅
-- [x] Consistent healthCheck response shape with StorageService
-- [x] Options object for extensibility
-- [x] Clear factory API
+- [x] Simple API: `run(provider, operation, params)`
+- [x] Consistent health check response shape
+- [x] Provider template shows required vs. optional methods
 
 ### Engineer ✅
-- [x] Testable via `reset()` method
-- [x] Race condition protection for token refresh (M3 fix)
+- [x] Mutex prevents token refresh race condition
 - [x] Double-check locking pattern
-- [x] Proper error handling and logging
+- [x] Providers testable in isolation
+- [x] Clear error codes and logging
 
 ### Security ✅
 - [x] No tokens logged (only metadata)
-- [x] Mutex prevents token refresh race condition
+- [x] Security event logged on token refresh
 - [x] Uses SYSTEM_USER_ID for automated operations

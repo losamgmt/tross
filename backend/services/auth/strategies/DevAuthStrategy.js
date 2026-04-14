@@ -4,12 +4,12 @@
  * JWT-based authentication using local test users for development and testing.
  * Implements AuthStrategy interface for the Strategy Pattern.
  */
-const { signJwt, verifyJwt } = require('../../utils/jwt-helper');
+const { signJwt, verifyJwt } = require('../../../utils/jwt-helper');
 const AuthStrategy = require('./AuthStrategy');
-const AppError = require('../../utils/app-error');
-const { TEST_USERS } = require('../../config/test-users');
-const { AUTH } = require('../../config/constants');
-const { logger } = require('../../config/logger');
+const AppError = require('../../../utils/app-error');
+const { TEST_USERS } = require('../../../config/test-users');
+const { AUTH } = require('../../../config/constants');
+const { logger } = require('../../../config/logger');
 
 class DevAuthStrategy extends AuthStrategy {
   constructor() {
@@ -24,7 +24,7 @@ class DevAuthStrategy extends AuthStrategy {
    * @returns {string} JWT secret
    */
   get jwtSecret() {
-    return require('../../config/app-config').jwt.secret;
+    return require('../../../config/app-config').jwt.secret;
   }
 
   /**

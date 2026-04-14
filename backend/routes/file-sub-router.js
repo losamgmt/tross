@@ -11,8 +11,8 @@
 const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
 const { validateIdParam } = require('../validators');
-const { storageService } = require('../services/storage-service');
-const FileAttachmentService = require('../services/file-attachment-service');
+const { storageService } = require('../services/storage/storage-service');
+const FileAttachmentService = require('../services/storage/attachment-service');
 const ResponseFormatter = require('../utils/response-formatter');
 const { logger } = require('../config/logger');
 const { asyncHandler } = require('../middleware/utils');

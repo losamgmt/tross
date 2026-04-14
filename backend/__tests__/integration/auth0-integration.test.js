@@ -20,8 +20,8 @@ process.env.AUTH0_AUDIENCE =
 process.env.AUTH0_CALLBACK_URL =
   process.env.AUTH0_CALLBACK_URL || "http://localhost:3001/callback";
 
-const Auth0Strategy = require("../../services/auth/Auth0Strategy");
-const UserDataService = require("../../services/user-data");
+const Auth0Strategy = require("../../services/auth/strategies/Auth0Strategy");
+const UserDataService = require("../../services/utils/user-data");
 const auth0Config = require("../../config/auth0");
 
 // Mock Auth0 SDK clients (auth0 v5 API)
@@ -51,7 +51,7 @@ jest.mock("axios");
 const axios = require("axios");
 
 // Mock UserDataService
-jest.mock("../../services/user-data");
+jest.mock("../../services/utils/user-data");
 
 describe("Auth0Strategy Integration Tests", () => {
   let auth0Strategy;

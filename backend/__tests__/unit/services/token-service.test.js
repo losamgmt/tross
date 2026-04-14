@@ -12,7 +12,7 @@ const {
 setupModuleMocks();
 
 // NOW import modules (they'll use the mocks)
-const TokenService = require("../../../services/token-service");
+const TokenService = require("../../../services/auth/token-service");
 const db = require("../../../db/connection");
 const logger = require("../../../config/logger");
 const { setTestEnv } = require("../../helpers/test-helpers");

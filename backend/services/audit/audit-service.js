@@ -1,8 +1,8 @@
-const db = require('../db/connection');
-const { logger } = require('../config/logger');
-const { AuditActions, AuditResults } = require('./audit-constants');
-const { toSafeUserId, toSafeInteger } = require('../validators/type-coercion');
-const AppError = require('../utils/app-error');
+const db = require('../../db/connection');
+const { logger } = require('../../config/logger');
+const { AuditActions, AuditResults } = require('./constants');
+const { toSafeUserId, toSafeInteger } = require('../../validators/type-coercion');
+const AppError = require('../../utils/app-error');
 
 /**
  * AuditService - Comprehensive audit logging for security and compliance

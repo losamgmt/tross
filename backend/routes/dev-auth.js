@@ -5,7 +5,7 @@
  * This allows dev login buttons to work alongside Auth0.
  */
 const express = require('express');
-const DevAuthStrategy = require('../services/auth/DevAuthStrategy');
+const DevAuthStrategy = require('../services/auth/strategies/DevAuthStrategy');
 // User model removed - not used in this file
 const { ROLE_HIERARCHY } = require('../config/constants');
 const ResponseFormatter = require('../utils/response-formatter');

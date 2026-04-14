@@ -17,7 +17,7 @@ const { authenticateToken, requirePermission } = require('../middleware/auth');
 const { attachEntity } = require('../middleware/generic-entity');
 const { validateIdParam, validatePagination } = require('../validators');
 const ResponseFormatter = require('../utils/response-formatter');
-const GenericEntityService = require('../services/generic-entity-service');
+const GenericEntityService = require('../services/entity/generic-entity-service');
 const { asyncHandler } = require('../middleware/utils');
 
 /**

@@ -32,10 +32,10 @@ const fs = require('fs');
 
 const { authenticateToken, requireMinimumRole } = require('../middleware/auth');
 const ResponseFormatter = require('../utils/response-formatter');
-const systemSettingsService = require('../services/system-settings-service');
-const sessionsService = require('../services/sessions-service');
-const EntityMetadataService = require('../services/entity-metadata-service');
-const AuditService = require('../services/audit-service');
+const systemSettingsService = require('../services/admin/settings-service');
+const sessionsService = require('../services/auth/sessions-service');
+const EntityMetadataService = require('../services/entity/metadata-service');
+const AuditService = require('../services/audit/audit-service');
 // Logger available if needed: const { logger } = require('../config/logger');
 const { validateIdParam } = require('../validators');
 const { getClientIp, getUserAgent } = require('../utils/request-helpers');

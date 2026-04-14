@@ -22,7 +22,7 @@ const { initializeDatabase } = require('./scripts/init-database');
 const {
   initializeFromDatabase: initRoleHierarchy,
 } = require('./config/role-hierarchy-loader');
-const backgroundTasks = require('./services/background-tasks');
+const backgroundTasks = require('./services/admin/background-tasks');
 const { validateStartupOrExit } = require('./utils/startup-validator');
 
 // Environment Validation
@@ -159,8 +159,14 @@ const {
   loadEntityRoutes,
   loadFileSubRoutes,
 } = require('./config/route-loader');
+const {
+  loadIntegrationRoutes,
+  loadWebhookRoutes,
+} = require('./config/integration-loader');
 const entityRoutes = loadEntityRoutes();
 const fileSubRoutes = loadFileSubRoutes();
+const integrationRoutes = loadIntegrationRoutes();
+const webhookRoutes = loadWebhookRoutes();
 
 // =============================================================================
 // AUTHENTICATION ROUTES
@@ -198,6 +204,22 @@ app.use('/api/stats', apiLimiter, statsRoutes); // Aggregation endpoints
 app.use('/api/export', apiLimiter, exportRoutes); // CSV export
 app.use('/api/audit', apiLimiter, auditRoutes); // Audit log queries
 app.use('/api/admin', apiLimiter, adminRoutes); // Admin system management
+
+// =============================================================================
+// INTEGRATION ROUTES (Metadata-Driven from config/integration-providers.js)
+// =============================================================================
+for (const { path, router } of integrationRoutes) {
+  app.use(path, apiLimiter, router); // Admin-only integration management
+}
+
+// =============================================================================
+// WEBHOOK ROUTES (Public - Signature Verified)
+// Must NOT have apiLimiter - webhooks may burst from external services
+// =============================================================================
+for (const { path, router } of webhookRoutes) {
+  app.use(path, router); // No rate limit, no auth - signature verified
+}
+
 app.use('/api', apiLimiter); // Catch-all rate limiting
 
 // 404 handler for unknown endpoints

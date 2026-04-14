@@ -19,7 +19,7 @@
 
 const express = require('express');
 const router = express.Router();
-const StatsService = require('../services/stats-service');
+const StatsService = require('../services/admin/stats-service');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
 const { enforceRLS } = require('../middleware/row-level-security');
 const { extractEntity } = require('../middleware/generic-entity');

@@ -15,17 +15,17 @@
  *   const sum = await StatsService.sum('invoice', req, 'amount', { status: 'paid' });
  */
 
-const allMetadata = require('../config/models');
-const { getFilterableFields } = require('../config/metadata-accessors');
-const { logger } = require('../config/logger');
-const db = require('../db/connection');
-const QueryBuilderService = require('./query-builder-service');
-const { buildRLSFilter } = require('../db/helpers/rls');
+const allMetadata = require('../../config/models');
+const { getFilterableFields } = require('../../config/metadata-accessors');
+const { logger } = require('../../config/logger');
+const db = require('../../db/connection');
+const QueryBuilderService = require('../entity/query-builder-service');
+const { buildRLSFilter } = require('../../db/helpers/rls');
 const {
   sanitizeIdentifier,
   validateFieldAgainstWhitelist,
-} = require('../utils/sql-safety');
-const AppError = require('../utils/app-error');
+} = require('../../utils/sql-safety');
+const AppError = require('../../utils/app-error');
 
 class StatsService {
   /**

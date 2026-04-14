@@ -31,7 +31,8 @@ const { TIMEOUTS } = require('../config/timeouts');
 const auth0Config = require('../config/auth0');
 const ResponseFormatter = require('../utils/response-formatter');
 const { asyncHandler } = require('../middleware/utils');
-const { storageService } = require('../services/storage-service');
+const { storageService } = require('../services/storage/storage-service');
+const { IntegrationRunner } = require('../services/integrations');
 // ServiceUnavailableError available if needed: const { ServiceUnavailableError } = require('../utils/errors');
 
 // ============================================================================
@@ -551,6 +552,66 @@ router.get(
   }),
 );
 
+/**
+ * @openapi
+ * /api/health/integrations:
+ *   get:
+ *     tags: [Health]
+ *     summary: Integration health check (admin only)
+ *     description: |
+ *       Checks connectivity to external integrations (QuickBooks, Stripe).
+ *       Returns configuration and reachability status for each provider.
+ *       Requires admin authentication.
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Integration health status
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Admin access required
+ */
+router.get(
+  '/integrations',
+  authenticateToken,
+  requireMinimumRole('admin'),
+  asyncHandler(async (req, res) => {
+    const integrations = await IntegrationRunner.healthCheckAll();
+
+    const response = {
+      integrations,
+      lastChecked: new Date().toISOString(),
+    };
+
+    // Determine overall status
+    const statuses = Object.values(integrations).map(i => i.status);
+    const hasErrors = statuses.some(s => s === 'error' || s === 'unhealthy');
+    const allUnconfigured = statuses.every(s => s === 'unconfigured');
+
+    if (hasErrors) {
+      return ResponseFormatter.ok(res, {
+        ...response,
+        overallStatus: 'degraded',
+        message: 'Some integrations are unhealthy',
+      });
+    }
+
+    if (allUnconfigured) {
+      return ResponseFormatter.ok(res, {
+        ...response,
+        overallStatus: 'unconfigured',
+        message: 'No integrations configured',
+      });
+    }
+
+    ResponseFormatter.get(res, {
+      ...response,
+      overallStatus: 'healthy',
+    });
+  }),
+);
+
 // Export router and helper functions
 module.exports = router;
 
@@ -561,3 +622,4 @@ module.exports.checkAuth0 = checkAuth0;
 module.exports.getMemoryMetrics = getMemoryMetrics;
 module.exports.getStorageConfiguration = getStorageConfiguration;
 module.exports.checkStorage = checkStorage;
+module.exports.checkIntegrations = () => IntegrationRunner.healthCheckAll();

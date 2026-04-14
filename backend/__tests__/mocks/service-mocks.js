@@ -10,8 +10,8 @@
  * USAGE:
  *   const { createQueryBuilderMock, createPaginationMock } = require('./mocks/service-mocks');
  *
- *   jest.mock('../../services/query-builder-service', () => createQueryBuilderMock());
- *   jest.mock('../../services/pagination-service', () => createPaginationMock());
+ *   jest.mock('../../services/entity/query-builder-service', () => createQueryBuilderMock());
+ *   jest.mock('../../services/entity/pagination-service', () => createPaginationMock());
  */
 
 /**

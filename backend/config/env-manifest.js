@@ -100,7 +100,7 @@ const ENV_MANIFEST = Object.freeze({
     description: 'Stripe API secret key (sk_live_xxx or sk_test_xxx)',
     defaultValue: null,
     allowDefaultIn: [],
-    skipValidationIn: [ENVIRONMENTS.TEST, ENVIRONMENTS.PRODUCTION], // Future integration - skip until configured
+    skipValidationIn: [ENVIRONMENTS.DEVELOPMENT, ENVIRONMENTS.TEST, ENVIRONMENTS.PRODUCTION], // Optional until integrations are configured
     sensitive: true,
     validator: (val) => val && /^sk_(live|test)_[a-zA-Z0-9]+$/.test(val),
     errorMessage: 'STRIPE_SECRET_KEY must be a valid Stripe secret key (sk_live_xxx or sk_test_xxx)',
@@ -111,7 +111,7 @@ const ENV_MANIFEST = Object.freeze({
     description: 'Stripe webhook endpoint signing secret (whsec_xxx)',
     defaultValue: null,
     allowDefaultIn: [],
-    skipValidationIn: [ENVIRONMENTS.TEST, ENVIRONMENTS.PRODUCTION], // Future integration - skip until configured
+    skipValidationIn: [ENVIRONMENTS.DEVELOPMENT, ENVIRONMENTS.TEST, ENVIRONMENTS.PRODUCTION], // Optional until integrations are configured
     sensitive: true,
     validator: (val) => val && val.startsWith('whsec_'),
     errorMessage: 'STRIPE_WEBHOOK_SECRET must be a valid Stripe webhook secret (whsec_xxx)',
@@ -125,7 +125,7 @@ const ENV_MANIFEST = Object.freeze({
     description: 'QuickBooks OAuth2 client ID',
     defaultValue: null,
     allowDefaultIn: [],
-    skipValidationIn: [ENVIRONMENTS.TEST, ENVIRONMENTS.PRODUCTION], // Future integration - skip until configured
+    skipValidationIn: [ENVIRONMENTS.DEVELOPMENT, ENVIRONMENTS.TEST, ENVIRONMENTS.PRODUCTION], // Optional until integrations are configured
     sensitive: false,
     validator: (val) => val && val.length > 10,
     errorMessage: 'QB_CLIENT_ID must be set for QuickBooks integration',
@@ -136,7 +136,7 @@ const ENV_MANIFEST = Object.freeze({
     description: 'QuickBooks OAuth2 client secret',
     defaultValue: null,
     allowDefaultIn: [],
-    skipValidationIn: [ENVIRONMENTS.TEST, ENVIRONMENTS.PRODUCTION], // Future integration - skip until configured
+    skipValidationIn: [ENVIRONMENTS.DEVELOPMENT, ENVIRONMENTS.TEST, ENVIRONMENTS.PRODUCTION], // Optional until integrations are configured
     sensitive: true,
     validator: (val) => val && val.length > 10,
     errorMessage: 'QB_CLIENT_SECRET must be set for QuickBooks integration',
@@ -147,7 +147,7 @@ const ENV_MANIFEST = Object.freeze({
     description: 'QuickBooks webhook verifier token for signature validation',
     defaultValue: null,
     allowDefaultIn: [],
-    skipValidationIn: [ENVIRONMENTS.TEST, ENVIRONMENTS.PRODUCTION], // Future integration - skip until configured
+    skipValidationIn: [ENVIRONMENTS.DEVELOPMENT, ENVIRONMENTS.TEST, ENVIRONMENTS.PRODUCTION], // Optional until integrations are configured
     sensitive: true,
     validator: (val) => val && val.length > 10,
     errorMessage: 'QB_WEBHOOK_VERIFIER_TOKEN must be set for webhook verification',

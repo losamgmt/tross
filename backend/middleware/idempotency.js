@@ -14,7 +14,7 @@
  *   // At end of handler: await saveIdempotencyResponse(req, statusCode, responseBody)
  */
 
-const IdempotencyService = require('../services/idempotency-service');
+const IdempotencyService = require('../services/utils/idempotency-service');
 const { API_OPERATIONS } = require('../config/api-operations');
 const ResponseFormatter = require('../utils/response-formatter');
 const { logger } = require('../config/logger');

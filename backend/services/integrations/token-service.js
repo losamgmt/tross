@@ -11,27 +11,24 @@
  *
  * SEPARATION OF CONCERNS:
  * - This service: Token credential management
- * - SystemSettingsService: General system settings (feature flags, maintenance mode)
- * - Individual integration services (QuickBooks, Stripe): Business logic
+ * - config/integration-providers.js: Provider metadata (SSOT)
+ * - Individual provider modules (quickbooks.js, stripe.js): API calls
  *
  * Extracted from SystemSettingsService for better SRP compliance.
  */
 
-const db = require('../db/connection');
-const { logger, logSecurityEvent } = require('../config/logger');
-const AppError = require('../utils/app-error');
-
-/**
- * Valid integration providers
- * Add new providers here as integrations are added
- */
-const INTEGRATION_PROVIDERS = ['quickbooks', 'stripe'];
+const db = require('../../db/connection');
+const { logger, logSecurityEvent } = require('../../config/logger');
+const AppError = require('../../utils/app-error');
+const { getProviderNames, hasProvider } = require('../../config/integration-providers');
 
 class IntegrationTokenService {
   /**
-   * Valid integration providers
+   * Valid integration providers (delegates to metadata)
    */
-  static PROVIDERS = INTEGRATION_PROVIDERS;
+  static get PROVIDERS() {
+    return getProviderNames();
+  }
 
   /**
    * Validate provider name
@@ -39,9 +36,9 @@ class IntegrationTokenService {
    * @throws {AppError} If provider is invalid
    */
   static _validateProvider(provider) {
-    if (!provider || !INTEGRATION_PROVIDERS.includes(provider)) {
+    if (!provider || !hasProvider(provider)) {
       throw new AppError(
-        `Invalid integration provider: ${provider}. Valid: ${INTEGRATION_PROVIDERS.join(', ')}`,
+        `Invalid integration provider: ${provider}. Valid: ${getProviderNames().join(', ')}`,
         400,
         'BAD_REQUEST',
       );

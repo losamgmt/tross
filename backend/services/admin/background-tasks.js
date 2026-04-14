@@ -22,10 +22,10 @@
  *   backgroundTasks.stop();
  */
 
-const { API_OPERATIONS } = require('../config/api-operations');
-const IdempotencyService = require('./idempotency-service');
-const TokenService = require('./token-service');
-const { logger } = require('../config/logger');
+const { API_OPERATIONS } = require('../../config/api-operations');
+const IdempotencyService = require('../utils/idempotency-service');
+const TokenService = require('../auth/token-service');
+const { logger } = require('../../config/logger');
 
 const { BACKGROUND_TASKS } = API_OPERATIONS;
 

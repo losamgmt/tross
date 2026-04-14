@@ -9,7 +9,7 @@
 
 const express = require('express');
 const router = express.Router();
-const SchemaIntrospectionService = require('../services/schema-introspection');
+const SchemaIntrospectionService = require('../services/admin/schema-introspection');
 const { authenticateToken } = require('../middleware/auth');
 const ResponseFormatter = require('../utils/response-formatter');
 const {

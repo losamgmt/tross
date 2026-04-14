@@ -20,11 +20,11 @@ jest.mock('../../../config/api-operations', () => ({
   },
 }));
 
-jest.mock('../../../services/idempotency-service', () => ({
+jest.mock('../../../services/utils/idempotency-service', () => ({
   cleanup: jest.fn().mockResolvedValue(5),
 }));
 
-jest.mock('../../../services/token-service', () => ({
+jest.mock('../../../services/auth/token-service', () => ({
   cleanupExpiredTokens: jest.fn().mockResolvedValue(3),
 }));
 
@@ -56,11 +56,11 @@ describe('background-tasks', () => {
       },
     }));
 
-    jest.doMock('../../../services/idempotency-service', () => ({
+    jest.doMock('../../../services/utils/idempotency-service', () => ({
       cleanup: jest.fn().mockResolvedValue(5),
     }));
 
-    jest.doMock('../../../services/token-service', () => ({
+    jest.doMock('../../../services/auth/token-service', () => ({
       cleanupExpiredTokens: jest.fn().mockResolvedValue(3),
     }));
 
@@ -74,9 +74,9 @@ describe('background-tasks', () => {
     }));
 
     // Re-require with fresh mocks
-    backgroundTasks = require('../../../services/background-tasks');
-    IdempotencyService = require('../../../services/idempotency-service');
-    TokenService = require('../../../services/token-service');
+    backgroundTasks = require('../../../services/admin/background-tasks');
+    IdempotencyService = require('../../../services/utils/idempotency-service');
+    TokenService = require('../../../services/auth/token-service');
   });
 
   afterEach(() => {
@@ -285,7 +285,7 @@ describe('background-tasks', () => {
         },
       }));
 
-      const disabledTasks = require('../../../services/background-tasks');
+      const disabledTasks = require('../../../services/admin/background-tasks');
       const { logger } = require('../../../config/logger');
 
       disabledTasks.start();

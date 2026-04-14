@@ -5,7 +5,7 @@
  * Uses mock req/res/next pattern from existing middleware tests
  */
 
-jest.mock('../../../services/idempotency-service', () => ({
+jest.mock('../../../services/utils/idempotency-service', () => ({
   hashBody: jest.fn(),
   validateKey: jest.fn(),
   find: jest.fn(),
@@ -22,7 +22,7 @@ jest.mock('../../../config/logger', () => ({
 }));
 
 const { checkIdempotency, saveIdempotencyResponse } = require('../../../middleware/idempotency');
-const IdempotencyService = require('../../../services/idempotency-service');
+const IdempotencyService = require('../../../services/utils/idempotency-service');
 const { API_OPERATIONS } = require('../../../config/api-operations');
 const AppError = require('../../../utils/app-error');
 

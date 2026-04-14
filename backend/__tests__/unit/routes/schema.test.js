@@ -9,11 +9,11 @@
 const request = require("supertest");
 const express = require("express");
 const schemaRouter = require("../../../routes/schema");
-const SchemaIntrospectionService = require("../../../services/schema-introspection");
+const SchemaIntrospectionService = require("../../../services/admin/schema-introspection");
 const { authenticateToken } = require("../../../middleware/auth");
 
 // Mock dependencies
-jest.mock("../../../services/schema-introspection");
+jest.mock("../../../services/admin/schema-introspection");
 jest.mock("../../../middleware/auth");
 
 describe("Schema Routes", () => {

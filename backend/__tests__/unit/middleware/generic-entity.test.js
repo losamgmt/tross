@@ -18,7 +18,7 @@ const {
 } = require("../../../middleware/generic-entity");
 
 // Mock dependencies
-jest.mock("../../../services/generic-entity-service");
+jest.mock("../../../services/entity/generic-entity-service");
 jest.mock("../../../config/permissions-loader");
 jest.mock("../../../config/logger", () => ({
   logSecurityEvent: jest.fn(),
@@ -30,7 +30,7 @@ jest.mock("../../../config/logger", () => ({
   },
 }));
 
-const GenericEntityService = require("../../../services/generic-entity-service");
+const GenericEntityService = require("../../../services/entity/generic-entity-service");
 const {
   hasPermission,
 } = require("../../../config/permissions-loader");

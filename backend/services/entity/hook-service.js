@@ -18,8 +18,8 @@
  * @module services/hook-service
  */
 
-const { logger } = require('../config/logger');
-const { getAction, executeAction } = require('../config/action-handlers');
+const { logger } = require('../../config/logger');
+const { getAction, executeAction } = require('../../config/action-handlers');
 
 // ============================================================================
 // CONFIGURATION

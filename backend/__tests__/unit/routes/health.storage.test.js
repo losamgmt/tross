@@ -5,10 +5,10 @@
  * in health routes and storage service.
  */
 
-const { storageService } = require("../../../services/storage-service");
+const { storageService } = require("../../../services/storage/storage-service");
 
 // Mock the storage service
-jest.mock("../../../services/storage-service", () => ({
+jest.mock("../../../services/storage/storage-service", () => ({
   storageService: {
     isConfigured: jest.fn(),
     getConfigurationInfo: jest.fn(),

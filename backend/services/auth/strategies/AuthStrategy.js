@@ -1,4 +1,4 @@
-const AppError = require('../../utils/app-error');
+const AppError = require('../../../utils/app-error');
 
 /**
  * Authentication Strategy Interface

@@ -7,7 +7,7 @@
 const path = require('path');
 
 // Mock GenericEntityService to avoid actual DB calls
-jest.mock('../../../services/generic-entity-service', () => ({
+jest.mock('../../../services/entity/generic-entity-service', () => ({
   create: jest.fn().mockResolvedValue({ id: 999 }),
   update: jest.fn().mockResolvedValue({ id: 1 }),
 }));
@@ -29,7 +29,7 @@ const {
 } = require('../../../config/action-handlers');
 
 // Get mock references for assertions
-const GenericEntityService = require('../../../services/generic-entity-service');
+const GenericEntityService = require('../../../services/entity/generic-entity-service');
 const db = require('../../../db/connection');
 
 describe('action-handlers', () => {

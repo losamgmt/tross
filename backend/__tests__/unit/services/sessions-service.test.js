@@ -15,7 +15,7 @@ jest.mock("../../../config/logger", () => ({
   },
 }));
 
-const SessionsService = require("../../../services/sessions-service");
+const SessionsService = require("../../../services/auth/sessions-service");
 const db = require("../../../db/connection");
 
 describe("SessionsService", () => {

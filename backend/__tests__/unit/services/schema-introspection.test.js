@@ -11,7 +11,7 @@
  * No DB mocking - integration tests cover DB queries
  */
 
-const SchemaIntrospectionService = require("../../../services/schema-introspection");
+const SchemaIntrospectionService = require("../../../services/admin/schema-introspection");
 const db = require("../../../db/connection");
 
 // Mock DB connection

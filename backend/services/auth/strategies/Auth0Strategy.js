@@ -4,17 +4,17 @@
  * Production OAuth2/OIDC authentication using Auth0.
  * Implements AuthStrategy interface for the Strategy Pattern.
  */
-const { signJwt } = require('../../utils/jwt-helper');
+const { signJwt } = require('../../../utils/jwt-helper');
 const { createRemoteJWKSet, jwtVerify } = require('jose');
 const axios = require('axios');
 const { AuthenticationClient, ManagementClient, UserInfoClient } = require('auth0');
 const AuthStrategy = require('./AuthStrategy');
-const { logger } = require('../../config/logger');
-const UserDataService = require('../user-data');
-const auth0Config = require('../../config/auth0');
-const { toSafeString, toSafeEmail } = require('../../validators');
-const AppError = require('../../utils/app-error');
-const AppConfig = require('../../config/app-config');
+const { logger } = require('../../../config/logger');
+const UserDataService = require('../../utils/user-data');
+const auth0Config = require('../../../config/auth0');
+const { toSafeString, toSafeEmail } = require('../../../validators');
+const AppError = require('../../../utils/app-error');
+const AppConfig = require('../../../config/app-config');
 
 // SECURITY: JWT_SECRET accessed via AppConfig.jwt.secret getter
 // This getter FAILS FAST if secret is not configured (no fallbacks)

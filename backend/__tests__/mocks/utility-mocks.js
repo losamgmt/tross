@@ -10,7 +10,7 @@
  *   const { createLoggerMock, createAuditMock } = require('./mocks/utility-mocks');
  *
  *   jest.mock('../../config/logger', () => ({ logger: createLoggerMock() }));
- *   jest.mock('../../services/audit-service', () => createAuditMock());
+ *   jest.mock('../../services/audit/audit-service', () => createAuditMock());
  */
 
 /**

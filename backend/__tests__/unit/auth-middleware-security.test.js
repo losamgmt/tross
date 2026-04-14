@@ -22,14 +22,14 @@ const {
 const { TEST_JWT_SECRET } = require("../../config/test-constants");
 
 // Mock the UserDataService (static class)
-jest.mock("../../services/user-data", () => ({
+jest.mock("../../services/utils/user-data", () => ({
   findOrCreateUser: jest.fn(),
   getUserByAuth0Id: jest.fn(),
   getAllUsers: jest.fn(),
   isConfigMode: jest.fn(),
 }));
 
-const UserDataService = require("../../services/user-data");
+const UserDataService = require("../../services/utils/user-data");
 
 /**
  * Test helper: attach entity metadata for routes that use requirePermission.

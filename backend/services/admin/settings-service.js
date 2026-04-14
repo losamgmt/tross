@@ -15,9 +15,9 @@
  * - Static class (no instance state)
  */
 
-const db = require('../db/connection');
-const { logger, logSecurityEvent } = require('../config/logger');
-const AppError = require('../utils/app-error');
+const db = require('../../db/connection');
+const { logger, logSecurityEvent } = require('../../config/logger');
+const AppError = require('../../utils/app-error');
 
 /**
  * Known setting keys with their default values
@@ -257,7 +257,7 @@ class SystemSettingsService {
    * @deprecated Use IntegrationTokenService._validateProvider instead
    */
   static _validateProvider(provider) {
-    const IntegrationTokenService = require('./integration-token-service');
+    const IntegrationTokenService = require('../integrations/token-service');
     IntegrationTokenService._validateProvider(provider);
   }
 
@@ -270,7 +270,7 @@ class SystemSettingsService {
    * @deprecated Use IntegrationTokenService.getTokens() instead
    */
   static async getIntegrationTokens(provider) {
-    const IntegrationTokenService = require('./integration-token-service');
+    const IntegrationTokenService = require('../integrations/token-service');
     return IntegrationTokenService.getTokens(provider);
   }
 
@@ -284,7 +284,7 @@ class SystemSettingsService {
    * @returns {Promise<Object>} The updated setting record
    */
   static async setIntegrationTokens(provider, tokens, userId) {
-    const IntegrationTokenService = require('./integration-token-service');
+    const IntegrationTokenService = require('../integrations/token-service');
     return IntegrationTokenService.setTokens(provider, tokens, userId);
   }
 
@@ -297,7 +297,7 @@ class SystemSettingsService {
    * @returns {Promise<boolean>} True if tokens existed and were cleared
    */
   static async clearIntegrationTokens(provider, userId) {
-    const IntegrationTokenService = require('./integration-token-service');
+    const IntegrationTokenService = require('../integrations/token-service');
     return IntegrationTokenService.clearTokens(provider, userId);
   }
 
@@ -309,7 +309,7 @@ class SystemSettingsService {
    * @returns {Promise<Object|null>} Config object or null if not stored
    */
   static async getIntegrationConfig(provider) {
-    const IntegrationTokenService = require('./integration-token-service');
+    const IntegrationTokenService = require('../integrations/token-service');
     return IntegrationTokenService.getConfig(provider);
   }
 
@@ -323,7 +323,7 @@ class SystemSettingsService {
    * @returns {Promise<Object>} The updated setting record
    */
   static async setIntegrationConfig(provider, config, userId) {
-    const IntegrationTokenService = require('./integration-token-service');
+    const IntegrationTokenService = require('../integrations/token-service');
     return IntegrationTokenService.setConfig(provider, config, userId);
   }
 

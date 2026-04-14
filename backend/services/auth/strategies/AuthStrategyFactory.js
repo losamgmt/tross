@@ -4,7 +4,7 @@
  * Clean factory pattern implementation for selecting authentication strategy.
  * Supports hot-swapping between dev and production auth based on AUTH_MODE env var.
  */
-const { logger } = require('../../config/logger');
+const { logger } = require('../../../config/logger');
 const DevAuthStrategy = require('./DevAuthStrategy');
 const Auth0Strategy = require('./Auth0Strategy');
 

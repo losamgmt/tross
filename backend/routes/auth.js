@@ -6,13 +6,13 @@ const { attachEntity } = require('../middleware/generic-entity');
 const { refreshLimiter } = require('../middleware/rate-limit');
 const ResponseFormatter = require('../utils/response-formatter');
 // User model removed - using GenericEntityService (strangler-fig Phase 4)
-const tokenService = require('../services/token-service');
-const auditService = require('../services/audit-service');
+const tokenService = require('../services/auth/token-service');
+const auditService = require('../services/audit/audit-service');
 const {
   AuditActions,
   ResourceTypes,
   AuditResults,
-} = require('../services/audit-constants');
+} = require('../services/audit/constants');
 const {
   validateProfileUpdate,
   validateRefreshToken,
@@ -21,7 +21,7 @@ const { validateIdParam } = require('../validators');
 const { logger } = require('../config/logger');
 const { getClientIp, getUserAgent } = require('../utils/request-helpers');
 const { asyncHandler } = require('../middleware/utils');
-const GenericEntityService = require('../services/generic-entity-service');
+const GenericEntityService = require('../services/entity/generic-entity-service');
 const AppError = require('../utils/app-error');
 
 const router = express.Router();

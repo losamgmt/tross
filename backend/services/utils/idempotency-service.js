@@ -18,10 +18,10 @@
  *   await IdempotencyService.store({ key, userId, ... });
  */
 
-const db = require('../db/connection');
-const { logger } = require('../config/logger');
-const { API_OPERATIONS } = require('../config/api-operations');
-const AppError = require('../utils/app-error');
+const db = require('../../db/connection');
+const { logger } = require('../../config/logger');
+const { API_OPERATIONS } = require('../../config/api-operations');
+const AppError = require('../../utils/app-error');
 const crypto = require('crypto');
 
 const { IDEMPOTENCY } = API_OPERATIONS;

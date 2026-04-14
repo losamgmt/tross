@@ -13,7 +13,7 @@
  * Add a column → UI updates automatically.
  */
 
-const db = require('../db/connection');
+const db = require('../../db/connection');
 
 class SchemaIntrospectionService {
   /**
