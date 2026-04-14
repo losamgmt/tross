@@ -273,6 +273,90 @@ class SessionsService {
       },
     };
   }
+
+  // ===========================================================================
+  // HEALTH CHECK METHODS (Standard Service Pattern)
+  // ===========================================================================
+
+  /**
+   * Check if sessions service is configured
+   * @returns {boolean}
+   */
+  static isConfigured() {
+    return true; // Service uses DB, no external config needed
+  }
+
+  /**
+   * Get configuration info (no network call)
+   * @returns {{configured: boolean}}
+   */
+  static getConfigurationInfo() {
+    return {
+      configured: true,
+    };
+  }
+
+  /**
+   * Deep health check - verifies DB connectivity for session operations
+   * @param {number} timeoutMs - Timeout in milliseconds (default: 5000)
+   * @returns {Promise<{configured: boolean, reachable: boolean, responseTime: number, status: string, activeSessionCount?: number, message?: string}>}
+   */
+  static async healthCheck(timeoutMs = 5000) {
+    const start = Date.now();
+
+    try {
+      // Create timeout promise
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Health check timed out')), timeoutMs);
+      });
+
+      // Test DB connectivity with active session count
+      const queryPromise = db.query(
+        `SELECT COUNT(*) as count FROM refresh_tokens 
+         WHERE is_active = true AND expires_at > NOW() AND revoked_at IS NULL`,
+      );
+
+      const result = await Promise.race([queryPromise, timeoutPromise]);
+      const responseTime = Date.now() - start;
+      const activeSessionCount = parseInt(result.rows[0].count, 10);
+
+      logger.debug('Sessions service health check passed', {
+        responseTime,
+        activeSessionCount,
+      });
+
+      return {
+        configured: true,
+        reachable: true,
+        responseTime,
+        activeSessionCount,
+        status: 'healthy',
+      };
+    } catch (error) {
+      const responseTime = Date.now() - start;
+
+      let message = 'Sessions service connectivity failed';
+      let status = 'critical';
+
+      if (error.message?.includes('timed out')) {
+        message = `Sessions service check timed out after ${timeoutMs}ms`;
+        status = 'timeout';
+      }
+
+      logger.warn('Sessions service health check failed', {
+        error: error.message,
+        responseTime,
+      });
+
+      return {
+        configured: true,
+        reachable: false,
+        responseTime,
+        status,
+        message,
+      };
+    }
+  }
 }
 
 module.exports = SessionsService;

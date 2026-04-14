@@ -14,7 +14,7 @@
  * - files.js route: HTTP concerns, permission checks, request/response
  */
 
-const { query: db } = require('../db/connection');
+const db = require('../db/connection');
 const { logger } = require('../config/logger');
 const AppError = require('../utils/app-error');
 const allMetadata = require('../config/models');
@@ -38,7 +38,7 @@ class FileAttachmentService {
       const tableName = metadata.tableName;
 
       // Check table exists in public schema
-      const tableCheck = await db(
+      const tableCheck = await db.query(
         `SELECT EXISTS(
           SELECT 1 FROM information_schema.tables 
           WHERE table_name = $1 AND table_schema = 'public'
@@ -51,7 +51,7 @@ class FileAttachmentService {
       }
 
       // Check entity exists
-      const entityCheck = await db(
+      const entityCheck = await db.query(
         `SELECT id FROM "${tableName}" WHERE id = $1 LIMIT 1`,
         [entityId],
       );
@@ -99,7 +99,7 @@ class FileAttachmentService {
    * @returns {Promise<Object|null>} File record or null if not found/inactive
    */
   static async getActiveFile(id) {
-    const result = await db(
+    const result = await db.query(
       'SELECT * FROM file_attachments WHERE id = $1 AND is_active = true',
       [id],
     );
@@ -131,7 +131,7 @@ class FileAttachmentService {
 
     query += ' ORDER BY created_at DESC';
 
-    const result = await db(query, params);
+    const result = await db.query(query, params);
     return result.rows;
   }
 
@@ -163,7 +163,7 @@ class FileAttachmentService {
       uploadedBy = null,
     } = data;
 
-    const result = await db(
+    const result = await db.query(
       `INSERT INTO file_attachments 
        (entity_type, entity_id, original_filename, storage_key, mime_type, 
         file_size, category, description, uploaded_by)
@@ -202,7 +202,7 @@ class FileAttachmentService {
    * @returns {Promise<boolean>} True if deleted
    */
   static async softDelete(id) {
-    const result = await db(
+    const result = await db.query(
       'UPDATE file_attachments SET is_active = false, updated_at = NOW() WHERE id = $1 RETURNING id',
       [id],
     );

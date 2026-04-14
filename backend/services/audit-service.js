@@ -1,4 +1,4 @@
-const { query: db } = require('../db/connection');
+const db = require('../db/connection');
 const { logger } = require('../config/logger');
 const { AuditActions, AuditResults } = require('./audit-constants');
 const { toSafeUserId, toSafeInteger } = require('../validators/type-coercion');
@@ -65,7 +65,7 @@ class AuditService {
       // This prevents "invalid input syntax for type integer" PostgreSQL errors
       const safeUserId = toSafeUserId(userId, 'userId');
 
-      await db(
+      await db.query(
         `INSERT INTO audit_logs 
          (user_id, action, resource_type, resource_id, old_values, new_values, 
           ip_address, user_agent, result, error_message)
@@ -148,7 +148,7 @@ class AuditService {
         allowNull: false,
       });
 
-      const result = await db(
+      const result = await db.query(
         `SELECT * FROM audit_logs
          WHERE user_id = $1
          ORDER BY created_at DESC
@@ -174,7 +174,7 @@ class AuditService {
    */
   static async getSecurityEvents(hours = 24, limit = 100) {
     try {
-      const result = await db(
+      const result = await db.query(
         `SELECT * FROM audit_logs
          WHERE action IN ($1, $2)
          AND created_at > NOW() - INTERVAL '${hours} hours'
@@ -242,14 +242,14 @@ class AuditService {
       }
 
       // Get total count
-      const countResult = await db(
+      const countResult = await db.query(
         `SELECT COUNT(*) as total FROM audit_logs ${whereClause}`,
         params,
       );
       const total = parseInt(countResult.rows[0].total, 10);
 
       // Get paginated logs with user info
-      const logsResult = await db(
+      const logsResult = await db.query(
         `SELECT 
            al.*,
            u.email as user_email,
@@ -303,7 +303,7 @@ class AuditService {
         allowNull: false,
       });
 
-      const result = await db(
+      const result = await db.query(
         `SELECT * FROM audit_logs
          WHERE resource_type = $1 AND resource_id = $2
          ORDER BY created_at DESC
@@ -330,7 +330,7 @@ class AuditService {
    */
   static async getFailedLoginAttempts(ipAddress, minutes = 15) {
     try {
-      const result = await db(
+      const result = await db.query(
         `SELECT COUNT(*) as count
          FROM audit_logs
          WHERE action = $1
@@ -356,7 +356,7 @@ class AuditService {
    */
   static async cleanupOldLogs(daysToKeep = 365) {
     try {
-      const result = await db(
+      const result = await db.query(
         `DELETE FROM audit_logs
          WHERE created_at < NOW() - INTERVAL '${daysToKeep} days'
          RETURNING id`,
@@ -392,7 +392,7 @@ class AuditService {
    */
   static async getCreator(resourceType, resourceId) {
     try {
-      const result = await db(
+      const result = await db.query(
         `SELECT user_id, created_at
          FROM audit_logs
          WHERE resource_type = $1
@@ -424,7 +424,7 @@ class AuditService {
    */
   static async getLastEditor(resourceType, resourceId) {
     try {
-      const result = await db(
+      const result = await db.query(
         `SELECT user_id, created_at as updated_at
          FROM audit_logs
          WHERE resource_type = $1
@@ -459,7 +459,7 @@ class AuditService {
   static async getDeactivator(resourceType, resourceId) {
     try {
       // Find the most recent UPDATE that set is_active to false
-      const result = await db(
+      const result = await db.query(
         `SELECT user_id, created_at as deactivated_at
          FROM audit_logs
          WHERE resource_type = $1
@@ -473,7 +473,7 @@ class AuditService {
 
       // Check if record was reactivated after this deactivation
       if (result.rows[0]) {
-        const reactivation = await db(
+        const reactivation = await db.query(
           `SELECT created_at
            FROM audit_logs
            WHERE resource_type = $1
@@ -680,8 +680,8 @@ class AuditService {
     params.push(limit, offset);
 
     const [countResult, dataResult] = await Promise.all([
-      db(countQuery, params.slice(0, -2)),
-      db(dataQuery, params),
+      db.query(countQuery, params.slice(0, -2)),
+      db.query(dataQuery, params),
     ]);
 
     const total = parseInt(countResult.rows[0].total, 10);
@@ -796,8 +796,8 @@ class AuditService {
     params.push(limit, offset);
 
     const [countResult, dataResult] = await Promise.all([
-      db(countQuery, params.slice(0, -2)),
-      db(dataQuery, params),
+      db.query(countQuery, params.slice(0, -2)),
+      db.query(dataQuery, params),
     ]);
 
     const total = parseInt(countResult.rows[0].total, 10);
@@ -836,7 +836,7 @@ class AuditService {
       ORDER BY resource_type
     `;
 
-    const result = await db(query, [actions]);
+    const result = await db.query(query, [actions]);
     return result.rows.map((r) => r.resource_type);
   }
 
@@ -866,7 +866,7 @@ class AuditService {
       ORDER BY count DESC
     `;
 
-    const result = await db(query);
+    const result = await db.query(query);
 
     return {
       period,
