@@ -1,21 +1,28 @@
 /**
  * Auth User Service
  *
- * SRP: ONLY handles authentication-related user operations
+ * SRP: Handles authentication-related user operations
  *
  * PHILOSOPHY:
  * - Specialized for Auth0/authentication flows
  * - Delegates CRUD to GenericEntityService
  * - Handles account linking and user creation from auth providers
+ * - Supports both database and in-memory (dev/mock) user modes
+ *
+ * MERGED FROM: user-data.js (consolidated for SRP compliance)
  *
  * USAGE:
  *   const user = await AuthUserService.findOrCreateFromAuth0(auth0Data);
+ *   const users = await AuthUserService.getAllUsers();
+ *   const user = await AuthUserService.getUserByAuth0Id(auth0Id);
  */
 
 const GenericEntityService = require('./generic-entity-service');
 const db = require('../db/connection');
 const { logger } = require('../config/logger');
 const AppError = require('../utils/app-error');
+const { TEST_USERS } = require('../config/test-users');
+const { useInMemoryUsers } = require('../config/app-mode');
 
 class AuthUserService {
   /**
@@ -149,6 +156,171 @@ class AuthUserService {
         email: auth0Data?.email,
       });
       throw error;
+    }
+  }
+
+  // ===========================================================================
+  // USER DATA METHODS (Merged from user-data.js)
+  // ===========================================================================
+  // These methods handle both in-memory (dev/mock) and database user sources
+
+  /**
+   * Check if using in-memory test users
+   * @deprecated Use useInMemoryUsers() from app-mode.js directly
+   */
+  static isConfigMode() {
+    return useInMemoryUsers();
+  }
+
+  /**
+   * Helper to format test user for API response
+   * @private
+   */
+  static _formatTestUser(testUser) {
+    return {
+      id: null, // No DB ID in config mode
+      auth0_id: testUser.auth0_id,
+      email: testUser.email,
+      first_name: testUser.first_name,
+      last_name: testUser.last_name,
+      role: testUser.role,
+      is_active: true,
+      created_at: new Date().toISOString(),
+      name: `${testUser.first_name} ${testUser.last_name}`,
+    };
+  }
+
+  /**
+   * Get all users - in-memory or database based
+   *
+   * DATA SOURCE SELECTION:
+   * - useInMemoryUsers() = true  → Use TEST_USERS from config
+   * - useInMemoryUsers() = false → Use database via GenericEntityService
+   *
+   * @returns {Promise<Array>} Array of user objects
+   */
+  static async getAllUsers() {
+    if (useInMemoryUsers()) {
+      return Object.values(TEST_USERS).map((user) =>
+        this._formatTestUser(user),
+      );
+    } else {
+      const result = await GenericEntityService.findAll('user', {
+        includeInactive: false,
+      });
+      return result.data;
+    }
+  }
+
+  /**
+   * Get user by Auth0 ID - in-memory or database based
+   *
+   * @param {string} auth0Id - Auth0 user ID (sub claim)
+   * @returns {Promise<Object|null>} User object or null if not found
+   */
+  static async getUserByAuth0Id(auth0Id) {
+    if (useInMemoryUsers()) {
+      const testUser = Object.values(TEST_USERS).find(
+        (user) => user.auth0_id === auth0Id,
+      );
+      return testUser ? this._formatTestUser(testUser) : null;
+    } else {
+      return GenericEntityService.findByField('user', 'auth0_id', auth0Id);
+    }
+  }
+
+  /**
+   * Create or find user from auth data
+   *
+   * Alias for findOrCreateFromAuth0 with in-memory user support.
+   * This is the primary method used by auth middleware.
+   *
+   * @param {Object} auth0Data - Auth0 token payload
+   * @returns {Promise<Object>} User object
+   */
+  static async findOrCreateUser(auth0Data) {
+    if (useInMemoryUsers()) {
+      return this.getUserByAuth0Id(auth0Data.sub);
+    } else {
+      return this.findOrCreateFromAuth0(auth0Data);
+    }
+  }
+
+  // ===========================================================================
+  // HEALTH CHECK METHODS (Standard Service Pattern)
+  // ===========================================================================
+
+  /**
+   * Check if auth user service is configured
+   * @returns {boolean}
+   */
+  static isConfigured() {
+    return true; // Service uses GenericEntityService which manages DB conn
+  }
+
+  /**
+   * Get configuration info (no network call)
+   * @returns {{configured: boolean, mode: string}}
+   */
+  static getConfigurationInfo() {
+    return {
+      configured: true,
+      mode: useInMemoryUsers() ? 'in-memory' : 'database',
+    };
+  }
+
+  /**
+   * Deep health check - verifies user operations are working
+   * @param {number} timeoutMs - Timeout in milliseconds (default: 5000)
+   * @returns {Promise<{configured: boolean, reachable: boolean, responseTime: number, status: string, message?: string}>}
+   */
+  static async healthCheck(timeoutMs = 5000) {
+    const start = Date.now();
+
+    try {
+      // Create timeout promise
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Health check timed out')), timeoutMs);
+      });
+
+      // Test by getting all users (works for both modes)
+      const queryPromise = this.getAllUsers();
+
+      await Promise.race([queryPromise, timeoutPromise]);
+      const responseTime = Date.now() - start;
+
+      logger.debug('Auth user service health check passed', { responseTime });
+
+      return {
+        configured: true,
+        reachable: true,
+        responseTime,
+        mode: useInMemoryUsers() ? 'in-memory' : 'database',
+        status: 'healthy',
+      };
+    } catch (error) {
+      const responseTime = Date.now() - start;
+
+      let message = 'Auth user service connectivity failed';
+      let status = 'critical';
+
+      if (error.message?.includes('timed out')) {
+        message = `Auth user service check timed out after ${timeoutMs}ms`;
+        status = 'timeout';
+      }
+
+      logger.warn('Auth user service health check failed', {
+        error: error.message,
+        responseTime,
+      });
+
+      return {
+        configured: true,
+        reachable: false,
+        responseTime,
+        status,
+        message,
+      };
     }
   }
 }

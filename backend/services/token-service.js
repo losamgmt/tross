@@ -324,6 +324,103 @@ class TokenService {
       throw error;
     }
   }
+
+  // ===========================================================================
+  // HEALTH CHECK METHODS (Standard Service Pattern)
+  // ===========================================================================
+
+  /**
+   * Check if token service is configured
+   * Validates JWT secret is available
+   * @returns {boolean}
+   */
+  static isConfigured() {
+    try {
+      // AppConfig.jwt.secret throws if not configured
+      return !!AppConfig.jwt.secret;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Get configuration info (no network call)
+   * @returns {{configured: boolean, hasJwtSecret: boolean}}
+   */
+  static getConfigurationInfo() {
+    const configured = this.isConfigured();
+    return {
+      configured,
+      hasJwtSecret: configured,
+    };
+  }
+
+  /**
+   * Deep health check - verifies DB connectivity for token operations
+   * @param {number} timeoutMs - Timeout in milliseconds (default: 5000)
+   * @returns {Promise<{configured: boolean, reachable: boolean, responseTime: number, status: string, message?: string}>}
+   */
+  static async healthCheck(timeoutMs = 5000) {
+    const start = Date.now();
+
+    // Check configuration first
+    if (!this.isConfigured()) {
+      return {
+        configured: false,
+        reachable: false,
+        responseTime: 0,
+        status: 'unconfigured',
+        message: 'Token service not configured (missing JWT secret)',
+      };
+    }
+
+    try {
+      // Create timeout promise
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Health check timed out')), timeoutMs);
+      });
+
+      // Test DB connectivity with simple query on refresh_tokens table
+      const queryPromise = db.query(
+        'SELECT COUNT(*) as count FROM refresh_tokens WHERE expires_at > NOW() LIMIT 1',
+      );
+
+      await Promise.race([queryPromise, timeoutPromise]);
+      const responseTime = Date.now() - start;
+
+      logger.debug('Token service health check passed', { responseTime });
+
+      return {
+        configured: true,
+        reachable: true,
+        responseTime,
+        status: 'healthy',
+      };
+    } catch (error) {
+      const responseTime = Date.now() - start;
+
+      let message = 'Token service connectivity failed';
+      let status = 'critical';
+
+      if (error.message?.includes('timed out')) {
+        message = `Token service check timed out after ${timeoutMs}ms`;
+        status = 'timeout';
+      }
+
+      logger.warn('Token service health check failed', {
+        error: error.message,
+        responseTime,
+      });
+
+      return {
+        configured: true,
+        reachable: false,
+        responseTime,
+        status,
+        message,
+      };
+    }
+  }
 }
 
 module.exports = TokenService;

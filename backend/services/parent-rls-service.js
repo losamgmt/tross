@@ -22,7 +22,7 @@
 
 const { buildRLSFilter } = require('../db/helpers/rls');
 const allMetadata = require('../config/models');
-const { pool } = require('../db/connection');
+const db = require('../db/connection');
 const { logger } = require('../config/logger');
 const { extractProfileIds } = require('../middleware/row-level-security');
 
@@ -144,12 +144,12 @@ function createParentRLSChecker(queryFn) {
 }
 
 /**
- * Default findParentWithRLS using pool.query
+ * Default findParentWithRLS using db.query
  *
  * Convenience export for production use.
  * For testing, use createParentRLSChecker() with mock.
  */
-const findParentWithRLS = createParentRLSChecker(pool.query.bind(pool));
+const findParentWithRLS = createParentRLSChecker(db.query);
 
 module.exports = {
   // Primary export for production

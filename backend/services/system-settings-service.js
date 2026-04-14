@@ -15,7 +15,7 @@
  * - Static class (no instance state)
  */
 
-const { query: db } = require('../db/connection');
+const db = require('../db/connection');
 const { logger, logSecurityEvent } = require('../config/logger');
 const AppError = require('../utils/app-error');
 
@@ -49,7 +49,7 @@ class SystemSettingsService {
       throw new AppError('Setting key is required', 400, 'BAD_REQUEST');
     }
 
-    const result = await db(
+    const result = await db.query(
       `SELECT key, value, description, updated_at, updated_by
        FROM system_settings
        WHERE key = $1`,
@@ -81,7 +81,7 @@ class SystemSettingsService {
    * @returns {Promise<Array>} All settings
    */
   static async getAllSettings() {
-    const result = await db(
+    const result = await db.query(
       `SELECT key, value, description, updated_at, updated_by
        FROM system_settings
        ORDER BY key`,
@@ -107,7 +107,7 @@ class SystemSettingsService {
       throw new AppError('Setting value is required', 400, 'BAD_REQUEST');
     }
 
-    const result = await db(
+    const result = await db.query(
       `INSERT INTO system_settings (key, value, updated_by)
        VALUES ($1, $2, $3)
        ON CONFLICT (key) DO UPDATE SET
@@ -240,45 +240,43 @@ class SystemSettingsService {
   }
 
   // ===========================================================================
-  // INTEGRATION CREDENTIALS HELPERS
+  // INTEGRATION CREDENTIALS HELPERS (Delegated to IntegrationTokenService)
   // ===========================================================================
+  // These methods are kept for backward compatibility.
+  // New code should use IntegrationTokenService directly.
 
   /**
    * Valid integration providers
-   * @private
+   * @deprecated Use IntegrationTokenService.PROVIDERS instead
    */
   static INTEGRATION_PROVIDERS = ['quickbooks', 'stripe'];
 
   /**
    * Validate provider name
    * @private
-   * @param {string} provider - Provider name to validate
-   * @throws {AppError} If provider is invalid
+   * @deprecated Use IntegrationTokenService._validateProvider instead
    */
   static _validateProvider(provider) {
-    if (!provider || !this.INTEGRATION_PROVIDERS.includes(provider)) {
-      throw new AppError(
-        `Invalid integration provider: ${provider}. Valid: ${this.INTEGRATION_PROVIDERS.join(', ')}`,
-        400,
-        'BAD_REQUEST',
-      );
-    }
+    const IntegrationTokenService = require('./integration-token-service');
+    IntegrationTokenService._validateProvider(provider);
   }
 
   /**
    * Get OAuth tokens for an integration
+   * @deprecated Use IntegrationTokenService.getTokens() instead
    *
    * @param {string} provider - Provider name: 'quickbooks', 'stripe'
    * @returns {Promise<Object|null>} Tokens object or null if not stored
+   * @deprecated Use IntegrationTokenService.getTokens() instead
    */
   static async getIntegrationTokens(provider) {
-    this._validateProvider(provider);
-    const setting = await this.getSetting(`integration.${provider}.tokens`);
-    return setting?.value || null;
+    const IntegrationTokenService = require('./integration-token-service');
+    return IntegrationTokenService.getTokens(provider);
   }
 
   /**
    * Store OAuth tokens for an integration
+   * @deprecated Use IntegrationTokenService.setTokens() instead
    *
    * @param {string} provider - Provider name
    * @param {Object} tokens - Token object (shape varies by provider)
@@ -286,80 +284,38 @@ class SystemSettingsService {
    * @returns {Promise<Object>} The updated setting record
    */
   static async setIntegrationTokens(provider, tokens, userId) {
-    this._validateProvider(provider);
-
-    if (!tokens || typeof tokens !== 'object') {
-      throw new AppError('Tokens must be an object', 400, 'BAD_REQUEST');
-    }
-
-    // Add storage timestamp for debugging
-    const tokenData = {
-      ...tokens,
-      stored_at: new Date().toISOString(),
-    };
-
-    const result = await this.updateSetting(
-      `integration.${provider}.tokens`,
-      tokenData,
-      userId,
-    );
-
-    logSecurityEvent('INTEGRATION_TOKENS_UPDATED', {
-      provider,
-      userId,
-      hasAccessToken: !!tokens.access_token,
-      hasRefreshToken: !!tokens.refresh_token,
-      expiresAt: tokens.expires_at,
-    });
-
-    return result;
+    const IntegrationTokenService = require('./integration-token-service');
+    return IntegrationTokenService.setTokens(provider, tokens, userId);
   }
 
   /**
    * Clear tokens (disconnect integration)
+   * @deprecated Use IntegrationTokenService.clearTokens() instead
    *
    * @param {string} provider - Integration provider name
    * @param {number} userId - Admin user ID for audit trail
    * @returns {Promise<boolean>} True if tokens existed and were cleared
    */
   static async clearIntegrationTokens(provider, userId) {
-    this._validateProvider(provider);
-
-    const existing = await this.getIntegrationTokens(provider);
-    if (!existing) {return false;}
-
-    const key = `integration.${provider}.tokens`;
-
-    // NOTE: Using raw SQL DELETE instead of a service method because:
-    // 1. SystemSettingsService doesn't have a deleteSetting() method
-    // 2. Setting value to null would leave a row with null value (not clean)
-    // 3. This is the only place we need delete functionality for now
-    // If more delete use cases arise, consider adding deleteSetting() method.
-    await db('DELETE FROM system_settings WHERE key = $1', [key]);
-
-    logSecurityEvent('INTEGRATION_DISCONNECTED', {
-      provider,
-      userId,
-      clearedKey: key,
-    });
-
-    return true;
+    const IntegrationTokenService = require('./integration-token-service');
+    return IntegrationTokenService.clearTokens(provider, userId);
   }
 
   /**
    * Get non-secret configuration for an integration
+   * @deprecated Use IntegrationTokenService.getConfig() instead
    *
    * @param {string} provider - Provider name
    * @returns {Promise<Object|null>} Config object or null if not stored
    */
   static async getIntegrationConfig(provider) {
-    this._validateProvider(provider);
-    const setting = await this.getSetting(`integration.${provider}.config`);
-    return setting?.value || null;
+    const IntegrationTokenService = require('./integration-token-service');
+    return IntegrationTokenService.getConfig(provider);
   }
 
   /**
    * Store non-secret configuration for an integration
+   * @deprecated Use IntegrationTokenService.setConfig() instead
    *
    * @param {string} provider - Provider name
    * @param {Object} config - Configuration object
@@ -367,8 +323,93 @@ class SystemSettingsService {
    * @returns {Promise<Object>} The updated setting record
    */
   static async setIntegrationConfig(provider, config, userId) {
-    this._validateProvider(provider);
-    return this.updateSetting(`integration.${provider}.config`, config, userId);
+    const IntegrationTokenService = require('./integration-token-service');
+    return IntegrationTokenService.setConfig(provider, config, userId);
+  }
+
+  // ===========================================================================
+  // HEALTH CHECK METHODS (Standard Service Pattern)
+  // ===========================================================================
+
+  /**
+   * Check if system settings service is configured
+   * Service is always configured if DB connection is available
+   * @returns {boolean}
+   */
+  static isConfigured() {
+    return true; // Service doesn't require external configuration
+  }
+
+  /**
+   * Get configuration info (no network call)
+   * @returns {{configured: boolean, defaultSettingsCount: number}}
+   */
+  static getConfigurationInfo() {
+    return {
+      configured: true,
+      defaultSettingsCount: Object.keys(DEFAULT_SETTINGS).length,
+    };
+  }
+
+  /**
+   * Deep health check - verifies DB connectivity for settings operations
+   * @param {number} timeoutMs - Timeout in milliseconds (default: 5000)
+   * @returns {Promise<{configured: boolean, reachable: boolean, responseTime: number, status: string, settingsCount?: number, message?: string}>}
+   */
+  static async healthCheck(timeoutMs = 5000) {
+    const start = Date.now();
+
+    try {
+      // Create timeout promise
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Health check timed out')), timeoutMs);
+      });
+
+      // Test DB connectivity with count on system_settings table
+      const queryPromise = db.query(
+        'SELECT COUNT(*) as count FROM system_settings',
+      );
+
+      const result = await Promise.race([queryPromise, timeoutPromise]);
+      const responseTime = Date.now() - start;
+      const settingsCount = parseInt(result.rows[0].count, 10);
+
+      logger.debug('System settings health check passed', { 
+        responseTime, 
+        settingsCount 
+      });
+
+      return {
+        configured: true,
+        reachable: true,
+        responseTime,
+        settingsCount,
+        status: 'healthy',
+      };
+    } catch (error) {
+      const responseTime = Date.now() - start;
+
+      let message = 'System settings service connectivity failed';
+      let status = 'critical';
+
+      if (error.message?.includes('timed out')) {
+        message = `System settings check timed out after ${timeoutMs}ms`;
+        status = 'timeout';
+      }
+
+      logger.warn('System settings health check failed', {
+        error: error.message,
+        responseTime,
+      });
+
+      return {
+        configured: true,
+        reachable: false,
+        responseTime,
+        status,
+        message,
+      };
+    }
   }
 }
 
