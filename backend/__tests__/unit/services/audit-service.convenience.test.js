@@ -1,5 +1,5 @@
 /**
- * Unit Tests for services/audit-service.js - V2.0 Convenience Methods
+ * Unit Tests for services/audit/audit-service.js - V2.0 Convenience Methods
  *
  * Tests the contract v2.0 convenience methods for audit history queries.
  * In v2.0, audit data lives ONLY in audit_logs table (SRP compliance).
@@ -27,9 +27,9 @@ jest.mock("../../../config/logger", () => ({
 
 const db = require("../../../db/connection");
 const { logger } = require("../../../config/logger");
-const auditService = require("../../../services/audit-service");
+const auditService = require("../../../services/audit/audit-service");
 
-describe("services/audit-service.js - V2.0 Convenience Methods", () => {
+describe("services/audit/audit-service.js - V2.0 Convenience Methods", () => {
   beforeEach(() => {
     jest.clearAllMocks();
 

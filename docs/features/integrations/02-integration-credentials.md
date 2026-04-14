@@ -1,14 +1,13 @@
 # Module 02: Integration Credentials Service
 
 **Status:** Implemented ✅  
-**Location:** `backend/services/system-settings-service.js` (extended)  
-**Lines of Code:** ~100 added  
-**Test Coverage:** 24 tests (part of system-settings-service suite)  
-**Dependencies:** SystemSettingsService (existing)
+**Location:** `backend/services/integrations/token-service.js`  
+**Lines of Code:** ~310  
+**Test Coverage:** 24 tests (system-settings-service suite includes delegation tests)  
+**Dependencies:** Database (system_settings table)
 
-> **Note:** Uses existing imports from SystemSettingsService:  
-> `const AppError = require('../utils/app-error');`  
-> `const { logSecurityEvent } = require('../config/logger');`
+> **Update (April 2026):** Extracted to dedicated `IntegrationTokenService` during service layer audit.  
+> `SystemSettingsService` retains deprecated wrapper methods for backward compatibility.
 
 ---
 
@@ -18,27 +17,26 @@ Store and retrieve OAuth tokens for external integrations (QuickBooks, Stripe).
 
 **SRP:** ONLY manages credential storage. Does NOT:
 - Perform OAuth flows
-- Refresh tokens (that's the caller's job)
+- Refresh tokens (that's the runner's job - see Module 03)
 - Make API calls to external services
 - Validate token format
 
 ---
 
-## Design Decision: Extend vs. New Service
+## Design Decision: Dedicated Service (Revised)
 
-**Decision:** Extend `SystemSettingsService` with helper methods.
+**Original Decision:** Extend `SystemSettingsService` with helper methods.
 
-**Rationale:**
-- SystemSettingsService already has JSONB storage
-- Already has admin-only write pattern
-- Already has audit logging via `updated_by`
-- New table would be redundant
+**Revised Decision (April 2026):** Extract to dedicated `IntegrationTokenService`.
 
-**Trade-off:**
-- ❌ Credentials mixed with general settings
-- ✅ Reuses proven infrastructure
-- ✅ No schema migration needed
-- ✅ Fewer files to maintain
+**Rationale for extraction:**
+- SRP: Token management is distinct from feature flags/maintenance mode
+- Service layer reorganization created `services/integrations/` directory
+- Cleaner separation of concerns
+
+**Current State:**
+- `IntegrationTokenService` owns all token logic
+- `SystemSettingsService` has deprecated wrapper methods that delegate
 
 ---
 

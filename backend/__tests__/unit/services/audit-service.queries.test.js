@@ -1,5 +1,5 @@
 /**
- * Unit Tests for services/audit-service.js - Query Operations
+ * Unit Tests for services/audit/audit-service.js - Query Operations
  *
  * Tests audit trail queries and specialized query methods.
  * Follows AAA pattern and DRY principles.
@@ -23,13 +23,13 @@ jest.mock("../../../config/logger", () => ({
 
 const db = require("../../../db/connection");
 const { logger } = require("../../../config/logger");
-const auditService = require("../../../services/audit-service");
+const auditService = require("../../../services/audit/audit-service");
 const {
   AuditActions,
   ResourceTypes,
-} = require("../../../services/audit-constants");
+} = require("../../../services/audit/constants");
 
-describe("services/audit-service.js - Query Operations", () => {
+describe("services/audit/audit-service.js - Query Operations", () => {
   beforeEach(() => {
     jest.clearAllMocks();
 

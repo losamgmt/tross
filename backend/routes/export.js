@@ -15,7 +15,7 @@
 
 const express = require('express');
 const router = express.Router();
-const ExportService = require('../services/export-service');
+const ExportService = require('../services/data/export-service');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
 const { enforceRLS } = require('../middleware/row-level-security');
 const { extractEntity } = require('../middleware/generic-entity');

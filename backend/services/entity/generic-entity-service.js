@@ -20,47 +20,47 @@
  *   Old models can delegate to this service during transition.
  */
 
-const allMetadata = require('../config/models');
+const allMetadata = require('../../config/models');
 const {
   getSearchableFields,
   getFilterableFields,
   getSortableFields,
   getRequiredFields,
   getImmutableFields,
-} = require('../config/metadata-accessors');
-const { logger } = require('../config/logger');
-const db = require('../db/connection');
-const { toSafeInteger } = require('../validators/type-coercion');
+} = require('../../config/metadata-accessors');
+const { logger } = require('../../config/logger');
+const db = require('../../db/connection');
+const { toSafeInteger } = require('../../validators/type-coercion');
 const PaginationService = require('./pagination-service');
 const QueryBuilderService = require('./query-builder-service');
 const {
   evaluateBeforeHooks,
   evaluateAfterHooks,
 } = require('./hook-service');
-const { buildUpdateClause } = require('../db/helpers/update-helper');
-const { cascadeDeleteDependents } = require('../db/helpers/cascade-helper');
+const { buildUpdateClause } = require('../../db/helpers/update-helper');
+const { cascadeDeleteDependents } = require('../../db/helpers/cascade-helper');
 // ADR-011: Use new rule-based RLS engine
-const { buildRLSFilter } = require('../db/helpers/rls');
+const { buildRLSFilter } = require('../../db/helpers/rls');
 const {
   stripAuthIdentifiers,
   stripAuthIdentifiersArray,
-} = require('../db/helpers/auth-identifier-sanitizer');
+} = require('../../db/helpers/auth-identifier-sanitizer');
 const {
   logEntityAudit,
   isAuditEnabled,
-} = require('../db/helpers/audit-helper');
-const { loadRelationships } = require('../db/helpers/relationship-loader');
+} = require('../../db/helpers/audit-helper');
+const { loadRelationships } = require('../../db/helpers/relationship-loader');
 const {
   ENTITY_FIELDS,
   NAME_PATTERNS,
   NAME_PATTERN_MAP,
-} = require('../config/constants');
-const { sanitizeData } = require('../utils/data-hygiene');
+} = require('../../config/constants');
+const { sanitizeData } = require('../../utils/data-hygiene');
 const {
   generateIdentifier,
   IDENTIFIER_FIELDS,
-} = require('../utils/identifier-generator');
-const AppError = require('../utils/app-error');
+} = require('../../utils/identifier-generator');
+const AppError = require('../../utils/app-error');
 
 /**
  * Table name to entity name mapping for related entity lookups

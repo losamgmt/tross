@@ -1,5 +1,5 @@
 /**
- * Unit Tests for services/auth/AuthStrategyFactory.js
+ * Unit Tests for services/auth/strategies/AuthStrategyFactory.js
  *
  * Tests the authentication strategy factory pattern.
  * Covers static utility methods for auth mode detection.
@@ -17,17 +17,17 @@ jest.mock("../../../config/logger", () => ({
 }));
 
 // Mock the strategy classes
-jest.mock("../../../services/auth/DevAuthStrategy");
-jest.mock("../../../services/auth/Auth0Strategy");
+jest.mock("../../../services/auth/strategies/DevAuthStrategy");
+jest.mock("../../../services/auth/strategies/Auth0Strategy");
 
 const {
   AuthStrategyFactory,
   AUTH_MODES,
-} = require("../../../services/auth/AuthStrategyFactory");
-const DevAuthStrategy = require("../../../services/auth/DevAuthStrategy");
-const Auth0Strategy = require("../../../services/auth/Auth0Strategy");
+} = require("../../../services/auth/strategies/AuthStrategyFactory");
+const DevAuthStrategy = require("../../../services/auth/strategies/DevAuthStrategy");
+const Auth0Strategy = require("../../../services/auth/strategies/Auth0Strategy");
 
-describe("services/auth/AuthStrategyFactory.js", () => {
+describe("services/auth/strategies/AuthStrategyFactory.js", () => {
   const originalAuthMode = process.env.AUTH_MODE;
 
   beforeEach(() => {

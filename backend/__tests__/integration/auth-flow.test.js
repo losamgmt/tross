@@ -5,7 +5,7 @@
 
 const request = require("supertest");
 const express = require("express");
-const { AuthProvider } = require("../../services/auth");
+const { AuthProvider } = require("../../services/auth/strategies");
 const { HTTP_STATUS, USER_ROLES } = require("../../config/constants");
 const {
   generateTestToken,
@@ -14,7 +14,7 @@ const {
 } = require("../helpers/test-helpers");
 
 // Mock the user data service
-jest.mock("../../services/user-data", () => ({
+jest.mock("../../services/utils/user-data", () => ({
   findOrCreateUser: jest.fn().mockResolvedValue({
     id: 1,
     auth0_id: "auth0|test123",

@@ -1,7 +1,7 @@
 # Integration Foundation Architecture
 
-**Status:** Phase 0 Implemented ✅  
-**Date:** April 9, 2026  
+**Status:** Phase 2 Implemented ✅  
+**Date:** April 14, 2026  
 **Scope:** Foundation extensions for QuickBooks + Stripe integrations
 
 ---
@@ -53,18 +53,29 @@ QuickBooksService
 ```
 Phase 0: Foundation ✅ COMPLETE (2026-04-09)
 ├── 01-webhook-validator.md     → utils/webhook-validator.js ✅
-├── 02-integration-credentials.md → SystemSettingsService extended ✅
+├── 02-integration-credentials.md → services/integrations/token-service.js ✅
 ├── 04-sync-status-fields.md    → Metadata + migration ✅
 └── env-manifest.js             → 8 new env vars ✅
 
-Phase 1: Services (Upcoming)
-└── 03-base-integration-service.md → Template for QB/Stripe services
-    ├── services/quickbooks-service.js
-    └── services/stripe-service.js
+Phase 1: Services ✅ COMPLETE (2026-04-14)
+└── 03-base-integration-service.md → Integration runner + providers
+    ├── services/integrations/runner.js          ✅
+    ├── services/integrations/providers/index.js ✅
+    ├── services/integrations/providers/quickbooks.js ✅
+    └── services/integrations/providers/stripe.js ✅
 
-Phase 3: Routes & Webhooks (Days 5-6)
-├── routes/webhooks.js (uses webhook-validator)
-└── Health check additions (follows health.js pattern)
+Phase 2: Routes & Webhooks ✅ COMPLETE (2026-04-14)
+├── config/integration-providers.js  → SSOT for all provider metadata ✅
+├── services/integrations/oauth-service.js → Generic OAuth2 flows ✅
+├── routes/integrations.js           → Metadata-driven route factory ✅
+├── routes/webhooks.js               → Signature-verified receivers ✅
+├── config/integration-loader.js     → Dynamic route loading ✅
+└── Health check in runner.js        → healthCheckAll() ✅
+
+Phase 3: API Implementations (Next)
+├── providers/quickbooks.js → Actual QuickBooks API calls
+├── providers/stripe.js     → Actual Stripe API calls
+└── Sync logic + event processing
 ```
 
 ---
@@ -72,33 +83,55 @@ Phase 3: Routes & Webhooks (Days 5-6)
 ## Dependency Graph
 
 ```
-  ┌─────────────┐     ┌─────────────────┐     ┌─────────────────────┐
-  │   crypto    │     │  Metadata SSOT  │     │ SystemSettingsService│
-  │  (Node.js)  │     │  field-types.js │     │                     │
-  └──────┬──────┘     └────────┬────────┘     └──────────┬──────────┘
-         │                     │                         │
-         ▼                     ▼                         ▼
-  ┌────────────┐       ┌────────────┐            ┌─────────────┐
-  │  Webhook   │       │Sync Fields │            │ Credentials │
-  │Validator(01)│       │   (04)     │            │ Service (02)│
-  └────────────┘       └────────────┘            └──────┬──────┘
-                                                        │
-                                                        ▼
-                                        ┌───────────────────────────┐
-                                        │   Base Integration (03)    │
-                                        │  (factory pattern + mutex) │
-                                        └───────────────┬───────────┘
-                                                        │
-              ┌─────────────────────────┬───────────────┴───────────┐
-              ▼                         ▼                           ▼
-     ┌────────────────┐        ┌────────────────┐        ┌─────────────┐
-     │ QuickBooks     │        │ Stripe         │        │ routes/     │
-     │ Service        │        │ Service        │        │ webhooks.js │
-     │ (uses 01,02,03)│        │ (uses 01,02,03)│        │ (uses 01)   │
-     └────────────────┘        └────────────────┘        └─────────────┘
+                        ┌───────────────────────────────────┐
+                        │  config/integration-providers.js  │
+                        │  (SSOT: OAuth, webhooks, caps)    │
+                        └──────────────────┬────────────────┘
+                                           │
+        ┌──────────────────────────────────┼───────────────────────────────────┐
+        │                                  │                                   │
+        ▼                                  ▼                                   ▼
+┌───────────────────┐           ┌─────────────────────┐           ┌────────────────────┐
+│  services/        │           │  routes/            │           │  routes/           │
+│  integrations/    │           │  integrations.js    │           │  webhooks.js       │
+│  oauth-service.js │           │  (auto-gen routes)  │           │  (signature verify)│
+└─────────┬─────────┘           └──────────┬──────────┘           └─────────┬──────────┘
+          │                                │                                │
+          ▼                                ▼                                ▼
+┌─────────────────────┐         ┌─────────────────────┐          ┌─────────────────────┐
+│  token-service.js   │         │  IntegrationRunner  │          │  WebhookValidator   │
+│  (encrypted tokens) │         │  (runner.js)        │          │  (utils)            │
+└─────────────────────┘         └──────────┬──────────┘          └─────────────────────┘
+                                           │
+                        ┌──────────────────┼───────────────────┐
+                        │                  │                   │
+                        ▼                  ▼                   ▼
+              ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
+              │ providers/      │  │ providers/      │  │ (future)        │
+              │  quickbooks.js  │  │  stripe.js      │  │  xero.js etc.   │
+              └─────────────────┘  └─────────────────┘  └─────────────────┘
 ```
 
-**Key:** Foundation modules (01-04) are independent leaf nodes. Consumer services (QuickBooks/Stripe) compose multiple modules together.
+**Directory Structure (April 2026):**
+```
+config/
+├── integration-providers.js   # SSOT for all provider metadata
+└── integration-loader.js      # Dynamic route loading (mirrors route-loader.js)
+
+services/integrations/
+├── token-service.js          # OAuth token storage (encrypted)
+├── runner.js                 # Base integration runner
+├── oauth-service.js          # Generic OAuth2 flows (NEW)
+├── index.js                  # Barrel exports
+└── providers/
+    ├── index.js              # Provider registry (uses metadata)
+    ├── quickbooks.js         # QuickBooks implementation
+    └── stripe.js             # Stripe implementation
+
+routes/
+├── integrations.js           # Integration management (auto-gen from metadata)
+└── webhooks.js               # Webhook receivers (signature-verified)
+```
 
 ---
 

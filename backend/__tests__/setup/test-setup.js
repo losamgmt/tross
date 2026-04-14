@@ -124,7 +124,7 @@ function setupModuleMocks() {
   }));
 
   // Audit service
-  jest.mock("../../services/audit-service", () => ({
+  jest.mock("../../services/audit/audit-service", () => ({
     log: jest.fn(),
     logCreate: jest.fn(),
     logUpdate: jest.fn(),

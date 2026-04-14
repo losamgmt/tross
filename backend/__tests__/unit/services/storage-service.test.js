@@ -97,7 +97,7 @@ describe("StorageService", () => {
 
     // Re-require after module reset to get fresh instance with mocks
     StorageService =
-      require("../../../services/storage-service").StorageService;
+      require("../../../services/storage/storage-service").StorageService;
     service = new StorageService();
   });
 
@@ -480,7 +480,7 @@ describe("StorageService", () => {
       jest.resetModules();
       const {
         StorageService: UnconfiguredStorageService,
-      } = require("../../../services/storage-service");
+      } = require("../../../services/storage/storage-service");
       const unconfiguredService = new UnconfiguredStorageService();
 
       const result = unconfiguredService.getConfigurationInfo();
@@ -498,7 +498,7 @@ describe("StorageService", () => {
       jest.resetModules();
       const {
         StorageService: NoProviderService,
-      } = require("../../../services/storage-service");
+      } = require("../../../services/storage/storage-service");
       const noProviderService = new NoProviderService();
 
       const result = noProviderService.getConfigurationInfo();
@@ -545,7 +545,7 @@ describe("StorageService", () => {
       jest.resetModules();
       const {
         StorageService: UnconfiguredStorageService,
-      } = require("../../../services/storage-service");
+      } = require("../../../services/storage/storage-service");
       const unconfiguredService = new UnconfiguredStorageService();
 
       const result = await unconfiguredService.healthCheck();

@@ -20,11 +20,11 @@
  * Kept for backward compatibility during transition. Will be removed in future.
  */
 
-const { buildRLSFilter } = require('../db/helpers/rls');
-const allMetadata = require('../config/models');
-const db = require('../db/connection');
-const { logger } = require('../config/logger');
-const { extractProfileIds } = require('../middleware/row-level-security');
+const { buildRLSFilter } = require('../../db/helpers/rls');
+const allMetadata = require('../../config/models');
+const db = require('../../db/connection');
+const { logger } = require('../../config/logger');
+const { extractProfileIds } = require('../../middleware/row-level-security');
 
 /** Get metadata for entity by table name */
 function getMetadataByTableName(tableName) {

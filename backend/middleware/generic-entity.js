@@ -20,7 +20,7 @@
  * Each layer validates independently - no assumptions about prior checks.
  */
 
-const GenericEntityService = require('../services/generic-entity-service');
+const GenericEntityService = require('../services/entity/generic-entity-service');
 const { logSecurityEvent } = require('../config/logger');
 const { getClientIp, getUserAgent } = require('../utils/request-helpers');
 const { buildEntitySchema } = require('../utils/validation-schema-builder');

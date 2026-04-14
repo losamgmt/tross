@@ -27,7 +27,7 @@ jest.mock("../../../db/connection", () =>
 jest.mock("../../../config/logger", () => ({
   logger: require("../../mocks").createLoggerMock(),
 }));
-jest.mock("../../../services/hook-service", () => ({
+jest.mock("../../../services/entity/hook-service", () => ({
   evaluateBeforeHooks: jest.fn().mockResolvedValue({ allowed: true }),
   evaluateAfterHooks: jest.fn().mockResolvedValue({ executed: [] }),
 }));
@@ -35,13 +35,13 @@ jest.mock("../../../services/hook-service", () => ({
 // ============================================================================
 // IMPORTS - After mocks are set up
 // ============================================================================
-const GenericEntityService = require("../../../services/generic-entity-service");
+const GenericEntityService = require("../../../services/entity/generic-entity-service");
 const db = require("../../../db/connection");
 const {
   getRequiredFields,
   getImmutableFields,
 } = require("../../../config/metadata-accessors");
-const hookService = require("../../../services/hook-service");
+const hookService = require("../../../services/entity/hook-service");
 
 describe("GenericEntityService", () => {
   // ==========================================================================

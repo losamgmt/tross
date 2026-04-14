@@ -8,7 +8,7 @@
  * Production mode ONLY accepts Auth0 tokens.
  */
 const { verifyJwt } = require('../utils/jwt-helper');
-const UserDataService = require('../services/user-data');
+const UserDataService = require('../services/utils/user-data');
 const {
   hasPermission,
   hasMinimumRole,

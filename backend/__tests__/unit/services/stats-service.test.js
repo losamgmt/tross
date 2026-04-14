@@ -2,7 +2,7 @@
  * Stats Service Unit Tests
  */
 
-const StatsService = require("../../../services/stats-service");
+const StatsService = require("../../../services/admin/stats-service");
 
 // Mock dependencies
 jest.mock("../../../db/connection");

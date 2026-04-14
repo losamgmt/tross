@@ -5,7 +5,7 @@
  * Mocks database connections to test service logic in isolation
  */
 
-const FileAttachmentService = require("../../../services/file-attachment-service");
+const FileAttachmentService = require("../../../services/storage/attachment-service");
 
 // Mock database connection
 jest.mock("../../../db/connection", () => ({

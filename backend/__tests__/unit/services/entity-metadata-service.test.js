@@ -4,7 +4,7 @@
  * Comprehensive tests for entity metadata operations.
  */
 
-const EntityMetadataService = require("../../../services/entity-metadata-service");
+const EntityMetadataService = require("../../../services/entity/metadata-service");
 
 // Mock logger
 jest.mock("../../../config/logger", () => ({

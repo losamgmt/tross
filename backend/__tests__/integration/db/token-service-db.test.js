@@ -12,7 +12,7 @@
  * Note: No uuid mock needed - utils/uuid.js handles test compatibility automatically
  */
 
-const TokenService = require("../../../services/token-service");
+const TokenService = require("../../../services/auth/token-service");
 const {
   getTestPool,
   cleanupTestDatabase,

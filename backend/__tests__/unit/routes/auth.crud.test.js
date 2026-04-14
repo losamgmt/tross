@@ -13,7 +13,7 @@
 const request = require("supertest");
 const authRoutes = require("../../../routes/auth");
 // User model removed - using GenericEntityService (strangler-fig Phase 4)
-const GenericEntityService = require("../../../services/generic-entity-service");
+const GenericEntityService = require("../../../services/entity/generic-entity-service");
 const { authenticateToken } = require("../../../middleware/auth");
 const { validateProfileUpdate } = require("../../../validators");
 const { getClientIp, getUserAgent } = require("../../../utils/request-helpers");
@@ -24,10 +24,10 @@ const {
 } = require("../../helpers/route-test-setup");
 
 // Mock dependencies
-jest.mock("../../../services/user-data");
-jest.mock("../../../services/token-service");
-jest.mock("../../../services/audit-service");
-jest.mock("../../../services/generic-entity-service");
+jest.mock("../../../services/utils/user-data");
+jest.mock("../../../services/auth/token-service");
+jest.mock("../../../services/audit/audit-service");
+jest.mock("../../../services/entity/generic-entity-service");
 jest.mock("../../../middleware/auth", () => ({
   authenticateToken: jest.fn((req, res, next) => next()),
   requirePermission: jest.fn(() => (req, res, next) => next()),

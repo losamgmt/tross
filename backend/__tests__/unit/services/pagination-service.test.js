@@ -5,7 +5,7 @@
  * SRP LITERALISM: Each test validates ONE behavior
  */
 
-const PaginationService = require("../../../services/pagination-service");
+const PaginationService = require("../../../services/entity/pagination-service");
 
 describe("PaginationService", () => {
   describe("validateParams()", () => {

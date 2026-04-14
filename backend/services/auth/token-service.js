@@ -1,11 +1,11 @@
-const { signJwt, verifyJwt } = require('../utils/jwt-helper');
-const { v4: uuidv4 } = require('../utils/uuid'); // Use CommonJS wrapper for Jest compatibility
+const { signJwt, verifyJwt } = require('../../utils/jwt-helper');
+const { v4: uuidv4 } = require('../../utils/uuid'); // Use CommonJS wrapper for Jest compatibility
 const bcrypt = require('bcrypt');
-const db = require('../db/connection');
-const { logger } = require('../config/logger');
-const { toSafeInteger, toSafeUuid } = require('../validators/type-coercion');
-const AppError = require('../utils/app-error');
-const AppConfig = require('../config/app-config');
+const db = require('../../db/connection');
+const { logger } = require('../../config/logger');
+const { toSafeInteger, toSafeUuid } = require('../../validators/type-coercion');
+const AppError = require('../../utils/app-error');
+const AppConfig = require('../../config/app-config');
 
 // SECURITY: JWT_SECRET accessed via AppConfig.jwt.secret getter
 // This getter FAILS FAST if secret is not configured (no fallbacks)

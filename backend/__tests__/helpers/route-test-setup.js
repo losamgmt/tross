@@ -157,12 +157,12 @@ function createValidatorMockConfig() {
  * All CRUD methods are mocked with sensible defaults that can be overridden per-test.
  *
  * USAGE in test file:
- *   jest.mock('../../../services/generic-entity-service', () =>
+ *   jest.mock('../../../services/entity/generic-entity-service', () =>
  *     require('../../helpers/route-test-setup').createGenericEntityServiceMock()
  *   );
  *
  * Then in tests:
- *   const GenericEntityService = require('../../../services/generic-entity-service');
+ *   const GenericEntityService = require('../../../services/entity/generic-entity-service');
  *   GenericEntityService.findById.mockResolvedValue({ id: 1, name: 'admin' });
  *
  * @returns {Object} Mock GenericEntityService module

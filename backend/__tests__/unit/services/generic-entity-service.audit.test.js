@@ -31,7 +31,7 @@ jest.mock("../../../db/helpers/audit-helper", () => ({
 // ============================================================================
 // IMPORTS - After mocks
 // ============================================================================
-const GenericEntityService = require("../../../services/generic-entity-service");
+const GenericEntityService = require("../../../services/entity/generic-entity-service");
 const db = require("../../../db/connection");
 
 describe("GenericEntityService - Audit Logging", () => {

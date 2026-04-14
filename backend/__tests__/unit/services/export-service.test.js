@@ -2,7 +2,7 @@
  * Export Service Unit Tests
  */
 
-const ExportService = require("../../../services/export-service");
+const ExportService = require("../../../services/data/export-service");
 
 // Mock dependencies
 jest.mock("../../../db/connection", () => ({

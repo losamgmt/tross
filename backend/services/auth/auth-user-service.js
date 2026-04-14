@@ -17,12 +17,12 @@
  *   const user = await AuthUserService.getUserByAuth0Id(auth0Id);
  */
 
-const GenericEntityService = require('./generic-entity-service');
-const db = require('../db/connection');
-const { logger } = require('../config/logger');
-const AppError = require('../utils/app-error');
-const { TEST_USERS } = require('../config/test-users');
-const { useInMemoryUsers } = require('../config/app-mode');
+const GenericEntityService = require('../entity/generic-entity-service');
+const db = require('../../db/connection');
+const { logger } = require('../../config/logger');
+const AppError = require('../../utils/app-error');
+const { TEST_USERS } = require('../../config/test-users');
+const { useInMemoryUsers } = require('../../config/app-mode');
 
 class AuthUserService {
   /**
@@ -57,7 +57,7 @@ class AuthUserService {
     const {
       mapAuth0ToUser,
       validateAuth0Data,
-    } = require('../utils/auth0-mapper');
+    } = require('../../utils/auth0-mapper');
 
     // Validate Auth0 data
     validateAuth0Data(auth0Data);

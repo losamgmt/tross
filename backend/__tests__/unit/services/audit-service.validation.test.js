@@ -1,5 +1,5 @@
 /**
- * Unit Tests for services/audit-service.js - Validation & Error Handling
+ * Unit Tests for services/audit/audit-service.js - Validation & Error Handling
  *
  * Tests error scenarios and validation logic for audit service.
  * Follows AAA pattern and DRY principles.
@@ -23,14 +23,14 @@ jest.mock("../../../config/logger", () => ({
 
 const db = require("../../../db/connection");
 const { logger } = require("../../../config/logger");
-const auditService = require("../../../services/audit-service");
+const auditService = require("../../../services/audit/audit-service");
 const {
   AuditActions,
   ResourceTypes,
   AuditResults,
-} = require("../../../services/audit-constants");
+} = require("../../../services/audit/constants");
 
-describe("services/audit-service.js - Validation & Error Handling", () => {
+describe("services/audit/audit-service.js - Validation & Error Handling", () => {
   beforeEach(() => {
     jest.clearAllMocks();
 

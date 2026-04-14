@@ -22,8 +22,8 @@ const {
 const { withAuth } = require('../helpers/test-auth');
 const { getUniqueValues } = require('../helpers/test-helpers');
 const { API_OPERATIONS } = require('../../config/api-operations');
-const IdempotencyService = require('../../services/idempotency-service');
-const backgroundTasks = require('../../services/background-tasks');
+const IdempotencyService = require('../../services/utils/idempotency-service');
+const backgroundTasks = require('../../services/admin/background-tasks');
 
 const { IDEMPOTENCY } = API_OPERATIONS;
 

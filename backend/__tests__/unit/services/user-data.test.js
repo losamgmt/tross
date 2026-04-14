@@ -11,12 +11,12 @@
  * - useInMemoryUsers() = false when: NODE_ENV=test OR NODE_ENV=production
  */
 
-const UserDataService = require("../../../services/user-data");
+const UserDataService = require("../../../services/utils/user-data");
 const { TEST_USERS } = require("../../../config/test-users");
-const AuthUserService = require("../../../services/auth-user-service");
+const AuthUserService = require("../../../services/auth/auth-user-service");
 
 // Mock AuthUserService - UserDataService delegates to it
-jest.mock("../../../services/auth-user-service");
+jest.mock("../../../services/auth/auth-user-service");
 
 describe("UserDataService", () => {
   const originalEnv = { ...process.env };

@@ -16,17 +16,17 @@
  * - Extensible for future formats (Excel, JSON, etc.)
  */
 
-const allMetadata = require('../config/models');
+const allMetadata = require('../../config/models');
 const {
   getSearchableFields,
   getFilterableFields,
   getSortableFields,
-} = require('../config/metadata-accessors');
-const { logger } = require('../config/logger');
-const db = require('../db/connection');
-const QueryBuilderService = require('./query-builder-service');
-const { buildRLSFilter } = require('../db/helpers/rls');
-const AppError = require('../utils/app-error');
+} = require('../../config/metadata-accessors');
+const { logger } = require('../../config/logger');
+const db = require('../../db/connection');
+const QueryBuilderService = require('../entity/query-builder-service');
+const { buildRLSFilter } = require('../../db/helpers/rls');
+const AppError = require('../../utils/app-error');
 
 /**
  * Escape a value for CSV format

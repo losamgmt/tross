@@ -13,7 +13,7 @@
  * - Edge cases (empty inputs, SQL injection attempts, invalid fields)
  */
 
-const QueryBuilderService = require("../../../services/query-builder-service");
+const QueryBuilderService = require("../../../services/entity/query-builder-service");
 
 describe("QueryBuilderService", () => {
   // ==========================================================================

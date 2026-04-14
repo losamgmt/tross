@@ -16,7 +16,7 @@ jest.mock("../../../config/logger", () => ({
   logSecurityEvent: jest.fn(),
 }));
 
-const SystemSettingsService = require("../../../services/system-settings-service");
+const SystemSettingsService = require("../../../services/admin/settings-service");
 const { query: db } = require("../../../db/connection");
 const { logSecurityEvent } = require("../../../config/logger");
 

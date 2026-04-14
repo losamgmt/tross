@@ -11,9 +11,9 @@
  * - Static class (no instance state)
  */
 
-const db = require('../db/connection');
-const { logger } = require('../config/logger');
-const AppError = require('../utils/app-error');
+const db = require('../../db/connection');
+const { logger } = require('../../config/logger');
+const AppError = require('../../utils/app-error');
 
 class SessionsService {
   /**

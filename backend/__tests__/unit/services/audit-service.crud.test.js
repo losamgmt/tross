@@ -1,5 +1,5 @@
 /**
- * Unit Tests for services/audit-service.js - Core Operations
+ * Unit Tests for services/audit/audit-service.js - Core Operations
  *
  * Tests core audit logging functionality with mocked database.
  * Follows AAA pattern and DRY principles.
@@ -23,14 +23,14 @@ jest.mock("../../../config/logger", () => ({
 
 const db = require("../../../db/connection");
 const { logger } = require("../../../config/logger");
-const auditService = require("../../../services/audit-service");
+const auditService = require("../../../services/audit/audit-service");
 const {
   AuditActions,
   ResourceTypes,
   AuditResults,
-} = require("../../../services/audit-constants");
+} = require("../../../services/audit/constants");
 
-describe("services/audit-service.js - Core Operations", () => {
+describe("services/audit/audit-service.js - Core Operations", () => {
   beforeEach(() => {
     jest.clearAllMocks();
 

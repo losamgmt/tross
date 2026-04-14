@@ -29,7 +29,7 @@ jest.mock("../../../db/helpers/audit-helper", () => ({
   isAuditEnabled: jest.fn().mockReturnValue(true),
 }));
 
-const GenericEntityService = require("../../../services/generic-entity-service");
+const GenericEntityService = require("../../../services/entity/generic-entity-service");
 const db = require("../../../db/connection");
 const {
   cascadeDeleteDependents,

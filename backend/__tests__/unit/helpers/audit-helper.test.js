@@ -12,7 +12,7 @@
  * - Constants re-exports
  */
 
-jest.mock("../../../services/audit-service");
+jest.mock("../../../services/audit/audit-service");
 jest.mock("../../../config/logger", () => ({
   logger: {
     warn: jest.fn(),
@@ -31,12 +31,12 @@ const {
   EntityActionMap,
   AuditResults,
 } = require("../../../db/helpers/audit-helper");
-const auditService = require("../../../services/audit-service");
+const auditService = require("../../../services/audit/audit-service");
 const { logger } = require("../../../config/logger");
 const {
   AuditActions,
   ResourceTypes,
-} = require("../../../services/audit-constants");
+} = require("../../../services/audit/constants");
 
 describe("db/helpers/audit-helper.js", () => {
   beforeEach(() => {

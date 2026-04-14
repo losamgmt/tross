@@ -22,7 +22,7 @@ module.exports = {
   // admin-logs: CONSOLIDATED INTO audit service (see audit entry below)
 
   sessions: {
-    module: "../../../services/sessions-service",
+    module: "../../../services/auth/sessions-service",
     type: "action",
     description: "Service for managing user sessions",
     dependencies: ["db"],
@@ -64,7 +64,7 @@ module.exports = {
   },
 
   "system-settings": {
-    module: "../../../services/system-settings-service",
+    module: "../../../services/admin/settings-service",
     type: "crud",
     description: "Service for managing system-wide settings",
     dependencies: ["db"],
@@ -100,7 +100,7 @@ module.exports = {
   },
 
   "entity-metadata": {
-    module: "../../../services/entity-metadata-service",
+    module: "../../../services/entity/metadata-service",
     type: "query",
     description: "Service for retrieving entity metadata",
     dependencies: [],
@@ -134,7 +134,7 @@ module.exports = {
 
   // Audit service - consolidated from AuditService + AdminLogsService
   "audit-service": {
-    module: "../../../services/audit-service",
+    module: "../../../services/audit/audit-service",
     type: "action",
     description: "Service for audit logging and admin log queries",
     dependencies: ["db"],
@@ -190,7 +190,7 @@ module.exports = {
   },
 
   "token-service": {
-    module: "../../../services/token-service",
+    module: "../../../services/auth/token-service",
     type: "utility",
     description: "Service for JWT token operations",
     dependencies: [],
@@ -213,7 +213,7 @@ module.exports = {
   },
 
   "storage-service": {
-    module: "../../../services/storage-service",
+    module: "../../../services/storage/storage-service",
     type: "action",
     description: "Service for file storage operations",
     dependencies: ["fs"],

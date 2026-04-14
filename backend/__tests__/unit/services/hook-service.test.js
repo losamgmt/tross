@@ -30,7 +30,7 @@ const {
   evaluateBeforeHooks,
   evaluateAfterHooks,
   HOOK_LIMITS,
-} = require('../../../services/hook-service');
+} = require('../../../services/entity/hook-service');
 const { getAction, executeAction } = require('../../../config/action-handlers');
 const { logger } = require('../../../config/logger');
 

@@ -27,8 +27,8 @@ const {
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const crypto = require('crypto');
 const path = require('path');
-const { logger } = require('../config/logger');
-const AppError = require('../utils/app-error');
+const { logger } = require('../../config/logger');
+const AppError = require('../../utils/app-error');
 
 // Initialize S3 client for R2
 const getS3Client = () => {

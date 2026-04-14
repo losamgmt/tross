@@ -21,7 +21,7 @@ jest.mock('../../../config/logger', () => ({
   },
 }));
 
-const IdempotencyService = require('../../../services/idempotency-service');
+const IdempotencyService = require('../../../services/utils/idempotency-service');
 const AppError = require('../../../utils/app-error');
 const db = require('../../../db/connection');
 const { API_OPERATIONS } = require('../../../config/api-operations');

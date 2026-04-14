@@ -45,7 +45,7 @@ const log = testLogger;
 let _GenericEntityService = null;
 function getGenericEntityService() {
   if (!_GenericEntityService) {
-    _GenericEntityService = require('../services/generic-entity-service');
+    _GenericEntityService = require('../services/entity/generic-entity-service');
   }
   return _GenericEntityService;
 }

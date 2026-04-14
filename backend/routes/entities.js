@@ -27,7 +27,7 @@ const {
   validateInclude,
   validateBatchRequest,
 } = require('../validators');
-const GenericEntityService = require('../services/generic-entity-service');
+const GenericEntityService = require('../services/entity/generic-entity-service');
 const ResponseFormatter = require('../utils/response-formatter');
 const { filterDataByRole } = require('../utils/field-access-controller');
 const {

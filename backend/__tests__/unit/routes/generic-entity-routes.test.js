@@ -15,8 +15,8 @@
 
 const request = require("supertest");
 const express = require("express");
-const GenericEntityService = require("../../../services/generic-entity-service");
-const auditService = require("../../../services/audit-service");
+const GenericEntityService = require("../../../services/entity/generic-entity-service");
+const auditService = require("../../../services/audit/audit-service");
 const { HTTP_STATUS } = require("../../../config/constants");
 
 // ============================================================================
@@ -40,7 +40,7 @@ jest.mock("../../../config/logger", () => ({
   },
 }));
 
-jest.mock("../../../services/generic-entity-service", () => ({
+jest.mock("../../../services/entity/generic-entity-service", () => ({
   findAll: jest.fn(),
   findById: jest.fn(),
   findByField: jest.fn(),
@@ -65,7 +65,7 @@ jest.mock("../../../services/generic-entity-service", () => ({
     sortableFields: ["id", "created_at"],
   })),
 }));
-jest.mock("../../../services/audit-service");
+jest.mock("../../../services/audit/audit-service");
 jest.mock("../../../utils/request-helpers", () => ({
   getClientIp: jest.fn(() => "127.0.0.1"),
   getUserAgent: jest.fn(() => "test-agent"),

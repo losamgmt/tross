@@ -24,14 +24,14 @@
  *   - If omitted, no audit (internal operations, migrations, etc.)
  */
 
-const auditService = require('../../services/audit-service');
+const auditService = require('../../services/audit/audit-service');
 const { logger } = require('../../config/logger');
 const allMetadata = require('../../config/models');
 const {
   AuditResults,
   EntityToResourceType,
   EntityActionMap,
-} = require('../../services/audit-constants');
+} = require('../../services/audit/constants');
 
 /**
  * Valid operations for audit logging
