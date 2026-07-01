@@ -185,6 +185,7 @@ describe("ResponseFormatter", () => {
       expect(res.json).toHaveBeenCalledWith({
         success: false,
         error: "Error",
+        code: ERROR_CODES.SERVER_ERROR,
         message: "Something went wrong",
         timestamp: expect.any(String),
       });
@@ -560,6 +561,7 @@ describe("ResponseFormatter", () => {
       expect(res.json).toHaveBeenCalledWith({
         success: false,
         error: "Conflict",
+        code: ERROR_CODES.RESOURCE_ALREADY_EXISTS,
         message: "Resource already exists",
         timestamp: expect.any(String),
       });
@@ -571,6 +573,7 @@ describe("ResponseFormatter", () => {
       expect(res.json).toHaveBeenCalledWith({
         success: false,
         error: "Conflict",
+        code: ERROR_CODES.RESOURCE_ALREADY_EXISTS,
         message: "Email already registered",
         timestamp: expect.any(String),
       });

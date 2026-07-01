@@ -11,7 +11,7 @@ const { createTestContext } = require("../core");
 const { HTTP_STATUS } = require("../../config/constants");
 
 describe("Audit API Endpoints - Integration Tests", () => {
-  const ctx = createTestContext({ roles: ["admin", "technician", "viewer"] });
+  const ctx = createTestContext({ roles: ["admin", "technician", "customer"] });
 
   beforeAll(() => ctx.setup());
   afterAll(() => ctx.teardown());
@@ -23,7 +23,7 @@ describe("Audit API Endpoints - Integration Tests", () => {
     });
 
     test("should return 403 for non-admin users", async () => {
-      const response = await ctx.get("/api/audit/all").as("viewer").execute();
+      const response = await ctx.get("/api/audit/all").as("customer").execute();
       expect(response.status).toBe(HTTP_STATUS.FORBIDDEN);
     });
 
@@ -119,7 +119,7 @@ describe("Audit API Endpoints - Integration Tests", () => {
     });
 
     test("should return empty array for user with no activity", async () => {
-      const newUser = await ctx.createUser("viewer");
+      const newUser = await ctx.createUser("customer");
       const response = await ctx.get(`/api/audit/user/${newUser.user.id}`).as("admin").execute();
 
       expect(response.status).toBe(HTTP_STATUS.OK);
@@ -139,7 +139,7 @@ describe("Audit API Endpoints - Integration Tests", () => {
     });
 
     test("should return 403 when lacking read permission on resource type", async () => {
-      const response = await ctx.get("/api/audit/audit_log/1").as("viewer").execute();
+      const response = await ctx.get("/api/audit/audit_log/1").as("customer").execute();
       expect(response.status).toBe(HTTP_STATUS.FORBIDDEN);
     });
 

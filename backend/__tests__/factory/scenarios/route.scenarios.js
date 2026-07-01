@@ -42,7 +42,7 @@ function requiresAuthentication(routeMeta, endpointMeta, ctx) {
  */
 function requiresMinimumRole(routeMeta, endpointMeta, ctx) {
   const minRole = endpointMeta.minRole || routeMeta.auth?.minRole;
-  if (!minRole || minRole === "viewer") return; // viewer is lowest, can't test insufficient
+  if (!minRole || minRole === "customer") return; // customer is lowest, can't test insufficient
 
   const fullPath = buildPath(routeMeta.basePath, endpointMeta.path);
   const insufficientRole = getInsufficientRole(minRole);
@@ -486,9 +486,9 @@ function buildPath(basePath, endpointPath) {
  * Get a role that's insufficient for the required role
  */
 function getInsufficientRole(requiredRole) {
-  const roleHierarchy = ["viewer", "user", "manager", "admin"];
+  const roleHierarchy = ["customer", "technician", "dispatcher", "manager", "admin"];
   const requiredIndex = roleHierarchy.indexOf(requiredRole);
-  if (requiredIndex <= 0) return "viewer";
+  if (requiredIndex <= 0) return "customer";
   return roleHierarchy[requiredIndex - 1];
 }
 

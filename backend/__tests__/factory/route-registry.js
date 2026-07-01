@@ -154,7 +154,7 @@ module.exports = {
 
   audit: {
     basePath: "/api/audit",
-    auth: { required: true, minRole: "viewer" },
+    auth: { required: true, minRole: "customer" },
     endpoints: [
       // /all requires admin (audit_logs read permission)
       {
@@ -187,7 +187,7 @@ module.exports = {
 
   export: {
     basePath: "/api/export",
-    auth: { required: true, minRole: "viewer" },
+    auth: { required: true, minRole: "customer" },
     endpoints: [
       {
         method: "GET",
@@ -211,7 +211,7 @@ module.exports = {
 
   preferences: {
     basePath: "/api/preferences",
-    auth: { required: true, minRole: "viewer" },
+    auth: { required: true, minRole: "customer" },
     // Uses generic entity router with sharedPrimaryKey pattern
     // Tested via entity runner, not route runner
     isDynamic: true,
@@ -255,7 +255,7 @@ module.exports = {
 
   stats: {
     basePath: "/api/stats",
-    auth: { required: true, minRole: "viewer" },
+    auth: { required: true, minRole: "customer" },
     endpoints: [
       {
         method: "GET",
@@ -283,7 +283,7 @@ module.exports = {
 
   entities: {
     basePath: "/api",
-    auth: { required: true, minRole: "viewer" },
+    auth: { required: true, minRole: "customer" },
     // Dynamic entity routes - tested via entity runner, not route runner
     isDynamic: true,
     endpoints: [
@@ -305,7 +305,7 @@ module.exports = {
         method: "POST",
         path: "/:entity",
         behavior: "create",
-        minRole: "user",
+        minRole: "technician",
         description: "Create entity",
       },
       {
@@ -313,7 +313,7 @@ module.exports = {
         path: "/:entity/:id",
         behavior: "update",
         paramTypes: { id: "id" },
-        minRole: "user",
+        minRole: "technician",
         description: "Update entity",
       },
       {
@@ -321,7 +321,7 @@ module.exports = {
         path: "/:entity/:id",
         behavior: "delete",
         paramTypes: { id: "id" },
-        minRole: "user",
+        minRole: "technician",
         description: "Delete entity",
       },
     ],

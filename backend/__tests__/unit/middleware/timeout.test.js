@@ -245,7 +245,7 @@ describe("Timeout Middleware", () => {
       expect(res.status).not.toHaveBeenCalled();
     });
 
-    test("should send timeout response if not already sent", () => {
+    test("should forward a canonical timeout error to next() if not already sent", () => {
       // Arrange
       req.timedout = true;
       req.startTime = Date.now() - 5000;
@@ -254,15 +254,20 @@ describe("Timeout Middleware", () => {
       // Act
       timeoutHandler(req, res, next);
 
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(408);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          error: "Request Timeout",
-          message: "Request processing was terminated due to timeout",
-        }),
+      // Assert: forwards an AppError (408) to the global error handler rather
+      // than sending its own (non-canonical) response.
+      expect(res.status).not.toHaveBeenCalled();
+      expect(next).toHaveBeenCalledTimes(1);
+      const forwardedError = next.mock.calls[0][0];
+      expect(forwardedError).toBeInstanceOf(Error);
+      expect(forwardedError.statusCode).toBe(408);
+      expect(forwardedError.code).toBe("SERVER_TIMEOUT");
+      expect(forwardedError.message).toBe(
+        "Request processing was terminated due to timeout",
       );
-      expect(next).not.toHaveBeenCalled();
+      expect(forwardedError.details).toEqual(
+        expect.objectContaining({ timeout: 3000 }),
+      );
     });
 
     test("should not send response if headers already sent", () => {

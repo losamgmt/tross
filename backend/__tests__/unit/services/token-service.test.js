@@ -274,6 +274,37 @@ describe("TokenService", () => {
         TokenService.refreshAccessToken(validRefreshToken),
       ).rejects.toThrow("Invalid refresh token");
     });
+
+    test("should reject (as invalid token) when the stored hash is corrupted and comparison throws", async () => {
+      // A malformed/corrupted stored hash makes bcrypt.compare throw. This must
+      // surface as an invalid-token rejection (401), never an unhandled 500.
+      db.query.mockResolvedValueOnce({
+        rows: [
+          {
+            token_id: tokenId,
+            user_id: testUser.id,
+            token_hash: "not-a-valid-bcrypt-hash",
+            expires_at: new Date(Date.now() + 86400000),
+            revoked_at: null,
+            email: testUser.email,
+            role: testUser.role,
+          },
+        ],
+        rowCount: 1,
+      });
+
+      const compareSpy = jest
+        .spyOn(bcrypt, "compare")
+        .mockRejectedValueOnce(new Error("Invalid salt version"));
+
+      try {
+        await expect(
+          TokenService.refreshAccessToken(validRefreshToken),
+        ).rejects.toThrow("Invalid refresh token");
+      } finally {
+        compareSpy.mockRestore();
+      }
+    });
   });
 
   describe("revokeToken()", () => {

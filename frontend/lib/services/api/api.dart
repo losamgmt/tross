@@ -12,4 +12,5 @@
 library;
 
 export 'api_client.dart';
+export 'api_exception.dart';
 export 'http_api_client.dart';

@@ -28,6 +28,7 @@
 const { logger } = require('../config/logger');
 const { HTTP_STATUS } = require('../config/constants');
 const { TIMEOUTS } = require('../config/timeouts');
+const AppError = require('../utils/app-error');
 
 /**
  * Request timeout middleware
@@ -152,18 +153,23 @@ function timeoutHandler(req, res, next) {
     return next();
   }
 
-  // Request already timed out, skip all subsequent middleware
-  // Response should have been sent by requestTimeout middleware
-  if (!res.headersSent) {
-    const duration = Date.now() - (req.startTime || Date.now());
-    res.status(HTTP_STATUS.REQUEST_TIMEOUT).json({
-      error: 'Request Timeout',
-      message: 'Request processing was terminated due to timeout',
-      timeout: req.timeoutMs || TIMEOUTS.REQUEST.DEFAULT_MS,
-      duration,
-      timestamp: new Date().toISOString(),
-    });
+  // Request already timed out. If a response hasn't been sent yet, forward a
+  // canonical timeout error to the global error handler (single envelope SSOT).
+  if (res.headersSent) {
+    return;
   }
+
+  const duration = Date.now() - (req.startTime || Date.now());
+  const timeoutError = new AppError(
+    'Request processing was terminated due to timeout',
+    HTTP_STATUS.REQUEST_TIMEOUT,
+    'SERVER_TIMEOUT',
+  );
+  timeoutError.details = {
+    timeout: req.timeoutMs || TIMEOUTS.REQUEST.DEFAULT_MS,
+    duration,
+  };
+  return next(timeoutError);
 }
 
 /**

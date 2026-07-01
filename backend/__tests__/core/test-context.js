@@ -332,9 +332,6 @@ class TestContext {
   /** @returns {string} Dispatcher token */
   get dispatcherToken() { return this.token('dispatcher'); }
 
-  /** @returns {string} Viewer token */
-  get viewerToken() { return this.token('viewer'); }
-
   /** @returns {Object} Admin user */
   get adminUser() { return this.user('admin'); }
 

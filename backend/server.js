@@ -11,11 +11,12 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
 const { HTTP_STATUS, SECURITY } = require('./config/constants');
 const { TIMEOUTS } = require('./config/timeouts');
-const { devAuthEnabled, isTestMode, isProduction, isLocalDev } = require('./config/app-mode');
+const { isTestMode, isProduction, isLocalDev } = require('./config/app-mode');
 const { logger, requestLogger } = require('./config/logger');
 const { securityHeaders, sanitizeInput } = require('./middleware/security');
 const { apiLimiter, authLimiter } = require('./middleware/rate-limit');
 const { requestTimeout, timeoutHandler } = require('./middleware/timeout');
+const ResponseFormatter = require('./utils/response-formatter');
 const { validateEnvironment } = require('./utils/env-validator');
 const { getAllowedOrigins } = require('./config/deployment-adapter');
 const { initializeDatabase } = require('./scripts/init-database');
@@ -222,49 +223,38 @@ for (const { path, router } of webhookRoutes) {
 
 app.use('/api', apiLimiter); // Catch-all rate limiting
 
-// 404 handler for unknown endpoints
+// 404 handler for unknown endpoints (canonical error envelope)
 app.use((req, res) => {
-  res.status(HTTP_STATUS.NOT_FOUND).json({
-    error: 'API endpoint not found',
-    path: req.originalUrl,
-    method: req.method,
-    timestamp: new Date().toISOString(),
-    available_endpoints: [
-      '/api/health',
-      '/api/auth/me',
-      '/api/auth/users',
-      '/api/roles',
-      devAuthEnabled() ? '/api/dev/status' : null,
-    ].filter(Boolean),
-  });
+  ResponseFormatter.notFound(
+    res,
+    `API endpoint not found: ${req.method} ${req.originalUrl}`,
+  );
 });
 
 // Timeout handler (must be before global error handler)
 app.use(timeoutHandler);
 
-// Global error handler - SINGLE SOURCE OF TRUTH for error-to-response mapping
-// Services throw plain Error objects; this handler maps them to HTTP responses
+// Global error handler - SINGLE SOURCE OF TRUTH for error-to-response mapping.
+// Services throw AppError (or plain Error); this maps them to the canonical
+// error envelope via ResponseFormatter: { success:false, error:'<Human Name>',
+// code:'<MACHINE_CODE>', message, details?, timestamp }.
 app.use((error, req, res, _next) => {
-  // Determine status code from error properties or message patterns
+  // Determine status: explicit AppError.statusCode wins; otherwise infer from
+  // the message for plain Errors thrown by simpler service code.
   let statusCode =
     error.statusCode || error.status || HTTP_STATUS.INTERNAL_SERVER_ERROR;
-  let errorCode = error.code || 'INTERNAL_ERROR';
-
-  // Pattern matching for common error messages (services stay simple)
   const message = error.message || '';
-  const messageLower = message.toLowerCase();
 
   if (!error.statusCode && !error.status) {
+    const messageLower = message.toLowerCase();
     // Not Found patterns
     if (
       messageLower.includes('not found') ||
       messageLower.includes('does not exist')
     ) {
       statusCode = HTTP_STATUS.NOT_FOUND;
-      errorCode = 'NOT_FOUND';
     }
-    // Bad Request patterns
-    // Note: "cannot read properties" is JS internal error, not validation
+    // Bad Request patterns ("cannot read properties" is a JS internal error)
     else if (
       messageLower.includes('invalid') ||
       messageLower.includes('required') ||
@@ -276,7 +266,6 @@ app.use((error, req, res, _next) => {
       messageLower.includes('not a foreign key')
     ) {
       statusCode = HTTP_STATUS.BAD_REQUEST;
-      errorCode = 'BAD_REQUEST';
     }
     // Unauthorized patterns
     else if (
@@ -285,7 +274,6 @@ app.use((error, req, res, _next) => {
       messageLower.includes('not authenticated')
     ) {
       statusCode = HTTP_STATUS.UNAUTHORIZED;
-      errorCode = 'UNAUTHORIZED';
     }
     // Forbidden patterns
     else if (
@@ -293,7 +281,6 @@ app.use((error, req, res, _next) => {
       messageLower.includes('not allowed')
     ) {
       statusCode = HTTP_STATUS.FORBIDDEN;
-      errorCode = 'FORBIDDEN';
     }
     // Conflict patterns
     else if (
@@ -301,19 +288,21 @@ app.use((error, req, res, _next) => {
       messageLower.includes('duplicate')
     ) {
       statusCode = HTTP_STATUS.CONFLICT;
-      errorCode = 'CONFLICT';
     }
   }
+
+  // Machine-readable code: prefer an explicit error.code, else derive from status.
+  const code =
+    error.code || ResponseFormatter._defaultCodeForStatus(statusCode);
 
   // Log based on severity (5xx = error, 4xx = warn)
   const logContext = {
     error: message,
-    code: errorCode,
+    code,
     url: req.url,
     method: req.method,
     ip: req.ip,
   };
-
   if (statusCode >= 500) {
     logContext.stack = error.stack;
     logger.error('Server error', logContext);
@@ -321,32 +310,23 @@ app.use((error, req, res, _next) => {
     logger.warn('Client error', logContext);
   }
 
-  // Build consistent response
-  const response = {
-    success: false,
-    error: errorCode,
-    message:
-      statusCode >= 500 && !isLocalDev()
-        ? 'Something went wrong'
-        : message,
-    timestamp: new Date().toISOString(),
-  };
-
-  // Add details if present (validation errors, etc.)
-  if (error.details) {
-    response.details = error.details;
-  }
-  if (error.errors) {
-    response.details = error.errors;
-  }
-
-  // Add retry-after for rate limits
+  // Retry-After (rate limits): header + top-level field on the envelope.
+  let extra = null;
   if (error.retryAfter) {
-    response.retryAfter = error.retryAfter;
     res.set('Retry-After', String(error.retryAfter));
+    extra = { retryAfter: error.retryAfter };
   }
 
-  res.status(statusCode).json(response);
+  ResponseFormatter._sendError(res, {
+    status: statusCode,
+    error: ResponseFormatter._humanNameForStatus(statusCode),
+    code,
+    // Hide internal 5xx detail outside local dev.
+    message:
+      statusCode >= 500 && !isLocalDev() ? 'Something went wrong' : message,
+    details: error.details || error.errors || null,
+    extra,
+  });
 });
 
 // Graceful shutdown (no hard dependencies)

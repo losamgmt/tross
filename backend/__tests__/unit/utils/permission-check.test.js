@@ -55,7 +55,7 @@ describe("Permission Check Utility", () => {
 
     test("prefers numeric role_priority over string lookup", () => {
       // Even if role name would give different priority
-      const user = { role: "viewer", role_priority: 99 };
+      const user = { role: "customer", role_priority: 99 };
       expect(getUserPriority(user)).toBe(99);
     });
   });
@@ -87,8 +87,8 @@ describe("Permission Check Utility", () => {
       expect(canAccess(user, "users", "create")).toBe(true);
     });
 
-    test("returns false when viewer tries to create users", () => {
-      const user = { role: "viewer" };
+    test("returns false when customer tries to create users", () => {
+      const user = { role: "customer" };
       expect(canAccess(user, "users", "create")).toBe(false);
     });
 
@@ -111,16 +111,16 @@ describe("Permission Check Utility", () => {
   // ==========================================================================
   describe("hasMinimumRole()", () => {
     test("returns false for null user", () => {
-      expect(hasMinimumRole(null, "viewer")).toBe(false);
+      expect(hasMinimumRole(null, "customer")).toBe(false);
     });
 
     test("returns false for undefined user", () => {
-      expect(hasMinimumRole(undefined, "viewer")).toBe(false);
+      expect(hasMinimumRole(undefined, "customer")).toBe(false);
     });
 
     test("returns false for user without role", () => {
       const user = { id: 1 };
-      expect(hasMinimumRole(user, "viewer")).toBe(false);
+      expect(hasMinimumRole(user, "customer")).toBe(false);
     });
 
     test("admin meets minimum role of admin", () => {
@@ -133,8 +133,8 @@ describe("Permission Check Utility", () => {
       expect(hasMinimumRole(user, "customer")).toBe(true);
     });
 
-    test("viewer does not meet minimum role of admin", () => {
-      const user = { role: "viewer" };
+    test("customer does not meet minimum role of admin", () => {
+      const user = { role: "customer" };
       expect(hasMinimumRole(user, "admin")).toBe(false);
     });
 
@@ -306,7 +306,7 @@ describe("Permission Check Utility", () => {
     });
 
     test("returns false for mismatch", () => {
-      const user = { role: "viewer" };
+      const user = { role: "customer" };
       expect(is.role(user, "admin")).toBe(false);
     });
   });

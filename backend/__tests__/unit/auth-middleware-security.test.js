@@ -88,6 +88,16 @@ describe("Authentication Middleware - Security", () => {
         res.json({ success: true, message: "Users create access granted" });
       },
     );
+
+    // Mutating auth endpoints used to exercise the dev read-only allowlist.
+    // '/api/auth/logout' is an exact allowlist member; '/api/auth/refresh-evil'
+    // is a decoy that only PREFIX-matches an allowlisted path.
+    app.post("/api/auth/logout", authenticateToken, (req, res) => {
+      res.json({ success: true, message: "logged out" });
+    });
+    app.post("/api/auth/refresh-evil", authenticateToken, (req, res) => {
+      res.json({ success: true, message: "unreachable for dev tokens" });
+    });
   });
 
   describe("Development Token Security", () => {
@@ -160,6 +170,64 @@ describe("Authentication Middleware - Security", () => {
       // In test env (devAuthEnabled=true), this passes
       // But we can verify the code path exists
       expect(typeof AppConfig.devAuthEnabled).toBe("boolean");
+    });
+
+    test("should block dev token from mutating business data (default-deny)", async () => {
+      const token = await signJwt(
+        {
+          sub: "dev|tech001",
+          email: "technician@tross.dev",
+          role: "technician",
+          provider: "development",
+        },
+        JWT_SECRET,
+        { expiresIn: "1h" },
+      );
+
+      const response = await request(app)
+        .post("/api/users")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ name: "should be blocked" });
+
+      expect(response.status).toBe(403);
+    });
+
+    test("should allow dev token to POST an exact allowlist path (/api/auth/logout)", async () => {
+      const token = await signJwt(
+        {
+          sub: "dev|tech001",
+          email: "technician@tross.dev",
+          role: "technician",
+          provider: "development",
+        },
+        JWT_SECRET,
+        { expiresIn: "1h" },
+      );
+
+      const response = await request(app)
+        .post("/api/auth/logout")
+        .set("Authorization", `Bearer ${token}`);
+
+      expect(response.status).toBe(200);
+    });
+
+    test("should block dev token from a decoy path that only prefix-matches the allowlist", async () => {
+      const token = await signJwt(
+        {
+          sub: "dev|tech001",
+          email: "technician@tross.dev",
+          role: "technician",
+          provider: "development",
+        },
+        JWT_SECRET,
+        { expiresIn: "1h" },
+      );
+
+      const response = await request(app)
+        .post("/api/auth/refresh-evil")
+        .set("Authorization", `Bearer ${token}`);
+
+      expect(response.status).toBe(403);
     });
   });
 

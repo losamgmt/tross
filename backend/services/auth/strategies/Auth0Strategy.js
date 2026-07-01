@@ -350,7 +350,11 @@ class Auth0Strategy extends AuthStrategy {
       logger.error('🔐 Auth0: Token verification failed', {
         error: err.message,
       });
-      throw new Error(`Token verification failed: ${err.message}`);
+      throw new AppError(
+        `Token verification failed: ${err.message}`,
+        401,
+        'AUTH_INVALID_TOKEN',
+      );
     }
   }
 

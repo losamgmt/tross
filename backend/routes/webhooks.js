@@ -20,6 +20,7 @@
 
 const express = require('express');
 const WebhookValidator = require('../utils/webhook-validator');
+const AppError = require('../utils/app-error');
 const { logger, logSecurityEvent } = require('../config/logger');
 const {
   getProvider,
@@ -91,7 +92,11 @@ function createWebhookRouter(providerName) {
   const providerConfig = getProvider(providerName);
 
   if (!providerConfig?.webhook) {
-    throw new Error(`Provider ${providerName} does not support webhooks`);
+    throw new AppError(
+      `Provider ${providerName} does not support webhooks`,
+      500,
+      'INTEGRATION_CONFIG_ERROR',
+    );
   }
 
   const webhookConfig = providerConfig.webhook;

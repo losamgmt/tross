@@ -380,7 +380,7 @@ describe('action-handlers', () => {
     it('executes multiple inline actions in sequence', async () => {
       const actions = [
         { type: 'notification', template: 'a', recipient: { role: 'admin' } },
-        { type: 'notification', template: 'b', recipient: { role: 'user' } },
+        { type: 'notification', template: 'b', recipient: { role: 'customer' } },
       ];
       const context = { entity: 'test', record: {} };
 
@@ -396,7 +396,7 @@ describe('action-handlers', () => {
       const actions = [
         { type: 'notification', template: 'good', recipient: { role: 'admin' } },
         { type: 'bad_type' }, // Will fail
-        { type: 'notification', template: 'also_good', recipient: { role: 'user' } },
+        { type: 'notification', template: 'also_good', recipient: { role: 'customer' } },
       ];
 
       const result = await executeActions(actions, { entity: 'test', record: {} });

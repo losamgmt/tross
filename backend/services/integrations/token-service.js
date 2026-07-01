@@ -21,6 +21,7 @@ const db = require('../../db/connection');
 const { logger, logSecurityEvent } = require('../../config/logger');
 const AppError = require('../../utils/app-error');
 const { getProviderNames, hasProvider } = require('../../config/integration-providers');
+const { encrypt, decrypt, isEncrypted } = require('../../utils/encryption');
 
 class IntegrationTokenService {
   /**
@@ -90,7 +91,35 @@ class IntegrationTokenService {
   static async getTokens(provider) {
     this._validateProvider(provider);
     const setting = await this._getSetting(`integration.${provider}.tokens`);
-    return setting?.value || null;
+    const stored = setting?.value;
+    if (!stored) {
+      return null;
+    }
+
+    // Encrypted-at-rest envelope: { enc: '<v1:...>' }
+    if (isEncrypted(stored.enc)) {
+      try {
+        return JSON.parse(decrypt(stored.enc));
+      } catch (err) {
+        logger.error('Failed to decrypt integration tokens', {
+          provider,
+          error: err.message,
+        });
+        throw new AppError(
+          'Stored integration tokens could not be decrypted',
+          500,
+          'SERVER_ERROR',
+        );
+      }
+    }
+
+    // Legacy plaintext tokens (stored before encryption was introduced).
+    // Returned as-is for back-compat; re-encrypted on the next setTokens().
+    logger.warn(
+      'Integration tokens are stored in plaintext (legacy); they will be encrypted on next update',
+      { provider },
+    );
+    return stored;
   }
 
   /**
@@ -122,9 +151,13 @@ class IntegrationTokenService {
       stored_at: new Date().toISOString(),
     };
 
+    // Encrypt the full token object at rest (AES-256-GCM). The JSONB column
+    // holds only the ciphertext envelope { enc: '<v1:...>' } — never plaintext.
+    const encryptedValue = { enc: encrypt(JSON.stringify(tokenData)) };
+
     const result = await this._updateSetting(
       `integration.${provider}.tokens`,
-      tokenData,
+      encryptedValue,
       userId,
     );
 

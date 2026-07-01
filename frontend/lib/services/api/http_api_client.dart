@@ -17,6 +17,7 @@ import '../entity_metadata.dart';
 import '../error_service.dart';
 import '../auth/token_manager.dart';
 import 'api_client.dart';
+import 'api_exception.dart';
 
 /// Production HTTP implementation of [ApiClient]
 class HttpApiClient implements ApiClient {
@@ -354,20 +355,35 @@ class HttpApiClient implements ApiClient {
         rethrow;
       }
     } else {
-      try {
-        final errorData = json.decode(response.body);
-        final errorMessage =
-            errorData['message'] ??
-            errorData['error'] ??
-            'Request failed: ${response.statusCode}';
-        throw Exception(errorMessage);
-      } catch (e) {
-        if (e is Exception && e.toString().contains('Exception:')) {
-          rethrow;
-        }
-        throw Exception('Request failed: ${response.statusCode}');
-      }
+      throw _parseError(response);
     }
+  }
+
+  /// Build a typed [ApiException] from a non-2xx response, extracting the
+  /// canonical error envelope's `code`/`message`/`details` when the body is
+  /// JSON, and falling back to a status-only error otherwise.
+  ApiException _parseError(http.Response response) {
+    try {
+      final decoded = json.decode(response.body);
+      if (decoded is Map<String, dynamic>) {
+        return ApiException(
+          statusCode: response.statusCode,
+          code: decoded['code']?.toString(),
+          message:
+              (decoded['message'] ??
+                      decoded['error'] ??
+                      'Request failed: ${response.statusCode}')
+                  .toString(),
+          details: decoded['details'],
+        );
+      }
+    } catch (_) {
+      // Body was not valid JSON — fall through to a status-only error.
+    }
+    return ApiException(
+      statusCode: response.statusCode,
+      message: 'Request failed: ${response.statusCode}',
+    );
   }
 
   @override

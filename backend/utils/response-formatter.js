@@ -168,21 +168,18 @@ class ResponseFormatter {
    * @param {string} [fallbackMessage] - Fallback error message
    */
   static error(res, error, fallbackMessage = 'An error occurred') {
-    const { isLocalDev } = require('../config/app-mode');
-    const statusCode = this._determineStatusCode(error);
-    const errorResponse = {
-      success: false,
-      error: error.name || 'Error',
+    // Prefer an explicit status from the error (e.g., AppError.statusCode); fall
+    // back to message-pattern inference only when the error carries none.
+    const statusCode =
+      error.statusCode || error.status || this._determineStatusCode(error);
+    return this._sendError(res, {
+      status: statusCode,
+      error: error.name || this._humanNameForStatus(statusCode),
+      code: error.code || this._defaultCodeForStatus(statusCode),
       message: error.message || fallbackMessage,
-      timestamp: new Date().toISOString(),
-    };
-
-    // In development, include stack trace
-    if (isLocalDev() && error.stack) {
-      errorResponse.stack = error.stack;
-    }
-
-    res.status(statusCode).json(errorResponse);
+      details: error.details || null,
+      stack: error.stack || null,
+    });
   }
 
   /**
@@ -197,12 +194,11 @@ class ResponseFormatter {
     message = 'Resource not found',
     code = ERROR_CODES.RESOURCE_NOT_FOUND,
   ) {
-    res.status(HTTP_STATUS.NOT_FOUND).json({
-      success: false,
+    return this._sendError(res, {
+      status: HTTP_STATUS.NOT_FOUND,
       error: 'Not Found',
       code,
       message,
-      timestamp: new Date().toISOString(),
     });
   }
 
@@ -220,19 +216,13 @@ class ResponseFormatter {
     details = null,
     code = ERROR_CODES.VALIDATION_FAILED,
   ) {
-    const response = {
-      success: false,
+    return this._sendError(res, {
+      status: HTTP_STATUS.BAD_REQUEST,
       error: 'Bad Request',
       code,
       message,
-      timestamp: new Date().toISOString(),
-    };
-
-    if (details) {
-      response.details = details;
-    }
-
-    res.status(HTTP_STATUS.BAD_REQUEST).json(response);
+      details,
+    });
   }
 
   /**
@@ -247,12 +237,11 @@ class ResponseFormatter {
     message = 'You do not have permission to perform this action',
     code = ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS,
   ) {
-    res.status(HTTP_STATUS.FORBIDDEN).json({
-      success: false,
+    return this._sendError(res, {
+      status: HTTP_STATUS.FORBIDDEN,
       error: 'Forbidden',
       code,
       message,
-      timestamp: new Date().toISOString(),
     });
   }
 
@@ -268,12 +257,11 @@ class ResponseFormatter {
     message = 'Authentication required',
     code = ERROR_CODES.AUTH_REQUIRED,
   ) {
-    res.status(HTTP_STATUS.UNAUTHORIZED).json({
-      success: false,
+    return this._sendError(res, {
+      status: HTTP_STATUS.UNAUTHORIZED,
       error: 'Unauthorized',
       code,
       message,
-      timestamp: new Date().toISOString(),
     });
   }
 
@@ -290,12 +278,11 @@ class ResponseFormatter {
       stack: error.stack,
     });
 
-    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-      success: false,
+    return this._sendError(res, {
+      status: HTTP_STATUS.INTERNAL_SERVER_ERROR,
       error: 'Internal Server Error',
       code,
       message: 'An unexpected error occurred',
-      timestamp: new Date().toISOString(),
     });
   }
 
@@ -313,19 +300,15 @@ class ResponseFormatter {
     details = null,
     code = ERROR_CODES.SERVER_UNAVAILABLE,
   ) {
-    const response = {
-      success: false,
+    // Health details are merged at the TOP level (not nested) for this method,
+    // preserving the existing health-check response contract.
+    return this._sendError(res, {
+      status: HTTP_STATUS.SERVICE_UNAVAILABLE,
       error: 'Service Unavailable',
       code,
       message,
-      timestamp: new Date().toISOString(),
-    };
-
-    if (details) {
-      Object.assign(response, details);
-    }
-
-    res.status(HTTP_STATUS.SERVICE_UNAVAILABLE).json(response);
+      extra: details,
+    });
   }
 
   /**
@@ -333,14 +316,103 @@ class ResponseFormatter {
    *
    * @param {Object} res - Express response object
    * @param {string} [message] - Custom conflict message
+   * @param {string} [code] - Error code (default: RESOURCE_ALREADY_EXISTS)
    */
-  static conflict(res, message = 'Resource already exists') {
-    res.status(HTTP_STATUS.CONFLICT).json({
-      success: false,
+  static conflict(
+    res,
+    message = 'Resource already exists',
+    code = ERROR_CODES.RESOURCE_ALREADY_EXISTS,
+  ) {
+    return this._sendError(res, {
+      status: HTTP_STATUS.CONFLICT,
       error: 'Conflict',
+      code,
+      message,
+    });
+  }
+
+  /**
+   * Canonical error-envelope sender — SINGLE SOURCE OF TRUTH for error shape.
+   *
+   * Shape: { success:false, error:'<Human Name>', code:'<MACHINE_CODE>',
+   * message, details?, timestamp }. In local dev a `stack` is added when
+   * supplied. `extra` (when given) is merged at the top level for the few
+   * responses that carry health/status fields.
+   *
+   * @param {Object} res - Express response object
+   * @param {Object} opts
+   * @param {number} opts.status - HTTP status code
+   * @param {string} opts.error - Human-readable error name
+   * @param {string} opts.code - Machine-readable code (ERROR_CODES)
+   * @param {string} opts.message - Human-readable message
+   * @param {Object} [opts.details] - Optional structured details (nested)
+   * @param {Object} [opts.extra] - Optional fields merged at the top level
+   * @param {string} [opts.stack] - Optional stack trace (local dev only)
+   * @private
+   */
+  static _sendError(
+    res,
+    { status, error, code, message, details = null, extra = null, stack = null },
+  ) {
+    const response = {
+      success: false,
+      error,
+      code,
       message,
       timestamp: new Date().toISOString(),
-    });
+    };
+
+    if (details) {
+      response.details = details;
+    }
+
+    if (extra && typeof extra === 'object') {
+      Object.assign(response, extra);
+    }
+
+    const { isLocalDev } = require('../config/app-mode');
+    if (stack && isLocalDev()) {
+      response.stack = stack;
+    }
+
+    res.status(status).json(response);
+  }
+
+  /**
+   * Map an HTTP status code to a default machine-readable ERROR_CODES value.
+   * @private
+   */
+  static _defaultCodeForStatus(status) {
+    const map = {
+      [HTTP_STATUS.BAD_REQUEST]: ERROR_CODES.VALIDATION_FAILED,
+      [HTTP_STATUS.UNAUTHORIZED]: ERROR_CODES.AUTH_REQUIRED,
+      [HTTP_STATUS.FORBIDDEN]: ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS,
+      [HTTP_STATUS.NOT_FOUND]: ERROR_CODES.RESOURCE_NOT_FOUND,
+      [HTTP_STATUS.REQUEST_TIMEOUT]: ERROR_CODES.SERVER_TIMEOUT,
+      [HTTP_STATUS.CONFLICT]: ERROR_CODES.RESOURCE_CONFLICT,
+      [HTTP_STATUS.TOO_MANY_REQUESTS]: ERROR_CODES.RATE_LIMIT_EXCEEDED,
+      [HTTP_STATUS.SERVICE_UNAVAILABLE]: ERROR_CODES.SERVER_UNAVAILABLE,
+    };
+    return map[status] || ERROR_CODES.SERVER_ERROR;
+  }
+
+  /**
+   * Map an HTTP status code to a human-readable error name.
+   * @private
+   */
+  static _humanNameForStatus(status) {
+    const map = {
+      [HTTP_STATUS.BAD_REQUEST]: 'Bad Request',
+      [HTTP_STATUS.UNAUTHORIZED]: 'Unauthorized',
+      [HTTP_STATUS.FORBIDDEN]: 'Forbidden',
+      [HTTP_STATUS.NOT_FOUND]: 'Not Found',
+      [HTTP_STATUS.REQUEST_TIMEOUT]: 'Request Timeout',
+      [HTTP_STATUS.CONFLICT]: 'Conflict',
+      [HTTP_STATUS.TOO_MANY_REQUESTS]: 'Too Many Requests',
+      [HTTP_STATUS.SERVICE_UNAVAILABLE]: 'Service Unavailable',
+      [HTTP_STATUS.INTERNAL_SERVER_ERROR]: 'Internal Server Error',
+    };
+    return map[status] || 'Error';
   }
 
   /**

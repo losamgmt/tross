@@ -198,4 +198,52 @@ describe('Entity Metadata Validator', () => {
       });
     });
   });
+
+  describe('manyToMany RLS invariant', () => {
+    // Validates a source entity with a fully-formed manyToMany relationship whose
+    // target defines the given rlsRules. Only the RLS invariant can flag
+    // `relationships.related` here (all other relationship props are valid).
+    function withManyToMany(targetTable, targetRlsRules) {
+      const source = createMinimalMetadata({
+        entityKey: 'source_entity',
+        tableName: 'source_entities',
+        relationships: {
+          related: {
+            type: 'manyToMany',
+            foreignKey: 'source_id',
+            table: targetTable,
+            through: 'source_target_junction',
+            targetKey: 'target_id',
+          },
+        },
+      });
+      const all = {
+        target_entity: {
+          entityKey: 'target_entity',
+          tableName: targetTable,
+          rlsRules: targetRlsRules,
+        },
+      };
+      return validateEntity('source_entity', source, all);
+    }
+
+    test('passes when the manyToMany target defines rlsRules', () => {
+      const result = withManyToMany('target_table', [
+        { id: 'target-access', roles: 'admin', operations: '*', access: null },
+      ]);
+      expect(hasFieldError(result, 'relationships.related')).toBe(false);
+    });
+
+    test('fails when the manyToMany target has no rlsRules', () => {
+      const result = withManyToMany('target_table', undefined);
+      expect(result.hasErrors()).toBe(true);
+      expect(hasFieldError(result, 'relationships.related')).toBe(true);
+    });
+
+    test('fails when the manyToMany target has an empty rlsRules array', () => {
+      const result = withManyToMany('target_table', []);
+      expect(result.hasErrors()).toBe(true);
+      expect(hasFieldError(result, 'relationships.related')).toBe(true);
+    });
+  });
 });

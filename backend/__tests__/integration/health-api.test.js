@@ -11,7 +11,7 @@ const { createTestContext } = require("../core");
 const { clearCache } = require("../../routes/health");
 
 describe("Health Endpoints - Integration Tests", () => {
-  const ctx = createTestContext({ roles: ["admin", "user"] });
+  const ctx = createTestContext({ roles: ["admin", "customer"] });
 
   beforeAll(() => ctx.setup());
   afterAll(() => ctx.teardown());
@@ -225,7 +225,7 @@ describe("Health Endpoints - Integration Tests", () => {
     });
 
     test("should require admin role", async () => {
-      const response = await ctx.get("/api/health/storage").as("user").execute();
+      const response = await ctx.get("/api/health/storage").as("customer").execute();
 
       expect(response.status).toBe(403);
     });

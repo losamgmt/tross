@@ -139,11 +139,20 @@ class TokenService {
 
       const storedToken = result.rows[0];
 
-      // Verify token hash matches
-      const isValid = await bcrypt.compare(
-        refreshToken,
-        storedToken.token_hash,
-      );
+      // Verify token hash matches.
+      // Guard the comparison: a corrupted/invalid stored hash makes bcrypt.compare
+      // throw — treat any comparison failure as an invalid token (401), never a 500.
+      let isValid = false;
+      try {
+        isValid = await bcrypt.compare(refreshToken, storedToken.token_hash);
+      } catch (compareError) {
+        logger.error('Refresh token hash comparison failed', {
+          tokenId: decoded.tokenId,
+          userId: decoded.userId,
+          error: compareError.message,
+        });
+        throw new AppError('Invalid refresh token', 401, 'UNAUTHORIZED');
+      }
       if (!isValid) {
         logger.error('Refresh token hash mismatch', {
           tokenId: decoded.tokenId,

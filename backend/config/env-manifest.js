@@ -291,6 +291,22 @@ const ENV_MANIFEST = Object.freeze({
     errorMessage: 'REDIS_DB must be a number',
   },
 
+  // Encryption
+  ENCRYPTION_KEY: {
+    category: CATEGORY.OPERATIONAL,
+    description:
+      'AES-256-GCM key (64 hex chars / 32 bytes) for encrypting integration tokens at rest',
+    // Deterministic dev/test placeholder ONLY. Production MUST supply a real key;
+    // the integration token path fails closed if it is missing there.
+    defaultValue:
+      '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+    allowDefaultIn: [ENVIRONMENTS.DEVELOPMENT, ENVIRONMENTS.TEST],
+    sensitive: true,
+    validator: (val) => /^[0-9a-fA-F]{64}$/.test(val),
+    errorMessage:
+      'ENCRYPTION_KEY must be a 64-character hex string (32 bytes) for AES-256-GCM',
+  },
+
   // =========================================================================
   // OPTIONAL - Always have defaults (non-critical operational settings)
   // =========================================================================

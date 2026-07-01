@@ -64,6 +64,10 @@ function _buildRelatedRLS(tableName, tableAlias, rlsContext, paramOffset) {
   }
 
   const targetMetadata = _findMetadataByTable(tableName);
+  // An empty filter here means "no RLS" for the related rows. For manyToMany targets
+  // this would be a defense-in-depth risk, so the metadata validator enforces a
+  // boot-time invariant (validateRelationships) that every M:M target defines rlsRules.
+  // hasMany/hasOne relations may legitimately reach RLS-less reference tables.
   if (!targetMetadata || !targetMetadata.rlsRules || targetMetadata.rlsRules.length === 0) {
     return { clause: '', params: [], nextOffset: paramOffset };
   }

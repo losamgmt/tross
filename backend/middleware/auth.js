@@ -86,12 +86,14 @@ const authenticateToken = async (req, res, next) => {
     // Routes that are SAFE for dev users even with mutating methods
     // These are session/auth operations, NOT business data mutations
     // Check both full path and route-relative path for flexibility
-    const DEV_ALLOWED_WRITE_PATHS = [
+    // Matched EXACTLY (not by prefix) to avoid over-matching decoy paths
+    // like '/api/auth/refresh-evil'. Session/auth ops only — never business data.
+    const DEV_ALLOWED_WRITE_PATHS = new Set([
       '/api/auth/logout', // Logout just clears token/session, no DB mutation
       '/logout', // Route-relative path (when checked via req.path)
       '/api/auth/refresh', // Token refresh (if dev tokens supported it)
       '/refresh', // Route-relative path
-    ];
+    ]);
 
     // CRITICAL: Development tokens should NEVER touch the database
     // They exist purely in-memory from test-users.js config
@@ -146,10 +148,9 @@ const authenticateToken = async (req, res, next) => {
       // Exception: Auth operations (logout, refresh) are safe - they manage
       // session state, not business data
       // ========================================================================
-      const requestPath = req.originalUrl || req.url;
-      const isAllowedPath = DEV_ALLOWED_WRITE_PATHS.some((path) =>
-        requestPath.startsWith(path),
-      );
+      // Match the PATH only (strip query string); exact membership, not prefix.
+      const requestPath = (req.originalUrl || req.url).split('?')[0];
+      const isAllowedPath = DEV_ALLOWED_WRITE_PATHS.has(requestPath);
 
       if (MUTATING_METHODS.includes(req.method) && !isAllowedPath) {
         logSecurityEvent('DEV_WRITE_BLOCKED', {

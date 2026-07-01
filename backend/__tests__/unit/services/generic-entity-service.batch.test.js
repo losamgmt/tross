@@ -567,7 +567,7 @@ describe("GenericEntityService.batch()", () => {
         GenericEntityService.batch(
           "customer",
           [{ operation: "update", id: 1, data: { phone: "555" } }],
-          { rlsContext: { user_id: 42, role: "user" } },
+          { rlsContext: { user_id: 42, role: "customer" } },
         ),
       ).rejects.toThrow("Access denied or record not found");
 
@@ -584,7 +584,7 @@ describe("GenericEntityService.batch()", () => {
         GenericEntityService.batch(
           "customer",
           [{ operation: "delete", id: 1 }],
-          { rlsContext: { user_id: 42, role: "user" } },
+          { rlsContext: { user_id: 42, role: "customer" } },
         ),
       ).rejects.toThrow("Access denied or record not found");
 
@@ -609,7 +609,7 @@ describe("GenericEntityService.batch()", () => {
             { operation: "update", id: 1, data: { phone: "555" } },
             { operation: "update", id: 2, data: { phone: "666" } }, // No access
           ],
-          { rlsContext: { user_id: 42, role: "user" } },
+          { rlsContext: { user_id: 42, role: "customer" } },
         ),
       ).rejects.toThrow("Access denied or record not found at operation 1");
 

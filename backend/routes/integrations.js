@@ -17,6 +17,7 @@ const express = require('express');
 const { authenticateToken, requireMinimumRole } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/utils');
 const ResponseFormatter = require('../utils/response-formatter');
+const AppError = require('../utils/app-error');
 const { logger, logSecurityEvent } = require('../config/logger');
 
 // Integration services
@@ -41,7 +42,11 @@ function createIntegrationRouter(providerName) {
   const providerConfig = getProvider(providerName);
 
   if (!providerConfig) {
-    throw new Error(`Unknown provider: ${providerName}`);
+    throw new AppError(
+      `Unknown integration provider: ${providerName}`,
+      500,
+      'INTEGRATION_CONFIG_ERROR',
+    );
   }
 
   // All integration routes require admin

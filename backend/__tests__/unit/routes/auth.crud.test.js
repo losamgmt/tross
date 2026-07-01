@@ -72,7 +72,7 @@ describe("routes/auth.js - Profile Operations", () => {
           id: 1,
           auth0_id: "auth0|123",
           email: "test@example.com",
-          role: "user",
+          role: "customer",
           first_name: "Test",
           last_name: "User",
           is_active: true,
@@ -86,13 +86,13 @@ describe("routes/auth.js - Profile Operations", () => {
         sub: "auth0|123",
         userId: 1,
         email: "test@example.com",
-        role: "user",
+        role: "customer",
       };
       req.dbUser = {
         id: 1,
         auth0_id: "auth0|123",
         email: "test@example.com",
-        role: "user",
+        role: "customer",
         first_name: "Test",
         last_name: "User",
         is_active: true,
@@ -123,7 +123,7 @@ describe("routes/auth.js - Profile Operations", () => {
       expect(response.body.data).toMatchObject({
         id: 1,
         email: "test@example.com",
-        role: "user",
+        role: "customer",
         name: "Test User",
       });
       expect(response.body.timestamp).toBeDefined();
@@ -145,7 +145,7 @@ describe("routes/auth.js - Profile Operations", () => {
           id: 1,
           auth0_id: "auth0|123",
           email: "test@example.com",
-          role: "user",
+          role: "customer",
           first_name: null,
           last_name: null,
         };
@@ -177,7 +177,7 @@ describe("routes/auth.js - Profile Operations", () => {
         id: 1,
         auth0_id: "auth0|123",
         email: "test@example.com",
-        role: "user",
+        role: "customer",
         first_name: "Test",
         last_name: "User",
       });
@@ -187,7 +187,7 @@ describe("routes/auth.js - Profile Operations", () => {
         id: 1,
         auth0_id: "auth0|123",
         email: "test@example.com",
-        role: "user",
+        role: "customer",
         first_name: "Updated",
         last_name: "Name",
       });

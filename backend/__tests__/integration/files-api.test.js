@@ -23,8 +23,6 @@ describe("Files API Endpoints - Integration Tests", () => {
   let adminToken;
   let customerUser;
   let customerToken;
-  let viewerUser;
-  let viewerToken;
   let testWorkOrderId;
 
   beforeAll(async () => {
@@ -32,8 +30,6 @@ describe("Files API Endpoints - Integration Tests", () => {
     adminToken = adminUser.token;
     customerUser = await createTestUser("customer");
     customerToken = customerUser.token;
-    viewerUser = await createTestUser("viewer");
-    viewerToken = viewerUser.token;
 
     // Create a work order for file tests (requires customer profile)
     const customerId = await createCustomerProfile("FilesTestCustomer");
@@ -56,15 +52,19 @@ describe("Files API Endpoints - Integration Tests", () => {
       expect(response.status).toBe(HTTP_STATUS.UNAUTHORIZED);
     });
 
-    test("should return 403 without update permission on entity", async () => {
+    test("should deny upload without update permission on entity", async () => {
+      // A customer lacks update permission on work_orders; for a work order they
+      // don't own, RLS hides the record (404). Both 403 and 404 are valid denials.
       const response = await request(app)
         .post("/api/work_orders/1/files")
-        .set("Authorization", `Bearer ${viewerToken}`)
+        .set("Authorization", `Bearer ${customerToken}`)
         .set("Content-Type", "text/plain")
         .set("X-Filename", "test.txt")
         .send(Buffer.from("test content"));
 
-      expect(response.status).toBe(HTTP_STATUS.FORBIDDEN);
+      expect([HTTP_STATUS.FORBIDDEN, HTTP_STATUS.NOT_FOUND]).toContain(
+        response.status,
+      );
     });
 
     test("should return 400 for invalid entity ID", async () => {
@@ -125,18 +125,18 @@ describe("Files API Endpoints - Integration Tests", () => {
       expect(response.status).toBe(HTTP_STATUS.UNAUTHORIZED);
     });
 
-    test("should return 403 without read permission on entity", async () => {
-      // Viewers may have read permission, so test a restricted entity type
-      // Note: audit_logs does not support file attachments, so use a different approach
-      // For now, just verify the auth flow works with work_orders
+    test("should enforce access control on entity reads", async () => {
+      // A customer can read their own work_orders; for one they don't own, RLS
+      // returns 404. OK / 403 / 404 are all acceptable access-controlled results.
       const response = await request(app)
         .get("/api/work_orders/1/files")
-        .set("Authorization", `Bearer ${viewerToken}`);
+        .set("Authorization", `Bearer ${customerToken}`);
 
-      // Viewers should have read permission on work_orders, so expect OK or empty
-      expect([HTTP_STATUS.OK, HTTP_STATUS.FORBIDDEN]).toContain(
-        response.status,
-      );
+      expect([
+        HTTP_STATUS.OK,
+        HTTP_STATUS.FORBIDDEN,
+        HTTP_STATUS.NOT_FOUND,
+      ]).toContain(response.status);
     });
 
     test("should return 400 for invalid entity ID", async () => {

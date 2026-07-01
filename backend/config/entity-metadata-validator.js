@@ -510,7 +510,7 @@ const VALID_RELATIONSHIP_TYPES = new Set([
  * Validate relationships configuration.
  * Ensures manyToMany relationships have required properties.
  */
-function validateRelationships(meta, errors, _allMetadata) {
+function validateRelationships(meta, errors, allMetadata) {
   const relationships = meta.relationships;
   if (!relationships || typeof relationships !== 'object') {
     return; // Optional or empty
@@ -562,6 +562,28 @@ function validateRelationships(meta, errors, _allMetadata) {
           `relationships.${relName}`,
           "manyToMany relationship requires 'targetKey' property (FK in junction to target)",
         );
+      }
+
+      // SECURITY INVARIANT (defense-in-depth): a manyToMany target MUST enforce RLS.
+      // relationship-loader._buildRelatedRLS returns an EMPTY filter when the target
+      // entity has no rlsRules, which would expose ALL target rows through relationship
+      // expansion. Fail fast at boot so an RLS-less M:M target can never ship silently.
+      if (relDef.table) {
+        const targetMeta = Object.values(allMetadata || {}).find(
+          (m) => m && m.tableName === relDef.table,
+        );
+        if (
+          targetMeta &&
+          (!Array.isArray(targetMeta.rlsRules) ||
+            targetMeta.rlsRules.length === 0)
+        ) {
+          errors.add(
+            `relationships.${relName}`,
+            `manyToMany target '${relDef.table}' has no rlsRules. M:M targets must enforce ` +
+              'row-level security (see db/helpers/relationship-loader.js _buildRelatedRLS); add ' +
+              `rlsRules to the '${relDef.table}' entity or remove this relationship.`,
+          );
+        }
       }
     }
   }
