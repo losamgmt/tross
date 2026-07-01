@@ -18,7 +18,7 @@ RESTful API design patterns and conventions.
 
 ## Base URL
 
-> **Port configuration:** See [`config/ports.js`](../config/ports.js) for local port.
+> **Port configuration:** See [`config/ports.js`](../../config/ports.js) for local port.
 
 **Development:** `http://localhost:<BACKEND_PORT>`  
 **Production:** Your deployed backend URL (e.g., `https://<your-app>.up.railway.app`)
@@ -29,53 +29,32 @@ RESTful API design patterns and conventions.
 
 ## Request/Response Patterns
 
-### Standard Request
+### Request
+
+Requests are JSON over HTTP, authenticated with a bearer token:
 
 ```http
-POST /api/customers
-Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+POST /api/{resource}
+Authorization: Bearer <access-token>
 Content-Type: application/json
 
-{
-  "name": "Acme Corp",
-  "email": "contact@acme.com",
-  "phone": "+1234567890"
-}
+{ /* resource fields — see OpenAPI for the per-resource schema */ }
 ```
 
-### Standard Response (Success)
+### Response Envelope
 
-```http
-HTTP/1.1 201 Created
-Content-Type: application/json
+All responses share a single, consistent envelope. The **authoritative schema is the generated OpenAPI spec / Swagger UI**; the skeletons below are illustrative only.
 
-{
-  "data": {
-    "id": 123,
-    "name": "Acme Corp",
-    "email": "contact@acme.com",
-    "phone": "+1234567890",
-    "is_active": true,
-    "created_at": "2025-11-19T10:30:00Z",
-    "updated_at": "2025-11-19T10:30:00Z"
-  }
-}
+**Success** — a `success` flag, the `data` payload, and a `timestamp`; list endpoints add a `pagination` block:
+
+```jsonc
+{ "success": true, "data": { /* resource or array */ }, "timestamp": "<ISO-8601>" }
 ```
 
-### Standard Response (Error)
+**Error** — `success: false`, a human-readable `error` name, a stable machine-readable `code`, a human-readable `message`, and a `timestamp`; validation errors add a structured `details` object (see [Error Handling](#error-handling)):
 
-```http
-HTTP/1.1 400 Bad Request
-Content-Type: application/json
-
-{
-  "error": "Validation failed",
-  "details": {
-    "email": "Invalid email format",
-    "phone": "Phone must be 10-15 digits"
-  },
-  "timestamp": "2025-11-19T10:30:00Z"
-}
+```jsonc
+{ "success": false, "error": "<Human Name>", "code": "<MACHINE_CODE>", "message": "<human-readable>", "timestamp": "<ISO-8601>" }
 ```
 
 ---
@@ -106,35 +85,21 @@ Content-Type: application/json
 
 ## Pagination
 
-### Request
+List endpoints are paginated, sorted, and filtered via query parameters:
 
 ```http
-GET /api/customers?page=1&limit=20&sort=name&order=asc
+GET /api/{resource}?page=1&limit=20&sort=name&order=asc
 ```
 
-**Query Parameters:**
+- `page` — page number
+- `limit` — items per page (a default and an enforced maximum apply; see OpenAPI/config)
+- `sort` — field to sort by
+- `order` — `asc` or `desc`
 
-- `page` - Page number (default: 1)
-- `limit` - Items per page (default: 20, max: 100)
-- `sort` - Field to sort by (default: id)
-- `order` - Sort order: `asc` or `desc` (default: asc)
+The response carries the items in `data` and a `pagination` block (current page, page size, totals, and next/previous flags):
 
-### Response
-
-```json
-{
-  "data": [
-    /* array of items */
-  ],
-  "pagination": {
-    "page": 1,
-    "limit": 20,
-    "total": 150,
-    "totalPages": 8,
-    "hasNext": true,
-    "hasPrev": false
-  }
-}
+```jsonc
+{ "success": true, "data": [ /* items */ ], "pagination": { /* page, limit, total, totalPages, hasNext, hasPrev */ }, "timestamp": "<ISO-8601>" }
 ```
 
 ---
@@ -157,8 +122,10 @@ GET /api/customers?status=active&search=acme
 ### Example
 
 ```http
-GET /api/work_orders?status=pending&assigned_to=123&created_after=2025-01-01
+GET /api/work_orders?status=pending&created_after=2025-01-01
 ```
+
+Filterable fields are per-resource and defined in entity metadata.
 
 ---
 
@@ -174,60 +141,21 @@ GET /api/{entity}?include=relationship1,relationship2
 GET /api/{entity}/:id?include=relationship1
 ```
 
-### Examples
+### Example
 
-**Load customer with their units and invoices:**
 ```http
 GET /api/customers/123?include=units,invoices
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "id": 123,
-    "first_name": "Alice",
-    "last_name": "Smith",
-    "email": "alice@example.com",
-    "units": [
-      { "id": 10, "unit_identifier": "4A", "property_id": 1 },
-      { "id": 11, "unit_identifier": "5B", "property_id": 1 }
-    ],
-    "invoices": [
-      { "id": 201, "invoice_number": "INV-001", "status": "paid", "total": 150.00 }
-    ]
-  }
-}
-```
+The related entities are nested under the parent in the `data` payload. Each relationship's available fields come from the related entity's metadata; the per-resource relationship list is published in the OpenAPI schema.
 
-**Load units with their customers (M:M relationship):**
-```http
-GET /api/units?include=customers&limit=10
-```
+### Behavior
 
-### Available Relationships
-
-Relationships are defined in entity metadata. Common patterns:
-
-| Entity | Relationships | Type |
-|--------|--------------|------|
-| `customer` | `units`, `invoices`, `workOrders`, `contracts` | M:M, hasMany |
-| `unit` | `customers`, `assets` | M:M, hasMany |
-| `work_order` | `invoices` | hasMany |
-| `role` | `users` | hasMany |
-
-### Validation
-
-- Invalid relationship names return `400 Bad Request`
-- `belongsTo` relationships are auto-loaded via JOINs (no need to include)
-- Multiple relationships separated by comma: `?include=units,invoices,contracts`
-
-### Notes
-
-- Relationships are loaded via efficient batch queries (no N+1)
-- Related data is filtered by the `fields` defined in entity metadata
-- RLS currently applies to parent entity only (junction table RLS is planned)
+- Invalid relationship names return `400 Bad Request`.
+- `belongsTo` relationships are auto-loaded via JOINs (no need to `include` them).
+- Multiple relationships are comma-separated.
+- Related data is loaded with efficient batch queries (no N+1) and filtered to the fields defined in metadata.
+- Row-level security on included relationships is scoped to the parent entity.
 
 ---
 
@@ -243,7 +171,7 @@ Relationships are defined in entity metadata. Common patterns:
 ### Bearer Token
 
 ```http
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Authorization: Bearer <access-token>
 ```
 
 ### Getting a Token
@@ -251,10 +179,10 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 **Dev Mode:**
 
 ```bash
-GET /api/dev/token?role=admin
-
-# Available roles: admin, manager, dispatcher, technician, customer
+GET /api/dev/token?role=<role>
 ```
+
+In dev mode, a token can be minted for any role in the role hierarchy.
 
 **Production (Auth0 PKCE):**
 
@@ -276,165 +204,34 @@ GET /api/dev/token?role=admin
 GET /api/health
 ```
 
-**Response:**
-
-```json
-{
-  "status": "healthy",
-  "timestamp": "<ISO-8601-timestamp>",
-  "database": "connected"
-}
-```
+Returns liveness plus key dependency status (e.g. database connectivity). The exact response fields and status values are defined by the health route and the OpenAPI spec.
 
 ---
 
-### Users
+### Resource Endpoints (CRUD)
 
-> **All User CRUD operations require admin role.** Non-admin users cannot read, create, update, or delete user records via the API.
+Every entity exposes a consistent set of REST endpoints, generated from its metadata. The **full, authoritative list of resources, routes, and request/response schemas lives in the OpenAPI spec / Swagger UI** — this document describes only the conventions.
 
-**List Users** (Admin only)
+| Verb & Path | Purpose |
+|-------------|---------|
+| `GET /api/{resource}` | List (paginated, filterable, sortable) |
+| `GET /api/{resource}/:id` | Fetch one |
+| `POST /api/{resource}` | Create |
+| `PATCH /api/{resource}/:id` | Partial update |
+| `DELETE /api/{resource}/:id` | Deactivate (soft delete — sets `is_active=false`) |
 
-```http
-GET /api/users?page=1&limit=20
-```
+Conventions:
 
-**Get User** (Admin only)
-
-```http
-GET /api/users/:id
-```
-
-**Create User** (Admin only)
-
-```http
-POST /api/users
-{
-  "email": "user@example.com",
-  "first_name": "John",
-  "last_name": "Doe",
-  "role_id": 2
-}
-```
-
-**Update User** (Partial update)
-
-```http
-PATCH /api/users/:id
-{
-  "first_name": "Jane",
-  "last_name": "Smith"
-}
-```
-
-**Assign Role** (Admin only)
-
-```http
-PUT /api/users/:id/role
-{
-  "role_id": 2
-}
-```
-
-**Deactivate User** (Sets is_active=false)
-
-```http
-DELETE /api/users/:id
-```
-
----
-
-### Customers
-
-**List Customers**
-
-```http
-GET /api/customers?page=1&limit=20&search=acme
-```
-
-**Get Customer**
-
-```http
-GET /api/customers/:id
-```
-
-**Create Customer**
-
-```http
-POST /api/customers
-{
-  "name": "Acme Corp",
-  "email": "contact@acme.com",
-  "phone": "+1234567890",
-  "address": "123 Main St"
-}
-```
-
-**Update Customer** (Partial update)
-
-```http
-PATCH /api/customers/:id
-{
-  "name": "Acme Corporation",
-  "phone": "+1234567899"
-}
-```
-
-**Deactivate Customer** (Sets is_active=false)
-
-```http
-DELETE /api/customers/:id
-```
-
----
-
-### Work Orders
-
-**List Work Orders**
-
-```http
-GET /api/work_orders?status=pending&assigned_to=123
-```
-
-**Get Work Order**
-
-```http
-GET /api/work_orders/:id
-```
-
-**Create Work Order**
-
-```http
-POST /api/work_orders
-{
-  "customer_id": 123,
-  "title": "Fix HVAC system",
-  "description": "Air conditioner not cooling",
-  "priority": 1,
-  "status": "pending"
-}
-```
-
-**Update Work Order** (Partial update)
-
-```http
-PATCH /api/work_orders/:id
-{
-  "status": "in_progress",
-  "assigned_to": 456
-}
-```
-
-**Deactivate Work Order** (Sets is_active=false)
-
-```http
-DELETE /api/work_orders/:id
-```
+- **Partial updates** use `PATCH`; send only the fields that change.
+- **Deletes are soft** by default — the record is deactivated, not removed.
+- **Authorization** is per-resource and per-action (see [Security](SECURITY.md)); some resources are role-restricted (e.g. user administration is admin-only).
+- **Per-resource fields** (required, optional, types, enums) are defined in entity metadata and published in the OpenAPI schema — they are not duplicated here.
 
 ---
 
 ### Batch Operations
 
-Perform bulk create, update, or delete operations in a single transactional request.
+Perform bulk create, update, and delete operations in a single request.
 
 **URL Pattern:**
 
@@ -442,49 +239,7 @@ Perform bulk create, update, or delete operations in a single transactional requ
 POST /api/:tableName/batch
 ```
 
-**Request:**
-
-```http
-POST /api/customers/batch
-Authorization: Bearer YOUR_TOKEN
-Content-Type: application/json
-Idempotency-Key: batch-import-2026-03-11
-
-{
-  "operations": [
-    { "operation": "create", "data": { "first_name": "Alice", "last_name": "Smith", "email": "alice@example.com" } },
-    { "operation": "create", "data": { "first_name": "Bob", "last_name": "Jones", "email": "bob@example.com" } },
-    { "operation": "update", "id": 123, "data": { "phone": "+1234567890" } },
-    { "operation": "delete", "id": 456 }
-  ],
-  "options": {
-    "continueOnError": false
-  }
-}
-```
-
-**Response (Success):**
-
-```json
-{
-  "success": true,
-  "message": "Batch completed: 4 operations (2 created, 1 updated, 1 deleted)",
-  "stats": {
-    "total": 4,
-    "created": 2,
-    "updated": 1,
-    "deleted": 1,
-    "failed": 0
-  },
-  "results": [
-    { "index": 0, "operation": "create", "success": true, "result": { "id": 101 } },
-    { "index": 1, "operation": "create", "success": true, "result": { "id": 102 } },
-    { "index": 2, "operation": "update", "success": true, "result": { "id": 123 } },
-    { "index": 3, "operation": "delete", "success": true, "result": { "id": 456, "deleted": true } }
-  ],
-  "errors": []
-}
-```
+A batch carries an ordered list of operations (mixed create/update/delete allowed) plus options, and supports the `Idempotency-Key` header for safe retries. By default the batch is **atomic** — any failure rolls back the whole batch; with `continueOnError` it processes independently and reports **partial success** (`207 Multi-Status`) with a per-operation result list. The exact request/response schema is defined in the OpenAPI spec.
 
 **Options:**
 
@@ -495,7 +250,7 @@ Idempotency-Key: batch-import-2026-03-11
 **Status Codes:**
 
 | Code | Meaning |
-|------|---------||
+|------|---------|
 | `200` | All operations succeeded |
 | `207` | Partial success (when `continueOnError=true` and some failed) |
 | `400` | Invalid batch structure or validation error |
@@ -503,15 +258,15 @@ Idempotency-Key: batch-import-2026-03-11
 
 **Limits:**
 
-- Maximum 100 operations per batch
-- Mixed operations allowed (create + update + delete in same batch)
+- A bounded maximum number of operations per batch (see OpenAPI/config)
+- Mixed operations allowed (create + update + delete in the same batch)
 - RLS (Row-Level Security) enforced on all operations
 
 **Best Practices:**
 
-- Use with `Idempotency-Key` header for retry safety
+- Use with an `Idempotency-Key` header for retry safety
 - Prefer `continueOnError: false` for data integrity
-- Keep batch sizes reasonable (50-100) to avoid timeouts
+- Keep batch sizes reasonable to avoid timeouts
 
 ---
 
@@ -535,142 +290,37 @@ Files are attached to entities using a **sub-resource pattern**. The URL path us
 
 ---
 
-**List Files for Entity**
+**Operations:**
 
-```http
-GET /api/work_orders/123/files
-```
+- **List** — `GET /api/{resource}/:id/files` (optionally filtered by `category`)
+- **Get one** — `GET /api/{resource}/:id/files/:fileId`
+- **Upload** — `POST /api/{resource}/:id/files` with the binary body; the filename, category, and description are supplied via request headers
+- **Delete** — `DELETE /api/{resource}/:id/files/:fileId` (soft delete)
 
-**Query Parameters:**
+File responses always include a **time-limited signed download URL**, so no separate download endpoint is needed — use the signed URL directly.
 
-- `category` - Filter by category (e.g., `before_photo`, `after_photo`, `document`)
-
-**Response:**
-
-```json
-{
-  "data": [
-    {
-      "id": 42,
-      "entity_type": "work_order",
-      "entity_id": 123,
-      "original_filename": "before_photo.jpg",
-      "mime_type": "image/jpeg",
-      "file_size": 245760,
-      "category": "before_photo",
-      "description": "Kitchen sink before repair",
-      "uploaded_by": 7,
-      "download_url": "https://bucket.r2.cloudflarestorage.com/files/...",
-      "download_url_expires_at": "2026-02-01T11:30:00Z",
-      "created_at": "2025-12-15T10:30:00Z"
-    }
-  ]
-}
-```
-
----
-
-**Get Single File**
-
-```http
-GET /api/work_orders/123/files/42
-```
-
-**Response:**
-
-```json
-{
-  "data": {
-    "id": 42,
-    "entity_type": "work_order",
-    "entity_id": 123,
-    "original_filename": "before_photo.jpg",
-    "mime_type": "image/jpeg",
-    "file_size": 245760,
-    "category": "before_photo",
-    "download_url": "https://bucket.r2.cloudflarestorage.com/files/...",
-    "download_url_expires_at": "2026-02-01T11:30:00Z",
-    "created_at": "2025-12-15T10:30:00Z"
-  }
-}
-```
-
-> **Note:** `download_url` and `download_url_expires_at` are **always** present in file responses. No separate download endpoint needed—use the signed URL directly.
-
----
-
-**Upload File**
-
-```http
-POST /api/work_orders/123/files
-Content-Type: image/jpeg
-X-Filename: photo.jpg
-X-Category: before_photo
-X-Description: Before work started
-
-[binary file data]
-```
-
-**Response:**
-
-```json
-{
-  "data": {
-    "id": 42,
-    "entity_type": "work_order",
-    "entity_id": 123,
-    "original_filename": "photo.jpg",
-    "storage_key": "files/work_order/123/abc123-photo.jpg",
-    "mime_type": "image/jpeg",
-    "file_size": 245760,
-    "category": "before_photo",
-    "download_url": "https://bucket.r2.cloudflarestorage.com/files/...",
-    "download_url_expires_at": "2026-02-01T11:30:00Z",
-    "created_at": "2025-12-15T10:30:00Z"
-  }
-}
-```
-
----
-
-**Delete File** (Soft delete—sets `is_active=false`)
-
-```http
-DELETE /api/work_orders/123/files/42
-```
-
----
-
-**Supported File Types:**
-
-- Images: JPEG, PNG, GIF, WebP
-- Documents: PDF
-- Max size: 10MB
-
-**File Categories:**
-
-- `before_photo` - Work order before photos
-- `after_photo` - Work order after photos
-- `document` - General documents
-- `signature` - Customer signatures
-- `attachment` - Generic attachments (default)
+**Constraints** (authoritative values in the OpenAPI spec / config): a bounded set of categories (e.g. before/after photos, documents, signatures, attachments), an allow-list of MIME types (common image formats and PDF), and a maximum file size.
 
 ---
 
 ## Error Handling
 
-All errors use the unified `AppError` class with explicit status codes. The response format is consistent:
+Errors use a single consistent envelope: `success: false`, a human-readable `error` name, a stable machine-readable **code**, a human-readable **message**, a **timestamp**, and — for validation failures — a structured **details** object. Errors are produced centrally (a unified error type plus a single response formatter), so the shape is uniform across the API. The authoritative schema is the OpenAPI spec.
 
-```json
+```jsonc
 {
   "success": false,
-  "error": "ERROR_CODE",
-  "message": "Human-readable error message",
-  "timestamp": "2026-01-16T10:30:00Z"
+  "error": "Bad Request",
+  "code": "BAD_REQUEST",
+  "message": "Validation failed",
+  "details": { "email": "Email is required" },
+  "timestamp": "<ISO-8601>"
 }
 ```
 
 ### Error Codes
+
+The stable, machine-readable codes (illustrative; the OpenAPI spec is authoritative):
 
 | Code                  | HTTP Status | Description                                      |
 | --------------------- | ----------- | ------------------------------------------------ |
@@ -681,54 +331,6 @@ All errors use the unified `AppError` class with explicit status codes. The resp
 | `CONFLICT`            | 409         | Duplicate entry, already exists                  |
 | `INTERNAL_ERROR`      | 500         | Server error (details hidden in production)      |
 | `SERVICE_UNAVAILABLE` | 503         | External service down (storage, database)        |
-
-### Validation Errors
-
-```json
-{
-  "success": false,
-  "error": "BAD_REQUEST",
-  "message": "Validation failed",
-  "details": {
-    "email": "Email is required",
-    "phone": "Phone must be 10-15 digits"
-  },
-  "timestamp": "2026-01-16T10:30:00Z"
-}
-```
-
-### Authentication Errors
-
-```json
-{
-  "success": false,
-  "error": "UNAUTHORIZED",
-  "message": "Invalid or expired token",
-  "timestamp": "2026-01-16T10:30:00Z"
-}
-```
-
-### Permission Errors
-
-```json
-{
-  "success": false,
-  "error": "FORBIDDEN",
-  "message": "Insufficient permissions for this action",
-  "timestamp": "2026-01-16T10:30:00Z"
-}
-```
-
-### Not Found Errors
-
-```json
-{
-  "success": false,
-  "error": "NOT_FOUND",
-  "message": "Customer with ID 999 not found",
-  "timestamp": "2026-01-16T10:30:00Z"
-}
-```
 
 ---
 
@@ -742,78 +344,18 @@ Prevent duplicate mutations from network retries or double-submits. Supported on
 Idempotency-Key: <unique-key>
 ```
 
-**Requirements:**
-
-- Alphanumeric, hyphens, underscores only (regex: `^[\w-]+$`)
-- Maximum 255 characters
-- UUID v4 recommended (e.g., `550e8400-e29b-41d4-a716-446655440000`)
+The key is a client-generated unique string (a UUID is recommended), bounded in length.
 
 ### Behavior
 
 | Scenario | Result |
 |----------|--------|
-| First request with key | Executes normally, response cached |
-| Retry with same key + same payload | Returns cached response (no duplicate) |
-| Same key + different payload | `422 Unprocessable Entity` (mismatch error) |
-| No key provided | Normal execution (opt-in feature) |
+| First request with key | Executes normally; response cached |
+| Retry with same key + same payload | Returns the cached response (no duplicate) |
+| Same key + different payload | `422 Unprocessable Entity` (mismatch) |
+| No key provided | Normal execution (opt-in) |
 
-### Example
-
-**First Request:**
-
-```http
-POST /api/customers
-Authorization: Bearer YOUR_TOKEN
-Idempotency-Key: create-customer-abc123
-Content-Type: application/json
-
-{ "first_name": "Alice", "email": "alice@example.com" }
-```
-
-**Response:** `201 Created`
-
-```json
-{
-  "success": true,
-  "data": { "id": 42, "first_name": "Alice", "email": "alice@example.com" }
-}
-```
-
-**Retry (Network failure, same key):**
-
-```http
-POST /api/customers
-Idempotency-Key: create-customer-abc123
-...
-```
-
-**Response:** `201 Created` (cached, no duplicate created)
-
-```json
-{
-  "success": true,
-  "data": { "id": 42, "first_name": "Alice", "email": "alice@example.com" }
-}
-```
-
-### Payload Mismatch Error
-
-If same key sent with different body:
-
-```json
-{
-  "success": false,
-  "error": "Unprocessable Entity",
-  "message": "Idempotency key already used with different request body",
-  "code": "IDEMPOTENCY_MISMATCH"
-}
-```
-
-### Key Scoping
-
-- Keys are **scoped per user** (same key, different users = separate operations)
-- Keys expire after **24 hours** (industry standard: Stripe, AWS)
-- Expired keys are cleaned up automatically
+Keys are **scoped per user** and expire after a fixed retention window, after which they are cleaned up automatically. A mismatch returns the standard error envelope with a stable code.
 
 ### When to Use
 
@@ -825,29 +367,7 @@ If same key sent with different body:
 
 ## Rate Limiting
 
-**Limits:**
-
-- 100 requests per minute per IP
-- 5 login attempts per 15 minutes
-
-**Headers:**
-
-```http
-X-RateLimit-Limit: 100
-X-RateLimit-Remaining: 95
-X-RateLimit-Reset: 1700000000
-```
-
-**Response when rate limited:**
-
-```json
-{
-  "error": "Too Many Requests",
-  "message": "Rate limit exceeded. Try again in 60 seconds.",
-  "retryAfter": 60,
-  "timestamp": "2025-11-19T10:30:00Z"
-}
-```
+API requests are rate-limited per client, with a stricter limit on login attempts; exact thresholds are configured centrally. Standard `X-RateLimit-*` headers report the limit, remaining quota, and reset time, and an exceeded limit returns `429 Too Many Requests` using the standard error envelope.
 
 ---
 
@@ -899,7 +419,7 @@ GET /api/v2/customers
 ### Response Design
 
 - ✅ Always return JSON
-- ✅ Use consistent structure (`{ data, error, pagination }`)
+- ✅ Use the single consistent response envelope
 - ✅ Include timestamps
 - ❌ Don't leak sensitive info in errors
 
@@ -926,26 +446,26 @@ Import OpenAPI spec into Postman:
 
 > **Note:** Replace `<backend-url>` with your local backend URL. See `config/ports.js` for port.
 
-**Get dev token:**
+**Get a dev token:**
 
 ```bash
-curl "<backend-url>/api/dev/token?role=admin"
+curl "<backend-url>/api/dev/token?role=<role>"
 ```
 
-**List customers:**
+**List a resource:**
 
 ```bash
-curl <backend-url>/api/customers \
-  -H "Authorization: Bearer YOUR_TOKEN"
+curl <backend-url>/api/{resource} \
+  -H "Authorization: Bearer <access-token>"
 ```
 
-**Create customer:**
+**Create a resource:**
 
 ```bash
-curl -X POST <backend-url>/api/customers \
-  -H "Authorization: Bearer YOUR_TOKEN" \
+curl -X POST <backend-url>/api/{resource} \
+  -H "Authorization: Bearer <access-token>" \
   -H "Content-Type: application/json" \
-  -d '{"name":"Acme Corp","email":"contact@acme.com"}'
+  -d '{ /* resource fields */ }'
 ```
 
 ---
@@ -954,4 +474,4 @@ curl -X POST <backend-url>/api/customers \
 
 - [Authentication](AUTH.md) - How to get and use tokens
 - [Security](SECURITY.md) - API security details
-- [Development](DEVELOPMENT.md) - Local API development
+- [Development](../getting-started/DEVELOPMENT.md) - Local API development

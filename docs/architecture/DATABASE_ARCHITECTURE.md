@@ -6,9 +6,9 @@ This document defines the architectural principles for database schema design in
 
 ## Core Principle
 
-> **The database schema is the source of truth for data structure.**
+> **Entity structure is declared in metadata (the single source of truth); the database schema is a derived artifact that materializes it.**
 
-All entities follow a standardized contract ensuring consistency across the application.
+Entity metadata files are the authoring SSOT for data structure. The deployable schema is generated/composed from that metadata (plus static infrastructure parts), and the database is a materialization of it — never hand-authored as the source. All entities follow a standardized contract (below) that this metadata expresses, ensuring consistency across the application.
 
 ## Entity Contract v2.0
 
@@ -142,9 +142,10 @@ For time-only fields (without date, e.g., "store opens at 9:00 AM"), use `TIME` 
 
 ### Single Source of Truth
 
-- Master schema lives in `backend/schema.sql`
-- Migrations apply incremental changes
-- Both dev and test databases use same schema
+- **Entity metadata is the declarative SSOT** for entity structure; non-entity infrastructure tables live in static schema parts.
+- The deployable schema is a **derived, composed build artifact** — generated from metadata + infrastructure parts, never hand-edited.
+- Deployment is a parameterized tool with pluggable **strategies**: a *clean rebuild* (provision the full desired state) and a *migrate* (apply the incremental difference between current and desired). Both source from the same declarative metadata.
+- Dev and test databases are materialized from the same source.
 
 ### Idempotent Migrations
 
@@ -201,20 +202,15 @@ This ensures tests never interfere with development.
 
 ## Evolution Guidelines
 
-### Adding an Entity
+Entities evolve through their **metadata**, not by hand-editing schema. The deployable schema and any migrations are produced from the updated metadata by the deployment tooling; the schema files are derived artifacts that are never edited directly.
 
-1. Follow Entity Contract v2.0 (Tier 1 required)
-2. Determine if Tier 2 status field needed
-3. Create migration for existing databases
-4. Update master schema
-5. Add entity metadata file
+### Adding or Changing an Entity
 
-### Modifying Schema
+1. Declare or update the entity in its metadata (honoring the Entity Contract above).
+2. Regenerate/compose the deployable schema, and produce a migration via the *migrate* strategy when evolving existing databases.
+3. Apply to dev and test from the same source.
 
-1. Create migration (never edit schema.sql directly for existing tables)
-2. Migration must be idempotent
-3. Update schema.sql to reflect final state
-4. Apply to both dev and test
+Migrations remain forward-only and idempotent. For the concrete commands and step-by-step procedure, see the development guide (the single home for that workflow).
 
 ## Anti-Patterns
 

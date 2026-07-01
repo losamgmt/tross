@@ -20,11 +20,7 @@ Dual authentication system: dev mode for rapid development, Auth0 for production
 
 ### Strategy Pattern
 
-```
-AuthStrategy (Base)
-├── DevelopmentStrategy → File-based test users
-└── Auth0Strategy → OAuth2/OIDC
-```
+Authentication uses a **Strategy pattern** with a common base and two interchangeable strategies — a **development strategy** (file-based test users) and an **Auth0 strategy** (OAuth2/OIDC). The concrete class names live in code.
 
 **Why Strategy Pattern:**
 
@@ -43,43 +39,26 @@ Fast local development without Auth0 configuration.
 
 ### How It Works
 
-1. Pre-configured test users in `backend/config/test-users.js`
-2. Request dev token via `GET /api/dev/token?role=admin`
+1. Pre-configured test users (one per role) live in the dev test-user config
+2. Request a dev token via `GET /api/dev/token?role=<role>`
 3. Instant JWT generation (no external API calls)
 4. Full RBAC permissions for testing
 
 ### Test Users
 
-```javascript
-// backend/config/test-users.js
-admin@dev.local      // Admin (full access)
-manager@dev.local    // Manager (team management)
-dispatcher@dev.local // Dispatcher (work order assignment)
-tech@dev.local       // Technician (own work orders)
-customer@dev.local   // Customer (own data only)
-```
+Dev mode provides a set of **pre-configured test users spanning the role hierarchy** (one per role), so any role can be exercised locally without Auth0. Their identities and credentials live in the dev test-user config (the source of truth) — they are never hardcoded in documentation.
 
 ### Login Flow
 
-```bash
-GET /api/dev/token?role=admin
+Request a dev token for a role, and the endpoint returns a signed token plus the resolved user and provider:
 
-Response:
-{
-  "success": true,
-  "data": {
-    "token": "eyJhbGciOiJIUzI1NiIs...",
-    "user": {
-      "email": "admin@tross.dev",
-      "role": "admin"
-    },
-    "provider": "development",
-    "expires_in": 86400
-  }
-}
+```bash
+GET /api/dev/token?role=<role>
 ```
 
-**Security:** Dev tokens are REJECTED in production (`AppConfig.devAuthEnabled` check).
+The response uses the standard envelope; the token is a normal internal JWT (see JWT Token Standard).
+
+**Security:** Dev tokens are **rejected in production** — the dev-auth path is disabled outside development.
 
 ---
 
@@ -158,15 +137,7 @@ App uses app_token for all API calls
 - iOS: `ios/Runner/Info.plist` with `CFBundleURLSchemes`
 - Both use scheme: `com.tross.auth0`
 
-**Code:**
-
-```javascript
-// backend/services/auth/Auth0Strategy.js
-const auth0Token = verifyAuth0Token(code); // RS256 verification
-const user = await User.findOrCreate(auth0Token.email);
-const internalJwt = generateToken(user); // HS256 with our roles
-return { token: internalJwt, user };
-```
+In short: the backend verifies the Auth0 token (RS256, via JWKS), finds or creates the corresponding user, and issues an internal HS256 JWT carrying our roles.
 
 ---
 
@@ -174,25 +145,9 @@ return { token: internalJwt, user };
 
 ### Role Hierarchy
 
-Roles are a **database entity** with a `priority` field that defines the hierarchy:
+Roles are a **database entity** with a `priority` field that defines the hierarchy, ordered from most to least privileged (e.g. Admin → Manager → Dispatcher → Technician → Customer).
 
-```
-Admin (priority=5)       Full system access
-  ↓
-Manager (priority=4)     Team management, reports
-  ↓
-Dispatcher (priority=3)  Work order assignment
-  ↓
-Technician (priority=2)  Own work orders
-  ↓
-Customer (priority=1)    Own data only
-```
-
-> **SSOT:** The `roles` table in the database is the single source of truth for role definitions.
-> The `priority` column determines hierarchy — higher priority = more permissions.
-> See `backend/schema.sql` for the roles table definition.
-
-**Hierarchy rule:** Higher priority roles inherit lower priority permissions.
+> **SSOT:** The `roles` table is the single source of truth for role definitions; the `priority` column determines the ordering. Higher-priority roles inherit the permissions of lower-priority ones.
 
 ### Permission Format
 
@@ -207,111 +162,46 @@ work_orders:update // Update work orders
 
 ### Permission Check
 
-```javascript
-// backend/middleware/auth.js
-function requirePermission(permission) {
-  return (req, res, next) => {
-    const [resource, action] = permission.split(':');
-
-    if (!hasPermission(req.user.role, resource, action)) {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
-
-    next();
-  };
-}
-
-// Usage
-router.post('/api/customers',
-  authenticateToken,           // Layer 1: Verify identity
-  requirePermission('customers:create'), // Layer 2: Check permission
-  async (req, res) => { ... }
-);
-```
+Routes are guarded by two layers: identity verification (authenticated token) followed by a permission middleware that checks the user's role against the `resource:action` the route requires, denying with 403 when no grant exists.
 
 ### Permission Matrix
 
-See `config/permissions.json` for complete matrix.
-
-**Example:**
-
-```json
-{
-  "admin": {
-    "users": ["create", "read", "update", "delete"],
-    "customers": ["create", "read", "update", "delete"]
-  },
-  "technician": {
-    "work_orders": ["read", "update"],
-    "customers": ["read"]
-  }
-}
-```
+Permissions are derived from metadata into a generated permissions matrix (role → resource → allowed actions); that generated configuration is the authoritative SSOT. This document does not duplicate it.
 
 ---
 
 ## JWT Token Standard
 
-### Token Structure (RFC 7519)
+### Token Structure
 
-```json
-{
-  "header": {
-    "alg": "HS256",
-    "typ": "JWT"
-  },
-  "payload": {
-    "userId": 123,
-    "email": "user@example.com",
-    "role": "admin",
-    "iat": 1700000000,
-    "exp": 1700003600
-  },
-  "signature": "..."
-}
-```
+Internal tokens are standard JWTs (RFC 7519): a signed token whose claims identify the user and role and carry issued-at/expiry timestamps. The exact claim set is defined by the token service (authoritative).
 
 ### Token Lifecycle
 
-- **Access Token:** 15 minutes lifetime
-- **Refresh Token:** 7 days lifetime
+- **Access token:** short-lived
+- **Refresh token:** longer-lived
 - **Refresh endpoint:** `/api/auth/refresh`
-- **Proactive refresh:** Frontend refreshes 5 minutes before expiry
+- **Proactive refresh:** the frontend refreshes shortly before expiry
+
+The exact lifetimes are configured centrally (the config is the SSOT).
 
 ### Proactive Token Refresh
 
 The frontend proactively refreshes tokens before expiration to prevent abrupt logouts:
 
-**Components:**
+1. On login/refresh, the access token's expiry is parsed from its `exp` claim and stored in secure storage.
+2. A timer is scheduled to refresh shortly before that expiry, and the token is also re-checked when the app resumes from the background.
+3. On success, the next refresh is rescheduled; on failure, the user is logged out.
 
-- `TokenRefreshManager` - Schedules refresh 5 minutes before expiry
-- `WidgetsBindingObserver` - Checks token on app resume from background
-- `TokenManager` - Stores token expiry timestamp
-
-**Flow:**
-
-1. On login/refresh, `AuthTokenService` parses JWT `exp` claim
-2. Expiry stored in secure storage via `TokenManager`
-3. `TokenRefreshManager` schedules Timer for 5 minutes before expiry
-4. On app resume, checks if token needs refresh
-5. On refresh success, reschedules next refresh
-6. On refresh failure, triggers logout
-
-**Fallback:** If proactive refresh fails, the reactive 401 interceptor in `ApiClient` attempts refresh.
+**Fallback:** if proactive refresh misses, a reactive `401` interceptor attempts a refresh on the next request.
 
 ### Token Refresh
 
+Exchanging a valid refresh token at `POST /api/auth/refresh` returns a new access token (and a rotated refresh token):
+
 ```bash
 POST /api/auth/refresh
-{
-  "refreshToken": "eyJhbGciOiJIUzI1NiIs..."
-}
-
-Response:
-{
-  "accessToken": "eyJhbGciOiJIUzI1NiIs...",  // New 1-hour token
-  "refreshToken": "eyJhbGciOiJIUzI1NiIs..."  // New 7-day token
-}
+{ "refreshToken": "<refresh-token>" }
 ```
 
 ---
@@ -332,45 +222,13 @@ POST /api/auth/logout-all    # Logout all devices
 
 ### Session Storage
 
-Sessions tracked in `refresh_tokens` table:
-
-```sql
-CREATE TABLE refresh_tokens (
-  id SERIAL PRIMARY KEY,
-  user_id INTEGER REFERENCES users(id),
-  token TEXT NOT NULL,
-  device_info TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  expires_at TIMESTAMP NOT NULL
-);
-```
+Active sessions are tracked server-side via stored refresh tokens (one per device), each associated with the user, device info, and an expiry. The table schema lives in the schema/migrations (the SSOT).
 
 ---
 
-## Audit Logging
+## Authentication Event Logging
 
-All authentication events logged to `audit_logs` table:
-
-**Logged Events:**
-
-- `auth.login.success` / `auth.login.failure`
-- `auth.logout`
-- `auth.token.refresh`
-- `auth.permission.denied`
-
-**Example:**
-
-```javascript
-await auditService.logEvent(
-  "auth.login.success",
-  {
-    email: user.email,
-    ip: req.ip,
-    userAgent: req.headers["user-agent"],
-  },
-  user.id,
-);
-```
+Authentication and authorization events are captured in the platform's **event record** (the security/auth-event scope — distinct from the data-change "audit" trail). Typical events include login success/failure, logout, token refresh, and permission denials, each recorded with the actor and request context.
 
 ---
 
@@ -454,29 +312,14 @@ Auth0 authentication now enabled alongside dev mode.
 
 ### Token Security
 
-- ✅ Store tokens in httpOnly cookies (XSS protection)
-- ✅ Use secure flag in production (HTTPS only)
-- ✅ Short access token lifetime (1 hour)
-- ❌ Never store tokens in localStorage (XSS vulnerable)
-
-### Password Requirements (if using database auth)
-
-- Minimum 8 characters
-- Mixed case, numbers, special characters
-- Bcrypt hashing (cost factor 12)
+- ✅ Store tokens in platform-appropriate **secure storage** (the mobile/web clients use the platform's secure credential store, not plain web storage)
+- ✅ Always transport over HTTPS in production
+- ✅ Keep access-token lifetimes short and refresh proactively
+- ✅ Scope and rotate refresh tokens; revoke on logout
 
 ### Rate Limiting
 
-```javascript
-// 5 login attempts per 15 minutes per IP
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 5,
-  message: "Too many login attempts, try again later",
-});
-
-app.use("/api/auth/login", loginLimiter);
-```
+Login endpoints are rate-limited per client to slow brute-force attempts; the exact threshold and window are configured centrally.
 
 ---
 
@@ -511,5 +354,5 @@ app.use("/api/auth/login", loginLimiter);
 ## Further Reading
 
 - [Security Guide](SECURITY.md) - Triple-tier security details
-- [Architecture](ARCHITECTURE.md) - Strategy pattern explanation
+- [Architecture](../architecture/ARCHITECTURE.md) - System architecture
 - [API Documentation](API.md) - All auth endpoints

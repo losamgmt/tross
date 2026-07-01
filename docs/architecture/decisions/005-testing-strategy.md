@@ -194,4 +194,4 @@ testWidgets('User can complete login flow', (tester) async {
 
 - [Flutter Testing Documentation](https://docs.flutter.dev/testing)
 - Internal: `frontend/test/` (test suite)
-- Internal: `docs/TESTING.md` (testing philosophy)
+- Internal: [TESTING.md](../../reference/TESTING.md) (testing philosophy)

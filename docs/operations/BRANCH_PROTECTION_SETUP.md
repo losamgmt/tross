@@ -32,10 +32,7 @@ Execute these steps in GitHub web interface to protect the `main` branch.
 
    ✅ **Require status checks to pass before merging**
    - Require branches to be up to date before merging
-   - Status checks to require:
-     - `test / Test Backend` (from ci.yml)
-     - `lint / Lint & Format Check` (from ci.yml)
-     - `build / Build Check` (from ci.yml)
+   - Status checks to require: select the jobs exposed by the CI workflow (see the workflow definitions under `.github/workflows/` for the current job names — these are the source of truth and may change)
 
    ✅ **Require conversation resolution before merging**
 
@@ -86,6 +83,6 @@ After setup:
 **When to upgrade:**
 
 - Make repo public → Branch protection free ✅
-- Subscribe to GitHub Team → $4/user/month ($12 total for 3 users)
+- Subscribe to GitHub Team → per-user monthly pricing
 
 **For now:** Keep this file as reference for future setup!

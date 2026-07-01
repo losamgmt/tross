@@ -243,91 +243,21 @@ fieldAccess: {
 
 ---
 
-## Database Indexing Recommendation
+## Querying and Indexing
 
-For efficient sync status queries, add a GIN index:
-
-```sql
--- Add to a migration file if queries become slow
-CREATE INDEX idx_invoices_metadata_gin ON invoices USING GIN (metadata);
-CREATE INDEX idx_payments_metadata_gin ON payments USING GIN (metadata);
-
--- Or for specific field queries:
-CREATE INDEX idx_invoices_qb_sync_status 
-  ON invoices ((metadata->>'qb_sync_status'))
-  WHERE metadata->>'qb_sync_status' IS NOT NULL;
-```
-
-**Note:** JSONB indexes are optional for MVP pilot. Add only if query performance is an issue.
+These fields are **real columns** (declared in metadata, materialized via the schema build and migration `003`), so they are queried and indexed like ordinary columns — not as JSONB.
 
 ---
 
-## Usage Examples
+## Design Direction: Vendor-Agnostic Sync (decided)
 
-### Setting Sync Status After Sync
+The current shape attaches **provider-specific** columns (`qb_*`, `stripe_*`) directly to core entities. The **decided direction** is to **decouple from specific vendors** via a generic, vendor-agnostic `integration_sync` association (keyed by entity, provider, and external reference, with sync state, timestamp, and error), so core schemas don't accumulate per-provider columns as integrations grow. The current provider-specific columns are the gap to be migrated (tracked as a code task), not the long-term design.
 
-```javascript
-// In QuickBooksService.syncInvoice()
-async syncInvoice(invoiceId) {
-  const invoice = await InvoiceService.getById(invoiceId);
-  
-  try {
-    const qbInvoice = await this._pushToQuickBooks(invoice);
-    
-    // Update sync fields
-    await InvoiceService.update(invoiceId, {
-      metadata: {
-        ...invoice.metadata,
-        qb_invoice_id: qbInvoice.DocNumber,
-        qb_sync_status: 'synced',
-        qb_synced_at: new Date().toISOString(),
-        qb_sync_error: null,  // Clear any previous error
-      },
-    });
-  } catch (error) {
-    // Track error
-    await InvoiceService.update(invoiceId, {
-      metadata: {
-        ...invoice.metadata,
-        qb_sync_status: 'error',
-        qb_sync_error: error.message.slice(0, 500),
-      },
-    });
-    throw error;
-  }
-}
-```
+---
 
-### Querying Sync Status
+## Usage
 
-```javascript
-// Find invoices needing sync
-const needsSync = await db.query(`
-  SELECT id, invoice_number, metadata->>'qb_sync_status' as status
-  FROM invoices
-  WHERE metadata->>'qb_sync_status' IN ('pending', 'modified')
-  ORDER BY created_at
-  LIMIT 100
-`);
-```
-
-### Marking Modified After Edit
-
-```javascript
-// In GenericEntityService.update() or invoice route hook
-afterUpdate(invoice) {
-  // If invoice was synced and now edited, mark as modified
-  if (invoice.metadata?.qb_invoice_id && 
-      invoice.metadata?.qb_sync_status === 'synced') {
-    return {
-      metadata: {
-        ...invoice.metadata,
-        qb_sync_status: 'modified',
-      },
-    };
-  }
-}
-```
+The integration **runner/providers** populate these fields when syncing an entity to a provider (set the external id + `synced` state on success; record the error + `error` state on failure; mark `modified` when a previously-synced record is edited). The concrete sync logic is **Phase 3 and not yet implemented** — code is the source of truth once built.
 
 ---
 
@@ -381,11 +311,11 @@ describe('Schema composition', () => {
 ## Design Review
 
 ### Architect ✅
-- [x] Uses existing metadata system (no new tables)
+- [x] Uses existing metadata system
 - [x] **CORRECTED:** Uses `withTraits()` pattern, not legacy format
 - [x] Fields are provider-namespaced (`qb_`, `stripe_`)
 - [x] Status enum defined in `enums` section
-- [x] Queryable via JSONB operators
+- [x] **CORRECTED:** Real columns, queried as standard columns (not JSONB)
 
 ### Designer ✅
 - [x] Field names self-documenting
@@ -394,11 +324,10 @@ describe('Schema composition', () => {
 
 ### Engineer ✅
 - [x] **CORRECTED:** Imports from `field-types.js`
-- [x] No migration needed (JSONB storage)
+- [x] **CORRECTED:** Real columns via migration (not JSONB; no "no-migration" claim)
 - [x] Pattern validation prevents garbage data
-- [x] Error field length capped (500 chars)
+- [x] Error field length capped
 - [x] Generic `external_ref` for ad-hoc needs
-- [x] Index recommendations included
 
 ### Security ✅
 - [x] `qb_sync_error` read-restricted to admin (may contain sensitive details)

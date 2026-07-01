@@ -4,7 +4,7 @@
 
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> **Quick Start:** [docs/getting-started/QUICK_START.md](docs/getting-started/QUICK_START.md) | **Development:** [docs/getting-started/DEVELOPMENT.md](docs/getting-started/DEVELOPMENT.md) | **Architecture:** [docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md) | **📋 Project Status (SSOT):** [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)
+> **Quick Start:** [docs/getting-started/QUICK_START.md](docs/getting-started/QUICK_START.md) | **Development:** [docs/getting-started/DEVELOPMENT.md](docs/getting-started/DEVELOPMENT.md) | **Architecture:** [docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md) | **📋 Project Overview:** [docs/project/PROJECT_OVERVIEW.md](docs/project/PROJECT_OVERVIEW.md)
 
 ---
 
@@ -151,9 +151,9 @@ npm run dev:frontend   # Frontend
 
 **Design System**:
 
-- **Primary**: Bronze (#CD7F32)
-- **Secondary**: Honey Yellow (#FFB90F)
-- **Accent**: Walnut (#8B4513)
+- **Primary**: Bronze
+- **Secondary**: Honey Yellow
+- **Accent**: Walnut
 - **Responsive**: Mobile-first with desktop optimization
 - **Architecture**: Atomic Design System (atoms, molecules, organisms)
 - **State Management**: Provider pattern with clean separation
@@ -172,7 +172,7 @@ npm run dev:frontend   # Frontend
 
 - RESTful endpoints following OpenAPI 3.0 specification
 - Comprehensive health checks and monitoring
-- See [API Documentation](docs/API.md) for details
+- See [API Documentation](docs/reference/API.md) for details
 
 ## 🔒 Security Features
 
@@ -289,7 +289,7 @@ npm run clean:flutter     # Clean Flutter build cache
 - **Database**: Managed PostgreSQL service
 - **Monitoring**: Application insights and error tracking
 
-See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed instructions.
+See [docs/operations/DEPLOYMENT.md](docs/operations/DEPLOYMENT.md) for detailed instructions.
 
 ## 🤝 Contributing
 
@@ -308,7 +308,7 @@ See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed instructions.
 
 ## 📋 Project Status & Roadmap
 
-> **Detailed Status:** See [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) for full implementation details.
+> **Project Overview:** See [docs/project/PROJECT_OVERVIEW.md](docs/project/PROJECT_OVERVIEW.md) for the architecture and documentation map.
 
 ### ✅ Phase 1: Core Platform (COMPLETE)
 
@@ -353,12 +353,8 @@ See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed instructions.
 
 ## 📞 Support
 
-**License**: MIT
-
-See [CONTRIBUTORS.md](CONTRIBUTORS.md) for team information and contribution guidelines.
+**License**: MIT — see [LICENSE](LICENSE).
 
 ---
 
 _Built with Flutter & Node.js_
-
-# Testing admin bypass

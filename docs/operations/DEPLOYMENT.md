@@ -1,35 +1,21 @@
 # Deployment
 
-Production deployment guide using Docker and environment configuration.
+How Tross is deployed, and the platform-agnostic design that keeps it portable.
 
 ---
 
-## Deployment Philosophy
+## Deployment Model
 
-**Principles:**
+**Tross runs on a managed platform** — the backend on Railway and the frontend on Vercel, deployed automatically from Git. There is **no self-hosted Docker/SSH/Nginx stack**; TLS, scaling, and the build pipeline are handled by the platform.
 
-- **Infrastructure as Code** - Docker Compose for reproducibility
-- **Zero-downtime** - Rolling updates with health checks
-- **Security-first** - Secrets management, least privilege
-- **Observable** - Logging, monitoring, health checks
-- **Reversible** - Easy rollback strategy
+**Platform-agnostic by design:** the app reads its configuration from the environment (via `backend/config/deployment-adapter.js`), so it can run on any platform that supplies a database connection and the required secrets. Nothing in the application code is tied to a specific host.
 
----
+For the actual deployment, CI/CD, health, and rollback procedures, see the operational runbooks:
 
-## Prerequisites
-
-**Required:**
-
-- Docker 20+ with Compose V2
-- Production server (Linux recommended)
-- Domain name with DNS configured
-- SSL certificate (Let's Encrypt recommended)
-
-**Recommended:**
-
-- GitHub Actions for CI/CD
-- Docker Hub or private registry
-- PostgreSQL managed service (AWS RDS, etc.)
+- **[CI/CD Guide](CI_CD_GUIDE.md)** — the Railway + Vercel pipeline
+- **[Health Monitoring](HEALTH_MONITORING.md)**
+- **[Rollback](ROLLBACK.md)**
+- **[Secrets](SECRETS.md)** — required environment secrets
 
 ---
 
@@ -51,7 +37,7 @@ Most cloud platforms (Railway, Heroku, Render) provide a single `DATABASE_URL` e
 
 #### Option 2: Individual Variables (AWS, Google Cloud, Local)
 
-> **Source of truth:** See [`backend/config/deployment-adapter.js`](../backend/config/deployment-adapter.js) for current defaults.
+> **Source of truth:** See [`backend/config/deployment-adapter.js`](../../backend/config/deployment-adapter.js) for current defaults.
 
 ```bash
 DB_HOST=your-db-host.region.rds.amazonaws.com
@@ -72,7 +58,7 @@ If `DATABASE_URL` is not set, the adapter falls back to individual environment v
 
 Create `.env.production`:
 
-> **Note:** Default values come from source files. See [`config/ports.js`](../config/ports.js) and [`backend/config/deployment-adapter.js`](../backend/config/deployment-adapter.js).
+> **Note:** Default values come from source files. See [`config/ports.js`](../../config/ports.js) and [`backend/config/deployment-adapter.js`](../../backend/config/deployment-adapter.js).
 
 ```bash
 # Node.js
@@ -94,9 +80,9 @@ DATABASE_URL=postgresql://user:password@db-host:5432/tross_prod
 # DB_POOL_MAX=<your_value>
 # DB_POOL_MIN=<your_value>
 
-# Security (CRITICAL - Generate strong secrets)
-JWT_SECRET=your-super-secure-64-character-minimum-secret-here-with-mixed-case-numbers-special
-SESSION_SECRET=another-super-secure-64-character-secret-for-sessions
+# Security (CRITICAL - generate strong secrets; minimum strength is enforced at startup)
+JWT_SECRET=<a strong random secret>
+SESSION_SECRET=<a strong random secret>
 
 # Auth0 (Production credentials)
 AUTH0_DOMAIN=your-tenant.auth0.com
@@ -125,19 +111,10 @@ SENTRY_DSN=your-sentry-dsn
 **Generate strong secrets:**
 
 ```bash
-# JWT_SECRET (64+ characters)
-openssl rand -base64 48
-
-# SESSION_SECRET
 openssl rand -base64 48
 ```
 
-**Validation:**
-
-- Minimum 64 characters
-- Mixed case, numbers, special characters
-- Never commit to git
-- Rotate every 90 days
+The startup **environment validator** enforces the minimum strength in production (fail-fast) — the validator is the source of truth. Never commit secrets; rotate them periodically.
 
 ---
 
@@ -155,7 +132,7 @@ Tross is deployed on Railway. The platform auto-detects the Node.js backend and 
 - `AUTH0_DOMAIN`, `AUTH0_CLIENT_ID`, `AUTH0_CLIENT_SECRET` - Auth0 credentials
 - `ALLOWED_ORIGINS` - Your frontend domain
 
-**railway.json** handles build configuration. See [`railway.json`](../railway.json).
+**railway.json** handles build configuration. See [`railway.json`](../../railway.json).
 
 ### Deployment Process
 
@@ -165,181 +142,21 @@ Tross is deployed on Railway. The platform auto-detects the Node.js backend and 
 
 ---
 
-## Docker Deployment (Alternative)
+## CI/CD
 
-For self-hosted deployments, use Docker Compose.
-
-### Example Production Docker Compose
-
-> **Note:** Create a `docker-compose.prod.yml` based on this template if self-hosting. Adjust ports to match your `config/ports.js` configuration.
-
-```yaml
-version: "3.8"
-
-services:
-  backend:
-    build: ./backend
-    ports:
-      - "<BACKEND_PORT>:<BACKEND_PORT>"
-    environment:
-      - NODE_ENV=production
-      - DATABASE_URL=${DATABASE_URL}
-      - JWT_SECRET=${JWT_SECRET}
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:<BACKEND_PORT>/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-
-  frontend:
-    build: ./frontend
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-    depends_on:
-      - backend
-    restart: unless-stopped
-```
-
-### Deployment Commands
-
-**Initial deployment:**
-
-```bash
-# 1. Clone repository
-git clone https://github.com/yourusername/tross.git
-cd tross
-
-# 2. Set environment variables
-cp .env.example .env.production
-nano .env.production  # Edit with production values
-
-# 3. Pull images
-docker-compose -f docker-compose.prod.yml pull
-
-# 4. Run migrations
-docker-compose -f docker-compose.prod.yml run --rm backend npm run migrate
-
-# 5. Start services
-docker-compose -f docker-compose.prod.yml up -d
-
-# 6. Verify health (see config/ports.js for port)
-curl http://localhost:<BACKEND_PORT>/api/health
-```
-
-**Update deployment:**
-
-```bash
-# Pull latest images
-docker-compose -f docker-compose.prod.yml pull
-
-# Restart services (zero-downtime with health checks)
-docker-compose -f docker-compose.prod.yml up -d
-
-# Verify (see config/ports.js for port)
-curl http://localhost:<BACKEND_PORT>/api/health
-```
-
----
-
-## CI/CD with GitHub Actions
-
-### Automated Deployment Workflow
-
-**File:** `.github/workflows/deploy.yml`
-
-```yaml
-name: Deploy to Production
-
-on:
-  push:
-    branches: [main]
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Run backend tests
-        run: |
-          cd backend
-          npm install
-          npm test
-
-  deploy:
-    needs: test
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Build and push Docker images
-        run: |
-          docker build -t tross/backend:latest ./backend
-          docker build -t tross/frontend:latest ./frontend
-          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-          docker push tross/backend:latest
-          docker push tross/frontend:latest
-
-      - name: Deploy to production
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.PROD_SERVER }}
-          username: ${{ secrets.PROD_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            cd /opt/tross
-            docker-compose -f docker-compose.prod.yml pull
-            docker-compose -f docker-compose.prod.yml up -d
-```
-
-### Required GitHub Secrets
-
-Configure in repository Settings → Secrets:
-
-```
-DOCKER_USERNAME - Docker Hub username
-DOCKER_PASSWORD - Docker Hub password/token
-PROD_SERVER - Production server IP/domain
-PROD_USER - SSH username
-SSH_PRIVATE_KEY - SSH private key for deployment
-```
+Deployment is automated from Git by the platform (push to `main` → Railway/Vercel build and deploy). The pipeline, required checks, and secrets are documented in the **[CI/CD Guide](CI_CD_GUIDE.md)** and **[Secrets](SECRETS.md)**.
 
 ---
 
 ## Database Migrations
 
-### Production Migration Strategy
-
-**Before deployment:**
-
-1. Backup database
-2. Test migrations on staging
-3. Plan rollback strategy
-
-**Migration commands:**
-
-```bash
-# Run migrations
-docker-compose -f docker-compose.prod.yml run --rm backend npm run migrate
-
-# Rollback last migration
-docker-compose -f docker-compose.prod.yml run --rm backend npm run migrate:rollback
-
-# Check migration status
-docker-compose -f docker-compose.prod.yml run --rm backend npm run migrate:status
-```
+Migrations are **forward-only numbered SQL files** applied by the migration runner (`npm run db:migrate`); entity tables are generated from metadata (see [DATABASE_ARCHITECTURE.md](../architecture/DATABASE_ARCHITECTURE.md)). On the managed platform, migrations run as part of the deploy.
 
 **Best practices:**
 
-- Always write `down()` migrations (rollback)
-- Test migrations on staging first
-- Never edit applied migrations (create new ones)
-- Backup before running migrations
+- Keep each migration small and idempotent (`IF [NOT] EXISTS`).
+- Never edit an applied migration — add a new one.
+- Back up the database before a structural change.
 
 ---
 
@@ -368,121 +185,19 @@ curl http://localhost:<BACKEND_PORT>/api/health/db
 
 {
   "status": "connected",
-  "responseTime": 5
+  "responseTime": "<ms>"
 }
 ```
 
-### Docker Health Checks
+### Logs, Health & TLS
 
-Built into `docker-compose.prod.yml`:
-
-```bash
-# Check service health
-docker-compose -f docker-compose.prod.yml ps
-
-# View logs
-docker-compose -f docker-compose.prod.yml logs -f backend
-```
-
-### Log Monitoring
-
-**Application logs:**
-
-```bash
-# Real-time logs
-docker-compose -f docker-compose.prod.yml logs -f
-
-# Last 100 lines
-docker-compose -f docker-compose.prod.yml logs --tail=100
-
-# Filter by service
-docker-compose -f docker-compose.prod.yml logs backend
-```
-
-**Log rotation:** Configured in docker-compose (10MB max, 3 files)
+On the managed platform, container health, logs, restarts, and TLS certificates are handled by the platform (via its dashboard) — there is no manual Nginx or Let's Encrypt setup. See **[Health Monitoring](HEALTH_MONITORING.md)**.
 
 ---
 
-## SSL/TLS Configuration
+## Rollback
 
-### Let's Encrypt (Recommended)
-
-**Certbot setup:**
-
-```bash
-# Install certbot
-sudo apt-get install certbot
-
-# Generate certificate
-sudo certbot certonly --standalone -d your-domain.com
-
-# Certificates saved to: /etc/letsencrypt/live/your-domain.com/
-```
-
-**Auto-renewal:**
-
-```bash
-# Add to crontab
-0 0 * * * certbot renew --quiet
-```
-
-### Nginx SSL Configuration
-
-**File:** `nginx.conf`
-
-```nginx
-server {
-    listen 80;
-    server_name your-domain.com;
-    return 301 https://$server_name$request_uri;
-}
-
-server {
-    listen 443 ssl http2;
-    server_name your-domain.com;
-
-    ssl_certificate /etc/nginx/ssl/fullchain.pem;
-    ssl_certificate_key /etc/nginx/ssl/privkey.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers HIGH:!aNULL:!MD5;
-
-    location /api {
-        proxy_pass http://backend:3001;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-
-    location / {
-        root /usr/share/nginx/html;
-        try_files $uri $uri/ /index.html;
-    }
-}
-```
-
----
-
-## Rollback Strategy
-
-### Rollback to Previous Version
-
-**Quick rollback:**
-
-```bash
-# Tag current version
-docker tag tross/backend:latest tross/backend:v1.2.3
-
-# Pull previous version
-docker pull tross/backend:v1.2.2
-
-# Tag as latest
-docker tag tross/backend:v1.2.2 tross/backend:latest
-
-# Restart
-docker-compose -f docker-compose.prod.yml up -d
-
-# Rollback migrations if needed
-docker-compose -f docker-compose.prod.yml run --rm backend npm run migrate:rollback
-```
+Rollbacks are performed by redeploying a previous build on the platform (with a forward database fix if needed) — see **[Rollback](ROLLBACK.md)**. Database migrations are forward-only.
 
 ---
 
@@ -490,146 +205,25 @@ docker-compose -f docker-compose.prod.yml run --rm backend npm run migrate:rollb
 
 **Before deployment:**
 
-- [ ] Strong JWT_SECRET (64+ chars, mixed case/numbers/special)
-- [ ] DATABASE_URL doesn't use localhost
+- [ ] Strong signing secret (meets the enforced minimum strength)
+- [ ] Production (non-local) database URL
 - [ ] Auth0 production credentials configured
-- [ ] CORS restricted to production domain
-- [ ] SSL/TLS certificate valid
+- [ ] CORS restricted to the production frontend origin
 - [ ] Rate limiting enabled
 - [ ] Helmet security headers enabled
-- [ ] No secrets in git repository
-- [ ] Docker containers run as non-root
-- [ ] Firewall configured (only 80/443 open)
-- [ ] Database backups automated
-- [ ] Log aggregation configured
+- [ ] No secrets in the git repository
+- [ ] Database backups enabled (platform-managed)
 
 ---
 
-## Backup & Recovery
+## Backups
 
-### Database Backups
-
-**Automated backup script:**
-
-```bash
-#!/bin/bash
-# backup-db.sh
-
-DATE=$(date +%Y%m%d_%H%M%S)
-BACKUP_DIR="/backups"
-DB_NAME="tross_prod"
-
-# Create backup
-pg_dump $DATABASE_URL > $BACKUP_DIR/backup_$DATE.sql
-
-# Compress
-gzip $BACKUP_DIR/backup_$DATE.sql
-
-# Keep only last 30 days
-find $BACKUP_DIR -name "backup_*.sql.gz" -mtime +30 -delete
-
-echo "Backup completed: backup_$DATE.sql.gz"
-```
-
-**Schedule with cron:**
-
-```bash
-0 2 * * * /opt/tross/scripts/backup-db.sh
-```
-
-### Restore from Backup
-
-```bash
-# Restore database
-gunzip -c /backups/backup_20251119_020000.sql.gz | psql $DATABASE_URL
-```
-
----
-
-## Troubleshooting
-
-### Service Won't Start
-
-**Check logs:**
-
-```bash
-docker-compose -f docker-compose.prod.yml logs backend
-```
-
-**Common issues:**
-
-- Missing environment variables → Check `.env.production`
-- Database connection failed → Verify `DATABASE_URL`
-- Port already in use → Check what's using port 3001
-
-### High Memory Usage
-
-**Check container stats:**
-
-```bash
-docker stats
-```
-
-**Optimize:**
-
-- Reduce `DB_POOL_MAX` if too many connections
-- Increase server resources
-- Enable query caching
-
-### Slow API Responses
-
-**Check database:**
-
-```bash
-# View slow queries
-docker-compose -f docker-compose.prod.yml logs backend | grep "Slow query"
-```
-
-**Optimize:**
-
-- Add database indexes
-- Review N+1 query patterns
-- Enable query result caching
-
----
-
-## Production Checklist
-
-**Infrastructure:**
-
-- [ ] Server provisioned (2GB+ RAM recommended)
-- [ ] Docker installed and running
-- [ ] Domain DNS configured
-- [ ] SSL certificate installed
-- [ ] Firewall configured
-
-**Configuration:**
-
-- [ ] `.env.production` created with all variables
-- [ ] Secrets generated and secured
-- [ ] Auth0 production app configured
-- [ ] Database created and migrations run
-
-**Deployment:**
-
-- [ ] Docker images built and pushed
-- [ ] Services started with docker-compose
-- [ ] Health checks passing
-- [ ] SSL working (https://)
-- [ ] Monitoring configured
-
-**Post-Deployment:**
-
-- [ ] Test authentication (dev + Auth0)
-- [ ] Test CRUD operations
-- [ ] Verify logs are writing
-- [ ] Confirm backups running
-- [ ] Monitor for errors
+The managed database provides automated backups and point-in-time recovery; configure retention in the platform. For an ad-hoc logical backup or restore, use `pg_dump` / `psql` against the database URL.
 
 ---
 
 ## Further Reading
 
-- [Architecture](ARCHITECTURE.md) - System design overview
-- [Security](SECURITY.md) - Security hardening details
-- [Development](DEVELOPMENT.md) - Local development setup
+- [Architecture](../architecture/ARCHITECTURE.md) - System design overview
+- [Security](../reference/SECURITY.md) - Security hardening details
+- [Development](../getting-started/DEVELOPMENT.md) - Local development setup

@@ -6,6 +6,10 @@
 
 ---
 
+> **📐 Design record (point-in-time).** This captures the entity-expansion and field-centric metadata design as of its date. The design was subsequently implemented; entity counts, scopes, and checklist states here are historical snapshots — **code and the metadata SSOT are authoritative for current status.** This document is preserved as the design rationale and is not maintained as live reference.
+
+---
+
 ## Executive Summary
 
 This document captures the design decisions for expanding the Tross entity model with 11 new entities AND a fundamental metadata architecture redesign. The design follows a phased approach:
@@ -2868,9 +2872,9 @@ The system will halt at MAX_CASCADE_DEPTH, but design to avoid this.
 
 ## References
 
-- [METADATA-SSOT-AUDIT.md](./METADATA-SSOT-AUDIT.md) — 12-layer architecture audit
+- [METADATA-SSOT-AUDIT.md](../project/audits/METADATA-SSOT-AUDIT.md) — 12-layer architecture audit
 - [entity-metadata.types.js](../../backend/config/models/entity-metadata.types.js) — Type contract
-- [DESIGN-REVIEW-FRAMEWORK.md](./DESIGN-REVIEW-FRAMEWORK.md) — Adversarial review process
+- [DESIGN-REVIEW-FRAMEWORK.md](../project/process/DESIGN-REVIEW-FRAMEWORK.md) — Adversarial review process
 - [Microsoft D365 Field Service](https://learn.microsoft.com/en-us/dynamics365/field-service/) — Industry patterns
 
 ---

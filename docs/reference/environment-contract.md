@@ -88,10 +88,7 @@ const config = getDatabaseConfigForMode();
 | `LOCAL_DEV` | `JWT_SECRET` env var |
 | `PRODUCTION` | `JWT_SECRET` env var (required) |
 
-The `TEST_JWT_SECRET` constant is defined in `app-mode.js` and is intentionally obvious:
-```javascript
-const TEST_JWT_SECRET = 'test-only-jwt-secret-do-not-use-in-production';
-```
+The `TEST_JWT_SECRET` constant is defined in `app-mode.js` and is intentionally obvious — a clearly-labeled, test-only value that must never be used in production.
 
 ## Environment Variables Reference
 
@@ -201,6 +198,6 @@ Derived flags prevent configuration drift:
 
 ## Related Documentation
 
-- [App Config](./app-config.md) — Central configuration service
-- [Authentication Architecture](../architecture/authentication.md)
-- [Getting Started](../getting-started/README.md)
+- [Environment Variables](ENVIRONMENT_VARIABLES.md) — Configuration reference
+- [Authentication](AUTH.md) — Auth strategy and JWT
+- [Getting Started](../getting-started/QUICK_START.md)

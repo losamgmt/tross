@@ -12,7 +12,7 @@ cp backend/.env.example backend/.env
 
 ## Required Variables
 
-> **Source of truth:** Default values are defined in [`backend/config/deployment-adapter.js`](../backend/config/deployment-adapter.js) and [`backend/config/constants.js`](../backend/config/constants.js). Refer to those files for current defaults.
+> **Source of truth:** Default values are defined in [`backend/config/deployment-adapter.js`](../../backend/config/deployment-adapter.js) and [`backend/config/constants.js`](../../backend/config/constants.js). Refer to those files for current defaults.
 
 ### Database Configuration
 
@@ -33,7 +33,7 @@ cp backend/.env.example backend/.env
 
 | Variable          | Description            | Example                     | Required             |
 | ----------------- | ---------------------- | --------------------------- | -------------------- |
-| `JWT_SECRET`      | Secret for JWT signing | 64+ character random string | Yes                  |
+| `JWT_SECRET`      | Secret for JWT signing | strong random secret        | Yes                  |
 | `AUTH0_DOMAIN`    | Auth0 tenant domain    | `yourapp.auth0.com`         | Yes (if using Auth0) |
 | `AUTH0_AUDIENCE`  | Auth0 API identifier   | `https://api.yourapp.com`   | Yes (if using Auth0) |
 | `AUTH0_CLIENT_ID` | Auth0 client ID        | (from Auth0 dashboard)      | Yes (if using Auth0) |
@@ -64,7 +64,7 @@ cp backend/.env.example backend/.env
 
 ### Rate Limiting
 
-> **Defaults:** See `OPTIONAL_ENV_VARS` in [`backend/config/deployment-adapter.js`](../backend/config/deployment-adapter.js)
+> **Defaults:** See `OPTIONAL_ENV_VARS` in [`backend/config/deployment-adapter.js`](../../backend/config/deployment-adapter.js)
 
 | Variable                  | Description             | Default    | Required |
 | ------------------------- | ----------------------- | ---------- | -------- |
@@ -115,11 +115,11 @@ cp backend/.env.example backend/.env
 ### Development Defaults
 
 > **Note:** These are illustrative examples. Actual defaults are defined in source files.
-> See [`backend/config/deployment-adapter.js`](../backend/config/deployment-adapter.js) for current values.
+> See [`backend/config/deployment-adapter.js`](../../backend/config/deployment-adapter.js) for current values.
 
 ```env
 NODE_ENV=development
-JWT_SECRET=your-development-secret-here-32-chars-min
+JWT_SECRET=your-development-secret
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=tross_dev
@@ -132,7 +132,7 @@ ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8080
 
 | Check | Requirement                                        |
 | ----- | -------------------------------------------------- |
-| ✅    | `JWT_SECRET` is a secure random string (64+ chars) |
+| ✅    | `JWT_SECRET` is a strong random secret (strength enforced at startup) |
 | ✅    | `DATABASE_URL` uses SSL (`?sslmode=require`)       |
 | ✅    | `NODE_ENV=production` is set                       |
 | ✅    | `ALLOWED_ORIGINS` contains only your domains       |
@@ -153,9 +153,9 @@ DB_NAME=tross_dev
 DB_USER=postgres
 DB_PASSWORD=postgres
 
-# Auth - REQUIRED (no fallback anymore)
-# Generate a random secret: openssl rand -base64 32
-JWT_SECRET=your-local-development-secret-32-chars-minimum
+# Auth - REQUIRED (no fallback)
+# Generate a random secret: openssl rand -base64 48
+JWT_SECRET=your-local-development-secret
 
 # CORS
 ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8080
@@ -166,8 +166,8 @@ ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8080
 ```env
 NODE_ENV=development
 DATABASE_URL=postgresql://postgres:postgres@db:5432/tross
-# REQUIRED - generate with: openssl rand -base64 32
-JWT_SECRET=your-docker-development-secret-32-chars-minimum
+# REQUIRED - generate with: openssl rand -base64 48
+JWT_SECRET=your-docker-development-secret
 ```
 
 ### Railway Production
@@ -185,15 +185,15 @@ ALLOWED_ORIGINS=https://yourapp.com,https://www.yourapp.com
 
 1. **Never commit `.env` files** - Use `.env.example` as a template
 2. **Rotate `JWT_SECRET`** periodically in production
-3. **Use strong secrets** - Minimum 32 characters, random
+3. **Use strong secrets** - random; minimum strength is enforced at startup (the env validator is the source of truth)
 4. **Restrict `ALLOWED_ORIGINS`** - Only include your actual domains
 5. **Enable SSL** - Always use `sslmode=require` for production databases
 
 ## Troubleshooting
 
-### "JWT_SECRET not set" warning
+### "JWT_SECRET not set" error
 
-Set `JWT_SECRET` in your environment. For development, any value works.
+Set `JWT_SECRET` in your environment. It is required in all non-test modes — the app fails fast at startup if it is missing (see the SECURITY NOTE above).
 
 ### Database connection failed
 

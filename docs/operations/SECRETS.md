@@ -1,30 +1,18 @@
-# GitHub Secrets Configuration
+# Secrets Configuration
 
-# Required secrets for CI/CD pipeline
+Secrets are supplied as **environment variables** — never committed to the repository. They are configured in the deployment platform (Railway for the backend, Vercel for the frontend) and, where CI needs them, as GitHub Actions secrets.
 
-## Docker Hub (for image publishing)
+## Required application secrets
 
-DOCKER_USERNAME=your-dockerhub-username
-DOCKER_PASSWORD=your-dockerhub-token
+The application requires (see [`backend/config/env-manifest.js`](../../backend/config/env-manifest.js) for the authoritative, current list):
 
-## Production Database (if using external DB)
+- **JWT signing secret** — a strong random secret (minimum strength enforced at startup).
+- **Auth0 credentials** — domain, client ID, and client secret for the production tenant.
+- **Database connection** — provided by the platform (e.g. Railway's `DATABASE_URL`); see [DEPLOYMENT.md](DEPLOYMENT.md).
+- **Frontend origin** — the production frontend URL for CORS.
 
-PROD_DB_HOST=your-production-db-host
-PROD_DB_USER=your-production-db-user  
-PROD_DB_PASSWORD=your-production-db-password
-PROD_DB_NAME=tross_prod
+## Notes
 
-## Application Secrets
-
-JWT_SECRET=your-super-secure-jwt-secret-minimum-32-chars
-API_KEY=your-api-key-if-needed
-
-## Deployment (if using cloud providers)
-
-# AWS_ACCESS_KEY_ID=your-aws-key
-
-# AWS_SECRET_ACCESS_KEY=your-aws-secret
-
-# AZURE_CREDENTIALS=your-azure-credentials
-
-# Note: Add these in GitHub Repository Settings > Secrets and variables > Actions
+- Generate strong secrets (e.g. `openssl rand -base64 48`); never commit them.
+- The env manifest is the source of truth for which variables are required and where.
+- Add CI secrets in **GitHub → Settings → Secrets and variables → Actions**.

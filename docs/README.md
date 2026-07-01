@@ -87,9 +87,9 @@ Tross documentation hub.
 
 | Doc                                                              | Purpose                        |
 | ---------------------------------------------------------------- | ------------------------------ |
-| [Project Status](project/PROJECT_STATUS.md)                      | Architecture quick reference   |
+| [Project Overview](project/PROJECT_OVERVIEW.md)                  | Architecture & documentation map |
 | [MVP Scope](project/MVP_SCOPE.md)                                | Original project scope         |
-| [Implementation Plan](project/plans/IMPLEMENTATION-PLAN.md)      | Current implementation roadmap |
-| [Metadata Completion](project/plans/METADATA-COMPLETION-PLAN.md) | 85%→100% completion tracker    |
+| [Implementation Plan](project/plans/IMPLEMENTATION-PLAN.md)      | Metadata implementation plan (historical record) |
+| [Metadata Completion](project/plans/METADATA-COMPLETION-PLAN.md) | Metadata completion coordinator (historical record) |
 | [Audits](project/audits/)                                        | Technical audits & reviews     |
 | [Process](project/process/)                                      | Development process docs       |

@@ -6,6 +6,8 @@
 
 ---
 
+> **🗂️ Point-in-time audit.** This records an assessment made when it was written. Findings, counts, and "current state"/"gap" notes are snapshots and may have since changed — **the code and test runners are the source of truth** for current status. Preserved as a historical record.
+
 ## Executive Summary
 
 The Tross metadata SSOT architecture is **production-ready**. After reviewing all 12 layers, the system demonstrates:

@@ -2,6 +2,8 @@
 
 > Generated from comprehensive codebase analysis. Synthesizes existing patterns, industry best practices, and specific recommendations for completing hook system test coverage.
 
+> **🗂️ Point-in-time audit.** This records an assessment made when it was written. Findings, counts, and "current state"/"gap" notes are snapshots and may have since changed — **the code and test runners are the source of truth** for current status. Preserved as a historical record.
+
 ## Executive Summary
 
 **Current State**: Hook infrastructure is implemented and wired into GenericEntityService, but **test coverage is incomplete**:
@@ -373,8 +375,8 @@ For integration tests to run, entities need hooks defined:
 
 | File | Purpose |
 |------|---------|
-| [generic-entity-service.test.js](../../backend/__tests__/unit/services/generic-entity-service.test.js) | Add hook unit tests here |
-| [hook-service.test.js](../../backend/__tests__/unit/services/hook-service.test.js) | Existing 37 unit tests |
-| [scenarios/index.js](../../backend/__tests__/factory/scenarios/index.js) | Register new hooks scenario |
-| [runner.js](../../backend/__tests__/factory/runner.js) | Scenario executor |
-| [mocks/index.js](../../backend/__tests__/mocks/index.js) | Add hook-service mock if needed |
+| [generic-entity-service.test.js](../../../backend/__tests__/unit/services/generic-entity-service.test.js) | Add hook unit tests here |
+| [hook-service.test.js](../../../backend/__tests__/unit/services/hook-service.test.js) | Existing 37 unit tests |
+| [scenarios/index.js](../../../backend/__tests__/factory/scenarios/index.js) | Register new hooks scenario |
+| [runner.js](../../../backend/__tests__/factory/runner.js) | Scenario executor |
+| [mocks/index.js](../../../backend/__tests__/mocks/index.js) | Add hook-service mock if needed |

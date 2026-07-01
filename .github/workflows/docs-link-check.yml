@@ -1,0 +1,50 @@
+# =============================================================================
+# Documentation Link Check
+# =============================================================================
+# Prevents internal documentation link rot (broken relative links between docs,
+# and from docs to source files). Runs in offline mode so it is deterministic
+# and never flakes on external/network URLs — it validates that every relative
+# link target actually exists in the repository.
+# =============================================================================
+
+name: Docs Link Check
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "**/*.md"
+      - ".github/workflows/docs-link-check.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "**/*.md"
+      - ".github/workflows/docs-link-check.yml"
+
+# Cancel in-progress runs for the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  link-check:
+    name: 🔗 Markdown Link Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1 # Shallow clone for speed
+
+      - name: Check internal documentation links
+        uses: lycheeverse/lychee-action@v2
+        with:
+          # --offline: validate that relative link targets exist on disk
+          #            (deterministic; skips external URLs to avoid flakiness)
+          args: >-
+            --offline
+            --no-progress
+            'README.md'
+            'docs/**/*.md'
+          fail: true # Fail the job if any internal link is broken

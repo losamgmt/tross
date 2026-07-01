@@ -24,28 +24,11 @@ module.exports = ExampleService;
 
 ## Directory Structure
 
-```
-backend/services/
-├── auth/                      # Auth strategy implementations
-│   ├── Auth0Strategy.js       # Auth0 OAuth strategy
-│   └── DevTokenStrategy.js    # Development token strategy
-├── auth-user-service.js       # User authentication operations
-├── audit-service.js           # Audit logging
-├── export-service.js          # Data export (CSV, JSON)
-├── file-attachment-service.js # File attachment DB operations
-├── generic-entity-service.js  # Metadata-driven CRUD
-├── idempotency-service.js     # Idempotency key management
-├── integration-token-service.js # OAuth token storage for integrations
-├── pagination-service.js      # Query pagination helpers
-├── parent-rls-service.js      # Parent entity RLS (deprecated)
-├── query-builder-service.js   # Dynamic query building
-├── sessions-service.js        # Session management for admins
-├── stats-service.js           # Dashboard statistics
-├── storage-service.js         # Cloud storage (R2/S3)
-├── system-settings-service.js # System configuration
-├── token-service.js           # JWT token lifecycle
-└── user-data.js               # DEPRECATED: Use auth-user-service.js
-```
+Services live under `backend/services/`, organized into domain-oriented subdirectories
+(for example: authentication, audit, entity/CRUD, integrations, and storage) alongside a
+few shared top-level modules. Browse `backend/services/` for the current layout — the
+directory is the source of truth, so this guide intentionally does not transcribe the
+full file list (which would drift).
 
 ## Standard Patterns
 
@@ -272,7 +255,7 @@ module.exports = { storageService: getInstance(), StorageService };
 | `audit-service` | Audit log writing and queries | Static class |
 | `storage-service` | File upload/download to R2 | Singleton |
 | `system-settings-service` | System config, feature flags | Static class |
-| `integration-token-service` | OAuth tokens for QuickBooks/Stripe | Static class |
+| `integration-token-service` | OAuth tokens for third-party integrations | Static class |
 | `sessions-service` | Admin session management | Static class |
 | `file-attachment-service` | File attachment DB records | Static class |
 

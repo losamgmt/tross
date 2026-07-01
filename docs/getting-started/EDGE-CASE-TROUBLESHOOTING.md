@@ -27,14 +27,14 @@ ResponseFormatter.format() → JSON response
 | Symptom | Look Here |
 |---------|-----------|
 | All errors returning 500 | Missing `statusCode` on thrown error |
-| Wrong error code | Check pattern matching in [server.js#L231-280](backend/server.js#L231) |
-| DB constraint errors wrong | Check [db-error-handler.js](backend/utils/db-error-handler.js) PG error codes |
+| Wrong error code | Check pattern matching in [server.js](../../backend/server.js) |
+| DB constraint errors wrong | Check [db-error-handler.js](../../backend/utils/db-error-handler.js) PG error codes |
 | Missing field name in error | `extractFieldFromError()` regex failed - constraint naming incorrect |
 
 ### Key Files
-- [backend/utils/app-error.js](backend/utils/app-error.js) - Error class
-- [backend/server.js#L225](backend/server.js#L225) - Global handler
-- [backend/utils/db-error-handler.js](backend/utils/db-error-handler.js) - PG error mapping
+- [backend/utils/app-error.js](../../backend/utils/app-error.js) - Error class
+- [backend/server.js](../../backend/server.js) - Global handler
+- [backend/utils/db-error-handler.js](../../backend/utils/db-error-handler.js) - PG error mapping
 
 ---
 
@@ -65,13 +65,13 @@ EXISTS (SELECT 1 FROM junction WHERE ... AND nested_clause)
 |---------|-----------|
 | No results for customer | Check `customer_profile_id` is in rlsContext |
 | All rules returning FALSE | Profile ID is null in rlsContext (`extractProfileIds()`) |
-| "depth limit exceeded" | Chain > 3 hops (MAX_HOPS in constants.js) |
+| "depth limit exceeded" | Relationship chain exceeds the configured maximum hop depth (see `constants.js`) |
 | Filter not matching | Wrong context key (camelCase vs snake_case) |
 
 ### Key Files
-- [backend/db/helpers/rls/clause-builder.js#L145](backend/db/helpers/rls/clause-builder.js#L145) - `buildJunctionClause()`
-- [backend/db/helpers/rls/rule-matcher.js](backend/db/helpers/rls/rule-matcher.js) - `matchRules()`
-- [backend/middleware/row-level-security.js](backend/middleware/row-level-security.js) - `extractProfileIds()`
+- [backend/db/helpers/rls/clause-builder.js](../../backend/db/helpers/rls/clause-builder.js) - `buildJunctionClause()`
+- [backend/db/helpers/rls/rule-matcher.js](../../backend/db/helpers/rls/rule-matcher.js) - `matchRules()`
+- [backend/middleware/row-level-security.js](../../backend/middleware/row-level-security.js) - `extractProfileIds()`
 
 ### Debug
 
@@ -111,9 +111,9 @@ buildPolymorphicParentClause()
 | "allowedTypes" rejection | Metadata has `polymorphic.allowedTypes` set |
 
 ### Key Files
-- [backend/middleware/sub-entity.js](backend/middleware/sub-entity.js) - `setPolymorphicContext()`
-- [backend/db/helpers/rls/clause-builder.js#L502](backend/db/helpers/rls/clause-builder.js#L502) - `buildPolymorphicParentClause()`
-- [backend/config/models/file-attachment-metadata.js](backend/config/models/file-attachment-metadata.js) - Example
+- [backend/middleware/sub-entity.js](../../backend/middleware/sub-entity.js) - `setPolymorphicContext()`
+- [backend/db/helpers/rls/clause-builder.js](../../backend/db/helpers/rls/clause-builder.js) - `buildPolymorphicParentClause()`
+- [backend/config/models/file-attachment-metadata.js](../../backend/config/models/file-attachment-metadata.js) - Example
 
 ---
 
@@ -150,8 +150,8 @@ COMMIT (or ROLLBACK on error)
 | Polymorphic cascade fails | Check `polymorphicType.value` matches DB |
 
 ### Key Files
-- [backend/db/helpers/cascade-helper.js](backend/db/helpers/cascade-helper.js)
-- [backend/services/generic-entity-service.js#L1274](backend/services/generic-entity-service.js#L1274) - `delete()`
+- [backend/db/helpers/cascade-helper.js](../../backend/db/helpers/cascade-helper.js)
+- [backend/services/entity/generic-entity-service.js](../../backend/services/entity/generic-entity-service.js) - `delete()`
 
 ---
 
@@ -181,8 +181,8 @@ Internal:
 | Old values missing | `oldValues` not captured before update |
 
 ### Key Files
-- [backend/db/helpers/audit-helper.js#L153](backend/db/helpers/audit-helper.js#L153) - `buildAuditContext()`
-- [backend/services/audit-service.js](backend/services/audit-service.js)
+- [backend/db/helpers/audit-helper.js](../../backend/db/helpers/audit-helper.js) - `buildAuditContext()`
+- [backend/services/audit/audit-service.js](../../backend/services/audit/audit-service.js)
 
 ---
 
@@ -219,10 +219,10 @@ If POST/PUT/DELETE → 403 Forbidden
 | Role mismatch | JWT role vs DB role conflict |
 
 ### Key Files
-- [backend/middleware/auth.js](backend/middleware/auth.js)
-- [backend/config/test-users.js](backend/config/test-users.js )
-- [backend/services/user-data.js](backend/services/user-data.js) - `findOrCreateUser()`
-- [backend/config/app-config.js](backend/config/app-config.js) - `devAuthEnabled`
+- [backend/middleware/auth.js](../../backend/middleware/auth.js)
+- [backend/config/test-users.js](../../backend/config/test-users.js)
+- [backend/services/user-data.js](../../backend/services/user-data.js) - `findOrCreateUser()`
+- [backend/config/app-config.js](../../backend/config/app-config.js) - `devAuthEnabled`
 
 ---
 
@@ -255,9 +255,9 @@ validateEnvironment() at startup → crash if missing critical vars
 | Wrong environment detected | `NODE_ENV` value vs `ENVIRONMENTS` enum |
 
 ### Key Files
-- [backend/config/env-manifest.js](backend/config/env-manifest.js) - Env var SSOT
-- [backend/config/app-config.js](backend/config/app-config.js) - Centralized config
-- [backend/config/app-mode.js](backend/config/app-mode.js) - Environment detection
+- [backend/config/env-manifest.js](../../backend/config/env-manifest.js) - Env var SSOT
+- [backend/config/app-config.js](../../backend/config/app-config.js) - Centralized config
+- [backend/config/app-mode.js](../../backend/config/app-mode.js) - Environment detection
 
 ---
 
@@ -303,9 +303,9 @@ psql -c "SELECT * FROM schema_migrations ORDER BY version"
 ```
 
 ### Key Files
-- [backend/scripts/run-migrations.js](backend/scripts/run-migrations.js)
-- [backend/migrations/](backend/migrations/)
-- [backend/schema-generated.sql](backend/schema-generated.sql) - Full schema (for fresh DBs)
+- [backend/scripts/run-migrations.js](../../backend/scripts/run-migrations.js)
+- [backend/migrations/](../../backend/migrations/)
+- [backend/schema.sql](../../backend/schema.sql) - Composed schema (for fresh DBs)
 
 ### Fresh DB vs Migration
 - **Fresh DB:** Run `schema-generated.sql` + all migrations
@@ -341,4 +341,4 @@ psql -c "SELECT * FROM schema_migrations ORDER BY version"
 
 ---
 
-*This document covers the edges of the system. For happy-path understanding, see [METADATA-SSOT-AUDIT.md](METADATA-SSOT-AUDIT.md).*
+*This document covers the edges of the system. For happy-path understanding, see [METADATA-SSOT-AUDIT.md](../project/audits/METADATA-SSOT-AUDIT.md).*

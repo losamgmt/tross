@@ -57,23 +57,23 @@ This keeps integration data organized while leveraging existing infrastructure.
 
 ## Interface Design
 
-```javascript
-// Added to SystemSettingsService
+Credential logic is owned by **`IntegrationTokenService`** (the `SystemSettingsService` retains thin, deprecated delegating wrappers for backward compatibility — prefer the dedicated service).
 
+```javascript
 /**
  * INTEGRATION CREDENTIALS HELPERS
  * 
  * Key naming convention: integration.{provider}.{type}
- * All values stored as JSONB in system_settings table.
+ * Values are stored in the system_settings store.
  * 
  * SECURITY:
- * - Tokens stored in database (not env vars) for rotation support
+ * - Tokens stored server-side (not env vars) for rotation support
  * - Access restricted to admin role at route level
  * - Audit trail via updated_by field
  * 
  * USAGE:
- *   const tokens = await SystemSettingsService.getIntegrationTokens('quickbooks');
- *   await SystemSettingsService.setIntegrationTokens('quickbooks', newTokens, userId);
+ *   const tokens = await IntegrationTokenService.getIntegrationTokens('quickbooks');
+ *   await IntegrationTokenService.setIntegrationTokens('quickbooks', newTokens, userId);
  */
 ```
 
@@ -150,8 +150,10 @@ Store non-secret configuration.
 
 ## Implementation
 
+> Historical: this shows the original implementation. The logic now lives in `IntegrationTokenService`; `SystemSettingsService` keeps thin delegating wrappers.
+
 ```javascript
-// Added to SystemSettingsService class
+// Integration credential helpers
 
 // ===========================================================================
 // INTEGRATION CREDENTIALS HELPERS
@@ -290,7 +292,7 @@ The credentials service **stores** tokens but doesn't refresh them. Here's the p
 const { SYSTEM_USER_ID } = require('../config/constants');
 
 async _getValidToken() {
-  const tokens = await SystemSettingsService.getIntegrationTokens('quickbooks');
+  const tokens = await IntegrationTokenService.getIntegrationTokens('quickbooks');
   
   if (!tokens) {
     throw new AppError('QuickBooks not connected', 401, 'INTEGRATION_NOT_CONNECTED');
@@ -303,7 +305,7 @@ async _getValidToken() {
   if (expiresAt.getTime() - Date.now() < buffer) {
     // Refresh token
     const newTokens = await this._refreshToken(tokens.refresh_token);
-    await SystemSettingsService.setIntegrationTokens('quickbooks', newTokens, SYSTEM_USER_ID);
+    await IntegrationTokenService.setIntegrationTokens('quickbooks', newTokens, SYSTEM_USER_ID);
     return newTokens.access_token;
   }
 

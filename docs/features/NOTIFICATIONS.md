@@ -39,7 +39,7 @@ This document covers the **Notification Tray** system. Toasts are already implem
 
 Notifications are **identical in architecture** to `saved_views`:
 
-- Per-user data with RLS (`own_record_only`)
+- Per-user data — each user sees only their own (a direct ownership RLS rule)
 - Standard CRUD via generic router
 - **NO custom routes**
 - **NO custom services**
@@ -105,28 +105,7 @@ CREATE TABLE IF NOT EXISTS notifications (
 
 ### Metadata Definition
 
-✅ **IMPLEMENTED** in `backend/config/models/notification-metadata.js`:
-
-```javascript
-{
-  tableName: 'notifications',
-  rlsResource: 'notifications',
-  routeConfig: { useGenericRouter: true },
-  rlsPolicy: {
-    customer: 'own_record_only',
-    technician: 'own_record_only',
-    dispatcher: 'own_record_only',
-    manager: 'own_record_only',
-    admin: 'own_record_only',  // Even admins only see their own
-  },
-  entityPermissions: {
-    create: null,      // System only - API returns 403
-    read: 'customer',
-    update: 'customer',
-    delete: 'customer',
-  },
-}
-```
+Defined in the notification metadata: generic-router CRUD, with a row-level rule that grants **each user access to their own notifications only** (direct ownership, applied uniformly across roles). Creation is **system-only** (the API create path returns 403); users can read, update (mark read), and delete their own. The authoritative rules live in the entity metadata.
 
 ---
 

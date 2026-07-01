@@ -8,14 +8,14 @@
 
 ## Overview
 
-This directory contains modular design documents for integration infrastructure. Each document is self-contained but designed to work compositionally.
+This directory contains modular **design records** for the integration *foundation* (the framework: credential storage, webhook validation, the provider runner, and OAuth flows). The actual provider API calls and data-sync logic (Phase 3) are **not yet implemented** — these documents describe the architecture, not a finished integration. Code is the source of truth for current status.
 
 ## Document Index
 
 | Document | Purpose | Dependencies |
 |----------|---------|--------------|
 | [01-webhook-validator.md](01-webhook-validator.md) | HMAC signature validation utility | None (leaf module) |
-| [02-integration-credentials.md](02-integration-credentials.md) | OAuth token storage pattern | SystemSettingsService |
+| [02-integration-credentials.md](02-integration-credentials.md) | OAuth token storage pattern | IntegrationTokenService |
 | [03-base-integration-service.md](03-base-integration-service.md) | External API client template | Credentials service |
 | [04-sync-status-fields.md](04-sync-status-fields.md) | Metadata field definitions | Metadata SSOT |
 
@@ -41,7 +41,7 @@ Each module has ONE responsibility:
 Services compose, not extend:
 ```
 QuickBooksService
-  ├── uses → SystemSettingsService (Module 02 token helpers)
+  ├── uses → IntegrationTokenService (Module 02 token helpers)
   ├── uses → WebhookValidator (verify callbacks)
   └── uses → createIntegrationService factory (Module 03)
 ```
@@ -100,7 +100,7 @@ Phase 3: API Implementations (Next)
           ▼                                ▼                                ▼
 ┌─────────────────────┐         ┌─────────────────────┐          ┌─────────────────────┐
 │  token-service.js   │         │  IntegrationRunner  │          │  WebhookValidator   │
-│  (encrypted tokens) │         │  (runner.js)        │          │  (utils)            │
+│  (OAuth tokens)     │         │  (runner.js)        │          │  (utils)            │
 └─────────────────────┘         └──────────┬──────────┘          └─────────────────────┘
                                            │
                         ┌──────────────────┼───────────────────┐
@@ -119,7 +119,7 @@ config/
 └── integration-loader.js      # Dynamic route loading (mirrors route-loader.js)
 
 services/integrations/
-├── token-service.js          # OAuth token storage (encrypted)
+├── token-service.js          # OAuth token storage
 ├── runner.js                 # Base integration runner
 ├── oauth-service.js          # Generic OAuth2 flows (NEW)
 ├── index.js                  # Barrel exports

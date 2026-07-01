@@ -104,9 +104,7 @@ See `backend/config/field-types.js` for full generator API.
 
 ## Field Traits System (Field-Centric Architecture)
 
-**Status:** ✅ Migration Complete (April 2026)
-
-All 34 entities have been migrated to the field-centric architecture. Field properties (required, immutable, searchable, filterable, sortable) are now defined directly on field definitions instead of separate arrays.
+Entities use a **field-centric** architecture: field properties (required, immutable, searchable, filterable, sortable) are defined directly on each field definition rather than in separate parallel arrays.
 
 ### Atomic Traits
 
@@ -210,7 +208,7 @@ const searchable = getSearchableFields(metadata);  // ['name', 'description']
 
 - [Database Architecture](DATABASE_ARCHITECTURE.md) - Entity Contract and database patterns
 - [Validation Architecture](VALIDATION_ARCHITECTURE.md) - How types flow to Joi validation
-- [Metadata SSOT Audit](METADATA-SSOT-AUDIT.md) - Complete architecture audit
+- [Metadata SSOT Audit](../project/audits/METADATA-SSOT-AUDIT.md) - Complete architecture audit
 - `backend/config/field-types.js` - Definitive field type definitions
 - `backend/config/metadata-accessors.js` - Accessor functions for field properties
 - `backend/config/geo-standards.js` - State/province/country enums

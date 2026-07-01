@@ -85,7 +85,7 @@ Actually pings the R2 bucket using `HeadBucket`. Requires admin authentication.
 **Endpoints:**
 
 - Production: `<your-backend-url>/api/health`
-- Local: `http://localhost:<BACKEND_PORT>/api/health` (see [`config/ports.js`](../config/ports.js))
+- Local: `http://localhost:<BACKEND_PORT>/api/health` (see [`config/ports.js`](../../config/ports.js))
 
 ---
 

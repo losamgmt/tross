@@ -6,6 +6,8 @@
 
 ---
 
+> **📐 Design record (point-in-time).** This is a planning-time design specification, not a description of current behavior. Specific counts, entity lists, and "Current State" notes are snapshots from when this was written and may have drifted — **the code and metadata are the source of truth** for what exists today. Preserved as-authored for its design rationale.
+
 ## Current State
 
 | File | Status | Content |

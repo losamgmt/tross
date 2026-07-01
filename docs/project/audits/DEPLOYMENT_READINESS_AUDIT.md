@@ -6,6 +6,8 @@
 
 ---
 
+> **🗂️ Point-in-time audit.** This records an assessment made when it was written. Findings, counts, and "current state"/"gap" notes are snapshots and may have since changed — **the code and test runners are the source of truth** for current status. Preserved as a historical record.
+
 ## Executive Summary
 
 This audit validates that adding/modifying fields on existing entities or creating new entities via the **Metadata SSOT** results in **automatic, complete propagation** through all system layers—with no manual intervention beyond:

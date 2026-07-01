@@ -173,8 +173,8 @@ User Login → LoginScreen → AuthProvider.login()
 
 **Key Design Decisions:**
 
-- See `docs/architecture/decisions/` for all ADRs
-- See `docs/AUTH.md` for auth implementation
+- See `../docs/architecture/decisions/` for all ADRs
+- See `../docs/reference/AUTH.md` for auth implementation
 - KISS principle throughout - minimal abstraction, maximum clarity
 - Defensive validation at every data boundary (API, JSON, user input)
 
@@ -276,7 +276,7 @@ flutter test test/integration/        # Integration tests
 
 Run `flutter test --coverage` to generate coverage reports.
 
-**CI/CD:** See [CI_CD_GUIDE.md](../docs/CI_CD_GUIDE.md) for automated testing pipeline and GitHub Actions workflow.
+**CI/CD:** See [CI_CD_GUIDE.md](../docs/operations/CI_CD_GUIDE.md) for automated testing pipeline and GitHub Actions workflow.
 
 ---
 
@@ -303,7 +303,7 @@ For production Auth0:
 2. Configure callback URLs
 3. Update `lib/services/auth/auth0_config.dart` (or environment variables)
 
-See `docs/AUTH.md` for full setup.
+See `../docs/reference/AUTH.md` for full setup.
 
 ---
 
@@ -373,11 +373,11 @@ flutter test --coverage
 ## 📚 Additional Documentation
 
 - **Main README:** `../README.md` - Project overview
-- **API Docs:** `../docs/api/README.md` - Backend endpoints
-- **Auth Guide:** `../docs/AUTH.md`
-- **Deployment:** `../docs/DEPLOYMENT.md`
-- **Architecture:** `../docs/ARCHITECTURE.md`
-- **Testing Strategy:** `../docs/TESTING.md`
+- **API Docs:** `../docs/reference/API.md` - Backend endpoints
+- **Auth Guide:** `../docs/reference/AUTH.md`
+- **Deployment:** `../docs/operations/DEPLOYMENT.md`
+- **Architecture:** `../docs/architecture/ARCHITECTURE.md`
+- **Testing Strategy:** `../docs/reference/TESTING.md`
 
 ---
 

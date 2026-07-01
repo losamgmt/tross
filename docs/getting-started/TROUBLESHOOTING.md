@@ -4,7 +4,7 @@ Common issues and solutions for Tross development and deployment.
 
 ## Quick Diagnostics
 
-> **Port values:** See [`config/ports.js`](../config/ports.js) for current port assignments.
+> **Port values:** See [`config/ports.js`](../../config/ports.js) for current port assignments.
 
 ```bash
 # Check backend health (replace <BACKEND_PORT> with value from config/ports.js)
@@ -91,8 +91,8 @@ cat .env | grep -E "^(DATABASE|JWT|AUTH0)"
 
 ```bash
 cd backend
-npm run db:migrate:latest
-npm run db:seed:run  # Optional: seed test data
+npm run db:migrate
+# Optionally seed test data (see the seed scripts in package.json)
 ```
 
 #### Pool Exhausted
@@ -185,11 +185,10 @@ ALLOWED_ORIGINS=http://localhost:<FRONTEND_PORT>,https://<your-production-domain
 **Solution**:
 
 ```bash
-# Reset test database
-NODE_ENV=test npm run db:migrate:rollback --all
-NODE_ENV=test npm run db:migrate:latest
+# Reset the test database, then re-apply migrations
+NODE_ENV=test npm run db:reset
 
-# Run tests with fresh database
+# Run tests with a fresh database
 npm test -- --runInBand
 ```
 
@@ -353,10 +352,7 @@ docker compose logs -f backend
 
 ### Database Query Logging
 
-```env
-# In .env
-DEBUG=knex:query
-```
+Verbose query logging is controlled by the app's logging configuration (see the environment/logging settings) — the app uses a custom query layer, not Knex.
 
 ---
 

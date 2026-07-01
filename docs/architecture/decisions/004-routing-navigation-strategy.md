@@ -1,8 +1,12 @@
 # ADR 004: Routing & Navigation Strategy
 
-**Status:** Accepted  
+**Status:** Superseded by [ADR-012](012-declarative-routing-go-router.md)  
 **Decision Makers:** Development Team  
 **Outcome:** Imperative Navigation with Programmatic Guards
+
+---
+
+> **⚠️ Superseded by [ADR-012: Declarative Routing with go_router](012-declarative-routing-go-router.md).** The imperative `Navigator` model with per-route guard helpers described below has been replaced by declarative `go_router` routing with a single centralized route guard. This record is retained, unchanged, as the history of the original decision.
 
 ---
 

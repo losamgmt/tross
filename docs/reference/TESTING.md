@@ -376,7 +376,7 @@ test/
     └── helpers.dart              # Barrel file
 ```
 
-**Key Concept:** Tests loop over `allKnownEntities` (11 entities) and generate tests automatically:
+**Key Concept:** Tests loop over `allKnownEntities` and generate tests automatically:
 
 ```dart
 // test/scenarios/widget_entity_scenario_test.dart
@@ -398,12 +398,13 @@ for (final entityName in allKnownEntities) {
 
 **Scenario Categories:**
 
-| Category         | Tests    | What it validates                           |
-| ---------------- | -------- | ------------------------------------------- |
-| Parity           | 31       | Frontend metadata matches backend config    |
-| Widget Rendering | 287      | All widgets × all entities render correctly |
-| Validation       | 132      | Missing fields, type mismatches, boundaries |
-| **Total**        | **450+** | Zero per-entity code                        |
+| Category         | What it validates                           |
+| ---------------- | ------------------------------------------- |
+| Parity           | Frontend metadata matches backend config    |
+| Widget Rendering | All widgets × all entities render correctly |
+| Validation       | Missing fields, type mismatches, boundaries |
+
+Run the frontend test suite to see current counts — the suite requires zero per-entity code.
 
 **Benefits:**
 
@@ -477,12 +478,12 @@ void main() {
 
 ### E2E Test Categories
 
-| Category     | Tests | What it verifies                                        |
-| ------------ | ----- | ------------------------------------------------------- |
-| Health       | 3     | Server running, DB connected, memory healthy            |
-| Security     | 6     | Auth required, invalid tokens rejected, headers present |
-| Routing      | 2     | Unknown routes return 404                               |
-| File Storage | 4     | All file endpoints require auth                         |
+| Category     | What it verifies                                        |
+| ------------ | ------------------------------------------------------- |
+| Health       | Server running, DB connected, memory healthy            |
+| Security     | Auth required, invalid tokens rejected, headers present |
+| Routing      | Unknown routes return 404                               |
+| File Storage | All file endpoints require auth                         |
 
 ---
 
@@ -611,13 +612,13 @@ backend/__tests__/
 │   ├── route-runner.js           # Route test runner
 │   ├── service-runner.js         # Service test runner
 │   ├── data/                     # Test data generators
-│   └── scenarios/                # 14 reusable scenario modules
+│   └── scenarios/                # reusable scenario modules
 │       ├── crud.scenarios.js
 │       ├── validation.scenarios.js
 │       ├── rls.scenarios.js
 │       ├── error.scenarios.js    # Unhappy path testing
 │       ├── search.scenarios.js
-│       └── ... (10 more)
+│       └── ...
 ├── unit/                         # Isolated unit tests
 │   ├── models/
 │   ├── services/
@@ -874,7 +875,7 @@ Run these tests against the production frontend URL after every deployment:
 #### 5. Backend Health
 
 - [ ] Visit the production API health endpoint (`/api/health`)
-- [ ] Should return JSON: `{"status":"ok",...}`
+- [ ] Should return a JSON health payload (overall status plus database health)
 - [ ] Check database health in response
 
 ### Automated E2E Tests (Against Production)
@@ -884,8 +885,9 @@ Run these tests against the production frontend URL after every deployment:
 # Set BACKEND_URL environment variable to production API URL
 BACKEND_URL=<production-api-url> npm run test:e2e
 
-# Note: Uses dev tokens, not Auth0
-# Good for API testing, not auth flow testing
+# Note: verifies health, security, and routing only — these tests send no
+# auth tokens. Dev tokens are rejected in production by design, so
+# auth-dependent behavior is covered by integration tests, not E2E.
 ```
 
 **Configuration:** See `.env.production.example` for environment setup.
@@ -907,6 +909,6 @@ BACKEND_URL=<production-api-url> npm run test:e2e
 
 ## Next Steps
 
-- **[Development Guide](DEVELOPMENT.md)** - Daily dev workflow
-- **[Architecture](ARCHITECTURE.md)** - System design
+- **[Development Guide](../getting-started/DEVELOPMENT.md)** - Daily dev workflow
+- **[Architecture](../architecture/ARCHITECTURE.md)** - System design
 - **[API Documentation](API.md)** - Endpoint reference

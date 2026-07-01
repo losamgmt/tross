@@ -323,7 +323,7 @@ API Docs: <your-backend-url>/api-docs
 
 **"npm ci failed"**
 
-- Cause: package-lock.json out of sync with Node 22
+- Cause: package-lock.json out of sync with the project's Node version
 - Fix: Run `npm install` locally, commit lock file
 
 **"Tests failed"**

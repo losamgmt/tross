@@ -164,8 +164,8 @@ When adding or modifying validation:
 
 ## Related Decisions
 
-- [ENTITY_CONTRACT.md](./ENTITY_CONTRACT.md) - how metadata files are structured
-- [DATABASE_ARCHITECTURE.md](./DATABASE_ARCHITECTURE.md) - database constraint philosophy
+- [FIELD_TYPES.md](./FIELD_TYPES.md) - how metadata fields are defined
+- [DATABASE_ARCHITECTURE.md](./DATABASE_ARCHITECTURE.md) - Entity Contract and constraint philosophy
 - [SCHEMA_DRIVEN_UI.md](./SCHEMA_DRIVEN_UI.md) - frontend/backend synchronization
 
 ---

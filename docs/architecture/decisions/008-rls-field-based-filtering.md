@@ -1,7 +1,11 @@
 # ADR 008: Row-Level Security Field-Based Filtering
 
-**Status:** Accepted  
+**Status:** Superseded by [ADR-011](011-rule-based-rls-engine.md)  
 **Date:** February 26, 2026
+
+---
+
+> **⚠️ Superseded by [ADR-011: Rule-Based Row-Level Security Engine](011-rule-based-rls-engine.md).** The field-based policy model described below (the `null` / `false` / `{ field, value }` policy values) is no longer how RLS works — access rules are now expressed as `rlsRules`. This record is retained, unchanged, as the history of the original decision.
 
 ---
 
@@ -177,6 +181,6 @@ function buildRLSFilter(rlsContext, metadata, paramOffset) {
 
 ## Related
 
-- [SECURITY.md](../../SECURITY.md) - Security architecture documentation
+- [SECURITY.md](../../reference/SECURITY.md) - Security architecture documentation
 - [ADR-006](006-entity-naming-convention.md) - Entity naming conventions
 - [ADR-007](007-file-attachments-architecture.md) - Sub-entity pattern reference

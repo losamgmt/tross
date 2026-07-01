@@ -103,7 +103,7 @@ Don't want to install Node/Flutter/PostgreSQL locally? Use Codespaces:
 
 1. Pull latest changes: `git pull origin main`
 2. Update dependencies: `npm install && cd frontend && flutter pub get`
-3. Run migrations: `cd backend && npm run migrate`
+3. Run migrations: `cd backend && npm run db:migrate`
 4. Start services: `npm run dev` (root) or `./scripts/start-dev.bat`
 5. Verify tests pass: `npm test` (backend) + `flutter test` (frontend)
 
@@ -263,18 +263,13 @@ module.exports = {
 };
 ```
 
-**2. Create Database Migration**
+**2. Regenerate the Schema** (generated — never hand-edited)
 
-```bash
-cd backend
-npm run migrate:create add_your_entity_table
-# Edit migration to match Entity Contract v2.0 (see DATABASE_ARCHITECTURE.md)
-npm run migrate
-```
+The deployable schema is **composed from metadata** (plus static infrastructure parts) by the sync step below — you do not write a migration by hand or edit `backend/schema.sql`.
 
-**3. Update Master Schema**
+**3. Evolve an Existing Database** (when needed)
 
-Add table to `backend/schema.sql` matching the migration.
+To apply changes to an already-provisioned database, run the migrate strategy via the migrations runner (forward-only, idempotent) — see [DATABASE_ARCHITECTURE.md](../architecture/DATABASE_ARCHITECTURE.md). Fresh databases are provisioned directly from the composed schema.
 
 **4. Sync & Verify** (Critical!)
 
@@ -405,20 +400,16 @@ const strategy = new Strategy();
 
 ```bash
 cd backend
-npm run migrate:create your_migration_name
-
-# Edit migrations/YYYYMMDDHHMMSS_your_migration_name.js
-# Implement up() and down()
-
-npm run migrate          # Apply
-npm run migrate:rollback # Undo last
+npm run db:migrate          # Apply pending migrations
 ```
+
+Migrations are **numbered, forward-only SQL files** applied by the migration runner. Entity tables are generated from metadata (see Adding a New Entity) — hand-written migrations are for infrastructure changes and for evolving already-provisioned databases.
 
 ### Migration Best Practices
 
 - **One change per migration**
-- **Always write `down()`** (rollback)
-- **Test rollback** before merging
+- **Forward-only and idempotent** (guarded with `IF [NOT] EXISTS`, safe to re-run)
+- **Test against a fresh database** before merging
 - **Never edit applied migrations** (create new one)
 
 ---
@@ -560,7 +551,7 @@ flutter run -d chrome
 
 ## Next Steps
 
-- **[Architecture](ARCHITECTURE.md)** - Understand core patterns
-- **[Testing Guide](TESTING.md)** - Deep dive into testing
-- **[API Documentation](API.md)** - Explore endpoints
-- **[Deployment](DEPLOYMENT.md)** - Deploy to production
+- **[Architecture](../architecture/ARCHITECTURE.md)** - Understand core patterns
+- **[Testing Guide](../reference/TESTING.md)** - Deep dive into testing
+- **[API Documentation](../reference/API.md)** - Explore endpoints
+- **[Deployment](../operations/DEPLOYMENT.md)** - Deploy to production

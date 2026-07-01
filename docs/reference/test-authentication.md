@@ -234,9 +234,4 @@ describe('Tests', () => {
 
 ## Available Roles
 
-- `admin`
-- `manager`
-- `dispatcher`
-- `technician`
-- `customer`
-- `viewer`
+Tests use the application's standard roles. See [`backend/config/role-definitions.js`](../../backend/config/role-definitions.js) for the canonical set, and pass any of them to the test helpers (e.g. `createTestContext({ roles: [...] })` or `getUnitTestToken(role)`).

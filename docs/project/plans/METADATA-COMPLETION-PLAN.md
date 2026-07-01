@@ -7,6 +7,8 @@
 
 ---
 
+> **🗂️ Point-in-time record.** This is a completed coordinator plan, captured on its completion date. Counts, test totals, and "current state" entries below are snapshots from that time and may have drifted — **the code, metadata, and test runners are the source of truth** for current status. Preserved as a historical record; not maintained as living documentation.
+
 ## Executive Summary
 
 The field-centric metadata migration is **100% COMPLETE**. All core architecture components have been implemented, tested, and verified against design specifications.

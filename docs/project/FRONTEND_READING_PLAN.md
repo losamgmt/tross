@@ -41,9 +41,9 @@ Understanding how metadata flows from JSON → Models → UI.
 
 | Priority | File | Lines | Purpose |
 |----------|------|-------|---------|
-| 1 | [lib/services/entity_metadata.dart](../frontend/lib/services/entity_metadata.dart) | ~200 | EntityMetadataRegistry - singleton that loads `entity-metadata.json` and provides runtime access |
-| 2 | [lib/models/entity_metadata.dart](../frontend/lib/models/entity_metadata.dart) | ~400 | EntityMetadata class - complete entity definition including fieldGroups, displayColumns, etc. |
-| 3 | [lib/models/field_definition.dart](../frontend/lib/models/field_definition.dart) | ~150 | FieldDefinition class - field types including `foreignKey`, `references`, `displayField` |
+| 1 | [lib/services/entity_metadata.dart](../../frontend/lib/services/entity_metadata.dart) | ~200 | EntityMetadataRegistry - singleton that loads `entity-metadata.json` and provides runtime access |
+| 2 | [lib/models/entity_metadata.dart](../../frontend/lib/models/entity_metadata.dart) | ~400 | EntityMetadata class - complete entity definition including fieldGroups, displayColumns, etc. |
+| 3 | [lib/models/field_definition.dart](../../frontend/lib/models/field_definition.dart) | ~150 | FieldDefinition class - field types including `foreignKey`, `references`, `displayField` |
 
 **Key Insights:**
 - EntityMetadataRegistry is initialized in `main.dart` at app startup
@@ -57,8 +57,8 @@ Understanding CRUD operations.
 
 | Priority | File | Lines | Purpose |
 |----------|------|-------|---------|
-| 4 | [lib/services/generic_entity_service.dart](../frontend/lib/services/generic_entity_service.dart) | ~200 | ALL entity CRUD through one service - `getAll()`, `getById()`, `create()`, `update()`, `delete()` |
-| 5 | [lib/services/api/api_client.dart](../frontend/lib/services/api/api_client.dart) | ~200 | HTTP client that calls backend API |
+| 4 | [lib/services/generic_entity_service.dart](../../frontend/lib/services/generic_entity_service.dart) | ~200 | ALL entity CRUD through one service - `getAll()`, `getById()`, `create()`, `update()`, `delete()` |
+| 5 | [lib/services/api/api_client.dart](../../frontend/lib/services/api/api_client.dart) | ~200 | HTTP client that calls backend API |
 
 **Key Insights:**
 - `GenericEntityService` works with `Map<String, dynamic>` - no typed models
@@ -71,8 +71,8 @@ Understanding the two main screens where junction entities will appear.
 
 | Priority | File | Lines | Purpose |
 |----------|------|-------|---------|
-| 6 | [lib/screens/entity_screen.dart](../frontend/lib/screens/entity_screen.dart) | ~200 | **LIST SCREEN** - Generic entity list for ANY entity. Uses `FilterableDataTable` |
-| 7 | [lib/screens/entity_detail_screen.dart](../frontend/lib/screens/entity_detail_screen.dart) | ~450 | **DETAIL SCREEN** - Single entity view/edit. Uses `EntityDetailCard` |
+| 6 | [lib/screens/entity_screen.dart](../../frontend/lib/screens/entity_screen.dart) | ~200 | **LIST SCREEN** - Generic entity list for ANY entity. Uses `FilterableDataTable` |
+| 7 | [lib/screens/entity_detail_screen.dart](../../frontend/lib/screens/entity_detail_screen.dart) | ~450 | **DETAIL SCREEN** - Single entity view/edit. Uses `EntityDetailCard` |
 
 **Key Insights:**
 - Both screens are 100% metadata-driven - `EntityMetadataRegistry.get(entityName)`
@@ -86,9 +86,9 @@ Understanding how tables are built from metadata.
 
 | Priority | File | Lines | Purpose |
 |----------|------|-------|---------|
-| 8 | [lib/services/metadata_table_column_factory.dart](../frontend/lib/services/metadata_table_column_factory.dart) | ~400 | **CRITICAL** - Generates `List<TableColumn>` from metadata. Handles FK fields with `ForeignKeyLookupCell` |
-| 9 | [lib/widgets/organisms/tables/data_table.dart](../frontend/lib/widgets/organisms/tables/data_table.dart) | ~400 | AppDataTable - the core table organism |
-| 10 | [lib/widgets/organisms/tables/filterable_data_table.dart](../frontend/lib/widgets/organisms/tables/filterable_data_table.dart) | ~150 | FilterableDataTable - composes filters with AppDataTable |
+| 8 | [lib/services/metadata_table_column_factory.dart](../../frontend/lib/services/metadata_table_column_factory.dart) | ~400 | **CRITICAL** - Generates `List<TableColumn>` from metadata. Handles FK fields with `ForeignKeyLookupCell` |
+| 9 | [lib/widgets/organisms/tables/data_table.dart](../../frontend/lib/widgets/organisms/tables/data_table.dart) | ~400 | AppDataTable - the core table organism |
+| 10 | [lib/widgets/organisms/tables/filterable_data_table.dart](../../frontend/lib/widgets/organisms/tables/filterable_data_table.dart) | ~150 | FilterableDataTable - composes filters with AppDataTable |
 
 **Key Insights:**
 - `MetadataTableColumnFactory.forEntity()` is the entry point for table columns
@@ -102,8 +102,8 @@ Understanding how foreign keys are displayed.
 
 | Priority | File | Lines | Purpose |
 |----------|------|-------|---------|
-| 11 | [lib/widgets/atoms/cells/foreign_key_lookup_cell.dart](../frontend/lib/widgets/atoms/cells/foreign_key_lookup_cell.dart) | ~100 | Loads & displays FK display value with caching |
-| 12 | [lib/utils/table_cell_builders.dart](../frontend/lib/utils/table_cell_builders.dart) | ~150 | Helper functions for building table cells |
+| 11 | [lib/widgets/atoms/cells/foreign_key_lookup_cell.dart](../../frontend/lib/widgets/atoms/cells/foreign_key_lookup_cell.dart) | ~100 | Loads & displays FK display value with caching |
+| 12 | [lib/utils/table_cell_builders.dart](../../frontend/lib/utils/table_cell_builders.dart) | ~150 | Helper functions for building table cells |
 
 **Key Insights:**
 - `ForeignKeyLookupCell` makes API call to fetch related entity
@@ -117,9 +117,9 @@ Understanding how forms are built from metadata.
 
 | Priority | File | Lines | Purpose |
 |----------|------|-------|---------|
-| 13 | [lib/widgets/organisms/forms/generic_form.dart](../frontend/lib/widgets/organisms/forms/generic_form.dart) | ~200 | Generic form with flat/grouped layouts |
-| 14 | [lib/widgets/organisms/modals/entity_form_modal.dart](../frontend/lib/widgets/organisms/modals/entity_form_modal.dart) | ~300 | Modal for create/edit operations |
-| 15 | [lib/services/metadata_field_config_factory.dart](../frontend/lib/services/metadata_field_config_factory.dart) | ~700 | **CRITICAL** - Generates form field configs from metadata. Handles FK with async select |
+| 13 | [lib/widgets/organisms/forms/generic_form.dart](../../frontend/lib/widgets/organisms/forms/generic_form.dart) | ~200 | Generic form with flat/grouped layouts |
+| 14 | [lib/widgets/organisms/modals/entity_form_modal.dart](../../frontend/lib/widgets/organisms/modals/entity_form_modal.dart) | ~300 | Modal for create/edit operations |
+| 15 | [lib/services/metadata_field_config_factory.dart](../../frontend/lib/services/metadata_field_config_factory.dart) | ~700 | **CRITICAL** - Generates form field configs from metadata. Handles FK with async select |
 
 **Key Insights:**
 - `MetadataFieldConfigFactory.forEntity()` builds form field configurations
@@ -133,8 +133,8 @@ Understanding how routes are generated.
 
 | Priority | File | Lines | Purpose |
 |----------|------|-------|---------|
-| 16 | [lib/core/routing/app_router.dart](../frontend/lib/core/routing/app_router.dart) | ~750 | GoRouter configuration with dynamic entity routes |
-| 17 | [lib/core/routing/app_routes.dart](../frontend/lib/core/routing/app_routes.dart) | ~100 | Route helpers (entityList, entityDetail) |
+| 16 | [lib/core/routing/app_router.dart](../../frontend/lib/core/routing/app_router.dart) | ~750 | GoRouter configuration with dynamic entity routes |
+| 17 | [lib/core/routing/app_routes.dart](../../frontend/lib/core/routing/app_routes.dart) | ~100 | Route helpers (entityList, entityDetail) |
 
 **Key Insights:**
 - Routes are generated dynamically from EntityMetadataRegistry
@@ -147,9 +147,9 @@ Understanding state management.
 
 | Priority | File | Lines | Purpose |
 |----------|------|-------|---------|
-| 18 | [lib/providers/app_provider.dart](../frontend/lib/providers/app_provider.dart) | ~100 | Root provider setup |
-| 19 | [lib/providers/auth_provider.dart](../frontend/lib/providers/auth_provider.dart) | ~200 | Authentication state, user info |
-| 20 | [lib/providers/preferences_provider.dart](../frontend/lib/providers/preferences_provider.dart) | ~300 | User preferences state |
+| 18 | [lib/providers/app_provider.dart](../../frontend/lib/providers/app_provider.dart) | ~100 | Root provider setup |
+| 19 | [lib/providers/auth_provider.dart](../../frontend/lib/providers/auth_provider.dart) | ~200 | Authentication state, user info |
+| 20 | [lib/providers/preferences_provider.dart](../../frontend/lib/providers/preferences_provider.dart) | ~300 | User preferences state |
 
 ---
 

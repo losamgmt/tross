@@ -31,7 +31,7 @@
 - Defense in depth: Auth0 + RBAC + RLS + validation
 - Zero trust architecture
 - Fail closed, never open
-- Audit everything
+- Record everything (security events + data-change trail)
 
 ### Test-Driven Quality
 
@@ -196,24 +196,15 @@ status VARCHAR(50) DEFAULT 'active'
 
 ### 6. Strategy Pattern for Auth
 
-**Decision:** Pluggable auth strategies (Auth0Strategy, DevelopmentStrategy).
+**Decision:** Pluggable auth strategies behind a single authentication interface — a development strategy (file-based test users) and an Auth0 strategy (OAuth2/OIDC) — selected at runtime based on mode.
 
 **Why:**
 
-- Single interface: `authenticate(credentials)`
+- Single, strategy-agnostic interface for all callers
 - Easy to swap strategies (dev ↔ prod)
 - Testable in isolation
 
-**Implementation:**
-
-```javascript
-// backend/services/auth/index.js
-const strategy = AppConfig.devAuthEnabled
-  ? new DevelopmentStrategy()
-  : new Auth0Strategy();
-
-const user = await strategy.authenticate(credentials);
-```
+The concrete strategy classes and the selection logic live in the auth service (see `backend/services/auth/`).
 
 ---
 
@@ -328,7 +319,7 @@ This is field-level metadata describing how the name is constructed—like a val
 ```javascript
 req.dbUser; // Authenticated user (from authenticateToken)
 req.entityMetadata; // Entity metadata (from attachEntity/extractEntity)
-req.rlsContext; // RLS context for filtering (from enforceRLS) - ADR-008
+req.rlsContext; // RLS context for filtering (from enforceRLS) - ADR-011
 req.validated = {
   body, // Validated request body
   query, // Validated query params

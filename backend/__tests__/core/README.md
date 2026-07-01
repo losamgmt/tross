@@ -32,7 +32,7 @@ describe("My Feature Tests", () => {
 
 ```javascript
 // Standard integration test context
-const ctx = createTestContext({ roles: ["admin", "user"] });
+const ctx = createTestContext({ roles: ["admin", "customer"] });
 
 // Unit test context (no DB)
 const ctx = TestContext.unit();
@@ -94,7 +94,7 @@ ctx.pool            // Returns pg Pool instance
 await ctx.pool.query("SELECT * FROM users WHERE id = $1", [userId]);
 
 // Create additional users within tests
-const newUser = await ctx.createUser("viewer");
+const newUser = await ctx.createUser("customer");
 // newUser.user.id, newUser.token
 ```
 

@@ -6,8 +6,8 @@ Get Tross running locally in under 5 minutes.
 
 ## Prerequisites
 
-- **Node.js** v18+
-- **Flutter** v3.x+
+- **Node.js** — version per the repo's `package.json` engines / `.nvmrc`
+- **Flutter** (3.x)
 - **PostgreSQL** 14+ (or use Docker)
 - **Git**
 
@@ -60,8 +60,8 @@ cp .env.example .env
 
 ```bash
 cd backend
-npm run migrate
-npm run seed  # Optional: adds test data
+npm run db:migrate
+# Optionally seed test data (see the seed scripts in package.json)
 ```
 
 ---
@@ -90,7 +90,7 @@ flutter run -d chrome
 
 ### Access Points
 
-> **Port configuration:** See [`config/ports.js`](../config/ports.js) for current port assignments.
+> **Port configuration:** See [`config/ports.js`](../../config/ports.js) for current port assignments.
 
 - **Frontend:** `http://localhost:<FRONTEND_PORT>`
 - **Backend API:** `http://localhost:<BACKEND_PORT>`
@@ -115,7 +115,7 @@ GET /api/dev/token?role=admin
 
 ### Production Mode (Auth0)
 
-See [Auth Guide](AUTH.md) for Auth0 setup.
+See [Auth Guide](../reference/AUTH.md) for Auth0 setup.
 
 ---
 
@@ -186,9 +186,9 @@ flutter run -d chrome
 ## Next Steps
 
 - **[Development Workflow](DEVELOPMENT.md)** - Learn the daily dev process
-- **[Architecture](ARCHITECTURE.md)** - Understand core patterns
-- **[Testing Guide](TESTING.md)** - Write tests effectively
-- **[API Documentation](API.md)** - Explore available endpoints
+- **[Architecture](../architecture/ARCHITECTURE.md)** - Understand core patterns
+- **[Testing Guide](../reference/TESTING.md)** - Write tests effectively
+- **[API Documentation](../reference/API.md)** - Explore available endpoints
 
 ---
 

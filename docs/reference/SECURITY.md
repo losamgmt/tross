@@ -9,7 +9,7 @@ Defense-in-depth security architecture.
 **Zero Trust:** Verify everything, trust nothing.  
 **Defense in Depth:** Multiple independent layers.  
 **Fail Closed:** Security failures deny access, never grant.  
-**Audit Everything:** All security events logged.
+**Record Everything:** Significant security and data-change events are durably logged.
 
 ---
 
@@ -41,24 +41,7 @@ Database Query
 - JWT token validation (RS256 → HS256)
 - Dev mode uses file-based test users
 
-**Code:**
-
-```javascript
-// backend/middleware/auth.js
-async function authenticateToken(req, res, next) {
-  const token = req.headers.authorization?.split(" ")[1];
-  if (!token) return res.status(401).json({ error: "No token provided" });
-
-  const decoded = jwt.verify(token, process.env.JWT_SECRET);
-  req.user = await User.findById(decoded.userId);
-
-  if (!req.user || !req.user.is_active) {
-    return res.status(401).json({ error: "Invalid or inactive user" });
-  }
-
-  next();
-}
-```
+**Behavior:** The authentication middleware extracts the bearer token, verifies its signature using the centrally-managed signing secret, loads the corresponding user, and fails closed — rejecting any request with a missing or invalid token, or an inactive user.
 
 #### Development User Protection (Read-Only Mode)
 
@@ -74,25 +57,7 @@ data. This is a defense-in-depth security measure implemented at the middleware 
 - Allowing writes could corrupt shared development databases
 - Creates clear separation between "viewing" and "modifying" data
 
-**Implementation:**
-
-```javascript
-// backend/middleware/auth.js - Global write protection for dev users
-const MUTATING_METHODS = ["POST", "PUT", "PATCH", "DELETE"];
-
-// After setting req.dbUser for dev users:
-if (MUTATING_METHODS.includes(req.method)) {
-  logger.security("DEV_WRITE_BLOCKED", {
-    method: req.method,
-    path: req.path,
-    devUser: req.devUser.name,
-  });
-  return ResponseFormatter.forbidden(
-    res,
-    "Development users have read-only access. Sign in with Auth0 to modify data.",
-  );
-}
-```
+**Implementation:** A global middleware guard blocks all mutating HTTP methods (write verbs) for dev users — returning 403 Forbidden and emitting a `DEV_WRITE_BLOCKED` security event — while read requests pass through under normal role permissions.
 
 **Behavior:**
 
@@ -110,97 +75,28 @@ All blocked write attempts are logged with event type `DEV_WRITE_BLOCKED`.
 
 **Purpose:** Verify permission for action
 
-**Roles:** (Hierarchical)
+**Roles:** A hierarchy of roles (e.g. Admin, Manager, Dispatcher, Technician, Client) ordered by privilege. The authoritative set of roles and their ordering is defined in the role metadata (the SSOT) and loaded at startup.
 
-1. Admin (level 5) - Full access
-2. Manager (level 4) - Team management
-3. Dispatcher (level 3) - Work order assignment
-4. Technician (level 2) - Own work orders
-5. Client (level 1) - Own data only
+**Permission Matrix:** Derived from metadata — the generated permissions configuration is the SSOT.
 
-**Permission Matrix:** See `config/permissions.json`
-
-**Code:**
-
-```javascript
-// backend/middleware/auth.js
-function requirePermission(permission) {
-  return (req, res, next) => {
-    const userRole = req.user.role;
-    const [resource, action] = permission.split(':');
-
-    if (!hasPermission(userRole, resource, action)) {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
-
-    next();
-  };
-}
-
-// Usage in routes
-router.get('/api/customers',
-  authenticateToken,
-  requirePermission('customers:read'),
-  async (req, res) => { ... }
-);
-```
+**Pattern:** Route handlers are guarded by a permission middleware that checks the authenticated user's role against the `resource:action` required by the route, denying with 403 when no grant exists. Grants are composed from the role hierarchy, not hand-coded per route.
 
 ---
 
 ### Tier 3: RLS (Row-Level Security)
 
-**Purpose:** Filter data by ownership
+**Purpose:** Filter data by ownership, so each role sees only the rows it is entitled to.
 
-**Implementation (ADR-008):**
+**Model:** Row-level access is **grant-based and deny-by-default** — a role sees a row only when an explicit rule grants access; with no matching grant, access is denied. The rules are **declared in entity metadata** (the SSOT) and compiled into query filters, so there is no hand-written per-query filtering.
 
-- RLS policy value IS the filter configuration (data-driven, no code)
-- SQL queries add ownership filters based on filterConfig
-- Middleware attaches `req.rlsContext` with filter configuration and profile IDs
+**Access scopes** a rule can grant:
 
-**Filter Config Semantics:**
+- **Direct** — the row references the user's own profile or identity.
+- **Junction** — access flows through a join table relating the user to the row.
+- **Parent-derived** — a child row inherits access from its parent entity (see Sub-Entity Security).
+- **Multi-hop** — access traverses a bounded chain of relationships.
 
-| Value | Meaning |
-|-------|--------|
-| `null` | No filter (all records visible) |
-| `false` | Deny all access |
-| `'$parent'` | Sub-entity: access controlled by parent |
-| `'field_name'` | Shorthand for `{ field: 'field_name', value: 'userId' }` |
-| `{ field, value }` | Filter: `WHERE table.field = $rlsContext[value]` |
-
-**Architecture:**
-
-```javascript
-// RLS policies defined in backend/config/models/*-metadata.js
-rlsPolicy: {
-  customer: { field: 'customer_id', value: 'customerProfileId' },
-  technician: { field: 'assigned_technician_id', value: 'technicianProfileId' },
-  dispatcher: null,  // All records
-  manager: null,
-  admin: null,
-},
-
-// RLS filter applied by db/helpers/rls-filter-helper.js
-// Middleware: middleware/row-level-security.js
-```
-
-#### Context Values Available
-
-| Value Key | Source | Description |
-|-----------|--------|-------------|
-| `userId` | `users.id` | Current user's ID |
-| `customerProfileId` | `users.customer_profile_id` | User's customer profile ID |
-| `technicianProfileId` | `users.technician_profile_id` | User's technician profile ID |
-
-#### Unknown Config Handling
-
-Invalid filterConfig defaults to deny (fail closed):
-
-```javascript
-// db/helpers/rls-filter-helper.js
-if (!config || typeof config !== 'object' || !config.field) {
-  return { clause: '1=0', params: [], applied: true }; // Deny access
-}
-```
+The concrete rule shape, operators, and traversal limits live in the RLS engine and are governed by the row-level-security ADR. This document deliberately does not transcribe rule structures, so it cannot drift from the engine.
 
 ---
 
@@ -235,42 +131,13 @@ Return child records
 
 #### Metadata Configuration
 
-Sub-entities declare `parent_entity_access` in their RLS policy:
-
-```javascript
-// backend/config/models/file-attachment-metadata.js
-rlsPolicy: {
-  customer: 'parent_entity_access',
-  technician: 'parent_entity_access',
-  dispatcher: 'parent_entity_access',
-  manager: 'parent_entity_access',
-  admin: 'all_records',
-},
-```
-
-This is a declarative marker. The actual enforcement happens in middleware.
+A sub-entity declares — in its metadata — that its access is **parent-derived** rather than defining its own row rules. This is a declarative marker; enforcement happens in middleware.
 
 #### Middleware Enforcement
 
-Sub-entity routes use `sub-entity.js` middleware:
+Sub-entity routes check permission against the **parent** entity's resource (not the sub-entity), denying when the parent grant is absent.
 
-```javascript
-// middleware/sub-entity.js
-function requireParentPermission(operation) {
-  return (req, res, next) => {
-    const { rlsResource } = req.parentMetadata;
-    
-    // Check permission on PARENT entity, not sub-entity
-    if (!req.permissions.hasPermission(rlsResource, operation)) {
-      return next(new AppError('Forbidden', 403));
-    }
-    next();
-  };
-}
-```
-
-**Key Insight:** The sub-entity itself has no separate RLS resource in `permissions.json`.
-Access is derived entirely from the parent entity's permissions.
+**Key Insight:** The sub-entity has no separate RLS resource of its own. Access is derived entirely from the parent entity's permissions.
 
 #### Why This Pattern?
 
@@ -279,14 +146,9 @@ Access is derived entirely from the parent entity's permissions.
 3. **Security** - Parent's RLS still applies (customer can't read another customer's work order files)
 4. **Maintainability** - Adding a new sub-entity doesn't require updating permissions.json
 
-#### Implementation Checklist
+#### Adding a Sub-Entity
 
-To add a new sub-entity:
-
-1. Create metadata with `rlsPolicy: { *: 'parent_entity_access' }`
-2. Set `routeConfig.useGenericRouter: false` (custom routes required)
-3. Create sub-router using `middleware/sub-entity.js` helpers
-4. Mount via `route-loader.js` or `createFileSubRouter()` pattern
+Conceptually: declare the sub-entity as parent-derived in metadata, opt it out of the generic router (so it gets custom routes), and mount it with the sub-entity middleware helpers so parent-permission checks apply. The concrete configuration keys and helpers live in code.
 
 ---
 
@@ -300,24 +162,7 @@ To add a new sub-entity:
 2. **API Schema** - JSON Schema validation
 3. **Database** - CHECK constraints, foreign keys
 
-**Example:**
-
-```javascript
-// backend/validators/customer-validator.js
-const customerSchema = {
-  email: { type: 'string', format: 'email', maxLength: 255 },
-  name: { type: 'string', minLength: 1, maxLength: 255 },
-  phone: { type: 'string', pattern: '^\\+?[0-9]{10,15}$' }
-};
-
-// Validation middleware
-router.post('/api/customers',
-  authenticateToken,
-  requirePermission('customers:create'),
-  validateSchema(customerSchema),
-  async (req, res) => { ... }
-);
-```
+Validation is schema-driven: each entity's field rules are declared in metadata and enforced as middleware on write routes, rejecting malformed input before it reaches the database. The schemas derive from the metadata SSOT, not hand-maintained per route.
 
 ---
 
@@ -351,186 +196,50 @@ const result = await db.query(
 
 - **Frontend:** Flutter automatically escapes strings
 - **Backend:** Express doesn't render HTML (JSON API only)
-- **Headers:** `helmet` middleware sets security headers
-
-```javascript
-// backend/server.js
-app.use(
-  helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-      },
-    },
-    xssFilter: true,
-    noSniff: true,
-    frameguard: { action: "deny" },
-  }),
-);
-```
+- **Headers:** `helmet` middleware sets security headers (CSP, no-sniff, frame-deny, and related protections); the exact header policy is configured in the server setup.
 
 ---
 
 ### CORS Configuration
 
-**Restrict cross-origin requests:**
+Cross-origin requests are restricted to the configured frontend origin, with credentialed requests and an explicit method/header allow-list. The origin is environment-configured and must be set in every environment.
 
-```javascript
-// backend/server.js
-app.use(
-  cors({
-    origin: process.env.FRONTEND_URL,
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  }),
-);
-```
-
-> **Note:** `FRONTEND_URL` must be set in all environments. See [Environment Variables](../operations/ENVIRONMENT_VARIABLES.md).
+> **Note:** See [Environment Variables](ENVIRONMENT_VARIABLES.md).
 
 ---
 
 ### Rate Limiting
 
-**Prevent brute force attacks:**
-
-```javascript
-// backend/middleware/rate-limit.js
-const rateLimit = require("express-rate-limit");
-
-const limiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 100, // 100 requests per minute
-  message: "Too many requests, please try again later",
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-app.use("/api", limiter);
-```
+API requests are rate-limited to mitigate brute-force and abuse. Limits apply per time window and are configured centrally (the limiter configuration is the SSOT for exact thresholds).
 
 ---
 
 ### Secret Management
 
-**Never hardcode secrets.**
+**Never hardcode secrets.** Secrets are supplied via environment configuration and read through a centralized config layer — never inlined in code or documentation.
 
-#### Fail-Fast Pattern (March 2026 Update)
+#### Fail-Fast Pattern
 
-**Problem:** Module-level fallbacks like `process.env.JWT_SECRET || 'dev-secret-key'` can silently use insecure defaults if the environment variable isn't set, defeating startup validation.
+**Problem:** Module-level fallbacks (defaulting a missing secret to a hard-coded value) can silently run with an insecure default, defeating startup validation.
 
-**Solution:** Critical secrets use a fail-fast getter pattern:
+**Solution:** Critical secrets are read through a fail-fast accessor that throws immediately if the secret is missing in dev or production, while still allowing tests to run without explicit configuration. Validation happens at the point of use, so there are no silent fallbacks. The same fail-fast philosophy applies on the frontend, where release builds refuse to start on missing critical configuration rather than falling back to defaults.
 
-```javascript
-// backend/config/app-config.js
-jwt: {
-  get secret() {
-    const secret = process.env.JWT_SECRET;
-    if (!secret) {
-      // Test mode: allow unit tests without explicit JWT_SECRET
-      if (isTest()) {
-        return 'test-only-jwt-secret-do-not-use-in-production';
-      }
-      // Dev/Production: FAIL IMMEDIATELY
-      throw new Error('SECURITY ERROR: JWT_SECRET environment variable is not set.');
-    }
-    return secret;
-  },
-  // ...
-}
-```
+#### Required Configuration
 
-**Benefits:**
-- ✅ No silent fallbacks in dev or production
-- ✅ Clear error message when secret is missing
-- ✅ Tests can still run without explicit configuration
-- ✅ Validation happens at the point of use, not import time
-
-**Files using this pattern:**
-- `backend/config/app-config.js` - Centralized `jwt.secret` getter
-- `backend/middleware/auth.js` - Uses `AppConfig.jwt.secret`
-- `backend/services/token-service.js` - Uses `AppConfig.jwt.secret`
-- `backend/services/auth/DevAuthStrategy.js` - Uses `AppConfig.jwt.secret`
-- `backend/services/auth/Auth0Strategy.js` - Uses `AppConfig.jwt.secret`
-
-**Frontend Equivalent:**
-
-Entity metadata loading also uses fail-fast in release builds:
-
-```dart
-// frontend/lib/services/entity_metadata.dart
-} catch (e) {
-  if (kReleaseMode) {
-    throw StateError('FATAL: Failed to load entity-metadata.json.');
-  }
-  // Debug mode only: use fallback defaults with warning
-  _loadDefaults();
-}
-```
-
-**Configuration:**
-
-```bash
-# .env (NOT committed to git)
-JWT_SECRET=your-very-long-random-secret-at-least-64-characters
-DATABASE_URL=postgresql://user:password@localhost:5432/tross
-AUTH0_DOMAIN=your-tenant.auth0.com
-AUTH0_CLIENT_ID=your-client-id
-AUTH0_CLIENT_SECRET=your-client-secret
-```
-
-**Validation:**
-
-```javascript
-// backend/utils/env-validator.js
-if (process.env.NODE_ENV === "production") {
-  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 64) {
-    throw new Error("JWT_SECRET must be at least 64 characters in production");
-  }
-
-  if (process.env.DATABASE_URL.includes("localhost")) {
-    throw new Error("Production database cannot use localhost");
-  }
-}
-```
+The deployment supplies — via environment, never committed — the JWT signing secret, the database connection URL, and the Auth0 tenant credentials. A startup **environment validator** enforces production requirements (a signing secret of sufficient minimum strength, and a non-local database URL) and fails fast when they are not met. The validator is the source of truth for these requirements; this document deliberately does not restate specific values.
 
 ---
 
-## Audit Logging
+## Event Recording
 
-**All security events logged:**
+The platform maintains a **durable record of significant events** for accountability and investigation. Two distinct scopes share this capability:
 
-- Login attempts (success/failure)
-- Permission denials
-- CRUD operations
-- Database changes
+- **Security/auth events** — authentication attempts, permission denials, and other security-relevant actions.
+- **Data-change history (the "audit" trail)** — who changed which record, including the before/after of the change.
 
-**Implementation:**
+Both are recorded centrally and distinguished by the kind of event; each entry captures the actor, the action, the affected resource, and contextual metadata. The concrete schema lives in the database and migrations (the SSOT) and is intentionally not transcribed here.
 
-```javascript
-// backend/services/audit-service.js
-async function logEvent(eventType, details, userId = null) {
-  await db.query(
-    `INSERT INTO audit_logs (event_type, details, user_id) 
-     VALUES ($1, $2, $3)`,
-    [eventType, JSON.stringify(details), userId],
-  );
-}
-
-// Usage
-await auditService.logEvent(
-  "user.login.success",
-  {
-    email: user.email,
-    ip: req.ip,
-    userAgent: req.headers["user-agent"],
-  },
-  user.id,
-);
-```
+> Universal by default: data changes are recorded as a secure-by-default accountability substrate, not gated per-entity.
 
 ---
 
@@ -539,8 +248,8 @@ await auditService.logEvent(
 **Before Deployment:**
 
 - [ ] All secrets in environment variables (not code)
-- [ ] JWT_SECRET is 64+ characters with mixed case/numbers/special
-- [ ] DATABASE_URL doesn't use localhost
+- [ ] JWT signing secret meets the enforced minimum strength
+- [ ] Database URL is non-local (production)
 - [ ] Auth0 production credentials configured
 - [ ] CORS restricted to production frontend URL
 - [ ] Rate limiting enabled
@@ -548,8 +257,8 @@ await auditService.logEvent(
 - [ ] All SQL queries parameterized
 - [ ] Input validation on all endpoints
 - [ ] RBAC permission checks in place
-- [ ] RLS implemented for multi-tenant data
-- [ ] Audit logging enabled
+- [ ] RLS enforced for row-level ownership
+- [ ] Event recording enabled
 - [ ] Error messages don't leak sensitive info
 - [ ] No console.log in production code
 
@@ -559,8 +268,8 @@ await auditService.logEvent(
 
 **If security breach suspected:**
 
-1. **Contain:** Revoke all JWT tokens (rotate JWT_SECRET)
-2. **Investigate:** Check audit logs for unauthorized access
+1. **Contain:** Revoke all sessions by rotating the JWT signing secret
+2. **Investigate:** Check the event record for unauthorized access
 3. **Notify:** Inform affected users
 4. **Fix:** Patch vulnerability
 5. **Monitor:** Watch for continued attacks
@@ -570,9 +279,9 @@ await auditService.logEvent(
 ## Security Resources
 
 - **Auth0 Setup:** [AUTH.md](AUTH.md)
-- **Environment Variables:** `backend/ENVIRONMENT_VARIABLES.md`
-- **Permission Matrix:** `config/permissions.json`
-- **Database Security:** [ARCHITECTURE.md](ARCHITECTURE.md#triple-tier-security)
+- **Environment Variables:** [ENVIRONMENT_VARIABLES.md](ENVIRONMENT_VARIABLES.md)
+- **Permission Matrix:** the generated permissions configuration (SSOT)
+- **Database Security:** [ARCHITECTURE.md](../architecture/ARCHITECTURE.md#triple-tier-security)
 
 ---
 
@@ -596,24 +305,9 @@ npm update
 
 ### Known Transitive Vulnerabilities
 
-**AWS SDK / fast-xml-parser (Low Severity)**
+Some transitive dependencies carry low-severity advisories that are **accepted and tracked** rather than force-overridden — typically when the upstream package pins the version deliberately, our usage does not reach the advisory's conditions, and forcing a different version risks subtle breakage. `npm audit` is the source of truth for current advisory status.
 
-`npm audit` reports 20 low-severity vulnerabilities in `fast-xml-parser@5.3.6`, a transitive dependency of `@aws-sdk/client-s3`. This is **accepted and tracked**.
-
-**Why we don't override:**
-- AWS SDK explicitly pins `"fast-xml-parser": "5.3.6"` (exact version, not semver range)
-- AWS has tested their SDK against this specific version
-- Forcing a different version could cause subtle XML parsing issues in S3 operations
-- The vulnerability (GHSA-fj3w-jwp8-x2g3: stack overflow in `XMLBuilder` with `preserveOrder`) requires specific conditions our code doesn't trigger
-
-**Our usage is safe because:**
-- We don't use `XMLBuilder` directly
-- Our S3 operations are simple file CRUD (`PutObject`, `GetObject`, `DeleteObject`, `HeadObject`)
-- No deeply nested XML parsing from untrusted sources
-
-**Action:** Monitor AWS SDK releases. When the SDK updates its `fast-xml-parser` dependency, upgrade via `npm update`.
-
-> **Note:** Run `npm audit` to check current vulnerability status. These notes capture point-in-time decisions that may change.
+**Policy:** review advisories on each `npm audit`; override only when an advisory is actually reachable from our usage; otherwise record the acceptance rationale at the point of decision and re-evaluate when the upstream updates.
 
 ---
 

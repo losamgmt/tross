@@ -108,8 +108,10 @@ router.post('/dev-auth/login', (req, res) => {
 
 Allows testing without Auth0:
 
-- Admin user: `admin@tross.com` / `admin123`
-- Client user: `client@tross.com` / `client123`
+- Admin user: `<redacted>` / `<redacted>`
+- Client user: `<redacted>` / `<redacted>`
+
+> _Example dev credentials redacted for security. Pre-configured test users are defined in the dev test-user config (the source of truth); credentials are never hardcoded in documentation._
 
 ---
 
