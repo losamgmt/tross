@@ -911,6 +911,17 @@ class GenericEntityService {
    *
    * SRP: ONLY inserts a new row using metadata-driven field validation
    *
+   * TRANSACTION SEMANTICS (NOT wrapped in a DB transaction):
+   * - The INSERT is auto-committed via db.query() the moment it runs.
+   * - afterChange hooks then run POST-COMMIT and are reactive: their failures are
+   *   caught and logged inside evaluateAfterHooks — they never roll back the write
+   *   or fail the request. Recursion is bounded by `options.skipHooks` and the hook
+   *   cascade-depth cap (HOOK_LIMITS.maxCascadeDepth).
+   * - Audit is written post-commit as a blocking await (audit integrity is
+   *   intentionally allowed to surface as an error).
+   * - Contrast: delete() and batch() DO use BEGIN/COMMIT/ROLLBACK. Wrapping the
+   *   write + afterChange + audit in a single transaction is deferred to P2.
+   *
    * @param {string} entityName - Entity name (e.g., 'user', 'role', 'customer')
    * @param {Object} data - Entity data to insert
    * @param {Object} [options={}] - Additional options
@@ -1059,6 +1070,9 @@ class GenericEntityService {
 
     // =========================================================================
     // EVALUATE AFTER-CHANGE HOOKS FOR CREATE (trigger actions)
+    // POST-COMMIT + reactive: the row is already persisted; hook failures are
+    // caught/logged inside evaluateAfterHooks and never fail the request or roll
+    // back the write.
     // Hooks are defined in metadata.fields[fieldName].afterChange
     // For create, oldValue is null/undefined (field didn't exist)
     // Skip if options.skipHooks is true (prevents recursive hook execution)
@@ -1101,6 +1115,17 @@ class GenericEntityService {
    * Update an existing entity by ID
    *
    * SRP: ONLY updates a row using metadata-driven field validation
+   *
+   * TRANSACTION SEMANTICS (NOT wrapped in a DB transaction):
+   * - beforeChange hooks run PRE-write and may block the update (403) or require
+   *   approval (202) — a blocked update never persists.
+   * - The UPDATE is auto-committed via db.query(); afterChange hooks then run
+   *   POST-COMMIT and are reactive: their failures are caught and logged inside
+   *   evaluateAfterHooks — they never roll back the write or fail the request.
+   *   Recursion is bounded by `options.skipHooks` and HOOK_LIMITS.maxCascadeDepth.
+   * - Audit is written post-commit as a blocking await.
+   * - Contrast: delete() and batch() DO use BEGIN/COMMIT/ROLLBACK. Full
+   *   transactionalization of update is deferred to P2.
    *
    * @param {string} entityName - Entity name (e.g., 'user', 'role', 'customer')
    * @param {number|string} id - Primary key value
