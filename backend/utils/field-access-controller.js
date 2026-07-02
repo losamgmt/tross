@@ -70,13 +70,20 @@ function normalizeRoleName(role) {
  * @returns {boolean} True if user has permission
  */
 function hasFieldPermission(userRole, requiredRole) {
-  // 'none' means no one can do this operation
-  if (requiredRole === 'none') {
+  // Fail closed: an unspecified ('none', undefined, null, '') or unresolvable
+  // required role is never satisfiable. This prevents a fail-OPEN when an
+  // operation isn't defined in fieldAccess (requiredRole would be undefined).
+  if (!requiredRole || requiredRole === 'none') {
     return false;
   }
 
   const userIndex = getRoleIndex(userRole);
   const requiredIndex = getRoleIndex(requiredRole);
+
+  // Unresolvable required role (not in the hierarchy) → deny.
+  if (requiredIndex < 0) {
+    return false;
+  }
 
   // User's role must be >= required role in hierarchy
   return userIndex >= requiredIndex;

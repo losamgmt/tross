@@ -157,6 +157,16 @@ describe("field-access-controller", () => {
       expect(hasFieldPermission(5, "customer")).toBe(true); // admin
       expect(hasFieldPermission(1, "admin")).toBe(false); // customer
     });
+
+    test("fails closed when required role is undefined/null/empty (unspecified operation)", () => {
+      expect(hasFieldPermission("admin", undefined)).toBe(false);
+      expect(hasFieldPermission("admin", null)).toBe(false);
+      expect(hasFieldPermission("admin", "")).toBe(false);
+    });
+
+    test("fails closed when required role is unresolvable (not in hierarchy)", () => {
+      expect(hasFieldPermission("admin", "superuser")).toBe(false);
+    });
   });
 
   // =============================================================================
@@ -265,6 +275,16 @@ describe("field-access-controller", () => {
           "nonexistent_field",
           "read",
         ),
+      ).toBe(false);
+    });
+
+    test("fails closed when the operation is undefined on a defined field", () => {
+      // 'summary' exists in fieldAccess but has no 'purge'/undefined operation → deny
+      expect(
+        canAccessField(mockWorkOrderMetadata, "admin", "summary", "purge"),
+      ).toBe(false);
+      expect(
+        canAccessField(mockWorkOrderMetadata, "admin", "summary", undefined),
       ).toBe(false);
     });
   });
