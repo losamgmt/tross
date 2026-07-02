@@ -93,7 +93,7 @@ run is the only one needing an external dependency (Docker).
 | 1 | T2 — gitignore generated schema | hygiene | repo | trivial |
 | 2 | M12 — field-access fail-closed | security | backend | tiny |
 | 3 | M2 — IN/NIN array cap | security (DoS) | backend | small |
-| 4 | M3 — role-metadata legacy immutableFields | cleanup | backend | small |
+| 4 | M3 — role-metadata immutableFields | ✅ non-issue | backend | none (misdiagnosis) |
 | 5 | H7 — role SSOT drift | correctness | backend | medium (blast radius) |
 | 6 | H3 — transaction-boundary doc/guard | correctness | backend | small |
 | 7a | M1/M13 — unify service signatures (`options.rlsContext`) | refactor | backend | **high (blast radius)** 🚧 isolate |
@@ -139,12 +139,17 @@ run is the only one needing an external dependency (Docker).
 - **Tests:** at-cap succeeds; over-cap → 400 (unit on `buildFilterClause` + an
   integration filter test).
 
-### Step 4 — M3: finish the role-metadata migration
-- **Problem:** `backend/config/models/role-metadata.js` still uses the legacy
-  `immutableFields: ['name','priority']` array (1 of 34 not migrated to
-  field-centric `immutable: true`) → emits a deprecation warning every run.
-- **Fix:** mark `name` and `priority` fields `immutable: true`; delete the array.
-- **Done when:** no deprecation warning; role validation still passes.
+### Step 4 — M3: role-metadata immutableFields → ✅ VERIFIED NON-ISSUE (no action)
+- **Original claim:** `role-metadata.js` uses a legacy top-level `immutableFields`
+  array that emits a deprecation warning.
+- **Verified false (2026-07-02):** the `immutableFields: ['name','priority']` in
+  role-metadata is **nested inside `systemProtected`** (fields locked on *protected
+  role records*) — a legitimate, purposeful config, **not** the deprecated top-level
+  `metadata.immutableFields` array. Confirmed empirically: `metadata.immutableFields`
+  is `undefined`; `getImmutableFields(role)` returns `[]` with **no** deprecation
+  warning (and `metadata-accessors` suppresses warnings in test env regardless). No
+  metadata file uses a top-level `immutableFields` array. **Changing it would break
+  protected-role field-locking.** No action taken.
 
 ### Step 5 — H7: remove role-hierarchy dual authority
 - **Problem:** `backend/config/constants.js` re-exports the **static**
@@ -268,6 +273,9 @@ run is the only one needing an external dependency (Docker).
 - **M15** — export `GET /:entity/fields` is already gated by
   `authenticateToken + extractEntity + requirePermission('read')`; `enforceRLS`
   is correctly N/A for a metadata-only endpoint (no rows). Dropped from the backlog.
+- **M3** — role-metadata's `immutableFields` is nested in `systemProtected`
+  (protected-role field-locking), not the deprecated top-level array; no warning,
+  nothing to migrate. Dropped from the backlog (see Step 4).
 
 ---
 
