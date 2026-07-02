@@ -72,6 +72,7 @@ const SECURITY = Object.freeze({
   REQUEST_LIMITS: Object.freeze({
     JSON_BODY_SIZE: '1mb', // Reduced from 10mb - sufficient for all API operations
     URL_ENCODED_SIZE: '1mb', // Reduced from 10mb - prevents DoS via large form submissions
+    MAX_FILTER_IN_VALUES: 100, // Cap on IN / NOT IN filter list length (resource-abuse guard)
   }),
   HEADERS: Object.freeze({
     CSP_UNSAFE_INLINE: "'unsafe-inline'",

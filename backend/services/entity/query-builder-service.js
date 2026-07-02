@@ -17,6 +17,9 @@
  *   const where = QueryBuilderService.combineWhereClauses([search.clause, filters.clause]);
  */
 
+const AppError = require('../../utils/app-error');
+const { SECURITY } = require('../../config/constants');
+
 class QueryBuilderService {
   // ==========================================================================
   // SEARCH (Text Search with ILIKE)
@@ -165,6 +168,16 @@ class QueryBuilderService {
             const values = Array.isArray(operatorValue)
               ? operatorValue
               : operatorValue.split(',').map((v) => v.trim());
+
+            // Resource-abuse guard: cap the number of values in an IN / NOT IN list
+            const maxInValues = SECURITY.REQUEST_LIMITS.MAX_FILTER_IN_VALUES;
+            if (values.length > maxInValues) {
+              throw new AppError(
+                `Too many values for '${operator}' filter on '${field}' (max ${maxInValues})`,
+                400,
+                'VALIDATION_FAILED',
+              );
+            }
 
             const placeholders = values
               .map((_, i) => `$${currentOffset + i}`)

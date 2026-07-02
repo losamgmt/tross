@@ -229,6 +229,40 @@ describe("QueryBuilderService", () => {
       expect(result.params).toEqual(["1", "2", "3"]);
     });
 
+    test("should accept an IN list at the max cap (100 values)", () => {
+      const values = Array.from({ length: 100 }, (_, i) => String(i + 1));
+      const result = QueryBuilderService.buildFilterClause(
+        { id: { in: values } },
+        filterableFields,
+      );
+
+      expect(result.params).toHaveLength(100);
+    });
+
+    test("should reject an over-cap IN list with a 400 (DoS guard)", () => {
+      const values = Array.from({ length: 101 }, (_, i) => String(i + 1));
+      expect.assertions(2);
+      try {
+        QueryBuilderService.buildFilterClause(
+          { id: { in: values } },
+          filterableFields,
+        );
+      } catch (err) {
+        expect(err.statusCode).toBe(400);
+        expect(err.code).toBe("VALIDATION_FAILED");
+      }
+    });
+
+    test("should reject an over-cap NOT IN list too", () => {
+      const values = Array.from({ length: 101 }, (_, i) => String(i));
+      expect(() =>
+        QueryBuilderService.buildFilterClause(
+          { status: { nin: values } },
+          [...filterableFields, "status"],
+        ),
+      ).toThrow(/Too many values/);
+    });
+
     test("should handle NOT IN operator with array", () => {
       const result = QueryBuilderService.buildFilterClause(
         { status: { nin: ["completed", "cancelled"] } },
