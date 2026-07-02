@@ -425,55 +425,29 @@ class GenericEntityService {
    *
    * @param {string} entityName - Entity name (e.g., 'user', 'role', 'customer')
    * @param {number|string} id - Primary key value
-   * @param {Object} [rlsContext] - RLS context from middleware (ADR-008)
-   * @param {*} [rlsContext.filterConfig] - Filter config: null | false | '$parent' | string | { field, value }
-   * @param {number} [rlsContext.userId] - User ID for RLS filtering
-   * @param {number} [rlsContext.customerProfileId] - Customer profile ID
-   * @param {number} [rlsContext.technicianProfileId] - Technician profile ID
+   * @param {Object} [options={}] - Options bag
+   * @param {string[]} [options.include] - Relationship names to eager-load
+   * @param {Object} [options.rlsContext] - ADR-011 RLS context ({ role, userId, operation, *_profile_id }); omit for internal/system reads (no filtering)
    * @returns {Promise<Object|null>} Entity record or null if not found/not authorized
    * @throws {Error} If entityName is invalid or id cannot be coerced to integer
    *
    * @example
-   *   // Without RLS (internal use, batch jobs, etc.)
+   *   // Internal/system read (no RLS filtering)
    *   const user = await GenericEntityService.findById('user', 123);
-   *   // Returns: { id: 123, email: 'test@example.com', ... } or null
    *
    * @example
-   *   // With RLS (API endpoints) - ADR-008 format
-   *   const user = await GenericEntityService.findById('user', 123, {
-   *     filterConfig: 'id', // Filter users.id = userId
-   *     userId: 123
+   *   // With RLS (API endpoints) — rlsContext from enforceRLS middleware
+   *   const user = await GenericEntityService.findById('user', 123, { rlsContext });
+   *
+   * @example
+   *   // With eager-loaded relationships
+   *   const customer = await GenericEntityService.findById('customer', 123, {
+   *     include: ['units'],
+   *     rlsContext,
    *   });
-   *   // Returns user if authorized, null if not
-   *
-   * @example
-   *   // With include (load related entities)
-   *   const customer = await GenericEntityService.findById('customer', 123, { include: ['units'] });
-   *   // Returns: { id: 123, name: '...', units: [{ id: 1, unit_number: 'A1' }, ...] }
    */
-  static async findById(entityName, id, optionsOrRlsContext = null, rlsContextArg = null) {
-    // Backward compatibility: detect if 3rd arg is options or rlsContext
-    // rlsContext has: filterConfig, userId, policy, customerProfileId, technicianProfileId
-    // options has: include
-    let options = {};
-    let rlsContext = rlsContextArg;
-
-    if (optionsOrRlsContext) {
-      const isRlsContext =
-        optionsOrRlsContext.filterConfig !== undefined ||
-        optionsOrRlsContext.userId !== undefined ||
-        optionsOrRlsContext.policy !== undefined ||
-        optionsOrRlsContext.customerProfileId !== undefined ||
-        optionsOrRlsContext.technicianProfileId !== undefined;
-
-      if (isRlsContext) {
-        // Old signature: findById(entityName, id, rlsContext)
-        rlsContext = optionsOrRlsContext;
-      } else {
-        // New signature: findById(entityName, id, options, rlsContext)
-        options = optionsOrRlsContext;
-      }
-    }
+  static async findById(entityName, id, options = {}) {
+    const { include = null, rlsContext = null } = options || {};
 
     // Get metadata to find primary key name
     const metadata = this._getMetadata(entityName);
@@ -489,14 +463,14 @@ class GenericEntityService {
       entityName,
       metadata.primaryKey,
       safeId,
-      rlsContext,
+      { rlsContext },
     );
 
     // Load relationships if requested and entity found
-    if (entity && options.include && options.include.length > 0) {
+    if (entity && include && include.length > 0) {
       const withRelationships = await loadRelationships(
         entityName,
-        options.include,
+        include,
         [entity],
         { rlsContext },
       );
@@ -721,7 +695,8 @@ class GenericEntityService {
    * @param {string} entityName - Entity name (e.g., 'user', 'role', 'customer')
    * @param {string} field - Field name to search by (must be in filterableFields)
    * @param {any} value - Value to match
-   * @param {Object} [rlsContext] - RLS context from middleware
+   * @param {Object} [options={}] - Options bag
+   * @param {Object} [options.rlsContext] - ADR-011 RLS context; omit for internal/system reads
    * @returns {Promise<Object|null>} Entity record or null if not found
    * @throws {Error} If entityName invalid or field not in filterableFields
    *
@@ -729,7 +704,8 @@ class GenericEntityService {
    *   const user = await GenericEntityService.findByField('user', 'email', 'test@example.com');
    *   // Returns: { id: 1, email: 'test@example.com', ... } or null
    */
-  static async findByField(entityName, field, value, rlsContext = null) {
+  static async findByField(entityName, field, value, options = {}) {
+    const { rlsContext = null } = options || {};
     // Get metadata (throws if invalid entityName)
     const metadata = this._getMetadata(entityName);
 
@@ -1646,7 +1622,7 @@ class GenericEntityService {
 
       for (const { op, index } of accessChecks) {
         const safeId = toSafeInteger(op.id, 'id', { silent: true });
-        const existing = await this.findById(entityName, safeId, rlsContext);
+        const existing = await this.findById(entityName, safeId, { rlsContext });
 
         if (!existing) {
           // Record not found OR user lacks RLS access - same behavior as individual routes

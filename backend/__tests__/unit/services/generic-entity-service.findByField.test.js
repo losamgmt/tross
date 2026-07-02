@@ -182,7 +182,7 @@ describe("GenericEntityService.findByField()", () => {
         "user",
         "email",
         "test@example.com",
-        rlsContext,
+        { rlsContext },
       );
 
       // Should have both email filter AND RLS filter

@@ -561,8 +561,7 @@ describe("GenericEntityService", () => {
 
         // Act - pass role for rule matching
         const result = await GenericEntityService.findById("user", 42, {
-          role: "customer",
-          userId: 42,
+          rlsContext: { role: "customer", userId: 42 },
         });
 
         // Assert
@@ -580,8 +579,7 @@ describe("GenericEntityService", () => {
 
         // Act - ADR-011: admin role has full access (access: null)
         const result = await GenericEntityService.findById("user", 1, {
-          role: "admin",
-          userId: 99,
+          rlsContext: { role: "admin", userId: 99 },
         });
 
         // Assert
@@ -599,8 +597,7 @@ describe("GenericEntityService", () => {
 
         // Act - ADR-011: unknown role has no rules = deny
         const result = await GenericEntityService.findById("invoice", 1, {
-          role: "unknown_role",
-          userId: 99,
+          rlsContext: { role: "unknown_role", userId: 99 },
         });
 
         // Assert
@@ -634,8 +631,7 @@ describe("GenericEntityService", () => {
 
         // Act - ADR-011: customer role can only see own record
         const result = await GenericEntityService.findById("user", 42, {
-          role: "customer",
-          userId: 99, // Different user
+          rlsContext: { role: "customer", userId: 99 }, // Different user
         });
 
         // Assert
@@ -657,9 +653,7 @@ describe("GenericEntityService", () => {
 
         // Act - pass role and profile ID (snake_case)
         const result = await GenericEntityService.findById("work_order", 10, {
-          role: "technician",
-          userId: 1,
-          technician_profile_id: 5,
+          rlsContext: { role: "technician", userId: 1, technician_profile_id: 5 },
         });
 
         // Assert
@@ -677,9 +671,7 @@ describe("GenericEntityService", () => {
 
         // Act - pass role and profile ID (snake_case)
         const result = await GenericEntityService.findById("work_order", 10, {
-          role: "customer",
-          userId: 1,
-          customer_profile_id: 42,
+          rlsContext: { role: "customer", userId: 1, customer_profile_id: 42 },
         });
 
         // Assert

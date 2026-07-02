@@ -192,8 +192,7 @@ function createEntityRouter(entityName, _options = {}) {
       const entity = await GenericEntityService.findById(
         entityName,
         entityId,
-        { include },
-        rlsContext,
+        { include, rlsContext },
       );
 
       if (!entity) {
@@ -288,7 +287,7 @@ function createEntityRouter(entityName, _options = {}) {
       const existing = await GenericEntityService.findById(
         entityName,
         entityId,
-        rlsContext,
+        { rlsContext },
       );
       if (!existing) {
         return ResponseFormatter.notFound(res, `${displayName} not found`);

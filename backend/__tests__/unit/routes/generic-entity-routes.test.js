@@ -422,8 +422,7 @@ describe.each(ENTITIES)(
         expect(GenericEntityService.findById).toHaveBeenCalledWith(
           name,
           expect.any(Number),
-          expect.any(Object), // options (includes `include` array)
-          expect.any(Object), // rlsContext
+          expect.any(Object), // unified options bag ({ include, rlsContext })
         );
       });
 
