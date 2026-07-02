@@ -152,8 +152,8 @@ function createEntityRouter(entityName, _options = {}) {
           sortBy,
           sortOrder,
           include: req.validated.query.include,
+          rlsContext,
         },
-        rlsContext,
       );
 
       const sanitizedData = filterDataByRole(

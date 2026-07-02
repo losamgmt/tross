@@ -31,7 +31,7 @@ const { getClientIp, getUserAgent } = require('./request-helpers');
  *
  * @example
  *   const rlsContext = buildRlsContext(req);
- *   const result = await GenericEntityService.findAll('invoice', options, rlsContext);
+ *   const result = await GenericEntityService.findAll('invoice', { ...options, rlsContext });
  */
 function buildRlsContext(req) {
   return req.rlsContext || null;

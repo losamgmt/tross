@@ -361,8 +361,7 @@ describe.each(ENTITIES)(
         expect(response.body.timestamp).toBeDefined();
         expect(GenericEntityService.findAll).toHaveBeenCalledWith(
           name,
-          expect.any(Object),
-          expect.any(Object),
+          expect.any(Object), // unified options bag (includes rlsContext)
         );
       });
 

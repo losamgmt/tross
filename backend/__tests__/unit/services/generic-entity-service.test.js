@@ -997,11 +997,11 @@ describe("GenericEntityService", () => {
           .mockResolvedValueOnce({ rows: [mockUser] });
 
         // Act - pass role for rule matching
-        const result = await GenericEntityService.findAll(
-          "user",
-          { page: 1, limit: 10 },
-          { role: "customer", userId: 42 },
-        );
+        const result = await GenericEntityService.findAll("user", {
+          page: 1,
+          limit: 10,
+          rlsContext: { role: "customer", userId: 42 },
+        });
 
         // Assert
         expect(result.data).toEqual([mockUser]);
@@ -1023,11 +1023,11 @@ describe("GenericEntityService", () => {
           .mockResolvedValueOnce({ rows: mockUsers });
 
         // Act - ADR-011: admin role has full access
-        const result = await GenericEntityService.findAll(
-          "user",
-          { page: 1, limit: 10 },
-          { role: "admin", userId: 1 },
-        );
+        const result = await GenericEntityService.findAll("user", {
+          page: 1,
+          limit: 10,
+          rlsContext: { role: "admin", userId: 1 },
+        });
 
         // Assert
         expect(result.data).toEqual(mockUsers);
@@ -1041,11 +1041,11 @@ describe("GenericEntityService", () => {
           .mockResolvedValueOnce({ rows: [] });
 
         // Act - ADR-011: unknown role has no rules = deny
-        const result = await GenericEntityService.findAll(
-          "invoice",
-          { page: 1, limit: 10 },
-          { role: "unknown_role", userId: 99 },
-        );
+        const result = await GenericEntityService.findAll("invoice", {
+          page: 1,
+          limit: 10,
+          rlsContext: { role: "unknown_role", userId: 99 },
+        });
 
         // Assert
         expect(result.data).toEqual([]);
@@ -1081,11 +1081,12 @@ describe("GenericEntityService", () => {
           .mockResolvedValueOnce({ rows: mockWorkOrders });
 
         // Act - customer searching their own work orders (ADR-011 format)
-        const result = await GenericEntityService.findAll(
-          "work_order",
-          { page: 1, limit: 10, search: "Fix" },
-          { role: "customer", userId: 1, customer_profile_id: 42 },
-        );
+        const result = await GenericEntityService.findAll("work_order", {
+          page: 1,
+          limit: 10,
+          search: "Fix",
+          rlsContext: { role: "customer", userId: 1, customer_profile_id: 42 },
+        });
 
         // Assert
         expect(result.data).toEqual(mockWorkOrders);
@@ -1110,11 +1111,10 @@ describe("GenericEntityService", () => {
           .mockResolvedValueOnce({ rows: mockWorkOrders });
 
         // Act - pass role and profile ID (snake_case)
-        const result = await GenericEntityService.findAll(
-          "work_order",
-          { page: 1 },
-          { role: "technician", userId: 1, technician_profile_id: 5 },
-        );
+        const result = await GenericEntityService.findAll("work_order", {
+          page: 1,
+          rlsContext: { role: "technician", userId: 1, technician_profile_id: 5 },
+        });
 
         // Assert
         expect(result.data).toEqual(mockWorkOrders);
@@ -1137,11 +1137,10 @@ describe("GenericEntityService", () => {
           .mockResolvedValueOnce({ rows: mockInvoices });
 
         // Act - pass role and profile ID (snake_case)
-        const result = await GenericEntityService.findAll(
-          "invoice",
-          { page: 1 },
-          { role: "customer", userId: 1, customer_profile_id: 100 },
-        );
+        const result = await GenericEntityService.findAll("invoice", {
+          page: 1,
+          rlsContext: { role: "customer", userId: 1, customer_profile_id: 100 },
+        });
 
         // Assert
         expect(result.data).toEqual(mockInvoices);

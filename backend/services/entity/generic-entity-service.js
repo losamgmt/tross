@@ -494,28 +494,23 @@ class GenericEntityService {
    * @param {Object} [options.filters] - Filters (e.g., { priority[gte]: 50 })
    * @param {string} [options.sortBy] - Field to sort by (validated against sortableFields)
    * @param {string} [options.sortOrder] - 'ASC' or 'DESC'
-   * @param {Object} [rlsContext] - RLS context from middleware (ADR-008)
-   * @param {*} [rlsContext.filterConfig] - Filter config: null | false | '$parent' | string | { field, value }
-   * @param {number} [rlsContext.userId] - User ID for RLS filtering
-   * @param {number} [rlsContext.customerProfileId] - Customer profile ID
-   * @param {number} [rlsContext.technicianProfileId] - Technician profile ID
+   * @param {string[]} [options.include] - Relationship names to eager-load
+   * @param {Object} [options.rlsContext] - ADR-011 RLS context ({ role, userId, operation, *_profile_id }); omit for internal/system reads (no filtering)
    * @returns {Promise<Object>} { data: Entity[], pagination: {...}, appliedFilters: {...} }
    *
    * @example
-   *   // Without RLS (internal use)
+   *   // Internal/system read (no RLS filtering)
    *   const result = await GenericEntityService.findAll('user', { page: 1, limit: 10 });
    *   // Returns: { data: [...], pagination: { page: 1, limit: 10, total: 100, ... } }
    *
    * @example
-   *   // With RLS (API endpoints - customer viewing their work orders) - ADR-008 format
-   *   const result = await GenericEntityService.findAll('work_order', { page: 1 }, {
-   *     filterConfig: { field: 'customer_id', value: 'customerProfileId' },
-   *     userId: 42,
-   *     customerProfileId: 100
-   *   });
-   *   // Returns only work orders where customer_id = 100
+   *   // With RLS (API endpoints) — rlsContext from enforceRLS middleware
+   *   const result = await GenericEntityService.findAll('work_order', { page: 1, rlsContext });
+   *   // Returns only rows the caller is authorized to see
    */
-  static async findAll(entityName, options = {}, rlsContext = null) {
+  static async findAll(entityName, options = {}) {
+    const { rlsContext = null } = options || {};
+
     // Get metadata (throws if invalid entityName)
     const metadata = this._getMetadata(entityName);
 
