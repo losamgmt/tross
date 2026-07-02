@@ -1,9 +1,9 @@
 # P1 Remediation Plan — Security · Correctness · Test Integrity
 
-**Status:** 📋 PLANNED — not started
+**Status:** � IN PROGRESS — Steps 1–6 executing (2026-07-02); 7a/7b/8 gated behind a re-inventory checkpoint
 **Phase:** P1 (follows P0 hardening; precedes P2 architecture/cleanup)
 **Prerequisite:** P0 complete — commit `78664fe` (`feat(security): P0 hardening`)
-**Created:** June 30, 2026
+**Created:** June 30, 2026 · **Updated:** July 2, 2026
 **Owner:** _unassigned_
 
 ---
@@ -47,22 +47,44 @@ cd frontend && dart analyze
 `NODE_ENV`/`JWT_SECRET` are set by the test setup automatically. The integration
 run is the only one needing an external dependency (Docker).
 
-## Locked decisions (resolved 2026-06-30)
+## Locked decisions (resolved 2026-06-30, refined 2026-07-02)
 
 - **H7 principle:** runtime authorization → the **DB role-hierarchy loader**;
   **dev-auth + test-users + tests** → `backend/config/role-definitions.js`
-  **directly** (intentional non-DB static). Remove the `constants.js` re-export.
+  **directly** (intentional non-DB static). Remove the `constants.js` re-exports.
   **Dev-auth "log in as any role" is confirmed preserved** — it needs the *array*
-  form of `ROLE_HIERARCHY` (from `role-definitions.js`); the loader returns an
-  *object* map, so the fix is an import-path change only, zero behavior change.
+  form of `ROLE_HIERARCHY` (from `role-definitions.js`); the loader returns the
+  same array, so the fix is an import-path change only, zero behavior change.
   Non-DB roles remain **dev-only** (`devAuthEnabled = !production`, read-only tokens).
-- **M1/M13:** field redaction belongs in the **service layer**. **No signature
-  change** — the service already receives `rlsContext`, which carries
-  `role` + `userId` + `operation`. Delivered in **two tiers** (below).
-- **Code-value normalization:** **full sweep** of `AppError`/emitted codes to the
-  canonical `ERROR_CODES`, via a shared constant, with tests updated in lockstep.
+  Verified: only **3 files** import these from `constants`; also `ROLE_NAME_TO_PRIORITY`
+  / `ROLE_DESCRIPTIONS` are re-exported (check consumers before removing).
+- **M1/M13 (refined 2026-07-02 — supersedes the earlier "no signature change"):**
+  field redaction belongs in the **service layer, across all operations**. The
+  service methods are currently *inconsistent* (reads take a positional
+  `rlsContext`; mutations take an `options` bag with none). **Unify all 8 methods to
+  a trailing `options` bag with a nested `options.rlsContext`** (ADR-011 object);
+  intrinsic params (`entityName`, `id`, `field`, `value`, `data`, `operations`) stay
+  positional. This also deletes `findById`'s dual-detection heuristic. Redaction runs
+  in-service via one `_redactForContext(data, metadata, options.rlsContext)` helper,
+  applied only when `options.rlsContext?.role` is set (internal/no-role callers get
+  full data). Executed as **7a (unify signatures) → 7b (add redaction) → 8 (nested
+  relationship redaction)**. 7a is a breaking read-method signature change — **risk-
+  laden; done in isolation.**
+- **Code-value normalization (full sweep):** normalize all ad-hoc `AppError` codes to
+  canonical `ERROR_CODES`; **extract `ERROR_CODES` into its own module**
+  (`config/error-codes.js`) imported by `response-formatter` + every `AppError`
+  caller; **centralize domain codes** (`IDEMPOTENCY_MISMATCH`, `APPROVAL_REQUIRED`,
+  `IMMUTABLE_FIELD_VIOLATION`, `NOT_IMPLEMENTED`, `TOKEN_REFRESH_FAILED`) into a
+  `DOMAIN_*` section; **split `UNAUTHORIZED`** case-by-case into `AUTH_INVALID_TOKEN` /
+  `AUTH_TOKEN_EXPIRED` / `AUTH_REQUIRED`; flip `AppError`'s default `'INTERNAL_ERROR'`
+  → `'SERVER_ERROR'`. Update all asserting tests in lockstep.
 - **God-object (H1):** **not** in P1 — it is a dedicated **P2 "Decomposition
   mini-project"** with its own review.
+
+> **Execution note (2026-07-02):** Steps **1–6** run now (each its own commit, full
+> suite green between). **7a, 7b, 8** (the risk-laden signature unification +
+> redaction) are **gated behind a dedicated re-inventory / reset checkpoint** and
+> executed in isolation. Steps 9–10 follow.
 
 ## Step-by-step batch
 
@@ -74,8 +96,9 @@ run is the only one needing an external dependency (Docker).
 | 4 | M3 — role-metadata legacy immutableFields | cleanup | backend | small |
 | 5 | H7 — role SSOT drift | correctness | backend | medium (blast radius) |
 | 6 | H3 — transaction-boundary doc/guard | correctness | backend | small |
-| 7 | M1/M13 Tier 1 — service field redaction | security | backend | medium |
-| 8 | M1/M13 Tier 2 — nested relationship redaction | security | backend | medium |
+| 7a | M1/M13 — unify service signatures (`options.rlsContext`) | refactor | backend | **high (blast radius)** 🚧 isolate |
+| 7b | M1/M13 — in-service field redaction (all ops) | security | backend | medium 🚧 isolate |
+| 8 | M1/M13 — nested relationship redaction (Tier 2) | security | backend | medium 🚧 isolate |
 | 9 | Test integrity — H17/H18/H19/H2 | test quality | backend | medium (test-only) |
 | 10 | Code-value normalization — full sweep | consistency | backend/frontend | medium (mechanical) |
 
@@ -97,10 +120,13 @@ run is the only one needing an external dependency (Docker).
   only guards `requiredRole === 'none'`. An **undefined** `requiredRole` (e.g.
   `canAccessField` called with an unknown operation) resolves to the lowest role
   index and returns **true** — fail-**open** on write-checks.
-- **Fix (root):** in `hasFieldPermission`, `if (!requiredRole || requiredRole === 'none') return false;`.
+- **Fix (root):** in `hasFieldPermission`, fail closed on a falsy **or unresolvable**
+  required role — `if (!requiredRole || requiredRole === 'none') return false;` and
+  treat `requiredIndex < 0` (unknown role string → `indexOf === -1`) as denied.
   `getFieldsForOperation` already guards `requiredRole && …`, so it's unaffected.
+  (`field-access-controller` already uses the runtime loader, so H7 doesn't touch it.)
 - **Tests:** `canAccessField(undefined operation) → false`;
-  `hasFieldPermission(role, undefined) → false`; existing field-access tests green.
+  `hasFieldPermission(role, undefined) → false`; unknown-role → false; existing tests green.
 
 ### Step 3 — M2: cap IN / NIN filter arrays (DoS guard)
 - **Problem:** `backend/services/entity/query-builder-service.js` →
@@ -125,14 +151,19 @@ run is the only one needing an external dependency (Docker).
   `ROLE_HIERARCHY`/`ROLE_PRIORITY_TO_NAME` (from `role-definitions.js`), while the
   runtime SSOT is the DB via `role-hierarchy-loader.js`. Because `constants.js` is
   imported everywhere, this quietly elevates the fallback and risks drift.
-- **Fix (per the locked H7 principle):**
-  - Remove the two re-exports from `constants.js`.
-  - `backend/routes/dev-auth.js` and `backend/config/test-users.js` → import the
-    static list **directly** from `role-definitions.js` (intentional non-DB).
-  - Tests asserting the canonical definition → import from `role-definitions.js`.
+- **Verified consumers (small):** only **3 files** import `ROLE_HIERARCHY` from
+  `constants` — `backend/routes/dev-auth.js` (prod: `.includes`, `.join`, and the
+  `supported_roles` response payload) + `field-access.scenarios.js` and
+  `rls.scenarios.js` (tests). `ROLE_PRIORITY_TO_NAME` has **zero** `constants`
+  consumers. `constants` also re-exports `ROLE_NAME_TO_PRIORITY` / `ROLE_DESCRIPTIONS`
+  — grep those before removing.
+- **Fix:**
+  - Remove the role re-exports from `constants.js`.
+  - `dev-auth.js` → import `ROLE_HIERARCHY` **directly** from `role-definitions.js`
+    (intentional non-DB source; needs the array form). `test-users.js` likewise if used.
+  - The 2 test scenarios → import from `role-definitions.js`.
   - Any runtime-authorization consumer → use the loader.
-- **Care:** run the **full** suite (broadest blast radius of the batch).
-- **Tests:** existing role tests green; dev-auth "any role" flow still works.
+- **Care:** run the **full** suite. **Tests:** role tests green; dev-auth "any role" works.
 
 ### Step 6 — H3: document + guard the create/update transaction boundary
 - **Problem:** `generic-entity-service` `create()`/`update()` use auto-commit
@@ -145,32 +176,45 @@ run is the only one needing an external dependency (Docker).
 - **Tests:** assert `afterChange` fires after persist and `skipHooks` prevents
   recursion.
 
-### Step 7 — M1/M13 Tier 1: field redaction in the service (top-level)
-- **Problem:** role-based field redaction (`filterDataByRole`) is applied **only**
-  in `backend/routes/entities.js` (5 sites) — direct service callers skip it.
-- **Fix:** apply redaction at the **output boundary** of the service read paths
-  (`findById`, `list`, and the entity returned by `create`/`update`) using
-  `filterDataByRole(data, metadata, rlsContext.role, 'read')`. **Skip when
-  `rlsContext` is null** (system/internal calls) — mirrors how RLS skips system
-  contexts. Then remove the now-redundant route-level calls.
-  - No signature change: `rlsContext.role`/`.operation` already available.
-  - Always redact output with `'read'` (what the user may *see*).
-- **Tests:** direct service read redacts for a low-privilege role; system context
-  (null) returns full data; route responses unchanged.
+### Step 7a — M1/M13: unify service signatures (🚧 risk-laden — isolate)
+- **Problem:** `generic-entity-service` methods are inconsistent — reads take a
+  positional `rlsContext` (`findById` even sniffs options-vs-rlsContext
+  heuristically); mutations take an `options` bag with no `rlsContext`.
+- **Fix:** unify all 8 methods to a trailing `options` bag with a **nested
+  `options.rlsContext`** (ADR-011 object). Intrinsic params stay positional:
+  `findById(entityName, id, options)`, `findAll(entityName, options)`,
+  `findByField(entityName, field, value, options)`, `count(entityName, options)`
+  (harmonize `filters` → `options.filters`), `create(entityName, data, options)`,
+  `update(entityName, id, data, options)`, `delete(entityName, id, options)`,
+  `batch(entityName, operations, options)`. Delete `findById`'s dual-detection.
+- **Execution:** full call-site sweep first
+  (`grep GenericEntityService.(findById|findAll|findByField|count)` across backend +
+  tests); update ALL call-sites (routes **and** internal service-to-service) + tests.
+  **Behavior-preserving — no redaction yet.**
+- **Done when:** full suite green with the unified signatures.
 
-### Step 8 — M1/M13 Tier 2: redact nested relationship rows
-- **Problem:** included relationship data (from `relationship-loader`) isn't
-  redacted — each related row should be filtered by **its own** target metadata.
-- **Fix:** redact nested relationship results using each relationship's target
-  entity metadata + the same `rlsContext.role`. Closes the relationship-data gap
-  (ties to H4).
+### Step 7b — M1/M13: in-service field redaction, all operations (🚧 isolate)
+- **Fix:** add `_redactForContext(data, metadata, options.rlsContext)` →
+  `filterDataByRole(data, metadata, rlsContext.role, 'read')` when
+  `options.rlsContext?.role` is set, else return data untouched (internal/system
+  callers = full data). Apply at the return of `findById`/`findAll`/`findByField` and
+  the returned entity of `create`/`update` (+ `batch` results). Remove the 5
+  route-level `filterDataByRole` calls.
+- **Tests:** direct service read redacts for a low-privilege role; no-role context
+  returns full data; route responses unchanged.
+
+### Step 8 — M1/M13: nested relationship redaction (Tier 2, 🚧 isolate)
+- **Fix:** redact included relationship rows (from `relationship-loader`) using each
+  relationship's **target** metadata + the same `options.rlsContext.role`. Closes the
+  relationship-data gap (ties to H4).
 - **Tests:** an included relationship omits fields the requester can't read.
 
 ### Step 9 — Test integrity (test-only; no production risk)
 - **H17:** `backend/__tests__/fixtures/roles.js` uses non-canonical roles
-  (`client` not `customer`, missing `customer`/`manager`, inverted priorities).
-  Reconcile to the canonical 5 (customer 1 … admin 5) + correct priorities; fix
-  dependent tests.
+  (`client` not `customer`, missing `customer`/`manager`, inverted priorities —
+  `admin` = 1 not 5 — and `PROTECTED_ROLES` references a `customer` that doesn't
+  exist in `MOCK_ROLES`). Reconcile to the canonical 5 (customer 1 … admin 5) +
+  correct priorities; grep `MOCK_ROLES`/`ACTIVE_ROLES` consumers and fix dependent tests.
 - **H18:** `factory/scenarios/hooks.scenarios.js` asserts only status ranges;
   rewrite to assert *which* hook fired (approval → 202 + approvalInfo + task;
   cascade-depth cap = 3; blocking `beforeChange`).
@@ -180,16 +224,25 @@ run is the only one needing an external dependency (Docker).
   afterChange non-blocking fires, `skipHooks` recursion guard, cascade cap).
 
 ### Step 10 — Code-value normalization (full sweep)
-- **Problem:** the error-envelope *shape* is canonical (P0), but `AppError` code
-  *strings* are ad-hoc (`UNAUTHORIZED`, `BAD_REQUEST`, `INTERNAL_ERROR`,
-  `NOT_FOUND`) rather than the canonical `ERROR_CODES`
-  (`AUTH_REQUIRED`, `VALIDATION_FAILED`, `SERVER_ERROR`, `RESOURCE_NOT_FOUND`).
-- **Fix:** sweep all `new AppError(...)` / emitted codes to `ERROR_CODES`; have
-  callers import the shared `ERROR_CODES` constant (no hand-typed strings); update
-  every test asserting an old code string in lockstep. Preserve intentional
-  domain codes (e.g. `IDEMPOTENCY_MISMATCH`).
-- **Also:** point `error-response-security.test.js` at the **real** server error
-  handler (it currently tests an inline mock).
+- **Scope (verified):** ~**100 `new AppError(...)` calls across 23 files**; **7 test
+  files** assert code strings. Distinct ad-hoc codes: `BAD_REQUEST`×31,
+  `UNAUTHORIZED`×10, `NOT_FOUND`×10, `SERVICE_UNAVAILABLE`×5, `INTERNAL_ERROR`×4,
+  `FORBIDDEN`×2, `VALIDATION_ERROR`×1, `CONFLICT`×1 (+ domain codes).
+- **Extract:** move `ERROR_CODES` out of `response-formatter.js` into its own module
+  `config/error-codes.js`; import it in `response-formatter`, `AppError` callers, and
+  the global handler. Flip `AppError`'s default `'INTERNAL_ERROR'` → `'SERVER_ERROR'`.
+- **Canonical mappings:** `BAD_REQUEST`/`VALIDATION_ERROR` → `VALIDATION_FAILED`,
+  `NOT_FOUND` → `RESOURCE_NOT_FOUND`, `INTERNAL_ERROR` → `SERVER_ERROR`,
+  `SERVICE_UNAVAILABLE` → `SERVER_UNAVAILABLE`, `CONFLICT` → `RESOURCE_CONFLICT`,
+  `FORBIDDEN` → `AUTH_INSUFFICIENT_PERMISSIONS`.
+- **`UNAUTHORIZED`×10 — split case-by-case:** `AUTH_INVALID_TOKEN` /
+  `AUTH_TOKEN_EXPIRED` / `AUTH_REQUIRED` by context.
+- **Domain codes — centralize:** add a `DOMAIN_*` section to `ERROR_CODES` for
+  `IDEMPOTENCY_MISMATCH`, `APPROVAL_REQUIRED`, `IMMUTABLE_FIELD_VIOLATION`,
+  `NOT_IMPLEMENTED`, `TOKEN_REFRESH_FAILED` (one registry, no strays).
+- **Tests:** update all 7 asserting test files in lockstep; point
+  `error-response-security.test.js` at the **real** server error handler (currently
+  tests an inline mock).
 
 ---
 
