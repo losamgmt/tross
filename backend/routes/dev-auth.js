@@ -7,7 +7,7 @@
 const express = require('express');
 const DevAuthStrategy = require('../services/auth/strategies/DevAuthStrategy');
 // User model removed - not used in this file
-const { ROLE_HIERARCHY } = require('../config/constants');
+const { ROLE_HIERARCHY } = require('../config/role-definitions');
 const ResponseFormatter = require('../utils/response-formatter');
 const { asyncHandler } = require('../middleware/utils');
 const AppError = require('../utils/app-error');

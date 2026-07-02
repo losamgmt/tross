@@ -12,7 +12,7 @@
  *
  * SECURITY:
  * - Field-level access control: Only fields the user's role can write are accepted
- * - Uses ROLE_HIERARCHY from constants.js to determine permission levels
+ * - Delegates role checks to field-access-controller.js (runtime role hierarchy)
  * - Customers cannot set fields requiring dispatcher+ permissions
  *
  * INTEGRATION:

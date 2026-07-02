@@ -9,7 +9,7 @@
  */
 
 const permissions = require("../../../../config/permissions.json");
-const { ROLE_HIERARCHY } = require("../../../config/constants");
+const { ROLE_HIERARCHY } = require("../../../config/role-definitions");
 
 // Role priority order from single source of truth
 const ROLE_ORDER = ROLE_HIERARCHY;

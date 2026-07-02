@@ -5,22 +5,15 @@
  */
 
 // ============================================================================
-// ROLE DEFINITIONS - DEPRECATED RE-EXPORTS
+// USER_ROLES enum (single-source role-name constants from role-definitions.js)
 // ============================================================================
-// ⚠️  DEPRECATION WARNING: These re-exports exist for backwards compatibility.
-// For production permission checks, use role-hierarchy-loader.js instead:
-//   const { getRoleHierarchy, getRolePriority } = require('./role-hierarchy-loader');
-//
-// These constants are from role-definitions.js (FALLBACK ONLY).
-// Production loads role hierarchy from database at server startup.
+// Role HIERARCHY / PRIORITY / DESCRIPTION constants are intentionally NOT
+// re-exported here, to avoid a dual-authority ambiguity: runtime permission
+// checks MUST use the DB SSOT via role-hierarchy-loader.js (getRoleHierarchy /
+// getRolePriority). The static fallback lives in role-definitions.js — import it
+// directly where a non-DB source is intended (dev-auth, seeds, tests).
 // ============================================================================
-const {
-  USER_ROLES,
-  ROLE_HIERARCHY,
-  ROLE_PRIORITY_TO_NAME,
-  ROLE_NAME_TO_PRIORITY,
-  ROLE_DESCRIPTIONS,
-} = require('./role-definitions');
+const { USER_ROLES } = require('./role-definitions');
 
 // Environment Constants
 const ENVIRONMENTS = Object.freeze({
@@ -264,7 +257,8 @@ const RLS_ENGINE = Object.freeze({
 // Role hierarchy (lowest to highest): customer < technician < dispatcher < manager < admin
 // Permissions accumulate UPWARD - manager inherits all permissions from dispatcher, technician, customer
 // 'none' = no access at any role level
-// NOTE: ROLE_HIERARCHY and ROLE_PRIORITY_TO_NAME are imported from ./role-definitions.js
+// NOTE: role hierarchy/priority constants are NOT re-exported here — use
+// role-hierarchy-loader.js (runtime SSOT) or role-definitions.js (static fallback).
 
 /**
  * Common field access patterns - shortcuts for DRY metadata definitions
@@ -664,10 +658,6 @@ module.exports = Object.freeze({
     return derivedConstants.NAME_PATTERN_MAP;
   },
   ENTITY_FIELDS,
-  ROLE_HIERARCHY,
-  ROLE_PRIORITY_TO_NAME,
-  ROLE_NAME_TO_PRIORITY,
-  ROLE_DESCRIPTIONS,
   FIELD_ACCESS_LEVELS,
   UNIVERSAL_FIELD_ACCESS,
   HEALTH,
