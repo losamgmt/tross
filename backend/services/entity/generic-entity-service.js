@@ -795,25 +795,28 @@ class GenericEntityService {
    * SRP: ONLY returns count of matching records with RLS enforcement
    *
    * USE CASES:
-   * - count('user', { role_id: 5 }) → replaces Role.getUserCount()
-   * - count('work_order', { status: 'pending' }) → count pending work orders
-   * - count('customer', { is_active: true }) → count active customers
+   * - count('user', { filters: { role_id: 5 } }) → replaces Role.getUserCount()
+   * - count('work_order', { filters: { status: 'pending' } }) → count pending work orders
+   * - count('customer', { filters: { is_active: true } }) → count active customers
    *
    * @param {string} entityName - Entity name (e.g., 'user', 'role', 'customer')
-   * @param {Object} [filters={}] - Filters to apply (must be in filterableFields)
-   * @param {Object} [rlsContext] - RLS context from middleware
+   * @param {Object} [options={}] - Options bag
+   * @param {Object} [options.filters] - Filters to apply (must be in filterableFields)
+   * @param {Object} [options.rlsContext] - ADR-011 RLS context; omit for internal/system reads
    * @returns {Promise<number>} Count of matching records
    * @throws {Error} If entityName invalid
    *
    * @example
-   *   const activeUsers = await GenericEntityService.count('user', { is_active: true });
+   *   const activeUsers = await GenericEntityService.count('user', { filters: { is_active: true } });
    *   // Returns: 42
    *
    * @example
-   *   const usersInRole = await GenericEntityService.count('user', { role_id: 5 });
+   *   const usersInRole = await GenericEntityService.count('user', { filters: { role_id: 5 } });
    *   // Returns: 10
    */
-  static async count(entityName, filters = {}, rlsContext = null) {
+  static async count(entityName, options = {}) {
+    const { filters = {}, rlsContext = null } = options || {};
+
     // Get metadata (throws if invalid entityName)
     const metadata = this._getMetadata(entityName);
 
