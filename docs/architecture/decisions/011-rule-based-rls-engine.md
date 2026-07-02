@@ -279,6 +279,25 @@ backend/db/helpers/rls/
 └─────────────────────┘
 ```
 
+### Service Integration
+
+`GenericEntityService` read/count methods receive `rlsContext` through a **unified
+trailing `options` bag** and pass it straight to `buildRLSFilter()`. Routes build the
+context with `buildRlsContext(req)` (which reads `req.rlsContext` set by `enforceRLS`)
+and nest it under `options.rlsContext`:
+
+```javascript
+const rlsContext = buildRlsContext(req);
+
+await GenericEntityService.findById('work_order', id, { rlsContext });
+await GenericEntityService.findAll('work_order', { page, limit, rlsContext });
+await GenericEntityService.findByField('user', 'email', email, { rlsContext });
+await GenericEntityService.count('work_order', { filters, rlsContext });
+```
+
+Omitting `rlsContext` (internal/system reads) skips RLS filtering entirely; when a
+context **is** supplied but no rule matches the role, the filter denies (`1=0`).
+
 ### Caching Strategy
 
 **Key:** `${entityName}:${operation}:${role}`  
