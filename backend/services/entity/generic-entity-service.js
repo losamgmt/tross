@@ -45,6 +45,8 @@ const {
   stripAuthIdentifiers,
   stripAuthIdentifiersArray,
 } = require('../../db/helpers/auth-identifier-sanitizer');
+// ADR-011: field-level read redaction at the service output boundary
+const { filterDataByRole } = require('../../utils/field-access-controller');
 const {
   logEntityAudit,
   isAuditEnabled,
@@ -412,6 +414,41 @@ class GenericEntityService {
     }
 
     return serialized;
+  }
+
+  /**
+   * Redact fields the caller's role may not read (ADR-011 output boundary)
+   *
+   * SRP: ONLY strips non-readable fields from a record (or array of records)
+   * according to the caller's role in the RLS context.
+   *
+   * Field-level read filtering is applied ONLY when a role is present in the RLS
+   * context. Internal/system callers (no rlsContext, or a context without a role)
+   * receive the record unchanged — mirroring the RLS engine's skip-for-system
+   * behavior so role-less reads are not over-redacted to the least-privileged role.
+   *
+   * @private
+   * @param {Object|Array|null} data - A record, an array of records, or null
+   * @param {Object} metadata - Entity metadata with fieldAccess config
+   * @param {Object|null} [rlsContext] - ADR-011 RLS context; redaction is skipped unless rlsContext.role is set
+   * @returns {Object|Array|null} Data limited to role-readable fields, or unchanged when no role applies
+   *
+   * @example
+   *   // API read (role present) → non-readable fields removed
+   *   GenericEntityService._redactForContext(row, metadata, { role: 'customer' });
+   *
+   * @example
+   *   // Internal/system read (no role) → full record returned
+   *   GenericEntityService._redactForContext(row, metadata, null);
+   */
+  static _redactForContext(data, metadata, rlsContext = null) {
+    // No role in context → internal/system caller → return full data unchanged
+    if (!rlsContext || !rlsContext.role) {
+      return data;
+    }
+
+    // Always 'read': this is the response-visibility boundary
+    return filterDataByRole(data, metadata, rlsContext.role, 'read');
   }
 
   // ============================================================================
