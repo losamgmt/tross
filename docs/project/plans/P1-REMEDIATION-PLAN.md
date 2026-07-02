@@ -1,6 +1,6 @@
 # P1 Remediation Plan — Security · Correctness · Test Integrity
 
-**Status:** � IN PROGRESS — Steps 1–6 executing (2026-07-02); 7a/7b/8 gated behind a re-inventory checkpoint
+**Status:** 🚧 IN PROGRESS — Steps 1–6 ✅ COMPLETE (2026-07-02); 7a/7b/8 gated behind a re-inventory checkpoint
 **Phase:** P1 (follows P0 hardening; precedes P2 architecture/cleanup)
 **Prerequisite:** P0 complete — commit `78664fe` (`feat(security): P0 hardening`)
 **Created:** June 30, 2026 · **Updated:** July 2, 2026
@@ -85,6 +85,25 @@ run is the only one needing an external dependency (Docker).
 > suite green between). **7a, 7b, 8** (the risk-laden signature unification +
 > redaction) are **gated behind a dedicated re-inventory / reset checkpoint** and
 > executed in isolation. Steps 9–10 follow.
+
+## Progress (2026-07-02)
+
+Steps 1–6 complete — each its own commit; full unit **3093/101** + integration
+**2309/29** green, frontend **5801** untouched.
+
+| Step | Commit | Outcome |
+|------|--------|---------|
+| refine plan | `37bc8b5` | locked 2026-07-02 decisions |
+| 1 · T2 | `4fdd7cd` | untracked + ignored `backend/generated/` (build artifact) |
+| 2 · M12 | `73fd544` | `hasFieldPermission` fails closed (falsy/unresolvable); +3 tests |
+| 3 · M2 | `0bd25ae` | IN/NIN filter cap 100 → 400; +3 tests |
+| 4 · M3 | `71d42d7` | ✅ verified non-issue (nested `systemProtected`, not legacy array) |
+| 5 · H7 | `13c9180` | removed role re-exports from `constants`; consumers → `role-definitions` |
+| 6 · H3 | `cf33453` | documented create/update non-transactional post-commit semantics |
+
+**⏸️ CHECKPOINT — before 7a/7b/8:** dedicated re-inventory / evaluation / cleanup /
+reset, then execute the risk-laden signature unification + in-service redaction in
+isolation. Steps 9–10 (test integrity, code-value sweep) follow after.
 
 ## Step-by-step batch
 
