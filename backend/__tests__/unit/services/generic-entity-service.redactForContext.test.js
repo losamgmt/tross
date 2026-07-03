@@ -124,4 +124,42 @@ describe("GenericEntityService._redactForContext()", () => {
       expect(result).toBeNull();
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // Nested relationship data (Tier-1 output boundary)
+  //
+  // Relationship keys (e.g. `units`) are NOT declared in fieldAccess, so the
+  // redaction boundary strips them for ANY role-bearing read — loaded
+  // relationship data never leaks through a redacted response, even for admin.
+  // Internal/system callers (no role) receive it intact. Making `?include=`
+  // response-visible with per-target nested redaction is a documented future
+  // feature — see ADR-011 "Field redaction & nested relationships".
+  // ---------------------------------------------------------------------------
+  describe("nested relationship data (not declared in fieldAccess)", () => {
+    const withRelationship = {
+      ...sampleRecord,
+      units: [{ id: 9, unit_identifier: "4A" }],
+    };
+
+    test("strips loaded relationship data on any role-bearing read", () => {
+      const result = GenericEntityService._redactForContext(
+        withRelationship,
+        mockMetadata,
+        { role: "admin" }, // even admin: relationship keys aren't in fieldAccess
+      );
+
+      expect(result.units).toBeUndefined();
+      expect(result.id).toBe(1);
+    });
+
+    test("preserves loaded relationship data for internal/system callers", () => {
+      const result = GenericEntityService._redactForContext(
+        withRelationship,
+        mockMetadata,
+        null,
+      );
+
+      expect(result.units).toEqual([{ id: 9, unit_identifier: "4A" }]);
+    });
+  });
 });
