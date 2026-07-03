@@ -1878,7 +1878,9 @@ class GenericEntityService {
             index: i,
             operation: op.operation,
             success: true,
-            result,
+            // Redact non-readable fields for the caller's role (ADR-011 output
+            // boundary). Applied AFTER per-op audit, which used the full result.
+            result: this._redactForContext(result, metadata, rlsContext),
           });
         } catch (opError) {
           stats.failed++;

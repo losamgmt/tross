@@ -29,7 +29,6 @@ const {
 } = require('../validators');
 const GenericEntityService = require('../services/entity/generic-entity-service');
 const ResponseFormatter = require('../utils/response-formatter');
-const { filterDataByRole } = require('../utils/field-access-controller');
 const {
   buildRlsContext,
   buildAuditContext,
@@ -371,21 +370,7 @@ function createEntityRouter(entityName, _options = {}) {
         continueOnError: options.continueOnError,
       });
 
-      // Filter results by role (consistent with single-item routes)
-      const filteredResults = result.results.map((r) => {
-        if (r.success && r.result) {
-          return {
-            ...r,
-            result: filterDataByRole(
-              r.result,
-              metadata,
-              req.dbUser.role,
-              'read',
-            ),
-          };
-        }
-        return r;
-      });
+      // Field redaction is applied in-service (ADR-011 output boundary)
 
       // Determine status code based on success and atomicity mode
       // 200: All operations succeeded
@@ -406,7 +391,7 @@ function createEntityRouter(entityName, _options = {}) {
         success: result.success,
         message: result.message,
         stats: result.stats,
-        results: filteredResults,
+        results: result.results,
         errors: result.errors,
       };
 
