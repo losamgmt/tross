@@ -1,6 +1,6 @@
 # P1 Remediation Plan — Security · Correctness · Test Integrity
 
-**Status:** 🚧 IN PROGRESS — Steps 1–6 ✅ COMPLETE (2026-07-02); 7a/7b/8 gated behind a re-inventory checkpoint
+**Status:** 🚧 IN PROGRESS — Steps **1–9 ✅ COMPLETE** (2026-07-02); **Step 10 (code-value / ERROR_CODES sweep) + an afterChange-action follow-up remain.** See "Progress" for the full commit map, current gate baselines, and cold-resume instructions.
 **Phase:** P1 (follows P0 hardening; precedes P2 architecture/cleanup)
 **Prerequisite:** P0 complete — commit `78664fe` (`feat(security): P0 hardening`)
 **Created:** June 30, 2026 · **Updated:** July 2, 2026
@@ -88,24 +88,87 @@ run is the only one needing an external dependency (Docker).
 
 ## Progress (2026-07-02)
 
-Steps 1–6 complete — each its own commit; full unit **3093/101** + integration
-**2309/29** green, frontend **5801** untouched.
+Steps **1–9 complete** — each sub-step its own commit, each gated. Current green
+baseline: backend unit **3104 / 102 suites**, backend integration **2312 / 30
+suites**, frontend **5801** (untouched). Working tree **clean**; **26 commits ahead
+of `origin/main` — local-only, no push (locked decision #1)**.
 
+### ⭐ Cold-resume — start here
+1. Confirm state: `git status` (clean), `git --no-pager log --oneline -12` (HEAD = `bd91dc8`).
+2. Start the Docker test DB (`npm run db:test:start` from repo root), then re-run the
+   baselines in "Known-good baseline" above — expect **unit 3104/102**, **integration 2312/30**.
+3. Remaining work: **Step 10** (ERROR_CODES sweep) + the **afterChange action follow-up**
+   (both below). Then P1 is done.
+4. Full operational detail (per-step notes, blast-radius sweeps, decisions) lives in
+   agent memory `/memories/repo/p1-plan-and-handoff.md`.
+
+### Commit map (all P1 commits, newest last)
 | Step | Commit | Outcome |
 |------|--------|---------|
-| refine plan | `37bc8b5` | locked 2026-07-02 decisions |
-| 1 · T2 | `4fdd7cd` | untracked + ignored `backend/generated/` (build artifact) |
-| 2 · M12 | `73fd544` | `hasFieldPermission` fails closed (falsy/unresolvable); +3 tests |
+| plan | `5f10ac6` · `37bc8b5` | P1 plan + locked 2026-07-02 decisions |
+| 1 · T2 | `4fdd7cd` | untracked + ignored `backend/generated/` |
+| 2 · M12 | `73fd544` | `hasFieldPermission` fails closed; +3 tests |
 | 3 · M2 | `0bd25ae` | IN/NIN filter cap 100 → 400; +3 tests |
-| 4 · M3 | `71d42d7` | ✅ verified non-issue (nested `systemProtected`, not legacy array) |
-| 5 · H7 | `13c9180` | removed role re-exports from `constants`; consumers → `role-definitions` |
-| 6 · H3 | `cf33453` | documented create/update non-transactional post-commit semantics |
+| 4 · M3 | `71d42d7` | ✅ verified non-issue (no change) |
+| 5 · H7 | `13c9180` | removed role re-exports from `constants` |
+| 6 · H3 | `cf33453` | documented create/update txn-boundary semantics |
+| 7a.1 | `d5c9140` | unify `findById`/`findByField` → `options.rlsContext` |
+| 7a.2 | `6f39040` | unify `findAll` → `options.rlsContext` |
+| 7a.3 | `eb9c926` | harmonize `count` → `options.filters` + `rlsContext` |
+| 7a.4 | `30ddf1f` | ADR-011 service-integration note |
+| 7b.1a | `adad936` | add `_redactForContext` helper + 6 tests |
+| 7b.1b | `61f63a5` | wire read redaction (findById/findAll); −2 route calls |
+| 7b.2a | `5267454` | wire `update` redaction; −1 route call |
+| 7b.2b | `297edc9` | wire `create` redaction (route supplies role ctx); −1 route call |
+| 7b.3 | `ec88c82` | wire `batch` redaction; −last route call + unused import |
+| 8.1 | `93195eb` | lock nested-relationship stripping (regression tests) |
+| 8.2 | `3b4bb00` | ADR-011 Tier-1/Tier-2 doc; closes H4/M13 (Path B) |
+| 9.1 · H17 | `b540b0d` | canonicalize `MOCK_ROLES` fixture |
+| 9.2 · H19 | `d021ad6` | harden `sensitiveFieldsHidden` (no null-in-DB false pass) |
+| 9.3 · H2 | `b641444` | hook integration test + **fix approval-workflow double bug** |
+| 9.4 · H18 | `bd91dc8` | tighten `hooks.scenarios` to branch-coherent asserts |
 
-**⏸️ CHECKPOINT — before 7a/7b/8:** dedicated re-inventory / evaluation / cleanup /
-reset, then execute the risk-laden signature unification + in-service redaction in
-isolation. Steps 9–10 (test integrity, code-value sweep) follow after.
+### Key outcomes & decisions since the checkpoint
+- **7a (behavior-preserving):** all `GenericEntityService` read/count methods now take
+  a trailing `options` bag with nested `options.rlsContext`; `findById`'s
+  dual-detection heuristic removed; `count` harmonized to `options.filters`.
+- **7b (security):** field redaction moved out of the routes entirely into the service
+  via `_redactForContext` at every read/write output boundary (internal/no-role callers
+  get full data). **Zero `filterDataByRole` calls remain in `routes/`.** Behavior-identical
+  because `req.rlsContext.role === req.dbUser.role`.
+- **8 — chose Path B (minimal safe close-out):** nested relationship includes are stripped
+  by Tier-1 redaction today (relationship keys aren't in `fieldAccess`), so **no field
+  leak** (row-level M:M already guarded by the P0.2 boot invariant); `?include=` is inert
+  under redaction. The full **Tier-2 feature** (make includes response-visible + redact
+  nested rows by target metadata) is **documented as deferred** in ADR-011 — revisit when
+  the frontend Related-tab ships.
+- **9.3 uncovered + fixed a real double bug — high-value approval was silently OFF:**
+  (1) `hook-service.evaluateWhen` only understood symbol operators (`>`,`=`), but
+  `invoice`/`quote`/`recommendation` hooks used word-forms (`gt`/`eq`) → the `when`
+  condition never matched. Fixed the 3 metadata files, added `HOOK_WHEN_OPERATORS` SSOT
+  (`constants.js`), refactored `evaluateWhen` to an introspectable map, and made the
+  metadata validator **fail-fast** on an unknown `when.operator`. (2) `AppError` dropped
+  its 4th arg → `approvalInfo` never reached the envelope; added a `details` param
+  (`AppError(message, statusCode, code, details)`) — verified the approval throw was the
+  only 4-arg caller backend-wide.
+
+### ⚠️ Remaining P1 work
+- **Follow-up (from 9.3) — afterChange action wiring:** `afterChange` hooks
+  `do: 'notify'` / `do: 'log'` (invoice/quote/recommendation status transitions) log
+  `Unknown action in hook {action: notify}` — `getAction('notify')` is unregistered, so
+  those notifications are **silent no-ops** (swallowed, non-blocking). Likely the same
+  class of vocab mismatch (registered actions are `notify_customer` / `notify_approvers`).
+  Options: register/alias the actions, fix the metadata to the registered keys, or
+  validator-enforce `do:` against registered actions (same fail-fast pattern as
+  `when.operator`).
+- **Step 10 — code-value / ERROR_CODES sweep** (see below). **NOTE:** 9.3 already added
+  the `AppError` 4th `details` param — Step 10's `AppError` work must preserve it.
 
 ## Step-by-step batch
+
+> **Status:** items **1–9 are ✅ complete** (see the commit map in "Progress" above);
+> only **item 10** + the **afterChange-action follow-up** remain. The rows/sections
+> below are the original plan spec, kept for reference.
 
 | # | Item | Type | Area | Risk |
 |---|------|------|------|------|
