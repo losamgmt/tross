@@ -15,6 +15,14 @@
  *   const loaded = await loadRelationships(entityName, ['units', 'invoices'], parentRecords, { rlsContext });
  *   // Returns parentRecords with units: [...] and invoices: [...] attached (RLS-filtered)
  *
+ * NOTE — field redaction: relationship names are not declared in the parent's
+ * `fieldAccess`, so GenericEntityService._redactForContext (the field-redaction
+ * output boundary) STRIPS these nested keys on any role-bearing read; nested data
+ * therefore surfaces only for internal/no-role callers today. Row-level RLS on the
+ * target rows IS applied here (see _buildRelatedRLS). Making `?include=`
+ * response-visible with per-target nested FIELD redaction is a deferred feature —
+ * see ADR-011 "Field redaction & nested relationships".
+ *
  * @module relationship-loader
  */
 

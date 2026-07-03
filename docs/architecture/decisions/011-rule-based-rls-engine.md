@@ -298,6 +298,48 @@ await GenericEntityService.count('work_order', { filters, rlsContext });
 Omitting `rlsContext` (internal/system reads) skips RLS filtering entirely; when a
 context **is** supplied but no rule matches the role, the filter denies (`1=0`).
 
+### Field redaction & nested relationships
+
+RLS (above) decides **which rows** a caller sees. A second, independent layer —
+**field redaction** — decides **which fields** of those rows the caller may read.
+After RLS filtering and relationship assembly, the service applies
+`_redactForContext(data, metadata, rlsContext)` at the output boundary of
+`findById` / `findAll` / `create` / `update` / `batch`. It delegates to
+`filterDataByRole(data, metadata, rlsContext.role, 'read')` **only when a role is
+present** — internal/system callers (no `rlsContext`, or no `role`) receive full
+records, mirroring the RLS skip-for-system behavior. (Auth identifiers such as
+`password_hash` are stripped unconditionally by a separate sanitizer.)
+
+**Known limitation — nested relationship includes are stripped under redaction.**
+`filterDataByRole` keeps only keys declared in the entity's `fieldAccess`.
+Relationship names (`units`, `invoices`, `workOrders`, …) are **not** `fieldAccess`
+keys, so nested relationship data attached by `loadRelationships`
+(`hasMany`/`hasOne`/`manyToMany`) is removed for **any** role-bearing read — even
+admin. Therefore, today:
+
+- **No field leak:** nested relationship rows never reach a redacted response, so
+  their inner fields cannot leak. Row-level access to `manyToMany` targets is
+  additionally guarded by a boot invariant (`validateRelationships` requires every
+  M:M target to define `rlsRules`).
+- **`?include=` is inert under redaction:** although the param is validated and the
+  loader runs, the included relationships are stripped before the response. Nested
+  data currently surfaces only for internal/no-role callers.
+
+**Deferred feature — Tier-2 nested redaction (revisit when the Related-tab ships).**
+To make `?include=` response-visible *and* field-safe, a future change should:
+
+1. Redact each nested row by its **target** entity's `fieldAccess` + caller role
+   (the relationship loader already resolves target metadata via
+   `_findMetadataByTable` and receives `rlsContext`); and
+2. Let relationship keys **survive** Tier-1 — e.g. declare relationship names in the
+   parent's `fieldAccess` as a presence-gate, and make `_redactForContext`
+   relationship-aware (redact own columns, preserve the already-redacted nested data).
+
+This was deliberately deferred during the P1 in-service redaction work (the
+route→service redaction move): there is no active leak, and the frontend Related-tab
+that would consume nested includes is not yet live. Closes review findings
+**H4 / M13** as *mitigated*.
+
 ### Caching Strategy
 
 **Key:** `${entityName}:${operation}:${role}`  
