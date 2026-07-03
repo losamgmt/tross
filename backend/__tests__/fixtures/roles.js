@@ -10,65 +10,77 @@
  * Consistent with Contract v2.0 schema
  */
 const MOCK_ROLES = {
-  admin: {
+  customer: {
     id: 1,
-    name: "admin",
-    description: "System administrator with full access",
+    name: "customer",
+    description: "Customer with access to their own records",
     is_active: true,
     priority: 1,
     created_at: new Date("2025-01-01T00:00:00Z"),
     updated_at: new Date("2025-01-01T00:00:00Z"),
   },
 
-  client: {
+  technician: {
     id: 2,
-    name: "client",
-    description: "Client user with limited access",
+    name: "technician",
+    description: "Technician with field access",
     is_active: true,
     priority: 2,
     created_at: new Date("2025-01-02T00:00:00Z"),
     updated_at: new Date("2025-01-02T00:00:00Z"),
   },
 
-  technician: {
+  dispatcher: {
     id: 3,
-    name: "technician",
-    description: "Technician with field access",
+    name: "dispatcher",
+    description: "Dispatcher with scheduling access",
     is_active: true,
     priority: 3,
     created_at: new Date("2025-01-03T00:00:00Z"),
     updated_at: new Date("2025-01-03T00:00:00Z"),
   },
 
-  dispatcher: {
+  manager: {
     id: 4,
-    name: "dispatcher",
-    description: "Dispatcher with scheduling access",
+    name: "manager",
+    description: "Manager with elevated operational access",
     is_active: true,
     priority: 4,
     created_at: new Date("2025-01-04T00:00:00Z"),
     updated_at: new Date("2025-01-04T00:00:00Z"),
   },
 
-  inactive: {
+  admin: {
     id: 5,
+    name: "admin",
+    description: "System administrator with full access",
+    is_active: true,
+    priority: 5,
+    created_at: new Date("2025-01-05T00:00:00Z"),
+    updated_at: new Date("2025-01-05T00:00:00Z"),
+  },
+
+  inactive: {
+    id: 6,
     name: "inactive_role",
     description: "Inactive role for testing",
     is_active: false,
     priority: 99,
-    created_at: new Date("2025-01-05T00:00:00Z"),
-    updated_at: new Date("2025-01-05T00:00:00Z"),
+    created_at: new Date("2025-01-06T00:00:00Z"),
+    updated_at: new Date("2025-01-06T00:00:00Z"),
   },
 };
 
 /**
- * Array of all active roles
+ * Array of all active roles (canonical hierarchy: customer → technician →
+ * dispatcher → manager → admin)
  */
 const ACTIVE_ROLES = [
-  MOCK_ROLES.admin,
-  MOCK_ROLES.client,
+  MOCK_ROLES.customer,
   MOCK_ROLES.technician,
   MOCK_ROLES.dispatcher,
+  MOCK_ROLES.manager,
+  MOCK_ROLES.admin,
 ];
 
 /**
