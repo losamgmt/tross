@@ -945,6 +945,7 @@ class GenericEntityService {
    * @param {Object} [options.auditContext] - Audit context from buildAuditContext()
    * @param {boolean} [options.skipHooks] - Skip hook evaluation (prevents recursion)
    * @param {string|number} [options.user] - User ID for hook/audit context
+   * @param {Object} [options.rlsContext] - ADR-011 RLS context; redacts the returned record to the caller's role (omit for internal/system callers → full record)
    * @returns {Promise<Object>} Created entity with all fields (RETURNING *)
    * @throws {Error} If entityName invalid, required fields missing, or DB error
    *
@@ -1125,7 +1126,9 @@ class GenericEntityService {
       );
     }
 
-    return filteredResult;
+    // Redact non-readable fields for the caller's role (ADR-011 output boundary).
+    // Applied AFTER hooks + audit, which require the full created record.
+    return this._redactForContext(filteredResult, metadata, options.rlsContext);
   }
 
   /**

@@ -212,11 +212,15 @@ function createEntityRouter(entityName, _options = {}) {
     asyncHandler(async (req, res) => {
       const validatedBody = req.validated.body;
       const auditContext = buildAuditContext(req);
+      // Create has no row-level RLS (nothing to filter on INSERT), but the
+      // response must still be redacted to the caller's role — supply the role
+      // so the service applies field redaction at its output boundary.
+      const rlsContext = { role: req.dbUser.role };
 
       const created = await GenericEntityService.create(
         entityName,
         validatedBody,
-        { auditContext },
+        { auditContext, rlsContext },
       );
 
       if (!created) {
@@ -227,18 +231,11 @@ function createEntityRouter(entityName, _options = {}) {
         );
       }
 
-      // SECURITY: Filter response to only include fields user can read
-      const sanitizedData = filterDataByRole(
-        created,
-        metadata,
-        req.dbUser.role,
-        'read',
-      );
-
-      // Build response body for idempotency caching
+      // Field redaction is applied in-service (ADR-011 output boundary).
+      // Build response body for idempotency caching.
       const responseBody = {
         success: true,
-        data: sanitizedData,
+        data: created,
         message: `${displayName} created successfully`,
       };
 
@@ -247,7 +244,7 @@ function createEntityRouter(entityName, _options = {}) {
 
       return ResponseFormatter.created(
         res,
-        sanitizedData,
+        created,
         `${displayName} created successfully`,
       );
     }),
