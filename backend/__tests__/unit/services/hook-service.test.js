@@ -30,9 +30,11 @@ const {
   evaluateBeforeHooks,
   evaluateAfterHooks,
   HOOK_LIMITS,
+  WHEN_OPERATORS,
 } = require('../../../services/entity/hook-service');
 const { getAction, executeAction } = require('../../../config/action-handlers');
 const { logger } = require('../../../config/logger');
+const { HOOK_WHEN_OPERATORS } = require('../../../config/constants');
 
 describe('HookService', () => {
   beforeEach(() => {
@@ -183,6 +185,19 @@ describe('HookService', () => {
     test('unknown operator returns false with warning', () => {
       expect(evaluateWhen({ field: 'status', operator: 'unknown', value: 'draft' }, record)).toBe(false);
       expect(logger.warn).toHaveBeenCalledWith('Unknown when operator', expect.any(Object));
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // OPERATOR VOCABULARY (drift guard vs metadata validator)
+  // ═══════════════════════════════════════════════════════════════
+
+  describe('when operator vocabulary', () => {
+    test('engine WHEN_OPERATORS matches the canonical HOOK_WHEN_OPERATORS', () => {
+      // The metadata validator enforces HOOK_WHEN_OPERATORS; the engine must be
+      // able to evaluate exactly that set. If they drift, a hook operator that
+      // passes validation could silently no-op (the gt/eq bug this guards).
+      expect(new Set(WHEN_OPERATORS)).toEqual(new Set(HOOK_WHEN_OPERATORS));
     });
   });
 

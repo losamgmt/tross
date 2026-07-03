@@ -231,7 +231,7 @@ module.exports = {
         {
           description: 'Urgent recommendations require manager approval',
           on: 'change',
-          when: { field: 'priority', operator: 'eq', value: 'urgent' },
+          when: { field: 'priority', operator: '=', value: 'urgent' },
           requiresApproval: { approver: 'manager', reason: 'urgent_priority' },
         },
       ],

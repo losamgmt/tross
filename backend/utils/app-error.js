@@ -22,12 +22,15 @@ class AppError extends Error {
    * @param {string} message - Human-readable error message
    * @param {number} statusCode - HTTP status code (default: 500)
    * @param {string} code - Machine-readable error code (default: 'INTERNAL_ERROR')
+   * @param {Object|null} [details] - Optional structured details surfaced in the
+   *   error envelope (e.g. { approvalInfo }); omit for simple errors.
    */
-  constructor(message, statusCode = 500, code = 'INTERNAL_ERROR') {
+  constructor(message, statusCode = 500, code = 'INTERNAL_ERROR', details = null) {
     super(message);
     this.name = 'AppError';
     this.statusCode = statusCode;
     this.code = code;
+    this.details = details;
 
     // Capture stack trace (excludes constructor from trace)
     Error.captureStackTrace(this, this.constructor);

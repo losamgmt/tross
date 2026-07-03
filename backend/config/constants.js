@@ -252,6 +252,30 @@ const RLS_ENGINE = Object.freeze({
 });
 
 // ============================================================================
+// HOOK ENGINE (field beforeChange `when` condition evaluation)
+// ============================================================================
+
+/**
+ * Canonical operator vocabulary for beforeChange hook `when` conditions.
+ *
+ * SSOT shared by the hook engine (services/entity/hook-service.js `evaluateWhen`)
+ * and the metadata validator (entity-metadata-validator.js), which fails fast at
+ * load if a hook uses an operator outside this set. Symbol form is intentional
+ * and documented in HOOKS-ENGINE.md — it is DISTINCT from the query-filter
+ * word-form operators (`[gt]`, `[gte]`, ...).
+ */
+const HOOK_WHEN_OPERATORS = Object.freeze([
+  '=',
+  '!=',
+  '>',
+  '<',
+  '>=',
+  '<=',
+  'in',
+  'not_in',
+]);
+
+// ============================================================================
 // FIELD ACCESS LEVELS (for field-level CRUD permissions)
 // ============================================================================
 // Role hierarchy (lowest to highest): customer < technician < dispatcher < manager < admin
@@ -653,6 +677,7 @@ module.exports = Object.freeze({
   getStructureType,
   RLS_RESOURCE_TYPES,
   RLS_ENGINE,
+  HOOK_WHEN_OPERATORS,
   // NAME_PATTERN_MAP is derived from metadata at runtime
   get NAME_PATTERN_MAP() {
     return derivedConstants.NAME_PATTERN_MAP;

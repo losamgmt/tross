@@ -77,6 +77,31 @@ function matchesOn(onPattern, oldValue, newValue, operation = 'update') {
 }
 
 /**
+ * Comparison function per supported `when` operator.
+ *
+ * The KEYS are the canonical hook operator vocabulary and MUST equal
+ * constants.HOOK_WHEN_OPERATORS (enforced by the metadata validator at load and
+ * asserted by a unit test). Symbol form is intentional and documented in
+ * HOOKS-ENGINE.md — distinct from the query-filter word-forms (`[gt]`, ...).
+ */
+const OPERATOR_EVALUATORS = Object.freeze({
+  '=': (fieldValue, value) => fieldValue === value,
+  '!=': (fieldValue, value) => fieldValue !== value,
+  '>': (fieldValue, value) => fieldValue > value,
+  '<': (fieldValue, value) => fieldValue < value,
+  '>=': (fieldValue, value) => fieldValue >= value,
+  '<=': (fieldValue, value) => fieldValue <= value,
+  in: (fieldValue, value) => Array.isArray(value) && value.includes(fieldValue),
+  not_in: (fieldValue, value) =>
+    Array.isArray(value) && !value.includes(fieldValue),
+});
+
+/**
+ * Canonical list of supported `when` operators (derived from OPERATOR_EVALUATORS).
+ */
+const WHEN_OPERATORS = Object.freeze(Object.keys(OPERATOR_EVALUATORS));
+
+/**
  * Evaluate a 'when' condition against context.
  *
  * @param {Object} whenCondition - { field, operator, value }
@@ -87,29 +112,14 @@ function evaluateWhen(whenCondition, record) {
   if (!whenCondition) {return true;}
 
   const { field, operator, value } = whenCondition;
-  const fieldValue = record[field];
+  const evaluator = OPERATOR_EVALUATORS[operator];
 
-  switch (operator) {
-    case '=':
-      return fieldValue === value;
-    case '!=':
-      return fieldValue !== value;
-    case '>':
-      return fieldValue > value;
-    case '<':
-      return fieldValue < value;
-    case '>=':
-      return fieldValue >= value;
-    case '<=':
-      return fieldValue <= value;
-    case 'in':
-      return Array.isArray(value) && value.includes(fieldValue);
-    case 'not_in':
-      return Array.isArray(value) && !value.includes(fieldValue);
-    default:
-      logger.warn('Unknown when operator', { operator, field });
-      return false;
+  if (!evaluator) {
+    logger.warn('Unknown when operator', { operator, field });
+    return false;
   }
+
+  return evaluator(record[field], value);
 }
 
 // ============================================================================
@@ -332,4 +342,5 @@ module.exports = {
 
   // Configuration (for testing)
   HOOK_LIMITS,
+  WHEN_OPERATORS,
 };

@@ -12,7 +12,7 @@
  */
 
 const { getRoleHierarchy } = require('./role-hierarchy-loader');
-const { RLS_ENGINE } = require('./constants');
+const { RLS_ENGINE, HOOK_WHEN_OPERATORS } = require('./constants');
 const { ENTITY_STRUCTURE, ENTITY_TRAITS } = require('./entity-traits');
 const { getForeignKeyFieldNames, extractForeignKeyFields } = require('./fk-helpers');
 const { foreignKeyFieldName } = require('./field-types');
@@ -1506,6 +1506,11 @@ function validateBeforeChangeHooks(meta, errors) {
           }
           if (!hook.when.operator) {
             errors.add(`${prefix}.when.operator`, 'Required when using condition');
+          } else if (!HOOK_WHEN_OPERATORS.includes(hook.when.operator)) {
+            errors.add(
+              `${prefix}.when.operator`,
+              `Invalid operator '${hook.when.operator}'. Valid: ${HOOK_WHEN_OPERATORS.join(', ')}`,
+            );
           }
         }
       }

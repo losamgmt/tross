@@ -449,7 +449,7 @@ module.exports = {
         {
           description: 'High-value invoices require manager approval before sending',
           on: 'change',
-          when: { field: 'total', operator: 'gt', value: 5000 },
+          when: { field: 'total', operator: '>', value: 5000 },
           requiresApproval: { approver: 'manager', reason: 'high_value_invoice' },
         },
       ],

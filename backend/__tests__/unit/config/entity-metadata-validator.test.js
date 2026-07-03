@@ -246,4 +246,49 @@ describe('Entity Metadata Validator', () => {
       expect(hasFieldError(result, 'relationships.related')).toBe(true);
     });
   });
+
+  describe('beforeChange when.operator validation', () => {
+    // Builds an entity whose `name` field carries a beforeChange hook using the
+    // given when-operator. Only the operator-vocabulary check can flag
+    // `fields.name.beforeChange[0].when.operator` here.
+    function withWhenOperator(operator) {
+      const meta = createMinimalMetadata({
+        fields: {
+          id: {
+            type: 'integer',
+            label: 'ID',
+            access: { create: 'hidden', edit: 'hidden', view: 'read' },
+          },
+          name: {
+            type: 'string',
+            label: 'Name',
+            access: { create: 'required', edit: 'editable', view: 'read' },
+            beforeChange: [
+              {
+                on: 'change',
+                when: { field: 'name', operator, value: 'x' },
+                requiresApproval: { approver: 'manager' },
+              },
+            ],
+          },
+        },
+      });
+      return validateEntity('test_entity', meta, {});
+    }
+
+    test('accepts a canonical symbol operator', () => {
+      const result = withWhenOperator('>');
+      expect(
+        hasFieldError(result, 'fields.name.beforeChange[0].when.operator'),
+      ).toBe(false);
+    });
+
+    test('rejects a word-form operator (e.g. gt) outside the vocabulary', () => {
+      const result = withWhenOperator('gt');
+      expect(result.hasErrors()).toBe(true);
+      expect(
+        hasFieldError(result, 'fields.name.beforeChange[0].when.operator'),
+      ).toBe(true);
+    });
+  });
 });

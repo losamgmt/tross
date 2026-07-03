@@ -218,7 +218,7 @@ module.exports = {
         {
           description: 'High-value quotes require manager approval',
           on: 'change',
-          when: { field: 'total_amount', operator: 'gt', value: 10000 },
+          when: { field: 'total_amount', operator: '>', value: 10000 },
           requiresApproval: { approver: 'manager', reason: 'high_value_quote' },
         },
       ],
