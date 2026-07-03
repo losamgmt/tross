@@ -285,24 +285,17 @@ function createEntityRouter(entityName, _options = {}) {
         entityName,
         entityId,
         validatedBody,
-        { auditContext },
+        { auditContext, rlsContext },
       );
 
       if (!updated) {
         return ResponseFormatter.notFound(res, `${displayName} not found`);
       }
 
-      // SECURITY: Filter response to only include fields user can read
-      const sanitizedData = filterDataByRole(
-        updated,
-        metadata,
-        req.dbUser.role,
-        'read',
-      );
-
+      // Field redaction is applied in-service (ADR-011 output boundary)
       return ResponseFormatter.updated(
         res,
-        sanitizedData,
+        updated,
         `${displayName} updated successfully`,
       );
     }),
