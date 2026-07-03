@@ -134,25 +134,51 @@ function deletePermissionDenied(meta, ctx) {
  * Scenario: Sensitive fields never exposed
  *
  * Preconditions: Entity has sensitiveFields defined
- * Tests: Sensitive fields are never in API responses
+ * Tests: A populated sensitive field is stored in the DB yet stripped from the
+ *   API response — while the record itself is still returned. Forcing a known
+ *   value defeats the null-in-DB false pass (a field that is simply never
+ *   populated would "pass" the old absence-only assertion for the wrong reason).
  */
 function sensitiveFieldsHidden(meta, ctx) {
-  const { sensitiveFields } = meta;
+  const { sensitiveFields, tableName, entityName, primaryKey = "id" } = meta;
   if (!sensitiveFields?.length) return;
 
   ctx.it(
-    `GET /api/${meta.tableName}/:id - never exposes sensitive fields`,
+    `GET /api/${tableName}/:id - never exposes sensitive fields even when populated`,
     async () => {
-      const created = await ctx.factory.create(meta.entityName);
+      const created = await ctx.factory.create(entityName);
       const auth = await ctx.authHeader("admin");
 
+      // Force a known, unique value into every sensitive field so a null-in-DB
+      // cannot produce a false pass. Unique per record+field to avoid tripping
+      // UNIQUE constraints (e.g. users.auth0_id).
+      const sentinelFor = (field) => `SENSITIVE_${field}_${created.id}`;
+      const setClause = sensitiveFields
+        .map((field, i) => `${field} = $${i + 1}`)
+        .join(", ");
+      const params = [...sensitiveFields.map(sentinelFor), created.id];
+      const updated = await ctx.db.query(
+        `UPDATE ${tableName} SET ${setClause} WHERE ${primaryKey} = $${sensitiveFields.length + 1} RETURNING ${sensitiveFields.join(", ")}`,
+        params,
+      );
+
+      // Prove the sensitive values are actually persisted in the DB
+      ctx.expect(updated.rows).toHaveLength(1);
+      for (const field of sensitiveFields) {
+        ctx.expect(updated.rows[0][field]).toBe(sentinelFor(field));
+      }
+
       const response = await ctx.request
-        .get(`/api/${meta.tableName}/${created.id}`)
+        .get(`/api/${tableName}/${created.id}`)
         .set(auth);
 
       ctx.expect(response.status).toBe(200);
       const data = response.body.data || response.body;
 
+      // The record WAS returned (the filtering path ran; it did not blank the
+      // row)...
+      ctx.expect(data[primaryKey]).toBe(created.id);
+      // ...yet every populated sensitive field is stripped from the response.
       for (const field of sensitiveFields) {
         ctx.expect(data[field]).toBeUndefined();
       }
