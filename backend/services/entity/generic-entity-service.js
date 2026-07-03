@@ -495,8 +495,10 @@ class GenericEntityService {
     const safeId = toSafeInteger(id, 'id', { silent: true });
 
     // Delegate to findByField using the primary key
-    // Note: primaryKey (e.g., 'id') must be in filterableFields for this to work
-    const entity = await this.findByField(
+    // Note: primaryKey (e.g., 'id') must be in filterableFields for this to work.
+    // findByField does NOT redact — findById redacts once below, after
+    // relationships are assembled, so FK fields survive relationship loading.
+    let entity = await this.findByField(
       entityName,
       metadata.primaryKey,
       safeId,
@@ -511,10 +513,11 @@ class GenericEntityService {
         [entity],
         { rlsContext },
       );
-      return withRelationships[0] || entity;
+      entity = withRelationships[0] || entity;
     }
 
-    return entity;
+    // Redact non-readable fields for the caller's role (ADR-011 output boundary)
+    return this._redactForContext(entity, metadata, rlsContext);
   }
 
   /**
@@ -698,6 +701,9 @@ class GenericEntityService {
         { rlsContext },
       );
     }
+
+    // Redact non-readable fields for the caller's role (ADR-011 output boundary)
+    filteredData = this._redactForContext(filteredData, metadata, rlsContext);
 
     return {
       data: filteredData,

@@ -156,15 +156,9 @@ function createEntityRouter(entityName, _options = {}) {
         },
       );
 
-      const sanitizedData = filterDataByRole(
-        result.data,
-        metadata,
-        req.dbUser.role,
-        'read',
-      );
-
+      // Field redaction is applied in-service (ADR-011 output boundary)
       return ResponseFormatter.list(res, {
-        data: sanitizedData,
+        data: result.data,
         pagination: result.pagination,
         appliedFilters: result.appliedFilters,
         rlsApplied: result.rlsApplied,
@@ -199,14 +193,8 @@ function createEntityRouter(entityName, _options = {}) {
         return ResponseFormatter.notFound(res, `${displayName} not found`);
       }
 
-      const sanitizedData = filterDataByRole(
-        entity,
-        metadata,
-        req.dbUser.role,
-        'read',
-      );
-
-      return ResponseFormatter.get(res, sanitizedData);
+      // Field redaction is applied in-service (ADR-011 output boundary)
+      return ResponseFormatter.get(res, entity);
     }),
   );
 

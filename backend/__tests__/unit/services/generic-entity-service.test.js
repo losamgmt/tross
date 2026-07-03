@@ -656,8 +656,9 @@ describe("GenericEntityService", () => {
           rlsContext: { role: "technician", userId: 1, technician_profile_id: 5 },
         });
 
-        // Assert
-        expect(result).toEqual(mockWorkOrder);
+        // Assert - row returned (RLS access granted); field redaction is
+        // covered separately by the _redactForContext + field-access tests
+        expect(result).not.toBeNull();
         const [query, params] = db.query.mock.calls[0];
         expect(query).toContain("WHERE work_orders.id = $1");
         expect(query).toContain("work_orders.assigned_technician_id = $2");
@@ -674,8 +675,9 @@ describe("GenericEntityService", () => {
           rlsContext: { role: "customer", userId: 1, customer_profile_id: 42 },
         });
 
-        // Assert
-        expect(result).toEqual(mockWorkOrder);
+        // Assert - row returned (RLS access granted); field redaction is
+        // covered separately by the _redactForContext + field-access tests
+        expect(result).not.toBeNull();
         const [query, params] = db.query.mock.calls[0];
         expect(query).toContain("WHERE work_orders.id = $1");
         expect(query).toContain("work_orders.customer_id = $2");
@@ -1088,8 +1090,9 @@ describe("GenericEntityService", () => {
           rlsContext: { role: "customer", userId: 1, customer_profile_id: 42 },
         });
 
-        // Assert
-        expect(result.data).toEqual(mockWorkOrders);
+        // Assert - rows returned (RLS access granted); field redaction is
+        // covered separately by the _redactForContext + field-access tests
+        expect(result.data).toHaveLength(1);
         // Should have both search params and RLS params
         const selectParams = db.query.mock.calls[1][1];
         expect(selectParams).toContain("%Fix%"); // Search param
@@ -1116,8 +1119,9 @@ describe("GenericEntityService", () => {
           rlsContext: { role: "technician", userId: 1, technician_profile_id: 5 },
         });
 
-        // Assert
-        expect(result.data).toEqual(mockWorkOrders);
+        // Assert - rows returned (RLS access granted); field redaction is
+        // covered separately by the _redactForContext + field-access tests
+        expect(result.data).toHaveLength(1);
         const selectQuery = db.query.mock.calls[1][0];
         expect(selectQuery).toContain("assigned_technician_id =");
       });
