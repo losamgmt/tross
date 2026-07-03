@@ -72,6 +72,32 @@ function getTestValueForField(field, meta) {
 }
 
 /**
+ * Assert an update response is COHERENT for whichever hook branch fired, instead
+ * of merely landing in a broad status set. Deterministic per-entity behavior
+ * (e.g. the invoice high-value approval workflow) is proven separately in
+ * integration/hooks-approval.test.js.
+ *
+ * @param {Object} ctx - Scenario context (provides expect)
+ * @param {Object} response - supertest response from the hooked-field update
+ */
+function assertHookResponseCoherent(ctx, response) {
+  const body = response.body || {};
+
+  if (response.status === 202) {
+    // beforeChange requiresApproval → APPROVAL_REQUIRED envelope with approvalInfo
+    ctx.expect(body.code).toBe("APPROVAL_REQUIRED");
+    ctx.expect(body.details?.approvalInfo).toBeDefined();
+  } else if (response.status === 403) {
+    // beforeChange blocked → failure envelope with a reason
+    ctx.expect(body.success).toBe(false);
+    ctx.expect(body.message).toBeTruthy();
+  } else {
+    // Hook allowed the change → update succeeded
+    ctx.expect(response.status).toBe(200);
+  }
+}
+
+/**
  * Scenario: beforeChange hooks are evaluated on update
  *
  * Preconditions:
@@ -110,9 +136,9 @@ function beforeChangeHooksOnUpdate(meta, ctx) {
           .set(auth)
           .send({ [fieldName]: getTestValueForField(meta.fields[fieldName], meta) });
 
-        // Hook either allows (200), blocks (403), requires approval (202),
-        // or validation rejects value (400) - all indicate hooks are wired up
-        ctx.expect([200, 202, 400, 403]).toContain(updateResponse.status);
+        // Assert the response is coherent for whichever hook branch fired
+        // (allow / block / requiresApproval), not merely in a broad status set.
+        assertHookResponseCoherent(ctx, updateResponse);
       },
     );
   });
@@ -190,10 +216,9 @@ function afterChangeHooksOnUpdate(meta, ctx) {
           .set(auth)
           .send({ [fieldName]: getTestValueForField(meta.fields[fieldName], meta) });
 
-        // Update should succeed - afterChange hooks don't prevent updates
-        // (beforeChange hooks block, afterChange hooks execute after success)
-        // 400 = validation error (acceptable - hooks still wired)
-        ctx.expect([200, 202, 400, 403]).toContain(updateResponse.status);
+        // afterChange never blocks; a beforeChange hook on the same field may
+        // still intercept (block / requiresApproval), so assert branch coherence.
+        assertHookResponseCoherent(ctx, updateResponse);
       },
     );
   });
