@@ -291,4 +291,50 @@ describe('Entity Metadata Validator', () => {
       ).toBe(true);
     });
   });
+
+  describe('afterChange do: action-registry validation', () => {
+    // Builds an entity whose `name` field carries a single afterChange hook with
+    // the given `do:` value. Only the action-registry check can flag
+    // `fields.name.afterChange[0].do` here.
+    function withAfterChangeDo(doValue) {
+      const meta = createMinimalMetadata({
+        fields: {
+          id: {
+            type: 'integer',
+            label: 'ID',
+            access: { create: 'hidden', edit: 'hidden', view: 'read' },
+          },
+          name: {
+            type: 'string',
+            label: 'Name',
+            access: { create: 'required', edit: 'editable', view: 'read' },
+            afterChange: [{ on: 'change', do: doValue }],
+          },
+        },
+      });
+      return validateEntity('test_entity', meta, {});
+    }
+
+    test('accepts a registered action id', () => {
+      const result = withAfterChangeDo('notify_approvers');
+      expect(
+        hasFieldError(result, 'fields.name.afterChange[0].do'),
+      ).toBe(false);
+    });
+
+    test('rejects an unregistered action id (e.g. the legacy bare "notify")', () => {
+      const result = withAfterChangeDo('notify');
+      expect(result.hasErrors()).toBe(true);
+      expect(
+        hasFieldError(result, 'fields.name.afterChange[0].do'),
+      ).toBe(true);
+    });
+
+    test('accepts an inline action object (not subject to the registry check)', () => {
+      const result = withAfterChangeDo({ log: { message: 'x' } });
+      expect(
+        hasFieldError(result, 'fields.name.afterChange[0].do'),
+      ).toBe(false);
+    });
+  });
 });

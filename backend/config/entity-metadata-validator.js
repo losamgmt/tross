@@ -16,6 +16,7 @@ const { RLS_ENGINE, HOOK_WHEN_OPERATORS } = require('./constants');
 const { ENTITY_STRUCTURE, ENTITY_TRAITS } = require('./entity-traits');
 const { getForeignKeyFieldNames, extractForeignKeyFields } = require('./fk-helpers');
 const { foreignKeyFieldName } = require('./field-types');
+const { listActions } = require('./action-handlers');
 
 /**
  * Valid navigation groups for menu placement.
@@ -1564,6 +1565,7 @@ function validateBeforeChangeHooks(meta, errors) {
  */
 function validateAfterChangeHooks(meta, errors) {
   const fields = meta.fields || {};
+  const registeredActions = new Set(listActions());
 
   for (const [fieldName, fieldDef] of Object.entries(fields)) {
     const hooks = fieldDef.afterChange;
@@ -1595,6 +1597,16 @@ function validateAfterChangeHooks(meta, errors) {
         errors.add(`${prefix}.do`, 'Required property (action ID or inline action)');
       } else if (typeof hook.do !== 'string' && typeof hook.do !== 'object') {
         errors.add(`${prefix}.do`, 'Must be a string (action ID) or object (inline action)');
+      } else if (typeof hook.do === 'string' && !registeredActions.has(hook.do)) {
+        // FAIL FAST: a string `do:` must reference an action registered in
+        // actions.json (mirrors the beforeChange when.operator vocabulary check).
+        // This prevents silent no-op hooks (the bare 'notify'/'log' bug that
+        // evaluateAfterHooks would otherwise log-and-swallow at runtime).
+        errors.add(
+          `${prefix}.do`,
+          `Unknown action '${hook.do}'. Must be registered in actions.json `
+            + `(registered: ${[...registeredActions].join(', ')}) or an inline action object.`,
+        );
       }
 
       // afterChange cannot have blocking properties
