@@ -222,18 +222,6 @@ module.exports = {
           requiresApproval: { approver: 'manager', reason: 'high_value_quote' },
         },
       ],
-      afterChange: [
-        {
-          description: 'Notify customer when quote is sent',
-          on: 'draft→sent',
-          do: 'notify',
-        },
-        {
-          description: 'Notify sales team when quote is accepted',
-          on: 'sent→accepted',
-          do: 'notify',
-        },
-      ],
     },
 
     // Identity field - auto-generated, immutable

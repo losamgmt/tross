@@ -5,6 +5,13 @@
   "_documentation": {
     "description": "Central registry of all workflow actions referenced by metadata hooks.",
     "usage": "In metadata: afterChange: [{ on: 'approved', do: 'create_quote_from_recommendation' }]",
+    "knownIssues": {
+      "_status": "INERT + TODO: the notification actions below are referenced by NO live metadata hook and are BROKEN as written. DO NOT wire them to any hook until the notification feature is designed (profile\u2192user resolver + created_by). See /memories/repo/notifications-identity-kb.md.",
+      "notify_customer": "recipient.field 'customer_id' is a customers PROFILE id; notifications.user_id is a users FK. Needs profile\u2192user resolution (a profile may map to 0..N users).",
+      "notify_technician": "recipient.field 'assigned_technician_id' is a technicians PROFILE id, not a users id. Same profile\u2192user gap.",
+      "notify_creator": "recipient.field 'created_by' does not exist on any entity (aspirational Phase 2). Add column + population, or drop.",
+      "notify_approvers": "The only correct notification action (recipient.role \u2192 getUsersByRole \u2192 real user ids)."
+    },
     "types": {
       "notification": "Send notification to user(s)",
       "create_entity": "Create a new entity record from context",

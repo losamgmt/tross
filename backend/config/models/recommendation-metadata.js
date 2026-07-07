@@ -235,18 +235,6 @@ module.exports = {
           requiresApproval: { approver: 'manager', reason: 'urgent_priority' },
         },
       ],
-      afterChange: [
-        {
-          description: 'Notify customer when recommendation is approved',
-          on: 'draft→approved',
-          do: 'notify',
-        },
-        {
-          description: 'Notify customer when recommendation is rejected',
-          on: 'draft→rejected',
-          do: 'notify',
-        },
-      ],
     },
 
     // Identity field - auto-generated, immutable

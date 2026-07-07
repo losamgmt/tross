@@ -453,18 +453,6 @@ module.exports = {
           requiresApproval: { approver: 'manager', reason: 'high_value_invoice' },
         },
       ],
-      afterChange: [
-        {
-          description: 'Notify customer when invoice is sent',
-          on: 'draft→sent',
-          do: 'notify',
-        },
-        {
-          description: 'Log payment received',
-          on: 'sent→paid',
-          do: 'log',
-        },
-      ],
     },
 
     // Identity field - auto-generated, immutable, searchable
