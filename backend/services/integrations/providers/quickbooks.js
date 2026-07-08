@@ -9,6 +9,7 @@
  */
 
 const AppError = require('../../../utils/app-error');
+const { ERROR_CODES } = require('../../../config/error-codes');
 const { logger } = require('../../../config/logger');
 
 // QuickBooks API base URLs
@@ -62,7 +63,7 @@ async function refreshToken(refreshTokenValue) {
   });
   
   if (!response.ok) {
-    throw new AppError('QuickBooks token refresh failed', 401, 'TOKEN_REFRESH_FAILED');
+    throw new AppError('QuickBooks token refresh failed', 401, ERROR_CODES.TOKEN_REFRESH_FAILED);
   }
   
   const data = await response.json();
@@ -96,7 +97,7 @@ async function syncInvoice(tokens, { invoice }) {
   //   }
   // );
   
-  throw new AppError('QuickBooks syncInvoice not implemented', 501, 'NOT_IMPLEMENTED');
+  throw new AppError('QuickBooks syncInvoice not implemented', 501, ERROR_CODES.NOT_IMPLEMENTED);
 }
 
 /**
@@ -109,7 +110,7 @@ async function syncCustomer(tokens, { customer }) {
   logger.info('Syncing customer to QuickBooks', { customerId: customer.id });
   
   // TODO: Implement actual QuickBooks customer creation
-  throw new AppError('QuickBooks syncCustomer not implemented', 501, 'NOT_IMPLEMENTED');
+  throw new AppError('QuickBooks syncCustomer not implemented', 501, ERROR_CODES.NOT_IMPLEMENTED);
 }
 
 module.exports = {

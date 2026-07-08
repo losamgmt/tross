@@ -18,6 +18,7 @@ const IdempotencyService = require('../services/utils/idempotency-service');
 const { API_OPERATIONS } = require('../config/api-operations');
 const ResponseFormatter = require('../utils/response-formatter');
 const { logger } = require('../config/logger');
+const { ERROR_CODES } = require('../config/error-codes');
 
 const { IDEMPOTENCY } = API_OPERATIONS;
 
@@ -100,7 +101,7 @@ function checkIdempotency(req, res, next) {
           success: false,
           error: 'Unprocessable Entity',
           message: 'Idempotency key already used with different request body',
-          code: 'IDEMPOTENCY_MISMATCH',
+          code: ERROR_CODES.IDEMPOTENCY_MISMATCH,
           timestamp: new Date().toISOString(),
         });
       }

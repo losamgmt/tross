@@ -1325,7 +1325,7 @@ class GenericEntityService {
               throw new AppError(
                 hookResult.approvalInfo?.description || 'Change requires approval',
                 202,
-                'APPROVAL_REQUIRED',
+                ERROR_CODES.APPROVAL_REQUIRED,
                 { approvalInfo: hookResult.approvalInfo },
               );
             }

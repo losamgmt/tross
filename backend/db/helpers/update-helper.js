@@ -19,6 +19,7 @@
  */
 
 const { ENTITY_FIELDS } = require('../../config/constants');
+const { ERROR_CODES } = require('../../config/error-codes');
 
 /**
  * Custom error for immutable field violations
@@ -28,7 +29,7 @@ class ImmutableFieldError extends Error {
     const fieldNames = violations.map((v) => v.field).join(', ');
     super(`Cannot update immutable field(s): ${fieldNames}`);
     this.name = 'ImmutableFieldError';
-    this.code = 'IMMUTABLE_FIELD_VIOLATION';
+    this.code = ERROR_CODES.IMMUTABLE_FIELD_VIOLATION;
     this.violations = violations;
     this.statusCode = 400;
   }

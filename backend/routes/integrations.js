@@ -18,6 +18,7 @@ const { authenticateToken, requireMinimumRole } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/utils');
 const ResponseFormatter = require('../utils/response-formatter');
 const AppError = require('../utils/app-error');
+const { ERROR_CODES } = require('../config/error-codes');
 const { logger, logSecurityEvent } = require('../config/logger');
 
 // Integration services
@@ -45,7 +46,7 @@ function createIntegrationRouter(providerName) {
     throw new AppError(
       `Unknown integration provider: ${providerName}`,
       500,
-      'INTEGRATION_CONFIG_ERROR',
+      ERROR_CODES.INTEGRATION_CONFIG_ERROR,
     );
   }
 

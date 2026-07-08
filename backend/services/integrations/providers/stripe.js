@@ -12,6 +12,7 @@
  */
 
 const AppError = require('../../../utils/app-error');
+const { ERROR_CODES } = require('../../../config/error-codes');
 const { logger } = require('../../../config/logger');
 
 // Stripe API base URL
@@ -100,7 +101,7 @@ async function syncPayment(tokens, { payment }) {
   logger.info('Syncing payment to Stripe', { paymentId: payment.id });
   
   // TODO: Implement payment sync logic
-  throw new AppError('Stripe syncPayment not implemented', 501, 'NOT_IMPLEMENTED');
+  throw new AppError('Stripe syncPayment not implemented', 501, ERROR_CODES.NOT_IMPLEMENTED);
 }
 
 module.exports = {
