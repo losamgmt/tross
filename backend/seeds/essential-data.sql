@@ -1,0 +1,109 @@
+-- ============================================================================
+-- TROSS ESSENTIAL SEED DATA
+-- ============================================================================
+-- IDEMPOTENT: Safe to run multiple times (uses ON CONFLICT)
+-- PURPOSE: Core bootstrap data the application (and the test database) require
+--          to function: the role hierarchy, the primary admin account, that
+--          account's preferences, and default system settings.
+--
+-- This file is composed into backend/schema.sql by scripts/compose-schema.js.
+-- Business/demo data lives in demo-data.sql (applied separately, dev only).
+-- ============================================================================
+
+-- ============================================================================
+-- ROLES (5 core system roles)
+-- ============================================================================
+-- Hierarchy: admin(5) > manager(4) > dispatcher(3) > technician(2) > customer(1)
+
+INSERT INTO roles (name, description, priority, status) VALUES
+('admin', 'Full system access and user management', 5, 'active'),
+('manager', 'Full data access, manages work orders and technicians', 4, 'active'),
+('dispatcher', 'Medium access, assigns and schedules work orders', 3, 'active'),
+('technician', 'Limited access, updates assigned work orders', 2, 'active'),
+('customer', 'Basic access, submits and tracks service requests', 1, 'active')
+ON CONFLICT (name) DO UPDATE SET
+    description = EXCLUDED.description,
+    priority = EXCLUDED.priority,
+    status = EXCLUDED.status;
+
+-- ============================================================================
+-- ADMIN USER (primary developer account)
+-- ============================================================================
+INSERT INTO users (
+    email,
+    auth0_id,
+    first_name,
+    last_name,
+    role_id,
+    status,
+    is_active
+) VALUES (
+    'zarika.amber@gmail.com',
+    'google-oauth2|106216621173067609100',
+    'Zarika',
+    'Amber',
+    (SELECT id FROM roles WHERE name = 'admin'),
+    'active',
+    true
+)
+ON CONFLICT (email) DO UPDATE SET
+    auth0_id = EXCLUDED.auth0_id,
+    first_name = EXCLUDED.first_name,
+    last_name = EXCLUDED.last_name,
+    role_id = EXCLUDED.role_id,
+    status = EXCLUDED.status,
+    is_active = EXCLUDED.is_active;
+
+-- ============================================================================
+-- USER PREFERENCES (linked to admin user)
+-- Uses individual columns per schema.sql (NOT JSONB)
+-- ============================================================================
+INSERT INTO preferences (
+    id,
+    theme,
+    density,
+    notifications_enabled,
+    items_per_page,
+    notification_retention_days,
+    auto_refresh_interval
+) VALUES (
+    (SELECT id FROM users WHERE email = 'zarika.amber@gmail.com'),
+    'system',
+    'comfortable',
+    true,
+    25,
+    30,
+    0
+)
+ON CONFLICT (id) DO UPDATE SET
+    theme = EXCLUDED.theme,
+    density = EXCLUDED.density,
+    notifications_enabled = EXCLUDED.notifications_enabled;
+
+-- ============================================================================
+-- SYSTEM SETTINGS (default configuration)
+-- ============================================================================
+INSERT INTO system_settings (key, value, description) VALUES 
+(
+    'maintenance_mode',
+    '{"enabled": false, "message": "System is under maintenance. Please try again later.", "allowed_roles": ["admin"], "estimated_end": null}',
+    'Controls system-wide maintenance mode. When enabled, only allowed_roles can access the system.'
+),
+(
+    'feature_flags',
+    '{"dark_mode": true, "file_attachments": true, "audit_logging": true}',
+    'Feature flags for enabling/disabling system features.'
+)
+ON CONFLICT (key) DO NOTHING;
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+DO $$
+BEGIN
+    RAISE NOTICE '✅ Essential seed data applied successfully';
+    RAISE NOTICE '   - Roles: %', (SELECT COUNT(*) FROM roles);
+    RAISE NOTICE '   - Users: %', (SELECT COUNT(*) FROM users);
+    RAISE NOTICE '   - Preferences: %', (SELECT COUNT(*) FROM preferences);
+    RAISE NOTICE '   - System Settings: %', (SELECT COUNT(*) FROM system_settings);
+END $$;

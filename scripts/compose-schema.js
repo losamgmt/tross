@@ -9,7 +9,7 @@
  *   1. schema-parts/header.sql - Static intro, extensions
  *   2. DROP statements - Generated from entity list
  *   3. generated/schema-generated.sql - CREATE tables from generate-schema.js
- *   4. seeds/seed-data.sql - INSERT statements
+ *   4. seeds/essential-data.sql - essential INSERT statements (roles, admin, prefs, settings)
  *
  * Output: backend/schema.sql
  *
@@ -37,7 +37,7 @@ const CONFIG = Object.freeze({
   HEADER_FILE: 'header.sql',
   INFRASTRUCTURE_FILE: 'infrastructure.sql',
   GENERATED_FILE: 'schema-generated.sql',
-  SEEDS_FILE: 'seed-data.sql',
+  SEEDS_FILE: 'essential-data.sql',
 
   // Infrastructure tables (not generated from entity metadata)
   // Note: These are created by infrastructure.sql, not entity metadata
@@ -130,7 +130,7 @@ function composeSchema() {
   // 4. Read seeds
   const seedsPath = path.join(CONFIG.SEEDS_DIR, CONFIG.SEEDS_FILE);
   const seeds = readFile(seedsPath);
-  console.log(seeds ? '  ✓ seed-data.sql' : '  ⚠️  No seeds file');
+  console.log(seeds ? '  ✓ essential-data.sql' : '  ⚠️  No seeds file');
 
   // 5. Extract table names and generate DROP section
   const tableNames = extractTableNames(generated);

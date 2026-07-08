@@ -625,7 +625,7 @@ const CASCADE_STRATEGIES = Object.freeze({
  */
 const DATABASE_MANAGER = Object.freeze({
   MODES: Object.freeze({
-    INIT: 'init',       // Apply schema.sql + seed-data.sql (dev/pre-production)
+    INIT: 'init',       // Apply schema.sql + demo-data.sql (dev/pre-production)
     MIGRATE: 'migrate', // Apply versioned migrations (production)
   }),
 });

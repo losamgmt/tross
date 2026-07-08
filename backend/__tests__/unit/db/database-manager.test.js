@@ -82,7 +82,7 @@ describe('db/database-manager.js', () => {
     test('should apply schema and seed in init mode', async () => {
       fs.readFile
         .mockResolvedValueOnce('CREATE TABLE test;') // schema.sql
-        .mockResolvedValueOnce('INSERT INTO test;'); // seed-data.sql
+        .mockResolvedValueOnce('INSERT INTO test;'); // demo-data.sql
       db.query.mockResolvedValue({ rows: [] });
 
       const result = await dbManager.initialize('init');
@@ -97,7 +97,7 @@ describe('db/database-manager.js', () => {
     test('should handle schema error gracefully', async () => {
       fs.readFile
         .mockResolvedValueOnce('INVALID SQL;') // schema.sql
-        .mockResolvedValueOnce('INSERT INTO test;'); // seed-data.sql
+        .mockResolvedValueOnce('INSERT INTO test;'); // demo-data.sql
       db.query
         .mockRejectedValueOnce(new Error('Syntax error')) // schema fails
         .mockResolvedValueOnce({ rows: [] }); // seed succeeds

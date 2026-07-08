@@ -5,7 +5,7 @@
  * PRE-PRODUCTION STRATEGY (current)
  * ============================================================================
  * Simple, idempotent schema and seed runner.
- * Runs schema.sql (structure) and seed-data.sql (core data) on startup.
+ * Runs schema.sql (structure + essential seeds) and demo-data.sql (dev/demo data) on startup.
  *
  * Both files are idempotent - safe to run multiple times:
  * - CREATE TABLE IF NOT EXISTS
@@ -36,7 +36,7 @@ const { logger } = require('../config/logger');
 const db = require('../db/connection');
 
 const SCHEMA_FILE = path.join(__dirname, '..', 'schema.sql');
-const SEED_FILE = path.join(__dirname, '..', 'seeds', 'seed-data.sql');
+const SEED_FILE = path.join(__dirname, '..', 'seeds', 'demo-data.sql');
 
 /**
  * Initialize database schema and seed data

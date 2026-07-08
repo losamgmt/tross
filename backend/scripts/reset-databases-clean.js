@@ -89,10 +89,10 @@ async function resetDatabase(config, envName) {
 
     // Apply seed data for DEVELOPMENT only (test DB should start empty)
     if (envName === 'DEVELOPMENT') {
-      const seedPath = path.join(__dirname, '..', 'seeds', 'seed-data.sql');
+      const seedPath = path.join(__dirname, '..', 'seeds', 'demo-data.sql');
       const seedData = await fs.readFile(seedPath, 'utf8');
 
-      log(`🌱 Applying seed-data.sql to ${envName}...`, 'blue');
+      log(`🌱 Applying demo-data.sql to ${envName}...`, 'blue');
       await appClient.query(seedData);
       log('✅ Seed data applied', 'green');
     }

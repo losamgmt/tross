@@ -2,7 +2,7 @@
 /**
  * Strict Database Initialization Script
  * 
- * Runs schema.sql and seed-data.sql with FAIL-FAST behavior.
+ * Runs schema.sql and demo-data.sql with FAIL-FAST behavior.
  * Used by Railway deploy to ensure database is properly initialized.
  * 
  * USES THE SAME CONNECTION AS THE REST OF THE APP (db/connection.js)
@@ -23,7 +23,7 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const db = require('../db/connection');
 
 const SCHEMA_FILE = path.join(__dirname, '..', 'schema.sql');
-const SEED_FILE = path.join(__dirname, '..', 'seeds', 'seed-data.sql');
+const SEED_FILE = path.join(__dirname, '..', 'seeds', 'demo-data.sql');
 
 // Color codes
 const colors = {
@@ -56,7 +56,7 @@ async function initDatabase() {
     log('✅ Schema applied successfully', 'green');
 
     // Apply seed data
-    log('🌱 Applying seed-data.sql...', 'blue');
+    log('🌱 Applying demo-data.sql...', 'blue');
     const seedSQL = await fs.readFile(SEED_FILE, 'utf8');
     await db.query(seedSQL);
     log('✅ Seed data applied successfully', 'green');

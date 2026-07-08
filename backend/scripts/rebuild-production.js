@@ -8,7 +8,7 @@
  * Steps:
  *   1. Drop all tables in public schema
  *   2. Apply fresh schema.sql (creates all tables + 5 roles)
- *   3. Run seed-data.sql (admin user + preferences)
+ *   3. Run essential-data.sql (roles, admin, preferences, system settings)
  *
  * Usage:
  *   node scripts/rebuild-production.js
@@ -132,12 +132,12 @@ async function rebuildProduction() {
     log('✅ Schema applied (all tables + 5 roles created)', 'green');
     log('', 'reset');
 
-    // Step 3: Apply seed-data.sql
-    log('🌱 Step 3/4: Applying seed-data.sql...', 'blue');
-    const seedPath = path.join(__dirname, '..', 'seeds', 'seed-data.sql');
+    // Step 3: Apply essential-data.sql
+    log('🌱 Step 3/4: Applying essential-data.sql...', 'blue');
+    const seedPath = path.join(__dirname, '..', 'seeds', 'essential-data.sql');
     const seedData = fs.readFileSync(seedPath, 'utf8');
     await client.query(seedData);
-    log('✅ Seed data applied (admin user + preferences)', 'green');
+    log('✅ Seed data applied (roles + admin + preferences + settings)', 'green');
     log('', 'reset');
 
     // Step 4: Verify

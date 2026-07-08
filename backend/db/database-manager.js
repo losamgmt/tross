@@ -37,7 +37,7 @@ const MODES = DATABASE_MANAGER.MODES;
 // PATHS are module-specific (contain path.join operations, not reusable)
 const PATHS = Object.freeze({
   SCHEMA: path.join(__dirname, '..', 'schema.sql'),
-  SEED: path.join(__dirname, '..', 'seeds', 'seed-data.sql'),
+  SEED: path.join(__dirname, '..', 'seeds', 'demo-data.sql'),
   MIGRATIONS: path.join(__dirname, '..', 'migrations'),
 });
 
@@ -101,7 +101,7 @@ function determineMode() {
 // =============================================================================
 
 /**
- * Apply schema.sql and seed-data.sql
+ * Apply schema.sql and demo-data.sql
  * Idempotent - safe to run multiple times
  * @returns {Promise<{schema: boolean, seed: boolean}>}
  */

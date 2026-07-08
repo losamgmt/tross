@@ -15,7 +15,7 @@
  * IN TESTS / BEFORE DB IS READY:
  *   - Falls back to role-definitions.js (bootstrap constants)
  *   - These constants MUST match the database seed data
- *   - See: backend/seeds/seed-data.sql for canonical values
+ *   - See: backend/seeds/essential-data.sql for canonical values
  *
  * INITIALIZATION:
  *   - Call `initializeFromDatabase()` at server startup (after DB is ready)

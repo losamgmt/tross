@@ -22,7 +22,7 @@
  *
  * SYNCHRONIZATION REQUIREMENT:
  *   These values MUST match the database seed data in:
- *   - backend/seeds/seed-data.sql (INSERT INTO roles)
+ *   - backend/seeds/essential-data.sql (INSERT INTO roles)
  *   - backend/schema.sql (roles table structure)
  *
  * If you need role hierarchy data at runtime, use:
