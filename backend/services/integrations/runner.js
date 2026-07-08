@@ -3,6 +3,7 @@
 const IntegrationTokenService = require('./token-service');
 const { hasProvider, getProviderNames } = require('./providers');
 const AppError = require('../../utils/app-error');
+const { ERROR_CODES } = require('../../config/error-codes');
 const { logger, logSecurityEvent } = require('../../config/logger');
 const { SYSTEM_USER_ID } = require('../../config/constants');
 
@@ -41,7 +42,7 @@ function loadProvider(providerName) {
     throw new AppError(
       `Unknown integration provider: ${providerName}`,
       400,
-      'BAD_REQUEST'
+      ERROR_CODES.VALIDATION_FAILED
     );
   }
   

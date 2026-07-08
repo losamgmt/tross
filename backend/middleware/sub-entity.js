@@ -8,6 +8,7 @@
  */
 
 const AppError = require('../utils/app-error');
+const { ERROR_CODES } = require('../config/error-codes');
 const { pool } = require('../db/connection');
 const { buildRLSFilter } = require('../db/helpers/rls');
 const { logger } = require('../config/logger');
@@ -91,7 +92,7 @@ function requireParentAccess(parentEntityKey, idParam = 'id') {
 
       if (isNaN(parentId) || parentId <= 0) {
         return next(
-          new AppError('Invalid parent entity ID', 400, 'VALIDATION_ERROR'),
+          new AppError('Invalid parent entity ID', 400, ERROR_CODES.VALIDATION_FAILED),
         );
       }
 

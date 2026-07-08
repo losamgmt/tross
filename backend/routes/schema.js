@@ -18,6 +18,7 @@ const {
 } = require('../config/validation-deriver');
 const { asyncHandler } = require('../middleware/utils');
 const AppError = require('../utils/app-error');
+const { ERROR_CODES } = require('../config/error-codes');
 
 /**
  * @openapi
@@ -187,7 +188,7 @@ router.get(
       throw new AppError(
         `Column '${column}' is not a foreign key`,
         400,
-        'BAD_REQUEST',
+        ERROR_CODES.VALIDATION_FAILED,
       );
     }
 

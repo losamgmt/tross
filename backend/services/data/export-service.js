@@ -27,6 +27,7 @@ const db = require('../../db/connection');
 const QueryBuilderService = require('../entity/query-builder-service');
 const { buildRLSFilter } = require('../../db/helpers/rls');
 const AppError = require('../../utils/app-error');
+const { ERROR_CODES } = require('../../config/error-codes');
 
 /**
  * Escape a value for CSV format
@@ -169,7 +170,7 @@ class ExportService {
       throw new AppError(
         `No exportable fields found for entity: ${entityName}`,
         400,
-        'BAD_REQUEST',
+        ERROR_CODES.VALIDATION_FAILED,
       );
     }
 

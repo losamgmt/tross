@@ -336,7 +336,7 @@ describe("Sub-Entity Middleware", () => {
 
       const error = next.mock.calls[0][0];
       expect(error.statusCode).toBe(400);
-      expect(error.code).toBe("VALIDATION_ERROR");
+      expect(error.code).toBe("VALIDATION_FAILED");
     });
 
     it("should return 400 for zero ID", async () => {

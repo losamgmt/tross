@@ -1,4 +1,5 @@
 const AppError = require('../../../utils/app-error');
+const { ERROR_CODES } = require('../../../config/error-codes');
 
 /**
  * Authentication Strategy Interface
@@ -74,7 +75,7 @@ class AuthStrategy {
     throw new AppError(
       'Token refresh not supported by this provider',
       400,
-      'BAD_REQUEST',
+      ERROR_CODES.VALIDATION_FAILED,
     );
   }
 

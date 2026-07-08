@@ -18,6 +18,7 @@
 const db = require('../../db/connection');
 const { logger, logSecurityEvent } = require('../../config/logger');
 const AppError = require('../../utils/app-error');
+const { ERROR_CODES } = require('../../config/error-codes');
 
 /**
  * Known setting keys with their default values
@@ -46,7 +47,7 @@ class SystemSettingsService {
    */
   static async getSetting(key) {
     if (!key || typeof key !== 'string') {
-      throw new AppError('Setting key is required', 400, 'BAD_REQUEST');
+      throw new AppError('Setting key is required', 400, ERROR_CODES.VALIDATION_FAILED);
     }
 
     const result = await db.query(
@@ -100,11 +101,11 @@ class SystemSettingsService {
    */
   static async updateSetting(key, value, userId) {
     if (!key || typeof key !== 'string') {
-      throw new AppError('Setting key is required', 400, 'BAD_REQUEST');
+      throw new AppError('Setting key is required', 400, ERROR_CODES.VALIDATION_FAILED);
     }
 
     if (value === undefined) {
-      throw new AppError('Setting value is required', 400, 'BAD_REQUEST');
+      throw new AppError('Setting value is required', 400, ERROR_CODES.VALIDATION_FAILED);
     }
 
     const result = await db.query(

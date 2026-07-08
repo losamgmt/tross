@@ -14,6 +14,7 @@ const UserDataService = require('../../utils/user-data');
 const auth0Config = require('../../../config/auth0');
 const { toSafeString, toSafeEmail } = require('../../../validators');
 const AppError = require('../../../utils/app-error');
+const { ERROR_CODES } = require('../../../config/error-codes');
 const AppConfig = require('../../../config/app-config');
 
 // SECURITY: JWT_SECRET accessed via AppConfig.jwt.secret getter
@@ -70,7 +71,7 @@ class Auth0Strategy extends AuthStrategy {
         throw new AppError(
           'Authorization code is required',
           400,
-          'BAD_REQUEST',
+          ERROR_CODES.VALIDATION_FAILED,
         );
       }
 

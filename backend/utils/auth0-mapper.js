@@ -12,6 +12,7 @@
 
 const userMetadata = require('../config/models/user-metadata');
 const AppError = require('./app-error');
+const { ERROR_CODES } = require('../config/error-codes');
 
 /**
  * Default role name for new users (configurable via metadata)
@@ -49,17 +50,17 @@ const DEFAULT_LAST_NAME = 'User';
  */
 function mapAuth0ToUser(auth0Data) {
   if (!auth0Data) {
-    throw new AppError('Auth0 data is required', 400, 'BAD_REQUEST');
+    throw new AppError('Auth0 data is required', 400, ERROR_CODES.VALIDATION_FAILED);
   }
 
   const { sub, email, given_name, family_name, role } = auth0Data;
 
   if (!sub) {
-    throw new AppError('Auth0 sub (user ID) is required', 400, 'BAD_REQUEST');
+    throw new AppError('Auth0 sub (user ID) is required', 400, ERROR_CODES.VALIDATION_FAILED);
   }
 
   if (!email) {
-    throw new AppError('Auth0 email is required', 400, 'BAD_REQUEST');
+    throw new AppError('Auth0 email is required', 400, ERROR_CODES.VALIDATION_FAILED);
   }
 
   return {
@@ -83,15 +84,15 @@ function mapAuth0ToUser(auth0Data) {
  */
 function validateAuth0Data(auth0Data) {
   if (!auth0Data) {
-    throw new AppError('Auth0 data is required', 400, 'BAD_REQUEST');
+    throw new AppError('Auth0 data is required', 400, ERROR_CODES.VALIDATION_FAILED);
   }
 
   if (!auth0Data.sub) {
-    throw new AppError('Auth0 sub (user ID) is required', 400, 'BAD_REQUEST');
+    throw new AppError('Auth0 sub (user ID) is required', 400, ERROR_CODES.VALIDATION_FAILED);
   }
 
   if (!auth0Data.email) {
-    throw new AppError('Auth0 email is required', 400, 'BAD_REQUEST');
+    throw new AppError('Auth0 email is required', 400, ERROR_CODES.VALIDATION_FAILED);
   }
 
   return true;

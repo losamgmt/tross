@@ -158,7 +158,7 @@ describe('checkIdempotency middleware', () => {
     test('returns 400 for invalid key format', () => {
       mockReq.get.mockReturnValue('invalid@key');
       IdempotencyService.validateKey.mockImplementation(() => {
-        throw new AppError('Invalid key', 400, 'BAD_REQUEST');
+        throw new AppError('Invalid key', 400, 'VALIDATION_FAILED');
       });
 
       checkIdempotency(mockReq, mockRes, mockNext);

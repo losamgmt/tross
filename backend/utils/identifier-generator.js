@@ -17,6 +17,7 @@
 const db = require('../db/connection');
 const { sanitizeIdentifier } = require('./sql-safety');
 const AppError = require('./app-error');
+const { ERROR_CODES } = require('../config/error-codes');
 const {
   getIdentifierFields,
   getEntityPrefix,
@@ -60,7 +61,7 @@ async function generateIdentifier(entityType) {
     throw new AppError(
       `Unknown entity type: ${entityType}`,
       400,
-      'BAD_REQUEST',
+      ERROR_CODES.VALIDATION_FAILED,
     );
   }
 

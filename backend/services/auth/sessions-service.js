@@ -14,6 +14,7 @@
 const db = require('../../db/connection');
 const { logger } = require('../../config/logger');
 const AppError = require('../../utils/app-error');
+const { ERROR_CODES } = require('../../config/error-codes');
 
 class SessionsService {
   /**
@@ -109,7 +110,7 @@ class SessionsService {
   static async forceLogoutUser(userId, adminUserId, reason = null) {
     // Prevent admin from locking themselves (check before transaction)
     if (userId === adminUserId) {
-      throw new AppError('Cannot force logout yourself', 400, 'BAD_REQUEST');
+      throw new AppError('Cannot force logout yourself', 400, ERROR_CODES.VALIDATION_FAILED);
     }
 
     const client = await db.getClient();

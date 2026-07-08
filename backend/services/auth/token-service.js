@@ -5,6 +5,7 @@ const db = require('../../db/connection');
 const { logger } = require('../../config/logger');
 const { toSafeInteger, toSafeUuid } = require('../../validators/type-coercion');
 const AppError = require('../../utils/app-error');
+const { ERROR_CODES } = require('../../config/error-codes');
 const AppConfig = require('../../config/app-config');
 
 // SECURITY: JWT_SECRET accessed via AppConfig.jwt.secret getter
@@ -202,7 +203,7 @@ class TokenService {
       }
       if (error.name === 'JsonWebTokenError') {
         logger.warn('Invalid refresh token format', { error: error.message });
-        throw new AppError('Invalid refresh token format', 400, 'BAD_REQUEST');
+        throw new AppError('Invalid refresh token format', 400, ERROR_CODES.VALIDATION_FAILED);
       }
       logger.error('Error refreshing token', { error: error.message });
       throw error;

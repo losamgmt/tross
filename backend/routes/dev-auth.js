@@ -11,6 +11,7 @@ const { ROLE_HIERARCHY } = require('../config/role-definitions');
 const ResponseFormatter = require('../utils/response-formatter');
 const { asyncHandler } = require('../middleware/utils');
 const AppError = require('../utils/app-error');
+const { ERROR_CODES } = require('../config/error-codes');
 
 const router = express.Router();
 
@@ -87,7 +88,7 @@ router.get(
       throw new AppError(
         `Invalid role. Role must be one of: ${ROLE_HIERARCHY.join(', ')}`,
         400,
-        'BAD_REQUEST',
+        ERROR_CODES.VALIDATION_FAILED,
       );
     }
 

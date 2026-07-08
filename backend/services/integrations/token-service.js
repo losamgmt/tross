@@ -20,6 +20,7 @@
 const db = require('../../db/connection');
 const { logger, logSecurityEvent } = require('../../config/logger');
 const AppError = require('../../utils/app-error');
+const { ERROR_CODES } = require('../../config/error-codes');
 const { getProviderNames, hasProvider } = require('../../config/integration-providers');
 const { encrypt, decrypt, isEncrypted } = require('../../utils/encryption');
 
@@ -41,7 +42,7 @@ class IntegrationTokenService {
       throw new AppError(
         `Invalid integration provider: ${provider}. Valid: ${getProviderNames().join(', ')}`,
         400,
-        'BAD_REQUEST',
+        ERROR_CODES.VALIDATION_FAILED,
       );
     }
   }
@@ -142,7 +143,7 @@ class IntegrationTokenService {
     this._validateProvider(provider);
 
     if (!tokens || typeof tokens !== 'object') {
-      throw new AppError('Tokens must be an object', 400, 'BAD_REQUEST');
+      throw new AppError('Tokens must be an object', 400, ERROR_CODES.VALIDATION_FAILED);
     }
 
     // Add storage timestamp for debugging

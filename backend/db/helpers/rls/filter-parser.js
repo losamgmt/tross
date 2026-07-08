@@ -11,6 +11,7 @@
 
 const { sanitizeIdentifier } = require('../../../utils/sql-safety');
 const AppError = require('../../../utils/app-error');
+const { ERROR_CODES } = require('../../../config/error-codes');
 const { logger } = require('../../../config/logger');
 const { RLS_ENGINE } = require('../../../config/constants');
 
@@ -66,7 +67,7 @@ function parseFilter(filter, alias = '', paramOffset = 1) {
     throw new AppError(
       `Filter exceeds maximum of ${RLS_ENGINE.MAX_FILTER_CONDITIONS} conditions`,
       400,
-      'BAD_REQUEST',
+      ERROR_CODES.VALIDATION_FAILED,
     );
   }
 
@@ -117,7 +118,7 @@ function parseSimpleValue(columnRef, value, paramOffset) {
 
   if (Array.isArray(value)) {
     if (value.length === 0) {
-      throw new AppError('IN clause requires non-empty array', 400, 'BAD_REQUEST');
+      throw new AppError('IN clause requires non-empty array', 400, ERROR_CODES.VALIDATION_FAILED);
     }
     const placeholders = value.map((_, i) => `$${paramOffset + i}`).join(', ');
     return {
@@ -145,7 +146,7 @@ function parseOperatorValue(columnRef, value, paramOffset) {
     throw new AppError(
       'Operator object must have exactly one key',
       400,
-      'BAD_REQUEST',
+      ERROR_CODES.VALIDATION_FAILED,
     );
   }
 
@@ -153,7 +154,7 @@ function parseOperatorValue(columnRef, value, paramOffset) {
   const sqlOp = OPERATORS[op];
 
   if (!sqlOp) {
-    throw new AppError(`Unknown filter operator: ${op}`, 400, 'BAD_REQUEST');
+    throw new AppError(`Unknown filter operator: ${op}`, 400, ERROR_CODES.VALIDATION_FAILED);
   }
 
   // IS NULL / IS NOT NULL
@@ -165,7 +166,7 @@ function parseOperatorValue(columnRef, value, paramOffset) {
   // IN / NOT IN
   if (op === '$in' || op === '$nin') {
     if (!Array.isArray(val) || val.length === 0) {
-      throw new AppError(`${op} requires non-empty array`, 400, 'BAD_REQUEST');
+      throw new AppError(`${op} requires non-empty array`, 400, ERROR_CODES.VALIDATION_FAILED);
     }
     const placeholders = val.map((_, i) => `$${paramOffset + i}`).join(', ');
     return {

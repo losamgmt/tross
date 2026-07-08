@@ -22,6 +22,7 @@ const db = require('../../db/connection');
 const { logger } = require('../../config/logger');
 const { API_OPERATIONS } = require('../../config/api-operations');
 const AppError = require('../../utils/app-error');
+const { ERROR_CODES } = require('../../config/error-codes');
 const crypto = require('crypto');
 
 const { IDEMPOTENCY } = API_OPERATIONS;
@@ -60,7 +61,7 @@ class IdempotencyService {
       throw new AppError(
         'Idempotency key must be a non-empty string',
         400,
-        'BAD_REQUEST',
+        ERROR_CODES.VALIDATION_FAILED,
       );
     }
 
@@ -68,7 +69,7 @@ class IdempotencyService {
       throw new AppError(
         `Idempotency key exceeds maximum length of ${IDEMPOTENCY.MAX_KEY_LENGTH}`,
         400,
-        'BAD_REQUEST',
+        ERROR_CODES.VALIDATION_FAILED,
       );
     }
 
@@ -76,7 +77,7 @@ class IdempotencyService {
       throw new AppError(
         'Idempotency key must contain only alphanumeric characters, hyphens, and underscores',
         400,
-        'BAD_REQUEST',
+        ERROR_CODES.VALIDATION_FAILED,
       );
     }
   }

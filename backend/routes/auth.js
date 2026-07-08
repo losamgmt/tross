@@ -23,6 +23,7 @@ const { getClientIp, getUserAgent } = require('../utils/request-helpers');
 const { asyncHandler } = require('../middleware/utils');
 const GenericEntityService = require('../services/entity/generic-entity-service');
 const AppError = require('../utils/app-error');
+const { ERROR_CODES } = require('../config/error-codes');
 
 const router = express.Router();
 
@@ -164,7 +165,7 @@ router.put(
     });
 
     if (Object.keys(updates).length === 0) {
-      throw new AppError('No valid fields to update', 400, 'BAD_REQUEST');
+      throw new AppError('No valid fields to update', 400, ERROR_CODES.VALIDATION_FAILED);
     }
 
     // Use GenericEntityService instead of User.update

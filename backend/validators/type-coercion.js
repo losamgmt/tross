@@ -22,6 +22,7 @@ const {
   logValidationFailure,
 } = require('./validation-logger');
 const AppError = require('../utils/app-error');
+const { ERROR_CODES } = require('../config/error-codes');
 
 /**
  * Safely coerce a value to an integer ID
@@ -64,7 +65,7 @@ function toSafeInteger(value, fieldName = 'id', options = {}) {
       value,
       reason: `Field is required but received ${value}`,
     });
-    throw new AppError(`${fieldName} is required`, 400, 'BAD_REQUEST');
+    throw new AppError(`${fieldName} is required`, 400, ERROR_CODES.VALIDATION_FAILED);
   }
 
   // Attempt coercion
@@ -82,7 +83,7 @@ function toSafeInteger(value, fieldName = 'id', options = {}) {
     throw new AppError(
       `${fieldName} must be a valid integer`,
       400,
-      'BAD_REQUEST',
+      ERROR_CODES.VALIDATION_FAILED,
     );
   }
 
@@ -97,7 +98,7 @@ function toSafeInteger(value, fieldName = 'id', options = {}) {
     throw new AppError(
       `${fieldName} must be at least ${min}`,
       400,
-      'BAD_REQUEST',
+      ERROR_CODES.VALIDATION_FAILED,
     );
   }
 
@@ -111,7 +112,7 @@ function toSafeInteger(value, fieldName = 'id', options = {}) {
     throw new AppError(
       `${fieldName} must be at most ${max}`,
       400,
-      'BAD_REQUEST',
+      ERROR_CODES.VALIDATION_FAILED,
     );
   }
 
@@ -232,7 +233,7 @@ function toSafeBoolean(value, fieldName = 'boolean', defaultValue = false) {
     throw new AppError(
       `${fieldName} must be a valid boolean`,
       400,
-      'BAD_REQUEST',
+      ERROR_CODES.VALIDATION_FAILED,
     );
   }
 
@@ -305,7 +306,7 @@ function toSafeUuid(value, fieldName = 'uuid', options = {}) {
       value,
       reason: `Field is required but received ${value}`,
     });
-    throw new AppError(`${fieldName} is required`, 400, 'BAD_REQUEST');
+    throw new AppError(`${fieldName} is required`, 400, ERROR_CODES.VALIDATION_FAILED);
   }
 
   // Must be string
@@ -319,7 +320,7 @@ function toSafeUuid(value, fieldName = 'uuid', options = {}) {
     throw new AppError(
       `${fieldName} must be a valid UUID string`,
       400,
-      'BAD_REQUEST',
+      ERROR_CODES.VALIDATION_FAILED,
     );
   }
 
@@ -336,7 +337,7 @@ function toSafeUuid(value, fieldName = 'uuid', options = {}) {
     throw new AppError(
       `${fieldName} must be a valid UUID v4`,
       400,
-      'BAD_REQUEST',
+      ERROR_CODES.VALIDATION_FAILED,
     );
   }
 
@@ -384,7 +385,7 @@ function toSafeString(value, fieldName = 'field', options = {}) {
       value,
       reason: `Field is required but received ${value}`,
     });
-    throw new AppError(`${fieldName} is required`, 400, 'BAD_REQUEST');
+    throw new AppError(`${fieldName} is required`, 400, ERROR_CODES.VALIDATION_FAILED);
   }
 
   // Coerce to string
@@ -415,7 +416,7 @@ function toSafeString(value, fieldName = 'field', options = {}) {
       value,
       reason: 'String is empty after trimming',
     });
-    throw new AppError(`${fieldName} cannot be empty`, 400, 'BAD_REQUEST');
+    throw new AppError(`${fieldName} cannot be empty`, 400, ERROR_CODES.VALIDATION_FAILED);
   }
 
   // Check length
@@ -429,7 +430,7 @@ function toSafeString(value, fieldName = 'field', options = {}) {
     throw new AppError(
       `${fieldName} must be at least ${minLength} characters`,
       400,
-      'BAD_REQUEST',
+      ERROR_CODES.VALIDATION_FAILED,
     );
   }
 
@@ -443,7 +444,7 @@ function toSafeString(value, fieldName = 'field', options = {}) {
     throw new AppError(
       `${fieldName} must be at most ${maxLength} characters`,
       400,
-      'BAD_REQUEST',
+      ERROR_CODES.VALIDATION_FAILED,
     );
   }
 
@@ -499,7 +500,7 @@ function toSafeEmail(value, fieldName = 'email', options = {}) {
     throw new AppError(
       `${fieldName} must be a valid email address`,
       400,
-      'BAD_REQUEST',
+      ERROR_CODES.VALIDATION_FAILED,
     );
   }
 

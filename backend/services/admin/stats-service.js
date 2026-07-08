@@ -26,6 +26,7 @@ const {
   validateFieldAgainstWhitelist,
 } = require('../../utils/sql-safety');
 const AppError = require('../../utils/app-error');
+const { ERROR_CODES } = require('../../config/error-codes');
 
 class StatsService {
   /**
@@ -119,7 +120,7 @@ class StatsService {
       throw new AppError(
         `Cannot group by '${groupByField}' - not a filterable field`,
         400,
-        'BAD_REQUEST',
+        ERROR_CODES.VALIDATION_FAILED,
       );
     }
 

@@ -26,6 +26,7 @@ const db = require('./connection');
 const { logger } = require('../config/logger');
 const { DATABASE_MANAGER, ENVIRONMENTS } = require('../config/constants');
 const AppError = require('../utils/app-error');
+const { ERROR_CODES } = require('../config/error-codes');
 
 // =============================================================================
 // CONSTANTS
@@ -70,7 +71,7 @@ function calculateChecksum(content) {
 function parseMigrationFilename(filename) {
   const match = filename.match(/^(\d{3})_(.+)\.sql$/);
   if (!match) {
-    throw new AppError(`Invalid migration filename: ${filename}`, 400, 'BAD_REQUEST');
+    throw new AppError(`Invalid migration filename: ${filename}`, 400, ERROR_CODES.VALIDATION_FAILED);
   }
   return { version: match[1], name: match[2], filename };
 }
@@ -383,7 +384,7 @@ async function initialize(mode, options = {}) {
   } else if (effectiveMode === MODES.MIGRATE) {
     result = await runMigrations(options);
   } else {
-    throw new AppError(`Unknown database mode: ${effectiveMode}`, 400, 'BAD_REQUEST');
+    throw new AppError(`Unknown database mode: ${effectiveMode}`, 400, ERROR_CODES.VALIDATION_FAILED);
   }
 
   isInitialized = true;

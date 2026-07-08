@@ -12,6 +12,7 @@
 const crypto = require('crypto');
 const { logger, logSecurityEvent } = require('../../config/logger');
 const AppError = require('../../utils/app-error');
+const { ERROR_CODES } = require('../../config/error-codes');
 const IntegrationTokenService = require('./token-service');
 const { getProvider, hasProvider, OAUTH_TYPES } = require('../../config/integration-providers');
 
@@ -57,7 +58,7 @@ class IntegrationOAuthService {
    */
   static generateAuthUrl(providerName, redirectUri, userId) {
     if (!hasProvider(providerName)) {
-      throw new AppError(`Unknown provider: ${providerName}`, 400, 'BAD_REQUEST');
+      throw new AppError(`Unknown provider: ${providerName}`, 400, ERROR_CODES.VALIDATION_FAILED);
     }
 
     const provider = getProvider(providerName);
@@ -66,7 +67,7 @@ class IntegrationOAuthService {
       throw new AppError(
         `${providerName} does not support OAuth - configure via API key`,
         400,
-        'BAD_REQUEST',
+        ERROR_CODES.VALIDATION_FAILED,
       );
     }
 
@@ -74,7 +75,7 @@ class IntegrationOAuthService {
       throw new AppError(
         `Unsupported OAuth type: ${provider.oauth.type}`,
         400,
-        'BAD_REQUEST',
+        ERROR_CODES.VALIDATION_FAILED,
       );
     }
 
@@ -130,11 +131,11 @@ class IntegrationOAuthService {
     // Validate state (CSRF protection)
     const pendingState = pendingStates.get(state);
     if (!pendingState) {
-      throw new AppError('Invalid or expired state parameter', 400, 'BAD_REQUEST');
+      throw new AppError('Invalid or expired state parameter', 400, ERROR_CODES.VALIDATION_FAILED);
     }
 
     if (pendingState.providerName !== providerName) {
-      throw new AppError('Provider mismatch in state', 400, 'BAD_REQUEST');
+      throw new AppError('Provider mismatch in state', 400, ERROR_CODES.VALIDATION_FAILED);
     }
 
     // Clear used state

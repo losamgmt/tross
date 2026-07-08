@@ -3,6 +3,7 @@ const { logger } = require('../../config/logger');
 const { AuditActions, AuditResults } = require('./constants');
 const { toSafeUserId, toSafeInteger } = require('../../validators/type-coercion');
 const AppError = require('../../utils/app-error');
+const { ERROR_CODES } = require('../../config/error-codes');
 
 /**
  * AuditService - Comprehensive audit logging for security and compliance
@@ -290,7 +291,7 @@ class AuditService {
         throw new AppError(
           'resourceType must be a non-empty string',
           400,
-          'BAD_REQUEST',
+          ERROR_CODES.VALIDATION_FAILED,
         );
       }
       const safeResourceId = toSafeInteger(resourceId, 'resourceId', {

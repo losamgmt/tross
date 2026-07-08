@@ -9,6 +9,7 @@
  */
 
 const AppError = require('./app-error');
+const { ERROR_CODES } = require('../config/error-codes');
 
 /**
  * Valid SQL identifier pattern
@@ -43,7 +44,7 @@ function sanitizeIdentifier(identifier, context = 'identifier') {
     throw new AppError(
       `Invalid ${context}: must be a string, got ${typeof identifier}`,
       400,
-      'BAD_REQUEST',
+      ERROR_CODES.VALIDATION_FAILED,
     );
   }
 
@@ -51,7 +52,7 @@ function sanitizeIdentifier(identifier, context = 'identifier') {
     throw new AppError(
       `Invalid ${context}: cannot be empty`,
       400,
-      'BAD_REQUEST',
+      ERROR_CODES.VALIDATION_FAILED,
     );
   }
 
@@ -59,7 +60,7 @@ function sanitizeIdentifier(identifier, context = 'identifier') {
     throw new AppError(
       `Invalid ${context}: exceeds maximum length of ${MAX_IDENTIFIER_LENGTH}`,
       400,
-      'BAD_REQUEST',
+      ERROR_CODES.VALIDATION_FAILED,
     );
   }
 
@@ -68,7 +69,7 @@ function sanitizeIdentifier(identifier, context = 'identifier') {
       `Invalid ${context}: "${identifier}" contains invalid characters. ` +
         'Only letters, numbers, and underscores are allowed.',
       400,
-      'BAD_REQUEST',
+      ERROR_CODES.VALIDATION_FAILED,
     );
   }
 
@@ -93,7 +94,7 @@ function validateFieldAgainstWhitelist(
     throw new AppError(
       `${context} whitelist must be an array`,
       400,
-      'BAD_REQUEST',
+      ERROR_CODES.VALIDATION_FAILED,
     );
   }
 
@@ -102,7 +103,7 @@ function validateFieldAgainstWhitelist(
       `Invalid ${context}: "${fieldName}" is not allowed. ` +
         `Allowed values: ${allowedFields.join(', ')}`,
       400,
-      'BAD_REQUEST',
+      ERROR_CODES.VALIDATION_FAILED,
     );
   }
 

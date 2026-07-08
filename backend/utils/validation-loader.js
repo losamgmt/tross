@@ -14,6 +14,7 @@
 
 const Joi = require('joi');
 const AppError = require('./app-error');
+const { ERROR_CODES } = require('../config/error-codes');
 
 // Import the deriver (SINGLE SOURCE OF TRUTH)
 const { deriveValidationRules } = require('../config/validation-deriver');
@@ -329,7 +330,7 @@ function buildCompositeSchema(operationName) {
     throw new AppError(
       `Unknown composite validation: ${operationName}`,
       400,
-      'BAD_REQUEST',
+      ERROR_CODES.VALIDATION_FAILED,
     );
   }
 

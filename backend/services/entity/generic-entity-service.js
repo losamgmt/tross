@@ -63,6 +63,7 @@ const {
   IDENTIFIER_FIELDS,
 } = require('../../utils/identifier-generator');
 const AppError = require('../../utils/app-error');
+const { ERROR_CODES } = require('../../config/error-codes');
 
 /**
  * Table name to entity name mapping for related entity lookups
@@ -348,7 +349,7 @@ class GenericEntityService {
       throw new AppError(
         'Entity name is required and must be a string',
         400,
-        'BAD_REQUEST',
+        ERROR_CODES.VALIDATION_FAILED,
       );
     }
 
@@ -367,7 +368,7 @@ class GenericEntityService {
       throw new AppError(
         `Unknown entity: ${normalizedName}. Valid entities: ${VALID_ENTITIES.join(', ')}`,
         400,
-        'BAD_REQUEST',
+        ERROR_CODES.VALIDATION_FAILED,
       );
     }
 
@@ -763,7 +764,7 @@ class GenericEntityService {
         `Field '${field}' is not filterable for ${entityName}. ` +
           `Allowed: ${filterableFields.join(', ')}`,
         400,
-        'BAD_REQUEST',
+        ERROR_CODES.VALIDATION_FAILED,
       );
     }
 
@@ -974,7 +975,7 @@ class GenericEntityService {
       throw new AppError(
         `Data is required and must be an object for ${entityName}`,
         400,
-        'BAD_REQUEST',
+        ERROR_CODES.VALIDATION_FAILED,
       );
     }
 
@@ -1027,7 +1028,7 @@ class GenericEntityService {
       throw new AppError(
         `Missing required fields for ${entityName}: ${missingFields.join(', ')}`,
         400,
-        'BAD_REQUEST',
+        ERROR_CODES.VALIDATION_FAILED,
       );
     }
 
@@ -1051,7 +1052,7 @@ class GenericEntityService {
       throw new AppError(
         `No valid fields provided for ${entityName}`,
         400,
-        'BAD_REQUEST',
+        ERROR_CODES.VALIDATION_FAILED,
       );
     }
 
@@ -1192,7 +1193,7 @@ class GenericEntityService {
       throw new AppError(
         `Data is required and must be an object for ${entityName}`,
         400,
-        'BAD_REQUEST',
+        ERROR_CODES.VALIDATION_FAILED,
       );
     }
 
@@ -1256,7 +1257,7 @@ class GenericEntityService {
       throw new AppError(
         `No valid updateable fields provided for ${entityName}`,
         400,
-        'BAD_REQUEST',
+        ERROR_CODES.VALIDATION_FAILED,
       );
     }
 
@@ -1605,7 +1606,7 @@ class GenericEntityService {
       throw new AppError(
         'Operations must be a non-empty array',
         400,
-        'BAD_REQUEST',
+        ERROR_CODES.VALIDATION_FAILED,
       );
     }
 
@@ -1618,7 +1619,7 @@ class GenericEntityService {
         throw new AppError(
           `Operation at index ${i} must be an object`,
           400,
-          'BAD_REQUEST',
+          ERROR_CODES.VALIDATION_FAILED,
         );
       }
 
@@ -1626,7 +1627,7 @@ class GenericEntityService {
         throw new AppError(
           `Invalid operation '${op.operation}' at index ${i}. Valid: ${validOperations.join(', ')}`,
           400,
-          'BAD_REQUEST',
+          ERROR_CODES.VALIDATION_FAILED,
         );
       }
 
@@ -1634,7 +1635,7 @@ class GenericEntityService {
         throw new AppError(
           `Operation '${op.operation}' at index ${i} requires an id`,
           400,
-          'BAD_REQUEST',
+          ERROR_CODES.VALIDATION_FAILED,
         );
       }
 
@@ -1645,7 +1646,7 @@ class GenericEntityService {
         throw new AppError(
           `Operation '${op.operation}' at index ${i} requires data`,
           400,
-          'BAD_REQUEST',
+          ERROR_CODES.VALIDATION_FAILED,
         );
       }
     }
@@ -1712,7 +1713,7 @@ class GenericEntityService {
                 throw new AppError(
                   `Missing required fields: ${missingFields.join(', ')}`,
                   400,
-                  'BAD_REQUEST',
+                  ERROR_CODES.VALIDATION_FAILED,
                 );
               }
 
@@ -1741,7 +1742,7 @@ class GenericEntityService {
                 throw new AppError(
                   'No valid fields provided',
                   400,
-                  'BAD_REQUEST',
+                  ERROR_CODES.VALIDATION_FAILED,
                 );
               }
 
@@ -1801,7 +1802,7 @@ class GenericEntityService {
                 throw new AppError(
                   'No valid fields provided',
                   400,
-                  'BAD_REQUEST',
+                  ERROR_CODES.VALIDATION_FAILED,
                 );
               }
 

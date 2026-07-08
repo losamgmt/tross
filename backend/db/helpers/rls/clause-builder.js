@@ -16,6 +16,7 @@ const { parseFilter } = require('./filter-parser');
 const { matchRules, resolveValue } = require('./rule-matcher');
 const { sanitizeIdentifier } = require('../../../utils/sql-safety');
 const AppError = require('../../../utils/app-error');
+const { ERROR_CODES } = require('../../../config/error-codes');
 const { logger } = require('../../../config/logger');
 const { RLS_ENGINE } = require('../../../config/constants');
 
@@ -75,7 +76,7 @@ function buildDirectClause(access, rlsContext, tableAlias, paramOffset, aliasCou
   const { field, value = 'userId' } = access;
 
   if (!field) {
-    throw new AppError('Direct access requires field', 400, 'BAD_REQUEST');
+    throw new AppError('Direct access requires field', 400, ERROR_CODES.VALIDATION_FAILED);
   }
 
   // Validate and sanitize field name
@@ -164,7 +165,7 @@ function buildJunctionClause(access, rlsContext, tableAlias, paramOffset, aliasC
   }
 
   if (!junction) {
-    throw new AppError('Junction access requires junction config', 400, 'BAD_REQUEST');
+    throw new AppError('Junction access requires junction config', 400, ERROR_CODES.VALIDATION_FAILED);
   }
 
   const { table, localKey, foreignKey, filter, through } = junction;
@@ -173,7 +174,7 @@ function buildJunctionClause(access, rlsContext, tableAlias, paramOffset, aliasC
     throw new AppError(
       'Junction requires table, localKey, and foreignKey',
       400,
-      'BAD_REQUEST',
+      ERROR_CODES.VALIDATION_FAILED,
     );
   }
 
@@ -369,7 +370,7 @@ function buildParentClause(access, rlsContext, tableAlias, paramOffset, aliasCou
 
   // foreignKey is required for all parent access
   if (!foreignKey) {
-    throw new AppError('Parent access requires foreignKey', 400, 'BAD_REQUEST');
+    throw new AppError('Parent access requires foreignKey', 400, ERROR_CODES.VALIDATION_FAILED);
   }
 
   // Validate foreignKey
@@ -381,7 +382,7 @@ function buildParentClause(access, rlsContext, tableAlias, paramOffset, aliasCou
   }
 
   if (!parentEntity) {
-    throw new AppError('Parent access requires either parentEntity or polymorphic config', 400, 'BAD_REQUEST');
+    throw new AppError('Parent access requires either parentEntity or polymorphic config', 400, ERROR_CODES.VALIDATION_FAILED);
   }
 
   // Static parent - pass depth for chain tracking
@@ -529,7 +530,7 @@ function buildPolymorphicParentClause(access, rlsContext, tableAlias, paramOffse
     throw new AppError(
       'Polymorphic parent access requires parent type in context (use route params or entity_type filter)',
       400,
-      'BAD_REQUEST',
+      ERROR_CODES.VALIDATION_FAILED,
     );
   }
 

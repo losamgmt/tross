@@ -12,6 +12,7 @@
  */
 
 const AppError = require('../utils/app-error');
+const { ERROR_CODES } = require('../config/error-codes');
 const { FILE_ATTACHMENTS } = require('../config/constants');
 
 /**
@@ -27,7 +28,7 @@ function validateFileHeaders(req, res, next) {
       new AppError(
         `File type ${mimeType || 'unknown'} not allowed. Allowed: ${FILE_ATTACHMENTS.ALLOWED_MIME_TYPES.join(', ')}`,
         400,
-        'BAD_REQUEST',
+        ERROR_CODES.VALIDATION_FAILED,
       ),
     );
   }
@@ -55,7 +56,7 @@ function validateFileBody(req, res, next) {
       new AppError(
         'No file data received. Send raw binary body.',
         400,
-        'BAD_REQUEST',
+        ERROR_CODES.VALIDATION_FAILED,
       ),
     );
   }
@@ -66,7 +67,7 @@ function validateFileBody(req, res, next) {
       new AppError(
         `File too large. Maximum size: ${maxMB}MB`,
         400,
-        'BAD_REQUEST',
+        ERROR_CODES.VALIDATION_FAILED,
       ),
     );
   }
