@@ -17,7 +17,7 @@ const entityFactory = require("./entity-factory");
 const allMetadata = require("../../../config/models");
 const { createTestUser } = require("../../helpers/test-db");
 const { extractForeignKeyFields } = require("../../../config/fk-helpers");
-const { getRequiredFields } = require("../../../config/metadata-accessors");
+const { getRequiredFields, isJunctionEntity } = require("../../../config/metadata-accessors");
 
 /**
  * Build test context for a given app instance
@@ -83,9 +83,18 @@ function buildTestContext(app, db) {
    * @param {Object} fkDef - FK definition from metadata
    * @returns {Promise<number>} The ID to use for the FK
    */
-  async function resolveFkDependency(fkField, fkDef) {
+  async function resolveFkDependency(fkField, fkDef, { fresh = false } = {}) {
     // references is the entity name directly - no conversion needed
     const parentEntityName = fkDef.references;
+
+    // Junction rows need a UNIQUE FK pair (composite unique constraint), so each
+    // of their FKs resolves to a FRESH parent rather than the shared fixture -
+    // otherwise every junction row would reuse the same (fk1, fk2) pair. Fresh
+    // parents are tracked in createdEntities and torn down (LIFO) in cleanup().
+    if (fresh) {
+      const parent = await factory.create(parentEntityName);
+      return parent.id;
+    }
 
     // Check if we have a fixture for this entity type
     if (fixtures[parentEntityName]) {
@@ -116,13 +125,14 @@ function buildTestContext(app, db) {
       const meta = entityFactory.getMetadata(entityName);
       const payload = entityFactory.buildMinimal(entityName, overrides);
       const requiredFields = getRequiredFields(meta);
+      const needsFreshFks = isJunctionEntity(meta);
 
       // Handle required FK dependencies - use fixtures or create parents
       for (const [fkField, fkDef] of Object.entries(extractForeignKeyFields(meta))) {
         if (!requiredFields.includes(fkField)) continue;
         if (payload[fkField] || overrides[fkField]) continue; // Already provided
 
-        payload[fkField] = await resolveFkDependency(fkField, fkDef);
+        payload[fkField] = await resolveFkDependency(fkField, fkDef, { fresh: needsFreshFks });
       }
 
       return { ...payload, ...overrides };
@@ -139,13 +149,14 @@ function buildTestContext(app, db) {
       const meta = entityFactory.getMetadata(entityName);
       const payload = entityFactory.buildMinimal(entityName, overrides);
       const requiredFields = getRequiredFields(meta);
+      const needsFreshFks = isJunctionEntity(meta);
 
       // Handle required FK dependencies - use fixtures or create parents
       for (const [fkField, fkDef] of Object.entries(extractForeignKeyFields(meta))) {
         if (!requiredFields.includes(fkField)) continue;
         if (payload[fkField] || overrides[fkField]) continue; // Already provided
 
-        payload[fkField] = await resolveFkDependency(fkField, fkDef);
+        payload[fkField] = await resolveFkDependency(fkField, fkDef, { fresh: needsFreshFks });
       }
 
       // Apply overrides after FK resolution

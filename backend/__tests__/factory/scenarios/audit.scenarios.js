@@ -24,6 +24,37 @@ function isAuditEnabled(meta) {
 }
 
 /**
+ * Poll audit_logs for a matching entry. Audit logs are written POST-COMMIT
+ * (async, non-blocking), so a fixed sleep is racy under load - retry until the
+ * row appears or the timeout elapses.
+ *
+ * @returns {Promise<Array>} matching rows (empty if none within timeout)
+ */
+async function waitForAuditLog(
+  ctx,
+  { resourceType, resourceId, actionLike, since },
+  timeoutMs = 2000,
+) {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const result = await ctx.db.query(
+      `SELECT * FROM audit_logs
+       WHERE resource_type = $1
+       AND resource_id = $2
+       AND action LIKE $3
+       AND created_at >= $4
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [resourceType, resourceId, actionLike, since],
+    );
+    if (result.rows.length > 0 || Date.now() >= deadline) {
+      return result.rows;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+}
+
+/**
  * Scenario: CREATE generates audit log entry
  *
  * Preconditions: Entity has auditing enabled AND API create is not disabled
@@ -49,23 +80,16 @@ function createGeneratesAuditLog(meta, ctx) {
       ctx.expect(response.status).toBe(201);
       const created = response.body.data || response.body;
 
-      // Wait briefly for async audit log to be written
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      // Poll for the async (post-commit) audit log
+      const auditRows = await waitForAuditLog(ctx, {
+        resourceType: meta.entityName,
+        resourceId: created.id,
+        actionLike: "%create%",
+        since: beforeCreate,
+      });
 
-      // Check audit_logs table
-      const auditResult = await ctx.db.query(
-        `SELECT * FROM audit_logs 
-       WHERE resource_type = $1 
-       AND resource_id = $2 
-       AND action LIKE '%create%'
-       AND created_at >= $3
-       ORDER BY created_at DESC
-       LIMIT 1`,
-        [meta.entityName, created.id, beforeCreate],
-      );
-
-      ctx.expect(auditResult.rows.length).toBeGreaterThan(0);
-      const auditLog = auditResult.rows[0];
+      ctx.expect(auditRows.length).toBeGreaterThan(0);
+      const auditLog = auditRows[0];
       ctx.expect(auditLog.result).toBe("success");
     },
   );
@@ -110,23 +134,16 @@ function updateGeneratesAuditLog(meta, ctx) {
 
       ctx.expect(response.status).toBe(200);
 
-      // Wait briefly for async audit log
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      // Poll for the async (post-commit) audit log
+      const auditRows = await waitForAuditLog(ctx, {
+        resourceType: meta.entityName,
+        resourceId: created.id,
+        actionLike: "%update%",
+        since: beforeUpdate,
+      });
 
-      // Check audit_logs table
-      const auditResult = await ctx.db.query(
-        `SELECT * FROM audit_logs 
-       WHERE resource_type = $1 
-       AND resource_id = $2 
-       AND action LIKE '%update%'
-       AND created_at >= $3
-       ORDER BY created_at DESC
-       LIMIT 1`,
-        [meta.entityName, created.id, beforeUpdate],
-      );
-
-      ctx.expect(auditResult.rows.length).toBeGreaterThan(0);
-      const auditLog = auditResult.rows[0];
+      ctx.expect(auditRows.length).toBeGreaterThan(0);
+      const auditLog = auditRows[0];
       ctx.expect(auditLog.result).toBe("success");
     },
   );
@@ -154,23 +171,16 @@ function deleteGeneratesAuditLog(meta, ctx) {
 
       ctx.expect(response.status).toBe(200);
 
-      // Wait briefly for async audit log
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      // Poll for the async (post-commit) audit log
+      const auditRows = await waitForAuditLog(ctx, {
+        resourceType: meta.entityName,
+        resourceId: created.id,
+        actionLike: "%delete%",
+        since: beforeDelete,
+      });
 
-      // Check audit_logs table
-      const auditResult = await ctx.db.query(
-        `SELECT * FROM audit_logs 
-       WHERE resource_type = $1 
-       AND resource_id = $2 
-       AND action LIKE '%delete%'
-       AND created_at >= $3
-       ORDER BY created_at DESC
-       LIMIT 1`,
-        [meta.entityName, created.id, beforeDelete],
-      );
-
-      ctx.expect(auditResult.rows.length).toBeGreaterThan(0);
-      const auditLog = auditResult.rows[0];
+      ctx.expect(auditRows.length).toBeGreaterThan(0);
+      const auditLog = auditRows[0];
       ctx.expect(auditLog.result).toBe("success");
     },
   );
