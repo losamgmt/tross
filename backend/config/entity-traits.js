@@ -35,13 +35,11 @@ const ENTITY_STRUCTURE = Object.freeze({
  *
  * - SYSTEM: Internal system table, not user-facing (audit_log, preferences)
  * - WORKFLOW: Has status-based lifecycle (invoice, work_order, quote)
- * - AUDITABLE: Changes are tracked in audit_log
  * - UNCOUNTABLE: Excluded from dashboard/summary counts
  */
 const ENTITY_TRAITS = Object.freeze({
   SYSTEM: 'system',
   WORKFLOW: 'workflow',
-  AUDITABLE: 'auditable',
   UNCOUNTABLE: 'uncountable',
 });
 

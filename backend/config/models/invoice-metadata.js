@@ -38,8 +38,8 @@ module.exports = {
   // Material icon for navigation menus and entity displays
   icon: 'receipt_long',
 
-  // Entity traits (workflow: has status lifecycle, auditable: changes tracked)
-  traits: ['workflow', 'auditable'],
+  // Entity traits (workflow: has status lifecycle)
+  traits: ['workflow'],
 
   // ============================================================================
   // ENTITY CATEGORY (determines name handling pattern)

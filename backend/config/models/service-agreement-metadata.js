@@ -33,8 +33,8 @@ module.exports = {
   primaryKey: 'id',
   icon: 'handshake',
 
-  // Entity traits (workflow: has status lifecycle, auditable: changes tracked)
-  traits: ['workflow', 'auditable'],
+  // Entity traits (workflow: has status lifecycle)
+  traits: ['workflow'],
 
   // ============================================================================
   // ENTITY CATEGORY
