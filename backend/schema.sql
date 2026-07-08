@@ -108,13 +108,12 @@ CREATE TABLE IF NOT EXISTS assets (
     warranty_expiry DATE,
     notes TEXT
 );
+ALTER TABLE assets ADD CONSTRAINT uq_assets_unit_name UNIQUE (unit_id, name);
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_assets_name ON assets(name);
 CREATE INDEX IF NOT EXISTS idx_assets_unit_id ON assets(unit_id);
 CREATE INDEX IF NOT EXISTS idx_assets_property_id ON assets(property_id);
--- Unique constraint for seed data idempotency (asset name unique within unit)
-CREATE UNIQUE INDEX IF NOT EXISTS idx_assets_unit_name_unique ON assets(unit_id, name);
 
 -- ============================================================================
 -- AUDIT_LOGS
@@ -181,6 +180,7 @@ CREATE TABLE IF NOT EXISTS customer_units (
     effective_date DATE,
     end_date DATE
 );
+ALTER TABLE customer_units ADD CONSTRAINT uq_customer_unit UNIQUE (customer_id, unit_id);
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_customer_units_role ON customer_units(role);
@@ -448,8 +448,6 @@ CREATE TABLE IF NOT EXISTS properties (
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_properties_name ON properties(name);
--- Unique index for seed data idempotency (ON CONFLICT requires unique constraint)
-CREATE UNIQUE INDEX IF NOT EXISTS idx_properties_name_unique ON properties(name);
 
 -- ============================================================================
 -- PROPERTY_ROLES
@@ -467,6 +465,7 @@ CREATE TABLE IF NOT EXISTS property_roles (
     effective_date DATE,
     end_date DATE
 );
+ALTER TABLE property_roles ADD CONSTRAINT uq_customer_property UNIQUE (customer_id, property_id);
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_property_roles_role ON property_roles(role);
@@ -625,6 +624,7 @@ CREATE TABLE IF NOT EXISTS service_agreement_items (
     service_agreement_id INTEGER NOT NULL,
     service_template_id INTEGER NOT NULL
 );
+ALTER TABLE service_agreement_items ADD CONSTRAINT uq_service_agreement_service_template UNIQUE (service_agreement_id, service_template_id);
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_service_agreement_items_service_agreement_id ON service_agreement_items(service_agreement_id);
@@ -737,12 +737,11 @@ CREATE TABLE IF NOT EXISTS units (
     square_footage INTEGER,
     notes TEXT
 );
+ALTER TABLE units ADD CONSTRAINT uq_units_property_identifier UNIQUE (property_id, unit_identifier);
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_units_unit_identifier ON units(unit_identifier);
 CREATE INDEX IF NOT EXISTS idx_units_property_id ON units(property_id);
--- Unique constraint for seed data idempotency (unit_identifier unique within property)
-CREATE UNIQUE INDEX IF NOT EXISTS idx_units_property_identifier_unique ON units(property_id, unit_identifier);
 
 -- ============================================================================
 -- USERS
@@ -803,6 +802,7 @@ CREATE TABLE IF NOT EXISTS visit_subcontractors (
     visit_id INTEGER NOT NULL,
     subcontractor_id INTEGER NOT NULL
 );
+ALTER TABLE visit_subcontractors ADD CONSTRAINT uq_visit_subcontractor UNIQUE (visit_id, subcontractor_id);
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_visit_subcontractors_visit_id ON visit_subcontractors(visit_id);
@@ -821,6 +821,7 @@ CREATE TABLE IF NOT EXISTS visit_technicians (
     visit_id INTEGER NOT NULL,
     technician_id INTEGER NOT NULL
 );
+ALTER TABLE visit_technicians ADD CONSTRAINT uq_visit_technician UNIQUE (visit_id, technician_id);
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_visit_technicians_visit_id ON visit_technicians(visit_id);
@@ -1050,16 +1051,20 @@ CREATE INDEX IF NOT EXISTS idx_idempotency_keys_created_at
     ON idempotency_keys(created_at);
 
 -- ============================================================================
--- TROSS SEED DATA
+-- TROSS ESSENTIAL SEED DATA
 -- ============================================================================
 -- IDEMPOTENT: Safe to run multiple times (uses ON CONFLICT)
--- PURPOSE: Core data required for application to function
+-- PURPOSE: Core bootstrap data the application (and the test database) require
+--          to function: the role hierarchy, the primary admin account, that
+--          account's preferences, and default system settings.
+--
+-- This file is composed into backend/schema.sql by scripts/compose-schema.js.
+-- Business/demo data lives in demo-data.sql (applied separately, dev only).
 -- ============================================================================
 
 -- ============================================================================
 -- ROLES (5 core system roles)
 -- ============================================================================
--- These are seeded in schema.sql via ON CONFLICT, but included here for clarity
 -- Hierarchy: admin(5) > manager(4) > dispatcher(3) > technician(2) > customer(1)
 
 INSERT INTO roles (name, description, priority, status) VALUES
@@ -1148,7 +1153,7 @@ ON CONFLICT (key) DO NOTHING;
 -- ============================================================================
 DO $$
 BEGIN
-    RAISE NOTICE '✅ Seed data applied successfully';
+    RAISE NOTICE '✅ Essential seed data applied successfully';
     RAISE NOTICE '   - Roles: %', (SELECT COUNT(*) FROM roles);
     RAISE NOTICE '   - Users: %', (SELECT COUNT(*) FROM users);
     RAISE NOTICE '   - Preferences: %', (SELECT COUNT(*) FROM preferences);
