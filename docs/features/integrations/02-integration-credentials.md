@@ -174,7 +174,7 @@ static _validateProvider(provider) {
     throw new AppError(
       `Invalid integration provider: ${provider}. Valid: ${this.INTEGRATION_PROVIDERS.join(', ')}`,
       400,
-      'BAD_REQUEST'
+      ERROR_CODES.VALIDATION_FAILED
     );
   }
 }
@@ -195,7 +195,7 @@ static async setIntegrationTokens(provider, tokens, userId) {
   this._validateProvider(provider);
   
   if (!tokens || typeof tokens !== 'object') {
-    throw new AppError('Tokens must be an object', 400, 'BAD_REQUEST');
+    throw new AppError('Tokens must be an object', 400, ERROR_CODES.VALIDATION_FAILED);
   }
 
   // Add storage timestamp for debugging

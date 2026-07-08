@@ -175,19 +175,24 @@ Use `AppError` for business errors with proper HTTP status codes:
 
 ```javascript
 const AppError = require('../utils/app-error');
+const { ERROR_CODES } = require('../config/error-codes');
 
 // Validation errors (400)
-throw new AppError('Email is required', 400, 'BAD_REQUEST');
+throw new AppError('Email is required', 400, ERROR_CODES.VALIDATION_FAILED);
 
 // Not found (404)
-throw new AppError('User not found', 404, 'NOT_FOUND');
+throw new AppError('User not found', 404, ERROR_CODES.RESOURCE_NOT_FOUND);
 
 // Permission denied (403)
-throw new AppError('Access denied', 403, 'FORBIDDEN');
+throw new AppError('Access denied', 403, ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS);
 
 // Internal errors (500)
-throw new AppError('Failed to process', 500, 'INTERNAL_ERROR');
+throw new AppError('Failed to process', 500, ERROR_CODES.SERVER_ERROR);
 ```
+
+Error codes come from the single `ERROR_CODES` source of truth
+(`backend/config/error-codes.js`) — always reference `ERROR_CODES.*`, never
+hand-type the string. `AppError` defaults the code to `ERROR_CODES.SERVER_ERROR`.
 
 ### 5. Logging Pattern
 
