@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Notification Foundation (2026-07-07)
+
+Metadata-driven foundation for the `notification` entity as a platform primitive.
+This delivers the mechanism only — **no business flows are wired** (by design; the
+platform provides the capability, apps declare their own triggers).
+
+#### New Files
+
+| File | Purpose |
+|------|---------|
+| `migrations/004_notifications_user_cascade.sql` | Add `ON DELETE CASCADE` to `notifications.user_id` for existing databases |
+| `frontend/lib/services/feedback_service.dart` | Transient toast/snackbar coordinator (renamed from `notification_service.dart`) |
+
+#### Features
+
+- **Recipient resolution contract**: a declarative `notification` action names its recipients with `recipient: { match, value }`, resolved against the `users` table (`SELECT id FROM users WHERE <match> = <value> AND is_active = true`, returning 0..N users). `value` is `{ field }` (from the triggering record), `{ role }` (role name → id), or a literal.
+- **Fail-fast startup validation**: `validateActions()` rejects a malformed notification recipient (unknown `users` column or bad `value` shape) at boot.
+- **Composition FK**: `notifications.user_id` now `ON DELETE CASCADE`, driven from the field metadata `onDelete`; `generate-schema.js` emits `ON DELETE <action>` for any FK field that declares it.
+
+#### Changed
+
+- Removed 6 inert `afterChange` `notify`/`log` hooks (unregistered silent no-ops) from `invoice` / `quote` / `recommendation` metadata; `afterChange` validation now fails fast on an unknown action id.
+- Renamed the frontend toast coordinator `NotificationService` → `FeedbackService`; "notification" is now reserved for the persisted entity.
+
+#### Fixed
+
+- Notification tap-navigation read `related_entity_type` / `related_entity_id` (never returned by the API), so deep-links were always a no-op — now reads `resource_type` / `resource_id`.
+- `docs/features/NOTIFICATIONS.md` drift: removed false claims of nonexistent indexes (`idx_notifications_user_unread` / `_user_created`) and triggers (`update_notifications_updated_at` / `trigger_notification_read_at`), corrected the `CREATE TABLE`, and documented the write primitive, Path A/B trigger boundary, and recipient contract.
+
+#### Notes
+
+- **Not wired (intentional):** no entity metadata declares a notification hook, so no business notifications fire yet — this is a foundation, not an app flow.
+- **Known drift:** `backend/schema.sql` is hand-maintained and has diverged from `npm run compose:schema` output (which would drop hand-added seed-idempotency unique indexes and add demo seed data), so the CASCADE change was applied surgically; reconciling the generator with `schema.sql` is deferred.
+
 ### Added - Integration Foundation (Phase 0) (2026-04-09)
 
 Foundation infrastructure for QuickBooks and Stripe integrations.

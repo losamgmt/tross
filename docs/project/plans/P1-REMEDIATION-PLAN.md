@@ -1,9 +1,9 @@
 # P1 Remediation Plan — Security · Correctness · Test Integrity
 
-**Status:** 🚧 IN PROGRESS — Steps **1–9 ✅ COMPLETE** (2026-07-02); **Step 10 (code-value / ERROR_CODES sweep) + an afterChange-action follow-up remain.** See "Progress" for the full commit map, current gate baselines, and cold-resume instructions.
+**Status:** 🚧 IN PROGRESS — Steps **1–9 ✅ COMPLETE** (2026-07-02); the **afterChange-action follow-up is ✅ RESOLVED** (2026-07-07 — reframed into a metadata-driven notification *foundation*; business-flow hook wiring is deferred by design). **Step 10 (code-value / ERROR_CODES sweep) remains.** See "Progress" for the full commit map, current gate baselines, and cold-resume instructions.
 **Phase:** P1 (follows P0 hardening; precedes P2 architecture/cleanup)
 **Prerequisite:** P0 complete — commit `78664fe` (`feat(security): P0 hardening`)
-**Created:** June 30, 2026 · **Updated:** July 2, 2026
+**Created:** June 30, 2026 · **Updated:** July 7, 2026
 **Owner:** _unassigned_
 
 ---
@@ -86,21 +86,23 @@ run is the only one needing an external dependency (Docker).
 > redaction) are **gated behind a dedicated re-inventory / reset checkpoint** and
 > executed in isolation. Steps 9–10 follow.
 
-## Progress (2026-07-02)
+## Progress (updated 2026-07-07)
 
-Steps **1–9 complete** — each sub-step its own commit, each gated. Current green
-baseline: backend unit **3104 / 102 suites**, backend integration **2312 / 30
-suites**, frontend **5801** (untouched). Working tree **clean**; **26 commits ahead
-of `origin/main` — local-only, no push (locked decision #1)**.
+Steps **1–9 complete** + the **afterChange-action follow-up resolved** (notification
+foundation, 2026-07-07) — each sub-step its own commit, each gated. Current green
+baseline: backend unit **3115 / 102 suites**, backend integration **2306 / 30
+suites**, frontend untouched (a test-file rename only). Working tree **clean**; **35
+commits ahead of `origin/main` — local-only, no push (locked decision #1)**.
 
 ### ⭐ Cold-resume — start here
-1. Confirm state: `git status` (clean), `git --no-pager log --oneline -12` (HEAD = `bd91dc8`).
+1. Confirm state: `git status` (clean), `git --no-pager log --oneline -12` (HEAD = `1e6fba9`).
 2. Start the Docker test DB (`npm run db:test:start` from repo root), then re-run the
-   baselines in "Known-good baseline" above — expect **unit 3104/102**, **integration 2312/30**.
-3. Remaining work: **Step 10** (ERROR_CODES sweep) + the **afterChange action follow-up**
-   (both below). Then P1 is done.
+   baselines in "Known-good baseline" above — expect **unit 3115/102**, **integration 2306/30**.
+3. Remaining work: **Step 10** (ERROR_CODES sweep) — the **afterChange follow-up is done**
+   (notification foundation; see below). Then P1 is done.
 4. Full operational detail (per-step notes, blast-radius sweeps, decisions) lives in
-   agent memory `/memories/repo/p1-plan-and-handoff.md`.
+   agent memory `/memories/repo/p1-plan-and-handoff.md` — including the notification
+   foundation contract and the **schema.sql drift** concern (below).
 
 ### Commit map (all P1 commits, newest last)
 | Step | Commit | Outcome |
@@ -127,6 +129,14 @@ of `origin/main` — local-only, no push (locked decision #1)**.
 | 9.2 · H19 | `d021ad6` | harden `sensitiveFieldsHidden` (no null-in-DB false pass) |
 | 9.3 · H2 | `b641444` | hook integration test + **fix approval-workflow double bug** |
 | 9.4 · H18 | `bd91dc8` | tighten `hooks.scenarios` to branch-coherent asserts |
+| A · notify | `acf55fa` | remove 6 inert afterChange notify/log hooks |
+| A · notify | `7e1f03f` | afterChange validation fails fast on unknown action id |
+| A · notify | `5de6ec5` | unify notification recipient → `{match, value}` (F1) |
+| A · notify | `c6653fa` | startup fails fast on malformed notification recipient (F2) |
+| A · notify | `4c45a28` | frontend tap-nav reads `resource_type`/`resource_id` |
+| A · notify | `2327fec` | rename frontend toast `NotificationService` → `FeedbackService` |
+| A · notify | `6cafea8` | `notifications.user_id` ON DELETE CASCADE + migration 004 |
+| A · notify | `1e6fba9` | fix `NOTIFICATIONS.md` drift + document boundary/recipient contract |
 
 ### Key outcomes & decisions since the checkpoint
 - **7a (behavior-preserving):** all `GenericEntityService` read/count methods now take
@@ -153,22 +163,31 @@ of `origin/main` — local-only, no push (locked decision #1)**.
   only 4-arg caller backend-wide.
 
 ### ⚠️ Remaining P1 work
-- **Follow-up (from 9.3) — afterChange action wiring:** `afterChange` hooks
-  `do: 'notify'` / `do: 'log'` (invoice/quote/recommendation status transitions) log
-  `Unknown action in hook {action: notify}` — `getAction('notify')` is unregistered, so
-  those notifications are **silent no-ops** (swallowed, non-blocking). Likely the same
-  class of vocab mismatch (registered actions are `notify_customer` / `notify_approvers`).
-  Options: register/alias the actions, fix the metadata to the registered keys, or
-  validator-enforce `do:` against registered actions (same fail-fast pattern as
-  `when.operator`).
+- ✅ **Follow-up (from 9.3) — afterChange action wiring — RESOLVED (2026-07-07),
+  reframed.** Rather than naïvely wire the broken `notify_*` actions (their
+  `{field: 'customer_id'}` recipients put a *profile* id into `notifications.user_id`),
+  this became a proper **notification foundation**: the inert hooks were removed;
+  recipient resolution was unified to `recipient: { match, value }` (resolves against
+  the `users` table, 0..N users) with **fail-fast startup validation**;
+  `notifications.user_id` now **cascades**; and `docs/features/NOTIFICATIONS.md`
+  documents the single write primitive, the Path A/B trigger boundary, and the
+  recipient contract. **No business hooks are wired — by design** (platform foundation,
+  not app flows). Full detail: agent memory `/memories/repo/notifications-identity-kb.md`.
+  - ⚠️ **Open concern surfaced here — `schema.sql` drift.** `backend/schema.sql` is
+    hand-maintained and has diverged from `npm run compose:schema` (a full regen would
+    *remove* hand-added seed-idempotency unique indexes and *add* ~414 lines of demo
+    seed data), so it is **unsafe to regenerate wholesale**. The CASCADE change was
+    applied surgically. Reconciling the generator ↔ `schema.sql` (so `compose:schema`
+    is idempotent) is a worthwhile **separate task**.
 - **Step 10 — code-value / ERROR_CODES sweep** (see below). **NOTE:** 9.3 already added
   the `AppError` 4th `details` param — Step 10's `AppError` work must preserve it.
 
 ## Step-by-step batch
 
-> **Status:** items **1–9 are ✅ complete** (see the commit map in "Progress" above);
-> only **item 10** + the **afterChange-action follow-up** remain. The rows/sections
-> below are the original plan spec, kept for reference.
+> **Status:** items **1–9 are ✅ complete** (see the commit map in "Progress" above)
+> and the **afterChange-action follow-up is ✅ resolved** (notification foundation,
+> 2026-07-07); only **item 10** remains. The rows/sections below are the original plan
+> spec, kept for reference.
 
 | # | Item | Type | Area | Risk |
 |---|------|------|------|------|
