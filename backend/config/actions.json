@@ -5,13 +5,6 @@
   "_documentation": {
     "description": "Central registry of all workflow actions referenced by metadata hooks.",
     "usage": "In metadata: afterChange: [{ on: 'approved', do: 'create_quote_from_recommendation' }]",
-    "knownIssues": {
-      "_status": "INERT + TODO: the notification actions below are referenced by NO live metadata hook and are BROKEN as written. DO NOT wire them to any hook until the notification feature is designed (profile\u2192user resolver + created_by). See /memories/repo/notifications-identity-kb.md.",
-      "notify_customer": "recipient.field 'customer_id' is a customers PROFILE id; notifications.user_id is a users FK. Needs profile\u2192user resolution (a profile may map to 0..N users).",
-      "notify_technician": "recipient.field 'assigned_technician_id' is a technicians PROFILE id, not a users id. Same profile\u2192user gap.",
-      "notify_creator": "recipient.field 'created_by' does not exist on any entity (aspirational Phase 2). Add column + population, or drop.",
-      "notify_approvers": "The only correct notification action (recipient.role \u2192 getUsersByRole \u2192 real user ids)."
-    },
     "types": {
       "notification": "Send notification to user(s)",
       "create_entity": "Create a new entity record from context",
@@ -21,7 +14,8 @@
     "patterns": {
       "copyFields": "Array of field names to copy from source record",
       "mapping": "Object mapping source field → target field name",
-      "setFields": "Object with static values or { field: 'fieldName' } references"
+      "setFields": "Object with static values or { field: 'fieldName' } references",
+      "recipient": "Notification target: { match: '<users column>', value: { field: '<record field>' } | { role: '<role name>' } | <literal> } - selects all active users WHERE users.<match> = resolved(value)"
     }
   },
 
@@ -29,28 +23,21 @@
     "notify_customer": {
       "type": "notification",
       "template": "status_change",
-      "recipient": { "field": "customer_id" },
+      "recipient": { "match": "customer_profile_id", "value": { "field": "customer_id" } },
       "description": "Notify customer of status change"
     },
     
     "notify_technician": {
       "type": "notification",
       "template": "assignment",
-      "recipient": { "field": "assigned_technician_id" },
+      "recipient": { "match": "technician_profile_id", "value": { "field": "assigned_technician_id" } },
       "description": "Notify technician of assignment or schedule change"
-    },
-    
-    "notify_creator": {
-      "type": "notification",
-      "template": "update",
-      "recipient": { "field": "created_by" },
-      "description": "Notify the record creator of updates"
     },
     
     "notify_approvers": {
       "type": "notification",
       "template": "approval_required",
-      "recipient": { "role": "manager" },
+      "recipient": { "match": "role_id", "value": { "role": "manager" } },
       "description": "Notify managers that approval is required"
     },
     

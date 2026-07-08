@@ -100,18 +100,21 @@ describe('action-handlers', () => {
 
   describe('ACTION_HANDLERS', () => {
     describe('notification handler', () => {
-      it('creates in_app notification via GenericEntityService', async () => {
+      it('resolves recipients by profile FK and creates one in_app notification per user', async () => {
+        // Resolver query: SELECT id FROM users WHERE customer_profile_id = $1
+        db.query.mockResolvedValueOnce({ rows: [{ id: 7 }] });
+
         const config = {
           type: 'notification',
           template: 'status_change',
-          recipient: { field: 'assigned_to' },
+          recipient: { match: 'customer_profile_id', value: { field: 'customer_id' } },
           channels: ['in_app'],
         };
         const context = {
-          entity: 'task',
-          record: { id: 1, assigned_to: 'user123' },
-          oldValue: 'pending',
-          newValue: 'completed',
+          entity: 'invoice',
+          record: { id: 1, customer_id: 42 },
+          oldValue: 'draft',
+          newValue: 'sent',
         };
 
         const result = await ACTION_HANDLERS.notification(config, context);
@@ -122,30 +125,34 @@ describe('action-handlers', () => {
         expect(result.recipientCount).toBe(1);
         expect(result.in_app).toHaveLength(1);
         expect(result.in_app[0].notificationId).toBe(999); // From mock
+        // Resolved the record's profile FK (42) against users.customer_profile_id
+        expect(db.query).toHaveBeenCalledWith(
+          expect.stringContaining('customer_profile_id'),
+          [42]
+        );
         expect(GenericEntityService.create).toHaveBeenCalledWith(
           'notification',
           expect.objectContaining({
-            user_id: 'user123',
+            user_id: 7,
             title: expect.any(String),
             body: expect.any(String),
             type: 'info',
-            resource_type: 'task',
+            resource_type: 'invoice',
             resource_id: 1,
           }),
           expect.objectContaining({ skipHooks: true })
         );
       });
 
-      it('handles role-based recipients by querying users', async () => {
-        // Mock getUsersByRole returning users
-        db.query.mockResolvedValueOnce({
-          rows: [{ id: 501 }],
-        });
+      it('resolves role recipients (role name -> id -> users) and notifies them', async () => {
+        db.query
+          .mockResolvedValueOnce({ rows: [{ id: 4 }] })   // role name -> id
+          .mockResolvedValueOnce({ rows: [{ id: 501 }] }); // users WHERE role_id = 4
 
         const config = {
           type: 'notification',
-          template: 'approval_needed',
-          recipient: { role: 'manager' },
+          template: 'approval_required',
+          recipient: { match: 'role_id', value: { role: 'manager' } },
           channels: ['in_app'],
         };
         const context = {
@@ -160,11 +167,11 @@ describe('action-handlers', () => {
         expect(result.in_app).toHaveLength(1);
       });
 
-      it('skips notification when no recipient can be resolved', async () => {
+      it('skips notification when the recipient value cannot be resolved', async () => {
         const config = {
           type: 'notification',
           template: 'test',
-          recipient: { field: 'missing_field' },
+          recipient: { match: 'customer_profile_id', value: { field: 'missing_field' } },
         };
         const context = { entity: 'test', record: {} };
 
@@ -422,15 +429,14 @@ describe('action-handlers', () => {
 
   describe('role-based notification recipients', () => {
     it('creates notifications for all users with specified role', async () => {
-      // Mock getUsersByRole returning multiple users
-      db.query.mockResolvedValueOnce({
-        rows: [{ id: 101 }, { id: 102 }, { id: 103 }],
-      });
+      db.query
+        .mockResolvedValueOnce({ rows: [{ id: 4 }] })                             // role -> id
+        .mockResolvedValueOnce({ rows: [{ id: 101 }, { id: 102 }, { id: 103 }] }); // users
 
       const config = {
         type: 'notification',
         template: 'approval_required',
-        recipient: { role: 'manager' },
+        recipient: { match: 'role_id', value: { role: 'manager' } },
         channels: ['in_app'],
       };
       const context = {
@@ -447,12 +453,14 @@ describe('action-handlers', () => {
     });
 
     it('skips notification when no users have the specified role', async () => {
-      db.query.mockResolvedValueOnce({ rows: [] });
+      db.query
+        .mockResolvedValueOnce({ rows: [{ id: 4 }] }) // role -> id
+        .mockResolvedValueOnce({ rows: [] });         // no users with role_id = 4
 
       const config = {
         type: 'notification',
         template: 'test',
-        recipient: { role: 'nonexistent_role' },
+        recipient: { match: 'role_id', value: { role: 'manager' } },
         channels: ['in_app'],
       };
       const context = { entity: 'test', record: { id: 1 } };
@@ -465,14 +473,14 @@ describe('action-handlers', () => {
     });
 
     it('marks email channel as pending infrastructure', async () => {
-      db.query.mockResolvedValueOnce({
-        rows: [{ id: 201 }],
-      });
+      db.query
+        .mockResolvedValueOnce({ rows: [{ id: 5 }] })   // role -> id
+        .mockResolvedValueOnce({ rows: [{ id: 201 }] }); // users
 
       const config = {
         type: 'notification',
         template: 'status_change',
-        recipient: { role: 'admin' },
+        recipient: { match: 'role_id', value: { role: 'admin' } },
         channels: ['in_app', 'email'],
       };
       const context = {

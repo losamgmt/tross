@@ -31,6 +31,7 @@
 const path = require('path');
 const testLogger = require('./test-logger');
 const { RRule } = require('rrule');
+const { sanitizeIdentifier } = require('../utils/sql-safety');
 
 const log = testLogger;
 
@@ -62,32 +63,80 @@ function getDb() {
 }
 
 /**
- * Resolve users by role name.
- * Queries the roles table to get role_id, then finds all active users with that role.
+ * Resolve a notification recipient spec to the set of target USER ids.
  *
- * @param {string} roleName - Role name (e.g., 'manager', 'admin')
- * @returns {Promise<number[]>} Array of user IDs with that role
+ * Unified shape (SSOT): `recipient: { match: '<users column>', value: <valueSpec> }`.
+ * Selects every active user whose `users.<match>` equals the resolved value, e.g.
+ *   { match: 'customer_profile_id',   value: { field: 'customer_id' } }
+ *   { match: 'technician_profile_id', value: { field: 'assigned_technician_id' } }
+ *   { match: 'role_id',               value: { role: 'manager' } }
+ *
+ * A profile or a role may map to 0..N users; all matches are returned. Errors
+ * (and unresolved values) yield an empty list, so the caller skips gracefully.
+ *
+ * @param {Object} recipient - Recipient spec from the action config
+ * @param {Object} context - Action execution context (record, entity, user, ...)
+ * @returns {Promise<Array<number>>} Target user ids (possibly empty)
  */
-async function getUsersByRole(roleName) {
-  const db = getDb();
-
-  try {
-    // Query users by role name (joining roles table)
-    const query = `
-      SELECT u.id
-      FROM users u
-      INNER JOIN roles r ON u.role_id = r.id
-      WHERE LOWER(r.name) = LOWER($1)
-        AND u.is_active = true
-        AND r.is_active = true
-    `;
-
-    const result = await db.query(query, [roleName]);
-    return result.rows.map((row) => row.id);
-  } catch (error) {
-    log.error('Failed to get users by role:', { roleName, error: error.message });
+async function resolveRecipients(recipient, context) {
+  if (!recipient || !recipient.match) {
     return [];
   }
+
+  try {
+    const value = await resolveRecipientValue(recipient.value, context);
+    if (value === null || value === undefined) {
+      return [];
+    }
+
+    const column = sanitizeIdentifier(recipient.match, 'recipient.match');
+    const db = getDb();
+    const result = await db.query(
+      `SELECT id FROM users WHERE ${column} = $1 AND is_active = true`,
+      [value],
+    );
+    return (result?.rows || []).map((row) => row.id);
+  } catch (error) {
+    log.error('Failed to resolve notification recipients:', {
+      recipient,
+      error: error.message,
+    });
+    return [];
+  }
+}
+
+/**
+ * Resolve the match value for a recipient spec.
+ *
+ * Value sources:
+ *   - { field: 'x' } -> the triggering record's field (via resolveValue)
+ *   - { role: 'x' }  -> the role's id (name -> id lookup)
+ *   - literal        -> used as-is
+ *
+ * @param {*} valueSpec - Recipient value specification
+ * @param {Object} context - Action execution context
+ * @returns {Promise<*>} Resolved match value (null/undefined => no recipients)
+ */
+async function resolveRecipientValue(valueSpec, context) {
+  if (valueSpec && typeof valueSpec === 'object' && valueSpec.role) {
+    return getRoleId(valueSpec.role);
+  }
+  return resolveValue(valueSpec, context);
+}
+
+/**
+ * Resolve a role name to its role id (for `role_id` matching).
+ *
+ * @param {string} roleName - Role name (e.g., 'manager')
+ * @returns {Promise<number|null>} Role id, or null if not found
+ */
+async function getRoleId(roleName) {
+  const db = getDb();
+  const result = await db.query(
+    'SELECT id FROM roles WHERE LOWER(name) = LOWER($1) AND is_active = true LIMIT 1',
+    [roleName],
+  );
+  return result?.rows?.[0]?.id ?? null;
 }
 
 // ============================================================================
@@ -393,19 +442,9 @@ const handlers = {
   notification: async (config, context) => {
     const { template, recipient, channels = ['in_app'] } = config;
 
-    // Resolve recipients - can be single user or multiple users by role
-    let recipientIds = [];
-
-    if (recipient?.field) {
-      // Direct field reference (e.g., customer_id)
-      const userId = resolveValue(recipient, context);
-      if (userId) {
-        recipientIds = [userId];
-      }
-    } else if (recipient?.role) {
-      // Role-based recipients (e.g., all managers)
-      recipientIds = await getUsersByRole(recipient.role);
-    }
+    // Resolve the recipient spec to the target USER id(s) via the unified
+    // { match, value } shape (see resolveRecipients).
+    const recipientIds = await resolveRecipients(recipient, context);
 
     // Skip if no recipients resolved
     if (recipientIds.length === 0) {

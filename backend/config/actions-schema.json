@@ -67,23 +67,23 @@
           "description": "Notification template name"
         },
         "recipient": {
-          "oneOf": [
-            {
-              "type": "object",
-              "properties": {
-                "field": { "type": "string", "description": "Field containing user ID" }
-              },
-              "required": ["field"]
+          "type": "object",
+          "required": ["match", "value"],
+          "properties": {
+            "match": {
+              "type": "string",
+              "description": "Column on the users table to match (e.g., customer_profile_id, technician_profile_id, role_id)"
             },
-            {
-              "type": "object",
-              "properties": {
-                "role": { "type": "string", "description": "Role to notify (e.g., 'manager')" }
-              },
-              "required": ["role"]
+            "value": {
+              "oneOf": [
+                { "type": "object", "required": ["field"], "properties": { "field": { "type": "string", "description": "Value from the triggering record" } } },
+                { "type": "object", "required": ["role"], "properties": { "role": { "type": "string", "description": "Role name; resolved to the role's id" } } },
+                { "type": ["string", "number"], "description": "Literal value" }
+              ],
+              "description": "The value to match against users.<match>"
             }
-          ],
-          "description": "Who receives the notification"
+          },
+          "description": "Selects all active users WHERE users.<match> = resolved(value)"
         },
         "channels": {
           "type": "array",
