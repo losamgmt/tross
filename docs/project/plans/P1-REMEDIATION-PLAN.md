@@ -1,9 +1,9 @@
 # P1 Remediation Plan — Security · Correctness · Test Integrity
 
-**Status:** 🚧 IN PROGRESS — Steps **1–9 ✅ COMPLETE** (2026-07-02); the **afterChange-action follow-up is ✅ RESOLVED** (2026-07-07 — reframed into a metadata-driven notification *foundation*; business-flow hook wiring is deferred by design). **Step 10 (code-value / ERROR_CODES sweep) remains.** See "Progress" for the full commit map, current gate baselines, and cold-resume instructions.
+**Status:** ✅ **COMPLETE** — Steps **1–10 all done** (Step 10 ERROR_CODES normalization landed 2026-07-08; the afterChange-action follow-up was reframed into a metadata-driven notification *foundation*, with business-flow hook wiring deferred by design). See "Progress" for the full commit map and final baselines. **P2** (architecture / perf / cleanup) is the next tier.
 **Phase:** P1 (follows P0 hardening; precedes P2 architecture/cleanup)
 **Prerequisite:** P0 complete — commit `78664fe` (`feat(security): P0 hardening`)
-**Created:** June 30, 2026 · **Updated:** July 7, 2026
+**Created:** June 30, 2026 · **Updated:** July 8, 2026
 **Owner:** _unassigned_
 
 ---
@@ -86,20 +86,21 @@ run is the only one needing an external dependency (Docker).
 > redaction) are **gated behind a dedicated re-inventory / reset checkpoint** and
 > executed in isolation. Steps 9–10 follow.
 
-## Progress (updated 2026-07-07)
+## Progress (updated 2026-07-08) — ✅ P1 COMPLETE
 
-Steps **1–9 complete** + the **afterChange-action follow-up resolved** (notification
-foundation, 2026-07-07) — each sub-step its own commit, each gated. Current green
-baseline: backend unit **3115 / 102 suites**, backend integration **2306 / 30
-suites**, frontend untouched (a test-file rename only). Working tree **clean**; **35
-commits ahead of `origin/main` — local-only, no push (locked decision #1)**.
+**All 10 steps done.** Steps 1–9 (2026-07-02), the afterChange follow-up → notification
+foundation (2026-07-07), the schema.sql/generator reconciliation, and Step 10
+(ERROR_CODES normalization, 2026-07-08) — each sub-step its own commit, each gated.
+Final green baseline: backend unit **3119 / 103 suites**, backend integration
+**2306 / 30 suites**, frontend untouched. Working tree **clean**; **47 commits ahead
+of `origin/main` — local-only, no push (locked decision #1)**.
 
 ### ⭐ Cold-resume — start here
-1. Confirm state: `git status` (clean), `git --no-pager log --oneline -12` (HEAD = `1e6fba9`).
+1. Confirm state: `git status` (clean), `git --no-pager log --oneline -12` (HEAD = `da82119`).
 2. Start the Docker test DB (`npm run db:test:start` from repo root), then re-run the
-   baselines in "Known-good baseline" above — expect **unit 3115/102**, **integration 2306/30**.
-3. Remaining work: **Step 10** (ERROR_CODES sweep) — the **afterChange follow-up is done**
-   (notification foundation; see below). Then P1 is done.
+   baselines in "Known-good baseline" above — expect **unit 3119/103**, **integration 2306/30**.
+3. **P1 is COMPLETE** — all 10 steps done (Step 10 = ERROR_CODES normalization). The next tier is
+   **P2** (architecture / perf / cleanup: god-object decompose, FE schema-driven exception, FK N+1, …).
 4. Full operational detail (per-step notes, blast-radius sweeps, decisions) lives in
    agent memory `/memories/repo/p1-plan-and-handoff.md` — including the notification
    foundation contract and the **schema.sql drift** concern (below).
@@ -137,6 +138,17 @@ commits ahead of `origin/main` — local-only, no push (locked decision #1)**.
 | A · notify | `2327fec` | rename frontend toast `NotificationService` → `FeedbackService` |
 | A · notify | `6cafea8` | `notifications.user_id` ON DELETE CASCADE + migration 004 |
 | A · notify | `1e6fba9` | fix `NOTIFICATIONS.md` drift + document boundary/recipient contract |
+| schema | `bc28f42` | generator emits `metadata.uniqueConstraints` |
+| schema | `ff0f4b7` | factory: unique junction FK pairs + poll async audit logs |
+| schema | `24ed422` | split seeds → `essential-data` + `demo-data` |
+| schema | `347b61b` | reconcile `schema.sql` (7 unique constraints) + migration 005 |
+| 10a | `d1a8f1e` | extract `config/error-codes.js` (SSOT) |
+| 10b | `5c63f01` | flip `AppError` default → `SERVER_ERROR` |
+| 10c | `a33457b` | normalize VALIDATION family → `VALIDATION_FAILED` (84) |
+| 10d | `f26b79c` | normalize RESOURCE + AUTH family (incl. UNAUTHORIZED split) |
+| 10e | `ce53ea7` | normalize SERVER family (INTERNAL_ERROR/SERVICE_UNAVAILABLE) |
+| 10f | `4be2d35` | DOMAIN codes reference `ERROR_CODES.*` |
+| 10g | `da82119` | ERROR_CODES SSOT guard test + API.md table |
 
 ### Key outcomes & decisions since the checkpoint
 - **7a (behavior-preserving):** all `GenericEntityService` read/count methods now take
@@ -173,21 +185,22 @@ commits ahead of `origin/main` — local-only, no push (locked decision #1)**.
   documents the single write primitive, the Path A/B trigger boundary, and the
   recipient contract. **No business hooks are wired — by design** (platform foundation,
   not app flows). Full detail: agent memory `/memories/repo/notifications-identity-kb.md`.
-  - ⚠️ **Open concern surfaced here — `schema.sql` drift.** `backend/schema.sql` is
-    hand-maintained and has diverged from `npm run compose:schema` (a full regen would
-    *remove* hand-added seed-idempotency unique indexes and *add* ~414 lines of demo
-    seed data), so it is **unsafe to regenerate wholesale**. The CASCADE change was
-    applied surgically. Reconciling the generator ↔ `schema.sql` (so `compose:schema`
-    is idempotent) is a worthwhile **separate task**.
-- **Step 10 — code-value / ERROR_CODES sweep** (see below). **NOTE:** 9.3 already added
-  the `AppError` 4th `details` param — Step 10's `AppError` work must preserve it.
+  - ✅ **`schema.sql` drift — RESOLVED (2026-07-08).** The generator now emits
+    `metadata.uniqueConstraints`, seeds were split (`essential-data` composed into
+    `schema.sql` + dev-only `demo-data`), `schema.sql` was regenerated (+7 composite
+    UNIQUE constraints — incl. 5 junctions that had none, a latent dup-pair bug) with
+    migration 005, and the test factory now makes unique junction FK pairs.
+    `compose:schema` is now **idempotent**. Commits `bc28f42`/`ff0f4b7`/`24ed422`/`347b61b`.
+- ✅ **Step 10 — code-value / ERROR_CODES sweep — DONE (2026-07-08).** ~176 ad-hoc
+  `AppError` codes normalized to a single `config/error-codes.js` SSOT (imported
+  `ERROR_CODES.*`) via a codemod; `AppError` default flipped to `SERVER_ERROR` (the 4th
+  `details` param preserved); a guard test enforces the SSOT. Commits `d1a8f1e`..`da82119`.
 
 ## Step-by-step batch
 
-> **Status:** items **1–9 are ✅ complete** (see the commit map in "Progress" above)
-> and the **afterChange-action follow-up is ✅ resolved** (notification foundation,
-> 2026-07-07); only **item 10** remains. The rows/sections below are the original plan
-> spec, kept for reference.
+> **Status:** ✅ **all items 1–10 complete** (see the commit map in "Progress" above),
+> plus the afterChange follow-up → notification foundation and the schema.sql
+> reconciliation. The rows/sections below are the original plan spec, kept for reference.
 
 | # | Item | Type | Area | Risk |
 |---|------|------|------|------|

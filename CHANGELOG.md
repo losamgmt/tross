@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - Canonical error codes (ERROR_CODES SSOT) (2026-07-08)
+
+Every API error now carries a canonical, centralized machine-readable code so the frontend can drive localization / retry / analytics off codes rather than message text.
+
+- **Single source of truth**: extracted `backend/config/error-codes.js`; all ~176 `AppError` call sites reference `ERROR_CODES.*` (no hand-typed code strings).
+- **Normalized** the ad-hoc codes to canonical families: `BAD_REQUEST`/`VALIDATION_ERROR` → `VALIDATION_FAILED`; `NOT_FOUND` → `RESOURCE_NOT_FOUND`; `CONFLICT` → `RESOURCE_CONFLICT`; `FORBIDDEN` → `AUTH_INSUFFICIENT_PERMISSIONS`; `INTERNAL_ERROR` → `SERVER_ERROR`; `SERVICE_UNAVAILABLE` → `SERVER_UNAVAILABLE`; `UNAUTHORIZED` split by context into `AUTH_INVALID_TOKEN` / `AUTH_TOKEN_EXPIRED` / `AUTH_REQUIRED`. Domain codes (`APPROVAL_REQUIRED`, `IDEMPOTENCY_MISMATCH`, …) centralized with values unchanged.
+- **`AppError` default** flipped from `INTERNAL_ERROR` to `SERVER_ERROR` (the structured `details` param is preserved).
+- **Guard test** enforces the SSOT: `ERROR_CODES` is frozen, every `ERROR_CODES.<KEY>` reference resolves, and retired codes cannot reappear as string literals.
+- `docs/reference/API.md` error-code table updated. The Postgres `PG_ERROR_CODES` SQLSTATE map is separate and unchanged.
+
+### Changed - Schema generator reconciliation (2026-07-08)
+
+- The schema generator now emits `metadata.uniqueConstraints`. The 5 junction entities that declared composite uniqueness but had **none** in the live schema (allowing duplicate M:M pairs) now enforce it; `assets(unit_id, name)` and `units(property_id, unit_identifier)` gained their composite uniques. Migration `005_unique_constraints_reconciliation.sql` covers deployed databases.
+- Seed data split into `essential-data.sql` (composed into `schema.sql`: roles, admin, preferences, system settings) and dev-only `demo-data.sql`. `npm run compose:schema` is now **idempotent** and `schema.sql` is a faithful derived artifact again.
+- The test factory generates unique junction FK pairs and polls for async audit logs (removing a latent flake).
+
 ### Added - Notification Foundation (2026-07-07)
 
 Metadata-driven foundation for the `notification` entity as a platform primitive.
