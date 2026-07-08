@@ -325,7 +325,7 @@ admin. Therefore, today:
   loader runs, the included relationships are stripped before the response. Nested
   data currently surfaces only for internal/no-role callers.
 
-**Deferred feature — Tier-2 nested redaction (revisit when the Related-tab ships).**
+**Deferred feature — Tier-2 nested redaction (revisit if `?include=` response-embedding is adopted).**
 To make `?include=` response-visible *and* field-safe, a future change should:
 
 1. Redact each nested row by its **target** entity's `fieldAccess` + caller role
@@ -336,9 +336,16 @@ To make `?include=` response-visible *and* field-safe, a future change should:
    relationship-aware (redact own columns, preserve the already-redacted nested data).
 
 This was deliberately deferred during the P1 in-service redaction work (the
-route→service redaction move): there is no active leak, and the frontend Related-tab
-that would consume nested includes is not yet live. Closes review findings
-**H4 / M13** as *mitigated*.
+route→service redaction move): there is no active leak. The frontend Related-tab
+has since shipped, but it deliberately loads each related list via a **separate
+filtered list call** (`getAll(targetEntity, { filters: { <fk>: parentId } })` in
+`RelationshipSection` — the junction entity for M:M, the target entity for
+`hasMany`), so every related list flows through the normal `findAll` → RLS
+row-filter → `_redactForContext` path and is already field-safe. Nothing in the
+frontend consumes `?include=` embedding, so this remains a **latent** task: it
+becomes relevant only if a future feature embeds nested relationship rows inside a
+single parent response via `?include=`. Closes review findings **H4 / M13** as
+*mitigated*.
 
 ### Caching Strategy
 
