@@ -29,7 +29,7 @@ Tross requires a notification system to alert users of important events:
 | **Toasts**            | Immediate feedback (save success, errors) | None (transient)    | Frontend only       |
 | **Notification Tray** | Async events, user alerts                 | Database (per-user) | Fetch on navigation |
 
-This document covers the **Notification Tray** system. Toasts are already implemented via `NotificationService` and `AppSnackbar`.
+This document covers the **Notification Tray** system. Toasts are already implemented via `FeedbackService` and `AppSnackbar`.
 
 ---
 
@@ -60,14 +60,14 @@ Notifications are **identical in architecture** to `saved_views`:
 
 ### What We DON'T Build
 
-| ❌ Rejected                 | Why                                    |
-| --------------------------- | -------------------------------------- |
-| `/unread-count` endpoint    | Count from list response in frontend   |
-| `/mark-all-read` endpoint   | Loop PATCH calls (bulk can be Phase 2) |
-| `/cleanup` endpoint         | Scheduled job, not API                 |
-| `NotificationService` class | Use `GenericEntityService.create()`    |
-| Socket.IO / WebSocket       | Overkill for MVP                       |
-| Polling                     | Fetch on navigation is sufficient      |
+| ❌ Rejected                      | Why                                    |
+| -------------------------------- | -------------------------------------- |
+| `/unread-count` endpoint         | Count from list response in frontend   |
+| `/mark-all-read` endpoint        | Loop PATCH calls (bulk can be Phase 2) |
+| `/cleanup` endpoint              | Scheduled job, not API                 |
+| A dedicated notification service | Use `GenericEntityService.create()`    |
+| Socket.IO / WebSocket            | Overkill for MVP                       |
+| Polling                          | Fetch on navigation is sufficient      |
 
 ---
 
@@ -80,28 +80,43 @@ Notifications are **identical in architecture** to `saved_views`:
 ```sql
 CREATE TABLE IF NOT EXISTS notifications (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    title VARCHAR(255) NOT NULL,
+    title VARCHAR(150) NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    user_id INTEGER NOT NULL,
     body TEXT,
-    type VARCHAR(20) NOT NULL DEFAULT 'info'
+    type VARCHAR(25) NOT NULL DEFAULT 'info'
         CHECK (type IN ('info', 'success', 'warning', 'error', 'assignment', 'reminder')),
     resource_type VARCHAR(50),
     resource_id INTEGER,
-    is_read BOOLEAN NOT NULL DEFAULT FALSE,
-    read_at TIMESTAMP,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    is_read BOOLEAN DEFAULT FALSE,
+    read_at TIMESTAMPTZ
 );
+
+-- The user_id foreign key is added separately (deferred to avoid forward
+-- references). It cascades: deleting a user deletes their notifications.
+ALTER TABLE notifications
+  ADD CONSTRAINT fk_notifications_user_id
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 ```
 
-### Indexes & Triggers
+### Indexes
 
-✅ **IMPLEMENTED** - See `backend/schema.sql` for:
+Two indexes exist in `backend/schema.sql`:
 
-- `idx_notifications_user_unread` - Fast unread queries
-- `idx_notifications_user_created` - Paged list queries
-- `update_notifications_updated_at` trigger
-- `trigger_notification_read_at` trigger (auto-sets `read_at`)
+- `idx_notifications_title` — index on `title`
+- `idx_notifications_user_id` — per-user lookups (the RLS filter and list queries key off `user_id`)
+
+### Triggers
+
+Notifications have **no database triggers**:
+
+- `read_at` is a plain nullable column. It is **not** auto-populated — there is
+  no trigger, and the mark-read `PATCH` sets `is_read` only. Treat `read_at` as
+  reserved for a future "when was this read" feature.
+- `updated_at` follows the standard entity contract and is set by the generic
+  write path on update, not by a per-table trigger.
 
 ### Metadata Definition
 
@@ -145,7 +160,56 @@ await GenericEntityService.create(
 );
 ```
 
-**No separate NotificationService needed** - use `GenericEntityService.create()`.
+**No separate notification service needed** - use `GenericEntityService.create()`.
+
+### The write primitive
+
+Every notification — whatever triggers it — is created by exactly one operation:
+creating a `notification` entity row with a `user_id` (the recipient), `title`,
+`body`, `type`, and optional `resource_type` + `resource_id` for deep-link
+navigation. There is no second way to write a notification.
+
+### Trigger boundary: two ways to reach the write primitive
+
+| Path               | When                                                                                | How                                                                                                             |
+| ------------------ | ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| **A — Imperative** | Backend code already holds the target `user_id` (e.g. reacting to a non-field event) | Call `GenericEntityService.create('notification', { user_id, ... })` directly, as above                        |
+| **B — Declarative** | A monitored entity field/status transition should notify someone                    | Declare an `afterChange` hook in the entity metadata that runs a `notification` action (see recipient contract) |
+
+Rule of thumb: a field/status transition on a tracked entity → **Path B**
+(declarative metadata hook). Any other event, or when the `user_id` is already
+in hand → **Path A**. Both converge on the single write primitive above.
+
+> **Status:** No business hooks are wired today (see Phase 4). The Path B
+> mechanism and the recipient contract below exist and are validated at startup,
+> but no entity metadata currently declares a notification hook.
+
+### Path B recipient contract
+
+A declarative `notification` action names its recipients with a
+`recipient: { match, value }` pair that resolves against the **`users`** table:
+
+- `match` — the `users` column to match on (e.g. `customer_profile_id`,
+  `technician_profile_id`, `role_id`). It must be a real `users` column;
+  a malformed recipient fails fast at startup.
+- `value` — what to match it against, one of:
+  - `{ field: '<record field>' }` — read a value from the triggering record
+    (e.g. `{ field: 'customer_id' }` uses the record's `customer_id`)
+  - `{ role: '<role name>' }` — resolve a role name to its id
+  - a literal value
+
+Resolution runs:
+
+```sql
+SELECT id FROM users WHERE <match> = <resolved value> AND is_active = true
+```
+
+and returns **0..N** user ids; each resolved user receives one notification via
+the write primitive. Recipients therefore resolve to *users* (the login identity
+that owns `notifications.user_id`), not to profiles or business rows. For
+example `{ match: 'customer_profile_id', value: { field: 'customer_id' } }` turns
+a record's customer **profile** id into the **user(s)** whose profile points at
+it.
 
 ---
 
@@ -253,8 +317,13 @@ class _NotificationTraySectionState extends State<_NotificationTraySection> {
 
 ### Phase 4: Backend Triggers (Future)
 
-- [ ] Work order assignment → create notification
-- [ ] Status change → create notification
+Not built yet. When wired, these will use the mechanism described under
+[Creating Notifications](#creating-notifications-backend-only) — the single
+write primitive, the Path A / Path B trigger boundary, and the Path B recipient
+contract.
+
+- [ ] Work order assignment → notify the assigned technician
+- [ ] Status change → notify the customer
 - [ ] Other business events as needed
 
 ---
