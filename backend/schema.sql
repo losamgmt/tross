@@ -907,7 +907,7 @@ ALTER TABLE invoices ADD CONSTRAINT fk_invoices_work_order_id FOREIGN KEY (work_
 ALTER TABLE maintenance_schedules ADD CONSTRAINT fk_maintenance_schedules_customer_id FOREIGN KEY (customer_id) REFERENCES customers(id);
 ALTER TABLE maintenance_schedules ADD CONSTRAINT fk_maintenance_schedules_asset_id FOREIGN KEY (asset_id) REFERENCES assets(id);
 ALTER TABLE maintenance_schedules ADD CONSTRAINT fk_maintenance_schedules_service_template_id FOREIGN KEY (service_template_id) REFERENCES service_templates(id);
-ALTER TABLE notifications ADD CONSTRAINT fk_notifications_user_id FOREIGN KEY (user_id) REFERENCES users(id);
+ALTER TABLE notifications ADD CONSTRAINT fk_notifications_user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 ALTER TABLE payments ADD CONSTRAINT fk_payments_customer_id FOREIGN KEY (customer_id) REFERENCES customers(id);
 ALTER TABLE payments ADD CONSTRAINT fk_payments_invoice_id FOREIGN KEY (invoice_id) REFERENCES invoices(id);
 ALTER TABLE preferences ADD CONSTRAINT fk_preferences_id FOREIGN KEY (id) REFERENCES users(id) ON DELETE CASCADE;

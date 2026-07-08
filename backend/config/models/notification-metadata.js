@@ -280,6 +280,7 @@ module.exports = {
       {
         type: 'foreignKey',
         references: 'user',
+        onDelete: 'CASCADE',
         description: 'Notification recipient (FK to users)',
       },
       TRAITS.REQUIRED,

@@ -260,9 +260,12 @@ function normalizeField(fieldName, fieldDef, metadata) {
     constraints.push(`DEFAULT ${serializeDefault(fieldDef.default)}`);
   }
 
-  // FK reference
+  // FK reference (optional ON DELETE action, e.g. CASCADE for composition FKs)
   if (fieldDef.type === 'foreignKey' && fieldDef.references) {
     references = `${pluralizeTable(fieldDef.references)}(id)`;
+    if (fieldDef.onDelete) {
+      references += ` ON DELETE ${fieldDef.onDelete}`;
+    }
   }
 
   return { name: fieldName, sqlType, constraints, references, check, order: 0 };

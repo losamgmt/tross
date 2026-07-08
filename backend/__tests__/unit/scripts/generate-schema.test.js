@@ -144,6 +144,15 @@ describe("generate-schema normalize phase", () => {
       );
       expect(col.references).toBe("customers(id)");
     });
+
+    it("appends ON DELETE action for FK fields with onDelete", () => {
+      const col = normalizeField(
+        "user_id",
+        { type: "foreignKey", references: "user", onDelete: "CASCADE" },
+        {},
+      );
+      expect(col.references).toBe("users(id) ON DELETE CASCADE");
+    });
   });
 
   describe("normalizeEntity", () => {
