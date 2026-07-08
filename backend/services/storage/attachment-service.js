@@ -17,6 +17,7 @@
 const db = require('../../db/connection');
 const { logger } = require('../../config/logger');
 const AppError = require('../../utils/app-error');
+const { ERROR_CODES } = require('../../config/error-codes');
 const allMetadata = require('../../config/models');
 
 class FileAttachmentService {
@@ -78,7 +79,7 @@ class FileAttachmentService {
         throw new AppError(
           `Database unavailable: ${error.message}`,
           503,
-          'SERVICE_UNAVAILABLE',
+          ERROR_CODES.SERVER_UNAVAILABLE,
         );
       }
 

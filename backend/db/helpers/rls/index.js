@@ -20,6 +20,7 @@ const { buildAccessClause, buildParentClause, combineClausesOr } = require('./cl
 const { getCachedClause, cacheClause, clearCache, invalidateEntity } = require('./sql-cache');
 const { validateAllRules: validateAllMetadataRules } = require('./path-validator');
 const AppError = require('../../../utils/app-error');
+const { ERROR_CODES } = require('../../../config/error-codes');
 const { logger } = require('../../../config/logger');
 
 /**
@@ -154,7 +155,7 @@ function validateAllRules(allMetadata) {
   if (!result.valid) {
     const errorMessage = `RLS validation failed:\n${result.errors.join('\n')}`;
     logger.error('RLS validation failed', { errors: result.errors });
-    throw new AppError(errorMessage, 500, 'INTERNAL_ERROR');
+    throw new AppError(errorMessage, 500, ERROR_CODES.SERVER_ERROR);
   }
 
   logger.info('✅ RLS rules validated', { entityCount: Object.keys(allMetadata).length });

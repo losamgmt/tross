@@ -239,7 +239,7 @@ class Auth0Strategy extends AuthStrategy {
       throw new AppError(
         `Logout failed: ${error.message}`,
         500,
-        'INTERNAL_ERROR',
+        ERROR_CODES.SERVER_ERROR,
       );
     }
   }

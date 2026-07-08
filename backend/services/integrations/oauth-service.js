@@ -96,7 +96,7 @@ class IntegrationOAuthService {
       throw new AppError(
         `${providerName} OAuth not configured - missing ${provider.oauth.envVars.clientId}`,
         503,
-        'SERVICE_UNAVAILABLE',
+        ERROR_CODES.SERVER_UNAVAILABLE,
       );
     }
 
@@ -152,7 +152,7 @@ class IntegrationOAuthService {
       throw new AppError(
         `${providerName} OAuth not configured`,
         503,
-        'SERVICE_UNAVAILABLE',
+        ERROR_CODES.SERVER_UNAVAILABLE,
       );
     }
 

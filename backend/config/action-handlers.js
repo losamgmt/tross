@@ -33,6 +33,7 @@ const testLogger = require('./test-logger');
 const { RRule } = require('rrule');
 const { sanitizeIdentifier } = require('../utils/sql-safety');
 const AppError = require('../utils/app-error');
+const { ERROR_CODES } = require('./error-codes');
 
 const log = testLogger;
 
@@ -332,7 +333,7 @@ function validateActions() {
     throw new AppError(
       `Invalid workflow actions:\n${errors.join('\n')}`,
       500,
-      'INTERNAL_ERROR',
+      ERROR_CODES.SERVER_ERROR,
     );
   }
 }

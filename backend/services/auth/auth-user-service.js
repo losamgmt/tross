@@ -21,6 +21,7 @@ const GenericEntityService = require('../entity/generic-entity-service');
 const db = require('../../db/connection');
 const { logger } = require('../../config/logger');
 const AppError = require('../../utils/app-error');
+const { ERROR_CODES } = require('../../config/error-codes');
 const { TEST_USERS } = require('../../config/test-users');
 const { useInMemoryUsers } = require('../../config/app-mode');
 
@@ -122,7 +123,7 @@ class AuthUserService {
         throw new AppError(
           `Default role '${mappedData.roleName}' not found`,
           500,
-          'INTERNAL_ERROR',
+          ERROR_CODES.SERVER_ERROR,
         );
       }
 

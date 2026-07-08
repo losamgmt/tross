@@ -166,7 +166,7 @@ async function cascadeDeleteDependents(client, metadata, id) {
         throw new AppError(
           `Unknown delete strategy: ${strategy}`,
           500,
-          'INTERNAL_ERROR',
+          ERROR_CODES.SERVER_ERROR,
         );
     }
 

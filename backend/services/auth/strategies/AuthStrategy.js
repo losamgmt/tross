@@ -20,7 +20,7 @@ class AuthStrategy {
     throw new AppError(
       'authenticate() must be implemented by subclass',
       500,
-      'INTERNAL_ERROR',
+      ERROR_CODES.SERVER_ERROR,
     );
   }
 
@@ -34,7 +34,7 @@ class AuthStrategy {
     throw new AppError(
       'verifyToken() must be implemented by subclass',
       500,
-      'INTERNAL_ERROR',
+      ERROR_CODES.SERVER_ERROR,
     );
   }
 
@@ -48,7 +48,7 @@ class AuthStrategy {
     throw new AppError(
       'getUserProfile() must be implemented by subclass',
       500,
-      'INTERNAL_ERROR',
+      ERROR_CODES.SERVER_ERROR,
     );
   }
 
@@ -61,7 +61,7 @@ class AuthStrategy {
     throw new AppError(
       'getProviderName() must be implemented by subclass',
       500,
-      'INTERNAL_ERROR',
+      ERROR_CODES.SERVER_ERROR,
     );
   }
 

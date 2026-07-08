@@ -101,7 +101,7 @@ function requireParentAccess(parentEntityKey, idParam = 'id') {
       if (!parentMetadata) {
         logger.error('requireParentAccess: Unknown entity key', { parentEntityKey });
         return next(
-          new AppError('Parent entity configuration error', 500, 'INTERNAL_ERROR'),
+          new AppError('Parent entity configuration error', 500, ERROR_CODES.SERVER_ERROR),
         );
       }
 
@@ -192,7 +192,7 @@ function requireParentPermission(operation) {
         new AppError(
           'Parent entity metadata not available',
           500,
-          'INTERNAL_ERROR',
+          ERROR_CODES.SERVER_ERROR,
         ),
       );
     }
@@ -234,7 +234,7 @@ function requireServiceConfigured(checkFn, serviceName) {
         new AppError(
           `${serviceName} is not configured`,
           503,
-          'SERVICE_UNAVAILABLE',
+          ERROR_CODES.SERVER_UNAVAILABLE,
         ),
       );
     }

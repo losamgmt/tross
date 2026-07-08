@@ -57,7 +57,7 @@ function buildAccessClause(access, rlsContext, tableAlias, paramOffset, aliasCou
       return buildParentClause(access, rlsContext, tableAlias, paramOffset, aliasCounter, allMetadata, depth);
 
     default:
-      throw new AppError(`Unknown RLS access type: ${type}`, 500, 'INTERNAL_ERROR');
+      throw new AppError(`Unknown RLS access type: ${type}`, 500, ERROR_CODES.SERVER_ERROR);
   }
 }
 
@@ -160,7 +160,7 @@ function buildJunctionClause(access, rlsContext, tableAlias, paramOffset, aliasC
     throw new AppError(
       `RLS junction chain exceeds maximum depth of ${RLS_ENGINE.MAX_HOPS}`,
       500,
-      'INTERNAL_ERROR',
+      ERROR_CODES.SERVER_ERROR,
     );
   }
 
@@ -364,7 +364,7 @@ function buildParentClause(access, rlsContext, tableAlias, paramOffset, aliasCou
       `RLS parent chain exceeds maximum depth of ${RLS_ENGINE.MAX_HOPS}. ` +
       'Check for circular parent references in entity metadata.',
       500,
-      'INTERNAL_ERROR',
+      ERROR_CODES.SERVER_ERROR,
     );
   }
 
@@ -405,7 +405,7 @@ function buildParentClause(access, rlsContext, tableAlias, paramOffset, aliasCou
 function buildStaticParentClause(parentEntity, safeForeignKey, rlsContext, tableAlias, paramOffset, aliasCounter, allMetadata, depth = 0) {
   // Get parent metadata
   if (!allMetadata || !allMetadata[parentEntity]) {
-    throw new AppError(`Parent entity '${parentEntity}' not found in metadata`, 500, 'INTERNAL_ERROR');
+    throw new AppError(`Parent entity '${parentEntity}' not found in metadata`, 500, ERROR_CODES.SERVER_ERROR);
   }
 
   const parentMetadata = allMetadata[parentEntity];

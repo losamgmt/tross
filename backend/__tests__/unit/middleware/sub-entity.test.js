@@ -353,7 +353,7 @@ describe("Sub-Entity Middleware", () => {
 
       const error = next.mock.calls[0][0];
       expect(error.statusCode).toBe(500);
-      expect(error.code).toBe("INTERNAL_ERROR");
+      expect(error.code).toBe("SERVER_ERROR");
     });
 
     it("should prefer validated.id over params.id", async () => {

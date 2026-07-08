@@ -29,6 +29,7 @@ const crypto = require('crypto');
 const path = require('path');
 const { logger } = require('../../config/logger');
 const AppError = require('../../utils/app-error');
+const { ERROR_CODES } = require('../../config/error-codes');
 
 // Initialize S3 client for R2
 const getS3Client = () => {
@@ -210,7 +211,7 @@ class StorageService {
       throw new AppError(
         'Storage service not configured',
         503,
-        'SERVICE_UNAVAILABLE',
+        ERROR_CODES.SERVER_UNAVAILABLE,
       );
     }
 
@@ -262,7 +263,7 @@ class StorageService {
       throw new AppError(
         'Storage service not configured',
         503,
-        'SERVICE_UNAVAILABLE',
+        ERROR_CODES.SERVER_UNAVAILABLE,
       );
     }
 
@@ -301,7 +302,7 @@ class StorageService {
       throw new AppError(
         'Storage service not configured',
         503,
-        'SERVICE_UNAVAILABLE',
+        ERROR_CODES.SERVER_UNAVAILABLE,
       );
     }
 
@@ -337,7 +338,7 @@ class StorageService {
       throw new AppError(
         'Storage service not configured',
         503,
-        'SERVICE_UNAVAILABLE',
+        ERROR_CODES.SERVER_UNAVAILABLE,
       );
     }
 
@@ -372,7 +373,7 @@ class StorageService {
       throw new AppError(
         'Storage service not configured',
         503,
-        'SERVICE_UNAVAILABLE',
+        ERROR_CODES.SERVER_UNAVAILABLE,
       );
     }
 

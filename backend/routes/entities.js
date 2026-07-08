@@ -44,6 +44,7 @@ const {
 } = require('../utils/db-error-handler');
 const { logger } = require('../config/logger');
 const AppError = require('../utils/app-error');
+const { ERROR_CODES } = require('../config/error-codes');
 
 // =============================================================================
 // ASYNC HANDLER WRAPPER
@@ -226,7 +227,7 @@ function createEntityRouter(entityName, _options = {}) {
         throw new AppError(
           `${displayName} creation failed unexpectedly`,
           500,
-          'INTERNAL_ERROR',
+          ERROR_CODES.SERVER_ERROR,
         );
       }
 

@@ -11,6 +11,7 @@
 const { logger } = require('../config/logger');
 const { loadValidationRules } = require('./validation-loader');
 const AppError = require('./app-error');
+const { ERROR_CODES } = require('../config/error-codes');
 
 /**
  * Query PostgreSQL CHECK constraints to extract enum values
@@ -172,7 +173,7 @@ async function validateEnumSync(pool) {
           `Found ${mismatches.length} mismatch(es). ` +
           'Update entity metadata or database schema to sync.',
         500,
-        'INTERNAL_ERROR',
+        ERROR_CODES.SERVER_ERROR,
       );
     }
 
@@ -191,7 +192,7 @@ async function validateEnumSync(pool) {
     throw new AppError(
       `Validation sync check failed: ${error.message}`,
       500,
-      'INTERNAL_ERROR',
+      ERROR_CODES.SERVER_ERROR,
     );
   }
 }

@@ -129,7 +129,7 @@ function loadValidationRules() {
     throw new AppError(
       'Cannot derive validation rules from metadata',
       500,
-      'INTERNAL_ERROR',
+      ERROR_CODES.SERVER_ERROR,
     );
   }
 }
@@ -154,7 +154,7 @@ function buildFieldSchema(fieldDef, fieldName) {
       `Unsupported field type: ${type} for ${fieldName}. ` +
         `Supported types: ${Object.keys(TYPE_BUILDERS).join(', ')}`,
       500,
-      'INTERNAL_ERROR',
+      ERROR_CODES.SERVER_ERROR,
     );
   }
 
