@@ -824,9 +824,10 @@ class _NotificationTraySectionState extends State<_NotificationTraySection> {
       // Silently fail
     }
 
-    // Navigate to related entity if available
-    final relatedEntity = notification['related_entity_type'] as String?;
-    final relatedId = notification['related_entity_id'];
+    // Navigate to the related entity if available. The notification entity stores
+    // the source record as resource_type + resource_id (see notification-metadata).
+    final relatedEntity = notification['resource_type'] as String?;
+    final relatedId = notification['resource_id'];
     if (relatedEntity != null && relatedId != null && mounted) {
       context.go('/$relatedEntity/$relatedId');
     }
