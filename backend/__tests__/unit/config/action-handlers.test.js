@@ -24,6 +24,8 @@ const {
   executeActions,
   getAction,
   listActions,
+  validateActions,
+  validateNotificationRecipient,
   clearActionsCache,
   ACTION_HANDLERS,
 } = require('../../../config/action-handlers');
@@ -424,6 +426,46 @@ describe('action-handlers', () => {
     it('listActions returns array of action names', () => {
       const actions = listActions();
       expect(Array.isArray(actions)).toBe(true);
+    });
+  });
+
+  describe('validateNotificationRecipient', () => {
+    it('accepts a profile-match recipient', () => {
+      expect(
+        validateNotificationRecipient('a', { match: 'customer_profile_id', value: { field: 'customer_id' } }),
+      ).toBeNull();
+    });
+
+    it('accepts a role-match recipient', () => {
+      expect(
+        validateNotificationRecipient('a', { match: 'role_id', value: { role: 'manager' } }),
+      ).toBeNull();
+    });
+
+    it('rejects a missing/non-object recipient', () => {
+      expect(validateNotificationRecipient('a', undefined)).toMatch(/must be an object/);
+    });
+
+    it('rejects a missing or empty match', () => {
+      expect(validateNotificationRecipient('a', { value: { field: 'x' } })).toMatch(/recipient\.match/);
+    });
+
+    it('rejects a match that is not a users column', () => {
+      expect(
+        validateNotificationRecipient('a', { match: 'not_a_real_column', value: { field: 'x' } }),
+      ).toMatch(/not a column on the users entity/);
+    });
+
+    it('rejects a malformed value source', () => {
+      expect(
+        validateNotificationRecipient('a', { match: 'role_id', value: { bogus: 'x' } }),
+      ).toMatch(/recipient\.value/);
+    });
+  });
+
+  describe('validateActions', () => {
+    it('passes for the registered actions.json (all recipients valid)', () => {
+      expect(() => validateActions()).not.toThrow();
     });
   });
 

@@ -32,6 +32,7 @@ const path = require('path');
 const testLogger = require('./test-logger');
 const { RRule } = require('rrule');
 const { sanitizeIdentifier } = require('../utils/sql-safety');
+const AppError = require('../utils/app-error');
 
 const log = testLogger;
 
@@ -248,6 +249,92 @@ function listActions() {
  */
 function clearActionsCache() {
   actionsCache = null;
+}
+
+// ============================================================================
+// ACTION VALIDATION (fail-fast at startup)
+// ============================================================================
+
+/**
+ * Whether a column name exists on the `user` entity (SSOT: user metadata).
+ * Defensive: never blocks boot if metadata cannot be loaded.
+ *
+ * @param {string} column - Candidate users column name
+ * @returns {boolean}
+ */
+function isUserColumn(column) {
+  try {
+    // Leaf config file - avoids any models/index -> validator -> action-handlers cycle.
+    const userMeta = require('./models/user-metadata');
+    const fields = userMeta && userMeta.fields;
+    if (!fields) {
+      return true;
+    }
+    return Object.prototype.hasOwnProperty.call(fields, column);
+  } catch (_error) {
+    return true;
+  }
+}
+
+/**
+ * Validate a notification action's recipient spec.
+ *
+ * Shape: `{ match: '<users column>', value: { field } | { role } | <literal> }`.
+ *
+ * @param {string} actionId - Action id (for error messages)
+ * @param {*} recipient - The recipient spec to validate
+ * @returns {string|null} Error message, or null if valid
+ */
+function validateNotificationRecipient(actionId, recipient) {
+  if (!recipient || typeof recipient !== 'object' || Array.isArray(recipient)) {
+    return `notification action '${actionId}': recipient must be an object { match, value }`;
+  }
+  if (typeof recipient.match !== 'string' || recipient.match.length === 0) {
+    return `notification action '${actionId}': recipient.match must be a non-empty users column name`;
+  }
+  if (!isUserColumn(recipient.match)) {
+    return `notification action '${actionId}': recipient.match '${recipient.match}' is not a column on the users entity`;
+  }
+
+  const { value } = recipient;
+  const isFieldSource = value && typeof value === 'object' && typeof value.field === 'string';
+  const isRoleSource = value && typeof value === 'object' && typeof value.role === 'string';
+  const isLiteral = typeof value === 'string' || typeof value === 'number';
+  if (!isFieldSource && !isRoleSource && !isLiteral) {
+    return (
+      `notification action '${actionId}': recipient.value must be `
+      + "{ field: '<record field>' }, { role: '<role name>' }, or a literal"
+    );
+  }
+  return null;
+}
+
+/**
+ * Validate all registered workflow actions at startup (fail-fast).
+ * Currently validates notification recipient specs against the unified shape.
+ *
+ * @throws {AppError} If any action is malformed
+ */
+function validateActions() {
+  const actions = loadActions();
+  const errors = [];
+
+  for (const [actionId, action] of Object.entries(actions)) {
+    if (action && action.type === 'notification') {
+      const error = validateNotificationRecipient(actionId, action.recipient);
+      if (error) {
+        errors.push(error);
+      }
+    }
+  }
+
+  if (errors.length > 0) {
+    throw new AppError(
+      `Invalid workflow actions:\n${errors.join('\n')}`,
+      500,
+      'INTERNAL_ERROR',
+    );
+  }
 }
 
 // ============================================================================
@@ -823,6 +910,10 @@ module.exports = {
   // Registry access
   getAction,
   listActions,
+
+  // Startup validation (fail-fast)
+  validateActions,
+  validateNotificationRecipient,
 
   // Testing utilities
   clearActionsCache,

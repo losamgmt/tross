@@ -26,6 +26,7 @@ const { logger } = require('../config/logger');
 const { STARTUP_VALIDATION, AUTH } = require('../config/constants');
 const AppConfig = require('../config/app-config');
 const { validateAllRules } = require('../db/helpers/rls');
+const { validateActions } = require('../config/action-handlers');
 
 /**
  * Validation result structure
@@ -87,6 +88,16 @@ function validateStartup(options = {}) {
     }
   } else {
     warnings.push('RLS validation skipped: allMetadata not provided');
+  }
+
+  // ============================================================================
+  // CRITICAL CHECK: Workflow Actions Validation
+  // ============================================================================
+  try {
+    validateActions();
+    logger.info('✅ Workflow actions validated successfully');
+  } catch (actionsError) {
+    errors.push(`Actions validation failed: ${actionsError.message}`);
   }
 
   // ============================================================================
