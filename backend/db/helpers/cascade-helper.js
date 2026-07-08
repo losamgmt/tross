@@ -26,6 +26,7 @@ const { logger } = require('../../config/logger');
 const { CASCADE_STRATEGIES } = require('../../config/constants');
 const { sanitizeIdentifier } = require('../../utils/sql-safety');
 const AppError = require('../../utils/app-error');
+const { ERROR_CODES } = require('../../config/error-codes');
 
 // Re-export as DELETE_STRATEGIES for semantic clarity in this module
 const DELETE_STRATEGIES = CASCADE_STRATEGIES;
@@ -122,7 +123,7 @@ async function cascadeDeleteDependents(client, metadata, id) {
           throw new AppError(
             `Cannot delete ${tableName}: ${count} dependent ${table} record(s) exist`,
             409,
-            'CONFLICT',
+            ERROR_CODES.RESOURCE_CONFLICT,
           );
         }
         action = 'checked';

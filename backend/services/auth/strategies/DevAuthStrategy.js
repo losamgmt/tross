@@ -7,6 +7,7 @@
 const { signJwt, verifyJwt } = require('../../../utils/jwt-helper');
 const AuthStrategy = require('./AuthStrategy');
 const AppError = require('../../../utils/app-error');
+const { ERROR_CODES } = require('../../../config/error-codes');
 const { TEST_USERS } = require('../../../config/test-users');
 const { AUTH } = require('../../../config/constants');
 const { logger } = require('../../../config/logger');
@@ -62,7 +63,7 @@ class DevAuthStrategy extends AuthStrategy {
         throw new AppError(
           'User not found in development test users',
           404,
-          'NOT_FOUND',
+          ERROR_CODES.RESOURCE_NOT_FOUND,
         );
       }
 
@@ -101,7 +102,7 @@ class DevAuthStrategy extends AuthStrategy {
       throw new AppError(
         `Authentication failed: ${error.message}`,
         401,
-        'UNAUTHORIZED',
+        ERROR_CODES.AUTH_INVALID_TOKEN,
       );
     }
   }
@@ -117,16 +118,16 @@ class DevAuthStrategy extends AuthStrategy {
 
       // Ensure this is a development token
       if (decoded.provider !== 'development') {
-        throw new AppError('Invalid token provider', 401, 'UNAUTHORIZED');
+        throw new AppError('Invalid token provider', 401, ERROR_CODES.AUTH_INVALID_TOKEN);
       }
 
       return decoded;
     } catch (error) {
       if (error.name === 'TokenExpiredError') {
-        throw new AppError('Token has expired', 401, 'UNAUTHORIZED');
+        throw new AppError('Token has expired', 401, ERROR_CODES.AUTH_TOKEN_EXPIRED);
       }
       if (error.name === 'JsonWebTokenError') {
-        throw new AppError('Invalid token', 401, 'UNAUTHORIZED');
+        throw new AppError('Invalid token', 401, ERROR_CODES.AUTH_INVALID_TOKEN);
       }
       throw error;
     }
@@ -149,7 +150,7 @@ class DevAuthStrategy extends AuthStrategy {
       }
 
       if (!user) {
-        throw new AppError('User not found', 404, 'NOT_FOUND');
+        throw new AppError('User not found', 404, ERROR_CODES.RESOURCE_NOT_FOUND);
       }
 
       // Return complete user object (matches DB schema exactly)

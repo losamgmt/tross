@@ -24,6 +24,7 @@ const { validateIdParam, validatePagination } = require('../validators');
 const auditService = require('../services/audit/audit-service');
 const ResponseFormatter = require('../utils/response-formatter');
 const AppError = require('../utils/app-error');
+const { ERROR_CODES } = require('../config/error-codes');
 const allMetadata = require('../config/models');
 const { asyncHandler } = require('../middleware/utils');
 
@@ -120,7 +121,7 @@ router.get(
       throw new AppError(
         'You can only view your own activity history',
         403,
-        'FORBIDDEN',
+        ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS,
       );
     }
 
@@ -174,7 +175,7 @@ router.get(
       throw new AppError(
         `You don't have permission to view ${resourceType} audit logs`,
         403,
-        'FORBIDDEN',
+        ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS,
       );
     }
 

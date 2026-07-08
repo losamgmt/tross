@@ -28,6 +28,7 @@ const {
   getRolePriorityToName,
 } = require('../config/role-hierarchy-loader');
 const AppError = require('./app-error');
+const { ERROR_CODES } = require('../config/error-codes');
 
 /**
  * Get the index of a role in the hierarchy (higher = more permissions)
@@ -202,7 +203,7 @@ function validateFieldAccess(data, metadata, userRole, operation) {
     throw new AppError(
       `Access denied: Role '${roleName}' cannot ${operation} field(s): ${disallowedFields.join(', ')}`,
       403,
-      'FORBIDDEN',
+      ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS,
     );
   }
 }

@@ -285,7 +285,7 @@ router.get(
       throw new AppError(
         `Validation operation '${operationName}' not found`,
         404,
-        'NOT_FOUND',
+        ERROR_CODES.RESOURCE_NOT_FOUND,
       );
     }
 

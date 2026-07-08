@@ -2763,7 +2763,7 @@ describe("GenericEntityService", () => {
             await GenericEntityService.update("recommendation", 1, { status: "approved" });
           } catch (error) {
             expect(error.statusCode).toBe(403);
-            expect(error.code).toBe("FORBIDDEN");
+            expect(error.code).toBe("AUTH_INSUFFICIENT_PERMISSIONS");
           }
         } finally {
           GenericEntityService._getMetadata = originalGetMetadata;

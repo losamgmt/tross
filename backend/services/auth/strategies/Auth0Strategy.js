@@ -134,7 +134,7 @@ class Auth0Strategy extends AuthStrategy {
       throw new AppError(
         `Auth0 authentication failed: ${error.message}`,
         401,
-        'UNAUTHORIZED',
+        ERROR_CODES.AUTH_INVALID_TOKEN,
       );
     }
   }
@@ -175,7 +175,7 @@ class Auth0Strategy extends AuthStrategy {
       throw new AppError(
         `Failed to get user profile: ${error.message}`,
         401,
-        'UNAUTHORIZED',
+        ERROR_CODES.AUTH_INVALID_TOKEN,
       );
     }
   }
@@ -211,7 +211,7 @@ class Auth0Strategy extends AuthStrategy {
       throw new AppError(
         `Refresh token expired or unauthorized: ${error.message}`,
         401,
-        'UNAUTHORIZED',
+        ERROR_CODES.AUTH_TOKEN_EXPIRED,
       );
     }
   }
@@ -292,7 +292,7 @@ class Auth0Strategy extends AuthStrategy {
       throw new AppError(
         `ID token validation failed: ${error.message}`,
         401,
-        'UNAUTHORIZED',
+        ERROR_CODES.AUTH_INVALID_TOKEN,
       );
     }
   }

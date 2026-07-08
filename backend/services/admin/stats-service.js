@@ -36,7 +36,7 @@ class StatsService {
   static _getMetadata(entityName) {
     const metadata = allMetadata[entityName];
     if (!metadata) {
-      throw new AppError(`Unknown entity: ${entityName}`, 404, 'NOT_FOUND');
+      throw new AppError(`Unknown entity: ${entityName}`, 404, ERROR_CODES.RESOURCE_NOT_FOUND);
     }
     return metadata;
   }

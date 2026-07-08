@@ -17,6 +17,7 @@ const ResponseFormatter = require('../utils/response-formatter');
 const { logger } = require('../config/logger');
 const { asyncHandler } = require('../middleware/utils');
 const AppError = require('../utils/app-error');
+const { ERROR_CODES } = require('../config/error-codes');
 const { FILE_ATTACHMENTS } = require('../config/constants');
 
 // Generic sub-entity middleware
@@ -53,7 +54,7 @@ async function generateDownloadInfo(storageKey) {
 async function getVerifiedFile(fileId, entityKey, parentId) {
   const file = await FileAttachmentService.getActiveFile(fileId);
   if (!file || file.entity_type !== entityKey || file.entity_id !== parentId) {
-    throw new AppError('File not found', 404, 'NOT_FOUND');
+    throw new AppError('File not found', 404, ERROR_CODES.RESOURCE_NOT_FOUND);
   }
   return file;
 }

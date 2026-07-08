@@ -130,7 +130,7 @@ class SessionsService {
         throw new AppError(
           `User with ID ${userId} not found`,
           404,
-          'NOT_FOUND',
+          ERROR_CODES.RESOURCE_NOT_FOUND,
         );
       }
 
@@ -214,7 +214,7 @@ class SessionsService {
       throw new AppError(
         `Session ${sessionId} not found or already revoked`,
         404,
-        'NOT_FOUND',
+        ERROR_CODES.RESOURCE_NOT_FOUND,
       );
     }
 
@@ -251,7 +251,7 @@ class SessionsService {
       throw new AppError(
         `User ${userId} not found or not suspended`,
         404,
-        'NOT_FOUND',
+        ERROR_CODES.RESOURCE_NOT_FOUND,
       );
     }
 

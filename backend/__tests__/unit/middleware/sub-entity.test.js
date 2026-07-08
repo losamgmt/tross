@@ -311,7 +311,7 @@ describe("Sub-Entity Middleware", () => {
 
       const error = next.mock.calls[0][0];
       expect(error.statusCode).toBe(404);
-      expect(error.code).toBe("NOT_FOUND");
+      expect(error.code).toBe("RESOURCE_NOT_FOUND");
     });
 
     it("should return 404 when RLS denies access (hides existence)", async () => {
@@ -325,7 +325,7 @@ describe("Sub-Entity Middleware", () => {
 
       const error = next.mock.calls[0][0];
       expect(error.statusCode).toBe(404);
-      expect(error.code).toBe("NOT_FOUND");
+      expect(error.code).toBe("RESOURCE_NOT_FOUND");
       expect(pool.query).not.toHaveBeenCalled(); // Short-circuits before query
     });
 

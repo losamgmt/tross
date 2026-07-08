@@ -41,6 +41,7 @@ const { validateIdParam } = require('../validators');
 const { getClientIp, getUserAgent } = require('../utils/request-helpers');
 const { asyncHandler } = require('../middleware/utils');
 const AppError = require('../utils/app-error');
+const { ERROR_CODES } = require('../config/error-codes');
 const allMetadata = require('../config/models');
 const {
   getRequiredFields,
@@ -459,7 +460,7 @@ router.get(
     const metadata = EntityMetadataService.getEntityMetadata(entity);
 
     if (!metadata) {
-      throw new AppError(`Entity '${entity}' not found`, 404, 'NOT_FOUND');
+      throw new AppError(`Entity '${entity}' not found`, 404, ERROR_CODES.RESOURCE_NOT_FOUND);
     }
 
     return ResponseFormatter.success(res, metadata);
@@ -476,7 +477,7 @@ router.get(
     const { entity } = req.params;
 
     if (!allMetadata[entity]) {
-      throw new AppError(`Entity '${entity}' not found`, 404, 'NOT_FOUND');
+      throw new AppError(`Entity '${entity}' not found`, 404, ERROR_CODES.RESOURCE_NOT_FOUND);
     }
 
     return ResponseFormatter.success(res, allMetadata[entity]);

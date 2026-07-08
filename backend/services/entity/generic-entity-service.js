@@ -1290,7 +1290,7 @@ class GenericEntityService {
           throw new AppError(
             `Cannot modify ${attemptedImmutable.join(', ')} on system ${entityName}: ${identityValue}`,
             403,
-            'FORBIDDEN',
+            ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS,
           );
         }
       }
@@ -1332,7 +1332,7 @@ class GenericEntityService {
             throw new AppError(
               hookResult.blockReason || 'Change blocked by policy',
               403,
-              'FORBIDDEN',
+              ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS,
             );
           }
         }
@@ -1476,7 +1476,7 @@ class GenericEntityService {
           throw new AppError(
             `Cannot delete system ${entityName}: ${identityValue}`,
             403,
-            'FORBIDDEN',
+            ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS,
           );
         }
       }
@@ -1677,7 +1677,7 @@ class GenericEntityService {
           throw new AppError(
             `Access denied or record not found at operation ${index}: ${op.operation} on id ${safeId}`,
             404,
-            'NOT_FOUND',
+            ERROR_CODES.RESOURCE_NOT_FOUND,
           );
         }
       }
@@ -1778,7 +1778,7 @@ class GenericEntityService {
                 throw new AppError(
                   `Record not found: ${safeId}`,
                   404,
-                  'NOT_FOUND',
+                  ERROR_CODES.RESOURCE_NOT_FOUND,
                 );
               }
 
@@ -1845,7 +1845,7 @@ class GenericEntityService {
                 throw new AppError(
                   `Record not found: ${safeId}`,
                   404,
-                  'NOT_FOUND',
+                  ERROR_CODES.RESOURCE_NOT_FOUND,
                 );
               }
 

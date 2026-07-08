@@ -49,7 +49,7 @@ const authenticateToken = async (req, res, next) => {
 
     // Validate required standard claims (RFC 7519)
     if (!decoded.sub) {
-      throw new AppError('Missing required "sub" claim', 401, 'UNAUTHORIZED');
+      throw new AppError('Missing required "sub" claim', 401, ERROR_CODES.AUTH_INVALID_TOKEN);
     }
 
     // Accept both development and auth0 providers
@@ -57,7 +57,7 @@ const authenticateToken = async (req, res, next) => {
       !decoded.provider ||
       !['development', 'auth0'].includes(decoded.provider)
     ) {
-      throw new AppError('Invalid token provider', 401, 'UNAUTHORIZED');
+      throw new AppError('Invalid token provider', 401, ERROR_CODES.AUTH_INVALID_TOKEN);
     }
 
     // SECURITY CHECK: Reject development tokens in production
@@ -74,7 +74,7 @@ const authenticateToken = async (req, res, next) => {
         'Development authentication is not permitted in production mode. ' +
           'Only Auth0 authentication is allowed.',
         403,
-        'FORBIDDEN',
+        ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS,
       );
     }
 
@@ -107,7 +107,7 @@ const authenticateToken = async (req, res, next) => {
         throw new AppError(
           'Development user not found in TEST_USERS',
           401,
-          'UNAUTHORIZED',
+          ERROR_CODES.AUTH_INVALID_TOKEN,
         );
       }
 

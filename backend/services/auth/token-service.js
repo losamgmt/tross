@@ -114,7 +114,7 @@ class TokenService {
       const decoded = await verifyJwt(refreshToken, AppConfig.jwt.secret);
 
       if (decoded.type !== 'refresh') {
-        throw new AppError('Invalid token type', 401, 'UNAUTHORIZED');
+        throw new AppError('Invalid token type', 401, ERROR_CODES.AUTH_INVALID_TOKEN);
       }
 
       // Check if token exists and is valid in database
@@ -135,7 +135,7 @@ class TokenService {
           tokenId: decoded.tokenId,
           userId: decoded.userId,
         });
-        throw new AppError('Invalid refresh token', 401, 'UNAUTHORIZED');
+        throw new AppError('Invalid refresh token', 401, ERROR_CODES.AUTH_INVALID_TOKEN);
       }
 
       const storedToken = result.rows[0];
@@ -152,14 +152,14 @@ class TokenService {
           userId: decoded.userId,
           error: compareError.message,
         });
-        throw new AppError('Invalid refresh token', 401, 'UNAUTHORIZED');
+        throw new AppError('Invalid refresh token', 401, ERROR_CODES.AUTH_INVALID_TOKEN);
       }
       if (!isValid) {
         logger.error('Refresh token hash mismatch', {
           tokenId: decoded.tokenId,
           userId: decoded.userId,
         });
-        throw new AppError('Invalid refresh token', 401, 'UNAUTHORIZED');
+        throw new AppError('Invalid refresh token', 401, ERROR_CODES.AUTH_INVALID_TOKEN);
       }
 
       // Update last used timestamp
@@ -199,7 +199,7 @@ class TokenService {
     } catch (error) {
       if (error.name === 'TokenExpiredError') {
         logger.warn('Expired refresh token used', { error: error.message });
-        throw new AppError('Refresh token expired', 401, 'UNAUTHORIZED');
+        throw new AppError('Refresh token expired', 401, ERROR_CODES.AUTH_TOKEN_EXPIRED);
       }
       if (error.name === 'JsonWebTokenError') {
         logger.warn('Invalid refresh token format', { error: error.message });

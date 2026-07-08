@@ -184,7 +184,7 @@ class IntegrationOAuthService {
       throw new AppError(
         `${providerName} OAuth token exchange failed`,
         401,
-        'UNAUTHORIZED',
+        ERROR_CODES.AUTH_INVALID_TOKEN,
       );
     }
 

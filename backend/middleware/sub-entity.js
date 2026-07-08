@@ -133,7 +133,7 @@ function requireParentAccess(parentEntityKey, idParam = 'id') {
           role: rlsContext.role,
         });
         return next(
-          new AppError(`${entityKey} not found`, 404, 'NOT_FOUND'),
+          new AppError(`${entityKey} not found`, 404, ERROR_CODES.RESOURCE_NOT_FOUND),
         );
       }
 
@@ -152,7 +152,7 @@ function requireParentAccess(parentEntityKey, idParam = 'id') {
       if (result.rows.length === 0) {
         // Parent not found or not accessible - return 404 to hide existence
         return next(
-          new AppError(`${entityKey} not found`, 404, 'NOT_FOUND'),
+          new AppError(`${entityKey} not found`, 404, ERROR_CODES.RESOURCE_NOT_FOUND),
         );
       }
 
@@ -206,7 +206,7 @@ function requireParentPermission(operation) {
         new AppError(
           `You don't have permission to ${actionVerb} this ${entityKey || 'resource'}`,
           403,
-          'FORBIDDEN',
+          ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS,
         ),
       );
     }
@@ -258,7 +258,7 @@ function requireParentExists(existsFn) {
           new AppError(
             `${entityKey} with id ${parentId} not found`,
             404,
-            'NOT_FOUND',
+            ERROR_CODES.RESOURCE_NOT_FOUND,
           ),
         );
       }

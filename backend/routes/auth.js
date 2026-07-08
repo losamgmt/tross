@@ -150,7 +150,7 @@ router.put(
       throw new AppError(
         `User not found for Auth0 ID: ${req.user.sub}`,
         404,
-        'NOT_FOUND',
+        ERROR_CODES.RESOURCE_NOT_FOUND,
       );
     }
 
@@ -498,7 +498,7 @@ router.post(
       targetUserId,
     );
     if (!targetUser) {
-      throw new AppError('User not found', 404, 'NOT_FOUND');
+      throw new AppError('User not found', 404, ERROR_CODES.RESOURCE_NOT_FOUND);
     }
 
     // Revoke all tokens for the target user
