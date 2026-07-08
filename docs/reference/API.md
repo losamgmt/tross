@@ -311,7 +311,7 @@ Errors use a single consistent envelope: `success: false`, a human-readable `err
 {
   "success": false,
   "error": "Bad Request",
-  "code": "BAD_REQUEST",
+  "code": "VALIDATION_FAILED",
   "message": "Validation failed",
   "details": { "email": "Email is required" },
   "timestamp": "<ISO-8601>"
@@ -322,15 +322,21 @@ Errors use a single consistent envelope: `success: false`, a human-readable `err
 
 The stable, machine-readable codes (illustrative; the OpenAPI spec is authoritative):
 
-| Code                  | HTTP Status | Description                                      |
-| --------------------- | ----------- | ------------------------------------------------ |
-| `BAD_REQUEST`         | 400         | Invalid input, missing fields, validation errors |
-| `UNAUTHORIZED`        | 401         | Authentication failed, token expired/invalid     |
-| `FORBIDDEN`           | 403         | Permission denied, insufficient role             |
-| `NOT_FOUND`           | 404         | Resource doesn't exist                           |
-| `CONFLICT`            | 409         | Duplicate entry, already exists                  |
-| `INTERNAL_ERROR`      | 500         | Server error (details hidden in production)      |
-| `SERVICE_UNAVAILABLE` | 503         | External service down (storage, database)        |
+| Code                            | HTTP Status | Description                                      |
+| ------------------------------- | ----------- | ------------------------------------------------ |
+| `VALIDATION_FAILED`             | 400         | Invalid input / validation error                 |
+| `VALIDATION_MISSING_FIELD`      | 400         | A required field is missing                      |
+| `AUTH_REQUIRED`                 | 401         | Authentication required                          |
+| `AUTH_INVALID_TOKEN`            | 401         | Token missing, malformed, or invalid             |
+| `AUTH_TOKEN_EXPIRED`            | 401         | Token expired                                    |
+| `AUTH_INSUFFICIENT_PERMISSIONS` | 403         | Permission denied, insufficient role             |
+| `RESOURCE_NOT_FOUND`            | 404         | Resource doesn't exist                           |
+| `RESOURCE_CONFLICT`             | 409         | Conflicting state / duplicate                    |
+| `RATE_LIMIT_EXCEEDED`           | 429         | Too many requests                                |
+| `SERVER_ERROR`                  | 500         | Unexpected server error (hidden in production)   |
+| `SERVER_UNAVAILABLE`            | 503         | External dependency down (storage, database)     |
+
+Domain-specific codes (e.g. `APPROVAL_REQUIRED`, `IDEMPOTENCY_MISMATCH`, `IMMUTABLE_FIELD_VIOLATION`) are also emitted for specific workflows. The canonical set is defined in `backend/config/error-codes.js`.
 
 ---
 
