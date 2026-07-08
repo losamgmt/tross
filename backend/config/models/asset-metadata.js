@@ -48,6 +48,11 @@ module.exports = {
   displayField: 'name',
   identityFieldUnique: false, // Assets can have same name at different units
 
+  // Composite uniqueness: an asset name is unique within a given unit.
+  uniqueConstraints: [
+    { name: 'uq_assets_unit_name', fields: ['unit_id', 'name'], description: 'Asset name unique within a unit' },
+  ],
+
   rlsResource: 'assets',
 
   /**

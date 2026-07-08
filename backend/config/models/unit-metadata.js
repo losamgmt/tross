@@ -49,6 +49,11 @@ module.exports = {
   displayField: 'unit_identifier',
   identityFieldUnique: false, // Units can have same identifier at different properties
 
+  // Composite uniqueness: a unit_identifier is unique within a given property.
+  uniqueConstraints: [
+    { name: 'uq_units_property_identifier', fields: ['property_id', 'unit_identifier'], description: 'Unit identifier unique within a property' },
+  ],
+
   rlsResource: 'units',
 
   /**

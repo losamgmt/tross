@@ -222,7 +222,7 @@ function normalizeEntity(raw) {
     if (fieldDef.type === 'foreignKey' && !indexes.includes(fieldName)) indexes.push(fieldName);
   }
 
-  return { entityKey, tableName, columns, indexes };
+  return { entityKey, tableName, columns, indexes, uniqueConstraints: raw.uniqueConstraints || [] };
 }
 
 /** Normalize field definition into Column */
@@ -443,7 +443,7 @@ function generateColumnSql(column, collectForeignKeys = null, tableName = null) 
 }
 
 function generateTableSql(entity, collectForeignKeys = null) {
-  const { tableName, entityKey, columns } = entity;
+  const { tableName, entityKey, columns, uniqueConstraints = [] } = entity;
   const lines = [];
 
   // Header
@@ -460,6 +460,11 @@ function generateTableSql(entity, collectForeignKeys = null) {
   lines.push(colLines.join(',\n'));
 
   lines.push(');');
+
+  // Composite UNIQUE constraints (metadata uniqueConstraints, e.g. junction pairs)
+  for (const uc of uniqueConstraints) {
+    lines.push(`ALTER TABLE ${tableName} ADD CONSTRAINT ${uc.name} UNIQUE (${uc.fields.join(', ')});`);
+  }
 
   return lines.join('\n');
 }

@@ -372,6 +372,24 @@ describe("generate-schema generate phase", () => {
       const namePos = sql.indexOf("name VARCHAR");
       expect(idPos).toBeLessThan(namePos);
     });
+
+    it("emits ALTER TABLE ADD CONSTRAINT UNIQUE for uniqueConstraints", () => {
+      const entity = {
+        entityKey: "customer_unit",
+        tableName: "customer_units",
+        columns: [
+          { name: "id", sqlType: "SERIAL", constraints: ["PRIMARY KEY"], order: 1 },
+        ],
+        indexes: [],
+        uniqueConstraints: [
+          { name: "uq_customer_unit", fields: ["customer_id", "unit_id"] },
+        ],
+      };
+      const sql = generateTableSql(entity);
+      expect(sql).toContain(
+        "ALTER TABLE customer_units ADD CONSTRAINT uq_customer_unit UNIQUE (customer_id, unit_id);",
+      );
+    });
   });
 
   describe("generateIndexSql", () => {
