@@ -13,42 +13,7 @@
 
 const { HTTP_STATUS } = require('../config/constants');
 const { logger } = require('../config/logger');
-
-/**
- * Machine-readable error codes for frontend error handling
- *
- * Format: CATEGORY_SPECIFIC_ERROR
- * These allow frontend to display localized messages or take specific actions.
- */
-const ERROR_CODES = Object.freeze({
-  // Authentication errors (AUTH_*)
-  AUTH_REQUIRED: 'AUTH_REQUIRED',
-  AUTH_INVALID_TOKEN: 'AUTH_INVALID_TOKEN',
-  AUTH_TOKEN_EXPIRED: 'AUTH_TOKEN_EXPIRED',
-  AUTH_INSUFFICIENT_PERMISSIONS: 'AUTH_INSUFFICIENT_PERMISSIONS',
-
-  // Validation errors (VALIDATION_*)
-  VALIDATION_FAILED: 'VALIDATION_FAILED',
-  VALIDATION_MISSING_FIELD: 'VALIDATION_MISSING_FIELD',
-  VALIDATION_INVALID_FORMAT: 'VALIDATION_INVALID_FORMAT',
-
-  // Resource errors (RESOURCE_*)
-  RESOURCE_NOT_FOUND: 'RESOURCE_NOT_FOUND',
-  RESOURCE_ALREADY_EXISTS: 'RESOURCE_ALREADY_EXISTS',
-  RESOURCE_CONFLICT: 'RESOURCE_CONFLICT',
-
-  // Rate limiting (RATE_*)
-  RATE_LIMIT_EXCEEDED: 'RATE_LIMIT_EXCEEDED',
-
-  // Server errors (SERVER_*)
-  SERVER_ERROR: 'SERVER_ERROR',
-  SERVER_UNAVAILABLE: 'SERVER_UNAVAILABLE',
-  SERVER_TIMEOUT: 'SERVER_TIMEOUT',
-
-  // Database errors (DB_*)
-  DB_CONNECTION_ERROR: 'DB_CONNECTION_ERROR',
-  DB_QUERY_ERROR: 'DB_QUERY_ERROR',
-});
+const { ERROR_CODES } = require('../config/error-codes');
 
 class ResponseFormatter {
   /**
@@ -463,4 +428,3 @@ class ResponseFormatter {
 }
 
 module.exports = ResponseFormatter;
-module.exports.ERROR_CODES = ERROR_CODES;

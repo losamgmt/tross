@@ -27,7 +27,7 @@
 const { logSecurityEvent, logger } = require('../config/logger');
 const { getClientIp, getUserAgent } = require('../utils/request-helpers');
 const ResponseFormatter = require('../utils/response-formatter');
-const { ERROR_CODES } = require('../utils/response-formatter');
+const { ERROR_CODES } = require('../config/error-codes');
 
 // ============================================================================
 // PROFILE TYPE REGISTRY

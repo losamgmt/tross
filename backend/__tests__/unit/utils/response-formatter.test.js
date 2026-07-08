@@ -10,7 +10,7 @@
  */
 
 const ResponseFormatter = require("../../../utils/response-formatter");
-const { ERROR_CODES } = require("../../../utils/response-formatter");
+const { ERROR_CODES } = require("../../../config/error-codes");
 const { HTTP_STATUS } = require("../../../config/constants");
 
 describe("ResponseFormatter", () => {

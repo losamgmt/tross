@@ -25,7 +25,7 @@ const { logSecurityEvent } = require('../config/logger');
 const { getClientIp, getUserAgent } = require('../utils/request-helpers');
 const { buildEntitySchema } = require('../utils/validation-schema-builder');
 const ResponseFormatter = require('../utils/response-formatter');
-const { ERROR_CODES } = require('../utils/response-formatter');
+const { ERROR_CODES } = require('../config/error-codes');
 const { getRequiredFields } = require('../config/metadata-accessors');
 
 // =============================================================================

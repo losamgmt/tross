@@ -18,7 +18,7 @@ const { getClientIp, getUserAgent } = require('../utils/request-helpers');
 const AppConfig = require('../config/app-config');
 const { TEST_USERS } = require('../config/test-users');
 const ResponseFormatter = require('../utils/response-formatter');
-const { ERROR_CODES } = require('../utils/response-formatter');
+const { ERROR_CODES } = require('../config/error-codes');
 const AppError = require('../utils/app-error');
 
 // SECURITY: JWT_SECRET accessed via AppConfig.jwt.secret getter
