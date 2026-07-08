@@ -19,12 +19,10 @@
  *
  * - STANDARD: Normal entity with full CRUD, navigation, relationships
  * - JUNCTION: Many-to-many join table (no navigation, minimal fields)
- * - POLYMORPHIC: Entity with type discriminator (future use)
  */
 const ENTITY_STRUCTURE = Object.freeze({
   STANDARD: 'standard',
   JUNCTION: 'junction',
-  POLYMORPHIC: 'polymorphic',
 });
 
 // ============================================================================
