@@ -45,7 +45,7 @@ library;
 import 'package:flutter/material.dart';
 import '../../atoms/atoms.dart';
 import '../../molecules/molecules.dart';
-import '../../../services/notification_service.dart';
+import '../../../services/feedback_service.dart';
 
 /// Configuration for field editing confirmation
 class ConfirmationConfig {
@@ -178,7 +178,7 @@ class _EditableFieldState<T, V> extends State<EditableField<T, V>> {
 
         // Show brief success feedback
         if (mounted) {
-          NotificationService.showSuccess(context, 'Updated successfully');
+          FeedbackService.showSuccess(context, 'Updated successfully');
         }
       } else {
         // API returned false
@@ -187,7 +187,7 @@ class _EditableFieldState<T, V> extends State<EditableField<T, V>> {
         });
 
         if (mounted) {
-          NotificationService.showError(context, _errorMessage!);
+          FeedbackService.showError(context, _errorMessage!);
         }
       }
     } catch (e) {
@@ -199,7 +199,7 @@ class _EditableFieldState<T, V> extends State<EditableField<T, V>> {
       });
 
       if (mounted) {
-        NotificationService.showError(context, _errorMessage!);
+        FeedbackService.showError(context, _errorMessage!);
       }
     } finally {
       if (mounted && widget.showLoading) {

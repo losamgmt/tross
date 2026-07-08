@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tross/services/notification_service.dart';
+import 'package:tross/services/feedback_service.dart';
 
 void main() {
-  group('NotificationService', () {
+  group('FeedbackService', () {
     testWidgets('showSuccess displays success SnackBar', (tester) async {
       const message = 'Operation completed successfully';
 
@@ -14,7 +14,7 @@ void main() {
               builder: (context) {
                 return ElevatedButton(
                   onPressed: () {
-                    NotificationService.showSuccess(context, message);
+                    FeedbackService.showSuccess(context, message);
                   },
                   child: const Text('Show Success'),
                 );
@@ -43,7 +43,7 @@ void main() {
               builder: (context) {
                 return ElevatedButton(
                   onPressed: () {
-                    NotificationService.showError(context, message);
+                    FeedbackService.showError(context, message);
                   },
                   child: const Text('Show Error'),
                 );
@@ -72,7 +72,7 @@ void main() {
               builder: (context) {
                 return ElevatedButton(
                   onPressed: () {
-                    NotificationService.showInfo(context, message);
+                    FeedbackService.showInfo(context, message);
                   },
                   child: const Text('Show Info'),
                 );
@@ -102,7 +102,7 @@ void main() {
               builder: (context) {
                 return ElevatedButton(
                   onPressed: () {
-                    NotificationService.showErrorWithAction(
+                    FeedbackService.showErrorWithAction(
                       context,
                       message,
                       actionLabel: actionLabel,
@@ -134,7 +134,7 @@ void main() {
       // The interaction itself is tested in integration/E2E tests
     });
 
-    testWidgets('multiple notifications queue correctly', (tester) async {
+    testWidgets('multiple feedback messages queue correctly', (tester) async {
       const message1 = 'First notification';
       const message2 = 'Second notification';
       const message3 = 'Third notification';
@@ -146,9 +146,9 @@ void main() {
               builder: (context) {
                 return ElevatedButton(
                   onPressed: () {
-                    NotificationService.showInfo(context, message1);
-                    NotificationService.showSuccess(context, message2);
-                    NotificationService.showError(context, message3);
+                    FeedbackService.showInfo(context, message1);
+                    FeedbackService.showSuccess(context, message2);
+                    FeedbackService.showError(context, message3);
                   },
                   child: const Text('Show Multiple'),
                 );
@@ -170,7 +170,7 @@ void main() {
       expect(find.text(message3), findsNothing);
     });
 
-    testWidgets('notification respects theme', (tester) async {
+    testWidgets('feedback respects theme', (tester) async {
       const message = 'Themed notification';
       final customTheme = ThemeData(
         colorScheme: ColorScheme.fromSeed(
@@ -187,7 +187,7 @@ void main() {
               builder: (context) {
                 return ElevatedButton(
                   onPressed: () {
-                    NotificationService.showInfo(context, message);
+                    FeedbackService.showInfo(context, message);
                   },
                   child: const Text('Show'),
                 );

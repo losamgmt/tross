@@ -1,6 +1,6 @@
-/// NotificationService - User notification coordinator
+/// FeedbackService - Transient user feedback coordinator
 ///
-/// **SOLE RESPONSIBILITY:** Coordinate user notifications via SnackBars
+/// **SOLE RESPONSIBILITY:** Show transient user feedback via SnackBars
 /// - Show success messages
 /// - Show error messages
 /// - Show info messages
@@ -8,20 +8,23 @@
 ///
 /// This is a SERVICE - coordinates UI behavior, doesn't create widgets
 /// Uses ScaffoldMessenger API + AppSnackbar atom
+///
+/// Note: "notification" is reserved for the persisted notification entity;
+/// this service handles ephemeral in-app feedback (toasts/snackbars) only.
 library;
 
 import 'package:flutter/material.dart';
 import '../widgets/atoms/atoms.dart';
 
-/// Service for showing user notifications
+/// Service for showing transient user feedback
 ///
-/// Provides centralized notification coordination using AppSnackbar atom.
+/// Provides centralized feedback coordination using AppSnackbar atom.
 /// All methods delegate to ScaffoldMessenger API with styled snackbars.
-class NotificationService {
+class FeedbackService {
   // Private constructor - this is a static utility class
-  NotificationService._();
+  FeedbackService._();
 
-  /// Show success notification
+  /// Show success feedback
   ///
   /// Displays a green SnackBar with success message.
   /// Auto-dismisses after 2 seconds.
@@ -31,7 +34,7 @@ class NotificationService {
     ).showSnackBar(AppSnackbar(message: message, style: SnackbarStyle.success));
   }
 
-  /// Show error notification
+  /// Show error feedback
   ///
   /// Displays a red SnackBar with error message.
   /// Auto-dismisses after 4 seconds (longer for errors).
@@ -41,7 +44,7 @@ class NotificationService {
     ).showSnackBar(AppSnackbar(message: message, style: SnackbarStyle.error));
   }
 
-  /// Show info notification
+  /// Show info feedback
   ///
   /// Displays a blue SnackBar with info message.
   /// Auto-dismisses after 3 seconds.
@@ -51,7 +54,7 @@ class NotificationService {
     ).showSnackBar(AppSnackbar(message: message, style: SnackbarStyle.info));
   }
 
-  /// Show error notification with action
+  /// Show error feedback with action
   ///
   /// Displays a red SnackBar with error message and action button.
   static void showErrorWithAction(

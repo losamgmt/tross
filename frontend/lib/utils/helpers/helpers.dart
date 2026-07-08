@@ -25,4 +25,4 @@ export 'input_type_helpers.dart';
 export 'number_helpers.dart';
 export 'string_helper.dart'; // Fixed: was exporting non-existent string_helpers.dart
 
-// ui_helpers.dart deleted - replaced by NotificationService + SnackBar atoms
+// ui_helpers.dart deleted - replaced by FeedbackService + SnackBar atoms

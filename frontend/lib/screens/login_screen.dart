@@ -14,7 +14,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../core/routing/app_routes.dart';
 import '../services/error_service.dart';
-import '../services/notification_service.dart';
+import '../services/feedback_service.dart';
 import '../widgets/organisms/login_content.dart';
 import '../widgets/templates/templates.dart';
 
@@ -51,11 +51,11 @@ class LoginScreen extends StatelessWidget {
         }
         // On web, do nothing - browser is redirecting to Auth0
       } else {
-        NotificationService.showError(context, 'Auth0 login failed');
+        FeedbackService.showError(context, 'Auth0 login failed');
       }
     } catch (e) {
       if (context.mounted) {
-        NotificationService.showError(context, 'Auth0 login failed: $e');
+        FeedbackService.showError(context, 'Auth0 login failed: $e');
       }
     }
   }
@@ -96,10 +96,7 @@ class LoginScreen extends StatelessWidget {
           '[Expected in tests] Login failed - showing error to user',
           context: {'role': role},
         );
-        NotificationService.showError(
-          context,
-          'Dev login failed for role: $role',
-        );
+        FeedbackService.showError(context, 'Dev login failed for role: $role');
       }
     } catch (e) {
       ErrorService.logError(
@@ -108,9 +105,8 @@ class LoginScreen extends StatelessWidget {
         context: {'role': role},
       );
       if (context.mounted) {
-        NotificationService.showError(context, 'Dev login failed: $e');
+        FeedbackService.showError(context, 'Dev login failed: $e');
       }
     }
   }
 }
-
