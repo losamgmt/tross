@@ -82,29 +82,58 @@ const PG_ERROR_CODES = Object.freeze({
 });
 
 /**
- * Extract field name from PostgreSQL constraint error message
+ * Guard a field-name candidate extracted from a database error.
  *
- * PostgreSQL error messages follow patterns like:
- * - "Key (customer_id)=(999) is not present in table "customers""
- * - "duplicate key value violates unique constraint "contracts_contract_number_key""
+ * FRAGILITY NOTE: extractFieldFromError parses PostgreSQL's human-readable error text,
+ * whose exact wording is NOT a stable contract (it varies by PG version and locale). Every
+ * extraction is therefore treated defensively here — only a value shaped like a single SQL
+ * column identifier is accepted. Composite keys, punctuation, or localized text fall back to
+ * null, so the caller emits a clean generic message rather than a garbled one.
+ *
+ * @param {*} raw - Candidate field name (from error.column or a regex capture)
+ * @returns {string|null} A valid column identifier, or null
+ */
+function sanitizeFieldName(raw) {
+  if (typeof raw !== 'string') {return null;}
+  const value = raw.trim();
+  return /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(value) ? value : null;
+}
+
+/**
+ * Extract the offending field name from a PostgreSQL constraint error.
+ *
+ * Strategy (most reliable first):
+ * 1. `error.column` — a structured field pg sets for some violations (e.g. NOT NULL).
+ * 2. FK detail regex — "Key (customer_id)=(999) is not present in table ..." (brittle).
+ * 3. Unique constraint-name regex — "..._<field>_key" (brittle; assumes naming convention).
+ *
+ * Steps 2-3 parse human-readable text (see sanitizeFieldName's FRAGILITY NOTE); every result
+ * is guarded and falls back to null, so a PG message-format change degrades gracefully to a
+ * generic message rather than surfacing garbage.
  *
  * @param {Error} error - PostgreSQL error
  * @returns {string|null} Field name or null
  */
 function extractFieldFromError(error) {
+  // 1. Prefer pg's structured column when present (reliable).
+  const structured = sanitizeFieldName(error.column);
+  if (structured) {return structured;}
+
   const message = error.message || '';
   const detail = error.detail || '';
 
-  // FK violation: "Key (customer_id)=(999) is not present..."
+  // 2. FK violation: "Key (customer_id)=(999) is not present..."
   const fkMatch = detail.match(/Key \(([^)]+)\)/);
   if (fkMatch) {
-    return fkMatch[1];
+    const field = sanitizeFieldName(fkMatch[1]);
+    if (field) {return field;}
   }
 
-  // Unique violation: constraint name often includes field name
+  // 3. Unique violation: constraint name often includes the field: "table_field_key"
   const constraintMatch = message.match(/"[^"]*_([^_"]+)_key"/);
   if (constraintMatch) {
-    return constraintMatch[1];
+    const field = sanitizeFieldName(constraintMatch[1]);
+    if (field) {return field;}
   }
 
   return null;
@@ -316,5 +345,6 @@ function handleDbError(error, res, config = {}) {
 module.exports = {
   handleDbError,
   buildDbErrorConfig,
+  extractFieldFromError,
   PG_ERROR_CODES,
 };

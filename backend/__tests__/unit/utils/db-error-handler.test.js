@@ -24,6 +24,7 @@ jest.mock("../../../utils/response-formatter", () => ({
 const {
   handleDbError,
   buildDbErrorConfig,
+  extractFieldFromError,
   PG_ERROR_CODES,
 } = require("../../../utils/db-error-handler");
 const ResponseFormatter = require("../../../utils/response-formatter");
@@ -59,6 +60,48 @@ describe("db-error-handler", () => {
 
     it("is frozen (immutable)", () => {
       expect(Object.isFrozen(PG_ERROR_CODES)).toBe(true);
+    });
+  });
+
+  describe("extractFieldFromError", () => {
+    it("prefers the structured error.column when present", () => {
+      expect(
+        extractFieldFromError({ column: "assigned_technician_id" }),
+      ).toBe("assigned_technician_id");
+    });
+
+    it("extracts the FK field from the detail message", () => {
+      expect(
+        extractFieldFromError({
+          detail: 'Key (customer_id)=(999) is not present in table "customers"',
+        }),
+      ).toBe("customer_id");
+    });
+
+    it("extracts the field from a unique constraint name", () => {
+      expect(
+        extractFieldFromError({
+          message:
+            'duplicate key value violates unique constraint "users_email_key"',
+        }),
+      ).toBe("email");
+    });
+
+    it("returns null when nothing matches", () => {
+      expect(extractFieldFromError({ message: "some other error" })).toBeNull();
+      expect(extractFieldFromError({})).toBeNull();
+    });
+
+    it("guards a composite-key extraction back to null (generic message)", () => {
+      expect(
+        extractFieldFromError({
+          detail: 'Key (col_a, col_b)=(1, 2) is not present in table "x"',
+        }),
+      ).toBeNull();
+    });
+
+    it("ignores a non-identifier structured column", () => {
+      expect(extractFieldFromError({ column: "weird value!" })).toBeNull();
     });
   });
 
