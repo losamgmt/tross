@@ -452,12 +452,17 @@ function updateEntityRegistry(entities) {
 /**
  * Main sync function
  */
-function syncMetadata() {
-  console.log("🔄 Syncing entity metadata from backend to frontend...\n");
-
-  // Build frontend metadata
-  // Note: lastModified removed for deterministic output (CI stability)
-  // Use git history for change tracking
+/**
+ * Build the full frontend entity-metadata object from backend models.
+ *
+ * PURE + DETERMINISTIC (no I/O, no timestamps): the same models always yield the same
+ * object, which is what makes `sync:all` idempotent. The header is emitted first, then
+ * each model is transformed in the models index's insertion order.
+ *
+ * @param {Object} models - Backend models index (entityName → metadata)
+ * @returns {Object} Frontend entity-metadata object
+ */
+function buildFrontendMetadata(models) {
   const frontendMetadata = {
     $schema: "http://json-schema.org/draft-07/schema#",
     $id: "https://tross.com/schemas/entity-metadata.json",
@@ -467,18 +472,23 @@ function syncMetadata() {
     version: "1.0.0",
   };
 
-  // Transform each model
-  const entities = [];
-  for (const [entityName, backendMeta] of Object.entries(backendModels)) {
-    // Use entityName directly - camelCase is the canonical format across all layers
-    // No conversion! Backend and frontend use the SAME entity names.
+  for (const [entityName, backendMeta] of Object.entries(models)) {
+    // Use entityName directly - camelCase is the canonical format across all layers.
+    frontendMetadata[entityName] = transformModel(entityName, backendMeta, models);
+  }
+
+  return frontendMetadata;
+}
+
+function syncMetadata() {
+  console.log("🔄 Syncing entity metadata from backend to frontend...\n");
+
+  // Build frontend metadata (pure), then write. No timestamps → deterministic output
+  // for CI idempotency; use git history for change tracking.
+  const frontendMetadata = buildFrontendMetadata(backendModels);
+  const entities = Object.keys(backendModels);
+  for (const entityName of entities) {
     console.log(`  ✓ ${entityName}`);
-    frontendMetadata[entityName] = transformModel(
-      entityName,
-      backendMeta,
-      backendModels,
-    );
-    entities.push(entityName);
   }
 
   // Write output
@@ -506,6 +516,7 @@ module.exports = {
   transformField,
   transformPreferenceSchema,
   transformModel,
+  buildFrontendMetadata,
   buildEntityPlacements,
   updateNavConfig,
   updateEntityRegistry,

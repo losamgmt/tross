@@ -7,6 +7,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { isDeepStrictEqual } = require('util');
 
 const {
   ROOT_DIR,
@@ -16,6 +17,7 @@ const {
   CONFIG_PERMISSIONS_JSON,
   RESOURCE_TYPE_DART,
 } = require('./paths');
+const { transformModel } = require('../sync-entity-metadata');
 
 // ============================================================================
 // CONFIGURATION
@@ -43,11 +45,24 @@ function loadContext(entityName) {
   const fileName = entityName.replace(/_/g, '-');
   const metadataPath = path.join(BACKEND_MODELS_DIR, `${fileName}-metadata.js`);
 
+  // Regenerate the expected frontend entry from source metadata (freshness baseline):
+  // exactly what `sync-entity-metadata` would write for this entity, right now. Normalize
+  // through JSON (the same round-trip the on-disk file went through) so the deep-equal
+  // compares apples to apples — dropping undefined/functions consistently.
+  const allModels = safeRequire(path.join(BACKEND_MODELS_DIR, 'index.js')) || {};
+  const rawExpected = allModels[entityName]
+    ? transformModel(entityName, allModels[entityName], allModels)
+    : null;
+  const expectedFrontendEntry = rawExpected
+    ? JSON.parse(JSON.stringify(rawExpected))
+    : null;
+
   return {
     entityName,
     metadataPath: fs.existsSync(metadataPath) ? metadataPath : null,
     metadata: safeRequire(metadataPath),
     frontendJson: safeReadJson(ENTITY_METADATA_JSON),
+    expectedFrontendEntry,
     permissionsJson: safeReadJson(CONFIG_PERMISSIONS_JSON),
     dartContent: safeReadFile(RESOURCE_TYPE_DART),
     schemaContent: safeReadFile(CONFIG.SCHEMA_FILE),
@@ -128,8 +143,17 @@ const verifyFrontendJson = (ctx) => {
   const entry = ctx.frontendJson[ctx.entityName];
   if (!entry) return { passed: false, detail: `"${ctx.entityName}" not in JSON` };
 
+  // Freshness: the on-disk entry must match a fresh regeneration from the source metadata.
+  // Guards against a stale entity-metadata.json (metadata changed but `sync:all` not re-run).
+  if (ctx.expectedFrontendEntry && !isDeepStrictEqual(entry, ctx.expectedFrontendEntry)) {
+    return {
+      passed: false,
+      detail: 'stale - run `npm run sync:all` (on-disk JSON differs from metadata)',
+    };
+  }
+
   const fieldCount = Object.keys(entry.fields || {}).length;
-  return { passed: true, detail: `${fieldCount} fields synced` };
+  return { passed: true, detail: `${fieldCount} fields synced (fresh)` };
 };
 
 const verifyPermissions = (ctx) => {
