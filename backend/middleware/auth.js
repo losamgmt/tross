@@ -17,6 +17,7 @@ const { logSecurityEvent } = require('../config/logger');
 const { getClientIp, getUserAgent } = require('../utils/request-helpers');
 const AppConfig = require('../config/app-config');
 const { TEST_USERS } = require('../config/test-users');
+const { AUTH } = require('../config/constants');
 const ResponseFormatter = require('../utils/response-formatter');
 const { ERROR_CODES } = require('../config/error-codes');
 const AppError = require('../utils/app-error');
@@ -52,11 +53,9 @@ const authenticateToken = async (req, res, next) => {
       throw new AppError('Missing required "sub" claim', 401, ERROR_CODES.AUTH_INVALID_TOKEN);
     }
 
-    // Accept both development and auth0 providers
-    if (
-      !decoded.provider ||
-      !['development', 'auth0'].includes(decoded.provider)
-    ) {
+    // Accept only known token providers (SSOT: AUTH.PROVIDERS)
+    const validProviders = Object.values(AUTH.PROVIDERS);
+    if (!decoded.provider || !validProviders.includes(decoded.provider)) {
       throw new AppError('Invalid token provider', 401, ERROR_CODES.AUTH_INVALID_TOKEN);
     }
 
