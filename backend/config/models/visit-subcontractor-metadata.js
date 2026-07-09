@@ -26,9 +26,6 @@ module.exports = {
   primaryKey: 'id',
   icon: 'group_add',
 
-  // Entity structure type (junction: many-to-many linking table)
-  structureType: 'junction',
-
   // ============================================================================
   // JUNCTION CONFIGURATION
   // ============================================================================

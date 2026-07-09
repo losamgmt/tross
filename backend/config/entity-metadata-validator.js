@@ -13,7 +13,7 @@
 
 const { getRoleHierarchy } = require('./role-hierarchy-loader');
 const { RLS_ENGINE, HOOK_WHEN_OPERATORS } = require('./constants');
-const { ENTITY_STRUCTURE, ENTITY_TRAITS } = require('./entity-traits');
+const { ENTITY_TRAITS } = require('./entity-traits');
 const { getForeignKeyFieldNames, extractForeignKeyFields } = require('./fk-helpers');
 const { foreignKeyFieldName } = require('./field-types');
 const { listActions } = require('./action-handlers');
@@ -648,39 +648,13 @@ function validateJunctionConfig(meta, errors, allMetadata) {
 }
 
 /**
- * Validate entity structure type and behavioral traits.
+ * Validate entity behavioral traits.
  *
- * Supports both legacy (isJunction, isSystemTable, uncountable) and
- * new (structureType, traits) syntax during migration.
+ * Supports both the legacy scalar flags (isSystemTable, uncountable) and the
+ * new `traits` array during migration.
  */
 function validateEntityTraits(meta, errors) {
-  const validStructureTypes = new Set(Object.values(ENTITY_STRUCTURE));
   const validTraits = new Set(Object.values(ENTITY_TRAITS));
-
-  // -------------------------------------------------------------------------
-  // Validate structureType (if present)
-  // -------------------------------------------------------------------------
-  if (meta.structureType !== undefined) {
-    if (!validStructureTypes.has(meta.structureType)) {
-      errors.add(
-        'structureType',
-        `Invalid value '${meta.structureType}'. ` +
-          `Must be one of: ${[...validStructureTypes].join(', ')}`,
-      );
-    }
-
-    // Check for conflicting legacy property
-    if (meta.isJunction !== undefined) {
-      const structureIsJunction = meta.structureType === ENTITY_STRUCTURE.JUNCTION;
-      if (structureIsJunction !== meta.isJunction) {
-        errors.add(
-          'structureType',
-          `Conflicts with isJunction: ${meta.isJunction}. ` +
-            'Remove isJunction and use structureType only.',
-        );
-      }
-    }
-  }
 
   // -------------------------------------------------------------------------
   // Validate traits array (if present)

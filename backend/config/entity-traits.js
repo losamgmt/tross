@@ -1,29 +1,12 @@
 /**
  * Entity Traits - SINGLE SOURCE OF TRUTH
  *
- * Defines entity-level classification: what KIND of entity (structure)
- * and what BEHAVIORS apply (traits).
+ * Defines entity-level behavioral traits (what BEHAVIORS apply to an entity).
  *
  * NO IMPORTS ALLOWED - This file must be dependency-free to avoid circular imports.
  *
  * @module config/entity-traits
  */
-
-// ============================================================================
-// ENTITY STRUCTURE TYPES (Mutually Exclusive)
-// ============================================================================
-
-/**
- * Entity structure type enum.
- * Every entity has exactly ONE structure type.
- *
- * - STANDARD: Normal entity with full CRUD, navigation, relationships
- * - JUNCTION: Many-to-many join table (no navigation, minimal fields)
- */
-const ENTITY_STRUCTURE = Object.freeze({
-  STANDARD: 'standard',
-  JUNCTION: 'junction',
-});
 
 // ============================================================================
 // ENTITY BEHAVIORAL TRAITS (Composable)
@@ -48,23 +31,6 @@ const ENTITY_TRAITS = Object.freeze({
 // ============================================================================
 
 /**
- * Check if entity has a specific structure type.
- *
- * @param {Object} metadata - Entity metadata object
- * @param {string} structureType - Value from ENTITY_STRUCTURE enum
- * @returns {boolean} True if entity has the specified structure type
- *
- * @example
- * hasStructure(customerUnitMetadata, ENTITY_STRUCTURE.JUNCTION) // true
- * hasStructure(workOrderMetadata, ENTITY_STRUCTURE.STANDARD)    // true
- */
-function hasStructure(metadata, structureType) {
-  // Default to STANDARD if not specified
-  const entityStructure = metadata.structureType || ENTITY_STRUCTURE.STANDARD;
-  return entityStructure === structureType;
-}
-
-/**
  * Check if entity has a specific behavioral trait.
  *
  * @param {Object} metadata - Entity metadata object
@@ -79,17 +45,6 @@ function hasStructure(metadata, structureType) {
 function hasTrait(metadata, trait) {
   const traits = metadata.traits || [];
   return traits.includes(trait);
-}
-
-/**
- * Check if entity is a junction table.
- * Convenience method - equivalent to hasStructure(metadata, ENTITY_STRUCTURE.JUNCTION)
- *
- * @param {Object} metadata - Entity metadata object
- * @returns {boolean} True if entity is a junction table
- */
-function isJunction(metadata) {
-  return hasStructure(metadata, ENTITY_STRUCTURE.JUNCTION);
 }
 
 /**
@@ -124,24 +79,10 @@ function getTraits(metadata) {
   return metadata.traits || [];
 }
 
-/**
- * Get structure type for an entity.
- *
- * @param {Object} metadata - Entity metadata object
- * @returns {string} Structure type (defaults to STANDARD)
- */
-function getStructureType(metadata) {
-  return metadata.structureType || ENTITY_STRUCTURE.STANDARD;
-}
-
 module.exports = {
-  ENTITY_STRUCTURE,
   ENTITY_TRAITS,
-  hasStructure,
   hasTrait,
-  isJunction,
   isSystemTable,
   hasWorkflow,
   getTraits,
-  getStructureType,
 };

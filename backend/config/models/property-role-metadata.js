@@ -32,9 +32,6 @@ module.exports = {
   primaryKey: 'id',
   icon: 'admin_panel_settings',
 
-  // Entity structure type (junction: many-to-many linking table)
-  structureType: 'junction',
-
   // ============================================================================
   // JUNCTION CONFIGURATION
   // ============================================================================
