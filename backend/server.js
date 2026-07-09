@@ -9,7 +9,7 @@ const express = require('express');
 const cors = require('cors');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
-const { HTTP_STATUS, SECURITY } = require('./config/constants');
+const { HTTP_STATUS, SECURITY, FILE_ATTACHMENTS } = require('./config/constants');
 const { TIMEOUTS } = require('./config/timeouts');
 const { isTestMode, isProduction, isLocalDev } = require('./config/app-mode');
 const { logger, requestLogger } = require('./config/logger');
@@ -91,7 +91,10 @@ const fileUploadRawParser = express.raw({
     // Fallback for unknown types picked by browser
     'application/octet-stream',
   ],
-  limit: '10mb',
+  // Reject oversized uploads at the transport layer, sized from the SAME constant as the
+  // app-level validateFileBody cap (single source of truth) so oversized bodies aren't
+  // fully buffered into memory before the per-file check runs.
+  limit: FILE_ATTACHMENTS.MAX_FILE_SIZE,
 });
 
 // Apply raw parser to all entity file upload paths
