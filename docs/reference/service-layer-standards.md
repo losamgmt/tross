@@ -281,7 +281,7 @@ const AuthUserService = require('./auth-user-service');
 
 ### parent-rls-service.js
 
-**Status:** Deprecated  
+**Status:** Removed (2026-07-08)  
 **Replacement:** `requireParentAccess()` middleware from `middleware/sub-entity.js`  
 **Note:** Uses declarative RLS rules from metadata instead of imperative checks.
 

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed - Metadata model cleanup (P2 Group A) (2026-07-08)
+
+Retired dead and redundant entity-metadata abstractions so the model has exactly one clear way to express each concept.
+
+- **Junction entities now have a single representation** — the consolidated `junction: { entities, uniqueOn }` object. Removed the deprecated `isJunction` boolean, the `junctionFor` object, and the `structureType` classification (all redundant; `isJunctionEntity()` / `getJunction()` already read `junction`). The now-unused `JunctionFor` model and `isJunction` field were removed from the frontend as well.
+- **Dead abstractions removed**: the `POLYMORPHIC` structure type (0 entities used it) and the inert `auditable` trait (audit is gated by `auditEnabled`, on by default for every entity, so the trait was both unused and misleading).
+- **Deprecated `parent-rls-service.js` deleted** — superseded by the declarative `requireParentAccess()` middleware; end-to-end behavior remains covered by integration tests.
+- **Smaller clarity fixes**: auth provider validation now derives from the `AUTH.PROVIDERS` single source of truth instead of a hardcoded list; the cascade-helper security comment now explains that identifiers are interpolated (not parameterizable), so sanitization is the primary control; and a dev-only cache caveat was documented on `metadata-service.reloadConfigs`.
+
 ### Changed - Canonical error codes (ERROR_CODES SSOT) (2026-07-08)
 
 Every API error now carries a canonical, centralized machine-readable code so the frontend can drive localization / retry / analytics off codes rather than message text.
