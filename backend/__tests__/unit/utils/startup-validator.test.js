@@ -135,6 +135,31 @@ describe('utils/startup-validator.js', () => {
       });
     });
 
+    describe('Production CSP Check', () => {
+      test('production config produces no CSP wildcard error (locked down)', () => {
+        isProduction.mockReturnValue(true);
+        devAuthEnabled.mockReturnValue(false);
+        isTestMode.mockReturnValue(false);
+        process.env.DB_PASSWORD = 'VeryStrongProductionPassword123!';
+
+        const result = validateStartup();
+
+        expect(
+          result.errors.filter((e) => e.includes('Content-Security-Policy')),
+        ).toHaveLength(0);
+      });
+
+      test('non-production skips the CSP wildcard check', () => {
+        isProduction.mockReturnValue(false);
+
+        const result = validateStartup();
+
+        expect(
+          result.errors.filter((e) => e.includes('Content-Security-Policy')),
+        ).toHaveLength(0);
+      });
+    });
+
     describe('RLS Rules Validation', () => {
       test('should validate RLS rules when metadata provided', () => {
         validateAllRules.mockImplementation(() => {});

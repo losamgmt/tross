@@ -27,6 +27,7 @@ const { STARTUP_VALIDATION, AUTH } = require('../config/constants');
 const AppConfig = require('../config/app-config');
 const { validateAllRules } = require('../db/helpers/rls');
 const { validateActions } = require('../config/action-handlers');
+const { buildCspDirectives, cspHasAllowAllWildcard } = require('../middleware/security');
 
 /**
  * Validation result structure
@@ -110,6 +111,20 @@ function validateStartup(options = {}) {
       logger.info('✅ JWT secret configured');
     } catch (jwtError) {
       errors.push(`JWT configuration error: ${jwtError.message}`);
+    }
+  }
+
+  // ============================================================================
+  // CRITICAL CHECK: Production CSP has no allow-all wildcard
+  // ============================================================================
+  if (isProduction()) {
+    if (cspHasAllowAllWildcard(buildCspDirectives(false))) {
+      errors.push(
+        'SECURITY VIOLATION: production Content-Security-Policy contains an allow-all ' +
+          '"*" wildcard. The development CSP relaxation must be gated behind development mode.',
+      );
+    } else {
+      logger.info('✅ Production CSP is locked down (no allow-all wildcard)');
     }
   }
 
