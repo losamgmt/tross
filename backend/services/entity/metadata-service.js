@@ -58,7 +58,11 @@ class EntityMetadataService {
 
   /**
    * Reload configs (useful for hot-reload during development)
-   * Busts the Node.js require cache and re-derives validation rules
+   * Busts the Node.js require cache and re-derives validation rules.
+   *
+   * DEV-ONLY convenience: this refreshes only this service's cached view.
+   * Modules that captured their own reference to the old config object will
+   * not observe the change, so it is not a full runtime hot-swap.
    */
   static reloadConfigs() {
     try {
