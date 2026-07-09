@@ -445,8 +445,7 @@
  * @property {boolean} [uncountable] - Whether entity name is uncountable (inventory)
  * @property {boolean} [isSystemTable] - Whether this is a system table (audit_log)
  *
- * @property {boolean} [isJunction] - Whether this entity is a junction table for M:M
- * @property {JunctionConfig} [junctionFor] - Junction entity configuration (required if isJunction=true)
+ * @property {Object} [junction] - Junction config { entities: [e1, e2], uniqueOn } for M:M join tables
  * @property {UniqueConstraint[]} [uniqueConstraints] - Composite unique constraints (common in junctions)
  *
  * @property {SummaryConfig} summaryConfig - REQUIRED: Summary endpoint configuration (null if not summarizable)

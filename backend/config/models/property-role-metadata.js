@@ -57,17 +57,6 @@ module.exports = {
     uniqueOn: [['customer_id', 'property_id']],
   },
 
-  isJunction: true, // DEPRECATED: Use junction !== null
-
-  /**
-   * The two entities this junction connects
-   * entity1 is typically the "owner" side
-   */
-  junctionFor: { // DEPRECATED: Use junction.entities
-    entity1: 'customer',
-    entity2: 'property',
-  },
-
   /**
    * Composite unique constraint: one role per customer per property
    * (A customer could have multiple roles at different properties,

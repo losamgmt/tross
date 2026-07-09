@@ -51,16 +51,6 @@ module.exports = {
     uniqueOn: [['visit_id', 'subcontractor_id']],
   },
 
-  isJunction: true, // DEPRECATED: Use junction !== null
-
-  /**
-   * The two entities this junction connects
-   */
-  junctionFor: { // DEPRECATED: Use junction.entities
-    entity1: 'visit',
-    entity2: 'subcontractor',
-  },
-
   /**
    * Composite unique constraint prevents duplicate assignments
    */

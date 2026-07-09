@@ -535,35 +535,17 @@ function getFeatures(metadata) {
 }
 
 // ============================================================================
-// JUNCTION (junctionFor, isJunction → junction)
+// JUNCTION
 // ============================================================================
 
 /**
  * Get junction configuration for an entity.
- * Reads from `junction: { ... }` first, falls back to legacy junctionFor.
  *
  * @param {Object} metadata - Entity metadata
  * @returns {Object|null} Junction config { entities, uniqueOn } or null if not a junction
  */
 function getJunction(metadata) {
-  const entityKey = metadata.entityKey || 'unknown';
-
-  // Check for new consolidated junction property
-  if (metadata.junction !== undefined) {
-    return metadata.junction;
-  }
-
-  // Fall back to legacy junctionFor property
-  if (metadata.junctionFor) {
-    logDeprecationWarning(entityKey, 'junctionFor');
-    const { entity1, entity2 } = metadata.junctionFor;
-    return {
-      entities: [entity1, entity2],
-      uniqueOn: [[`${entity1}_id`, `${entity2}_id`]],
-    };
-  }
-
-  return null;
+  return metadata.junction !== undefined ? metadata.junction : null;
 }
 
 /**
@@ -663,14 +645,6 @@ function checkLegacyUsage(metadata) {
   }
   if (metadata.summaryConfig !== undefined && metadata.features === undefined) {
     legacyProperties.push('summaryConfig');
-  }
-
-  // Check for legacy junction properties
-  if (metadata.junctionFor !== undefined && metadata.junction === undefined) {
-    legacyProperties.push('junctionFor');
-  }
-  if (metadata.isJunction !== undefined && metadata.junction === undefined) {
-    legacyProperties.push('isJunction');
   }
 
   return {

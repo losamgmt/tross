@@ -592,78 +592,59 @@ function validateRelationships(meta, errors, allMetadata) {
 
 /**
  * Validate junction entity configuration.
- * Ensures isJunction entities have proper junctionFor config.
  *
- * NOTE: During migration, if junction property is defined, skip legacy validation.
+ * Validates the consolidated `junction: { entities, uniqueOn }` object: `entities`
+ * must list exactly two known entities, and each entity's derived FK field must
+ * exist on the junction table.
  */
 function validateJunctionConfig(meta, errors, allMetadata) {
-  // Skip legacy validation if using new consolidated junction property
-  if (meta.junction !== undefined) {
+  // Not a junction entity — nothing to validate
+  if (meta.junction === undefined) {
     return;
   }
 
-  // If not a junction, nothing to validate
-  if (!meta.isJunction) {
-    // Warn if junctionFor is present without isJunction
-    if (meta.junctionFor) {
+  const { junction } = meta;
+
+  if (
+    typeof junction !== 'object' ||
+    junction === null ||
+    Array.isArray(junction)
+  ) {
+    errors.add(
+      'junction',
+      'Must be an object: { entities: [entity1, entity2], uniqueOn: [[...]] }',
+    );
+    return;
+  }
+
+  // entities: array of exactly two known entity keys
+  if (!Array.isArray(junction.entities) || junction.entities.length !== 2) {
+    errors.add('junction.entities', 'Required: array of exactly 2 entity names');
+    return;
+  }
+
+  const allEntityKeys = new Set(Object.keys(allMetadata));
+  const fields = meta.fields || {};
+
+  junction.entities.forEach((entity, index) => {
+    if (!allEntityKeys.has(entity)) {
       errors.add(
-        'junctionFor',
-        'junctionFor is defined but isJunction is not true. Add isJunction: true.',
+        `junction.entities[${index}]`,
+        `References unknown entity '${entity}'`,
+      );
+      return;
+    }
+
+    // The derived FK field for this entity must exist on the junction
+    const fk = foreignKeyFieldName(entity);
+    if (!fields[fk]) {
+      errors.add(
+        'junction',
+        `FK field '${fk}' not found in fields. ` +
+          `Add: ${fk}: { type: 'foreignKey', references: '${entity}' }`,
       );
     }
-    return;
-  }
-
-  // isJunction is true - junctionFor is REQUIRED
-  if (!meta.junctionFor) {
-    errors.add(
-      'junctionFor',
-      'isJunction is true but junctionFor config is missing. ' +
-        'Add: junctionFor: { entity1: \'...\', entity2: \'...\' }',
-    );
-    return;
-  }
-
-  const config = meta.junctionFor;
-  const allEntityKeys = new Set(Object.keys(allMetadata));
-
-  // Validate entity1
-  if (!config.entity1) {
-    errors.add('junctionFor.entity1', 'Required property missing');
-  } else if (!allEntityKeys.has(config.entity1)) {
-    errors.add(
-      'junctionFor.entity1',
-      `References unknown entity '${config.entity1}'`,
-    );
-  }
-
-  // Validate entity2
-  if (!config.entity2) {
-    errors.add('junctionFor.entity2', 'Required property missing');
-  } else if (!allEntityKeys.has(config.entity2)) {
-    errors.add(
-      'junctionFor.entity2',
-      `References unknown entity '${config.entity2}'`,
-    );
-  }
-
-  // Validate FK fields exist if specified
-  const fields = meta.fields || {};
-  const fk1 = config.foreignKey1 || foreignKeyFieldName(config.entity1);
-  const fk2 = config.foreignKey2 || foreignKeyFieldName(config.entity2);
-
-  if (!fields[fk1]) {
-    errors.add(
-      'junctionFor',
-      `FK field '${fk1}' not found in fields. Add: ${fk1}: { type: 'foreignKey', references: '${config.entity1}' }`,
-    );
-  }
-  if (!fields[fk2]) {
-    errors.add(
-      'junctionFor',
-      `FK field '${fk2}' not found in fields. Add: ${fk2}: { type: 'foreignKey', references: '${config.entity2}' }`,
-    );
-  }
+  });
 }
 
 /**
