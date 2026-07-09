@@ -6,7 +6,9 @@
  * PHILOSOPHY:
  * - METADATA-DRIVEN: Reads `dependents` array from entity metadata
  * - STRATEGY-BASED: Supports CASCADE, RESTRICT, NULLIFY, SOFT delete
- * - DEFENSE-IN-DEPTH: Sanitizes identifiers even from trusted metadata
+ * - IDENTIFIER SAFETY: Table/column identifiers are interpolated into SQL (which
+ *   cannot bind identifiers as parameters), so they are validated via
+ *   sanitizeIdentifier; row values are always bound as $1/$2 parameters
  * - TRANSACTIONAL: Requires client to be in a transaction
  *
  * USAGE:
@@ -92,7 +94,8 @@ async function cascadeDeleteDependents(client, metadata, id) {
   for (const dependent of dependents) {
     const { table, foreignKey, polymorphicType, strategy = DELETE_STRATEGIES.CASCADE } = dependent;
 
-    // SECURITY: Defense-in-depth - validate identifiers even from metadata
+    // SECURITY: identifiers are interpolated below and SQL cannot bind them as
+    // parameters, so validate them first (row values use $1/$2 placeholders)
     const safeTable = sanitizeIdentifier(table, 'dependent table');
     const safeForeignKey = sanitizeIdentifier(foreignKey, 'foreign key');
 
