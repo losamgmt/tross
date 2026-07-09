@@ -252,7 +252,7 @@ const validateRLSApplied = (req, result) => {
 module.exports = {
   enforceRLS,
   validateRLSApplied,
-  // Exported for use by related modules (e.g., sub-entity.js, parent-rls-service.js)
+  // Exported for use by related modules (e.g., sub-entity.js)
   extractProfileIds,
   getOperationFromMethod,
   // Exported for tests and documentation
