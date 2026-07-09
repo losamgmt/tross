@@ -580,6 +580,23 @@ class HttpApiClient implements ApiClient {
     }
   }
 
+  /// Build a typed [ApiException] for a 2xx response whose body did not match
+  /// the success envelope (`{ success: true, data }`). Surfaces the backend's
+  /// own `code`/`message`/`details` when present (e.g. a 2xx that carries
+  /// `success: false`), otherwise a clear malformed-envelope error.
+  ApiException _malformedSuccessEnvelope(Map<String, dynamic> response) {
+    final code = response['code'];
+    final message = response['message'] ?? response['error'];
+    return ApiException(
+      statusCode: 200,
+      code: code is String ? code : 'MALFORMED_RESPONSE',
+      message: message is String
+          ? message
+          : 'Malformed success response from backend: expected { success: true, data }.',
+      details: response['details'],
+    );
+  }
+
   @override
   T parseSuccessResponse<T>(
     Map<String, dynamic> response,
@@ -588,7 +605,7 @@ class HttpApiClient implements ApiClient {
     if (response['success'] == true && response['data'] != null) {
       return fromJson(response['data'] as Map<String, dynamic>);
     }
-    throw Exception('Invalid response format from backend');
+    throw _malformedSuccessEnvelope(response);
   }
 
   @override
@@ -602,6 +619,6 @@ class HttpApiClient implements ApiClient {
           .map((item) => fromJson(item as Map<String, dynamic>))
           .toList();
     }
-    throw Exception('Invalid response format from backend');
+    throw _malformedSuccessEnvelope(response);
   }
 }

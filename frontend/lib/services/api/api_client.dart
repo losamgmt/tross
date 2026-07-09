@@ -153,15 +153,20 @@ abstract class ApiClient {
   // RESPONSE PARSING UTILITIES
   // ==========================================================================
 
-  /// Parse success response with data validation
+  /// Parse success response with data validation.
   ///
-  /// DRY helper to eliminate repeated `response['success'] && response['data']` checks
+  /// DRY helper to eliminate repeated `response['success'] && response['data']`
+  /// checks. Throws an ApiException (fail-loud) when the body does not match the
+  /// success envelope, surfacing the backend's `code`/`message` when present.
   T parseSuccessResponse<T>(
     Map<String, dynamic> response,
     T Function(Map<String, dynamic>) fromJson,
   );
 
-  /// Parse success response with list data
+  /// Parse success response with list data.
+  ///
+  /// Throws an ApiException (fail-loud) when the body does not match the success
+  /// envelope, mirroring [parseSuccessResponse].
   List<T> parseSuccessListResponse<T>(
     Map<String, dynamic> response,
     T Function(Map<String, dynamic>) fromJson,

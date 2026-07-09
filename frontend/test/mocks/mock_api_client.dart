@@ -32,6 +32,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:tross/services/api/api_client.dart';
+import 'package:tross/services/api/api_exception.dart';
 import 'mock_failure_config.dart';
 
 /// Mock API client that implements the ApiClient interface for testing
@@ -481,7 +482,11 @@ class MockApiClient with MockFailureMixin implements ApiClient {
     T Function(Map<String, dynamic>) fromJson,
   ) {
     if (response['success'] != true || response['data'] == null) {
-      throw Exception('Invalid response format');
+      throw const ApiException(
+        statusCode: 200,
+        code: 'MALFORMED_RESPONSE',
+        message: 'Invalid response format',
+      );
     }
     return fromJson(response['data'] as Map<String, dynamic>);
   }
@@ -492,7 +497,11 @@ class MockApiClient with MockFailureMixin implements ApiClient {
     T Function(Map<String, dynamic>) fromJson,
   ) {
     if (response['success'] != true || response['data'] == null) {
-      throw Exception('Invalid response format');
+      throw const ApiException(
+        statusCode: 200,
+        code: 'MALFORMED_RESPONSE',
+        message: 'Invalid response format',
+      );
     }
     return (response['data'] as List<dynamic>)
         .map((e) => fromJson(e as Map<String, dynamic>))
