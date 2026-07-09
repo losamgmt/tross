@@ -242,7 +242,7 @@ class MetadataFieldConfigFactory {
     final label = _fieldNameToLabel(fieldName, metadata);
 
     // Build validator
-    final validator = _buildValidator(fieldDef, metadata);
+    final validator = buildValidator(fieldDef, metadata);
 
     // Build the config based on field type
     return switch (fieldDef.type) {
@@ -338,8 +338,13 @@ class MetadataFieldConfigFactory {
         .join(' ');
   }
 
-  /// Build validator function from field definition
-  static String? Function(dynamic)? _buildValidator(
+  /// Build validator function from field definition.
+  ///
+  /// Exposed for testing so unit tests can exercise validation directly from a
+  /// constructed [meta.FieldDefinition]/[meta.EntityMetadata] pair, without the
+  /// async metadata-registry/asset machinery required by [forEntity].
+  @visibleForTesting
+  static String? Function(dynamic)? buildValidator(
     meta.FieldDefinition fieldDef,
     meta.EntityMetadata metadata,
   ) {
@@ -388,6 +393,23 @@ class MetadataFieldConfigFactory {
         }
         return null;
       });
+    }
+
+    // Custom regex pattern check (metadata-supplied `pattern`; this is also how
+    // URL/other formatted fields are validated, since the pattern is the SSOT).
+    // A malformed pattern disables this check rather than crashing form build.
+    if (fieldDef.pattern != null && fieldDef.pattern!.isNotEmpty) {
+      final patternRegex = _compilePattern(fieldDef.pattern!);
+      if (patternRegex != null) {
+        validators.add((value) {
+          if (value is String &&
+              value.isNotEmpty &&
+              !patternRegex.hasMatch(value)) {
+            return 'Invalid format';
+          }
+          return null;
+        });
+      }
     }
 
     // Number range checks
@@ -442,6 +464,17 @@ class MetadataFieldConfigFactory {
       }
       return null;
     };
+  }
+
+  /// Compile a metadata-supplied regex [pattern], returning null when it is not
+  /// a valid [RegExp] so a malformed pattern disables that check instead of
+  /// throwing during form generation.
+  static RegExp? _compilePattern(String pattern) {
+    try {
+      return RegExp(pattern);
+    } on FormatException {
+      return null;
+    }
   }
 
   /// Create text field config

@@ -13,6 +13,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:tross/models/field_definition.dart';
 import 'package:tross/models/entity_metadata.dart';
+import 'package:tross/services/metadata_field_config_factory.dart';
 
 void main() {
   group('Strategy 3: Metadata Factory Scenario Tests', () {
@@ -237,6 +238,76 @@ void main() {
         expect(EntityMetadata.toDisplayNamePlural('Box'), 'Boxes');
         expect(EntityMetadata.toDisplayNamePlural('Match'), 'Matches');
         expect(EntityMetadata.toDisplayNamePlural('Wish'), 'Wishes');
+      });
+    });
+
+    group('MetadataFieldConfigFactory.buildValidator - pattern', () {
+      // Metadata is only consulted for isRequired()/label here; an empty
+      // definition (no requiredFields) is sufficient to exercise validation.
+      final metadata = EntityMetadata.fromJson('customer', const {
+        'rlsResource': 'customers',
+      });
+
+      const patternField = FieldDefinition(
+        name: 'website',
+        type: FieldType.string,
+        pattern: r'^https?://',
+      );
+
+      test('rejects values that do not match the metadata regex pattern', () {
+        final validator = MetadataFieldConfigFactory.buildValidator(
+          patternField,
+          metadata,
+        );
+        expect(validator, isNotNull);
+        expect(validator!('not-a-url'), 'Invalid format');
+      });
+
+      test('accepts values that match the pattern', () {
+        final validator = MetadataFieldConfigFactory.buildValidator(
+          patternField,
+          metadata,
+        )!;
+        expect(validator('https://example.com'), isNull);
+      });
+
+      test('treats empty value as valid (pattern is not a presence check)', () {
+        final validator = MetadataFieldConfigFactory.buildValidator(
+          patternField,
+          metadata,
+        )!;
+        expect(validator(''), isNull);
+      });
+
+      test('still enforces required alongside the pattern', () {
+        const requiredPattern = FieldDefinition(
+          name: 'website',
+          type: FieldType.string,
+          required: true,
+          pattern: r'^https?://',
+        );
+        final validator = MetadataFieldConfigFactory.buildValidator(
+          requiredPattern,
+          metadata,
+        )!;
+        expect(validator(''), contains('required'));
+        expect(validator('ftp://nope'), 'Invalid format');
+        expect(validator('https://ok'), isNull);
+      });
+
+      test('malformed pattern disables the check instead of throwing', () {
+        const badPattern = FieldDefinition(
+          name: 'weird',
+          type: FieldType.string,
+          pattern: '(', // invalid regex
+        );
+        // No other rules -> the pattern check is skipped and no validator is
+        // produced (rather than crashing form generation).
+        final validator = MetadataFieldConfigFactory.buildValidator(
+          badPattern,
+          metadata,
+        );
+        expect(validator, isNull);
       });
     });
   });
