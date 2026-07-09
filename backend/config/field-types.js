@@ -826,6 +826,36 @@ function getEnumValues(enumDef) {
   return Object.keys(enumDef);
 }
 
+/**
+ * Enum → SQL column sizing (SSOT).
+ *
+ * Enum values are stored as VARCHAR. The width is derived from the longest value with
+ * head-room, then hard-capped by ENUM_MAX_LENGTH so a typo'd / oversized enum value fails
+ * fast at schema-generation time instead of emitting an absurd column.
+ */
+const ENUM_PADDING = Object.freeze({ multiplier: 1.5, base: 10 });
+const ENUM_MAX_LENGTH = 64;
+
+/**
+ * Derive the VARCHAR length for an enum column from its values.
+ *
+ * @param {string[]} values - Enum values
+ * @returns {number} VARCHAR length (padded)
+ * @throws {Error} If the derived length exceeds ENUM_MAX_LENGTH
+ */
+function deriveEnumColumnLength(values) {
+  const maxLen = Math.max(...values.map((v) => String(v).length), 10);
+  const padded = Math.ceil(maxLen * ENUM_PADDING.multiplier) + ENUM_PADDING.base;
+  if (padded > ENUM_MAX_LENGTH) {
+    throw new Error(
+      `Enum column would require VARCHAR(${padded}), exceeding ENUM_MAX_LENGTH=${ENUM_MAX_LENGTH}. ` +
+        `Longest value is ${maxLen} chars. Shorten the enum values or raise ENUM_MAX_LENGTH. ` +
+        `Values: ${values.join(', ')}`,
+    );
+  }
+  return padded;
+}
+
 // ============================================================================
 // NAMING CONVENTIONS
 // ============================================================================
@@ -1162,6 +1192,8 @@ module.exports = {
 
   // Enum utilities
   getEnumValues,
+  ENUM_MAX_LENGTH,
+  deriveEnumColumnLength,
 
   // Junction entity helpers
   JUNCTION,

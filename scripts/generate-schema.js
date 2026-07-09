@@ -14,6 +14,7 @@ const { BACKEND_MODELS_DIR, BACKEND_DIR } = require('./lib/paths');
 const {
   deriveSqlType,
   getEnumValues,
+  deriveEnumColumnLength,
   NAME_PATTERNS,
   FIELD,
 } = require('../backend/config/field-types');
@@ -65,9 +66,6 @@ const CONFIG = Object.freeze({
     inventory: 'inventory',
     property: 'properties',
   }),
-
-  /** Enum VARCHAR padding */
-  ENUM_PADDING: { multiplier: 1.5, base: 10 },
 });
 
 // ============================================================================
@@ -235,8 +233,7 @@ function normalizeField(fieldName, fieldDef, metadata) {
     const values = fieldDef.enumKey && metadata.enums?.[fieldDef.enumKey]
       ? getEnumValues(metadata.enums[fieldDef.enumKey])
       : fieldDef.values || [];
-    const maxLen = Math.max(...values.map((v) => v.length), 10);
-    const padded = Math.ceil(maxLen * CONFIG.ENUM_PADDING.multiplier) + CONFIG.ENUM_PADDING.base;
+    const padded = deriveEnumColumnLength(values);
     sqlType = `VARCHAR(${padded})`;
     if (values.length > 0) {
       check = `${fieldName} IN (${values.map((v) => `'${escapeSql(v)}'`).join(', ')})`;
