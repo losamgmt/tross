@@ -22,6 +22,28 @@ enum FieldType {
   foreignKey, // FK relationship to another entity
 }
 
+/// Declarative field derivation.
+///
+/// Mirrors the backend `derived` construct: this field's value is derived from a sibling
+/// [from] field via a named method [via] with optional [params]. The frontend applies the
+/// methods it implements (e.g. `timeOffset`); backend-only methods (e.g. `lookup`) are
+/// ignored client-side and resolved on save.
+class FieldDerived {
+  final String from;
+  final String via;
+  final Map<String, dynamic>? params;
+
+  const FieldDerived({required this.from, required this.via, this.params});
+
+  factory FieldDerived.fromJson(Map<String, dynamic> json) {
+    return FieldDerived(
+      from: json['from'] as String,
+      via: json['via'] as String,
+      params: json['params'] as Map<String, dynamic>?,
+    );
+  }
+}
+
 /// Field definition from metadata
 class FieldDefinition {
   final String name;
@@ -47,6 +69,9 @@ class FieldDefinition {
   final String?
   displayTemplate; // Format string e.g., '{company_name} - {email}'
 
+  /// Declarative derivation of this field's value from a sibling field (see [FieldDerived]).
+  final FieldDerived? derived;
+
   /// Check if this is a foreign key field
   bool get isForeignKey => type == FieldType.foreignKey || references != null;
 
@@ -71,6 +96,7 @@ class FieldDefinition {
     this.displayField,
     this.displayFields,
     this.displayTemplate,
+    this.derived,
   });
 
   factory FieldDefinition.fromJson(String name, Map<String, dynamic> json) {
@@ -114,6 +140,9 @@ class FieldDefinition {
       displayField: json['displayField'] as String?,
       displayFields: (json['displayFields'] as List<dynamic>?)?.cast<String>(),
       displayTemplate: json['displayTemplate'] as String?,
+      derived: json['derived'] is Map<String, dynamic>
+          ? FieldDerived.fromJson(json['derived'] as Map<String, dynamic>)
+          : null,
     );
   }
 

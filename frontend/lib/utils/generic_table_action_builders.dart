@@ -19,7 +19,7 @@ import '../services/metadata_field_config_factory.dart';
 import '../services/navigation_coordinator.dart';
 import '../services/error_service.dart';
 import '../services/export_service.dart';
-import 'datetime_utils.dart';
+import 'field_dependency_resolver.dart';
 import '../widgets/molecules/menus/action_item.dart';
 import '../widgets/organisms/modals/generic_modal.dart';
 import '../widgets/organisms/forms/generic_form.dart';
@@ -436,57 +436,17 @@ class _EntityFormDialogState extends State<_EntityFormDialog> {
     _previousData = Map<String, dynamic>.from(widget.initialData);
   }
 
-  /// Handle form change with inter-field dependencies
+  /// Handle form change with metadata-driven field dependencies
   void _handleFormChange(Map<String, dynamic> data) {
-    final updatedData = _applyFieldDependencies(data);
+    final updatedData = FieldDependencyResolver.apply(
+      metadata: widget.metadata,
+      value: data,
+      previous: _previousData,
+    );
     setState(() {
       _previousData = Map<String, dynamic>.from(_data);
       _data = updatedData;
     });
-  }
-
-  /// Apply inter-field dependencies based on entity type
-  ///
-  /// For work_order:
-  /// - If scheduled_start is set and scheduled_end is not, set end to start + 1hr
-  /// - If scheduled_end is set and scheduled_start is not, set start to end - 1hr
-  ///
-  /// Uses DateTimeSerializer to ensure UTC consistency.
-  Map<String, dynamic> _applyFieldDependencies(Map<String, dynamic> value) {
-    if (widget.entityName != 'work_order') return value;
-
-    final result = Map<String, dynamic>.from(value);
-
-    // Parse current values
-    final startValue = result['scheduled_start'];
-    final endValue = result['scheduled_end'];
-
-    // Parse previous values
-    final prevStartValue = _previousData['scheduled_start'];
-    final prevEndValue = _previousData['scheduled_end'];
-
-    // Detect which field changed
-    final startChanged = startValue != prevStartValue;
-    final endChanged = endValue != prevEndValue;
-
-    // Use centralized parser that preserves UTC flag
-    final start = DateTimeUtils.parseAny(startValue);
-    final end = DateTimeUtils.parseAny(endValue);
-
-    // If start was just set/changed and end is null, derive end from start + 1hr
-    if (startChanged && start != null && end == null) {
-      final derivedEnd = start.add(const Duration(hours: 1));
-      // Use centralized serializer to ensure UTC format
-      result['scheduled_end'] = DateTimeUtils.toApiString(derivedEnd);
-    }
-    // If end was just set/changed and start is null, derive start from end - 1hr
-    else if (endChanged && end != null && start == null) {
-      final derivedStart = end.subtract(const Duration(hours: 1));
-      // Use centralized serializer to ensure UTC format
-      result['scheduled_start'] = DateTimeUtils.toApiString(derivedStart);
-    }
-
-    return result;
   }
 
   Future<void> _handleSave() async {
