@@ -207,6 +207,46 @@ function validateDerived(meta, errors) {
 }
 
 /**
+ * Field types over which the `searchable` trait (full-text search) is meaningful.
+ */
+const SEARCHABLE_TYPES = new Set(['string', 'text', 'email', 'phone']);
+
+/**
+ * Validate field trait/type combinations.
+ *
+ * The atomic traits (required, immutable, searchable, filterable, sortable, readonly) are
+ * largely orthogonal. The full pairwise matrix was audited against live metadata; the
+ * following combinations are VALID and intentionally NOT flagged:
+ * - required + immutable  → set-once required (e.g. junction FKs)
+ * - required + readonly   → system-generated required (e.g. identity numbers)
+ * - readonly + immutable  → redundant (readonly already blocks updates), not a conflict
+ * Only genuine, zero-false-positive conflicts are enforced:
+ * - default + derived              → two competing sources of a default value
+ * - searchable on a non-text type  → full-text search only applies to text-like fields
+ */
+function validateFieldTraitConflicts(meta, errors) {
+  const fields = meta.fields || {};
+
+  for (const [fieldName, fieldDef] of Object.entries(fields)) {
+    const prefix = `fields.${fieldName}`;
+
+    if (fieldDef.default !== undefined && fieldDef.derived) {
+      errors.add(
+        prefix,
+        "cannot declare both 'default' and 'derived' (two competing sources of a default value)",
+      );
+    }
+
+    if (fieldDef.searchable && !SEARCHABLE_TYPES.has(fieldDef.type)) {
+      errors.add(
+        prefix,
+        `trait 'searchable' requires a text-like type (${[...SEARCHABLE_TYPES].join(', ')}); got '${fieldDef.type}'`,
+      );
+    }
+  }
+}
+
+/**
  * Validate fieldAccess uses valid access levels
  */
 function validateFieldAccess(meta, errors) {
@@ -1686,6 +1726,7 @@ function validateEntity(entityName, meta, allMetadata) {
 
   validateFieldTypes(meta, errors);
   validateDerived(meta, errors);
+  validateFieldTraitConflicts(meta, errors);
   validateFieldAccess(meta, errors);
   validateEntityPermissions(meta, errors);
   validateRequiredFields(meta, errors);
