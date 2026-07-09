@@ -284,8 +284,7 @@ module.exports = {
       {
         type: 'foreignKey',
         references: 'property',
-        computed: true,
-        derivedFrom: 'unit_id',
+        derived: { from: 'unit_id', via: 'lookup' },
         displayFields: ['name'],
         displayTemplate: '{name}',
       },

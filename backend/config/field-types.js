@@ -1062,6 +1062,7 @@ function createForeignKey(entity, options = {}) {
     required = false,
     traits = TRAIT_SETS.FILTER_ONLY,
     displayField,
+    derived,
   } = options;
 
   return Object.freeze({
@@ -1069,9 +1070,20 @@ function createForeignKey(entity, options = {}) {
     references: entity,
     ...(required && { required: true }),
     ...(displayField && { displayField }),
+    ...(derived && { derived }),
     ...traits,
   });
 }
+
+/**
+ * Field derivation methods (`derived.via`) — the vocabulary of ways a field's value can
+ * be derived from a sibling field. Shared by the metadata validator and the runtime
+ * derivation engine (GenericEntityService.applyDerived).
+ * - LOOKUP: project this field from the related entity a sibling FK points to.
+ */
+const DERIVATION_VIA = Object.freeze({
+  LOOKUP: 'lookup',
+});
 
 /**
  * Generate a standard unique constraint for a junction entity.
@@ -1131,6 +1143,9 @@ module.exports = {
 
   // Foreign key helper (NEW)
   createForeignKey,
+
+  // Field derivation vocabulary (NEW)
+  DERIVATION_VIA,
 
   // Address constants
   ADDRESS_SUFFIXES,

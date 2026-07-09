@@ -546,8 +546,7 @@ module.exports = {
       displayFields: ['name', 'address_city'],
       displayTemplate: '{name} - {address_city}',
       description: 'Property for this work order (auto-populated from unit when set)',
-      computed: true,
-      derivedFrom: 'unit_id',
+      derived: { from: 'unit_id', via: 'lookup' },
       traits: TRAIT_SETS.LOOKUP,
     }),
     unit_id: createForeignKey('unit', {

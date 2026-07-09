@@ -15,7 +15,7 @@ const { getRoleHierarchy } = require('./role-hierarchy-loader');
 const { RLS_ENGINE, HOOK_WHEN_OPERATORS } = require('./constants');
 const { ENTITY_TRAITS } = require('./entity-traits');
 const { getForeignKeyFieldNames, extractForeignKeyFields } = require('./fk-helpers');
-const { foreignKeyFieldName } = require('./field-types');
+const { foreignKeyFieldName, DERIVATION_VIA } = require('./field-types');
 const { listActions } = require('./action-handlers');
 
 /**
@@ -144,6 +144,54 @@ function validateFieldTypes(meta, errors) {
           'Enum field must have enumKey referencing enums.[key] or legacy field.values',
         );
       }
+    }
+  }
+}
+
+/**
+ * Validate field-level `derived` constructs.
+ *
+ * `derived: { from, via, params? }` declares a field's value is derived from a sibling
+ * field. Checks the reference + method are well-formed; the runtime engine applies it.
+ */
+function validateDerived(meta, errors) {
+  const fields = meta.fields || {};
+  const validVia = new Set(Object.values(DERIVATION_VIA));
+
+  for (const [fieldName, fieldDef] of Object.entries(fields)) {
+    const derived = fieldDef.derived;
+    if (!derived) {
+      continue;
+    }
+
+    const prefix = `fields.${fieldName}.derived`;
+
+    if (!derived.from || typeof derived.from !== 'string') {
+      errors.add(`${prefix}.from`, 'Required: source field name (string)');
+    } else if (!fields[derived.from]) {
+      errors.add(
+        `${prefix}.from`,
+        `References unknown sibling field '${derived.from}'`,
+      );
+    }
+
+    if (!derived.via || !validVia.has(derived.via)) {
+      errors.add(
+        `${prefix}.via`,
+        `Unknown method '${derived.via}'. Valid: ${[...validVia].join(', ')}`,
+      );
+    }
+
+    if (
+      derived.via === DERIVATION_VIA.LOOKUP &&
+      derived.from &&
+      fields[derived.from] &&
+      fields[derived.from].type !== 'foreignKey'
+    ) {
+      errors.add(
+        prefix,
+        `via:'lookup' requires source field '${derived.from}' to be a foreignKey`,
+      );
     }
   }
 }
@@ -1627,6 +1675,7 @@ function validateEntity(entityName, meta, allMetadata) {
   validateConsolidatedJunction(meta, errors, allMetadata);
 
   validateFieldTypes(meta, errors);
+  validateDerived(meta, errors);
   validateFieldAccess(meta, errors);
   validateEntityPermissions(meta, errors);
   validateRequiredFields(meta, errors);

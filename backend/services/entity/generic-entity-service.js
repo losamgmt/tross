@@ -38,6 +38,7 @@ const {
   evaluateAfterHooks,
 } = require('./hook-service');
 const { buildUpdateClause } = require('../../db/helpers/update-helper');
+const { applyDerived } = require('./field-derivation');
 const { cascadeDeleteDependents } = require('../../db/helpers/cascade-helper');
 // ADR-011: Use new rule-based RLS engine
 const { buildRLSFilter } = require('../../db/helpers/rls');
@@ -167,95 +168,6 @@ function buildDefaultIncludesClauses(
  * Used for validation and error messages
  */
 const VALID_ENTITIES = Object.keys(allMetadata);
-
-/**
- * Derive computed FK values from source fields
- *
- * When a field has `computed: true, derivedFrom: 'source_field'`, look up the source
- * entity and derive the FK value. For example, work_order.property_id is derived
- * from work_order.unit_id by looking up unit.property_id.
- *
- * @param {string} entityName - Entity being created/updated
- * @param {Object} data - Data object (will be mutated to add derived values)
- * @param {Object} metadata - Entity metadata
- * @returns {Promise<Object>} Data object with derived values added
- */
-async function deriveComputedFKValues(entityName, data, metadata) {
-  const fields = metadata.fields || {};
-
-  for (const [fieldName, fieldDef] of Object.entries(fields)) {
-    // Check if this is a computed FK derived from another field
-    if (!fieldDef.computed || !fieldDef.derivedFrom) {
-      continue;
-    }
-
-    const sourceField = fieldDef.derivedFrom;
-    const sourceValue = data[sourceField];
-
-    // Skip if source field is not provided
-    if (sourceValue === undefined || sourceValue === null) {
-      continue;
-    }
-
-    // Skip if derived field is already set (explicit value takes precedence)
-    if (data[fieldName] !== undefined && data[fieldName] !== null) {
-      continue;
-    }
-
-    // Get the source field's related entity from metadata
-    const sourceFieldDef = fields[sourceField];
-    if (!sourceFieldDef || sourceFieldDef.type !== 'foreignKey') {
-      logger.warn('derivedFrom references non-FK field', {
-        entity: entityName,
-        field: fieldName,
-        derivedFrom: sourceField,
-      });
-      continue;
-    }
-
-    const sourceEntity = sourceFieldDef.references;
-    const sourceMetadata = allMetadata[sourceEntity];
-    if (!sourceMetadata) {
-      logger.warn('derivedFrom references unknown entity', {
-        entity: entityName,
-        field: fieldName,
-        sourceEntity,
-      });
-      continue;
-    }
-
-    // Look up the source entity to get the derived value
-    // The derived field name in the source is inferred from this field's references
-    // e.g., property_id derivedFrom unit_id → look up unit.property_id
-    try {
-      const sourceRecord = await db.oneOrNone(
-        `SELECT ${fieldName} FROM ${sourceMetadata.tableName} WHERE id = $1`,
-        [sourceValue],
-      );
-
-      if (sourceRecord && sourceRecord[fieldName] !== null) {
-        data[fieldName] = sourceRecord[fieldName];
-        logger.debug('Derived FK value from source entity', {
-          entity: entityName,
-          field: fieldName,
-          derivedFrom: sourceField,
-          sourceId: sourceValue,
-          derivedValue: data[fieldName],
-        });
-      }
-    } catch (error) {
-      logger.warn('Failed to derive FK value', {
-        entity: entityName,
-        field: fieldName,
-        derivedFrom: sourceField,
-        error: error.message,
-      });
-      // Don't throw - derivation failure shouldn't block the operation
-    }
-  }
-
-  return data;
-}
 
 /**
  * Apply linked timestamp defaults for work orders
@@ -1004,11 +916,11 @@ class GenericEntityService {
     }
 
     // =========================================================================
-    // DERIVE COMPUTED FK VALUES FROM SOURCE FIELDS
-    // For fields with computed=true & derivedFrom, look up the source entity
-    // Example: work_order.property_id derived from unit.property_id via unit_id
+    // APPLY METADATA-DRIVEN FIELD DERIVATIONS
+    // For fields with `derived: { from, via }`, compute the value per method.
+    // Example: work_order.property_id via:'lookup' from unit_id → unit.property_id
     // =========================================================================
-    await deriveComputedFKValues(entityName, cleanData, metadata);
+    await applyDerived(entityName, cleanData, metadata);
 
     // =========================================================================
     // APPLY LINKED TIMESTAMP DEFAULTS (work_order specific)
@@ -1226,11 +1138,11 @@ class GenericEntityService {
     }
 
     // =========================================================================
-    // DERIVE COMPUTED FK VALUES FROM SOURCE FIELDS
-    // For fields with computed=true & derivedFrom, look up the source entity
-    // Example: work_order.property_id derived from unit.property_id via unit_id
+    // APPLY METADATA-DRIVEN FIELD DERIVATIONS
+    // For fields with `derived: { from, via }`, compute the value per method.
+    // Example: work_order.property_id via:'lookup' from unit_id → unit.property_id
     // =========================================================================
-    await deriveComputedFKValues(entityName, filteredData, metadata);
+    await applyDerived(entityName, filteredData, metadata);
 
     // =========================================================================
     // APPLY LINKED TIMESTAMP DEFAULTS (work_order specific)
