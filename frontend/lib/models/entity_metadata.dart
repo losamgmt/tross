@@ -185,14 +185,6 @@ class EntityMetadata {
   /// ALWAYS present (empty map if none) - consistent shape contract.
   final Map<String, Relationship> relationships;
 
-  /// Whether this is a junction entity (M:M pivot table)
-  /// ALWAYS present (false for non-junctions) - consistent shape contract.
-  final bool isJunction;
-
-  /// Junction entity configuration (which two entities it connects)
-  /// Null for non-junction entities.
-  final JunctionFor? junctionFor;
-
   /// Default relationships to auto-load via ?include=
   /// ALWAYS present (empty list if none) - consistent shape contract.
   final List<String> defaultIncludes;
@@ -222,8 +214,6 @@ class EntityMetadata {
     this.namePattern,
     // Relationship fields - ALWAYS present (consistent shape)
     this.relationships = const {},
-    this.isJunction = false,
-    this.junctionFor,
     this.defaultIncludes = const [],
   });
 
@@ -297,8 +287,6 @@ class EntityMetadata {
       namePattern: json['namePattern'] as String?,
       // Relationship support - ALWAYS present (consistent shape contract)
       relationships: _parseRelationships(json['relationships']),
-      isJunction: json['isJunction'] as bool? ?? false,
-      junctionFor: _parseJunctionFor(json['junctionFor']),
       defaultIncludes:
           (json['defaultIncludes'] as List<dynamic>?)?.cast<String>() ?? [],
     );
@@ -318,12 +306,6 @@ class EntityMetadata {
       );
     }
     return result;
-  }
-
-  /// Parse junctionFor JSON into JunctionFor object
-  static JunctionFor? _parseJunctionFor(dynamic junctionJson) {
-    if (junctionJson == null) return null;
-    return JunctionFor.fromJson(junctionJson as Map<String, dynamic>);
   }
 
   /// Parse fieldGroups JSON into FieldGroup map
