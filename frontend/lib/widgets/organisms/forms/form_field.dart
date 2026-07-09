@@ -93,37 +93,51 @@ class _GenericFormFieldState<T, V> extends State<GenericFormField<T, V>> {
     final spacing = context.spacing;
     final fieldValue = widget.config.getValue(widget.value);
 
-    // Molecule composition: Label + Input Atom + Spacing
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Label with required indicator (molecule's responsibility)
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Flexible(
-              child: Text(
-                widget.config.label,
-                style: theme.textTheme.labelMedium,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            if (widget.config.required) ...[
-              SizedBox(width: spacing.xxs),
-              Text(
-                '*',
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: theme.colorScheme.error,
+    // Molecule composition: Label + Input Atom + Spacing.
+    //
+    // Wrapped in MergeSemantics so the visual label (and its required state) are
+    // announced together with the input control as a single accessible field.
+    // The input atoms deliberately render no label of their own, so without this
+    // the control would be exposed to screen readers with no accessible name.
+    return MergeSemantics(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Label with required indicator (molecule's responsibility)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  widget.config.label,
+                  style: theme.textTheme.labelMedium,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
+              if (widget.config.required) ...[
+                SizedBox(width: spacing.xxs),
+                // Announce "required" to screen readers rather than the literal
+                // "*" glyph (which assistive tech would read as "asterisk").
+                Semantics(
+                  label: 'required',
+                  child: ExcludeSemantics(
+                    child: Text(
+                      '*',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: theme.colorScheme.error,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ],
-          ],
-        ),
-        SizedBox(height: spacing.xxs),
+          ),
+          SizedBox(height: spacing.xxs),
 
-        // Input atom (context-agnostic, no layout assumptions)
-        _buildInputAtom(fieldValue),
-      ],
+          // Input atom (context-agnostic, no layout assumptions)
+          _buildInputAtom(fieldValue),
+        ],
+      ),
     );
   }
 
