@@ -169,69 +169,6 @@ function buildDefaultIncludesClauses(
  */
 const VALID_ENTITIES = Object.keys(allMetadata);
 
-/**
- * Apply linked timestamp defaults for work orders
- *
- * UX Enhancement: When scheduling work orders, if only scheduled_start or
- * scheduled_end is set, auto-fill the other with a 1-hour offset:
- * - scheduled_start set, scheduled_end null → scheduled_end = scheduled_start + 1 hour
- * - scheduled_end set, scheduled_start null → scheduled_start = scheduled_end - 1 hour
- *
- * This is work_order specific logic but placed here for co-location with
- * other derivation helpers.
- *
- * @param {string} entityName - Entity being created/updated
- * @param {Object} data - Data object (will be mutated to add defaults)
- * @returns {Object} Data object with defaults applied
- */
-function deriveLinkedTimestampDefaults(entityName, data) {
-  // Only apply to work_order entity
-  if (entityName !== 'work_order') {
-    return data;
-  }
-
-  const ONE_HOUR_MS = 60 * 60 * 1000;
-  const scheduledStart = data.scheduled_start;
-  const scheduledEnd = data.scheduled_end;
-
-  // Only apply if exactly one of them is set
-  // (both null = no scheduling, both set = explicit range)
-  const startIsSet =
-    scheduledStart !== undefined &&
-    scheduledStart !== null &&
-    scheduledStart !== '';
-  const endIsSet =
-    scheduledEnd !== undefined && scheduledEnd !== null && scheduledEnd !== '';
-
-  if (startIsSet && !endIsSet) {
-    // scheduled_start set, scheduled_end missing → default to +1 hour
-    const startDate = new Date(scheduledStart);
-    if (!isNaN(startDate.getTime())) {
-      const defaultEnd = new Date(startDate.getTime() + ONE_HOUR_MS);
-      data.scheduled_end = defaultEnd.toISOString();
-      logger.debug('Auto-defaulted scheduled_end from scheduled_start', {
-        entity: entityName,
-        scheduled_start: scheduledStart,
-        scheduled_end: data.scheduled_end,
-      });
-    }
-  } else if (endIsSet && !startIsSet) {
-    // scheduled_end set, scheduled_start missing → default to -1 hour
-    const endDate = new Date(scheduledEnd);
-    if (!isNaN(endDate.getTime())) {
-      const defaultStart = new Date(endDate.getTime() - ONE_HOUR_MS);
-      data.scheduled_start = defaultStart.toISOString();
-      logger.debug('Auto-defaulted scheduled_start from scheduled_end', {
-        entity: entityName,
-        scheduled_start: data.scheduled_start,
-        scheduled_end: scheduledEnd,
-      });
-    }
-  }
-
-  return data;
-}
-
 class GenericEntityService {
   // ============================================================================
   // PRIVATE HELPERS
@@ -922,12 +859,6 @@ class GenericEntityService {
     // =========================================================================
     await applyDerived(entityName, cleanData, metadata);
 
-    // =========================================================================
-    // APPLY LINKED TIMESTAMP DEFAULTS (work_order specific)
-    // Auto-fill scheduled_end from scheduled_start (+1hr) or vice versa (-1hr)
-    // =========================================================================
-    deriveLinkedTimestampDefaults(entityName, cleanData);
-
     // Validate required fields are present (after sanitization and auto-generation)
     const missingFields = requiredFields.filter(
       (field) =>
@@ -1143,12 +1074,6 @@ class GenericEntityService {
     // Example: work_order.property_id via:'lookup' from unit_id → unit.property_id
     // =========================================================================
     await applyDerived(entityName, filteredData, metadata);
-
-    // =========================================================================
-    // APPLY LINKED TIMESTAMP DEFAULTS (work_order specific)
-    // Auto-fill scheduled_end from scheduled_start (+1hr) or vice versa (-1hr)
-    // =========================================================================
-    deriveLinkedTimestampDefaults(entityName, filteredData);
 
     // Use buildUpdateClause with EXCLUSION pattern
     // All fields allowed except those in immutableFields (+ universal immutables)

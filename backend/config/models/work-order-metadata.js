@@ -562,8 +562,20 @@ module.exports = {
     }),
 
     // Scheduling fields
-    scheduled_start: withTraits({ type: 'timestamp' }, TRAIT_SETS.LOOKUP),
-    scheduled_end: withTraits({ type: 'timestamp' }, TRAIT_SETS.LOOKUP),
+    scheduled_start: withTraits(
+      {
+        type: 'timestamp',
+        derived: { from: 'scheduled_end', via: 'timeOffset', params: { hours: -1 } },
+      },
+      TRAIT_SETS.LOOKUP,
+    ),
+    scheduled_end: withTraits(
+      {
+        type: 'timestamp',
+        derived: { from: 'scheduled_start', via: 'timeOffset', params: { hours: 1 } },
+      },
+      TRAIT_SETS.LOOKUP,
+    ),
     completed_at: withTraits({ type: 'timestamp' }, TRAIT_SETS.LOOKUP),
 
     // AUDIT TEST: service_region for propagation verification

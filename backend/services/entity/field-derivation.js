@@ -64,6 +64,26 @@ const DERIVATION_METHODS = Object.freeze({
       return sourceRecord ? sourceRecord[fieldName] : undefined;
     },
   }),
+
+  /**
+   * timeOffset — offset a source datetime by a fixed duration (params.hours, which may be
+   * negative). Same-record, synchronous. e.g. work_order.scheduled_end from scheduled_start
+   * with params:{ hours: 1 }. Returns a UTC ISO-8601 string.
+   */
+  timeOffset: Object.freeze({
+    async: false,
+    apply({ sourceValue, params }) {
+      const hours = params && params.hours;
+      if (typeof hours !== 'number') {
+        return undefined;
+      }
+      const base = new Date(sourceValue);
+      if (Number.isNaN(base.getTime())) {
+        return undefined;
+      }
+      return new Date(base.getTime() + hours * 60 * 60 * 1000).toISOString();
+    },
+  }),
 });
 
 /**

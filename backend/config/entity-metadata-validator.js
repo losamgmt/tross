@@ -193,6 +193,16 @@ function validateDerived(meta, errors) {
         `via:'lookup' requires source field '${derived.from}' to be a foreignKey`,
       );
     }
+
+    if (derived.via === DERIVATION_VIA.TIME_OFFSET) {
+      const hours = derived.params && derived.params.hours;
+      if (typeof hours !== 'number') {
+        errors.add(
+          `${prefix}.params.hours`,
+          "via:'timeOffset' requires a numeric params.hours",
+        );
+      }
+    }
   }
 }
 

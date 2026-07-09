@@ -32,6 +32,22 @@ function metadataFixture() {
   };
 }
 
+// Minimal metadata with mutual timeOffset rules (work_order scheduling shape).
+function schedulingMeta() {
+  return {
+    fields: {
+      scheduled_start: {
+        type: 'timestamp',
+        derived: { from: 'scheduled_end', via: 'timeOffset', params: { hours: -1 } },
+      },
+      scheduled_end: {
+        type: 'timestamp',
+        derived: { from: 'scheduled_start', via: 'timeOffset', params: { hours: 1 } },
+      },
+    },
+  };
+}
+
 describe('field-derivation: applyDerived', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -86,6 +102,51 @@ describe('field-derivation: applyDerived', () => {
       await applyDerived('work_order', data, metadataFixture());
 
       expect(data.property_id).toBeUndefined();
+    });
+  });
+
+  describe('via: timeOffset', () => {
+    test('derives end from start (+1h) when only start is set', async () => {
+      const data = { scheduled_start: '2026-07-09T10:00:00.000Z' };
+      await applyDerived('work_order', data, schedulingMeta());
+      expect(data.scheduled_end).toBe('2026-07-09T11:00:00.000Z');
+      expect(data.scheduled_start).toBe('2026-07-09T10:00:00.000Z');
+    });
+
+    test('derives start from end (-1h) when only end is set', async () => {
+      const data = { scheduled_end: '2026-07-09T10:00:00.000Z' };
+      await applyDerived('work_order', data, schedulingMeta());
+      expect(data.scheduled_start).toBe('2026-07-09T09:00:00.000Z');
+    });
+
+    test('leaves both untouched when both are set (explicit range)', async () => {
+      const data = {
+        scheduled_start: '2026-07-09T10:00:00.000Z',
+        scheduled_end: '2026-07-09T15:00:00.000Z',
+      };
+      await applyDerived('work_order', data, schedulingMeta());
+      expect(data.scheduled_start).toBe('2026-07-09T10:00:00.000Z');
+      expect(data.scheduled_end).toBe('2026-07-09T15:00:00.000Z');
+    });
+
+    test('does nothing when neither is set', async () => {
+      const data = {};
+      await applyDerived('work_order', data, schedulingMeta());
+      expect(data.scheduled_start).toBeUndefined();
+      expect(data.scheduled_end).toBeUndefined();
+    });
+
+    test('deriving end from start does not alter the provided start (single pass)', async () => {
+      const data = { scheduled_start: '2026-07-09T10:00:00.000Z' };
+      await applyDerived('work_order', data, schedulingMeta());
+      expect(data.scheduled_start).toBe('2026-07-09T10:00:00.000Z');
+      expect(data.scheduled_end).toBe('2026-07-09T11:00:00.000Z');
+    });
+
+    test('invalid source datetime yields no derivation', async () => {
+      const data = { scheduled_start: 'not-a-date' };
+      await applyDerived('work_order', data, schedulingMeta());
+      expect(data.scheduled_end).toBeUndefined();
     });
   });
 

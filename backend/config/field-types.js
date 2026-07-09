@@ -1083,6 +1083,7 @@ function createForeignKey(entity, options = {}) {
  */
 const DERIVATION_VIA = Object.freeze({
   LOOKUP: 'lookup',
+  TIME_OFFSET: 'timeOffset',
 });
 
 /**
