@@ -122,6 +122,8 @@ function transformField(fieldName, fieldDef, enums, allModels) {
   if (fieldDef.max !== undefined) result.max = fieldDef.max;
   if (fieldDef.default !== undefined) result.default = fieldDef.default;
   if (fieldDef.pattern) result.pattern = fieldDef.pattern;
+  // Field derivation construct (frontend applies the sync methods it implements, e.g. timeOffset)
+  if (fieldDef.derived) result.derived = fieldDef.derived;
 
   // Handle enum values with optional colors
   // NEW pattern: enumKey references enums.[enumKey] where values are object keys

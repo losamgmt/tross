@@ -439,7 +439,11 @@
       "property_id": {
         "type": "foreignKey",
         "references": "property",
-        "displayField": "name"
+        "displayField": "name",
+        "derived": {
+          "from": "unit_id",
+          "via": "lookup"
+        }
       },
       "name": {
         "type": "string",
@@ -6114,7 +6118,11 @@
       "property_id": {
         "type": "foreignKey",
         "references": "property",
-        "displayField": "name"
+        "displayField": "name",
+        "derived": {
+          "from": "unit_id",
+          "via": "lookup"
+        }
       },
       "unit_id": {
         "type": "foreignKey",
@@ -6127,10 +6135,24 @@
         "displayField": "email"
       },
       "scheduled_start": {
-        "type": "timestamp"
+        "type": "timestamp",
+        "derived": {
+          "from": "scheduled_end",
+          "via": "timeOffset",
+          "params": {
+            "hours": -1
+          }
+        }
       },
       "scheduled_end": {
-        "type": "timestamp"
+        "type": "timestamp",
+        "derived": {
+          "from": "scheduled_start",
+          "via": "timeOffset",
+          "params": {
+            "hours": 1
+          }
+        }
       },
       "completed_at": {
         "type": "timestamp"
