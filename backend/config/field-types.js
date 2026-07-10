@@ -1065,10 +1065,14 @@ function createJunctionFields(entity1, entity2, options = {}) {
  * Generate a single foreign key field with configurable traits.
  *
  * @param {string} entity - Target entity key (e.g., 'customer')
- * @param {Object} [options] - Configuration options
+ * @param {Object} [options] - Configuration forwarded verbatim onto the FK field
+ *   definition (non-lossy — no allowlist). Common properties:
  * @param {boolean} [options.required=false] - Whether FK is required
+ * @param {boolean} [options.immutable] - Whether the FK cannot change after create
  * @param {Object} [options.traits=TRAIT_SETS.FILTER_ONLY] - Traits to apply
  * @param {string} [options.displayField] - Field to display from related entity
+ * @param {string} [options.description] - Field documentation (surfaced in OpenAPI)
+ * @param {Object} [options.derived] - Declarative derivation ({ from, via, params })
  * @returns {Object} FK field definition with traits
  *
  * @example
@@ -1088,19 +1092,16 @@ function createJunctionFields(entity1, entity2, options = {}) {
  * })
  */
 function createForeignKey(entity, options = {}) {
-  const {
-    required = false,
-    traits = TRAIT_SETS.FILTER_ONLY,
-    displayField,
-    derived,
-  } = options;
+  // Non-lossy: forward every provided option onto the FK field definition
+  // (required, immutable, displayField, description, derived, ...). Only `traits`
+  // is special — it spreads its own object of trait booleans. This removes the
+  // silent-drop footgun of the previous allowlist.
+  const { traits = TRAIT_SETS.FILTER_ONLY, ...rest } = options;
 
   return Object.freeze({
     type: 'foreignKey',
     references: entity,
-    ...(required && { required: true }),
-    ...(displayField && { displayField }),
-    ...(derived && { derived }),
+    ...rest,
     ...traits,
   });
 }

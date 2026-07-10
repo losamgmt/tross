@@ -36,7 +36,8 @@
       "target_entity",
       "target_id",
       "target_field",
-      "previous_value"
+      "previous_value",
+      "requested_by"
     ],
     "searchableFields": [
       "request_number"
@@ -305,6 +306,7 @@
       "asset_type"
     ],
     "immutableFields": [
+      "unit_id",
       "property_id"
     ],
     "searchableFields": [
@@ -4963,7 +4965,9 @@
       "unit_identifier",
       "ownership_type"
     ],
-    "immutableFields": [],
+    "immutableFields": [
+      "property_id"
+    ],
     "searchableFields": [
       "unit_identifier",
       "notes"
