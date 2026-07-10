@@ -264,15 +264,19 @@ function toSafeBoolean(value, fieldName = 'boolean', defaultValue = false) {
  * @param {Object} limits - Pagination limits from constants
  * @returns {Object} Validated { page, limit, offset }
  */
-function toSafePagination(query, limits = { defaultLimit: 50, maxLimit: 200 }) {
+function toSafePagination(query, limits = {}) {
+  // Per-field defaults so a partial override (e.g. { maxLimit: 200 } from a
+  // route) does not drop the other field to undefined — a request that omits
+  // `limit` must resolve to defaultLimit, not throw.
+  const { defaultLimit = 50, maxLimit = 200 } = limits;
   const page = toSafeInteger(query.page || 1, 'page', {
     min: 1,
     allowNull: false,
     silent: true,
   });
-  const limit = toSafeInteger(query.limit || limits.defaultLimit, 'limit', {
+  const limit = toSafeInteger(query.limit || defaultLimit, 'limit', {
     min: 1,
-    max: limits.maxLimit,
+    max: maxLimit,
     allowNull: false,
     silent: true,
   });

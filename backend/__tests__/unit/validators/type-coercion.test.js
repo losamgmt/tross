@@ -510,6 +510,14 @@ describe("Type Coercion Validators - DEFENSIVE TESTING", () => {
         );
         expect(result.limit).toBe(100);
       });
+
+      test("applies a partial limits override without dropping the default page size", () => {
+        // Regression: validatePagination({ maxLimit: 200 }) passes only maxLimit,
+        // so defaultLimit must still fall back to 50 — a request that omits limit
+        // must resolve to the default, not throw.
+        const result = toSafePagination({ page: "3" }, { maxLimit: 200 });
+        expect(result).toEqual({ page: 3, limit: 50, offset: 100 });
+      });
     });
 
     describe("❌ Invalid pagination", () => {
