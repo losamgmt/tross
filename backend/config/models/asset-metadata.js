@@ -277,16 +277,12 @@ module.exports = {
     unit_id: createForeignKey('unit', {
       required: true,
       immutable: true,
-      displayFields: ['unit_identifier'],
-      displayTemplate: '{unit_identifier}',
     }),
     property_id: withTraits(
       {
         type: 'foreignKey',
         references: 'property',
         derived: { from: 'unit_id', via: 'lookup' },
-        displayFields: ['name'],
-        displayTemplate: '{name}',
       },
       TRAITS.IMMUTABLE,
       TRAIT_SETS.FILTER_ONLY,

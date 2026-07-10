@@ -538,26 +538,18 @@ module.exports = {
     // FK fields with embedded traits
     customer_id: createForeignKey('customer', {
       required: true,
-      displayFields: ['first_name', 'last_name', 'email'],
-      displayTemplate: '{first_name} {last_name} - {email}',
       traits: TRAIT_SETS.LOOKUP,
     }),
     property_id: createForeignKey('property', {
-      displayFields: ['name', 'address_city'],
-      displayTemplate: '{name} - {address_city}',
       description: 'Property for this work order (auto-populated from unit when set)',
       derived: { from: 'unit_id', via: 'lookup' },
       traits: TRAIT_SETS.LOOKUP,
     }),
     unit_id: createForeignKey('unit', {
-      displayFields: ['unit_identifier'],
-      displayTemplate: '{unit_identifier}',
       description: 'Specific unit for this work order',
       traits: TRAIT_SETS.LOOKUP,
     }),
     assigned_technician_id: createForeignKey('technician', {
-      displayFields: ['first_name', 'last_name', 'email'],
-      displayTemplate: '{first_name} {last_name} - {email}',
       traits: TRAIT_SETS.LOOKUP,
     }),
 

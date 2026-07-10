@@ -214,13 +214,9 @@ module.exports = {
 
     // FK fields with embedded traits
     work_order_id: createForeignKey('work_order', {
-      displayFields: ['work_order_number'],
-      displayTemplate: '{work_order_number}',
       traits: TRAIT_SETS.LOOKUP,
     }),
     purchase_order_id: createForeignKey('purchase_order', {
-      displayFields: ['po_number'],
-      displayTemplate: '{po_number}',
       traits: TRAIT_SETS.LOOKUP,
     }),
   },

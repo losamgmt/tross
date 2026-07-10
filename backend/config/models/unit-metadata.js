@@ -305,8 +305,6 @@ module.exports = {
     property_id: createForeignKey('property', {
       required: true,
       immutable: true,
-      displayFields: ['name'],
-      displayTemplate: '{name}',
       traits: TRAIT_SETS.LOOKUP,
     }),
 

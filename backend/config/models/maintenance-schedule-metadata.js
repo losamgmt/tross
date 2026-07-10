@@ -256,18 +256,12 @@ module.exports = {
     // FK fields with embedded traits
     customer_id: createForeignKey('customer', {
       required: true,
-      displayFields: ['first_name', 'last_name'],
-      displayTemplate: '{first_name} {last_name}',
       traits: TRAIT_SETS.LOOKUP,
     }),
     asset_id: createForeignKey('asset', {
-      displayFields: ['name', 'model'],
-      displayTemplate: '{name}',
       traits: TRAIT_SETS.LOOKUP,
     }),
     service_template_id: createForeignKey('service_template', {
-      displayFields: ['name'],
-      displayTemplate: '{name}',
       traits: TRAIT_SETS.LOOKUP,
     }),
   },

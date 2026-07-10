@@ -299,13 +299,9 @@ module.exports = {
     // FK fields with embedded traits
     customer_id: createForeignKey('customer', {
       required: true,
-      displayFields: ['display_name'],
-      displayTemplate: '{display_name}',
       traits: TRAIT_SETS.LOOKUP,
     }),
     invoice_id: createForeignKey('invoice', {
-      displayFields: ['invoice_number'],
-      displayTemplate: '{invoice_number}',
       traits: TRAIT_SETS.LOOKUP,
     }),
 

@@ -216,8 +216,6 @@ module.exports = {
     // FK fields with embedded traits
     customer_id: createForeignKey('customer', {
       required: true,
-      displayFields: ['first_name', 'last_name', 'email'],
-      displayTemplate: '{first_name} {last_name}',
       traits: TRAIT_SETS.LOOKUP,
     }),
   },

@@ -259,8 +259,6 @@ module.exports = {
     // FK fields
     work_order_id: createForeignKey('work_order', {
       required: true,
-      displayFields: ['work_order_number', 'name'],
-      displayTemplate: '{work_order_number}',
       traits: TRAIT_SETS.LOOKUP,
     }),
   },

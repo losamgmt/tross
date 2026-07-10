@@ -227,13 +227,9 @@ module.exports = {
     // FK fields with embedded traits
     vendor_id: createForeignKey('vendor', {
       required: true,
-      displayFields: ['company_name'],
-      displayTemplate: '{company_name}',
       traits: TRAIT_SETS.LOOKUP,
     }),
     work_order_id: createForeignKey('work_order', {
-      displayFields: ['work_order_number'],
-      displayTemplate: '{work_order_number}',
       traits: TRAIT_SETS.LOOKUP,
     }),
   },
