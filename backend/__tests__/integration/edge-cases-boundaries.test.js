@@ -95,28 +95,23 @@ describe("Boundary Condition Tests", () => {
       }
     });
 
-    test("should reject empty string for required name field", async () => {
+    test("should reject an empty value for a required name field", async () => {
       const uniqueEmail = `empty-${Date.now()}@example.com`;
       const response = await request(app)
         .post("/api/customers")
         .set("Authorization", `Bearer ${adminToken}`)
         .send({
-          name: "",
+          first_name: "",
+          last_name: "Boundary",
           email: uniqueEmail,
           phone: "1234567890",
         });
 
-      // API might allow empty strings or reject them
-      expect([201, 400]).toContain(response.status);
-
-      if (response.status === 201) {
-        testCustomerId = response.body.data.id;
-        // Empty string might be stored as empty or null
-        expect([null, "", undefined]).toContain(response.body.data.name);
-      }
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
     });
 
-    test("should reject extremely long strings (SQL injection attempt)", async () => {
+    test("should reject an over-length name", async () => {
       const longString = "A".repeat(10000);
       const uniqueEmail = `longtest-${Date.now()}@example.com`;
 
@@ -124,40 +119,31 @@ describe("Boundary Condition Tests", () => {
         .post("/api/customers")
         .set("Authorization", `Bearer ${adminToken}`)
         .send({
-          name: longString,
+          first_name: longString,
+          last_name: "Boundary",
           email: uniqueEmail,
           phone: "1234567890",
         });
 
-      // Should reject long strings (400) or accept but truncate (201)
-      expect([201, 400]).toContain(response.status);
-
-      if (response.status === 201) {
-        testCustomerId = response.body.data.id;
-      }
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
     });
 
-    test("should handle single character names", async () => {
+    test("should accept a valid single-character name", async () => {
       const uniqueEmail = `single-${Date.now()}-${Math.random()}@example.com`;
       const response = await request(app)
         .post("/api/customers")
         .set("Authorization", `Bearer ${adminToken}`)
         .send({
-          name: "A",
+          first_name: "A",
+          last_name: "B",
           email: uniqueEmail,
           phone: "1234567890",
         });
 
-      // API might accept single char names or reject them
-      expect([201, 400, 409]).toContain(response.status);
-
-      if (response.status === 201) {
-        if (response.body && response.body.data && response.body.data.id) {
-          testCustomerId = response.body.data.id;
-          // Name might be stored as-is or normalized
-          expect([null, "", "A", undefined]).toContain(response.body.data.name);
-        }
-      }
+      expect(response.status).toBe(201);
+      testCustomerId = response.body.data.id;
+      expect(response.body.data.first_name).toBe("A");
     });
   });
 
@@ -199,7 +185,7 @@ describe("Boundary Condition Tests", () => {
       }
     });
 
-    test("should handle negative amounts for invoices (credit memos)", async () => {
+    test("should reject negative invoice amounts", async () => {
       const response = await request(app)
         .post("/api/invoices")
         .set("Authorization", `Bearer ${adminToken}`)
@@ -212,13 +198,9 @@ describe("Boundary Condition Tests", () => {
           status: "draft",
         });
 
-      // Negative amounts may be valid (credit memos, refunds) or rejected by business rules
-      // Accept any well-formed response
-      expect([201, 400, 500]).toContain(response.status);
-
-      if (response.status === 201 && response.body.data) {
-        testInvoiceIds.push(response.body.data.id);
-      }
+      // Negative amounts are rejected by validation (amounts must be >= 0).
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
     });
 
     test("should handle zero amounts", async () => {
@@ -235,12 +217,9 @@ describe("Boundary Condition Tests", () => {
           status: "draft",
         });
 
-      // Zero might be valid for $0 invoices or rejected
-      expect([200, 201, 400, 409, 500]).toContain(response.status);
-
-      if (response.status === 201 && response.body.data) {
-        testInvoiceIds.push(response.body.data.id);
-      }
+      // A zero-amount invoice is accepted.
+      expect(response.status).toBe(201);
+      testInvoiceIds.push(response.body.data.id);
     });
 
     test("should handle very large decimal values", async () => {
@@ -257,13 +236,10 @@ describe("Boundary Condition Tests", () => {
           status: "draft",
         });
 
-      expect([201, 400, 409, 500]).toContain(response.status);
-
-      if (response.status === 201 && response.body.data) {
-        testInvoiceIds.push(response.body.data.id);
-        // PostgreSQL DECIMAL returns as string
-        expect(response.body.data.total).toBe("999999999.99");
-      }
+      expect(response.status).toBe(201);
+      testInvoiceIds.push(response.body.data.id);
+      // PostgreSQL DECIMAL returns as string
+      expect(response.body.data.total).toBe("999999999.99");
     });
   });
 
@@ -310,8 +286,8 @@ describe("Boundary Condition Tests", () => {
           status: "draft",
         });
 
-      // Invalid dates might cause 400 validation error or 500 DB error
-      expect([400, 500]).toContain(response.status);
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
     });
 
     test("should reject end_date before start_date", async () => {
@@ -327,12 +303,9 @@ describe("Boundary Condition Tests", () => {
           status: "draft",
         });
 
-      // Date range validation might not be implemented (accepts or errors)
-      expect([201, 400, 500]).toContain(response.status);
-
-      if (response.status === 201 && response.body.data) {
-        testContractIds.push(response.body.data.id);
-      }
+      // No end-after-start business rule is enforced, so this is accepted.
+      expect(response.status).toBe(201);
+      testContractIds.push(response.body.data.id);
     });
 
     test("should handle same start and end dates", async () => {
@@ -348,12 +321,9 @@ describe("Boundary Condition Tests", () => {
           status: "draft",
         });
 
-      // Same date might be valid for single-day contracts
-      expect([201, 400]).toContain(response.status);
-
-      if (response.status === 201 && response.body.data) {
-        testContractIds.push(response.body.data.id);
-      }
+      // Same start/end date is valid (single-day contract).
+      expect(response.status).toBe(201);
+      testContractIds.push(response.body.data.id);
     });
   });
 
@@ -363,13 +333,9 @@ describe("Boundary Condition Tests", () => {
         .get("/api/customers?search=NONEXISTENT_CUSTOMER_XYZ123")
         .set("Authorization", `Bearer ${adminToken}`);
 
-      // Search validation might reject invalid patterns
-      expect([200, 400]).toContain(response.status);
-
-      if (response.status === 200) {
-        expect(response.body.data).toEqual([]);
-        expect(response.body.pagination.total).toBe(0);
-      }
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toEqual([]);
     });
 
     test("should handle searches with special characters gracefully", async () => {
@@ -394,16 +360,17 @@ describe("Boundary Condition Tests", () => {
         .get(`/api/customers?search=${encodeURIComponent(sqlInjection)}`)
         .set("Authorization", `Bearer ${adminToken}`);
 
-      // Should reject invalid search pattern or handle safely
+      // The injection string is safely parameterized: handled as a literal
+      // search (200) or rejected as an invalid pattern (400), never executed.
+      // Both are safe; the security guarantee is asserted below.
       expect([200, 400]).toContain(response.status);
 
-      // Verify customers table still exists
+      // Verify the customers table still exists (injection did not run).
       const verifyResponse = await request(app)
         .get("/api/customers")
         .set("Authorization", `Bearer ${adminToken}`);
 
-      // Should successfully list customers (table not dropped)
-      expect([200, 400]).toContain(verifyResponse.status);
+      expect(verifyResponse.status).toBe(200);
     });
 
     test("should prevent SQL injection in ID parameters", async () => {
