@@ -26,7 +26,7 @@ const {
  * @param {number} limits.maxLimit - Maximum items per page (default: 200)
  * @returns {Function} Express middleware
  */
-function validatePagination(limits = { defaultLimit: 50, maxLimit: 200 }) {
+function validatePagination(limits = {}) {
   return (req, res, next) => {
     try {
       const pagination = toSafePagination(req.query, limits);

@@ -23,6 +23,7 @@ const {
 } = require('./validation-logger');
 const AppError = require('../utils/app-error');
 const { ERROR_CODES } = require('../config/error-codes');
+const { PAGINATION } = require('../config/constants');
 
 /**
  * Safely coerce a value to an integer ID
@@ -268,8 +269,11 @@ function toSafePagination(query, limits = {}) {
   // Per-field defaults so a partial override (e.g. { maxLimit: 200 } from a
   // route) does not drop the other field to undefined — a request that omits
   // `limit` must resolve to defaultLimit, not throw.
-  const { defaultLimit = 50, maxLimit = 200 } = limits;
-  const page = toSafeInteger(query.page || 1, 'page', {
+  const {
+    defaultLimit = PAGINATION.DEFAULT_LIMIT,
+    maxLimit = PAGINATION.MAX_LIMIT,
+  } = limits;
+  const page = toSafeInteger(query.page || PAGINATION.DEFAULT_PAGE, 'page', {
     min: 1,
     allowNull: false,
     silent: true,

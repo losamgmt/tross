@@ -9,6 +9,8 @@
  * - Edge Cases: Unique names avoid conflicts with seeded data
  */
 
+const { PAGINATION } = require('./constants');
+
 // ============================================================================
 // TEST ROLES
 // ============================================================================
@@ -246,10 +248,10 @@ const TEST_DATABASE = Object.freeze({
 // Pagination constants matching backend defaults (from pagination-service.js)
 // Use in tests instead of magic numbers: page=1&limit=10
 const TEST_PAGINATION = Object.freeze({
-  DEFAULT_PAGE: 1,
-  DEFAULT_LIMIT: 50, // Matches PaginationService.DEFAULTS.LIMIT
+  DEFAULT_PAGE: PAGINATION.DEFAULT_PAGE,
+  DEFAULT_LIMIT: PAGINATION.DEFAULT_LIMIT,
   SMALL_LIMIT: 5, // For testing pagination with multiple pages
-  LARGE_LIMIT: 200, // Max limit (matches PaginationService.DEFAULTS.MAX_LIMIT)
+  LARGE_LIMIT: PAGINATION.MAX_LIMIT, // Max limit
 });
 
 // ============================================================================

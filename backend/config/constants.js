@@ -29,6 +29,16 @@ const DATABASE_PERFORMANCE = Object.freeze({
   SLOW_QUERY_EXPLAIN_THRESHOLD_MS: 500, // Run EXPLAIN for queries over 500ms
 });
 
+// Pagination Constants
+// SSOT for list-pagination defaults. Consumed by PaginationService (clamps
+// internally) and the query-param validators toSafePagination/validatePagination
+// (throw at the HTTP boundary); tests reference these via TEST_PAGINATION.
+const PAGINATION = Object.freeze({
+  DEFAULT_PAGE: 1,
+  DEFAULT_LIMIT: 50,
+  MAX_LIMIT: 200,
+});
+
 // Authentication Constants
 const AUTH = Object.freeze({
   // Token provider types (used in JWT payload)
@@ -653,6 +663,7 @@ const STARTUP_VALIDATION = Object.freeze({
 module.exports = Object.freeze({
   ENVIRONMENTS,
   DATABASE_PERFORMANCE,
+  PAGINATION,
   AUTH,
   USER_ROLES,
   HTTP_STATUS,

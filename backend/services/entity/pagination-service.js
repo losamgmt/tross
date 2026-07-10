@@ -13,6 +13,8 @@
  * cap values (user-friendly) rather than throw errors (strict validation)
  */
 
+const { PAGINATION } = require('../../config/constants');
+
 /**
  * Safely parse and clamp an integer value
  * SRP: ONLY for pagination - gracefully caps instead of throwing
@@ -36,9 +38,9 @@ function safeClamp(value, defaultValue, min, max) {
  * Can be overridden per request but enforces sane limits
  */
 const DEFAULTS = {
-  PAGE: 1,
-  LIMIT: 50,
-  MAX_LIMIT: 200,
+  PAGE: PAGINATION.DEFAULT_PAGE,
+  LIMIT: PAGINATION.DEFAULT_LIMIT,
+  MAX_LIMIT: PAGINATION.MAX_LIMIT,
 };
 
 /**
