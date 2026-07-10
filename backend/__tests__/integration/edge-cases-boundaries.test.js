@@ -30,71 +30,58 @@ describe("Boundary Condition Tests", () => {
   });
 
   describe("Pagination Boundaries", () => {
-    test("should handle page=0 gracefully (treat as page 1)", async () => {
+    // Contract: the list route wires validatePagination({ maxLimit: 200 }),
+    // which coerces page/limit via toSafeInteger with min=1 (and max=200 for
+    // limit). Out-of-range values THROW 400 (fail-loud) rather than being
+    // silently clamped; a valid-but-out-of-range page returns 200 with no rows.
+
+    test("should reject page=0 (page must be >= 1)", async () => {
       const response = await request(app)
         .get("/api/customers?page=0")
         .set("Authorization", `Bearer ${adminToken}`);
 
-      // API validates page >= 1 (returns 400 for invalid)
-      expect([200, 400]).toContain(response.status);
-
-      if (response.status === 200) {
-        expect(response.body.pagination.page).toBe(1);
-      }
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
     });
 
-    test("should handle negative page numbers (treat as page 1)", async () => {
+    test("should reject negative page numbers", async () => {
       const response = await request(app)
         .get("/api/customers?page=-5")
         .set("Authorization", `Bearer ${adminToken}`);
 
-      // API validates page >= 1 (returns 400 for invalid)
-      expect([200, 400]).toContain(response.status);
-
-      if (response.status === 200) {
-        expect(response.body.pagination.page).toBe(1);
-      }
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
     });
 
-    test("should handle limit=0 gracefully", async () => {
+    test("should reject limit=0 (limit must be >= 1)", async () => {
       const response = await request(app)
         .get("/api/customers?limit=0")
         .set("Authorization", `Bearer ${adminToken}`);
 
-      // API validates limit > 0 (returns 400 for invalid)
-      expect([200, 400]).toContain(response.status);
-
-      if (response.status === 200) {
-        expect(response.body.data).toBeDefined();
-      }
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
     });
 
-    test("should handle extremely large page numbers", async () => {
+    test("should return an empty page beyond the result set", async () => {
+      // Send an explicit valid limit so this isolates PAGE-past-the-end
+      // behavior (a valid page with no rows), independent of limit defaulting.
       const response = await request(app)
-        .get("/api/customers?page=999999")
+        .get("/api/customers?page=999999&limit=50")
         .set("Authorization", `Bearer ${adminToken}`);
 
-      // API might validate max page or return empty results
-      expect([200, 400]).toContain(response.status);
-
-      if (response.status === 200) {
-        expect(response.body.data).toEqual([]);
-        expect(response.body.pagination.totalPages).toBeGreaterThanOrEqual(0);
-      }
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toEqual([]);
+      expect(response.body.pagination).toBeDefined();
     });
 
-    test("should handle extremely large limit values", async () => {
+    test("should reject a limit above the max (200)", async () => {
       const response = await request(app)
         .get("/api/customers?limit=999999")
         .set("Authorization", `Bearer ${adminToken}`);
 
-      // API validates max limit or caps it
-      expect([200, 400]).toContain(response.status);
-
-      if (response.status === 200) {
-        // Should cap at max limit (e.g., 100)
-        expect(response.body.data.length).toBeLessThanOrEqual(100);
-      }
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
     });
   });
 
