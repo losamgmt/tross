@@ -312,6 +312,7 @@ function createEntityRouter(entityName, _options = {}) {
     asyncHandler(async (req, res) => {
       const entityId = req.validated.id;
       const auditContext = buildAuditContext(req);
+      const rlsContext = buildRlsContext(req);
 
       // SELF-DELETION PREVENTION: Users cannot delete themselves
       if (entityName === 'user' && req.dbUser?.id === entityId) {
@@ -321,8 +322,11 @@ function createEntityRouter(entityName, _options = {}) {
         );
       }
 
+      // rlsContext row-scopes the delete in-service (ADR-011): out-of-scope rows
+      // return null → 404, so a caller cannot delete records outside their scope.
       const deleted = await GenericEntityService.delete(entityName, entityId, {
         auditContext,
+        rlsContext,
       });
 
       if (!deleted) {

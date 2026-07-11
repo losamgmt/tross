@@ -1267,7 +1267,8 @@ class GenericEntityService {
    * @param {number|string} id - Primary key value
    * @param {Object} [options={}] - Additional options
    * @param {Object} [options.auditContext] - Audit context from buildAuditContext()
-   * @returns {Promise<Object|null>} Deleted entity or null if not found
+   * @param {Object} [options.rlsContext] - ADR-011 RLS context; row-scopes the delete so a caller cannot delete rows outside their access scope (out-of-scope → null → 404). Omit for internal/system callers (no filtering).
+   * @returns {Promise<Object|null>} Deleted entity, or null if not found or not authorized by RLS
    * @throws {Error} If entityName invalid, id invalid, or DB constraint violation
    *
    * @example
@@ -1287,6 +1288,8 @@ class GenericEntityService {
    *   });
    */
   static async delete(entityName, id, options = {}) {
+    const { rlsContext = null } = options || {};
+
     // Get metadata (throws if invalid entityName)
     const metadata = this._getMetadata(entityName);
 
@@ -1325,9 +1328,30 @@ class GenericEntityService {
     try {
       await client.query('BEGIN');
 
-      // Check if record exists first
-      const checkQuery = `SELECT * FROM ${tableName} WHERE ${primaryKey} = $1`;
-      const checkResult = await client.query(checkQuery, [safeId]);
+      // Check the record exists AND is within the caller's RLS scope.
+      // Applying RLS here (operation 'delete') prevents deleting rows outside the
+      // caller's access scope: an out-of-scope row matches zero rows and returns
+      // null (surfaced as 404), mirroring how reads hide unauthorized rows.
+      // Internal/system callers (no rlsContext) are unaffected — no clause added.
+      const checkClauses = [`${primaryKey} = $1`];
+      const checkParams = [safeId];
+
+      if (rlsContext) {
+        const rlsFilter = buildRLSFilter(
+          rlsContext,
+          metadata,
+          rlsContext.operation || 'delete',
+          checkParams.length + 1,
+          allMetadata,
+        );
+        if (rlsFilter.clause) {
+          checkClauses.push(rlsFilter.clause);
+          checkParams.push(...rlsFilter.params);
+        }
+      }
+
+      const checkQuery = `SELECT * FROM ${tableName} WHERE ${checkClauses.join(' AND ')}`;
+      const checkResult = await client.query(checkQuery, checkParams);
 
       if (checkResult.rows.length === 0) {
         await client.query('ROLLBACK');
