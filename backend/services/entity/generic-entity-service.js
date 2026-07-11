@@ -998,8 +998,8 @@ class GenericEntityService {
    * @param {Object} [options.auditContext] - Audit context from buildAuditContext()
    * @param {boolean} [options.skipHooks] - Skip hook evaluation (prevents recursion)
    * @param {string|number} [options.user] - User ID for hook/audit context
-   * @param {Object} [options.rlsContext] - ADR-011 RLS context; redacts the returned record to the caller's role (omit for internal/system callers → full record)
-   * @returns {Promise<Object|null>} Updated entity or null if not found
+   * @param {Object} [options.rlsContext] - ADR-011 RLS context; row-scopes the update (out-of-scope → null → 404) AND redacts the returned record to the caller's role. Omit for internal/system callers (no scoping/redaction).
+   * @returns {Promise<Object|null>} Updated entity, or null if not found or not authorized by RLS
    * @throws {Error} If entityName invalid, id invalid, or no valid fields provided
    *
    * @example
@@ -1016,6 +1016,8 @@ class GenericEntityService {
    *   });
    */
   static async update(entityName, id, data, options = {}) {
+    const { rlsContext = null } = options || {};
+
     // Get metadata (throws if invalid entityName)
     const metadata = this._getMetadata(entityName);
 
@@ -1179,11 +1181,31 @@ class GenericEntityService {
     // Add ID as the last parameter
     values.push(safeId);
 
+    // Row-scope the write by RLS (defense-in-depth): even if a caller reaches
+    // update() without a route-level access pre-check, an out-of-scope row matches
+    // zero rows and yields null (→ 404). Internal/system callers (no rlsContext)
+    // are unaffected. We scope the UPDATE itself rather than the oldRecord fetch,
+    // because hooks + audit require the full (unredacted) oldRecord.
+    let whereClause = `${primaryKey} = $${values.length}`;
+    if (rlsContext) {
+      const rlsFilter = buildRLSFilter(
+        rlsContext,
+        metadata,
+        rlsContext.operation || 'update',
+        values.length + 1,
+        allMetadata,
+      );
+      if (rlsFilter.clause) {
+        whereClause += ` AND ${rlsFilter.clause}`;
+        values.push(...rlsFilter.params);
+      }
+    }
+
     // Build parameterized UPDATE query
     const query = `
       UPDATE ${tableName}
       SET ${updates.join(', ')}
-      WHERE ${primaryKey} = $${values.length}
+      WHERE ${whereClause}
       RETURNING ${primaryKey}
     `;
 
@@ -1255,7 +1277,7 @@ class GenericEntityService {
 
     // Redact non-readable fields for the caller's role (ADR-011 output boundary).
     // Applied AFTER hooks + audit, which require the full updated record.
-    return this._redactForContext(updatedRecord, metadata, options.rlsContext);
+    return this._redactForContext(updatedRecord, metadata, rlsContext);
   }
 
   /**
