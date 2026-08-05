@@ -6,9 +6,7 @@
 
 jest.mock("../../../db/connection", () => ({
   query: jest.fn(),
-  pool: {
-    connect: jest.fn(),
-  },
+  getClient: jest.fn(),
 }));
 
 jest.mock("../../../config/logger", () => ({
@@ -45,7 +43,7 @@ describe("GenericEntityService.batch()", () => {
       query: jest.fn(),
       release: jest.fn(),
     };
-    db.pool.connect.mockResolvedValue(mockClient);
+    db.getClient.mockResolvedValue(mockClient);
   });
 
   describe("validation", () => {

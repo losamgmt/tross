@@ -1477,7 +1477,7 @@ class GenericEntityService {
     const stats = { created: 0, updated: 0, deleted: 0, failed: 0 };
 
     // Get a client for transaction
-    const client = await db.pool.connect();
+    const client = await db.getClient();
 
     try {
       await client.query('BEGIN');
