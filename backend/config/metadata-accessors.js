@@ -559,6 +559,24 @@ function isJunctionEntity(metadata) {
 }
 
 // ============================================================================
+// DISPLAY
+// ============================================================================
+
+/**
+ * Get the human-readable display field for an entity.
+ *
+ * Prefers `displayField` (presentation) over `identityField` (uniqueness),
+ * falling back to 'name'. Used to pick the column to surface for a related
+ * entity in JOIN projections and foreign-key display.
+ *
+ * @param {Object} metadata - Entity metadata
+ * @returns {string} Display field name (e.g., 'email' for customers, 'name' for roles)
+ */
+function getEntityDisplayField(metadata) {
+  return metadata.displayField || metadata.identityField || 'name';
+}
+
+// ============================================================================
 // MIGRATION HELPERS
 // ============================================================================
 
@@ -736,6 +754,9 @@ module.exports = {
   // Junction
   getJunction,
   isJunctionEntity,
+
+  // Display
+  getEntityDisplayField,
 
   // Migration helpers
   checkLegacyUsage,

@@ -21,6 +21,7 @@ const {
   getBeforeChangeHooks,
   getAfterChangeHooks,
   getAllHooks,
+  getEntityDisplayField,
   checkLegacyUsage,
   MIGRATION_CONFIG,
 } = require('../../../config/metadata-accessors');
@@ -324,6 +325,22 @@ describe('metadata-accessors', () => {
       expect(hooks.status.afterChange).toHaveLength(1);
       expect(hooks.priority.beforeChange).toHaveLength(0);
       expect(hooks.priority.afterChange).toHaveLength(1);
+    });
+  });
+
+  describe('getEntityDisplayField', () => {
+    it('prefers displayField over identityField', () => {
+      expect(
+        getEntityDisplayField({ displayField: 'name', identityField: 'email' }),
+      ).toBe('name');
+    });
+
+    it('falls back to identityField when no displayField', () => {
+      expect(getEntityDisplayField({ identityField: 'email' })).toBe('email');
+    });
+
+    it("falls back to 'name' when neither displayField nor identityField is set", () => {
+      expect(getEntityDisplayField({})).toBe('name');
     });
   });
 

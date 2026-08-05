@@ -30,6 +30,7 @@ const db = require('../connection');
 const { logger } = require('../../config/logger');
 const allMetadata = require('../../config/models');
 const { buildRLSFilter } = require('./rls');
+const { getEntityDisplayField } = require('../../config/metadata-accessors');
 
 // ============================================================================
 // HELPERS
@@ -482,9 +483,75 @@ function validateRelationshipNames(entityName, relationshipNames) {
   return { valid, invalid };
 }
 
+/**
+ * Build SELECT parts and JOIN parts for an entity's belongsTo defaultIncludes.
+ *
+ * belongsTo relationships are eager-loaded via LEFT JOIN (not the post-query
+ * loaders above), projecting the related entity's display field. Smart aliasing:
+ * - the display/identity field -> aliased as the relationship name (e.g., r.name as role)
+ * - other configured fields -> prefixed (e.g., r.priority as role_priority)
+ *
+ * @param {string} tableName - Main (parent) table name
+ * @param {string[]} defaultIncludes - Relationship names to include
+ * @param {Object} relationships - Relationship definitions from the parent metadata
+ * @returns {{ selectParts: string[], joinParts: string[] }} SQL fragments for query building
+ */
+function buildDefaultIncludesClauses(tableName, defaultIncludes, relationships) {
+  const joinParts = [];
+  const selectParts = [];
+  const usedAliases = new Set();
+
+  for (const relName of defaultIncludes) {
+    const rel = relationships[relName];
+    if (rel && rel.type === 'belongsTo') {
+      // Generate unique alias: first letter, then add numbers if collision
+      const baseAlias = relName.charAt(0);
+      let relAlias = baseAlias;
+      let counter = 1;
+      while (usedAliases.has(relAlias)) {
+        relAlias = `${baseAlias}${counter++}`;
+      }
+      usedAliases.add(relAlias);
+      const relMeta = _findMetadataByTable(rel.table);
+      const identityField = relMeta ? getEntityDisplayField(relMeta) : 'name';
+
+      // Include all configured fields from relationship, or just identity field as fallback
+      if (rel.fields && rel.fields.length > 0) {
+        // Select specific fields with smart aliasing:
+        // - Identity field (e.g., 'name') → relationship name (e.g., 'role')
+        // - Other fields → prefixed (e.g., 'priority' → 'role_priority')
+        for (const field of rel.fields) {
+          // Skip 'id' to avoid confusion with main entity id
+          if (field === 'id') {
+            continue;
+          }
+
+          if (field === identityField) {
+            // Identity field: alias as relationship name (e.g., r.name as role)
+            selectParts.push(`${relAlias}.${field} as ${relName}`);
+          } else {
+            // Other fields: prefix with relationship name (e.g., r.priority as role_priority)
+            selectParts.push(`${relAlias}.${field} as ${relName}_${field}`);
+          }
+        }
+      } else {
+        // Fallback: just the identity field with relationship name as alias
+        selectParts.push(`${relAlias}.${identityField} as ${relName}`);
+      }
+
+      joinParts.push(
+        `LEFT JOIN ${rel.table} ${relAlias} ON ${tableName}.${rel.foreignKey} = ${relAlias}.id`,
+      );
+    }
+  }
+
+  return { selectParts, joinParts };
+}
+
 module.exports = {
   loadRelationships,
   validateRelationshipNames,
+  buildDefaultIncludesClauses,
   // Expose for testing
   loadManyToMany,
   loadHasMany,

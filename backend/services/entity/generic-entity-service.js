@@ -49,7 +49,10 @@ const {
 // ADR-011: field-level read redaction at the service output boundary
 const { filterDataByRole } = require('../../utils/field-access-controller');
 const { logEntityAuditIfEnabled } = require('../../db/helpers/audit-helper');
-const { loadRelationships } = require('../../db/helpers/relationship-loader');
+const {
+  loadRelationships,
+  buildDefaultIncludesClauses,
+} = require('../../db/helpers/relationship-loader');
 const {
   ENTITY_FIELDS,
   NAME_PATTERNS,
@@ -80,103 +83,6 @@ function partitionFields(data, predicate) {
     }
   }
   return { kept, rejected };
-}
-
-/**
- * Table name to entity name mapping for related entity lookups
- * DYNAMICALLY DERIVED from metadata - no hardcoding!
- */
-const TABLE_TO_ENTITY = Object.fromEntries(
-  Object.entries(allMetadata)
-    .filter(([, meta]) => meta.tableName)
-    .map(([entityName, meta]) => [meta.tableName, entityName]),
-);
-
-/**
- * Get the display field for a related entity's table
- * Used in JOIN queries to select the appropriate display field
- *
- * Prefers 'displayField' (human-readable) over 'identityField' (uniqueness)
- * Example: roles have identityField='priority' but displayField='name'
- *
- * @param {string} tableName - Related table name (e.g., 'customers')
- * @returns {string} Display field name (e.g., 'email' for customers, 'name' for roles)
- */
-function getRelatedIdentityField(tableName) {
-  const entityName = TABLE_TO_ENTITY[tableName];
-  if (!entityName || !allMetadata[entityName]) {
-    // Fallback to 'name' for unknown entities (backward compatibility)
-    return 'name';
-  }
-  const metadata = allMetadata[entityName];
-  // Prefer displayField for JOINs, fall back to identityField, then 'name'
-  return metadata.displayField || metadata.identityField || 'name';
-}
-
-/**
- * Build SELECT parts and JOIN parts for default includes
- * Extracts relationship fields with smart aliasing:
- * - Identity field (e.g., 'name') → relationship name (e.g., 'role')
- * - Other fields → prefixed (e.g., 'priority' → 'role_priority')
- *
- * @param {string} tableName - Main table name
- * @param {string[]} defaultIncludes - Relationship names to include
- * @param {Object} relationships - Relationship definitions from metadata
- * @returns {{ selectParts: string[], joinParts: string[] }} Parts for query building
- */
-function buildDefaultIncludesClauses(
-  tableName,
-  defaultIncludes,
-  relationships,
-) {
-  const joinParts = [];
-  const selectParts = [];
-  const usedAliases = new Set();
-
-  for (const relName of defaultIncludes) {
-    const rel = relationships[relName];
-    if (rel && rel.type === 'belongsTo') {
-      // Generate unique alias: first letter, then add numbers if collision
-      const baseAlias = relName.charAt(0);
-      let relAlias = baseAlias;
-      let counter = 1;
-      while (usedAliases.has(relAlias)) {
-        relAlias = `${baseAlias}${counter++}`;
-      }
-      usedAliases.add(relAlias);
-      const identityField = getRelatedIdentityField(rel.table);
-
-      // Include all configured fields from relationship, or just identity field as fallback
-      if (rel.fields && rel.fields.length > 0) {
-        // Select specific fields with smart aliasing:
-        // - Identity field (e.g., 'name') → relationship name (e.g., 'role')
-        // - Other fields → prefixed (e.g., 'priority' → 'role_priority')
-        for (const field of rel.fields) {
-          // Skip 'id' to avoid confusion with main entity id
-          if (field === 'id') {
-            continue;
-          }
-
-          if (field === identityField) {
-            // Identity field: alias as relationship name (e.g., r.name as role)
-            selectParts.push(`${relAlias}.${field} as ${relName}`);
-          } else {
-            // Other fields: prefix with relationship name (e.g., r.priority as role_priority)
-            selectParts.push(`${relAlias}.${field} as ${relName}_${field}`);
-          }
-        }
-      } else {
-        // Fallback: just the identity field with relationship name as alias
-        selectParts.push(`${relAlias}.${identityField} as ${relName}`);
-      }
-
-      joinParts.push(
-        `LEFT JOIN ${rel.table} ${relAlias} ON ${tableName}.${rel.foreignKey} = ${relAlias}.id`,
-      );
-    }
-  }
-
-  return { selectParts, joinParts };
 }
 
 /**
