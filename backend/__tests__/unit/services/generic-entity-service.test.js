@@ -3012,4 +3012,60 @@ describe("GenericEntityService", () => {
       });
     });
   });
+
+  // ==========================================================================
+  // partitionFields TESTS (module-level pure helper)
+  // ==========================================================================
+
+  describe("partitionFields", () => {
+    const { partitionFields } = GenericEntityService;
+
+    test("splits entries into kept (predicate true) and rejected (predicate false)", () => {
+      const { kept, rejected } = partitionFields(
+        { a: 1, b: 2, c: 3 },
+        (_value, key) => key !== "b",
+      );
+
+      expect(kept).toEqual({ a: 1, c: 3 });
+      expect(rejected).toEqual(["b"]);
+    });
+
+    test("passes both value and key to the predicate, in insertion order", () => {
+      const seen = [];
+      partitionFields({ x: 10, y: 20 }, (value, key) => {
+        seen.push([key, value]);
+        return true;
+      });
+
+      expect(seen).toEqual([
+        ["x", 10],
+        ["y", 20],
+      ]);
+    });
+
+    test("keeps entries whose value is undefined when the predicate allows it", () => {
+      const { kept, rejected } = partitionFields(
+        { a: undefined, b: 2 },
+        () => true,
+      );
+
+      expect(kept).toHaveProperty("a", undefined);
+      expect(kept).toHaveProperty("b", 2);
+      expect(rejected).toEqual([]);
+    });
+
+    test("rejects every field when the predicate always returns false", () => {
+      const { kept, rejected } = partitionFields({ a: 1, b: 2 }, () => false);
+
+      expect(kept).toEqual({});
+      expect(rejected).toEqual(["a", "b"]);
+    });
+
+    test("returns empty kept and rejected for an empty object", () => {
+      const { kept, rejected } = partitionFields({}, () => true);
+
+      expect(kept).toEqual({});
+      expect(rejected).toEqual([]);
+    });
+  });
 });

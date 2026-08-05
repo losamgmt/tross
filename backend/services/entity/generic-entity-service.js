@@ -67,6 +67,25 @@ const AppError = require('../../utils/app-error');
 const { ERROR_CODES } = require('../../config/error-codes');
 
 /**
+ * Partition an object's entries into kept vs rejected by a predicate.
+ * @param {Object} data - Source object.
+ * @param {(value: *, key: string) => boolean} predicate - Keep when it returns true.
+ * @returns {{ kept: Object, rejected: string[] }} Kept subset plus rejected keys.
+ */
+function partitionFields(data, predicate) {
+  const kept = {};
+  const rejected = [];
+  for (const [key, value] of Object.entries(data)) {
+    if (predicate(value, key)) {
+      kept[key] = value;
+    } else {
+      rejected.push(key);
+    }
+  }
+  return { kept, rejected };
+}
+
+/**
  * Table name to entity name mapping for related entity lookups
  * DYNAMICALLY DERIVED from metadata - no hardcoding!
  */
@@ -878,16 +897,14 @@ class GenericEntityService {
     // Filter data using EXCLUSION pattern - allow all fields EXCEPT system-managed ones
     // Uses centralized constant from config/constants.js
     // EXCEPTION: sharedPrimaryKey entities (e.g., preferences) allow 'id' to be provided
-    const filteredData = {};
     const allowedSystemFields = metadata.sharedPrimaryKey ? ['id'] : [];
-    for (const [field, value] of Object.entries(cleanData)) {
-      const isSystemManaged =
-        ENTITY_FIELDS.SYSTEM_MANAGED_ON_CREATE.includes(field);
-      const isAllowedSystemField = allowedSystemFields.includes(field);
-      if ((!isSystemManaged || isAllowedSystemField) && value !== undefined) {
-        filteredData[field] = value;
-      }
-    }
+    const { kept: filteredData } = partitionFields(
+      cleanData,
+      (value, field) =>
+        (!ENTITY_FIELDS.SYSTEM_MANAGED_ON_CREATE.includes(field) ||
+          allowedSystemFields.includes(field)) &&
+        value !== undefined,
+    );
 
     // Check we have at least one field to insert
     const fields = Object.keys(filteredData);
@@ -1058,16 +1075,16 @@ class GenericEntityService {
       : metadata.fields
         ? Object.keys(metadata.fields)
         : [];
-    const filteredData = {};
-    for (const [field, value] of Object.entries(cleanData)) {
-      if (knownFields.length === 0 || knownFields.includes(field)) {
-        filteredData[field] = value;
-      } else {
-        logger.debug('GenericEntityService.update: Unknown field ignored', {
-          entity: entityName,
-          field,
-        });
-      }
+    const { kept: filteredData, rejected } = partitionFields(
+      cleanData,
+      (_value, field) =>
+        knownFields.length === 0 || knownFields.includes(field),
+    );
+    for (const field of rejected) {
+      logger.debug('GenericEntityService.update: Unknown field ignored', {
+        entity: entityName,
+        field,
+      });
     }
 
     // =========================================================================
@@ -1603,22 +1620,16 @@ class GenericEntityService {
               // Filter using EXCLUSION pattern - allow all fields EXCEPT system-managed ones
               // Uses centralized constant from config/constants.js
               // EXCEPTION: sharedPrimaryKey entities (e.g., preferences) allow 'id' to be provided
-              const filteredData = {};
               const allowedSystemFields = metadata.sharedPrimaryKey
                 ? ['id']
                 : [];
-              for (const [field, value] of Object.entries(op.data)) {
-                const isSystemManaged =
-                  ENTITY_FIELDS.SYSTEM_MANAGED_ON_CREATE.includes(field);
-                const isAllowedSystemField =
-                  allowedSystemFields.includes(field);
-                if (
-                  (!isSystemManaged || isAllowedSystemField) &&
-                  value !== undefined
-                ) {
-                  filteredData[field] = value;
-                }
-              }
+              const { kept: filteredData } = partitionFields(
+                op.data,
+                (value, field) =>
+                  (!ENTITY_FIELDS.SYSTEM_MANAGED_ON_CREATE.includes(field) ||
+                    allowedSystemFields.includes(field)) &&
+                  value !== undefined,
+              );
 
               const fields = Object.keys(filteredData);
               if (fields.length === 0) {
@@ -1673,12 +1684,11 @@ class GenericEntityService {
                 ...ENTITY_FIELDS.UNIVERSAL_IMMUTABLES,
                 ...immutableFields,
               ];
-              const updateData = {};
-              for (const [field, value] of Object.entries(op.data)) {
-                if (!allExcluded.includes(field) && value !== undefined) {
-                  updateData[field] = value;
-                }
-              }
+              const { kept: updateData } = partitionFields(
+                op.data,
+                (value, field) =>
+                  !allExcluded.includes(field) && value !== undefined,
+              );
 
               const fields = Object.keys(updateData);
               if (fields.length === 0) {
@@ -1837,3 +1847,4 @@ class GenericEntityService {
 }
 
 module.exports = GenericEntityService;
+module.exports.partitionFields = partitionFields;
