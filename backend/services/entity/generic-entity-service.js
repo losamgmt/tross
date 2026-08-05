@@ -369,6 +369,37 @@ class GenericEntityService {
     // Get metadata (throws if invalid entityName)
     const metadata = this._getMetadata(entityName);
 
+    const built = this._buildListQuery(entityName, metadata, options, rlsContext);
+    const { rows, total } = await this._executeListQuery(
+      built.countQuery,
+      built.dataQuery,
+      built.params,
+    );
+
+    return this._shapeListResult(
+      {
+        rows,
+        total,
+        page: built.page,
+        limit: built.limit,
+        appliedFilters: built.appliedFilters,
+        rlsApplied: built.rlsApplied,
+      },
+      entityName,
+      metadata,
+      options,
+      rlsContext,
+    );
+  }
+
+  /**
+   * Assemble the COUNT and DATA queries (with their shared params) for a list
+   * read. Pure: no DB access. Used only by findAll.
+   *
+   * @returns {{ countQuery: string, dataQuery: string, params: Array, page: number,
+   *   limit: number, appliedFilters: Object, rlsApplied: boolean }}
+   */
+  static _buildListQuery(entityName, metadata, options, rlsContext) {
     // Validate pagination params (gracefully caps invalid values)
     const { page, limit, offset } = PaginationService.validateParams(options);
     const includeInactive = options.includeInactive || false;
@@ -471,27 +502,66 @@ class GenericEntityService {
       hasJoins: joinClause.length > 0,
     });
 
-    // Get total count for pagination metadata
     const countQuery = `SELECT COUNT(*) as total FROM ${tableName} ${joinClause} ${whereClause}`;
-    const countResult = await db.query(countQuery, params);
-    const total = parseInt(countResult.rows[0].total);
 
-    // Get paginated entities with optional JOINs
-    const query = `
+    const dataQuery = `
       SELECT ${selectClause} 
       FROM ${tableName} 
       ${joinClause}
       ${whereClause} 
       ORDER BY ${sortClause}
-      LIMIT ${limit} OFFSET ${offset}
+      ${PaginationService.buildLimitClause(limit, offset)}
     `;
-    const result = await db.query(query, params);
 
+    return {
+      countQuery,
+      dataQuery,
+      params,
+      page,
+      limit,
+      appliedFilters: {
+        search: options.search || null,
+        filters: filterOptions,
+        sortBy: options.sortBy || defaultSort.field,
+        sortOrder: options.sortOrder || defaultSort.order,
+      },
+      rlsApplied,
+    };
+  }
+
+  /**
+   * Execute the COUNT and DATA queries for a list read. The only I/O in the
+   * findAll path.
+   *
+   * @returns {Promise<{ rows: Object[], total: number }>}
+   */
+  static async _executeListQuery(countQuery, dataQuery, params) {
+    const countResult = await db.query(countQuery, params);
+    const total = parseInt(countResult.rows[0].total, 10);
+
+    const result = await db.query(dataQuery, params);
+
+    return { rows: result.rows, total };
+  }
+
+  /**
+   * Shape executed list rows into the public findAll response. Redaction is the
+   * LAST step (ADR-011 output boundary), after auth-strip and relationship load.
+   *
+   * @returns {Promise<{ data: Object[], pagination: Object, appliedFilters: Object, rlsApplied: boolean }>}
+   */
+  static async _shapeListResult(
+    { rows, total, page, limit, appliedFilters, rlsApplied },
+    entityName,
+    metadata,
+    options,
+    rlsContext,
+  ) {
     // Generate pagination metadata
     const pagination = PaginationService.generateMetadata(page, limit, total);
 
     // Strip auth identifiers from all records
-    let filteredData = stripAuthIdentifiersArray(result.rows, metadata);
+    let filteredData = stripAuthIdentifiersArray(rows, metadata);
 
     // Load relationships if requested
     if (options.include && options.include.length > 0 && filteredData.length > 0) {
@@ -509,12 +579,7 @@ class GenericEntityService {
     return {
       data: filteredData,
       pagination,
-      appliedFilters: {
-        search: options.search || null,
-        filters: filterOptions,
-        sortBy: options.sortBy || defaultSort.field,
-        sortOrder: options.sortOrder || defaultSort.order,
-      },
+      appliedFilters,
       rlsApplied,
     };
   }
