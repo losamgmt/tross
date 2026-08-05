@@ -30,7 +30,7 @@ const {
 } = require('../../config/metadata-accessors');
 const { logger } = require('../../config/logger');
 const db = require('../../db/connection');
-const { toSafeInteger } = require('../../validators/type-coercion');
+const { toSafeId } = require('../../validators/type-coercion');
 const PaginationService = require('./pagination-service');
 const QueryBuilderService = require('./query-builder-service');
 const {
@@ -48,10 +48,7 @@ const {
 } = require('../../db/helpers/auth-identifier-sanitizer');
 // ADR-011: field-level read redaction at the service output boundary
 const { filterDataByRole } = require('../../utils/field-access-controller');
-const {
-  logEntityAudit,
-  isAuditEnabled,
-} = require('../../db/helpers/audit-helper');
+const { logEntityAuditIfEnabled } = require('../../db/helpers/audit-helper');
 const { loadRelationships } = require('../../db/helpers/relationship-loader');
 const {
   ENTITY_FIELDS,
@@ -359,9 +356,9 @@ class GenericEntityService {
     const metadata = this._getMetadata(entityName);
 
     // Validate and coerce ID to integer (throws on invalid)
-    // toSafeInteger enforces min=1 by default, so 0 and negatives throw
-    // silent: true - IDs from controllers are strings (URL params), coercion is expected
-    const safeId = toSafeInteger(id, 'id', { silent: true });
+    // toSafeId enforces min=1 by default, so 0 and negatives throw; it coerces
+    // silently because IDs from controllers are URL-param strings (expected)
+    const safeId = toSafeId(id);
 
     // Delegate to findByField using the primary key
     // Note: primaryKey (e.g., 'id') must be in filterableFields for this to work.
@@ -387,6 +384,49 @@ class GenericEntityService {
 
     // Redact non-readable fields for the caller's role (ADR-011 output boundary)
     return this._redactForContext(entity, metadata, rlsContext);
+  }
+
+  /**
+   * Append the RLS WHERE-clause fragment for a read operation to the given
+   * clause/param arrays, in place. Shared by findAll, findByField, and count;
+   * the write paths (update/delete) assemble RLS differently and stay inline.
+   *
+   * @param {string} entityName - Entity name (for debug logging).
+   * @param {string[]} whereClauses - WHERE fragments; RLS clause pushed if present.
+   * @param {Array} params - Query params; RLS params pushed if present.
+   * @param {Object|null} rlsContext - RLS context; when falsy, no-op returns false.
+   * @param {Object} metadata - Entity metadata for the RLS engine.
+   * @returns {boolean} Whether an RLS filter was applied (used by findAll's result).
+   */
+  static _appendRlsFilter(entityName, whereClauses, params, rlsContext, metadata) {
+    if (!rlsContext) {
+      return false;
+    }
+
+    // Determine operation: use context.operation if set, else default to 'read'
+    const operation = rlsContext.operation || 'read';
+    // New engine uses 1-indexed offset, pass allMetadata for parent access
+    const rlsFilter = buildRLSFilter(
+      rlsContext,
+      metadata,
+      operation,
+      params.length + 1,
+      allMetadata,
+    );
+
+    if (rlsFilter.clause) {
+      whereClauses.push(rlsFilter.clause);
+      params.push(...rlsFilter.params);
+    }
+
+    logger.debug('GenericEntityService RLS filter applied', {
+      entity: entityName,
+      operation,
+      rlsApplied: rlsFilter.applied,
+      rlsClause: rlsFilter.clause || '(none)',
+    });
+
+    return rlsFilter.applied;
   }
 
   /**
@@ -494,27 +534,13 @@ class GenericEntityService {
     const params = [...(search?.params || []), ...(filters?.params || [])];
 
     // Apply RLS filter if context provided (ADR-011: rule-based engine)
-    let rlsApplied = false;
-    if (rlsContext) {
-      // Determine operation: use context.operation if set, else default to 'read'
-      const operation = rlsContext.operation || 'read';
-      // New engine uses 1-indexed offset, pass allMetadata for parent access
-      const rlsFilter = buildRLSFilter(rlsContext, metadata, operation, params.length + 1, allMetadata);
-
-      if (rlsFilter.clause) {
-        whereClauses.push(rlsFilter.clause);
-        params.push(...rlsFilter.params);
-      }
-
-      rlsApplied = rlsFilter.applied;
-
-      logger.debug('GenericEntityService.findAll with RLS', {
-        entity: entityName,
-        operation,
-        rlsApplied: rlsFilter.applied,
-        rlsClause: rlsFilter.clause || '(none)',
-      });
-    }
+    const rlsApplied = this._appendRlsFilter(
+      entityName,
+      whereClauses,
+      params,
+      rlsContext,
+      metadata,
+    );
 
     const whereClause =
       whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
@@ -658,29 +684,7 @@ class GenericEntityService {
     const params = [value];
 
     // Apply RLS filter if context provided (ADR-011: rule-based engine)
-    if (rlsContext) {
-      // For findByField, use operation from context or default to 'read'
-      const operation = rlsContext.operation || 'read';
-      const rlsFilter = buildRLSFilter(
-        rlsContext,
-        metadata,
-        operation,
-        params.length + 1,
-        allMetadata,
-      );
-
-      if (rlsFilter.clause) {
-        whereClauses.push(rlsFilter.clause);
-        params.push(...rlsFilter.params);
-      }
-
-      logger.debug('GenericEntityService.findByField with RLS', {
-        entity: entityName,
-        field,
-        operation,
-        rlsApplied: rlsFilter.applied,
-      });
-    }
+    this._appendRlsFilter(entityName, whereClauses, params, rlsContext, metadata);
 
     // Build parameterized query with optional JOINs
     const query = `SELECT ${selectClause} FROM ${tableName} ${joinClause} WHERE ${whereClauses.join(' AND ')} LIMIT 1`;
@@ -751,22 +755,7 @@ class GenericEntityService {
     }
 
     // Apply RLS filter if context provided (ADR-011: rule-based engine)
-    if (rlsContext) {
-      // For count, use operation from context or default to 'read'
-      const operation = rlsContext.operation || 'read';
-      const rlsFilter = buildRLSFilter(rlsContext, metadata, operation, params.length + 1, allMetadata);
-
-      if (rlsFilter.clause) {
-        whereClauses.push(rlsFilter.clause);
-        params.push(...rlsFilter.params);
-      }
-
-      logger.debug('GenericEntityService.count with RLS', {
-        entity: entityName,
-        operation,
-        rlsApplied: rlsFilter.applied,
-      });
-    }
+    this._appendRlsFilter(entityName, whereClauses, params, rlsContext, metadata);
 
     // Build WHERE clause
     const whereClause =
@@ -978,14 +967,12 @@ class GenericEntityService {
     }
 
     // Log audit event (blocking to ensure audit is written before response)
-    if (options.auditContext && isAuditEnabled(entityName)) {
-      await logEntityAudit(
-        'create',
-        entityName,
-        filteredResult,
-        options.auditContext,
-      );
-    }
+    await logEntityAuditIfEnabled(
+      'create',
+      entityName,
+      filteredResult,
+      options.auditContext,
+    );
 
     // Redact non-readable fields for the caller's role (ADR-011 output boundary).
     // Applied AFTER hooks + audit, which require the full created record.
@@ -1048,7 +1035,7 @@ class GenericEntityService {
 
     // Validate and coerce ID (throws on invalid)
     // silent: true - IDs from controllers are strings, coercion is expected
-    const safeId = toSafeInteger(id, 'id', { silent: true });
+    const safeId = toSafeId(id);
 
     // Validate data is an object
     if (!data || typeof data !== 'object' || Array.isArray(data)) {
@@ -1282,15 +1269,13 @@ class GenericEntityService {
     }
 
     // Log audit event (blocking to ensure audit is written before response)
-    if (options.auditContext && isAuditEnabled(entityName)) {
-      await logEntityAudit(
-        'update',
-        entityName,
-        updatedRecord,
-        options.auditContext,
-        oldRecord,
-      );
-    }
+    await logEntityAuditIfEnabled(
+      'update',
+      entityName,
+      updatedRecord,
+      options.auditContext,
+      oldRecord,
+    );
 
     // Redact non-readable fields for the caller's role (ADR-011 output boundary).
     // Applied AFTER hooks + audit, which require the full updated record.
@@ -1336,7 +1321,7 @@ class GenericEntityService {
 
     // Validate and coerce ID (throws on invalid)
     // silent: true - IDs from controllers are strings, coercion is expected
-    const safeId = toSafeInteger(id, 'id', { silent: true });
+    const safeId = toSafeId(id);
 
     // =========================================================================
     // SYSTEM PROTECTION CHECK (before any DB operation)
@@ -1423,15 +1408,13 @@ class GenericEntityService {
       const filteredOldValues = stripAuthIdentifiers(recordBeforeDelete, metadata);
 
       // Log audit event (blocking to ensure audit is written before response)
-      if (options.auditContext && isAuditEnabled(entityName)) {
-        await logEntityAudit(
-          'delete',
-          entityName,
-          filteredResult,
-          options.auditContext,
-          filteredOldValues,
-        );
-      }
+      await logEntityAuditIfEnabled(
+        'delete',
+        entityName,
+        filteredResult,
+        options.auditContext,
+        filteredOldValues,
+      );
 
       return filteredResult;
     } catch (error) {
@@ -1569,7 +1552,7 @@ class GenericEntityService {
         );
 
       for (const { op, index } of accessChecks) {
-        const safeId = toSafeInteger(op.id, 'id', { silent: true });
+        const safeId = toSafeId(op.id);
         const existing = await this.findById(entityName, safeId, { rlsContext });
 
         if (!existing) {
@@ -1650,19 +1633,17 @@ class GenericEntityService {
               stats.created++;
 
               // Audit (blocking to ensure audit is written before transaction completes)
-              if (auditContext && isAuditEnabled(entityName)) {
-                await logEntityAudit(
-                  'create',
-                  entityName,
-                  result,
-                  auditContext,
-                );
-              }
+              await logEntityAuditIfEnabled(
+                'create',
+                entityName,
+                result,
+                auditContext,
+              );
               break;
             }
 
             case 'update': {
-              const safeId = toSafeInteger(op.id, 'id', { silent: true });
+              const safeId = toSafeId(op.id);
 
               // Fetch current record for audit oldValues
               const fetchQuery = `SELECT * FROM ${tableName} WHERE ${primaryKey} = $1`;
@@ -1714,21 +1695,19 @@ class GenericEntityService {
               stats.updated++;
 
               // Audit with oldValues (blocking to ensure audit is written before transaction completes)
-              if (auditContext && isAuditEnabled(entityName)) {
-                const filteredOld = stripAuthIdentifiers(oldRecord, metadata);
-                await logEntityAudit(
-                  'update',
-                  entityName,
-                  result,
-                  auditContext,
-                  filteredOld,
-                );
-              }
+              const filteredOld = stripAuthIdentifiers(oldRecord, metadata);
+              await logEntityAuditIfEnabled(
+                'update',
+                entityName,
+                result,
+                auditContext,
+                filteredOld,
+              );
               break;
             }
 
             case 'delete': {
-              const safeId = toSafeInteger(op.id, 'id', { silent: true });
+              const safeId = toSafeId(op.id);
 
               // Fetch record before delete for audit
               const fetchQuery = `SELECT * FROM ${tableName} WHERE ${primaryKey} = $1`;
@@ -1754,16 +1733,14 @@ class GenericEntityService {
               stats.deleted++;
 
               // Audit with oldValues (blocking to ensure audit is written before transaction completes)
-              if (auditContext && isAuditEnabled(entityName)) {
-                const filteredOld = stripAuthIdentifiers(oldRecord, metadata);
-                await logEntityAudit(
-                  'delete',
-                  entityName,
-                  result,
-                  auditContext,
-                  filteredOld,
-                );
-              }
+              const filteredOld = stripAuthIdentifiers(oldRecord, metadata);
+              await logEntityAuditIfEnabled(
+                'delete',
+                entityName,
+                result,
+                auditContext,
+                filteredOld,
+              );
               break;
             }
           }

@@ -23,6 +23,7 @@ jest.mock("../../../config/logger", () => ({
 
 const {
   logEntityAudit,
+  logEntityAuditIfEnabled,
   buildAuditContext,
   getClientIp,
   getUserAgent,
@@ -265,6 +266,60 @@ describe("db/helpers/audit-helper.js", () => {
           resourceId: 42,
         });
       });
+    });
+  });
+
+  // ==========================================================================
+  // logEntityAuditIfEnabled
+  // ==========================================================================
+  describe("logEntityAuditIfEnabled", () => {
+    const result = { id: 7, email: "a@b.com" };
+    const auditContext = { userId: 1, newValues: { email: "a@b.com" } };
+
+    test("delegates to logEntityAudit when context present and entity enabled", async () => {
+      await logEntityAuditIfEnabled("create", "customer", result, auditContext);
+
+      expect(auditService.log).toHaveBeenCalledTimes(1);
+      expect(auditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: AuditActions.CUSTOMER_CREATE,
+          resourceType: ResourceTypes.CUSTOMER,
+          resourceId: 7,
+        }),
+      );
+    });
+
+    test("passes oldValues through for updates", async () => {
+      const oldValues = { email: "old@b.com" };
+
+      await logEntityAuditIfEnabled(
+        "update",
+        "user",
+        { id: 42, email: "new@b.com" },
+        { userId: 1, newValues: { email: "new@b.com" } },
+        oldValues,
+      );
+
+      expect(auditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({ oldValues }),
+      );
+    });
+
+    test("is a no-op when auditContext is falsy", async () => {
+      await logEntityAuditIfEnabled("create", "customer", result, null);
+
+      expect(auditService.log).not.toHaveBeenCalled();
+    });
+
+    test("is a no-op when auditing is disabled for the entity", async () => {
+      await logEntityAuditIfEnabled(
+        "create",
+        "nonexistent",
+        result,
+        auditContext,
+      );
+
+      expect(auditService.log).not.toHaveBeenCalled();
     });
   });
 

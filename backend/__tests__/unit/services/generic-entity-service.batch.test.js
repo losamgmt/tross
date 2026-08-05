@@ -25,8 +25,7 @@ jest.mock("../../../db/helpers/cascade-helper", () => ({
 }));
 
 jest.mock("../../../db/helpers/audit-helper", () => ({
-  logEntityAudit: jest.fn(),
-  isAuditEnabled: jest.fn().mockReturnValue(true),
+  logEntityAuditIfEnabled: jest.fn(),
 }));
 
 const GenericEntityService = require("../../../services/entity/generic-entity-service");

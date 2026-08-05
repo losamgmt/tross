@@ -20,12 +20,10 @@ jest.mock("../../../config/logger", () => ({
   logger: require("../../mocks").createLoggerMock(),
 }));
 
-const mockLogEntityAudit = jest.fn();
-const mockIsAuditEnabled = jest.fn();
+const mockLogEntityAuditIfEnabled = jest.fn();
 
 jest.mock("../../../db/helpers/audit-helper", () => ({
-  logEntityAudit: mockLogEntityAudit,
-  isAuditEnabled: mockIsAuditEnabled,
+  logEntityAuditIfEnabled: mockLogEntityAuditIfEnabled,
 }));
 
 // ============================================================================
@@ -40,9 +38,6 @@ describe("GenericEntityService - Audit Logging", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-
-    // Default: audit is enabled for all entities
-    mockIsAuditEnabled.mockReturnValue(true);
 
     // Set up mock client for delete operations
     mockClient = {
@@ -79,7 +74,7 @@ describe("GenericEntityService - Audit Logging", () => {
       });
     });
 
-    test("should call logEntityAudit on create with auditContext", async () => {
+    test("should call logEntityAuditIfEnabled on create with auditContext", async () => {
       // Act
       await GenericEntityService.create(
         "customer",
@@ -93,8 +88,8 @@ describe("GenericEntityService - Audit Logging", () => {
       );
 
       // Assert
-      expect(mockLogEntityAudit).toHaveBeenCalledTimes(1);
-      expect(mockLogEntityAudit).toHaveBeenCalledWith(
+      expect(mockLogEntityAuditIfEnabled).toHaveBeenCalledTimes(1);
+      expect(mockLogEntityAuditIfEnabled).toHaveBeenCalledWith(
         "create",
         "customer",
         expect.objectContaining({ id: 1 }),
@@ -102,7 +97,7 @@ describe("GenericEntityService - Audit Logging", () => {
       );
     });
 
-    test("should NOT call logEntityAudit without auditContext", async () => {
+    test("delegates to logEntityAuditIfEnabled with the caller's (absent) context", async () => {
       // Act
       await GenericEntityService.create("customer", {
         first_name: "John",
@@ -111,11 +106,16 @@ describe("GenericEntityService - Audit Logging", () => {
         organization_name: "Test Co",
       });
 
-      // Assert
-      expect(mockLogEntityAudit).not.toHaveBeenCalled();
+      // Assert - the service always delegates; the helper owns the enabled/context guard
+      expect(mockLogEntityAuditIfEnabled).toHaveBeenCalledWith(
+        "create",
+        "customer",
+        expect.objectContaining({ id: 1 }),
+        undefined,
+      );
     });
 
-    test("should NOT call logEntityAudit with empty auditContext", async () => {
+    test("delegates to logEntityAuditIfEnabled with a null context (helper no-ops)", async () => {
       // Act
       await GenericEntityService.create(
         "customer",
@@ -128,28 +128,13 @@ describe("GenericEntityService - Audit Logging", () => {
         { auditContext: null },
       );
 
-      // Assert
-      expect(mockLogEntityAudit).not.toHaveBeenCalled();
-    });
-
-    test("should NOT call logEntityAudit if audit disabled for entity", async () => {
-      // Arrange
-      mockIsAuditEnabled.mockReturnValue(false);
-
-      // Act
-      await GenericEntityService.create(
+      // Assert - the service forwards the caller's (null) context; the helper no-ops
+      expect(mockLogEntityAuditIfEnabled).toHaveBeenCalledWith(
+        "create",
         "customer",
-        {
-          first_name: "John",
-          last_name: "Doe",
-          email: "test@example.com",
-          organization_name: "Test Co",
-        },
-        { auditContext: mockAuditContext },
+        expect.objectContaining({ id: 1 }),
+        null,
       );
-
-      // Assert
-      expect(mockLogEntityAudit).not.toHaveBeenCalled();
     });
 
     test("should return result even without auditContext", async () => {
@@ -197,7 +182,7 @@ describe("GenericEntityService - Audit Logging", () => {
       userAgent: "Test-Agent/1.0",
     };
 
-    test("should call logEntityAudit with old and new values", async () => {
+    test("should call logEntityAuditIfEnabled with old and new values", async () => {
       // Arrange - first query fetches old values, second updates, third re-fetches with JOINs
       db.query
         .mockResolvedValueOnce({ rows: [mockOldRecord], rowCount: 1 }) // findById for old values
@@ -213,8 +198,8 @@ describe("GenericEntityService - Audit Logging", () => {
       );
 
       // Assert
-      expect(mockLogEntityAudit).toHaveBeenCalledTimes(1);
-      expect(mockLogEntityAudit).toHaveBeenCalledWith(
+      expect(mockLogEntityAuditIfEnabled).toHaveBeenCalledTimes(1);
+      expect(mockLogEntityAuditIfEnabled).toHaveBeenCalledWith(
         "update",
         "customer",
         expect.objectContaining({ id: 1, phone: "555-9999" }),
@@ -223,17 +208,24 @@ describe("GenericEntityService - Audit Logging", () => {
       );
     });
 
-    test("should NOT call logEntityAudit without auditContext", async () => {
-      // Arrange - update + re-fetch
+    test("delegates to logEntityAuditIfEnabled even without auditContext", async () => {
+      // Arrange - oldRecord fetch + update + re-fetch
       db.query
+        .mockResolvedValueOnce({ rows: [mockOldRecord], rowCount: 1 }) // oldRecord findById
         .mockResolvedValueOnce({ rows: [{ id: 1 }], rowCount: 1 }) // update
         .mockResolvedValueOnce({ rows: [mockUpdatedRecord], rowCount: 1 }); // re-fetch
 
       // Act
       await GenericEntityService.update("customer", 1, { phone: "555-9999" });
 
-      // Assert
-      expect(mockLogEntityAudit).not.toHaveBeenCalled();
+      // Assert - the service delegates; the helper owns the enabled/context guard
+      expect(mockLogEntityAuditIfEnabled).toHaveBeenCalledWith(
+        "update",
+        "customer",
+        expect.objectContaining({ id: 1 }),
+        undefined,
+        expect.objectContaining({ id: 1 }),
+      );
     });
 
     test("should fetch old values for hooks even without auditContext", async () => {
@@ -267,7 +259,7 @@ describe("GenericEntityService - Audit Logging", () => {
 
       // Assert
       expect(result).toBeNull();
-      expect(mockLogEntityAudit).not.toHaveBeenCalled();
+      expect(mockLogEntityAuditIfEnabled).not.toHaveBeenCalled();
     });
   });
 
@@ -289,7 +281,7 @@ describe("GenericEntityService - Audit Logging", () => {
       userAgent: "Test-Agent/1.0",
     };
 
-    test("should call logEntityAudit with old values on delete", async () => {
+    test("should call logEntityAuditIfEnabled with old values on delete", async () => {
       // Arrange - transaction queries: BEGIN, SELECT, CASCADE, DELETE, COMMIT
       mockClient.query
         .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // BEGIN
@@ -304,8 +296,8 @@ describe("GenericEntityService - Audit Logging", () => {
       });
 
       // Assert
-      expect(mockLogEntityAudit).toHaveBeenCalledTimes(1);
-      expect(mockLogEntityAudit).toHaveBeenCalledWith(
+      expect(mockLogEntityAuditIfEnabled).toHaveBeenCalledTimes(1);
+      expect(mockLogEntityAuditIfEnabled).toHaveBeenCalledWith(
         "delete",
         "customer",
         expect.objectContaining({ id: 1 }),
@@ -314,7 +306,7 @@ describe("GenericEntityService - Audit Logging", () => {
       );
     });
 
-    test("should NOT call logEntityAudit without auditContext", async () => {
+    test("delegates to logEntityAuditIfEnabled even without auditContext", async () => {
       // Arrange
       mockClient.query
         .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // BEGIN
@@ -326,8 +318,14 @@ describe("GenericEntityService - Audit Logging", () => {
       // Act
       await GenericEntityService.delete("customer", 1);
 
-      // Assert
-      expect(mockLogEntityAudit).not.toHaveBeenCalled();
+      // Assert - the service delegates; the helper owns the enabled/context guard
+      expect(mockLogEntityAuditIfEnabled).toHaveBeenCalledWith(
+        "delete",
+        "customer",
+        expect.objectContaining({ id: 1 }),
+        undefined,
+        expect.objectContaining({ id: 1 }),
+      );
     });
 
     test("should return null for non-existent entity (no audit)", async () => {
@@ -344,26 +342,7 @@ describe("GenericEntityService - Audit Logging", () => {
 
       // Assert
       expect(result).toBeNull();
-      expect(mockLogEntityAudit).not.toHaveBeenCalled();
-    });
-
-    test("should NOT call logEntityAudit if audit disabled for entity", async () => {
-      // Arrange
-      mockIsAuditEnabled.mockReturnValue(false);
-      mockClient.query
-        .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // BEGIN
-        .mockResolvedValueOnce({ rows: [mockDeletedRecord], rowCount: 1 }) // SELECT
-        .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // CASCADE DELETE
-        .mockResolvedValueOnce({ rows: [mockDeletedRecord], rowCount: 1 }) // DELETE
-        .mockResolvedValueOnce({ rows: [], rowCount: 0 }); // COMMIT
-
-      // Act
-      await GenericEntityService.delete("customer", 1, {
-        auditContext: mockAuditContext,
-      });
-
-      // Assert
-      expect(mockLogEntityAudit).not.toHaveBeenCalled();
+      expect(mockLogEntityAuditIfEnabled).not.toHaveBeenCalled();
     });
   });
 
@@ -401,7 +380,7 @@ describe("GenericEntityService - Audit Logging", () => {
       );
 
       // Assert
-      expect(mockLogEntityAudit).toHaveBeenCalledWith(
+      expect(mockLogEntityAuditIfEnabled).toHaveBeenCalledWith(
         "create",
         "customer",
         expect.any(Object),
@@ -440,7 +419,7 @@ describe("GenericEntityService - Audit Logging", () => {
       );
 
       // Assert
-      expect(mockLogEntityAudit).toHaveBeenCalled();
+      expect(mockLogEntityAuditIfEnabled).toHaveBeenCalled();
     });
   });
 });

@@ -135,6 +135,32 @@ async function logEntityAudit(
 }
 
 /**
+ * Log an entity operation only when a caller-supplied audit context is present
+ * AND auditing is enabled for the entity.
+ *
+ * Collapses the `if (auditContext && isAuditEnabled(entity)) { await logEntityAudit(...) }`
+ * guard that every GenericEntityService mutation path repeated.
+ *
+ * @param {string} operation - 'create', 'update', or 'delete'
+ * @param {string} entityName - Entity name (e.g., 'user', 'customer')
+ * @param {Object} result - The operation result (contains id)
+ * @param {Object} [auditContext] - Audit context; when falsy, nothing is logged
+ * @param {Object} [oldValues=null] - Previous values (for update/delete)
+ * @returns {Promise<void>}
+ */
+async function logEntityAuditIfEnabled(
+  operation,
+  entityName,
+  result,
+  auditContext,
+  oldValues = null,
+) {
+  if (auditContext && isAuditEnabled(entityName)) {
+    await logEntityAudit(operation, entityName, result, auditContext, oldValues);
+  }
+}
+
+/**
  * Build audit context from an Express request
  *
  * Convenience function to extract audit-relevant fields from req
@@ -214,6 +240,7 @@ function isAuditEnabled(entityName) {
 
 module.exports = {
   logEntityAudit,
+  logEntityAuditIfEnabled,
   buildAuditContext,
   getClientIp,
   getUserAgent,

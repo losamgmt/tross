@@ -12,6 +12,7 @@
 
 const {
   toSafeInteger,
+  toSafeId,
   toSafeUserId,
   toSafeBoolean,
   toSafePagination,
@@ -162,6 +163,38 @@ describe("Type Coercion Validators - DEFENSIVE TESTING", () => {
         const safeInt = Number.MAX_SAFE_INTEGER;
         expect(toSafeInteger(safeInt, "id", { max: safeInt })).toBe(safeInt);
       });
+    });
+  });
+
+  // ============================================================================
+  // toSafeId - Silent id coercion wrapper over toSafeInteger
+  // ============================================================================
+
+  describe("toSafeId()", () => {
+    test("coerces a numeric string id to an integer", () => {
+      expect(toSafeId("7")).toBe(7);
+    });
+
+    test("accepts an integer id unchanged", () => {
+      expect(toSafeId(42)).toBe(42);
+    });
+
+    test("strips leading zeros like toSafeInteger", () => {
+      expect(toSafeId("007")).toBe(7);
+    });
+
+    test("rejects a non-numeric id with an 'id' message", () => {
+      expect(() => toSafeId("abc")).toThrow("id must be a valid integer");
+    });
+
+    test("rejects a zero or negative id (min 1) with an 'id' message", () => {
+      expect(() => toSafeId(0)).toThrow("id must be at least 1");
+      expect(() => toSafeId(-3)).toThrow("id must be at least 1");
+    });
+
+    test("rejects a missing id as required", () => {
+      expect(() => toSafeId(null)).toThrow("id is required");
+      expect(() => toSafeId(undefined)).toThrow("id is required");
     });
   });
 

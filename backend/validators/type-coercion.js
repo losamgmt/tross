@@ -133,6 +133,21 @@ function toSafeInteger(value, fieldName = 'id', options = {}) {
 }
 
 /**
+ * Coerce a value to a safe positive integer entity ID.
+ *
+ * Thin wrapper over toSafeInteger with the standard 'id' field name and silent
+ * mode (URL/param id coercion is routine, not noteworthy). Throws a 400 on an
+ * invalid id, exactly as toSafeInteger does.
+ *
+ * @param {*} value - Value to coerce (typically a URL param or op.id).
+ * @returns {number} Coerced positive integer id.
+ * @throws {AppError} 400 when the value is missing or not a valid integer id.
+ */
+function toSafeId(value) {
+  return toSafeInteger(value, 'id', { silent: true });
+}
+
+/**
  * Safely coerce a userId value (handles dev tokens)
  *
  * Dev tokens may provide string auth0_id instead of integer database ID.
@@ -517,6 +532,7 @@ function toSafeEmail(value, fieldName = 'email', options = {}) {
 
 module.exports = {
   toSafeInteger,
+  toSafeId,
   toSafeUserId,
   toSafeBoolean,
   toSafePagination,
