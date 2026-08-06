@@ -5,9 +5,7 @@
  *
  * Test Coverage:
  * - logEntityAudit: Core audit logging function
- * - buildAuditContext: Request context extraction
- * - getClientIp: IP extraction with proxy support
- * - getUserAgent: User agent extraction
+ * - logEntityAuditIfEnabled: Guarded audit logging (context + enabled)
  * - isAuditEnabled: Entity audit configuration check
  * - Constants re-exports
  */
@@ -24,9 +22,6 @@ jest.mock("../../../config/logger", () => ({
 const {
   logEntityAudit,
   logEntityAuditIfEnabled,
-  buildAuditContext,
-  getClientIp,
-  getUserAgent,
   isAuditEnabled,
   EntityToResourceType,
   EntityActionMap,
@@ -320,139 +315,6 @@ describe("db/helpers/audit-helper.js", () => {
       );
 
       expect(auditService.log).not.toHaveBeenCalled();
-    });
-  });
-
-  // ==========================================================================
-  // buildAuditContext
-  // ==========================================================================
-  describe("buildAuditContext", () => {
-    test("should extract all fields from request", () => {
-      const mockReq = {
-        user: { userId: 42 },
-        ip: "10.0.0.1",
-        headers: { "user-agent": "Test Browser" },
-      };
-
-      const context = buildAuditContext(mockReq, {
-        oldValues: { name: "Old" },
-        newValues: { name: "New" },
-      });
-
-      expect(context).toEqual({
-        userId: 42,
-        ipAddress: "10.0.0.1",
-        userAgent: "Test Browser",
-        oldValues: { name: "Old" },
-        newValues: { name: "New" },
-      });
-    });
-
-    test("should handle missing user gracefully", () => {
-      const mockReq = {
-        ip: "127.0.0.1",
-        headers: {},
-      };
-
-      const context = buildAuditContext(mockReq);
-
-      expect(context.userId).toBeNull();
-    });
-
-    test("should handle empty options", () => {
-      const mockReq = {
-        user: { userId: 1 },
-        ip: "127.0.0.1",
-        headers: { "user-agent": "Agent" },
-      };
-
-      const context = buildAuditContext(mockReq);
-
-      expect(context.oldValues).toBeNull();
-      expect(context.newValues).toBeNull();
-    });
-  });
-
-  // ==========================================================================
-  // getClientIp
-  // ==========================================================================
-  describe("getClientIp", () => {
-    test("should return null for null request", () => {
-      expect(getClientIp(null)).toBeNull();
-    });
-
-    test("should return null for undefined request", () => {
-      expect(getClientIp(undefined)).toBeNull();
-    });
-
-    test("should extract IP from X-Forwarded-For header", () => {
-      const req = {
-        headers: {
-          "x-forwarded-for": "203.0.113.195, 70.41.3.18, 150.172.238.178",
-        },
-        ip: "10.0.0.1",
-      };
-
-      expect(getClientIp(req)).toBe("203.0.113.195");
-    });
-
-    test("should handle single IP in X-Forwarded-For", () => {
-      const req = {
-        headers: { "x-forwarded-for": "192.168.1.100" },
-      };
-
-      expect(getClientIp(req)).toBe("192.168.1.100");
-    });
-
-    test("should fall back to req.ip", () => {
-      const req = {
-        headers: {},
-        ip: "172.16.0.1",
-      };
-
-      expect(getClientIp(req)).toBe("172.16.0.1");
-    });
-
-    test("should fall back to connection.remoteAddress", () => {
-      const req = {
-        headers: {},
-        connection: { remoteAddress: "::1" },
-      };
-
-      expect(getClientIp(req)).toBe("::1");
-    });
-
-    test("should return null if no IP available", () => {
-      const req = { headers: {} };
-
-      expect(getClientIp(req)).toBeNull();
-    });
-  });
-
-  // ==========================================================================
-  // getUserAgent
-  // ==========================================================================
-  describe("getUserAgent", () => {
-    test("should return null for null request", () => {
-      expect(getUserAgent(null)).toBeNull();
-    });
-
-    test("should return null for undefined request", () => {
-      expect(getUserAgent(undefined)).toBeNull();
-    });
-
-    test("should extract user-agent header", () => {
-      const req = {
-        headers: { "user-agent": "Mozilla/5.0 (Windows NT 10.0)" },
-      };
-
-      expect(getUserAgent(req)).toBe("Mozilla/5.0 (Windows NT 10.0)");
-    });
-
-    test("should return null if no user-agent header", () => {
-      const req = { headers: {} };
-
-      expect(getUserAgent(req)).toBeNull();
     });
   });
 

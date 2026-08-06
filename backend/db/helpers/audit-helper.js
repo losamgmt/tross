@@ -161,62 +161,6 @@ async function logEntityAuditIfEnabled(
 }
 
 /**
- * Build audit context from an Express request
- *
- * Convenience function to extract audit-relevant fields from req
- *
- * @param {Object} req - Express request object
- * @param {Object} [options] - Additional options
- * @param {Object} [options.oldValues] - Previous values (for update/delete)
- * @param {Object} [options.newValues] - New values (for create/update)
- * @returns {Object} Audit context ready for logEntityAudit
- *
- * @example
- *   const auditContext = buildAuditContext(req, {
- *     newValues: { email: 'new@example.com' }
- *   });
- */
-function buildAuditContext(req, options = {}) {
-  return {
-    userId: req.user?.userId || null,
-    ipAddress: getClientIp(req),
-    userAgent: getUserAgent(req),
-    oldValues: options.oldValues || null,
-    newValues: options.newValues || null,
-  };
-}
-
-/**
- * Extract client IP from request
- * Handles proxy headers (X-Forwarded-For) for production deployments
- */
-function getClientIp(req) {
-  if (!req) {
-    return null;
-  }
-
-  // Check proxy headers first
-  const forwarded = req.headers?.['x-forwarded-for'];
-  if (forwarded) {
-    // X-Forwarded-For can be comma-separated list; take first
-    return forwarded.split(',')[0].trim();
-  }
-
-  // Fall back to direct connection
-  return req.ip || req.connection?.remoteAddress || null;
-}
-
-/**
- * Extract user agent from request
- */
-function getUserAgent(req) {
-  if (!req) {
-    return null;
-  }
-  return req.headers?.['user-agent'] || null;
-}
-
-/**
  * Check if audit logging should be performed for an entity
  *
  * Some entities may be configured to skip audit logging
@@ -241,9 +185,6 @@ function isAuditEnabled(entityName) {
 module.exports = {
   logEntityAudit,
   logEntityAuditIfEnabled,
-  buildAuditContext,
-  getClientIp,
-  getUserAgent,
   isAuditEnabled,
   // Re-export constants for convenience (tests, etc.)
   // Original definitions are in services/audit-constants.js
