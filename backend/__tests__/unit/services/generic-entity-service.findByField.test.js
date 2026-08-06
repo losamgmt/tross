@@ -4,20 +4,12 @@
  * Tests the findByField method for looking up entities by arbitrary fields
  */
 
-jest.mock("../../../db/connection", () => ({
-  query: jest.fn(),
-  pool: {
-    connect: jest.fn(),
-  },
-}));
+jest.mock("../../../db/connection", () =>
+  require("../../mocks").createDBMock(),
+);
 
 jest.mock("../../../config/logger", () => ({
-  logger: {
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-  },
+  logger: require("../../mocks").createLoggerMock(),
 }));
 
 const GenericEntityService = require("../../../services/entity/generic-entity-service");
