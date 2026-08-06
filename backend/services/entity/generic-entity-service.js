@@ -91,6 +91,9 @@ function partitionFields(data, predicate) {
  */
 const VALID_ENTITIES = Object.keys(allMetadata);
 
+// Default list sort when an entity declares no defaultSort in metadata.
+const DEFAULT_SORT = Object.freeze({ field: 'id', order: 'ASC' });
+
 class GenericEntityService {
   // ============================================================================
   // PRIVATE HELPERS
@@ -351,7 +354,7 @@ class GenericEntityService {
    * @param {string} [options.sortOrder] - 'ASC' or 'DESC'
    * @param {string[]} [options.include] - Relationship names to eager-load
    * @param {Object} [options.rlsContext] - ADR-011 RLS context ({ role, userId, operation, *_profile_id }); omit for internal/system reads (no filtering)
-   * @returns {Promise<Object>} { data: Entity[], pagination: {...}, appliedFilters: {...} }
+   * @returns {Promise<Object>} { data, pagination, appliedFilters, rlsApplied } — rlsApplied = RLS rules were EVALUATED (not that rows were filtered)
    *
    * @example
    *   // Internal/system read (no RLS filtering)
@@ -407,7 +410,7 @@ class GenericEntityService {
     // Extract query-building metadata
     const {
       tableName,
-      defaultSort = { field: 'id', order: 'ASC' },
+      defaultSort = DEFAULT_SORT,
       defaultIncludes = [],
       relationships = {},
     } = metadata;
@@ -581,6 +584,7 @@ class GenericEntityService {
       data: filteredData,
       pagination,
       appliedFilters,
+      // rlsApplied = RLS rules were EVALUATED for this read, not that rows were filtered.
       rlsApplied,
     };
   }
@@ -1062,7 +1066,7 @@ class GenericEntityService {
         .map(([name]) => name)
       : [];
 
-    const { updates, values, hasUpdates } = buildUpdateClause(
+    const { updates, values: updateValues, hasUpdates } = buildUpdateClause(
       filteredData,
       immutableFields,
       { jsonbFields },
@@ -1154,8 +1158,9 @@ class GenericEntityService {
       }
     }
 
-    // Add ID as the last parameter
-    values.push(safeId);
+    // Full param list = SET values (from buildUpdateClause) + the id; a fresh
+    // array so buildUpdateClause's return is not mutated.
+    const values = [...updateValues, safeId];
 
     // Row-scope the write by RLS (defense-in-depth): even if a caller reaches
     // update() without a route-level access pre-check, an out-of-scope row matches
