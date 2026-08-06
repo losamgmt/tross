@@ -546,13 +546,57 @@ test("should calculate total price", () => {
 
 ### Mocking External Dependencies
 
-```javascript
-// Mock database
-jest.mock("../../../db/connection");
-const db = require("../../../db/connection");
+Backend unit tests mock side-effecting dependencies (database, logger, audit,
+peer services) through the **centralized smart-mock factories** in
+`backend/__tests__/mocks/`. Import them from the package index
+(`require('<relative>/mocks')`), not from the individual mock files, so a single
+canonical implementation backs every suite.
 
-db.query.mockResolvedValue({ rows: [{ id: 1, name: "Test" }] });
+**Canonical pattern (respects Jest hoisting).** `jest.mock()` calls are hoisted
+above imports, so the factory must be required _inside_ the mock callback — a
+top-level `const { createDBMock } = require('../../mocks')` would execute too
+late to be used:
+
+```javascript
+// __tests__/unit/services/foo.test.js  ('../../mocks' -> __tests__/mocks)
+jest.mock("../../../db/connection", () =>
+  require("../../mocks").createDBMock(),
+);
+jest.mock("../../../config/logger", () => ({
+  logger: require("../../mocks").createLoggerMock(),
+}));
+
+// Imports come AFTER the mocks
+const db = require("../../../db/connection");
+const FooService = require("../../../services/foo-service");
+
+// Per-test overrides
+db.query.mockResolvedValueOnce({ rows: [{ id: 1 }], rowCount: 1 });
 ```
+
+**Primary factories** (all re-exported from `__tests__/mocks`):
+
+| Factory                                     | Replaces                       | Notes                                                                                                                                                                                    |
+| ------------------------------------------- | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `createDBMock({ rows, count })`             | `db/connection`                | Detects SELECT/COUNT/INSERT/UPDATE/DELETE and returns a realistic `{ rows, rowCount, command }`. Transaction-aware: `getClient()` yields a client whose `BEGIN/COMMIT/ROLLBACK` auto-resolve; reach it via `db.__getMockClient()`. |
+| `createFailingDBMock(error)`                | `db/connection`                | Every `query`/`getClient` rejects — for connection-failure paths.                                                                                                                        |
+| `createRetryableDBMock(failCount, res)`     | `db/connection`                | Fails N times (deadlock `40P01`) then succeeds — for retry logic.                                                                                                                        |
+| `createLoggerMock({ silent })`              | `config/logger` (`.logger`)    | `info/warn/error/debug` jest.fns, silent by default.                                                                                                                                     |
+| `createAuditMock({ onAudit })`              | audit service                  | `logCreate/logUpdate/logDelete/logAccess`.                                                                                                                                              |
+| `createQueryBuilderMock()` / `createPaginationMock()` | entity query/pagination services | Metadata-driven SQL-clause and pagination behavior; each accepts an `overrides` escape hatch for error simulation.                                                                       |
+| `createMockClient()` + `mockSuccessfulTransaction` / `mockFailedTransaction` | pg client        | Fine-grained transaction control when `createDBMock`'s defaults are not enough.                                                                                                         |
+
+**When to hand-roll instead of using a factory:**
+
+- The dependency is a **pure function** with no side effects (e.g.
+  `PaginationService`, `QueryBuilderService` when testing _through_ a service) —
+  prefer the real module; do not mock it at all.
+- You need one bespoke return the factory does not model — reach for the
+  factory's `overrides` option first, and only inline a `jest.fn()` when that
+  does not fit.
+- Avoid the bare auto-mock (`jest.mock("../../../db/connection")` with no
+  factory). It discards the smart query-shape behavior and forces every test to
+  re-stub `db.query` — exactly the drift this standard removes.
 
 ### Testing Async Code
 
