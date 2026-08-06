@@ -22,6 +22,11 @@ const {
   createQueryBuilderMock,
   createPaginationMock,
   createSmartMocks,
+  createMockAuditService,
+  createMockPaginationService,
+  resetAuditServiceMocks,
+  resetPaginationServiceMocks,
+  mockUserDataServiceFindOrCreateUser,
 } = require("./service-mocks");
 
 // Smart database mocks (ENHANCED - supports both db.query AND db.getClient)
@@ -35,6 +40,8 @@ const {
   mockFailedTransaction,
   mockRecordNotFound,
   transactionMatchers,
+  createMockDb,
+  resetDbMocks,
 } = require("./db-mocks");
 
 // Smart utility mocks
@@ -45,9 +52,6 @@ const {
 } = require("./utility-mocks");
 
 // Legacy mocks (for backward compatibility)
-const dbMocksLegacy = require("./db.mock");
-// modelMocks removed - models no longer used (GenericEntityService replaces them)
-const serviceMocks = require("./services.mock");
 const middlewareMocks = require("./middleware.mock");
 const loggerMocks = require("./logger.mock");
 const fixtures = require("../fixtures");
@@ -74,9 +78,16 @@ module.exports = {
   createAuditMock,
   createMetadataMock,
 
+  // Bare factories consumed by the shared test-setup + auth suites
+  createMockDb,
+  resetDbMocks,
+  createMockAuditService,
+  createMockPaginationService,
+  resetAuditServiceMocks,
+  resetPaginationServiceMocks,
+  mockUserDataServiceFindOrCreateUser,
+
   // Legacy exports (for backward compatibility)
-  ...dbMocksLegacy,
-  ...serviceMocks,
   ...middlewareMocks,
   ...loggerMocks,
   ...fixtures,

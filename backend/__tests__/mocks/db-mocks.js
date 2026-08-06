@@ -341,6 +341,32 @@ const transactionMatchers = {
   },
 };
 
+/**
+ * Create a bare database connection mock (query/connect/end jest.fns).
+ * Simpler than createDBMock (no smart query-shape behavior); consumed by the
+ * shared test-setup helper.
+ *
+ * @returns {Object} Mock db connection
+ */
+function createMockDb() {
+  return {
+    query: jest.fn(),
+    connect: jest.fn(),
+    end: jest.fn(),
+  };
+}
+
+/**
+ * Reset a bare db mock created by createMockDb().
+ *
+ * @param {Object} db - Database mock instance
+ */
+function resetDbMocks(db) {
+  db.query.mockReset();
+  db.connect.mockReset();
+  db.end.mockReset();
+}
+
 module.exports = {
   createDBMock,
   createFailingDBMock,
@@ -351,4 +377,6 @@ module.exports = {
   mockFailedTransaction,
   mockRecordNotFound,
   transactionMatchers,
+  createMockDb,
+  resetDbMocks,
 };

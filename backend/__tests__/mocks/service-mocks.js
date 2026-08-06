@@ -309,8 +309,92 @@ function createSmartMocks(options = {}) {
   };
 }
 
+/**
+ * Create a bare AuditService mock (all methods as jest.fns).
+ *
+ * @returns {Object} Mocked AuditService
+ */
+function createMockAuditService() {
+  return {
+    log: jest.fn(),
+    logCreate: jest.fn(),
+    logUpdate: jest.fn(),
+    logDelete: jest.fn(),
+    logAuth: jest.fn(),
+    logError: jest.fn(),
+  };
+}
+
+/**
+ * Create a bare PaginationService mock (all methods as jest.fns).
+ *
+ * @returns {Object} Mocked PaginationService
+ */
+function createMockPaginationService() {
+  return {
+    validateParams: jest.fn(),
+    generateMetadata: jest.fn(),
+    buildLimitClause: jest.fn(),
+    paginate: jest.fn(),
+  };
+}
+
+/**
+ * Reset all AuditService mocks.
+ *
+ * @param {Object} auditService - AuditService mock instance
+ */
+function resetAuditServiceMocks(auditService) {
+  auditService.log.mockReset();
+  auditService.logCreate.mockReset();
+  auditService.logUpdate.mockReset();
+  auditService.logDelete.mockReset();
+  auditService.logAuth.mockReset();
+  auditService.logError.mockReset();
+}
+
+/**
+ * Reset all PaginationService mocks.
+ *
+ * @param {Object} paginationService - PaginationService mock instance
+ */
+function resetPaginationServiceMocks(paginationService) {
+  paginationService.validateParams.mockReset();
+  paginationService.generateMetadata.mockReset();
+  paginationService.buildLimitClause.mockReset();
+  paginationService.paginate.mockReset();
+}
+
+/**
+ * Mock UserDataService.findOrCreateUser to resolve with a user.
+ *
+ * @param {Object} userDataService - UserDataService mock
+ * @param {Object} user - User object to return (defaults to an auth0 user)
+ */
+function mockUserDataServiceFindOrCreateUser(
+  userDataService,
+  user = {
+    id: 1,
+    auth0_id: "auth0|12345",
+    email: "user@auth0.com",
+    first_name: "Test",
+    last_name: "User",
+    role: "technician",
+    is_active: true,
+    provider: "auth0",
+    name: "Test User",
+  },
+) {
+  userDataService.findOrCreateUser.mockResolvedValue(user);
+}
+
 module.exports = {
   createQueryBuilderMock,
   createPaginationMock,
   createSmartMocks,
+  createMockAuditService,
+  createMockPaginationService,
+  resetAuditServiceMocks,
+  resetPaginationServiceMocks,
+  mockUserDataServiceFindOrCreateUser,
 };

@@ -18,7 +18,7 @@ const {
 const AppConfig = require("../../config/app-config");
 const {
   mockUserDataServiceFindOrCreateUser,
-} = require("../mocks/services.mock");
+} = require("../mocks/service-mocks");
 const { TEST_JWT_SECRET } = require("../../config/test-constants");
 
 // Mock the UserDataService (static class)

@@ -22,7 +22,7 @@ const {
 } = require("../../../middleware/auth");
 const {
   mockUserDataServiceFindOrCreateUser,
-} = require("../../mocks/services.mock");
+} = require("../../mocks/service-mocks");
 
 // Mock the UserDataService (static class)
 jest.mock("../../../services/utils/user-data", () => ({
