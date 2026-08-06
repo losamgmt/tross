@@ -240,6 +240,7 @@ class GenericEntityService {
    * @param {Object} [options={}] - Options bag
    * @param {string[]} [options.include] - Relationship names to eager-load
    * @param {Object} [options.rlsContext] - ADR-011 RLS context ({ role, userId, operation, *_profile_id }); omit for internal/system reads (no filtering)
+   * @param {Object} [options.client] - Optional pg client to run the read on a caller's open transaction (batch); defaults to the pool. Relationship eager-loading (include) still uses the pool.
    * @returns {Promise<Object|null>} Entity record or null if not found/not authorized
    * @throws {Error} If entityName is invalid or id cannot be coerced to integer
    *
@@ -259,7 +260,7 @@ class GenericEntityService {
    *   });
    */
   static async findById(entityName, id, options = {}) {
-    const { include = null, rlsContext = null } = options || {};
+    const { include = null, rlsContext = null, client = null } = options || {};
 
     // Get metadata to find primary key name
     const metadata = this.requireEntityMetadata(entityName);
@@ -277,7 +278,7 @@ class GenericEntityService {
       entityName,
       metadata.primaryKey,
       safeId,
-      { rlsContext },
+      { rlsContext, client },
     );
 
     // Load relationships if requested and entity found
@@ -606,6 +607,7 @@ class GenericEntityService {
    * @param {any} value - Value to match
    * @param {Object} [options={}] - Options bag
    * @param {Object} [options.rlsContext] - ADR-011 RLS context; omit for internal/system reads
+   * @param {Object} [options.client] - Optional pg client to run the read on a caller's open transaction (batch); defaults to the pool
    * @returns {Promise<Object|null>} Entity record or null if not found
    * @throws {Error} If entityName invalid or field not in filterableFields
    *
@@ -614,7 +616,7 @@ class GenericEntityService {
    *   // Returns: { id: 1, email: 'test@example.com', ... } or null
    */
   static async findByField(entityName, field, value, options = {}) {
-    const { rlsContext = null } = options || {};
+    const { rlsContext = null, client = null } = options || {};
     // Get metadata (throws if invalid entityName)
     const metadata = this.requireEntityMetadata(entityName);
 
@@ -673,8 +675,9 @@ class GenericEntityService {
       hasJoins: joinClause.length > 0,
     });
 
-    // Execute query
-    const result = await db.query(query, params);
+    // Execute query (use the caller's transaction client when threaded, else the pool)
+    const exec = client || db;
+    const result = await exec.query(query, params);
 
     // Return first row or null (with auth identifiers stripped)
     const record = result.rows[0] || null;
@@ -780,6 +783,7 @@ class GenericEntityService {
    * @param {boolean} [options.skipHooks] - Skip hook evaluation (prevents recursion)
    * @param {string|number} [options.user] - User ID for hook/audit context
    * @param {Object} [options.rlsContext] - ADR-011 RLS context; redacts the returned record to the caller's role (omit for internal/system callers → full record)
+   * @param {Object} [options.client] - Optional pg client to run the INSERT on a caller's open transaction (batch); defaults to the pool
    * @returns {Promise<Object>} Created entity with all fields (RETURNING *)
    * @throws {Error} If entityName invalid, required fields missing, or DB error
    *
@@ -827,7 +831,7 @@ class GenericEntityService {
     if (namePattern === NAME_PATTERNS.COMPUTED) {
       const identifierField = IDENTIFIER_FIELDS[entityName];
       if (identifierField && !cleanData[identifierField]) {
-        cleanData[identifierField] = await generateIdentifier(entityName);
+        cleanData[identifierField] = await generateIdentifier(entityName, options.client);
         logger.debug('Auto-generated identifier for COMPUTED entity', {
           entity: entityName,
           field: identifierField,
@@ -901,8 +905,9 @@ class GenericEntityService {
       fields,
     });
 
-    // Execute query
-    const result = await db.query(query, values);
+    // Execute query (use the caller's transaction client when threaded, else the pool)
+    const exec = options.client || db;
+    const result = await exec.query(query, values);
 
     logger.info(`${entityName} created`, {
       id: result.rows[0]?.[metadata.primaryKey],
@@ -979,6 +984,7 @@ class GenericEntityService {
    * @param {boolean} [options.skipHooks] - Skip hook evaluation (prevents recursion)
    * @param {string|number} [options.user] - User ID for hook/audit context
    * @param {Object} [options.rlsContext] - ADR-011 RLS context; row-scopes the update (out-of-scope → null → 404) AND redacts the returned record to the caller's role. Omit for internal/system callers (no scoping/redaction).
+   * @param {Object} [options.client] - Optional pg client to run the UPDATE and its re-fetch on a caller's open transaction (batch); defaults to the pool
    * @returns {Promise<Object|null>} Updated entity, or null if not found or not authorized by RLS
    * @throws {Error} If entityName invalid, id invalid, or no valid fields provided
    *
@@ -1085,7 +1091,9 @@ class GenericEntityService {
     // Single fetch used by: system protection check, beforeChange hooks,
     // afterChange hooks, and audit old-vs-new comparison
     // =========================================================================
-    const oldRecord = await this.findById(entityName, safeId);
+    const oldRecord = await this.findById(entityName, safeId, {
+      client: options.client,
+    });
     if (!oldRecord) {
       return null; // Record doesn't exist
     }
@@ -1197,8 +1205,9 @@ class GenericEntityService {
       fieldsUpdated: updates.length,
     });
 
-    // Execute query
-    const result = await db.query(query, values);
+    // Execute query (use the caller's transaction client when threaded, else the pool)
+    const exec = options.client || db;
+    const result = await exec.query(query, values);
 
     // Return null if not found (no rows updated)
     if (result.rows.length === 0) {
@@ -1212,7 +1221,9 @@ class GenericEntityService {
 
     // Re-fetch using findById to include JOINs (defaultIncludes)
     // This ensures the returned record has all relationship data
-    const updatedRecord = await this.findById(entityName, safeId);
+    const updatedRecord = await this.findById(entityName, safeId, {
+      client: options.client,
+    });
 
     // =========================================================================
     // EVALUATE AFTER-CHANGE HOOKS (trigger actions, cannot block)
@@ -1269,6 +1280,7 @@ class GenericEntityService {
    * @param {Object} [options={}] - Additional options
    * @param {Object} [options.auditContext] - Audit context from buildAuditContext()
    * @param {Object} [options.rlsContext] - ADR-011 RLS context; row-scopes the delete so a caller cannot delete rows outside their access scope (out-of-scope → null → 404). Omit for internal/system callers (no filtering).
+   * @param {Object} [options.client] - Optional pg client to run the delete on a caller's open transaction (batch); when present, the caller owns BEGIN/COMMIT/ROLLBACK and release, and this method does not manage its own transaction. Defaults to the pool.
    * @returns {Promise<Object|null>} Deleted entity, or null if not found or not authorized by RLS
    * @throws {Error} If entityName invalid, id invalid, or DB constraint violation
    *
@@ -1289,7 +1301,7 @@ class GenericEntityService {
    *   });
    */
   static async delete(entityName, id, options = {}) {
-    const { rlsContext = null } = options || {};
+    const { rlsContext = null, client: externalClient = null } = options || {};
 
     // Get metadata (throws if invalid entityName)
     const metadata = this.requireEntityMetadata(entityName);
@@ -1305,7 +1317,9 @@ class GenericEntityService {
     // =========================================================================
     if (systemProtected?.preventDelete) {
       // Need to fetch record to check if it's protected
-      const record = await this.findById(entityName, safeId);
+      const record = await this.findById(entityName, safeId, {
+        client: externalClient,
+      });
 
       if (record) {
         // Use protectedByField if specified, otherwise fall back to identityField
@@ -1323,11 +1337,16 @@ class GenericEntityService {
       }
     }
 
-    // Start transaction for cascade + delete atomicity
-    const client = await db.getClient();
+    // Transaction handling: when a caller threads their own client (batch), run
+    // on it and let the caller own BEGIN/COMMIT/ROLLBACK + release. Otherwise
+    // open and manage our own transaction for cascade + delete atomicity.
+    const ownTransaction = !externalClient;
+    const client = externalClient || (await db.getClient());
 
     try {
-      await client.query('BEGIN');
+      if (ownTransaction) {
+        await client.query('BEGIN');
+      }
 
       // Check the record exists AND is within the caller's RLS scope.
       // Applying RLS here (operation 'delete') prevents deleting rows outside the
@@ -1355,7 +1374,9 @@ class GenericEntityService {
       const checkResult = await client.query(checkQuery, checkParams);
 
       if (checkResult.rows.length === 0) {
-        await client.query('ROLLBACK');
+        if (ownTransaction) {
+          await client.query('ROLLBACK');
+        }
         return null;
       }
 
@@ -1373,7 +1394,9 @@ class GenericEntityService {
       const deleteQuery = `DELETE FROM ${tableName} WHERE ${primaryKey} = $1 RETURNING *`;
       const deleteResult = await client.query(deleteQuery, [safeId]);
 
-      await client.query('COMMIT');
+      if (ownTransaction) {
+        await client.query('COMMIT');
+      }
 
       logger.info(`${entityName} deleted`, {
         id: safeId,
@@ -1395,7 +1418,9 @@ class GenericEntityService {
 
       return filteredResult;
     } catch (error) {
-      await client.query('ROLLBACK');
+      if (ownTransaction) {
+        await client.query('ROLLBACK');
+      }
 
       logger.error(`Error deleting ${entityName}`, {
         error: error.message,
@@ -1404,7 +1429,9 @@ class GenericEntityService {
 
       throw error;
     } finally {
-      client.release();
+      if (ownTransaction) {
+        client.release();
+      }
     }
   }
 

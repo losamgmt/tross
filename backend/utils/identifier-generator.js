@@ -45,6 +45,7 @@ function formatIdentifier(prefix, year, sequence) {
  * Uses raw pg pool for database queries.
  *
  * @param {string} entityType - Entity type ('work_order', 'invoice', 'contract')
+ * @param {Object} [client] - Optional pg client to read the current max on a caller's open transaction (batch), so sequential in-transaction creates see each other; defaults to the pool
  * @returns {Promise<string>} Generated identifier
  * @throws {Error} If entity type is unknown
  *
@@ -52,7 +53,7 @@ function formatIdentifier(prefix, year, sequence) {
  * await generateIdentifier('work_order') // 'WO-2026-0001'
  * await generateIdentifier('invoice') // 'INV-2026-0001'
  */
-async function generateIdentifier(entityType) {
+async function generateIdentifier(entityType, client = null) {
   const prefix = getEntityPrefix(entityType);
   const identifierField = getIdentifierField(entityType);
   const tableName = getTableName(entityType);
@@ -73,7 +74,9 @@ async function generateIdentifier(entityType) {
   const safeField = sanitizeIdentifier(identifierField, 'identifier field');
 
   // Find the highest sequence number for this year using raw pg
-  const result = await db.query(
+  // Use the caller's transaction client when threaded (batch), else the pool
+  const exec = client || db;
+  const result = await exec.query(
     `SELECT ${safeField} FROM ${safeTable} 
      WHERE ${safeField} LIKE $1 
      ORDER BY ${safeField} DESC 
