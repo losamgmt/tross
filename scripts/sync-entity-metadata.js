@@ -42,6 +42,7 @@ const {
   getNavigation,
   getFeatures,
   getJunction,
+  getEntityDisplayField,
 } = require("../backend/config/metadata-accessors");
 
 // Import all backend metadata
@@ -102,7 +103,7 @@ function transformField(fieldName, fieldDef, enums, allModels) {
   // Helper to get display field for a related entity
   const getDisplayFieldForEntity = (entityName) => {
     const relatedMeta = allModels?.[entityName];
-    return relatedMeta?.displayField || relatedMeta?.identityField || "name";
+    return relatedMeta ? getEntityDisplayField(relatedMeta) : "name";
   };
 
   // Foreign key handling - SINGLE PATH: type + references required
