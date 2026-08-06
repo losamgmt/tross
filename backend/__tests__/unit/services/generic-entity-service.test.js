@@ -11,7 +11,7 @@
  * - QueryBuilderService: NOT mocked (pure functions, no side effects)
  *
  * Coverage:
- * - Step 1.1: _getMetadata - metadata lookup foundation
+ * - Step 1.1: requireEntityMetadata - metadata lookup foundation
  * - Step 1.2: findById - single entity retrieval by primary key
  * - Step 1.3: findAll - paginated list retrieval with search/filter/sort
  * - Step 1.4: create - new entity creation with field validation
@@ -45,17 +45,17 @@ const hookService = require("../../../services/entity/hook-service");
 
 describe("GenericEntityService", () => {
   // ==========================================================================
-  // _getMetadata TESTS
+  // requireEntityMetadata TESTS
   // ==========================================================================
 
-  describe("_getMetadata", () => {
+  describe("requireEntityMetadata", () => {
     // ------------------------------------------------------------------------
     // Happy Path: Valid Entities
     // ------------------------------------------------------------------------
 
     describe("valid entities", () => {
       test('should return metadata for "user" entity', () => {
-        const metadata = GenericEntityService._getMetadata("user");
+        const metadata = GenericEntityService.requireEntityMetadata("user");
 
         expect(metadata).toBeDefined();
         expect(metadata.tableName).toBe("users");
@@ -64,7 +64,7 @@ describe("GenericEntityService", () => {
       });
 
       test('should return metadata for "role" entity', () => {
-        const metadata = GenericEntityService._getMetadata("role");
+        const metadata = GenericEntityService.requireEntityMetadata("role");
 
         expect(metadata).toBeDefined();
         expect(metadata.tableName).toBe("roles");
@@ -72,7 +72,7 @@ describe("GenericEntityService", () => {
       });
 
       test('should return metadata for "customer" entity', () => {
-        const metadata = GenericEntityService._getMetadata("customer");
+        const metadata = GenericEntityService.requireEntityMetadata("customer");
 
         expect(metadata).toBeDefined();
         expect(metadata.tableName).toBe("customers");
@@ -80,7 +80,7 @@ describe("GenericEntityService", () => {
       });
 
       test('should return metadata for "technician" entity', () => {
-        const metadata = GenericEntityService._getMetadata("technician");
+        const metadata = GenericEntityService.requireEntityMetadata("technician");
 
         expect(metadata).toBeDefined();
         expect(metadata.tableName).toBe("technicians");
@@ -88,7 +88,7 @@ describe("GenericEntityService", () => {
       });
 
       test('should return metadata for "work_order" entity', () => {
-        const metadata = GenericEntityService._getMetadata("work_order");
+        const metadata = GenericEntityService.requireEntityMetadata("work_order");
 
         expect(metadata).toBeDefined();
         expect(metadata.tableName).toBe("work_orders");
@@ -96,7 +96,7 @@ describe("GenericEntityService", () => {
       });
 
       test('should return metadata for "invoice" entity', () => {
-        const metadata = GenericEntityService._getMetadata("invoice");
+        const metadata = GenericEntityService.requireEntityMetadata("invoice");
 
         expect(metadata).toBeDefined();
         expect(metadata.tableName).toBe("invoices");
@@ -104,7 +104,7 @@ describe("GenericEntityService", () => {
       });
 
       test('should return metadata for "contract" entity', () => {
-        const metadata = GenericEntityService._getMetadata("contract");
+        const metadata = GenericEntityService.requireEntityMetadata("contract");
 
         expect(metadata).toBeDefined();
         expect(metadata.tableName).toBe("contracts");
@@ -112,7 +112,7 @@ describe("GenericEntityService", () => {
       });
 
       test('should return metadata for "inventory" entity', () => {
-        const metadata = GenericEntityService._getMetadata("inventory");
+        const metadata = GenericEntityService.requireEntityMetadata("inventory");
 
         expect(metadata).toBeDefined();
         expect(metadata.tableName).toBe("inventory");
@@ -126,24 +126,24 @@ describe("GenericEntityService", () => {
 
     describe("case handling", () => {
       test("should preserve case for camelCase entity names", () => {
-        const metadata = GenericEntityService._getMetadata("work_order");
+        const metadata = GenericEntityService.requireEntityMetadata("work_order");
         expect(metadata.tableName).toBe("work_orders");
       });
 
       test("should handle entity name with whitespace", () => {
-        const metadata = GenericEntityService._getMetadata("  user  ");
+        const metadata = GenericEntityService.requireEntityMetadata("  user  ");
         expect(metadata.tableName).toBe("users");
       });
 
       test("should match exact case from metadata keys", () => {
         // These are the exact keys from config/models/index.js
-        expect(() => GenericEntityService._getMetadata("user")).not.toThrow();
-        expect(() => GenericEntityService._getMetadata("role")).not.toThrow();
+        expect(() => GenericEntityService.requireEntityMetadata("user")).not.toThrow();
+        expect(() => GenericEntityService.requireEntityMetadata("role")).not.toThrow();
         expect(() =>
-          GenericEntityService._getMetadata("work_order"),
+          GenericEntityService.requireEntityMetadata("work_order"),
         ).not.toThrow();
         expect(() =>
-          GenericEntityService._getMetadata("inventory"),
+          GenericEntityService.requireEntityMetadata("inventory"),
         ).not.toThrow();
       });
     });
@@ -154,7 +154,7 @@ describe("GenericEntityService", () => {
 
     describe("CRUD properties present", () => {
       test("should have requiredFields derivable from accessor", () => {
-        const metadata = GenericEntityService._getMetadata("user");
+        const metadata = GenericEntityService.requireEntityMetadata("user");
         const requiredFields = getRequiredFields(metadata);
 
         expect(requiredFields).toBeDefined();
@@ -164,7 +164,7 @@ describe("GenericEntityService", () => {
 
       test("should have immutableFields derivable from accessor", () => {
         // Phase 4: Exclusion pattern - immutableFields defines what CANNOT be updated
-        const metadata = GenericEntityService._getMetadata("user");
+        const metadata = GenericEntityService.requireEntityMetadata("user");
         const immutableFields = getImmutableFields(metadata);
 
         expect(immutableFields).toBeDefined();
@@ -172,7 +172,7 @@ describe("GenericEntityService", () => {
       });
 
       test("should have rlsResource property", () => {
-        const metadata = GenericEntityService._getMetadata("user");
+        const metadata = GenericEntityService.requireEntityMetadata("user");
 
         expect(metadata.rlsResource).toBeDefined();
         expect(typeof metadata.rlsResource).toBe("string");
@@ -185,14 +185,14 @@ describe("GenericEntityService", () => {
 
     describe("systemProtected configuration", () => {
       test("role metadata should have systemProtected property", () => {
-        const metadata = GenericEntityService._getMetadata("role");
+        const metadata = GenericEntityService.requireEntityMetadata("role");
 
         expect(metadata.systemProtected).toBeDefined();
         expect(typeof metadata.systemProtected).toBe("object");
       });
 
       test("systemProtected should have values array", () => {
-        const metadata = GenericEntityService._getMetadata("role");
+        const metadata = GenericEntityService.requireEntityMetadata("role");
 
         expect(metadata.systemProtected.values).toBeDefined();
         expect(Array.isArray(metadata.systemProtected.values)).toBe(true);
@@ -200,7 +200,7 @@ describe("GenericEntityService", () => {
       });
 
       test("systemProtected values should include all 5 system roles", () => {
-        const metadata = GenericEntityService._getMetadata("role");
+        const metadata = GenericEntityService.requireEntityMetadata("role");
 
         expect(metadata.systemProtected.values).toContain("admin");
         expect(metadata.systemProtected.values).toContain("manager");
@@ -210,7 +210,7 @@ describe("GenericEntityService", () => {
       });
 
       test("systemProtected should have immutableFields array", () => {
-        const metadata = GenericEntityService._getMetadata("role");
+        const metadata = GenericEntityService.requireEntityMetadata("role");
 
         expect(metadata.systemProtected.immutableFields).toBeDefined();
         expect(Array.isArray(metadata.systemProtected.immutableFields)).toBe(
@@ -219,21 +219,21 @@ describe("GenericEntityService", () => {
       });
 
       test("immutableFields should include name and priority", () => {
-        const metadata = GenericEntityService._getMetadata("role");
+        const metadata = GenericEntityService.requireEntityMetadata("role");
 
         expect(metadata.systemProtected.immutableFields).toContain("name");
         expect(metadata.systemProtected.immutableFields).toContain("priority");
       });
 
       test("systemProtected should have preventDelete flag", () => {
-        const metadata = GenericEntityService._getMetadata("role");
+        const metadata = GenericEntityService.requireEntityMetadata("role");
 
         expect(metadata.systemProtected.preventDelete).toBeDefined();
         expect(metadata.systemProtected.preventDelete).toBe(true);
       });
 
       test("user metadata should NOT have systemProtected (only roles)", () => {
-        const metadata = GenericEntityService._getMetadata("user");
+        const metadata = GenericEntityService.requireEntityMetadata("user");
 
         expect(metadata.systemProtected).toBeUndefined();
       });
@@ -246,49 +246,49 @@ describe("GenericEntityService", () => {
     describe("error handling", () => {
       test("should throw for unknown entity name", () => {
         expect(() => {
-          GenericEntityService._getMetadata("nonexistent");
+          GenericEntityService.requireEntityMetadata("nonexistent");
         }).toThrow("Unknown entity: nonexistent");
       });
 
       test("should include valid entities in error message", () => {
         expect(() => {
-          GenericEntityService._getMetadata("invalid");
+          GenericEntityService.requireEntityMetadata("invalid");
         }).toThrow(/Valid entities:/);
       });
 
       test("should throw for null entity name", () => {
         expect(() => {
-          GenericEntityService._getMetadata(null);
+          GenericEntityService.requireEntityMetadata(null);
         }).toThrow("Entity name is required and must be a string");
       });
 
       test("should throw for undefined entity name", () => {
         expect(() => {
-          GenericEntityService._getMetadata(undefined);
+          GenericEntityService.requireEntityMetadata(undefined);
         }).toThrow("Entity name is required and must be a string");
       });
 
       test("should throw for empty string entity name", () => {
         expect(() => {
-          GenericEntityService._getMetadata("");
+          GenericEntityService.requireEntityMetadata("");
         }).toThrow("Entity name is required and must be a string");
       });
 
       test("should throw for non-string entity name (number)", () => {
         expect(() => {
-          GenericEntityService._getMetadata(123);
+          GenericEntityService.requireEntityMetadata(123);
         }).toThrow("Entity name is required and must be a string");
       });
 
       test("should throw for non-string entity name (object)", () => {
         expect(() => {
-          GenericEntityService._getMetadata({ name: "user" });
+          GenericEntityService.requireEntityMetadata({ name: "user" });
         }).toThrow("Entity name is required and must be a string");
       });
 
       test("should throw for non-string entity name (array)", () => {
         expect(() => {
-          GenericEntityService._getMetadata(["user"]);
+          GenericEntityService.requireEntityMetadata(["user"]);
         }).toThrow("Entity name is required and must be a string");
       });
     });
@@ -2668,9 +2668,9 @@ describe("GenericEntityService", () => {
         const existingRecord = { id: 1, status: "draft", amount: 100 };
         const updatedRecord = { id: 1, status: "approved", amount: 100 };
 
-        // Mock _getMetadata to return entity with beforeChange hooks
-        const originalGetMetadata = GenericEntityService._getMetadata;
-        GenericEntityService._getMetadata = jest.fn().mockReturnValue({
+        // Mock requireEntityMetadata to return entity with beforeChange hooks
+        const originalGetMetadata = GenericEntityService.requireEntityMetadata;
+        GenericEntityService.requireEntityMetadata = jest.fn().mockReturnValue({
           tableName: "recommendations",
           primaryKey: "id",
           fields: {
@@ -2718,7 +2718,7 @@ describe("GenericEntityService", () => {
             }),
           );
         } finally {
-          GenericEntityService._getMetadata = originalGetMetadata;
+          GenericEntityService.requireEntityMetadata = originalGetMetadata;
         }
       });
 
@@ -2731,8 +2731,8 @@ describe("GenericEntityService", () => {
 
         const existingRecord = { id: 1, status: "draft", amount: 10000 };
 
-        const originalGetMetadata = GenericEntityService._getMetadata;
-        GenericEntityService._getMetadata = jest.fn().mockReturnValue({
+        const originalGetMetadata = GenericEntityService.requireEntityMetadata;
+        GenericEntityService.requireEntityMetadata = jest.fn().mockReturnValue({
           tableName: "recommendations",
           primaryKey: "id",
           fields: {
@@ -2766,7 +2766,7 @@ describe("GenericEntityService", () => {
             expect(error.code).toBe("AUTH_INSUFFICIENT_PERMISSIONS");
           }
         } finally {
-          GenericEntityService._getMetadata = originalGetMetadata;
+          GenericEntityService.requireEntityMetadata = originalGetMetadata;
         }
       });
 
@@ -2784,8 +2784,8 @@ describe("GenericEntityService", () => {
 
         const existingRecord = { id: 1, status: "draft", amount: 10000 };
 
-        const originalGetMetadata = GenericEntityService._getMetadata;
-        GenericEntityService._getMetadata = jest.fn().mockReturnValue({
+        const originalGetMetadata = GenericEntityService.requireEntityMetadata;
+        GenericEntityService.requireEntityMetadata = jest.fn().mockReturnValue({
           tableName: "recommendations",
           primaryKey: "id",
           fields: {
@@ -2830,7 +2830,7 @@ describe("GenericEntityService", () => {
             );
           }
         } finally {
-          GenericEntityService._getMetadata = originalGetMetadata;
+          GenericEntityService.requireEntityMetadata = originalGetMetadata;
         }
       });
 
@@ -2862,8 +2862,8 @@ describe("GenericEntityService", () => {
         const existingRecord = { id: 1, status: "draft" };
         const updatedRecord = { id: 1, status: "approved" };
 
-        const originalGetMetadata = GenericEntityService._getMetadata;
-        GenericEntityService._getMetadata = jest.fn().mockReturnValue({
+        const originalGetMetadata = GenericEntityService.requireEntityMetadata;
+        GenericEntityService.requireEntityMetadata = jest.fn().mockReturnValue({
           tableName: "recommendations",
           primaryKey: "id",
           fields: {
@@ -2908,7 +2908,7 @@ describe("GenericEntityService", () => {
             }),
           );
         } finally {
-          GenericEntityService._getMetadata = originalGetMetadata;
+          GenericEntityService.requireEntityMetadata = originalGetMetadata;
         }
       });
 
@@ -2921,8 +2921,8 @@ describe("GenericEntityService", () => {
 
         const existingRecord = { id: 1, status: "draft" };
 
-        const originalGetMetadata = GenericEntityService._getMetadata;
-        GenericEntityService._getMetadata = jest.fn().mockReturnValue({
+        const originalGetMetadata = GenericEntityService.requireEntityMetadata;
+        GenericEntityService.requireEntityMetadata = jest.fn().mockReturnValue({
           tableName: "recommendations",
           primaryKey: "id",
           fields: {
@@ -2947,7 +2947,7 @@ describe("GenericEntityService", () => {
           // Assert: afterHooks should NOT have been called
           expect(hookService.evaluateAfterHooks).not.toHaveBeenCalled();
         } finally {
-          GenericEntityService._getMetadata = originalGetMetadata;
+          GenericEntityService.requireEntityMetadata = originalGetMetadata;
         }
       });
     });
@@ -2961,8 +2961,8 @@ describe("GenericEntityService", () => {
         // Arrange
         const createdRecord = { id: 1, status: "draft", name: "Test" };
 
-        const originalGetMetadata = GenericEntityService._getMetadata;
-        GenericEntityService._getMetadata = jest.fn().mockReturnValue({
+        const originalGetMetadata = GenericEntityService.requireEntityMetadata;
+        GenericEntityService.requireEntityMetadata = jest.fn().mockReturnValue({
           tableName: "recommendations",
           primaryKey: "id",
           fields: {
@@ -3007,7 +3007,7 @@ describe("GenericEntityService", () => {
             }),
           );
         } finally {
-          GenericEntityService._getMetadata = originalGetMetadata;
+          GenericEntityService.requireEntityMetadata = originalGetMetadata;
         }
       });
     });

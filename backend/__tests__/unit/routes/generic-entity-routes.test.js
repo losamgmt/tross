@@ -49,8 +49,8 @@ jest.mock("../../../services/entity/generic-entity-service", () => ({
   delete: jest.fn(),
   count: jest.fn(),
   batch: jest.fn(),
-  // _getMetadata is called during router creation to get entity config
-  _getMetadata: jest.fn((entityName) => ({
+  // requireEntityMetadata is called during router creation to get entity config
+  requireEntityMetadata: jest.fn((entityName) => ({
     entityName,
     displayName: entityName.charAt(0).toUpperCase() + entityName.slice(1),
     tableName: entityName === "work_order" ? "work_orders" : entityName + "s",

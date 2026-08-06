@@ -110,7 +110,7 @@ function createEntityRouter(entityName, _options = {}) {
   const router = express.Router();
 
   // Get metadata for this entity
-  const metadata = GenericEntityService._getMetadata(entityName);
+  const metadata = GenericEntityService.requireEntityMetadata(entityName);
   // Use metadata displayName, or auto-generate from entityName
   const displayName = metadata.displayName || toDisplayName(entityName);
 

@@ -109,7 +109,7 @@ const attachEntity = (entityName) => {
   // Get metadata at factory time (route definition)
   let metadata;
   try {
-    metadata = GenericEntityService._getMetadata(entityName);
+    metadata = GenericEntityService.requireEntityMetadata(entityName);
   } catch (_error) {
     // Fail at startup, not at request time
     throw new Error(
@@ -171,7 +171,7 @@ const extractEntity = (req, res, next) => {
   // Get metadata (validates entity exists in registry)
   let metadata;
   try {
-    metadata = GenericEntityService._getMetadata(entityName);
+    metadata = GenericEntityService.requireEntityMetadata(entityName);
   } catch (error) {
     // This shouldn't happen if ENTITY_URL_MAP is in sync with metadata registry
     logSecurityEvent('GENERIC_ENTITY_METADATA_MISSING', {

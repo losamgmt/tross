@@ -139,7 +139,7 @@ describe("extractEntity", () => {
     };
 
     beforeEach(() => {
-      GenericEntityService._getMetadata = jest
+      GenericEntityService.requireEntityMetadata = jest
         .fn()
         .mockReturnValue(mockMetadata);
     });
@@ -157,7 +157,7 @@ describe("extractEntity", () => {
 
     test("should handle plural URL form", () => {
       mockReq.params.entity = "work-orders";
-      GenericEntityService._getMetadata = jest.fn().mockReturnValue({
+      GenericEntityService.requireEntityMetadata = jest.fn().mockReturnValue({
         tableName: "work_orders",
         rlsResource: "work_orders",
       });

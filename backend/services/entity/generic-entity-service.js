@@ -104,20 +104,20 @@ class GenericEntityService {
    *
    * SRP: ONLY looks up and validates entity metadata exists
    *
-   * @private
+   * Semi-public: consumed by middleware/routes at route-definition time.
    * @param {string} entityName - Entity name (e.g., 'user', 'role', 'customer')
    * @returns {Object} Entity metadata from config/models
    * @throws {Error} If entityName is invalid or metadata not found
    *
    * @example
-   *   const metadata = GenericEntityService._getMetadata('user');
+   *   const metadata = GenericEntityService.requireEntityMetadata('user');
    *   // Returns: { tableName: 'users', primaryKey: 'id', ... }
    *
    * @example
-   *   GenericEntityService._getMetadata('invalid');
+   *   GenericEntityService.requireEntityMetadata('invalid');
    *   // Throws: Error('Unknown entity: invalid. Valid entities: user, role, ...')
    */
-  static _getMetadata(entityName) {
+  static requireEntityMetadata(entityName) {
     // Validate entityName is provided
     if (!entityName || typeof entityName !== 'string') {
       throw new AppError(
@@ -262,7 +262,7 @@ class GenericEntityService {
     const { include = null, rlsContext = null } = options || {};
 
     // Get metadata to find primary key name
-    const metadata = this._getMetadata(entityName);
+    const metadata = this.requireEntityMetadata(entityName);
 
     // Validate and coerce ID to integer (throws on invalid)
     // toSafeId enforces min=1 by default, so 0 and negatives throw; it coerces
@@ -370,7 +370,7 @@ class GenericEntityService {
     const { rlsContext = null } = options || {};
 
     // Get metadata (throws if invalid entityName)
-    const metadata = this._getMetadata(entityName);
+    const metadata = this.requireEntityMetadata(entityName);
 
     const built = this._buildListQuery(entityName, metadata, options, rlsContext);
     const { rows, total } = await this._executeListQuery(
@@ -616,7 +616,7 @@ class GenericEntityService {
   static async findByField(entityName, field, value, options = {}) {
     const { rlsContext = null } = options || {};
     // Get metadata (throws if invalid entityName)
-    const metadata = this._getMetadata(entityName);
+    const metadata = this.requireEntityMetadata(entityName);
 
     const {
       tableName,
@@ -710,7 +710,7 @@ class GenericEntityService {
     const { filters = {}, rlsContext = null } = options || {};
 
     // Get metadata (throws if invalid entityName)
-    const metadata = this._getMetadata(entityName);
+    const metadata = this.requireEntityMetadata(entityName);
 
     const { tableName } = metadata;
     const filterableFields = getFilterableFields(metadata);
@@ -798,7 +798,7 @@ class GenericEntityService {
    */
   static async create(entityName, data, options = {}) {
     // Get metadata (throws if invalid entityName)
-    const metadata = this._getMetadata(entityName);
+    const metadata = this.requireEntityMetadata(entityName);
 
     const { tableName } = metadata;
     const requiredFields = getRequiredFields(metadata);
@@ -999,7 +999,7 @@ class GenericEntityService {
     const { rlsContext = null } = options || {};
 
     // Get metadata (throws if invalid entityName)
-    const metadata = this._getMetadata(entityName);
+    const metadata = this.requireEntityMetadata(entityName);
 
     const {
       tableName,
@@ -1292,7 +1292,7 @@ class GenericEntityService {
     const { rlsContext = null } = options || {};
 
     // Get metadata (throws if invalid entityName)
-    const metadata = this._getMetadata(entityName);
+    const metadata = this.requireEntityMetadata(entityName);
 
     const { tableName, primaryKey, identityField, systemProtected } = metadata;
 
@@ -1459,7 +1459,7 @@ class GenericEntityService {
    */
   static async batch(entityName, operations, options = {}) {
     // Get metadata (throws if invalid entityName)
-    const metadata = this._getMetadata(entityName);
+    const metadata = this.requireEntityMetadata(entityName);
 
     // Validate operations array
     if (!Array.isArray(operations) || operations.length === 0) {
