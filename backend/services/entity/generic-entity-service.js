@@ -479,8 +479,8 @@ class GenericEntityService {
       metadata,
     );
 
-    const whereClause =
-      whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+    const combinedWhere = QueryBuilderService.combineWhereClauses(whereClauses);
+    const whereClause = combinedWhere ? `WHERE ${combinedWhere}` : '';
 
     // Build sort clause (validated against sortableFields, with table prefix)
     const sortClause = QueryBuilderService.buildSortClause(
@@ -502,7 +502,8 @@ class GenericEntityService {
       hasJoins: joinClause.length > 0,
     });
 
-    const countQuery = `SELECT COUNT(*) as total FROM ${tableName} ${joinClause} ${whereClause}`;
+    // COUNT omits the belongsTo JOINs: they only project display fields; filters/RLS qualify by tableName.
+    const countQuery = `SELECT COUNT(*) as total FROM ${tableName} ${whereClause}`;
 
     const dataQuery = `
       SELECT ${selectClause} 
@@ -729,8 +730,8 @@ class GenericEntityService {
     this._appendRlsFilter(entityName, whereClauses, params, rlsContext, metadata);
 
     // Build WHERE clause
-    const whereClause =
-      whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+    const combinedWhere = QueryBuilderService.combineWhereClauses(whereClauses);
+    const whereClause = combinedWhere ? `WHERE ${combinedWhere}` : '';
 
     // Build count query
     const query = `SELECT COUNT(*) as total FROM ${tableName} ${whereClause}`;
