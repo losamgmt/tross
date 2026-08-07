@@ -1,7 +1,14 @@
 /**
- * Schema Introspection API Routes
+ * Schema Introspection API Routes (/api/schema)
  *
- * Exposes database schema metadata to frontend for auto-generating UIs
+ * ⚠️ QUARANTINED — SUPERSEDED runtime introspection, currently UNUSED.
+ *
+ * The frontend auto-generates UIs from build-time-synced entity metadata
+ * (frontend/assets/config/entity-metadata.json), not from these endpoints. This
+ * route predates that sync pipeline and has no known consumer. It is retained only
+ * for possible future admin/ops "live DB inspection" use. The metadata in
+ * backend/config/models/*-metadata.js is the SSOT; the DB schema exposed here is a
+ * derived artifact. Do not build new consumers here without revisiting this decision.
  *
  * Security: Requires authentication
  * Performance: Schemas are cacheable (TTL: 5 minutes)

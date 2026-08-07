@@ -88,14 +88,17 @@ frontend/assets/config/nav-config.json       (generated)
 - Overrides merge with introspected schema
 - Custom labels, ordering, computed fields
 
-### Decision: Runtime Metadata Fetch
+### Decision: Build-Time Metadata Sync
 
-**Why frontend fetches metadata at runtime:**
+**Why the frontend loads synced metadata at startup (not a runtime introspection call):**
 
-- Always up-to-date
-- No frontend rebuild for schema changes
-- Metadata can be cached client-side
-- Single source remains backend
+- Backend metadata is the single source of truth
+- `npm run sync:metadata` projects it to a bundled JSON asset
+- The frontend loads that bundle on startup (no per-request schema fetch)
+- CI verifies the bundle stays in lockstep with metadata (idempotency + freshness)
+
+> Historical note: an earlier design fetched schema at runtime via `GET /api/schema`.
+> That route still exists but is **quarantined/unused**; the build-time sync replaced it.
 
 ## How It Works
 

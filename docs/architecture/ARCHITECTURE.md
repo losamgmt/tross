@@ -210,19 +210,23 @@ The concrete strategy classes and the selection logic live in the auth service (
 
 ### 7. Schema-Driven UI
 
-**Decision:** Backend schema introspection drives frontend forms.
+**Decision:** Entity metadata drives frontend forms via a build-time sync.
 
 **Why:**
 
-- Single source of truth (schema.sql)
-- Validation rules shared (backend ↔ frontend)
-- Changes propagate automatically
+- Single source of truth: entity metadata (`backend/config/models/*-metadata.js`)
+- Validation rules shared (backend ↔ frontend), derived from that metadata
+- Changes propagate automatically on `npm run sync:all`
 
 **Implementation:**
 
-- `GET /api/schema/:entity` returns field metadata
-- Flutter uses metadata to build dynamic forms
-- Validation rules embedded in metadata
+- `npm run sync:metadata` projects metadata to `frontend/assets/config/entity-metadata.json`
+- Flutter loads that bundle at startup and builds dynamic forms from it
+- Validation rules are embedded in the same metadata
+
+> Note: a legacy runtime introspection route (`GET /api/schema`) predates this sync
+> pipeline and is retained but **quarantined** (unused — see `backend/routes/schema.js`).
+> The schema it reports is a derived artifact, not the source of truth.
 
 ---
 

@@ -68,7 +68,7 @@ All test suites should pass before making changes. Run `npm run test:all` to ver
 /api/export/{entity}        - CSV exports
 /api/audit/                 - Audit log queries
 /api/health/                - Health checks
-/api/schema/                - Schema introspection
+/api/schema/                - Schema introspection (LEGACY/quarantined; unused)
 /api/dev/                   - Dev-only endpoints
 ```
 

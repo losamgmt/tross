@@ -1,16 +1,19 @@
 /**
  * Schema Introspection Service
  *
- * SINGLE SOURCE OF TRUTH: PostgreSQL information_schema
+ * ⚠️ QUARANTINED — SUPERSEDED, NOT THE SSOT, NOT CONSUMED BY THE FRONTEND.
  *
- * Introspects database schema at runtime to auto-generate:
- * - UI field types
- * - Validation rules
- * - Form configs
- * - Table configs
+ * This service predates the metadata-driven sync pipeline (added 2025-11-12,
+ * superseded 2025-12-12). It reads the LIVE PostgreSQL information_schema at
+ * runtime — but that is a DERIVED artifact. The SINGLE SOURCE OF TRUTH is the
+ * entity metadata in backend/config/models/*-metadata.js, which GENERATES the
+ * database schema. The frontend auto-generates UIs from the build-time-synced
+ * metadata (frontend/assets/config/entity-metadata.json), NOT this endpoint;
+ * there are currently no consumers.
  *
- * Philosophy: Database schema drives EVERYTHING.
- * Add a column → UI updates automatically.
+ * Retained only as potential future ops tooling (e.g. live DB drift inspection).
+ * Do NOT build new consumers against it, and do NOT treat information_schema as a
+ * source of truth. If it gains no owner it is a removal candidate.
  */
 
 const db = require('../../db/connection');
