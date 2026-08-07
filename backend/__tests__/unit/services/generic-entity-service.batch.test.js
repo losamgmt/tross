@@ -30,6 +30,9 @@ describe("GenericEntityService.batch()", () => {
   let mockClient;
 
   beforeEach(() => {
+    // restoreAllMocks undoes any jest.spyOn(create/update/delete/findById) from a
+    // prior test, so tests that exercise real delegation are not affected.
+    jest.restoreAllMocks();
     jest.clearAllMocks();
 
     // Setup mock client for transactions
@@ -175,30 +178,23 @@ describe("GenericEntityService.batch()", () => {
 
   describe("update operations", () => {
     test("should update record and return new values", async () => {
-      const oldRecord = {
-        id: 1,
-        email: "old@test.com",
-        company_name: "Old Corp",
-      };
-      const newRecord = {
-        id: 1,
-        email: "old@test.com",
-        company_name: "New Corp",
-      };
-
-      mockClient.query
-        .mockResolvedValueOnce({}) // BEGIN
-        .mockResolvedValueOnce({ rows: [oldRecord] }) // SELECT for old values
-        .mockResolvedValueOnce({ rows: [newRecord] }) // UPDATE
-        .mockResolvedValueOnce({}); // COMMIT
+      jest
+        .spyOn(GenericEntityService, "update")
+        .mockResolvedValue({ id: 1, organization_name: "New Corp" });
 
       const result = await GenericEntityService.batch("customer", [
-        { operation: "update", id: 1, data: { company_name: "New Corp" } },
+        { operation: "update", id: 1, data: { organization_name: "New Corp" } },
       ]);
 
       expect(result.success).toBe(true);
       expect(result.stats.updated).toBe(1);
-      expect(result.results[0].result.company_name).toBe("New Corp");
+      expect(result.results[0].result.organization_name).toBe("New Corp");
+      expect(GenericEntityService.update).toHaveBeenCalledWith(
+        "customer",
+        1,
+        { organization_name: "New Corp" },
+        expect.objectContaining({ client: mockClient, skipHooks: true }),
+      );
     });
 
     test("should fail if record not found", async () => {
@@ -238,24 +234,9 @@ describe("GenericEntityService.batch()", () => {
 
   describe("mixed operations", () => {
     test("should handle create, update, delete in order", async () => {
-      mockClient.query
-        .mockResolvedValueOnce({}) // BEGIN
-        .mockResolvedValueOnce({
-          rows: [
-            {
-              id: 10,
-              first_name: "New",
-              last_name: "User",
-              email: "new@test.com",
-              organization_name: "New",
-            },
-          ],
-        }) // CREATE
-        .mockResolvedValueOnce({ rows: [{ id: 5, phone: "555-1111" }] }) // SELECT for update
-        .mockResolvedValueOnce({ rows: [{ id: 5, phone: "555-9999" }] }) // UPDATE
-        .mockResolvedValueOnce({ rows: [{ id: 3, email: "del@test.com" }] }) // SELECT for delete
-        .mockResolvedValueOnce({ rows: [{ id: 3, email: "del@test.com" }] }) // DELETE
-        .mockResolvedValueOnce({}); // COMMIT
+      jest.spyOn(GenericEntityService, "create").mockResolvedValue({ id: 10 });
+      jest.spyOn(GenericEntityService, "update").mockResolvedValue({ id: 5 });
+      jest.spyOn(GenericEntityService, "delete").mockResolvedValue({ id: 3 });
 
       const result = await GenericEntityService.batch("customer", [
         {
@@ -279,6 +260,9 @@ describe("GenericEntityService.batch()", () => {
         failed: 0,
       });
       expect(result.results).toHaveLength(3);
+      expect(GenericEntityService.create).toHaveBeenCalledTimes(1);
+      expect(GenericEntityService.update).toHaveBeenCalledTimes(1);
+      expect(GenericEntityService.delete).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -327,32 +311,13 @@ describe("GenericEntityService.batch()", () => {
     });
 
     test("should continue on error when continueOnError=true", async () => {
-      mockClient.query
-        .mockResolvedValueOnce({}) // BEGIN
-        .mockResolvedValueOnce({
-          rows: [
-            {
-              id: 1,
-              first_name: "Good",
-              last_name: "User",
-              email: "good@test.com",
-              organization_name: "Good",
-            },
-          ],
-        }) // First CREATE
-        .mockResolvedValueOnce({ rows: [] }) // Second: SELECT not found
-        .mockResolvedValueOnce({
-          rows: [
-            {
-              id: 3,
-              first_name: "Also",
-              last_name: "User",
-              email: "also@test.com",
-              organization_name: "Also",
-            },
-          ],
-        }) // Third CREATE
-        .mockResolvedValueOnce({}); // COMMIT
+      jest
+        .spyOn(GenericEntityService, "create")
+        .mockResolvedValueOnce({ id: 1 })
+        .mockResolvedValueOnce({ id: 3 });
+      // Middle op: update a missing row -> delegated update returns null ->
+      // batch maps it to a 404 and rolls back just that op's savepoint.
+      jest.spyOn(GenericEntityService, "update").mockResolvedValue(null);
 
       const result = await GenericEntityService.batch(
         "customer",
@@ -366,7 +331,7 @@ describe("GenericEntityService.batch()", () => {
               organization_name: "Good",
             },
           },
-          { operation: "update", id: 999, data: { phone: "555" } }, // Will fail - not found
+          { operation: "update", id: 999, data: { phone: "555" } },
           {
             operation: "create",
             data: {
@@ -386,8 +351,11 @@ describe("GenericEntityService.batch()", () => {
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].index).toBe(1);
 
-      // Should still commit successful operations
-      expect(mockClient.query).toHaveBeenCalledWith("COMMIT");
+      const sqls = mockClient.query.mock.calls.map((c) => c[0]);
+      // Survivors are committed; the failed op is rolled back to its savepoint.
+      expect(sqls).toContain("COMMIT");
+      expect(sqls.some((s) => /^SAVEPOINT /.test(s))).toBe(true);
+      expect(sqls.some((s) => /^ROLLBACK TO SAVEPOINT /.test(s))).toBe(true);
     });
   });
 
@@ -683,23 +651,19 @@ describe("GenericEntityService.batch()", () => {
     });
 
     test("should not check RLS when rlsContext not provided", async () => {
-      jest.spyOn(GenericEntityService, "findById");
-
-      mockClient.query
-        .mockResolvedValueOnce({}) // BEGIN
-        .mockResolvedValueOnce({ rows: [{ id: 1, phone: "111" }] }) // SELECT
-        .mockResolvedValueOnce({ rows: [{ id: 1, phone: "555" }] }) // UPDATE
-        .mockResolvedValueOnce({}); // COMMIT
+      // Delegated update is mocked so it does not call the real findById; the
+      // point is that batch runs no RLS PRE-CHECK when rlsContext is absent.
+      jest
+        .spyOn(GenericEntityService, "update")
+        .mockResolvedValue({ id: 1, phone: "555" });
+      const findByIdSpy = jest.spyOn(GenericEntityService, "findById");
 
       const result = await GenericEntityService.batch("customer", [
         { operation: "update", id: 1, data: { phone: "555" } },
       ]);
 
       expect(result.success).toBe(true);
-      // findById should NOT have been called for RLS (no rlsContext)
-      expect(GenericEntityService.findById).not.toHaveBeenCalled();
-
-      GenericEntityService.findById.mockRestore();
+      expect(findByIdSpy).not.toHaveBeenCalled();
     });
   });
 });

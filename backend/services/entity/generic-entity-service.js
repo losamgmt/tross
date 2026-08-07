@@ -1485,8 +1485,9 @@ class GenericEntityService {
    *   // Returns partial success with errors array populated
    */
   static async batch(entityName, operations, options = {}) {
-    // Get metadata (throws if invalid entityName)
-    const metadata = this.requireEntityMetadata(entityName);
+    // Validate entityName early (throws if invalid); the delegated
+    // create/update/delete calls fetch metadata themselves.
+    this.requireEntityMetadata(entityName);
 
     // Validate operations array
     if (!Array.isArray(operations) || operations.length === 0) {
@@ -1538,9 +1539,6 @@ class GenericEntityService {
       }
     }
 
-    const { tableName, primaryKey } = metadata;
-    const requiredFields = getRequiredFields(metadata);
-    const immutableFields = getImmutableFields(metadata);
     const { continueOnError = false, auditContext, rlsContext } = options;
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -1583,180 +1581,74 @@ class GenericEntityService {
       for (let i = 0; i < operations.length; i++) {
         const op = operations[i];
 
+        // Per-op SAVEPOINT under continueOnError lets a failed op undo its own
+        // partial writes (e.g. a delete whose cascade already ran) without
+        // discarding earlier successful ops; the batch still COMMITs survivors.
+        const savepoint = continueOnError ? `op_${i}` : null;
+        if (savepoint) {
+          await client.query(`SAVEPOINT ${savepoint}`);
+        }
+
         try {
+          // Delegate to the canonical single-entity methods ON this transaction.
+          // skipHooks keeps batch hook-free (S6a); create/update/delete already
+          // sanitize, derive, generate identifiers, enforce system-protection,
+          // audit, and redact for rlsContext.
+          const delegateOptions = {
+            client,
+            skipHooks: true,
+            rlsContext,
+            auditContext,
+          };
           let result;
 
           switch (op.operation) {
-            case 'create': {
-              // Validate required fields
-              const missingFields = requiredFields.filter(
-                (field) =>
-                  op.data[field] === undefined ||
-                  op.data[field] === null ||
-                  op.data[field] === '',
-              );
-
-              if (missingFields.length > 0) {
-                throw new AppError(
-                  `Missing required fields: ${missingFields.join(', ')}`,
-                  400,
-                  ERROR_CODES.VALIDATION_FAILED,
-                );
-              }
-
-              // Filter using EXCLUSION pattern - allow all fields EXCEPT system-managed ones
-              // Uses centralized constant from config/constants.js
-              // EXCEPTION: sharedPrimaryKey entities (e.g., preferences) allow 'id' to be provided
-              const allowedSystemFields = metadata.sharedPrimaryKey
-                ? ['id']
-                : [];
-              const { kept: filteredData } = partitionFields(
-                op.data,
-                (value, field) =>
-                  (!ENTITY_FIELDS.SYSTEM_MANAGED_ON_CREATE.includes(field) ||
-                    allowedSystemFields.includes(field)) &&
-                  value !== undefined,
-              );
-
-              const fields = Object.keys(filteredData);
-              if (fields.length === 0) {
-                throw new AppError(
-                  'No valid fields provided',
-                  400,
-                  ERROR_CODES.VALIDATION_FAILED,
-                );
-              }
-
-              const columns = fields.join(', ');
-              const placeholders = fields.map((_, j) => `$${j + 1}`).join(', ');
-              const values = fields.map((field) => filteredData[field]);
-
-              const query = `INSERT INTO ${tableName} (${columns}) VALUES (${placeholders}) RETURNING *`;
-              const dbResult = await client.query(query, values);
-              result = stripAuthIdentifiers(dbResult.rows[0], metadata);
+            case 'create':
+              result = await this.create(entityName, op.data, delegateOptions);
               stats.created++;
-
-              // Audit (blocking to ensure audit is written before transaction completes)
-              await logEntityAuditIfEnabled(
-                'create',
-                entityName,
-                result,
-                auditContext,
-              );
               break;
-            }
 
-            case 'update': {
-              const safeId = toSafeId(op.id);
-
-              // Fetch current record for audit oldValues
-              const fetchQuery = `SELECT * FROM ${tableName} WHERE ${primaryKey} = $1`;
-              const fetchResult = await client.query(fetchQuery, [safeId]);
-
-              if (fetchResult.rows.length === 0) {
-                throw new AppError(
-                  `Record not found: ${safeId}`,
-                  404,
-                  ERROR_CODES.RESOURCE_NOT_FOUND,
-                );
-              }
-
-              const oldRecord = fetchResult.rows[0];
-
-              // Filter using EXCLUSION pattern - allow all fields EXCEPT immutables
-              // Uses centralized constant from config/constants.js
-              const allExcluded = [
-                ...ENTITY_FIELDS.UNIVERSAL_IMMUTABLES,
-                ...immutableFields,
-              ];
-              const { kept: updateData } = partitionFields(
+            case 'update':
+              result = await this.update(
+                entityName,
+                op.id,
                 op.data,
-                (value, field) =>
-                  !allExcluded.includes(field) && value !== undefined,
+                delegateOptions,
               );
-
-              const fields = Object.keys(updateData);
-              if (fields.length === 0) {
+              if (result === null) {
                 throw new AppError(
-                  'No valid fields provided',
-                  400,
-                  ERROR_CODES.VALIDATION_FAILED,
-                );
-              }
-
-              // Build UPDATE clause
-              const setClause = fields
-                .map((field, j) => `${field} = $${j + 2}`)
-                .join(', ');
-              const values = [
-                safeId,
-                ...fields.map((field) => updateData[field]),
-              ];
-
-              const query = `UPDATE ${tableName} SET ${setClause} WHERE ${primaryKey} = $1 RETURNING *`;
-              const dbResult = await client.query(query, values);
-              result = stripAuthIdentifiers(dbResult.rows[0], metadata);
-              stats.updated++;
-
-              // Audit with oldValues (blocking to ensure audit is written before transaction completes)
-              const filteredOld = stripAuthIdentifiers(oldRecord, metadata);
-              await logEntityAuditIfEnabled(
-                'update',
-                entityName,
-                result,
-                auditContext,
-                filteredOld,
-              );
-              break;
-            }
-
-            case 'delete': {
-              const safeId = toSafeId(op.id);
-
-              // Fetch record before delete for audit
-              const fetchQuery = `SELECT * FROM ${tableName} WHERE ${primaryKey} = $1`;
-              const fetchResult = await client.query(fetchQuery, [safeId]);
-
-              if (fetchResult.rows.length === 0) {
-                throw new AppError(
-                  `Record not found: ${safeId}`,
+                  `Record not found: ${op.id}`,
                   404,
                   ERROR_CODES.RESOURCE_NOT_FOUND,
                 );
               }
-
-              const oldRecord = fetchResult.rows[0];
-
-              // Cascade delete dependents
-              await cascadeDeleteDependents(client, metadata, safeId);
-
-              // Delete the record
-              const query = `DELETE FROM ${tableName} WHERE ${primaryKey} = $1 RETURNING *`;
-              const dbResult = await client.query(query, [safeId]);
-              result = stripAuthIdentifiers(dbResult.rows[0], metadata);
-              stats.deleted++;
-
-              // Audit with oldValues (blocking to ensure audit is written before transaction completes)
-              const filteredOld = stripAuthIdentifiers(oldRecord, metadata);
-              await logEntityAuditIfEnabled(
-                'delete',
-                entityName,
-                result,
-                auditContext,
-                filteredOld,
-              );
+              stats.updated++;
               break;
-            }
+
+            case 'delete':
+              result = await this.delete(entityName, op.id, delegateOptions);
+              if (result === null) {
+                throw new AppError(
+                  `Record not found: ${op.id}`,
+                  404,
+                  ERROR_CODES.RESOURCE_NOT_FOUND,
+                );
+              }
+              stats.deleted++;
+              break;
           }
 
+          // Delegated create/update/delete already redacted for rlsContext.
           results.push({
             index: i,
             operation: op.operation,
             success: true,
-            // Redact non-readable fields for the caller's role (ADR-011 output
-            // boundary). Applied AFTER per-op audit, which used the full result.
-            result: this._redactForContext(result, metadata, rlsContext),
+            result,
           });
+
+          if (savepoint) {
+            await client.query(`RELEASE SAVEPOINT ${savepoint}`);
+          }
         } catch (opError) {
           stats.failed++;
 
@@ -1770,8 +1662,13 @@ class GenericEntityService {
           errors.push(errorEntry);
           results.push(errorEntry);
 
-          if (!continueOnError) {
-            // Rollback and return immediately
+          if (continueOnError) {
+            // Undo just this op's partial writes; keep earlier successful ops.
+            if (savepoint) {
+              await client.query(`ROLLBACK TO SAVEPOINT ${savepoint}`);
+            }
+          } else {
+            // Roll the whole transaction back and return immediately.
             await client.query('ROLLBACK');
 
             logger.warn(`Batch ${entityName} failed at operation ${i}`, {
