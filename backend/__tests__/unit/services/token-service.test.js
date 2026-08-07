@@ -6,7 +6,6 @@
 // Setup mocks FIRST (before any imports)
 const {
   setupModuleMocks,
-  setupMocks,
   MOCK_USERS,
 } = require("../../setup/test-setup");
 setupModuleMocks();

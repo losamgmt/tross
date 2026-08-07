@@ -1,41 +1,20 @@
 /**
  * Centralized Test Setup
  *
- * SRP: ONLY provides pre-configured mocks for tests
+ * SRP: ONLY provides pre-configured jest.mock() setup + fixtures for tests
  *
  * Usage in test files:
- * const { setupMocks, MOCK_USERS, MOCK_ROLES } = require('../../setup/test-setup');
+ * const { setupModuleMocks, MOCK_USERS } = require('../../setup/test-setup');
+ * setupModuleMocks(); // at the TOP, before importing the module under test
  *
- * describe('MyTest', () => {
- *   const mocks = setupMocks();
- *
- *   beforeEach(() => {
- *     mocks.reset(); // Reset all mocks between tests
- *   });
- *
- *   it('should work', async () => {
- *     mocks.db.query.mockResolvedValue({ rows: [MOCK_USERS.admin] });
- *     // ... test logic
- *   });
- * });
+ * For DB/logger mocking in new tests, prefer the smart-mock factories documented
+ * in docs/reference/TESTING.md (require('../mocks').createDBMock(), etc.).
  */
 
 const {
-  createMockDb,
-  createMockUser,
-  createMockRole,
-  createMockAuditService,
-  createMockPaginationService,
-  createMockLogger,
   createMockRequest,
   createMockResponse,
   createMockNext,
-  resetDbMocks,
-  resetUserMocks,
-  resetRoleMocks,
-  resetAuditServiceMocks,
-  resetPaginationServiceMocks,
-  resetLoggerMocks,
   transactionMatchers,
 } = require("../mocks");
 
@@ -45,54 +24,6 @@ const fixtures = require("../fixtures");
 // Register custom Jest matchers globally
 if (transactionMatchers) {
   expect.extend(transactionMatchers);
-}
-
-/**
- * Setup all mocks for a test suite
- * Creates fresh mock instances that can be reset between tests
- *
- * @returns {Object} Mock instances with reset helper
- */
-function setupMocks() {
-  const mocks = {
-    // Database
-    db: createMockDb(),
-
-    // Models
-    User: createMockUser(),
-    Role: createMockRole(),
-
-    // Services
-    auditService: createMockAuditService(),
-    paginationService: createMockPaginationService(),
-
-    // Logger
-    logger: createMockLogger(),
-
-    // Express middleware
-    req: createMockRequest(),
-    res: createMockResponse(),
-    next: createMockNext(),
-
-    /**
-     * Reset all mocks - call in beforeEach()
-     */
-    reset() {
-      resetDbMocks(this.db);
-      resetUserMocks(this.User);
-      resetRoleMocks(this.Role);
-      resetAuditServiceMocks(this.auditService);
-      resetPaginationServiceMocks(this.paginationService);
-      resetLoggerMocks(this.logger);
-
-      // Express mocks need recreation for chainability
-      this.req = createMockRequest();
-      this.res = createMockResponse();
-      this.next = createMockNext();
-    },
-  };
-
-  return mocks;
 }
 
 /**
@@ -153,7 +84,6 @@ function setupAuthMocks() {
 
 module.exports = {
   // Main setup function
-  setupMocks,
   setupModuleMocks,
   setupAuthMocks,
 
