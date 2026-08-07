@@ -15,7 +15,7 @@ const { getRoleHierarchy } = require('./role-hierarchy-loader');
 const { RLS_ENGINE, HOOK_WHEN_OPERATORS } = require('./constants');
 const { ENTITY_TRAITS } = require('./entity-traits');
 const { getForeignKeyFieldNames, extractForeignKeyFields } = require('./fk-helpers');
-const { foreignKeyFieldName, DERIVATION_VIA } = require('./field-types');
+const { foreignKeyFieldName, DERIVATION_VIA, NAME_PATTERNS } = require('./field-types');
 const { listActions } = require('./action-handlers');
 
 /**
@@ -901,6 +901,61 @@ function validateDisplayProperties(meta, errors) {
 }
 
 /**
+ * Validate the display-name contract (UDN).
+ *
+ * Every user-facing entity must declare, per its name-strategy, how its
+ * human-readable display name resolves. This is the metadata half of the
+ * resolveDisplayName / GENERATED-column contract (utils/name-utils.js):
+ *
+ * - HUMAN            -> non-empty `displayFields` array (composed, e.g. first+last).
+ * - SIMPLE/COMPUTED  -> a `displayField` string (authored `name` or identifier).
+ * - null namePattern -> `displayField` is OPTIONAL (custom entities like
+ *                       subcontractor/unit declare one; pure junction/system
+ *                       tables declare neither and have no display name).
+ *
+ * A declared singular `displayField` must reference a real field.
+ */
+function validateDisplayContract(meta, errors) {
+  const pattern = meta.namePattern;
+  const fields = meta.fields || {};
+  const hasFields = Object.keys(fields).length > 0;
+
+  if (pattern === NAME_PATTERNS.HUMAN) {
+    if (!Array.isArray(meta.displayFields) || meta.displayFields.length === 0) {
+      errors.add(
+        'displayFields',
+        "HUMAN namePattern requires a non-empty 'displayFields' array (e.g. ['first_name', 'last_name'])",
+      );
+    }
+    // displayFields field-existence is checked by validateEntityTraits.
+    return;
+  }
+
+  if (pattern === NAME_PATTERNS.SIMPLE || pattern === NAME_PATTERNS.COMPUTED) {
+    if (typeof meta.displayField !== 'string' || meta.displayField.length === 0) {
+      errors.add(
+        'displayField',
+        `${pattern} namePattern requires a 'displayField' string naming the display column`,
+      );
+      return;
+    }
+  }
+
+  // Any singular displayField that is declared must reference a real field.
+  if (
+    typeof meta.displayField === 'string' &&
+    meta.displayField.length > 0 &&
+    hasFields &&
+    !fields[meta.displayField]
+  ) {
+    errors.add(
+      'displayField',
+      `References field '${meta.displayField}' which does not exist in fields`,
+    );
+  }
+}
+
+/**
  * Validate supportsFileAttachments property
  * REQUIRED: Every entity must explicitly declare whether it supports file attachments.
  * This ensures intentional decisions and powers metadata-driven file attachment UI.
@@ -1714,6 +1769,7 @@ function validateEntity(entityName, meta, allMetadata) {
 
   // Run all validators
   validateDisplayProperties(meta, errors);
+  validateDisplayContract(meta, errors);
   validateNavVisibility(meta, errors);
   validateNavPlacement(meta, errors);
   validateSupportsFileAttachments(meta, errors);

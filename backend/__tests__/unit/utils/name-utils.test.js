@@ -2,19 +2,24 @@
  * Unit Tests: Name Utilities
  *
  * Tests all name formatting functions for entities.
- * Covers HUMAN entities, COMPUTED entities, and text utilities.
+ * Covers HUMAN entities, COMPUTED entities, text utilities, and the
+ * display-name resolution SSOT (resolveDisplayName + buildHumanNameSqlExpr).
  *
  * Goal: 100% coverage of name-utils.js
  */
 
 const {
+  composeFields,
   fullName,
   sortName,
   displayName,
   truncate,
   computeName,
   formatTemplate,
-} = require("../../helpers/name-utils");
+  resolveDisplayName,
+  buildHumanNameSqlExpr,
+} = require("../../../utils/name-utils");
+const { NAME_PATTERNS } = require("../../../config/name-patterns");
 
 describe("Name Utils", () => {
   // ==========================================================================
@@ -329,6 +334,171 @@ describe("Name Utils", () => {
 
     test("handles empty template", () => {
       expect(formatTemplate("", { name: "test" })).toBe("");
+    });
+  });
+
+  // ==========================================================================
+  // FIELD COMPOSITION PRIMITIVE
+  // ==========================================================================
+
+  describe("composeFields()", () => {
+    test("returns empty string for null record", () => {
+      expect(composeFields(null, ["first_name"])).toBe("");
+    });
+
+    test("returns empty string when fields is not an array", () => {
+      expect(composeFields({ first_name: "Jane" }, null)).toBe("");
+    });
+
+    test("composes arbitrary ordered fields", () => {
+      const record = { a: "X", b: "Y", c: "Z" };
+      expect(composeFields(record, ["a", "b", "c"])).toBe("X Y Z");
+    });
+
+    test("drops empty and null fields, trims the rest", () => {
+      const record = { a: "  X  ", b: "", c: null, d: "Z" };
+      expect(composeFields(record, ["a", "b", "c", "d"])).toBe("X Z");
+    });
+
+    test("coerces non-string values", () => {
+      expect(composeFields({ a: 42, b: "u" }, ["a", "b"])).toBe("42 u");
+    });
+  });
+
+  // ==========================================================================
+  // DISPLAY-NAME RESOLUTION (SSOT)
+  // ==========================================================================
+
+  describe("resolveDisplayName()", () => {
+    test("returns empty string for null record", () => {
+      expect(resolveDisplayName(null, { namePattern: NAME_PATTERNS.SIMPLE })).toBe("");
+    });
+
+    test("returns empty string for null metadata", () => {
+      expect(resolveDisplayName({ name: "Acme" }, null)).toBe("");
+    });
+
+    test("HUMAN: composes declared displayFields", () => {
+      const meta = {
+        namePattern: NAME_PATTERNS.HUMAN,
+        displayFields: ["first_name", "last_name"],
+      };
+      expect(resolveDisplayName({ first_name: "Jane", last_name: "Smith" }, meta)).toBe(
+        "Jane Smith",
+      );
+    });
+
+    test("HUMAN: falls back to first_name/last_name when displayFields absent", () => {
+      const meta = { namePattern: NAME_PATTERNS.HUMAN };
+      expect(resolveDisplayName({ first_name: "Ann", last_name: "Lee" }, meta)).toBe(
+        "Ann Lee",
+      );
+    });
+
+    test("HUMAN: honors a non-standard displayFields order", () => {
+      const meta = {
+        namePattern: NAME_PATTERNS.HUMAN,
+        displayFields: ["last_name", "first_name"],
+      };
+      expect(resolveDisplayName({ first_name: "Jane", last_name: "Smith" }, meta)).toBe(
+        "Smith Jane",
+      );
+    });
+
+    test("SIMPLE: returns the authored displayField column", () => {
+      const meta = { namePattern: NAME_PATTERNS.SIMPLE, displayField: "name" };
+      expect(resolveDisplayName({ name: "Manager" }, meta)).toBe("Manager");
+    });
+
+    test("COMPUTED: returns the identifier displayField column", () => {
+      const meta = {
+        namePattern: NAME_PATTERNS.COMPUTED,
+        displayField: "work_order_number",
+      };
+      expect(resolveDisplayName({ work_order_number: "WO-2026-0001" }, meta)).toBe(
+        "WO-2026-0001",
+      );
+    });
+
+    test("custom: null namePattern but a declared displayField still resolves", () => {
+      const meta = { namePattern: null, displayField: "company_name" };
+      expect(resolveDisplayName({ company_name: "Acme LLC" }, meta)).toBe("Acme LLC");
+    });
+
+    test("returns empty string when the displayField value is null", () => {
+      const meta = { namePattern: NAME_PATTERNS.SIMPLE, displayField: "name" };
+      expect(resolveDisplayName({ name: null }, meta)).toBe("");
+    });
+
+    test("returns empty string for junction/system (no pattern, no displayField)", () => {
+      expect(resolveDisplayName({ id: 1 }, { namePattern: null })).toBe("");
+    });
+  });
+
+  // ==========================================================================
+  // SQL EXPRESSION BUILDER + JS<->SQL PARITY
+  // ==========================================================================
+
+  describe("buildHumanNameSqlExpr()", () => {
+    test("builds the canonical expression for the default fields", () => {
+      expect(buildHumanNameSqlExpr()).toBe(
+        "NULLIF(TRIM(CONCAT_WS(' ', NULLIF(TRIM(first_name), ''), NULLIF(TRIM(last_name), ''))), '')",
+      );
+    });
+
+    test("supports custom fields", () => {
+      expect(buildHumanNameSqlExpr(["given", "family"])).toBe(
+        "NULLIF(TRIM(CONCAT_WS(' ', NULLIF(TRIM(given), ''), NULLIF(TRIM(family), ''))), '')",
+      );
+    });
+
+    test("qualifies columns with a table alias", () => {
+      expect(buildHumanNameSqlExpr(["first_name", "last_name"], { alias: "c" })).toBe(
+        "NULLIF(TRIM(CONCAT_WS(' ', NULLIF(TRIM(c.first_name), ''), NULLIF(TRIM(c.last_name), ''))), '')",
+      );
+    });
+  });
+
+  describe("JS<->SQL parity (composeFields vs the GENERATED expression)", () => {
+    // Oracle mirroring Postgres semantics of buildHumanNameSqlExpr:
+    //   NULLIF(TRIM(CONCAT_WS(' ', NULLIF(TRIM(c), ''), ...)), '')
+    // Returns null for the "no name" case (the SQL twin of JS '').
+    const evalHumanNameSql = (fields, record) => {
+      const parts = fields
+        .map((f) => (record[f] == null ? null : String(record[f]).trim())) // TRIM(col)
+        .map((v) => (v === "" ? null : v)) // NULLIF(col, '')
+        .filter((v) => v != null); // CONCAT_WS drops NULL
+      const trimmed = parts.join(" ").trim(); // outer TRIM
+      return trimmed === "" ? null : trimmed; // NULLIF(result, '')
+    };
+
+    const fields = ["first_name", "last_name"];
+    const cases = [
+      { first_name: "Jane", last_name: "Smith" },
+      { first_name: "Jane", last_name: "" },
+      { first_name: "", last_name: "Smith" },
+      { first_name: null, last_name: "Doe" },
+      { first_name: "  Jane  ", last_name: "  Smith  " },
+      { first_name: "   ", last_name: null },
+      {},
+    ];
+
+    test.each(cases)(
+      "composeFields agrees with the SQL oracle for %o",
+      (record) => {
+        const js = composeFields(record, fields);
+        const sql = evalHumanNameSql(fields, record);
+        // SQL NULL is the twin of JS '' (the "no display name" sentinel).
+        expect(js).toBe(sql == null ? "" : sql);
+      },
+    );
+
+    test("resolveDisplayName(HUMAN) agrees with the SQL oracle", () => {
+      const meta = { namePattern: NAME_PATTERNS.HUMAN, displayFields: fields };
+      for (const record of cases) {
+        const sql = evalHumanNameSql(fields, record);
+        expect(resolveDisplayName(record, meta)).toBe(sql == null ? "" : sql);
+      }
     });
   });
 });
