@@ -20,44 +20,9 @@
  */
 
 const allMetadata = require('./models');
-const entityRouters = require('../routes/entities');
+const { createEntityRouter } = require('../routes/entities');
 const { createFileSubRouter } = require('../routes/file-sub-router');
 const { getFeatures } = require('./metadata-accessors');
-
-// Derive uncountable entity names from metadata at load time (no hardcoding!)
-const UNCOUNTABLE_ENTITIES = Object.entries(allMetadata)
-  .filter(([, meta]) => meta.uncountable === true)
-  .map(([key]) =>
-    key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase()),
-  );
-
-/**
- * Maps entity name to router export name.
- * Must match the naming convention in routes/entities.js
- *
- * @param {string} entityName - Snake_case entity name (e.g., 'work_order')
- * @returns {string} Router export name (e.g., 'workOrdersRouter')
- */
-function toRouterName(entityName) {
-  // Convert snake_case to camelCase
-  const camelCase = entityName.replace(/_([a-z])/g, (_, letter) =>
-    letter.toUpperCase(),
-  );
-
-  // Uncountable nouns derived from metadata (no plural form)
-  if (UNCOUNTABLE_ENTITIES.includes(camelCase)) {
-    return `${camelCase}Router`;
-  }
-
-  // Simple pluralization: 'y' -> 'ies' for consonant+y, otherwise add 's'
-  const vowels = ['a', 'e', 'i', 'o', 'u'];
-  const plural =
-    camelCase.endsWith('y') && !vowels.includes(camelCase.slice(-2, -1))
-      ? camelCase.slice(0, -1) + 'ies'
-      : camelCase + 's';
-
-  return `${plural}Router`;
-}
 
 /**
  * Load all entity routes for dynamic mounting in server.js
@@ -76,15 +41,12 @@ function loadEntityRoutes() {
       continue;
     }
 
-    // Get the router by its export name
-    const routerName = toRouterName(entityName);
-    const router = entityRouters[routerName];
-
-    if (!router) {
-      // This is a configuration error - routeConfig says use generic, but no router exists
+    // Generic routing needs an rlsResource for requirePermission/enforceRLS to
+    // resolve at request time; skip loudly on misconfiguration.
+    if (!metadata.rlsResource) {
       console.error(
-        `[route-loader] ❌ Router not found for entity '${entityName}' ` +
-          `(expected export: '${routerName}'). Check routes/entities.js exports.`,
+        `[route-loader] ❌ '${entityName}' sets routeConfig.useGenericRouter ` +
+          'but has no rlsResource; skipping route mount.',
       );
       continue;
     }
@@ -95,7 +57,7 @@ function loadEntityRoutes() {
 
     routes.push({
       path: mountPath,
-      router,
+      router: createEntityRouter(entityName),
       entityName, // Include for logging/debugging
     });
   }
@@ -159,7 +121,6 @@ function getFileRouteSummary(routes) {
 module.exports = {
   loadEntityRoutes,
   loadFileSubRoutes,
-  toRouterName,
   getRouteSummary,
   getFileRouteSummary,
 };

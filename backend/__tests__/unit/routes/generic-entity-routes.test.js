@@ -169,17 +169,8 @@ jest.mock("../../../validators", () => {
 // ENTITY CONFIGURATION
 // ============================================================================
 
-// Import the generic entity routers
-const {
-  usersRouter,
-  rolesRouter,
-  customersRouter,
-  techniciansRouter,
-  inventoryRouter,
-  invoicesRouter,
-  contractsRouter,
-  workOrdersRouter,
-} = require("../../../routes/entities");
+// Build entity routers on demand via the factory (Option A: no named exports)
+const { createEntityRouter } = require("../../../routes/entities");
 
 /**
  * Entity definitions for parameterized tests
@@ -189,7 +180,7 @@ const ENTITIES = [
   {
     name: "user",
     routePath: "/api/users",
-    router: usersRouter,
+    router: createEntityRouter("user"),
     sampleData: {
       id: 1,
       email: "user@example.com",
@@ -205,7 +196,7 @@ const ENTITIES = [
   {
     name: "role",
     routePath: "/api/roles",
-    router: rolesRouter,
+    router: createEntityRouter("role"),
     sampleData: {
       id: 1,
       name: "admin",
@@ -217,7 +208,7 @@ const ENTITIES = [
   {
     name: "customer",
     routePath: "/api/customers",
-    router: customersRouter,
+    router: createEntityRouter("customer"),
     sampleData: {
       id: 1,
       email: "test@example.com",
@@ -233,21 +224,21 @@ const ENTITIES = [
   {
     name: "technician",
     routePath: "/api/technicians",
-    router: techniciansRouter,
+    router: createEntityRouter("technician"),
     sampleData: { id: 1, user_id: 1, specialty: "HVAC", status: "active" },
     createData: { user_id: 2, specialty: "Plumbing", status: "active" },
   },
   {
     name: "inventory",
     routePath: "/api/inventory",
-    router: inventoryRouter,
+    router: createEntityRouter("inventory"),
     sampleData: { id: 1, name: "Widget", quantity: 100, unit_price: 9.99 },
     createData: { name: "New Widget", quantity: 50, unit_price: 19.99 },
   },
   {
     name: "invoice",
     routePath: "/api/invoices",
-    router: invoicesRouter,
+    router: createEntityRouter("invoice"),
     sampleData: {
       id: 1,
       customer_id: 1,
@@ -259,7 +250,7 @@ const ENTITIES = [
   {
     name: "contract",
     routePath: "/api/contracts",
-    router: contractsRouter,
+    router: createEntityRouter("contract"),
     sampleData: {
       id: 1,
       customer_id: 1,
@@ -271,7 +262,7 @@ const ENTITIES = [
   {
     name: "work_order",
     routePath: "/api/work_orders",
-    router: workOrdersRouter,
+    router: createEntityRouter("work_order"),
     sampleData: {
       id: 1,
       customer_id: 1,

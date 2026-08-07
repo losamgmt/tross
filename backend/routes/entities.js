@@ -411,61 +411,11 @@ function createEntityRouter(entityName, _options = {}) {
 }
 
 // =============================================================================
-// DYNAMIC ENTITY ROUTER GENERATION
+// EXPORTS
 // =============================================================================
-
-/**
- * Dynamically generate routers for all entities with routeConfig.useGenericRouter: true
- * This replaces hardcoded router declarations with metadata-driven generation.
- */
-const allMetadata = require('../config/models');
-
-// Derive uncountable entity names from metadata at load time (no hardcoding!)
-const UNCOUNTABLE_ENTITIES = Object.entries(allMetadata)
-  .filter(([, meta]) => meta.uncountable === true)
-  .map(([key]) =>
-    key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase()),
-  );
-
-/**
- * Convert entity name to router export name
- * Examples: 'customer' -> 'customersRouter', 'work_order' -> 'workOrdersRouter'
- */
-function toRouterName(entityName) {
-  // Convert snake_case to camelCase
-  const camelCase = entityName.replace(/_([a-z])/g, (_, letter) =>
-    letter.toUpperCase(),
-  );
-
-  // Uncountable nouns derived from metadata (no plural form)
-  if (UNCOUNTABLE_ENTITIES.includes(camelCase)) {
-    return `${camelCase}Router`;
-  }
-
-  // Simple pluralization: 'y' -> 'ies' for consonant+y, otherwise add 's'
-  const vowels = ['a', 'e', 'i', 'o', 'u'];
-  const plural =
-    camelCase.endsWith('y') && !vowels.includes(camelCase.slice(-2, -1))
-      ? camelCase.slice(0, -1) + 'ies'
-      : camelCase + 's';
-  return `${plural}Router`;
-}
-
-// Generate routers dynamically from metadata
-const dynamicRouters = {};
-
-for (const [entityName, metadata] of Object.entries(allMetadata)) {
-  // Only create routers for entities that opt-in via routeConfig
-  if (metadata.routeConfig?.useGenericRouter === true && metadata.rlsResource) {
-    const routerName = toRouterName(entityName);
-    dynamicRouters[routerName] = createEntityRouter(entityName, {
-      rlsResource: metadata.rlsResource,
-    });
-  }
-}
-
-// Export factory + all dynamic routers
+// Entity routers are built on demand by config/route-loader.js, which calls
+// createEntityRouter(entityName) for each entity whose metadata sets
+// routeConfig.useGenericRouter. No pre-built named exports (single load path).
 module.exports = {
   createEntityRouter,
-  ...dynamicRouters,
 };
