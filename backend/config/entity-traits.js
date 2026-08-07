@@ -19,11 +19,14 @@
  * - SYSTEM: Internal system table, not user-facing (audit_log, preferences)
  * - WORKFLOW: Has status-based lifecycle (invoice, work_order, quote)
  * - UNCOUNTABLE: Excluded from dashboard/summary counts
+ * - SELF_PROTECTED: A principal cannot delete their own record (e.g. a user
+ *   cannot delete their own account)
  */
 const ENTITY_TRAITS = Object.freeze({
   SYSTEM: 'system',
   WORKFLOW: 'workflow',
   UNCOUNTABLE: 'uncountable',
+  SELF_PROTECTED: 'self-protected',
 });
 
 // ============================================================================
@@ -79,10 +82,23 @@ function getTraits(metadata) {
   return metadata.traits || [];
 }
 
+/**
+ * Check if entity is self-protected: a principal cannot delete their own
+ * record (e.g. a user cannot delete their own account).
+ * Convenience method - equivalent to hasTrait(metadata, ENTITY_TRAITS.SELF_PROTECTED)
+ *
+ * @param {Object} metadata - Entity metadata object
+ * @returns {boolean} True if the entity forbids self-deletion
+ */
+function isSelfProtected(metadata) {
+  return hasTrait(metadata, ENTITY_TRAITS.SELF_PROTECTED);
+}
+
 module.exports = {
   ENTITY_TRAITS,
   hasTrait,
   isSystemTable,
   hasWorkflow,
   getTraits,
+  isSelfProtected,
 };

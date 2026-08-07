@@ -45,6 +45,7 @@ const {
 const { logger } = require('../config/logger');
 const AppError = require('../utils/app-error');
 const { ERROR_CODES } = require('../config/error-codes');
+const { isSelfProtected } = require('../config/entity-traits');
 
 // =============================================================================
 // ASYNC HANDLER WRAPPER
@@ -314,11 +315,12 @@ function createEntityRouter(entityName, _options = {}) {
       const auditContext = buildAuditContext(req);
       const rlsContext = buildRlsContext(req);
 
-      // SELF-DELETION PREVENTION: Users cannot delete themselves
-      if (entityName === 'user' && req.dbUser?.id === entityId) {
+      // SELF-DELETION PREVENTION (metadata-driven): self-protected entities
+      // forbid a principal from deleting their own record.
+      if (isSelfProtected(metadata) && req.dbUser?.id === entityId) {
         return ResponseFormatter.badRequest(
           res,
-          'Users cannot delete their own account',
+          'You cannot delete your own account',
         );
       }
 

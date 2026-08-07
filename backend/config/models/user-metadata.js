@@ -38,6 +38,9 @@ module.exports = {
   // Material icon for navigation menus and entity displays
   icon: 'person',
 
+  // Behavioral traits: self-protected = a user cannot delete their own account
+  traits: ['self-protected'],
+
   // ============================================================================
   // AUTH0 CONFIGURATION
   // ============================================================================
