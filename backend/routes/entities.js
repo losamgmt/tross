@@ -269,7 +269,11 @@ function createEntityRouter(entityName, _options = {}) {
       const rlsContext = buildRlsContext(req);
       const auditContext = buildAuditContext(req);
 
-      // Check entity exists and user has access
+      // RLS access pre-check — LOAD-BEARING (do not remove). update() fetches
+      // oldRecord UNscoped (hooks/audit need the full row) and only row-scopes the
+      // UPDATE itself, so this 404 is what prevents a beforeChange hook from firing
+      // on an out-of-scope row (which would leak existence via 403/202 + approval
+      // side-effects). Registry: update-route-precheck-redundant (verified NOT redundant).
       const existing = await GenericEntityService.findById(
         entityName,
         entityId,
