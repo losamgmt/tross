@@ -48,6 +48,16 @@ import '../molecules/containers/scrollable_content.dart';
 import 'charts/dashboard_charts.dart';
 import 'tables/filterable_data_table.dart';
 
+/// Display label for a technician row: prefer the server `name`, else first+last.
+@visibleForTesting
+String technicianDisplayLabel(Map<String, dynamic> tech) {
+  final name = tech['name'] as String?;
+  if (name != null && name.isNotEmpty) return name;
+  final firstName = tech['first_name'] ?? '';
+  final lastName = tech['last_name'] ?? '';
+  return '$firstName $lastName'.trim();
+}
+
 /// Main dashboard content widget
 class DashboardContent extends StatelessWidget {
   /// User's display name for welcome banner
@@ -503,9 +513,7 @@ class DashboardContent extends StatelessWidget {
             (t) => t['id'] == value,
             orElse: () => <String, dynamic>{},
           );
-          final firstName = tech['first_name'] ?? '';
-          final lastName = tech['last_name'] ?? '';
-          return '$firstName $lastName'.trim();
+          return technicianDisplayLabel(tech);
         },
       ),
     );
