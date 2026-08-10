@@ -9,6 +9,7 @@
 ///   entityId: customerId,
 ///   references: 'customer',
 ///   displayField: 'name',
+///   embeddedDisplay: row['customer_id_display'], // optional: skips the lookup
 /// )
 /// ```
 library;
@@ -28,11 +29,16 @@ class ForeignKeyLookupCell extends StatefulWidget {
   final String references;
   final String displayField;
 
+  /// Server-embedded display value (UDN `<fk>_display`). When present, the cell
+  /// renders it directly and performs NO lookup; otherwise it falls back to getById.
+  final String? embeddedDisplay;
+
   const ForeignKeyLookupCell({
     super.key,
     required this.entityId,
     required this.references,
     required this.displayField,
+    this.embeddedDisplay,
   });
 
   @override
@@ -48,7 +54,14 @@ class _ForeignKeyLookupCellState extends State<ForeignKeyLookupCell> {
   @override
   void initState() {
     super.initState();
-    _loadValue();
+    final embedded = widget.embeddedDisplay;
+    if (embedded != null && embedded.isNotEmpty) {
+      // Server already embedded the FK's display value: no lookup needed.
+      _displayValue = embedded;
+      _isLoading = false;
+    } else {
+      _loadValue();
+    }
   }
 
   Future<void> _loadValue() async {

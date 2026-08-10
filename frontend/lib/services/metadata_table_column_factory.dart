@@ -208,7 +208,11 @@ class MetadataTableColumnFactory {
       FieldType.integer => TableCellBuilders.textCell(value.toString()),
       FieldType.decimal => _buildDecimalCell(value),
       FieldType.jsonb => TableCellBuilders.textCell('[JSON]'),
-      FieldType.foreignKey => _buildForeignKeyCell(fieldDef!, value),
+      FieldType.foreignKey => _buildForeignKeyCell(
+        fieldDef!,
+        value,
+        item['${fieldName}_display']?.toString(),
+      ),
       _ => TableCellBuilders.textCell(value.toString()),
     };
   }
@@ -337,7 +341,11 @@ class MetadataTableColumnFactory {
   /// Build foreign key cell with async lookup
   ///
   /// Uses a StatefulWidget to load and display the related entity's display field
-  static Widget _buildForeignKeyCell(FieldDefinition fieldDef, dynamic value) {
+  static Widget _buildForeignKeyCell(
+    FieldDefinition fieldDef,
+    dynamic value,
+    String? embeddedDisplay,
+  ) {
     if (value == null) return TableCellBuilders.textCell('—');
 
     final referencedEntity = fieldDef.references;
@@ -358,11 +366,12 @@ class MetadataTableColumnFactory {
       return TableCellBuilders.textCell('ID: $value');
     }
 
-    // Use async cell widget for FK lookup
+    // Prefer the server-embedded display; the cell looks up only if it is absent.
     return ForeignKeyLookupCell(
       entityId: value is int ? value : int.tryParse(value.toString()) ?? 0,
       references: referencedEntity,
       displayField: displayField,
+      embeddedDisplay: embeddedDisplay,
     );
   }
 
