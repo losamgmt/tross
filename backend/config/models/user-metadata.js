@@ -252,9 +252,6 @@ module.exports = {
       delete: 'none',
     },
 
-    // Role name from JOIN - readonly, publicly readable
-    role: FAL.PUBLIC_READONLY,
-
     // Profile links - admin managed (set via profile creation flows)
     customer_profile_id: FAL.ADMIN_ONLY,
     technician_profile_id: FAL.ADMIN_ONLY,
