@@ -19,6 +19,9 @@ const {
   FIELD,
 } = require('../backend/config/field-types');
 
+// Display-name SQL SSOT (UDN): the HUMAN generated-column expression (first + last)
+const { buildHumanNameSqlExpr } = require('../backend/utils/name-utils');
+
 // ============================================================================
 // CONFIGURATION
 // ============================================================================
@@ -53,6 +56,13 @@ const CONFIG = Object.freeze({
     [NAME_PATTERNS.HUMAN]: [
       { name: 'first_name', sqlType: FIELD.FIRST_NAME.sqlType, constraints: ['NOT NULL'] },
       { name: 'last_name', sqlType: FIELD.LAST_NAME.sqlType, constraints: ['NOT NULL'] },
+      // UDN: real, DB-maintained display name = first + last (STORED generated column, nullable)
+      {
+        name: 'name',
+        sqlType: FIELD.NAME.sqlType,
+        constraints: [],
+        generatedAs: buildHumanNameSqlExpr(['first_name', 'last_name']),
+      },
     ],
     [NAME_PATTERNS.SIMPLE]: [
       { name: 'name', sqlType: FIELD.NAME.sqlType, constraints: ['NOT NULL'] },
@@ -415,6 +425,11 @@ function sortByDependencies(entities) {
 
 function generateColumnSql(column, collectForeignKeys = null, tableName = null) {
   const parts = [column.name, column.sqlType];
+
+  // Postgres STORED generated column: the expression follows the type (UDN HUMAN name)
+  if (column.generatedAs) {
+    parts.push(`GENERATED ALWAYS AS (${column.generatedAs}) STORED`);
+  }
 
   // Add constraints in order: UNIQUE, NOT NULL, DEFAULT
   for (const constraint of column.constraints) {

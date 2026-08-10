@@ -442,32 +442,33 @@ describe("Name Utils", () => {
   describe("buildHumanNameSqlExpr()", () => {
     test("builds the canonical expression for the default fields", () => {
       expect(buildHumanNameSqlExpr()).toBe(
-        "NULLIF(TRIM(CONCAT_WS(' ', NULLIF(TRIM(first_name), ''), NULLIF(TRIM(last_name), ''))), '')",
+        "NULLIF(TRIM(COALESCE(NULLIF(TRIM(first_name), '') || ' ', '') || COALESCE(NULLIF(TRIM(last_name), '') || ' ', '')), '')",
       );
     });
 
     test("supports custom fields", () => {
       expect(buildHumanNameSqlExpr(["given", "family"])).toBe(
-        "NULLIF(TRIM(CONCAT_WS(' ', NULLIF(TRIM(given), ''), NULLIF(TRIM(family), ''))), '')",
+        "NULLIF(TRIM(COALESCE(NULLIF(TRIM(given), '') || ' ', '') || COALESCE(NULLIF(TRIM(family), '') || ' ', '')), '')",
       );
     });
 
     test("qualifies columns with a table alias", () => {
       expect(buildHumanNameSqlExpr(["first_name", "last_name"], { alias: "c" })).toBe(
-        "NULLIF(TRIM(CONCAT_WS(' ', NULLIF(TRIM(c.first_name), ''), NULLIF(TRIM(c.last_name), ''))), '')",
+        "NULLIF(TRIM(COALESCE(NULLIF(TRIM(c.first_name), '') || ' ', '') || COALESCE(NULLIF(TRIM(c.last_name), '') || ' ', '')), '')",
       );
     });
   });
 
   describe("JS<->SQL parity (composeFields vs the GENERATED expression)", () => {
-    // Oracle mirroring Postgres semantics of buildHumanNameSqlExpr:
-    //   NULLIF(TRIM(CONCAT_WS(' ', NULLIF(TRIM(c), ''), ...)), '')
+    // Oracle mirroring Postgres semantics of buildHumanNameSqlExpr (immutable form):
+    //   NULLIF(TRIM(COALESCE(NULLIF(TRIM(c), '') || ' ', '') || ...), '')
+    // Same result as: trim each, drop empties, single-space join, NULL if all empty.
     // Returns null for the "no name" case (the SQL twin of JS '').
     const evalHumanNameSql = (fields, record) => {
       const parts = fields
         .map((f) => (record[f] == null ? null : String(record[f]).trim())) // TRIM(col)
         .map((v) => (v === "" ? null : v)) // NULLIF(col, '')
-        .filter((v) => v != null); // CONCAT_WS drops NULL
+        .filter((v) => v != null); // empties drop out
       const trimmed = parts.join(" ").trim(); // outer TRIM
       return trimmed === "" ? null : trimmed; // NULLIF(result, '')
     };

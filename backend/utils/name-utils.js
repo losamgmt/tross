@@ -278,15 +278,19 @@ function resolveDisplayName(record, metadata) {
  *
  * @example
  * buildHumanNameSqlExpr(['first_name', 'last_name'])
- * // "NULLIF(TRIM(CONCAT_WS(' ', NULLIF(TRIM(first_name), ''), NULLIF(TRIM(last_name), ''))), '')"
+ * // "NULLIF(TRIM(COALESCE(NULLIF(TRIM(first_name), '') || ' ', '') || COALESCE(NULLIF(TRIM(last_name), '') || ' ', '')), '')"
  */
 function buildHumanNameSqlExpr(fields = ['first_name', 'last_name'], options = {}) {
   const { alias = '' } = options;
   const qualify = (col) => (alias ? `${alias}.${col}` : col);
+  // Each field contributes its trimmed value + a trailing space, or '' when
+  // empty/NULL, joined with the IMMUTABLE || operator. CONCAT_WS is only STABLE,
+  // so Postgres REJECTS it in a GENERATED column. Outer TRIM drops the separator
+  // space(s); NULLIF collapses an all-empty result to NULL (the SQL twin of '').
   const parts = fields
-    .map((col) => `NULLIF(TRIM(${qualify(col)}), '')`)
-    .join(', ');
-  return `NULLIF(TRIM(CONCAT_WS(' ', ${parts})), '')`;
+    .map((col) => `COALESCE(NULLIF(TRIM(${qualify(col)}), '') || ' ', '')`)
+    .join(' || ');
+  return `NULLIF(TRIM(${parts}), '')`;
 }
 
 // ============================================================================

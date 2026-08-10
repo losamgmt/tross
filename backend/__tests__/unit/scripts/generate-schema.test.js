@@ -342,6 +342,20 @@ describe("generate-schema generate phase", () => {
         references: "customers(id)",
       });
     });
+
+    it("renders a STORED generated column when generatedAs is present", () => {
+      const col = {
+        name: "name",
+        sqlType: "VARCHAR(255)",
+        constraints: [],
+        generatedAs: "TRIM(first_name || ' ' || last_name)",
+        order: 1,
+      };
+      const sql = generateColumnSql(col);
+      expect(sql).toBe(
+        "name VARCHAR(255) GENERATED ALWAYS AS (TRIM(first_name || ' ' || last_name)) STORED",
+      );
+    });
   });
 
   describe("generateTableSql", () => {
@@ -526,6 +540,32 @@ describe("generate-schema edge cases", () => {
 
       expect(colNames).toContain("first_name");
       expect(colNames).toContain("last_name");
+    });
+
+    it("human namePattern adds a generated, nullable, non-unique `name` column", () => {
+      const rawHuman = {
+        entityKey: "customer",
+        tableName: "customers",
+        namePattern: "human",
+        identityField: "email",
+        fields: {
+          email: { type: "email", required: true },
+          first_name: { type: "string", required: true },
+          last_name: { type: "string", required: true },
+        },
+        requiredFields: ["email", "first_name", "last_name"],
+      };
+
+      const entity = normalizeEntity(rawHuman);
+      const nameCol = entity.columns.find((c) => c.name === "name");
+
+      expect(nameCol).toBeDefined();
+      // Composed from first + last via the generated-column expression
+      expect(nameCol.generatedAs).toContain("first_name");
+      expect(nameCol.generatedAs).toContain("last_name");
+      // Generated display name is nullable + not unique
+      expect(nameCol.constraints).not.toContain("NOT NULL");
+      expect(nameCol.constraints).not.toContain("UNIQUE");
     });
 
     it("handles computed namePattern (no name columns)", () => {
