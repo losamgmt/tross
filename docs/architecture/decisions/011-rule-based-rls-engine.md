@@ -325,6 +325,17 @@ admin. Therefore, today:
   loader runs, the included relationships are stripped before the response. Nested
   data currently surfaces only for internal/no-role callers.
 
+**Update — scalar FK display labels ARE embedded and redaction-safe (UDN, 2026-08).**
+Distinct from nested *rows*: every user-facing entity now has a real per-strategy
+display column (`name` for HUMAN/SIMPLE, the identifier for COMPUTED), and the generic
+read path (`findAll` / `findByField`) LEFT JOINs each FK target to project a single
+scalar `<fk>_display` label (via `buildForeignKeyDisplayClauses`). Redaction stays
+Tier-1 and safe: `filterDataByRole` keeps `<fk>_display` **iff** the FK id field is
+itself readable by the caller's role (the label inherits the id's permission), so a
+label never outlives its id. This resolves the former FK-display N+1 (the client reads
+the embedded label, zero lookups) *without* embedding nested rows — the Tier-2
+nested-relationship case below remains separate and still deferred.
+
 **Deferred feature — Tier-2 nested redaction (revisit if `?include=` response-embedding is adopted).**
 To make `?include=` response-visible *and* field-safe, a future change should:
 
