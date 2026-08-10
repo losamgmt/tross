@@ -68,6 +68,48 @@ function logDeprecationWarning(entityKey, property) {
 }
 
 // ============================================================================
+// FIELD-TRAIT VOCABULARY + GENERIC ACCESSORS (the canonical field-trait API)
+// ============================================================================
+
+/**
+ * The queryable field-trait vocabulary. Each value IS the boolean field property
+ * that flags membership. Pass these to getFieldsWithTrait / fieldHasTrait — never a raw string.
+ */
+const FIELD_TRAIT = Object.freeze({
+  REQUIRED: 'required',
+  IMMUTABLE: 'immutable',
+  SEARCHABLE: 'searchable',
+  FILTERABLE: 'filterable',
+  SORTABLE: 'sortable',
+});
+
+/**
+ * Field names on an entity that carry a given trait (field-level only; no legacy bridge).
+ *
+ * @param {Object} metadata - Entity metadata
+ * @param {string} trait - A FIELD_TRAIT value
+ * @returns {string[]} Field names where fields[name][trait] === true
+ */
+function getFieldsWithTrait(metadata, trait) {
+  const fields = metadata.fields || {};
+  return Object.entries(fields)
+    .filter(([, fieldDef]) => fieldDef[trait] === true)
+    .map(([fieldName]) => fieldName);
+}
+
+/**
+ * Whether a single field carries a given trait (field-level only).
+ *
+ * @param {Object} metadata - Entity metadata
+ * @param {string} fieldName - Field to check
+ * @param {string} trait - A FIELD_TRAIT value
+ * @returns {boolean}
+ */
+function fieldHasTrait(metadata, fieldName, trait) {
+  return metadata.fields?.[fieldName]?.[trait] === true;
+}
+
+// ============================================================================
 // REQUIRED FIELDS
 // ============================================================================
 
@@ -716,6 +758,11 @@ function getMigrationStatus(allMetadata) {
 // ============================================================================
 
 module.exports = {
+  // Canonical field-trait API (generic — pass a FIELD_TRAIT value)
+  FIELD_TRAIT,
+  getFieldsWithTrait,
+  fieldHasTrait,
+
   // Required fields
   getRequiredFields,
   isFieldRequired,
