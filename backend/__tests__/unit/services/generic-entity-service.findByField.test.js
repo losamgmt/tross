@@ -63,12 +63,12 @@ describe("GenericEntityService.findByField()", () => {
       );
     });
 
-    test("should find user by auth0_id with role JOIN (defaultIncludes)", async () => {
+    test("should find user by auth0_id and embed role_id_display via FK JOIN", async () => {
       const mockUser = {
         id: 1,
         email: "test@example.com",
         auth0_id: "auth0|abc123",
-        role: "admin",
+        role_id_display: "admin",
       };
       db.query.mockResolvedValueOnce({ rows: [mockUser] });
 
@@ -78,19 +78,19 @@ describe("GenericEntityService.findByField()", () => {
         "auth0|abc123",
       );
 
-      // Should include role JOIN because user metadata has defaultIncludes: ['role']
+      // role_id FK LEFT JOINs roles and projects its display column as role_id_display
       expect(db.query).toHaveBeenCalledWith(
-        expect.stringContaining("LEFT JOIN roles"),
+        expect.stringContaining("LEFT JOIN roles fk_role_id"),
         ["auth0|abc123"],
       );
       expect(db.query).toHaveBeenCalledWith(
-        expect.stringContaining("r.name as role"),
+        expect.stringContaining("fk_role_id.name AS role_id_display"),
         ["auth0|abc123"],
       );
       // auth0_id should be filtered out in response
       expect(result.auth0_id).toBeUndefined();
-      // role should be included
-      expect(result.role).toBe("admin");
+      // the embedded FK display label should be included
+      expect(result.role_id_display).toBe("admin");
     });
 
     test("should find customer by email", async () => {

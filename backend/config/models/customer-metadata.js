@@ -51,6 +51,9 @@ module.exports = {
    */
   displayFields: ['first_name', 'last_name'],
 
+  // UDN: the generated `name` is the singular display column; FK refs resolve to it.
+  displayField: 'name',
+
   // ============================================================================
   // IDENTITY CONFIGURATION (Entity Contract v2.0)
   // ============================================================================

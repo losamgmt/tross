@@ -51,7 +51,7 @@ const { filterDataByRole } = require('../../utils/field-access-controller');
 const { logEntityAuditIfEnabled } = require('../../db/helpers/audit-helper');
 const {
   loadRelationships,
-  buildDefaultIncludesClauses,
+  buildForeignKeyDisplayClauses,
 } = require('../../db/helpers/relationship-loader');
 const {
   ENTITY_FIELDS,
@@ -412,8 +412,6 @@ class GenericEntityService {
     const {
       tableName,
       defaultSort = DEFAULT_SORT,
-      defaultIncludes = [],
-      relationships = {},
     } = metadata;
 
     // Use accessors for field properties (supports both legacy arrays and field-level)
@@ -421,21 +419,17 @@ class GenericEntityService {
     const filterableFields = getFilterableFields(metadata);
     const sortableFields = getSortableFields(metadata);
 
-    // Build SELECT and JOIN clauses for default includes
+    // Embed each FK's display value (LEFT JOIN target, project <fk>_display)
     let selectClause = `${tableName}.*`;
     let joinClause = '';
 
-    if (defaultIncludes.length > 0) {
-      const { selectParts, joinParts } = buildDefaultIncludesClauses(
-        tableName,
-        defaultIncludes,
-        relationships,
-      );
-
-      if (selectParts.length > 0) {
-        selectClause = `${tableName}.*, ${selectParts.join(', ')}`;
-        joinClause = joinParts.join(' ');
-      }
+    const { selectParts, joinParts } = buildForeignKeyDisplayClauses(
+      metadata,
+      allMetadata,
+    );
+    if (selectParts.length > 0) {
+      selectClause = `${tableName}.*, ${selectParts.join(', ')}`;
+      joinClause = joinParts.join(' ');
     }
 
     // Build search clause (case-insensitive ILIKE across searchable fields)
@@ -623,8 +617,6 @@ class GenericEntityService {
     const {
       tableName,
       primaryKey,
-      defaultIncludes = [],
-      relationships = {},
     } = metadata;
     const filterableFields = getFilterableFields(metadata);
 
@@ -640,21 +632,17 @@ class GenericEntityService {
       );
     }
 
-    // Build SELECT and JOIN clauses for default includes
+    // Embed each FK's display value (LEFT JOIN target, project <fk>_display)
     let selectClause = `${tableName}.*`;
     let joinClause = '';
 
-    if (defaultIncludes.length > 0) {
-      const { selectParts, joinParts } = buildDefaultIncludesClauses(
-        tableName,
-        defaultIncludes,
-        relationships,
-      );
-
-      if (selectParts.length > 0) {
-        selectClause = `${tableName}.*, ${selectParts.join(', ')}`;
-        joinClause = joinParts.join(' ');
-      }
+    const { selectParts, joinParts } = buildForeignKeyDisplayClauses(
+      metadata,
+      allMetadata,
+    );
+    if (selectParts.length > 0) {
+      selectClause = `${tableName}.*, ${selectParts.join(', ')}`;
+      joinClause = joinParts.join(' ');
     }
 
     // Build WHERE clause - qualify field with table name to avoid ambiguity

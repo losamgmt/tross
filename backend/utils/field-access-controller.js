@@ -156,6 +156,15 @@ function filterDataByRole(data, metadata, userRole, operation = 'read') {
   const allowedFields = getFieldsForOperation(metadata, userRole, operation);
   const allowedSet = new Set(allowedFields);
 
+  // UDN: a readable FK id also authorizes its embedded <fk>_display label.
+  if (operation === 'read') {
+    for (const field of allowedFields) {
+      if (metadata.fields?.[field]?.type === 'foreignKey') {
+        allowedSet.add(`${field}_display`);
+      }
+    }
+  }
+
   if (Array.isArray(data)) {
     return data.map((record) => pickFields(record, allowedSet));
   }

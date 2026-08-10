@@ -239,13 +239,13 @@
       "requested_by": {
         "type": "foreignKey",
         "references": "user",
-        "displayField": "email",
+        "displayField": "name",
         "required": true
       },
       "approved_by": {
         "type": "foreignKey",
         "references": "user",
-        "displayField": "email"
+        "displayField": "name"
       }
     },
     "relationships": {
@@ -605,7 +605,7 @@
       "user_id": {
         "type": "foreignKey",
         "references": "user",
-        "displayField": "email",
+        "displayField": "name",
         "readonly": true
       },
       "ip_address": {
@@ -775,7 +775,7 @@
       "customer_id": {
         "type": "foreignKey",
         "references": "customer",
-        "displayField": "email",
+        "displayField": "name",
         "required": true
       },
       "start_date": {
@@ -846,7 +846,7 @@
         "status"
       ]
     },
-    "displayField": "email",
+    "displayField": "name",
     "displayName": "Customer",
     "displayNamePlural": "Customers",
     "requiredFields": [
@@ -1371,7 +1371,7 @@
       "customer_id": {
         "type": "foreignKey",
         "references": "customer",
-        "displayField": "email",
+        "displayField": "name",
         "required": true
       },
       "unit_id": {
@@ -1538,7 +1538,7 @@
       "manager_id": {
         "type": "foreignKey",
         "references": "user",
-        "displayField": "email"
+        "displayField": "name"
       }
     },
     "relationships": {
@@ -1682,7 +1682,7 @@
       "uploaded_by": {
         "type": "foreignKey",
         "references": "user",
-        "displayField": "email",
+        "displayField": "name",
         "readonly": true
       },
       "is_active": {
@@ -1990,7 +1990,7 @@
       "customer_id": {
         "type": "foreignKey",
         "references": "customer",
-        "displayField": "email",
+        "displayField": "name",
         "required": true
       },
       "work_order_id": {
@@ -2261,7 +2261,7 @@
       "customer_id": {
         "type": "foreignKey",
         "references": "customer",
-        "displayField": "email",
+        "displayField": "name",
         "required": true
       },
       "asset_id": {
@@ -2389,7 +2389,7 @@
       "user_id": {
         "type": "foreignKey",
         "references": "user",
-        "displayField": "email",
+        "displayField": "name",
         "required": true,
         "readonly": true
       },
@@ -2638,7 +2638,7 @@
       "customer_id": {
         "type": "foreignKey",
         "references": "customer",
-        "displayField": "email",
+        "displayField": "name",
         "required": true
       },
       "invoice_id": {
@@ -2762,7 +2762,7 @@
       "id": {
         "type": "foreignKey",
         "references": "user",
-        "displayField": "email",
+        "displayField": "name",
         "required": true,
         "readonly": true
       },
@@ -3232,7 +3232,7 @@
       "customer_id": {
         "type": "foreignKey",
         "references": "customer",
-        "displayField": "email",
+        "displayField": "name",
         "required": true
       },
       "property_id": {
@@ -3604,7 +3604,7 @@
       "customer_id": {
         "type": "foreignKey",
         "references": "customer",
-        "displayField": "email",
+        "displayField": "name",
         "required": true
       },
       "property_id": {
@@ -3951,7 +3951,7 @@
       "customer_id": {
         "type": "foreignKey",
         "references": "customer",
-        "displayField": "email",
+        "displayField": "name",
         "required": true
       },
       "asset_id": {
@@ -4189,7 +4189,7 @@
       "user_id": {
         "type": "foreignKey",
         "references": "user",
-        "displayField": "email",
+        "displayField": "name",
         "required": true,
         "readonly": true
       },
@@ -4492,7 +4492,7 @@
       "customer_id": {
         "type": "foreignKey",
         "references": "customer",
-        "displayField": "email",
+        "displayField": "name",
         "required": true
       }
     },
@@ -4769,7 +4769,7 @@
         "status"
       ]
     },
-    "displayField": "email",
+    "displayField": "name",
     "displayName": "Technician",
     "displayNamePlural": "Technicians",
     "requiredFields": [
@@ -5208,7 +5208,7 @@
     "icon": "person",
     "supportsFileAttachments": false,
     "summaryConfig": null,
-    "displayField": "email",
+    "displayField": "name",
     "displayName": "User",
     "displayNamePlural": "Users",
     "requiredFields": [
@@ -5340,12 +5340,12 @@
       "customer_profile_id": {
         "type": "foreignKey",
         "references": "customer",
-        "displayField": "email"
+        "displayField": "name"
       },
       "technician_profile_id": {
         "type": "foreignKey",
         "references": "technician",
-        "displayField": "email"
+        "displayField": "name"
       }
     },
     "relationships": {
@@ -5858,7 +5858,7 @@
       "technician_id": {
         "type": "foreignKey",
         "references": "technician",
-        "displayField": "email",
+        "displayField": "name",
         "required": true
       },
       "is_active": {
@@ -6137,7 +6137,7 @@
       "customer_id": {
         "type": "foreignKey",
         "references": "customer",
-        "displayField": "email",
+        "displayField": "name",
         "required": true
       },
       "property_id": {
@@ -6157,7 +6157,7 @@
       "assigned_technician_id": {
         "type": "foreignKey",
         "references": "technician",
-        "displayField": "email"
+        "displayField": "name"
       },
       "scheduled_start": {
         "type": "timestamp",

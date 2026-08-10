@@ -362,6 +362,48 @@ describe("field-access-controller", () => {
       expect(filtered[0].internal_notes).toBeUndefined();
       expect(filtered[1].internal_notes).toBeUndefined();
     });
+
+    test("keeps <fk>_display when the FK id is readable, strips it otherwise", () => {
+      const metadata = {
+        fields: {
+          customer_id: { type: "foreignKey", references: "customer" },
+          assigned_technician_id: { type: "foreignKey", references: "technician" },
+        },
+        fieldAccess: {
+          customer_id: { create: "none", read: "technician", update: "none", delete: "none" },
+          assigned_technician_id: { create: "none", read: "customer", update: "none", delete: "none" },
+        },
+      };
+      const row = {
+        customer_id: 42,
+        customer_id_display: "Jane Smith",
+        assigned_technician_id: 5,
+        assigned_technician_id_display: "Bob Tech",
+      };
+
+      // customer reads assigned_technician_id (read: customer) but NOT customer_id (read: technician)
+      const forCustomer = filterDataByRole(row, metadata, "customer", "read");
+      expect(forCustomer.assigned_technician_id_display).toBe("Bob Tech");
+      expect(forCustomer.customer_id_display).toBeUndefined();
+
+      // technician reads both FK ids, so both display labels survive
+      const forTechnician = filterDataByRole(row, metadata, "technician", "read");
+      expect(forTechnician.customer_id_display).toBe("Jane Smith");
+      expect(forTechnician.assigned_technician_id_display).toBe("Bob Tech");
+    });
+
+    test("does not add <fk>_display on non-read operations", () => {
+      const metadata = {
+        fields: { customer_id: { type: "foreignKey", references: "customer" } },
+        fieldAccess: {
+          customer_id: { create: "customer", read: "customer", update: "customer", delete: "none" },
+        },
+      };
+      const row = { customer_id: 42, customer_id_display: "Jane Smith" };
+      const updated = filterDataByRole(row, metadata, "customer", "update");
+      expect(updated.customer_id).toBe(42);
+      expect(updated.customer_id_display).toBeUndefined();
+    });
   });
 
   describe("filterWritableFields", () => {

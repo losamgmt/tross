@@ -8,7 +8,6 @@
 const {
   loadRelationships,
   validateRelationshipNames,
-  buildDefaultIncludesClauses,
   buildForeignKeyDisplayClauses,
   loadManyToMany,
   loadHasMany,
@@ -506,89 +505,6 @@ describe('RelationshipLoader', () => {
         'LEFT JOIN customers fk_requested_by ON approvals.requested_by = fk_requested_by.id',
         'LEFT JOIN customers fk_approved_by ON approvals.approved_by = fk_approved_by.id',
       ]);
-    });
-  });
-
-  describe('buildDefaultIncludesClauses', () => {
-    const relationships = {
-      role: {
-        type: 'belongsTo',
-        table: 'users',
-        foreignKey: 'user_id',
-        fields: ['name', 'email'],
-      },
-      owner: { type: 'belongsTo', table: 'users', foreignKey: 'owner_id' },
-      invoices: {
-        type: 'hasMany',
-        table: 'invoices',
-        foreignKey: 'customer_id',
-      },
-    };
-
-    it('builds a LEFT JOIN and aliased SELECT parts for a belongsTo include', () => {
-      const { selectParts, joinParts } = buildDefaultIncludesClauses(
-        'customers',
-        ['role'],
-        relationships,
-      );
-
-      // No metadata for table 'users' -> display field falls back to 'name',
-      // aliased as the relationship name; other configured fields are prefixed.
-      expect(selectParts).toEqual(['r.name as role', 'r.email as role_email']);
-      expect(joinParts).toEqual([
-        'LEFT JOIN users r ON customers.user_id = r.id',
-      ]);
-    });
-
-    it('projects the identity field as the relationship name when no fields are configured', () => {
-      const { selectParts, joinParts } = buildDefaultIncludesClauses(
-        'customers',
-        ['owner'],
-        relationships,
-      );
-
-      expect(selectParts).toEqual(['o.name as owner']);
-      expect(joinParts).toEqual([
-        'LEFT JOIN users o ON customers.owner_id = o.id',
-      ]);
-    });
-
-    it('skips non-belongsTo relationships (those are post-query loaded)', () => {
-      const { selectParts, joinParts } = buildDefaultIncludesClauses(
-        'customers',
-        ['invoices'],
-        relationships,
-      );
-
-      expect(selectParts).toEqual([]);
-      expect(joinParts).toEqual([]);
-    });
-
-    it('returns empty parts when there are no includes', () => {
-      const { selectParts, joinParts } = buildDefaultIncludesClauses(
-        'customers',
-        [],
-        relationships,
-      );
-
-      expect(selectParts).toEqual([]);
-      expect(joinParts).toEqual([]);
-    });
-
-    it('disambiguates aliases when includes share a first letter', () => {
-      const twoRels = {
-        role: { type: 'belongsTo', table: 'users', foreignKey: 'role_id' },
-        region: { type: 'belongsTo', table: 'users', foreignKey: 'region_id' },
-      };
-
-      const { joinParts } = buildDefaultIncludesClauses(
-        'customers',
-        ['role', 'region'],
-        twoRels,
-      );
-
-      expect(joinParts[0]).toContain(' r ON customers.role_id = r.id');
-      expect(joinParts[1]).toContain(' r1 ON customers.region_id = r1.id');
     });
   });
 });

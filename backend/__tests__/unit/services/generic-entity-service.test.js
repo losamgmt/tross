@@ -329,7 +329,7 @@ describe("GenericEntityService", () => {
         expect(query).toContain("SELECT users.*");
         expect(query).toContain("FROM users");
         expect(query).toContain("WHERE users.id = $1");
-        expect(query).toContain("LEFT JOIN roles"); // user has defaultIncludes: ['role']
+        expect(query).toContain("LEFT JOIN roles fk_role_id"); // role_id FK display embedding
         expect(query).toContain("LIMIT 1");
         expect(params).toEqual([1]);
       });
