@@ -10,7 +10,7 @@
  * SINGLE SOURCE OF TRUTH for Customer model query and CRUD capabilities
  */
 
-const { UNIVERSAL_FIELD_ACCESS } = require('../constants');
+const { UNIVERSAL_FIELD_ACCESS, FIELD_ACCESS_LEVELS: FAL } = require('../constants');
 const {
   FIELD,
   NAME_PATTERNS,
@@ -238,6 +238,9 @@ module.exports = {
       delete: 'none',
     },
 
+    // Generated display name (first + last) - read-only, mirrors name-field visibility
+    name: FAL.PUBLIC_READONLY,
+
     // Email - identity field, dispatcher+ can create, customer can read own
     email: {
       create: 'dispatcher',
@@ -404,6 +407,12 @@ module.exports = {
     last_name: withTraits(
       { ...FIELD.LAST_NAME, description: 'Customer last name' },
       TRAITS.REQUIRED, TRAIT_SETS.SEARCHABLE_LOOKUP,
+    ),
+
+    // Generated display name maintained by the DB (see schema GENERATED column)
+    name: withTraits(
+      { ...FIELD.NAME, description: 'Full name (generated from first + last)' },
+      TRAITS.READONLY, TRAITS.SORTABLE, TRAITS.FILTERABLE,
     ),
 
     // Entity-specific fields

@@ -238,6 +238,9 @@ module.exports = {
     first_name: FAL.SELF_EDITABLE,
     last_name: FAL.SELF_EDITABLE,
 
+    // Generated display name (first + last) - read-only, publicly readable
+    name: FAL.PUBLIC_READONLY,
+
     // Role assignment - admin only, but readable by all authenticated users
     role_id: {
       create: 'admin',
@@ -395,6 +398,12 @@ module.exports = {
     // Human name fields - required, fully queryable
     first_name: withTraits(FIELD.FIRST_NAME, TRAITS.REQUIRED, TRAIT_SETS.IDENTITY),
     last_name: withTraits(FIELD.LAST_NAME, TRAITS.REQUIRED, TRAIT_SETS.IDENTITY),
+
+    // Generated display name maintained by the DB (see schema GENERATED column)
+    name: withTraits(
+      { ...FIELD.NAME, description: 'Full name (generated from first + last)' },
+      TRAITS.READONLY, TRAITS.SORTABLE, TRAITS.FILTERABLE,
+    ),
 
     // Role assignment - lookupable (filterable + sortable)
     role_id: createForeignKey('role', { traits: TRAIT_SETS.LOOKUP }),

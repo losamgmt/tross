@@ -871,6 +871,7 @@
       "email",
       "first_name",
       "last_name",
+      "name",
       "phone",
       "organization_name"
     ],
@@ -882,6 +883,7 @@
       "email",
       "first_name",
       "last_name",
+      "name",
       "phone",
       "organization_name"
     ],
@@ -1009,6 +1011,11 @@
         "type": "string",
         "required": true,
         "maxLength": 100
+      },
+      "name": {
+        "type": "string",
+        "readonly": true,
+        "maxLength": 255
       },
       "phone": {
         "type": "phone",
@@ -4789,6 +4796,7 @@
       "email",
       "first_name",
       "last_name",
+      "name",
       "license_number"
     ],
     "sortableFields": [
@@ -4800,6 +4808,7 @@
       "email",
       "first_name",
       "last_name",
+      "name",
       "license_number"
     ],
     "displayColumns": [
@@ -4888,6 +4897,11 @@
         "type": "string",
         "required": true,
         "maxLength": 100
+      },
+      "name": {
+        "type": "string",
+        "readonly": true,
+        "maxLength": 255
       },
       "license_number": {
         "type": "string",
@@ -5221,6 +5235,7 @@
       "auth0_id",
       "first_name",
       "last_name",
+      "name",
       "role_id"
     ],
     "sortableFields": [
@@ -5232,6 +5247,7 @@
       "email",
       "first_name",
       "last_name",
+      "name",
       "role_id"
     ],
     "displayColumns": [
@@ -5310,6 +5326,11 @@
         "type": "string",
         "required": true,
         "maxLength": 100
+      },
+      "name": {
+        "type": "string",
+        "readonly": true,
+        "maxLength": 255
       },
       "role_id": {
         "type": "foreignKey",

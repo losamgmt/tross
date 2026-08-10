@@ -195,6 +195,9 @@ module.exports = {
       delete: 'none',
     },
 
+    // Generated display name (first + last) - read-only, mirrors name-field visibility
+    name: FAL.INTERNAL_READONLY,
+
     // Email - identity field, manager+ can create, technician can read own
     email: {
       create: 'manager',
@@ -333,6 +336,12 @@ module.exports = {
     last_name: withTraits(
       { ...FIELD.LAST_NAME, description: 'Technician last name' },
       TRAITS.REQUIRED, TRAIT_SETS.SEARCHABLE_LOOKUP,
+    ),
+
+    // Generated display name maintained by the DB (see schema GENERATED column)
+    name: withTraits(
+      { ...FIELD.NAME, description: 'Full name (generated from first + last)' },
+      TRAITS.READONLY, TRAITS.SORTABLE, TRAITS.FILTERABLE,
     ),
 
     // Entity-specific fields with embedded traits
