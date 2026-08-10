@@ -22,6 +22,7 @@ class AuditLogEntry {
 
   // User info from join (optional - populated in getAllLogs)
   final String? userEmail;
+  final String? userName; // canonical UDN display name (preferred)
   final String? userFirstName;
   final String? userLastName;
 
@@ -39,6 +40,7 @@ class AuditLogEntry {
     this.result,
     this.errorMessage,
     this.userEmail,
+    this.userName,
     this.userFirstName,
     this.userLastName,
   });
@@ -58,6 +60,7 @@ class AuditLogEntry {
       result: json['result'] as String?,
       errorMessage: json['error_message'] as String?,
       userEmail: json['user_email'] as String?,
+      userName: json['user_name'] as String?,
       userFirstName: json['user_first_name'] as String?,
       userLastName: json['user_last_name'] as String?,
     );
@@ -65,6 +68,9 @@ class AuditLogEntry {
 
   /// Get display name for the user who performed the action
   String get userDisplayName {
+    if (userName != null && userName!.isNotEmpty) {
+      return userName!;
+    }
     if (userFirstName != null || userLastName != null) {
       return '${userFirstName ?? ''} ${userLastName ?? ''}'.trim();
     }

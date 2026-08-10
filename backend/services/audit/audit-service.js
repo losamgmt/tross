@@ -254,6 +254,7 @@ class AuditService {
         `SELECT 
            al.*,
            u.email as user_email,
+           u.name as user_name,
            u.first_name as user_first_name,
            u.last_name as user_last_name
          FROM audit_logs al
@@ -669,6 +670,7 @@ class AuditService {
         al.error_message,
         al.created_at,
         u.email as user_email,
+        u.name as user_name,
         u.first_name,
         u.last_name
       FROM audit_logs al
@@ -785,6 +787,7 @@ class AuditService {
         al.error_message,
         al.created_at,
         u.email as user_email,
+        u.name as user_name,
         u.first_name,
         u.last_name
       FROM audit_logs al
