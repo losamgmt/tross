@@ -9,6 +9,7 @@ const {
   loadRelationships,
   validateRelationshipNames,
   buildDefaultIncludesClauses,
+  buildForeignKeyDisplayClauses,
   loadManyToMany,
   loadHasMany,
   loadHasOne,
@@ -367,6 +368,144 @@ describe('RelationshipLoader', () => {
 
       expect(result[0].units).toHaveLength(1);
       expect(result[1].units).toEqual([]); // Empty array, not undefined
+    });
+  });
+
+  describe('buildForeignKeyDisplayClauses', () => {
+    const allModels = {
+      customer: {
+        tableName: 'customers',
+        primaryKey: 'id',
+        displayField: 'name',
+        fields: { name: {}, email: {} },
+      },
+      role: {
+        tableName: 'roles',
+        identityField: 'name',
+        fields: { name: {} },
+      },
+      property: {
+        tableName: 'properties',
+        primaryKey: 'property_pk',
+        displayField: 'label',
+        fields: { label: {} },
+      },
+      junction: { tableName: 'link_table', fields: {} },
+    };
+
+    it('projects <fk>_display and a LEFT JOIN for each resolvable FK', () => {
+      const metadata = {
+        tableName: 'work_orders',
+        fields: {
+          customer_id: { type: 'foreignKey', references: 'customer' },
+          title: { type: 'string' },
+        },
+      };
+      const { selectParts, joinParts } = buildForeignKeyDisplayClauses(metadata, allModels);
+      expect(selectParts).toEqual(['fk_customer_id.name AS customer_id_display']);
+      expect(joinParts).toEqual([
+        'LEFT JOIN customers fk_customer_id ON work_orders.customer_id = fk_customer_id.id',
+      ]);
+    });
+
+    it('falls back to the target identity field when the FK declares no displayField', () => {
+      const metadata = {
+        tableName: 'users',
+        fields: { role_id: { type: 'foreignKey', references: 'role' } },
+      };
+      const { selectParts, joinParts } = buildForeignKeyDisplayClauses(metadata, allModels);
+      expect(selectParts).toEqual(['fk_role_id.name AS role_id_display']);
+      expect(joinParts).toEqual([
+        'LEFT JOIN roles fk_role_id ON users.role_id = fk_role_id.id',
+      ]);
+    });
+
+    it("honors the FK field's own displayField override", () => {
+      const metadata = {
+        tableName: 'x',
+        fields: {
+          customer_id: { type: 'foreignKey', references: 'customer', displayField: 'email' },
+        },
+      };
+      const { selectParts } = buildForeignKeyDisplayClauses(metadata, allModels);
+      expect(selectParts).toEqual(['fk_customer_id.email AS customer_id_display']);
+    });
+
+    it('uses the target primary key (not assuming id) in the JOIN', () => {
+      const metadata = {
+        tableName: 'units',
+        fields: { property_id: { type: 'foreignKey', references: 'property' } },
+      };
+      const { joinParts } = buildForeignKeyDisplayClauses(metadata, allModels);
+      expect(joinParts).toEqual([
+        'LEFT JOIN properties fk_property_id ON units.property_id = fk_property_id.property_pk',
+      ]);
+    });
+
+    it('skips FKs whose target is unresolvable in allModels', () => {
+      const metadata = {
+        tableName: 'x',
+        fields: { ghost_id: { type: 'foreignKey', references: 'nonexistent' } },
+      };
+      expect(buildForeignKeyDisplayClauses(metadata, allModels)).toEqual({
+        selectParts: [],
+        joinParts: [],
+      });
+    });
+
+    it('skips FKs whose target exposes no display column (junction/system)', () => {
+      const metadata = {
+        tableName: 'x',
+        fields: { link_id: { type: 'foreignKey', references: 'junction' } },
+      };
+      expect(buildForeignKeyDisplayClauses(metadata, allModels)).toEqual({
+        selectParts: [],
+        joinParts: [],
+      });
+    });
+
+    it('skips when a real <fk>_display column already exists on the source', () => {
+      const metadata = {
+        tableName: 'x',
+        fields: {
+          customer_id: { type: 'foreignKey', references: 'customer' },
+          customer_id_display: { type: 'string' },
+        },
+      };
+      expect(buildForeignKeyDisplayClauses(metadata, allModels)).toEqual({
+        selectParts: [],
+        joinParts: [],
+      });
+    });
+
+    it('ignores non-foreignKey fields', () => {
+      const metadata = {
+        tableName: 'x',
+        fields: { title: { type: 'string' }, count: { type: 'integer' } },
+      };
+      expect(buildForeignKeyDisplayClauses(metadata, allModels)).toEqual({
+        selectParts: [],
+        joinParts: [],
+      });
+    });
+
+    it('emits one clause per FK for multiple FKs to the same target (distinct aliases)', () => {
+      const metadata = {
+        tableName: 'approvals',
+        fields: {
+          requested_by: { type: 'foreignKey', references: 'customer' },
+          approved_by: { type: 'foreignKey', references: 'customer' },
+        },
+      };
+      const { selectParts, joinParts } = buildForeignKeyDisplayClauses(metadata, allModels);
+      expect(selectParts).toEqual([
+        'fk_requested_by.name AS requested_by_display',
+        'fk_approved_by.name AS approved_by_display',
+      ]);
+      expect(joinParts).toEqual([
+        'LEFT JOIN customers fk_requested_by ON approvals.requested_by = fk_requested_by.id',
+        'LEFT JOIN customers fk_approved_by ON approvals.approved_by = fk_approved_by.id',
+      ]);
     });
   });
 

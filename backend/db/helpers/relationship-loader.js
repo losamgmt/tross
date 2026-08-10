@@ -31,6 +31,8 @@ const { logger } = require('../../config/logger');
 const allMetadata = require('../../config/models');
 const { buildRLSFilter } = require('./rls');
 const { getEntityDisplayField } = require('../../config/metadata-accessors');
+const { extractForeignKeyFields } = require('../../config/fk-helpers');
+const { sanitizeIdentifier } = require('../../utils/sql-safety');
 
 // ============================================================================
 // HELPERS
@@ -548,10 +550,64 @@ function buildDefaultIncludesClauses(tableName, defaultIncludes, relationships) 
   return { selectParts, joinParts };
 }
 
+/**
+ * Build SELECT + JOIN parts that embed each foreign key's display value.
+ *
+ * For every belongsTo FK field on `metadata`, LEFT JOIN the target table and
+ * project its display column as `<fkField>_display`. Uniform single-column
+ * embedding: every user-facing entity has one real display column (HUMAN=name,
+ * SIMPLE=name, COMPUTED=identifier), resolved via the FK field's own
+ * `displayField` or the target's `getEntityDisplayField`. The FK->PK join is 1:1,
+ * so it never multiplies source rows. All identifiers pass through sanitizeIdentifier.
+ *
+ * @param {Object} metadata - Source entity metadata (needs tableName + fields)
+ * @param {Object} allModels - entityKey -> metadata map (for FK target lookup)
+ * @returns {{ selectParts: string[], joinParts: string[] }} SQL fragments
+ */
+function buildForeignKeyDisplayClauses(metadata, allModels) {
+  const selectParts = [];
+  const joinParts = [];
+  const sourceTable = metadata.tableName;
+  const fkFields = extractForeignKeyFields(metadata);
+
+  for (const [fkField, fkDef] of Object.entries(fkFields)) {
+    const targetMeta = allModels[fkDef.references];
+    // Unresolvable or polymorphic target: no single table to join.
+    if (!targetMeta || !targetMeta.tableName) {
+      continue;
+    }
+
+    const displayCol = fkDef.displayField || getEntityDisplayField(targetMeta);
+    // Target exposes no such display column (junction/system or misconfig).
+    if (!targetMeta.fields || !targetMeta.fields[displayCol]) {
+      continue;
+    }
+    // Defensive: a real <fkField>_display column already exists on the source.
+    if (metadata.fields && metadata.fields[`${fkField}_display`]) {
+      continue;
+    }
+
+    const srcTable = sanitizeIdentifier(sourceTable, 'source table');
+    const tgtTable = sanitizeIdentifier(targetMeta.tableName, 'target table');
+    const tgtPk = sanitizeIdentifier(targetMeta.primaryKey || 'id', 'primary key');
+    const srcCol = sanitizeIdentifier(fkField, 'foreign key');
+    const dispCol = sanitizeIdentifier(displayCol, 'display column');
+    const alias = sanitizeIdentifier(`fk_${fkField}`, 'join alias');
+
+    selectParts.push(`${alias}.${dispCol} AS ${srcCol}_display`);
+    joinParts.push(
+      `LEFT JOIN ${tgtTable} ${alias} ON ${srcTable}.${srcCol} = ${alias}.${tgtPk}`,
+    );
+  }
+
+  return { selectParts, joinParts };
+}
+
 module.exports = {
   loadRelationships,
   validateRelationshipNames,
   buildDefaultIncludesClauses,
+  buildForeignKeyDisplayClauses,
   // Expose for testing
   loadManyToMany,
   loadHasMany,
