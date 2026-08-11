@@ -15,7 +15,7 @@ const { getRoleHierarchy } = require('./role-hierarchy-loader');
 const { RLS_ENGINE, HOOK_WHEN_OPERATORS } = require('./constants');
 const { ENTITY_TRAITS } = require('./entity-traits');
 const { getFieldsWithTrait, FIELD_TRAIT } = require('./metadata-accessors');
-const { getForeignKeyFieldNames, extractForeignKeyFields } = require('./fk-helpers');
+const { extractForeignKeyFields } = require('./fk-helpers');
 const { foreignKeyFieldName, DERIVATION_VIA, NAME_PATTERNS } = require('./field-types');
 const { listActions } = require('./action-handlers');
 
@@ -318,29 +318,6 @@ function validateEntityPermissions(meta, errors) {
       errors.add(
         `entityPermissions.${op}`,
         `Invalid value '${value}'. Valid: null (disabled), 'none', or role name`,
-      );
-    }
-  }
-}
-
-/**
- * Validate required fields exist in fields definition
- */
-function validateRequiredFields(meta, errors) {
-  const requiredFields = getFieldsWithTrait(meta, FIELD_TRAIT.REQUIRED);
-  const fieldDefs = meta.fields || {};
-  const fkFieldNames = getForeignKeyFieldNames(meta);
-
-  for (const field of requiredFields) {
-    // FK fields are always valid (they exist in fields with type: 'foreignKey')
-    if (fkFieldNames.has(field)) {
-      continue;
-    }
-
-    if (!fieldDefs[field]) {
-      errors.add(
-        'requiredFields',
-        `Required field '${field}' not defined in fields`,
       );
     }
   }
@@ -1786,7 +1763,6 @@ function validateEntity(entityName, meta, allMetadata) {
   validateFieldTraitConflicts(meta, errors);
   validateFieldAccess(meta, errors);
   validateEntityPermissions(meta, errors);
-  validateRequiredFields(meta, errors);
   validateForeignKeys(meta, errors, allMetadata);
   validateRlsPolicy(meta, errors);
   validateRlsRules(meta, errors);

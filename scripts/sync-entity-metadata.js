@@ -34,11 +34,8 @@ const {
 // Metadata accessor functions - derive values from field-level properties
 // when legacy arrays are not present (supports field-centric migration)
 const {
-  getRequiredFields,
-  getImmutableFields,
-  getSearchableFields,
-  getFilterableFields,
-  getSortableFields,
+  getFieldsWithTrait,
+  FIELD_TRAIT,
   getNavigation,
   getFeatures,
   getJunction,
@@ -248,13 +245,12 @@ function transformModel(entityName, backendMeta, allModels) {
   // Frontend can confidently access without null checks.
   // ============================================================================
 
-  // Arrays - Use accessor functions to support field-centric migration
-  // Accessors derive values from field-level properties when legacy arrays absent
-  result.requiredFields = getRequiredFields(backendMeta);
-  result.immutableFields = getImmutableFields(backendMeta);
-  result.searchableFields = getSearchableFields(backendMeta);
-  result.filterableFields = getFilterableFields(backendMeta);
-  result.sortableFields = getSortableFields(backendMeta);
+  // Arrays - field-trait accessors derive values from field-level properties
+  result.requiredFields = getFieldsWithTrait(backendMeta, FIELD_TRAIT.REQUIRED);
+  result.immutableFields = getFieldsWithTrait(backendMeta, FIELD_TRAIT.IMMUTABLE);
+  result.searchableFields = getFieldsWithTrait(backendMeta, FIELD_TRAIT.SEARCHABLE);
+  result.filterableFields = getFieldsWithTrait(backendMeta, FIELD_TRAIT.FILTERABLE);
+  result.sortableFields = getFieldsWithTrait(backendMeta, FIELD_TRAIT.SORTABLE);
   result.displayColumns = backendMeta.displayColumns ?? [];
 
   // Default sort - ALWAYS emit (sensible default if none)

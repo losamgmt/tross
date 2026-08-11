@@ -1,28 +1,18 @@
 /**
  * Metadata Accessors Tests
  *
- * Tests the backwards-compatible field property accessors.
- * Ensures both legacy arrays and field-centric properties work correctly.
+ * Tests the bridge accessors (fieldAccess, hooks, display) that remain in
+ * metadata-accessors.js. The generic field-trait accessors (getFieldsWithTrait,
+ * fieldHasTrait) are covered by field-trait-accessors.test.js.
  */
 
 const {
-  getRequiredFields,
-  isFieldRequired,
-  getImmutableFields,
-  isFieldImmutable,
-  getSearchableFields,
-  isFieldSearchable,
-  getFilterableFields,
-  isFieldFilterable,
-  getSortableFields,
-  isFieldSortable,
   getFieldAccess,
   getAllFieldAccess,
   getBeforeChangeHooks,
   getAfterChangeHooks,
   getAllHooks,
   getEntityDisplayField,
-  checkLegacyUsage,
   MIGRATION_CONFIG,
 } = require('../../../config/metadata-accessors');
 
@@ -34,183 +24,6 @@ describe('metadata-accessors', () => {
 
   afterAll(() => {
     MIGRATION_CONFIG.warnOnLegacyUsage = process.env.NODE_ENV !== 'test';
-  });
-
-  describe('getRequiredFields', () => {
-    it('returns empty array for entity with no required fields', () => {
-      const meta = { entityKey: 'test', fields: {} };
-      expect(getRequiredFields(meta)).toEqual([]);
-    });
-
-    it('reads from field-level required: true', () => {
-      const meta = {
-        entityKey: 'test',
-        fields: {
-          name: { type: 'string', required: true },
-          email: { type: 'string', required: true },
-          phone: { type: 'string' },
-        },
-      };
-      expect(getRequiredFields(meta)).toEqual(['name', 'email']);
-    });
-
-    it('falls back to legacy requiredFields array', () => {
-      const meta = {
-        entityKey: 'test',
-        fields: {
-          name: { type: 'string' },
-          email: { type: 'string' },
-        },
-        requiredFields: ['name', 'email'],
-      };
-      expect(getRequiredFields(meta)).toEqual(['name', 'email']);
-    });
-
-    it('uses legacy array when present for migration safety', () => {
-      const meta = {
-        entityKey: 'test',
-        fields: {
-          name: { type: 'string', required: true },
-          email: { type: 'string' }, // NOT required at field level
-        },
-        requiredFields: ['name', 'email', 'phone'], // Legacy array exists
-      };
-      // Legacy array takes precedence during migration period
-      expect(getRequiredFields(meta)).toEqual(['name', 'email', 'phone']);
-    });
-
-    it('derives from field-level when no legacy array exists', () => {
-      const meta = {
-        entityKey: 'test',
-        fields: {
-          name: { type: 'string', required: true },
-          email: { type: 'string' }, // NOT required at field level
-        },
-        // No requiredFields array - derive from field-level
-      };
-      // Only 'name' has required: true
-      expect(getRequiredFields(meta)).toEqual(['name']);
-    });
-  });
-
-  describe('isFieldRequired', () => {
-    it('returns true for field-level required: true', () => {
-      const meta = {
-        fields: { name: { type: 'string', required: true } },
-      };
-      expect(isFieldRequired(meta, 'name')).toBe(true);
-    });
-
-    it('returns false for field-level required: false', () => {
-      const meta = {
-        fields: { name: { type: 'string', required: false } },
-        requiredFields: ['name'], // Legacy says required
-      };
-      // Field-level wins
-      expect(isFieldRequired(meta, 'name')).toBe(false);
-    });
-
-    it('falls back to legacy array', () => {
-      const meta = {
-        fields: { name: { type: 'string' } }, // No required property
-        requiredFields: ['name'],
-      };
-      expect(isFieldRequired(meta, 'name')).toBe(true);
-    });
-
-    it('returns false for unknown field', () => {
-      const meta = { fields: {}, requiredFields: [] };
-      expect(isFieldRequired(meta, 'unknown')).toBe(false);
-    });
-  });
-
-  describe('getImmutableFields', () => {
-    it('reads from field-level immutable: true', () => {
-      const meta = {
-        entityKey: 'test',
-        fields: {
-          id: { type: 'integer', immutable: true },
-          name: { type: 'string' },
-        },
-      };
-      expect(getImmutableFields(meta)).toEqual(['id']);
-    });
-
-    it('falls back to legacy immutableFields array', () => {
-      const meta = {
-        entityKey: 'test',
-        fields: { id: { type: 'integer' } },
-        immutableFields: ['id', 'created_at'],
-      };
-      expect(getImmutableFields(meta)).toEqual(['id', 'created_at']);
-    });
-  });
-
-  describe('getSearchableFields', () => {
-    it('reads from field-level searchable: true', () => {
-      const meta = {
-        entityKey: 'test',
-        fields: {
-          name: { type: 'string', searchable: true },
-          email: { type: 'string', searchable: true },
-          id: { type: 'integer' },
-        },
-      };
-      expect(getSearchableFields(meta)).toEqual(['name', 'email']);
-    });
-
-    it('falls back to legacy searchableFields array', () => {
-      const meta = {
-        entityKey: 'test',
-        fields: {},
-        searchableFields: ['name', 'description'],
-      };
-      expect(getSearchableFields(meta)).toEqual(['name', 'description']);
-    });
-  });
-
-  describe('getFilterableFields', () => {
-    it('reads from field-level filterable: true', () => {
-      const meta = {
-        entityKey: 'test',
-        fields: {
-          status: { type: 'enum', filterable: true },
-          created_at: { type: 'timestamp', filterable: true },
-        },
-      };
-      expect(getFilterableFields(meta)).toEqual(['status', 'created_at']);
-    });
-
-    it('falls back to legacy filterableFields array', () => {
-      const meta = {
-        entityKey: 'test',
-        fields: {},
-        filterableFields: ['status', 'priority'],
-      };
-      expect(getFilterableFields(meta)).toEqual(['status', 'priority']);
-    });
-  });
-
-  describe('getSortableFields', () => {
-    it('reads from field-level sortable: true', () => {
-      const meta = {
-        entityKey: 'test',
-        fields: {
-          name: { type: 'string', sortable: true },
-          created_at: { type: 'timestamp', sortable: true },
-        },
-      };
-      expect(getSortableFields(meta)).toEqual(['name', 'created_at']);
-    });
-
-    it('falls back to legacy sortableFields array', () => {
-      const meta = {
-        entityKey: 'test',
-        fields: {},
-        sortableFields: ['created_at', 'updated_at'],
-      };
-      expect(getSortableFields(meta)).toEqual(['created_at', 'updated_at']);
-    });
   });
 
   describe('getFieldAccess / getAllFieldAccess', () => {
@@ -341,54 +154,6 @@ describe('metadata-accessors', () => {
 
     it("falls back to 'name' when neither displayField nor identityField is set", () => {
       expect(getEntityDisplayField({})).toBe('name');
-    });
-  });
-
-  describe('checkLegacyUsage', () => {
-    it('returns usesLegacy: false for fully migrated entity', () => {
-      const meta = {
-        entityKey: 'test',
-        fields: {
-          name: { type: 'string', required: true, searchable: true, filterable: true, sortable: true },
-        },
-        // No legacy arrays
-      };
-      const result = checkLegacyUsage(meta);
-      expect(result.usesLegacy).toBe(false);
-      expect(result.legacyProperties).toEqual([]);
-    });
-
-    it('returns usesLegacy: true for entity with legacy arrays only', () => {
-      const meta = {
-        entityKey: 'test',
-        fields: { name: { type: 'string' } },
-        requiredFields: ['name'],
-        searchableFields: ['name'],
-        filterableFields: ['name'],
-        sortableFields: ['name'],
-        fieldAccess: { name: { create: 'any', read: 'any', update: 'any', delete: 'none' } },
-      };
-      const result = checkLegacyUsage(meta);
-      expect(result.usesLegacy).toBe(true);
-      expect(result.legacyProperties).toContain('requiredFields');
-      expect(result.legacyProperties).toContain('searchableFields');
-    });
-
-    it('handles partial migration correctly', () => {
-      const meta = {
-        entityKey: 'test',
-        fields: {
-          name: { type: 'string', required: true }, // Field-level required
-        },
-        requiredFields: ['name'], // Both present
-        searchableFields: ['name'], // Legacy only
-      };
-      const result = checkLegacyUsage(meta);
-      expect(result.usesLegacy).toBe(true);
-      // requiredFields has field-level, so not in legacy
-      expect(result.legacyProperties).not.toContain('requiredFields');
-      // searchableFields is legacy-only
-      expect(result.legacyProperties).toContain('searchableFields');
     });
   });
 });

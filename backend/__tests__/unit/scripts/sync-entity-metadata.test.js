@@ -217,11 +217,13 @@ describe("sync-entity-metadata", () => {
         tableName: "users",
         primaryKey: "id",
         identityField: "email",
-        requiredFields: ["email", "role_id"],
-        searchableFields: ["email", "first_name"],
-        filterableFields: ["role_id", "status"],
-        sortableFields: ["created_at", "email"],
-        fields: {},
+        fields: {
+          email: { required: true, searchable: true, sortable: true },
+          first_name: { searchable: true },
+          role_id: { required: true, filterable: true },
+          status: { filterable: true },
+          created_at: { sortable: true },
+        },
       };
 
       const result = transformModel("user", backendMeta);
@@ -229,7 +231,7 @@ describe("sync-entity-metadata", () => {
       expect(result.requiredFields).toEqual(["email", "role_id"]);
       expect(result.searchableFields).toEqual(["email", "first_name"]);
       expect(result.filterableFields).toEqual(["role_id", "status"]);
-      expect(result.sortableFields).toEqual(["created_at", "email"]);
+      expect(result.sortableFields).toEqual(["email", "created_at"]);
     });
 
     it("includes summaryConfig when present", () => {
