@@ -73,6 +73,21 @@ describe('COMPUTED display name (compute-on-read)', () => {
     expect(row.name).toBe(`${customerName}: Replace filter: ${woNumber}`);
   });
 
+  test('read-only: a user-supplied name is ignored (composed name wins)', async () => {
+    const create = await request(app)
+      .post('/api/work_orders')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ customer_id: customerId, summary: 'Paint wall', name: 'HACKED TITLE' });
+    expect(create.status).toBe(201);
+    const { id, work_order_number: woNumber } = create.body.data;
+
+    const res = await request(app)
+      .get(`/api/work_orders/${id}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.body.data.name).toBe(`${customerName}: Paint wall: ${woNumber}`);
+    expect(res.body.data.name).not.toContain('HACKED');
+  });
+
   test('freshness: renaming the customer changes the composed name on next read (never stored)', async () => {
     const create = await request(app)
       .post('/api/work_orders')

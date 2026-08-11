@@ -176,7 +176,7 @@ module.exports = {
   computedName: {
     template: '{customer.fullName}: {summary}: {contract_number}',
     sources: ['customer_id', 'summary', 'contract_number'],
-    readOnly: false,
+    readOnly: true, // Computed display is not user-writable (compute-on-read)
   },
 
   // ============================================================================
@@ -222,11 +222,11 @@ module.exports = {
       delete: 'none',
     },
 
-    // Computed name field (optional user override)
+    // Computed display name (compute-on-read; not user-writable)
     name: {
-      create: 'manager',
+      create: 'none',
       read: 'customer',
-      update: 'manager',
+      update: 'none',
       delete: 'none',
     },
 
