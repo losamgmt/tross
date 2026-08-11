@@ -45,6 +45,7 @@ const {
 } = require('../../db/helpers/auth-identifier-sanitizer');
 // ADR-011: field-level read redaction at the service output boundary
 const { filterDataByRole } = require('../../utils/field-access-controller');
+const { composeComputedName } = require('../../utils/name-utils');
 const { logEntityAuditIfEnabled } = require('../../db/helpers/audit-helper');
 const {
   loadRelationships,
@@ -223,6 +224,29 @@ class GenericEntityService {
     return filterDataByRole(data, metadata, rlsContext.role, 'read');
   }
 
+  /**
+   * Compose a COMPUTED entity's display `name` ON READ (never stored). No-op for
+   * non-COMPUTED entities. Runs AFTER redaction so it composes from the
+   * redaction-safe <fk>_display values already on the row; only sets `name` when
+   * the caller may read it.
+   *
+   * @param {Object|Object[]} data - a redacted record or array of records
+   * @param {Object} metadata - entity metadata
+   * @returns {Object|Object[]} the same reference, `name` composed where applicable
+   */
+  static _applyComputedName(data, metadata) {
+    if (!metadata.computedName || !data) {
+      return data;
+    }
+    const apply = (row) => {
+      if (row && Object.prototype.hasOwnProperty.call(row, 'name')) {
+        row.name = composeComputedName(row, metadata);
+      }
+      return row;
+    };
+    return Array.isArray(data) ? data.map(apply) : apply(data);
+  }
+
   // ============================================================================
   // READ OPERATIONS
   // ============================================================================
@@ -290,7 +314,8 @@ class GenericEntityService {
     }
 
     // Redact non-readable fields for the caller's role (ADR-011 output boundary)
-    return this._redactForContext(entity, metadata, rlsContext);
+    const redacted = this._redactForContext(entity, metadata, rlsContext);
+    return this._applyComputedName(redacted, metadata);
   }
 
   /**
@@ -570,6 +595,10 @@ class GenericEntityService {
 
     // Redact non-readable fields for the caller's role (ADR-011 output boundary)
     filteredData = this._redactForContext(filteredData, metadata, rlsContext);
+
+    // Compose the COMPUTED display name on read (never stored) from the
+    // redaction-safe <fk>_display values now on each row.
+    filteredData = this._applyComputedName(filteredData, metadata);
 
     return {
       data: filteredData,

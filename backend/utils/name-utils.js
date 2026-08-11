@@ -219,6 +219,66 @@ function formatTemplate(template, data) {
   });
 }
 
+/**
+ * Compose a COMPUTED entity's display name ON READ from its `computedName` template.
+ *
+ * Own-field placeholders (e.g. `{summary}`) read the row directly; a cross-entity
+ * placeholder (e.g. `{customer.fullName}`) reads the row's already-projected,
+ * redaction-safe `<fk>_display` value (the generic FK-display JOIN) — so it is
+ * always fresh and NEVER stored. A placeholder that resolves to blank drops the
+ * literal separator that precedes it, so redacted/empty parts leave no stray
+ * delimiters. Generic over the template and its separators.
+ *
+ * @param {Object} row - the (already-redacted) entity row, incl. any <fk>_display
+ * @param {Object} metadata - entity metadata (computedName, fields)
+ * @returns {string} composed display name ('' when there is no template)
+ */
+function composeComputedName(row, metadata) {
+  const cfg = metadata && metadata.computedName;
+  if (!cfg || !cfg.template || !row) {
+    return '';
+  }
+
+  const fields = metadata.fields || {};
+
+  // Map each cross-entity relationship (its FK source) to that FK's display value.
+  const relationshipDisplay = {};
+  for (const source of cfg.sources || []) {
+    const def = fields[source];
+    if (def && def.type === 'foreignKey' && def.references) {
+      relationshipDisplay[def.references] = row[`${source}_display`];
+    }
+  }
+
+  const resolve = (path) => {
+    const root = path.split('.')[0];
+    const crossEntity =
+      path.includes('.') &&
+      Object.prototype.hasOwnProperty.call(relationshipDisplay, root);
+    const raw = crossEntity ? relationshipDisplay[root] : row[root];
+    return isNil(raw) ? '' : String(raw).trim();
+  };
+
+  // Walk the template; drop each blank placeholder together with the literal
+  // separator that precedes it.
+  let result = '';
+  let cursor = 0;
+  const placeholder = /\{([^}]+)\}/g;
+  let match;
+  while ((match = placeholder.exec(cfg.template)) !== null) {
+    const literal = cfg.template.slice(cursor, match.index);
+    cursor = placeholder.lastIndex;
+    const value = resolve(match[1]);
+    if (value !== '') {
+      result += literal + value;
+    }
+  }
+  result += cfg.template.slice(cursor);
+
+  // Trim any separator/space left when the first or last part was blank.
+  return result.replace(/^[\s:]+|[\s:]+$/g, '');
+}
+
 // ============================================================================
 // DISPLAY-NAME RESOLUTION (SSOT)
 // ============================================================================
@@ -312,6 +372,7 @@ module.exports = {
   // COMPUTED entity functions
   computeName,
   formatTemplate,
+  composeComputedName,
 
   // Display-name resolution (SSOT)
   resolveDisplayName,

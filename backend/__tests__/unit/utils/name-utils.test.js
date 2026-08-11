@@ -16,6 +16,7 @@ const {
   truncate,
   computeName,
   formatTemplate,
+  composeComputedName,
   resolveDisplayName,
   buildHumanNameSqlExpr,
 } = require("../../../utils/name-utils");
@@ -500,6 +501,61 @@ describe("Name Utils", () => {
         const sql = evalHumanNameSql(fields, record);
         expect(resolveDisplayName(record, meta)).toBe(sql == null ? "" : sql);
       }
+    });
+  });
+
+  // ==========================================================================
+  // COMPUTED DISPLAY NAME (compute-on-read)
+  // ==========================================================================
+
+  describe("composeComputedName()", () => {
+    const woMeta = {
+      computedName: {
+        template: "{customer.fullName}: {summary}: {work_order_number}",
+        sources: ["customer_id", "summary", "work_order_number"],
+      },
+      fields: {
+        customer_id: { type: "foreignKey", references: "customer" },
+        summary: { type: "string" },
+        work_order_number: { type: "string" },
+      },
+    };
+
+    test("composes own fields + the cross-entity <fk>_display", () => {
+      const row = {
+        customer_id: 5,
+        customer_id_display: "Jane Smith",
+        summary: "Fix sink",
+        work_order_number: "WO-1",
+      };
+      expect(composeComputedName(row, woMeta)).toBe("Jane Smith: Fix sink: WO-1");
+    });
+
+    test("drops a redacted cross-entity part (no <fk>_display) and its separator", () => {
+      const row = { summary: "Fix sink", work_order_number: "WO-1" };
+      expect(composeComputedName(row, woMeta)).toBe("Fix sink: WO-1");
+    });
+
+    test("drops a blank middle part without doubling separators", () => {
+      const row = { customer_id_display: "Jane Smith", work_order_number: "WO-1" };
+      expect(composeComputedName(row, woMeta)).toBe("Jane Smith: WO-1");
+    });
+
+    test("handles an all-own-field template (no cross-entity part)", () => {
+      const quoteMeta = {
+        computedName: {
+          template: "{quote_number}: {description}",
+          sources: ["quote_number", "description"],
+        },
+        fields: { quote_number: { type: "string" }, description: { type: "text" } },
+      };
+      const row = { quote_number: "Q-1", description: "Roof" };
+      expect(composeComputedName(row, quoteMeta)).toBe("Q-1: Roof");
+    });
+
+    test("returns '' when there is no computedName or no row", () => {
+      expect(composeComputedName({ name: "x" }, { fields: {} })).toBe("");
+      expect(composeComputedName(null, woMeta)).toBe("");
     });
   });
 });
