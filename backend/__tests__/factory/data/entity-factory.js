@@ -19,7 +19,7 @@ const {
   getForeignKeyFieldNames,
   extractForeignKeyFields,
 } = require("../../../config/fk-helpers");
-const { getRequiredFields } = require("../../../config/metadata-accessors");
+const { getFieldsWithTrait, FIELD_TRAIT } = require("../../../config/metadata-accessors");
 
 /**
  * Cache for entity capabilities (derived once per entity)
@@ -106,8 +106,8 @@ function buildMinimal(entityName, overrides = {}) {
   // Get FK field names so we can skip them
   const fkFields = getForeignKeyFieldNames(meta);
 
-  // Use accessor to get required fields (supports both legacy and field-level)
-  const requiredFields = getRequiredFields(meta);
+  // Required fields (field-level traits)
+  const requiredFields = getFieldsWithTrait(meta, FIELD_TRAIT.REQUIRED);
   for (const field of requiredFields) {
     // Skip FK fields - test-context will resolve them by creating parents
     if (fkFields.has(field)) continue;
@@ -163,7 +163,7 @@ function buildComplete(entityName, overrides = {}) {
   }
 
   // Ensure required non-FK fields are present
-  const requiredFields = getRequiredFields(meta);
+  const requiredFields = getFieldsWithTrait(meta, FIELD_TRAIT.REQUIRED);
   for (const field of requiredFields) {
     if (fkFields.has(field)) continue;
     if (!payload[field]) {
@@ -181,7 +181,7 @@ function buildComplete(entityName, overrides = {}) {
 function getDependencyOrder(entityName) {
   const meta = getMetadata(entityName);
   const deps = [];
-  const requiredFields = getRequiredFields(meta);
+  const requiredFields = getFieldsWithTrait(meta, FIELD_TRAIT.REQUIRED);
   const requiredSet = new Set(requiredFields);
 
   for (const [fkField, fkDef] of Object.entries(extractForeignKeyFields(meta))) {
@@ -202,7 +202,7 @@ async function createWithParents(entityName, ctx, overrides = {}) {
   const meta = getMetadata(entityName);
   const parents = {};
   const payload = buildMinimal(entityName, overrides);
-  const requiredFields = getRequiredFields(meta);
+  const requiredFields = getFieldsWithTrait(meta, FIELD_TRAIT.REQUIRED);
   const requiredSet = new Set(requiredFields);
 
   // Create required parent entities first

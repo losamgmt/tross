@@ -38,8 +38,8 @@ jest.mock("../../../services/entity/hook-service", () => ({
 const GenericEntityService = require("../../../services/entity/generic-entity-service");
 const db = require("../../../db/connection");
 const {
-  getRequiredFields,
-  getImmutableFields,
+  getFieldsWithTrait,
+  FIELD_TRAIT,
 } = require("../../../config/metadata-accessors");
 const hookService = require("../../../services/entity/hook-service");
 
@@ -155,7 +155,7 @@ describe("GenericEntityService", () => {
     describe("CRUD properties present", () => {
       test("should have requiredFields derivable from accessor", () => {
         const metadata = GenericEntityService.requireEntityMetadata("user");
-        const requiredFields = getRequiredFields(metadata);
+        const requiredFields = getFieldsWithTrait(metadata, FIELD_TRAIT.REQUIRED);
 
         expect(requiredFields).toBeDefined();
         expect(Array.isArray(requiredFields)).toBe(true);
@@ -165,7 +165,7 @@ describe("GenericEntityService", () => {
       test("should have immutableFields derivable from accessor", () => {
         // Phase 4: Exclusion pattern - immutableFields defines what CANNOT be updated
         const metadata = GenericEntityService.requireEntityMetadata("user");
-        const immutableFields = getImmutableFields(metadata);
+        const immutableFields = getFieldsWithTrait(metadata, FIELD_TRAIT.IMMUTABLE);
 
         expect(immutableFields).toBeDefined();
         expect(Array.isArray(immutableFields)).toBe(true);

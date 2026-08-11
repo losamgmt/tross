@@ -8,9 +8,8 @@
  */
 
 const {
-  getSortableFields,
-  getFilterableFields,
-  getSearchableFields,
+  getFieldsWithTrait,
+  FIELD_TRAIT,
 } = require('../../../config/metadata-accessors');
 const { filterDataByRole } = require('../../../utils/field-access-controller');
 
@@ -42,9 +41,9 @@ describe('UDN HUMAN `name` field contract (P4a/P5)', () => {
       expect(meta.fields.name.searchable).toBeFalsy();
 
       // Accessors are what the list route + query builder consult.
-      expect(getSortableFields(meta)).toContain('name');
-      expect(getFilterableFields(meta)).toContain('name');
-      expect(getSearchableFields(meta)).not.toContain('name');
+      expect(getFieldsWithTrait(meta, FIELD_TRAIT.SORTABLE)).toContain('name');
+      expect(getFieldsWithTrait(meta, FIELD_TRAIT.FILTERABLE)).toContain('name');
+      expect(getFieldsWithTrait(meta, FIELD_TRAIT.SEARCHABLE)).not.toContain('name');
     });
 
     test('fieldAccess makes `name` read-only and non-writable', () => {

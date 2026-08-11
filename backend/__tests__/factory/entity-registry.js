@@ -23,7 +23,7 @@
 
 const allMetadata = require("../../config/models");
 const { RLS_RESOURCE_TYPES } = require("../../config/constants");
-const { getRequiredFields } = require("../../config/metadata-accessors");
+const { getFieldsWithTrait, FIELD_TRAIT } = require("../../config/metadata-accessors");
 
 // ============================================================================
 // REQUIRED METADATA FIELDS
@@ -171,8 +171,8 @@ function validateEntityMetadata() {
       }
     }
 
-    // Validate requiredFields exists (via accessor - supports both legacy and field-level)
-    const requiredFields = getRequiredFields(meta);
+    // Validate required fields resolve (field-level traits)
+    const requiredFields = getFieldsWithTrait(meta, FIELD_TRAIT.REQUIRED);
     if (!Array.isArray(requiredFields)) {
       errors.push(`${entityName}: requiredFields must be an array (via accessor)`);
     }

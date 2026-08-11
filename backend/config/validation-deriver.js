@@ -428,9 +428,8 @@ function generateDefaultErrorMessages(fieldName, validation) {
 /**
  * Derive composite validation (create/update schemas) for an entity
  *
- * Uses getRequiredFields accessor which:
- * - Returns field-level required properties if any exist (new format)
- * - Falls back to metadata.requiredFields array (legacy format)
+ * Uses getFieldsWithTrait(metadata, FIELD_TRAIT.REQUIRED) — the canonical
+ * field-level trait accessor (field-centric; no legacy top-level array).
  *
  * @param {string} entityName - Entity name (snake_case)
  * @param {Object} metadata - Entity metadata

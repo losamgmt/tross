@@ -24,7 +24,7 @@ const {
   REQUIRED_FIELDS,
   RLS_REQUIRED_FIELDS,
 } = require("../../factory/entity-registry");
-const { getRequiredFields, getSearchableFields } = require("../../../config/metadata-accessors");
+const { getFieldsWithTrait, FIELD_TRAIT } = require("../../../config/metadata-accessors");
 
 describe("Entity Registry", () => {
   // ==========================================================================
@@ -109,8 +109,7 @@ describe("Entity Registry", () => {
       "%s has resolvable requiredFields",
       (entityName) => {
         const meta = getEntityMetadata(entityName);
-        // Use accessor - supports both legacy array and field-level properties
-        const requiredFields = getRequiredFields(meta);
+        const requiredFields = getFieldsWithTrait(meta, FIELD_TRAIT.REQUIRED);
         expect(requiredFields).toBeDefined();
         expect(Array.isArray(requiredFields)).toBe(true);
       },
@@ -212,7 +211,7 @@ describe("Entity Registry", () => {
       const allEntities = getAllEntityNames();
       const entitiesWithSearch = allEntities.filter((entityName) => {
         const metadata = getEntityMetadata(entityName);
-        const searchableFields = getSearchableFields(metadata);
+        const searchableFields = getFieldsWithTrait(metadata, FIELD_TRAIT.SEARCHABLE);
         return searchableFields.length > 0;
       });
 
@@ -264,7 +263,7 @@ describe("Entity Registry", () => {
 
       for (const entityName of entities) {
         const meta = getEntityMetadata(entityName);
-        const requiredFields = getRequiredFields(meta);
+        const requiredFields = getFieldsWithTrait(meta, FIELD_TRAIT.REQUIRED);
 
         // Basic structure checks
         expect(meta.tableName).toBeDefined();

@@ -17,7 +17,7 @@ const entityFactory = require("./entity-factory");
 const allMetadata = require("../../../config/models");
 const { createTestUser } = require("../../helpers/test-db");
 const { extractForeignKeyFields } = require("../../../config/fk-helpers");
-const { getRequiredFields, isJunctionEntity } = require("../../../config/metadata-accessors");
+const { getFieldsWithTrait, FIELD_TRAIT, isJunctionEntity } = require("../../../config/metadata-accessors");
 
 /**
  * Build test context for a given app instance
@@ -124,7 +124,7 @@ function buildTestContext(app, db) {
     async buildMinimalWithFKs(entityName, overrides = {}) {
       const meta = entityFactory.getMetadata(entityName);
       const payload = entityFactory.buildMinimal(entityName, overrides);
-      const requiredFields = getRequiredFields(meta);
+      const requiredFields = getFieldsWithTrait(meta, FIELD_TRAIT.REQUIRED);
       const needsFreshFks = isJunctionEntity(meta);
 
       // Handle required FK dependencies - use fixtures or create parents
@@ -148,7 +148,7 @@ function buildTestContext(app, db) {
     async create(entityName, overrides = {}) {
       const meta = entityFactory.getMetadata(entityName);
       const payload = entityFactory.buildMinimal(entityName, overrides);
-      const requiredFields = getRequiredFields(meta);
+      const requiredFields = getFieldsWithTrait(meta, FIELD_TRAIT.REQUIRED);
       const needsFreshFks = isJunctionEntity(meta);
 
       // Handle required FK dependencies - use fixtures or create parents
