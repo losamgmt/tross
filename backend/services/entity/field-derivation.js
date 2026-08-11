@@ -34,6 +34,8 @@ const DERIVATION_METHODS = Object.freeze({
    */
   lookup: Object.freeze({
     async: true,
+    // The FK source wins over a manually-set target (parent reassignment re-derives).
+    sourcePrecedence: true,
     async apply({ entityName, fieldName, sourceField, sourceValue, sourceFieldDef }) {
       if (!sourceFieldDef || sourceFieldDef.type !== 'foreignKey') {
         logger.warn('derived via:lookup references non-FK source field', {
@@ -95,7 +97,8 @@ const DERIVATION_METHODS = Object.freeze({
  * Shared semantics for every method:
  * - Single pass; sources are read from an ORIGINAL snapshot so mutual/paired rules cannot
  *   cascade within one pass and field order never matters.
- * - Skip if the target already has an explicit value (user input wins).
+ * - Skip if the target already has an explicit value (user input wins), UNLESS the
+ *   method declares `sourcePrecedence` (then the source overrides a set target, e.g. `lookup`).
  * - Skip if the source value is blank.
  * - A method failure is logged and swallowed — derivation must never block the operation.
  *
@@ -114,11 +117,6 @@ async function applyDerived(entityName, data, metadata) {
       continue;
     }
 
-    // Explicit value wins
-    if (!isBlank(data[fieldName])) {
-      continue;
-    }
-
     const method = DERIVATION_METHODS[derived.via];
     if (!method) {
       logger.warn('Unknown field derivation method', {
@@ -126,6 +124,13 @@ async function applyDerived(entityName, data, metadata) {
         field: fieldName,
         via: derived.via,
       });
+      continue;
+    }
+
+    // Explicit value wins — unless the method asserts source precedence (e.g.
+    // `lookup`: the FK source overrides a manually-set target, so reassigning the
+    // parent re-derives the dependent field instead of leaving it stale).
+    if (!method.sourcePrecedence && !isBlank(data[fieldName])) {
       continue;
     }
 

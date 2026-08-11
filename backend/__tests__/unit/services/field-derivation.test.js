@@ -67,13 +67,15 @@ describe('field-derivation: applyDerived', () => {
       expect(params).toEqual([7]);
     });
 
-    test('explicit target value wins (no lookup performed)', async () => {
+    test('FK source takes precedence: re-derives a set target when the source is present', async () => {
+      db.oneOrNone.mockResolvedValue({ property_id: 42 });
       const data = { unit_id: 7, property_id: 99 };
 
       await applyDerived('work_order', data, metadataFixture());
 
-      expect(data.property_id).toBe(99);
-      expect(db.oneOrNone).not.toHaveBeenCalled();
+      // unit_id is present, so the unit's property wins over the manually-set 99
+      expect(data.property_id).toBe(42);
+      expect(db.oneOrNone).toHaveBeenCalledTimes(1);
     });
 
     test('skips when the source field is blank', async () => {
