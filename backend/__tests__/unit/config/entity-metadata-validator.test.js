@@ -58,6 +58,28 @@ describe('Entity Metadata Validator', () => {
   // Empty allMetadata for isolated tests (no foreign key validation needed)
   const allMetadata = {};
 
+  describe('legacy trait-array regression guard', () => {
+    test.each([
+      'requiredFields',
+      'immutableFields',
+      'searchableFields',
+      'filterableFields',
+      'sortableFields',
+    ])('rejects a top-level %s array', (legacyKey) => {
+      const meta = createMinimalMetadata({ [legacyKey]: ['name'] });
+      const result = validateEntity('test_entity', meta, allMetadata);
+      expect(result.hasErrors()).toBe(true);
+      expect(hasFieldError(result, legacyKey)).toBe(true);
+    });
+
+    test('accepts a purely field-centric entity (no top-level trait arrays)', () => {
+      const meta = createMinimalMetadata();
+      const result = validateEntity('test_entity', meta, allMetadata);
+      expect(hasFieldError(result, 'requiredFields')).toBe(false);
+      expect(hasFieldError(result, 'searchableFields')).toBe(false);
+    });
+  });
+
   describe('validateNavPlacement', () => {
     describe('entities without navVisibility', () => {
       test('navGroup and navOrder are not required when navVisibility is null', () => {

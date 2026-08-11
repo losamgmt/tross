@@ -324,6 +324,26 @@ function validateEntityPermissions(meta, errors) {
 }
 
 /**
+ * Reject legacy top-level trait arrays (requiredFields, searchableFields, ...).
+ *
+ * Field traits are declared per-field (fields.<name>.<trait> = true) and read
+ * via getFieldsWithTrait. A top-level `<trait>Fields` array is the retired
+ * legacy shape; fail fast so it cannot silently re-enter a model.
+ */
+function validateNoLegacyTraitArrays(meta, errors) {
+  for (const trait of Object.values(FIELD_TRAIT)) {
+    const legacyKey = `${trait}Fields`;
+    if (Array.isArray(meta[legacyKey])) {
+      errors.add(
+        legacyKey,
+        `Legacy top-level '${legacyKey}' array is not allowed; ` +
+          `declare '${trait}: true' on each field instead`,
+      );
+    }
+  }
+}
+
+/**
  * Validate foreign keys reference valid entities
  * FK fields are identified by type: 'foreignKey' with references in fields section
  */
@@ -1763,6 +1783,7 @@ function validateEntity(entityName, meta, allMetadata) {
   validateFieldTraitConflicts(meta, errors);
   validateFieldAccess(meta, errors);
   validateEntityPermissions(meta, errors);
+  validateNoLegacyTraitArrays(meta, errors);
   validateForeignKeys(meta, errors, allMetadata);
   validateRlsPolicy(meta, errors);
   validateRlsRules(meta, errors);
