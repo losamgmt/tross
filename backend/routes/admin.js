@@ -44,8 +44,8 @@ const AppError = require('../utils/app-error');
 const { ERROR_CODES } = require('../config/error-codes');
 const allMetadata = require('../config/models');
 const {
-  getRequiredFields,
-  getImmutableFields,
+  getFieldsWithTrait,
+  FIELD_TRAIT,
 } = require('../config/metadata-accessors');
 
 // ============================================================================
@@ -415,8 +415,8 @@ router.get(
         validation.entities[entityName] = {
           tableName: metadata.tableName,
           fields: metadata.fields,
-          requiredFields: getRequiredFields(metadata),
-          immutableFields: getImmutableFields(metadata),
+          requiredFields: getFieldsWithTrait(metadata, FIELD_TRAIT.REQUIRED),
+          immutableFields: getFieldsWithTrait(metadata, FIELD_TRAIT.IMMUTABLE),
         };
       }
     }

@@ -337,9 +337,14 @@ describe("Query Validators", () => {
 
   describe("validateQuery", () => {
     const metadata = {
-      searchableFields: ["name", "email"],
-      filterableFields: ["status", "role_id"],
-      sortableFields: ["name", "created_at", "id"],
+      fields: {
+        name: { searchable: true, sortable: true },
+        email: { searchable: true },
+        status: { filterable: true },
+        role_id: { filterable: true },
+        created_at: { sortable: true },
+        id: { sortable: true },
+      },
       defaultSort: { field: "id", order: "ASC" },
     };
 

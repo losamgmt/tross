@@ -26,7 +26,7 @@ const { getClientIp, getUserAgent } = require('../utils/request-helpers');
 const { buildEntitySchema } = require('../utils/validation-schema-builder');
 const ResponseFormatter = require('../utils/response-formatter');
 const { ERROR_CODES } = require('../config/error-codes');
-const { getRequiredFields } = require('../config/metadata-accessors');
+const { getFieldsWithTrait, FIELD_TRAIT } = require('../config/metadata-accessors');
 
 // =============================================================================
 // ENTITY NAME MAPPING (METADATA-DRIVEN - NO HARDCODING!)
@@ -287,7 +287,7 @@ const genericValidateBody = (operation) => (req, res, next) => {
   if (operation === 'create') {
     // Required fields check is now role-aware (handled in schema builder)
     // But we do belt-and-suspenders check here for fields the user CAN set
-    const requiredFields = getRequiredFields(entityMetadata);
+    const requiredFields = getFieldsWithTrait(entityMetadata, FIELD_TRAIT.REQUIRED);
     // Only check required fields that user's role can create
     const {
       deriveCreatableFields,

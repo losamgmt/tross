@@ -18,9 +18,8 @@
 
 const allMetadata = require('../../config/models');
 const {
-  getSearchableFields,
-  getFilterableFields,
-  getSortableFields,
+  getFieldsWithTrait,
+  FIELD_TRAIT,
 } = require('../../config/metadata-accessors');
 const { logger } = require('../../config/logger');
 const db = require('../../db/connection');
@@ -109,10 +108,9 @@ class ExportService {
       fields = {},
     } = metadata;
 
-    // Use accessors for field properties (supports both legacy arrays and field-level)
-    const searchableFields = getSearchableFields(metadata);
-    const filterableFields = getFilterableFields(metadata);
-    const sortableFields = getSortableFields(metadata);
+    const searchableFields = getFieldsWithTrait(metadata, FIELD_TRAIT.SEARCHABLE);
+    const filterableFields = getFieldsWithTrait(metadata, FIELD_TRAIT.FILTERABLE);
+    const sortableFields = getFieldsWithTrait(metadata, FIELD_TRAIT.SORTABLE);
 
     // Normalize fields to array format: { fieldName: {...} } → [{ name, label, ... }]
     const fieldsArray = Array.isArray(fields)

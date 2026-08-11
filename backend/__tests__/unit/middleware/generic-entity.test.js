@@ -222,7 +222,15 @@ describe("genericValidateBody", () => {
 
   // Use real customer metadata to match validation-rules.json
   const mockMetadata = {
-    requiredFields: ["email"],
+    fields: {
+      email: { required: true },
+      phone: {},
+      company_name: {},
+      billing_address: {},
+      service_address: {},
+      status: {},
+      is_active: {},
+    },
     createableFields: [
       "email",
       "phone",

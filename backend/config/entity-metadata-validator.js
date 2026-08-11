@@ -14,6 +14,7 @@
 const { getRoleHierarchy } = require('./role-hierarchy-loader');
 const { RLS_ENGINE, HOOK_WHEN_OPERATORS } = require('./constants');
 const { ENTITY_TRAITS } = require('./entity-traits');
+const { getFieldsWithTrait, FIELD_TRAIT } = require('./metadata-accessors');
 const { getForeignKeyFieldNames, extractForeignKeyFields } = require('./fk-helpers');
 const { foreignKeyFieldName, DERIVATION_VIA, NAME_PATTERNS } = require('./field-types');
 const { listActions } = require('./action-handlers');
@@ -326,7 +327,7 @@ function validateEntityPermissions(meta, errors) {
  * Validate required fields exist in fields definition
  */
 function validateRequiredFields(meta, errors) {
-  const requiredFields = meta.requiredFields || [];
+  const requiredFields = getFieldsWithTrait(meta, FIELD_TRAIT.REQUIRED);
   const fieldDefs = meta.fields || {};
   const fkFieldNames = getForeignKeyFieldNames(meta);
 
@@ -1079,7 +1080,7 @@ function validateSummaryConfig(meta, errors) {
   }
 
   const fields = meta.fields || {};
-  const filterableFields = meta.filterableFields || [];
+  const filterableFields = getFieldsWithTrait(meta, FIELD_TRAIT.FILTERABLE);
 
   // groupableFields is REQUIRED and must be non-empty
   if (!Array.isArray(config.groupableFields) || config.groupableFields.length === 0) {
@@ -1874,9 +1875,9 @@ function deriveCapabilities(meta) {
     },
 
     // Field-level checks
-    hasSearchableFields: (meta.searchableFields || []).length > 0,
-    hasSortableFields: (meta.sortableFields || []).length > 0,
-    hasFilterableFields: (meta.filterableFields || []).length > 0,
+    hasSearchableFields: getFieldsWithTrait(meta, FIELD_TRAIT.SEARCHABLE).length > 0,
+    hasSortableFields: getFieldsWithTrait(meta, FIELD_TRAIT.SORTABLE).length > 0,
+    hasFilterableFields: getFieldsWithTrait(meta, FIELD_TRAIT.FILTERABLE).length > 0,
   };
 }
 

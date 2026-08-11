@@ -17,7 +17,7 @@
  */
 
 const allMetadata = require('./models');
-const { getRequiredFields } = require('./metadata-accessors');
+const { getFieldsWithTrait, FIELD_TRAIT } = require('./metadata-accessors');
 const { FIELD, ADDRESS_SUFFIXES } = require('./field-types');
 const { ALL_SUBDIVISIONS, SUPPORTED_COUNTRIES } = require('./geo-standards');
 
@@ -439,8 +439,7 @@ function generateDefaultErrorMessages(fieldName, validation) {
 function deriveCompositeValidation(entityName, metadata) {
   const fields = metadata.fields || {};
 
-  // Use accessor to get required fields (handles both legacy arrays and field-level)
-  const requiredFields = getRequiredFields(metadata);
+  const requiredFields = getFieldsWithTrait(metadata, FIELD_TRAIT.REQUIRED);
   const requiredSet = new Set(requiredFields);
 
   // All non-readonly fields not in requiredFields are optional

@@ -18,8 +18,8 @@ const { logger } = require('../../config/logger');
 // Load entity metadata registry
 const entityMetadata = require('../../config/models');
 const {
-  getRequiredFields,
-  getImmutableFields,
+  getFieldsWithTrait,
+  FIELD_TRAIT,
 } = require('../../config/metadata-accessors');
 
 // Validation is now derived from entity metadata (SSOT pattern)
@@ -144,8 +144,8 @@ class EntityMetadataService {
       fieldAliases: metadata.fieldAliases || {},
 
       // Additional metadata
-      immutableFields: getImmutableFields(metadata),
-      requiredFields: getRequiredFields(metadata),
+      immutableFields: getFieldsWithTrait(metadata, FIELD_TRAIT.IMMUTABLE),
+      requiredFields: getFieldsWithTrait(metadata, FIELD_TRAIT.REQUIRED),
       sensitiveFields: metadata.sensitiveFields || [],
     };
   }

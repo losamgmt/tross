@@ -22,11 +22,8 @@
 
 const allMetadata = require('../../config/models');
 const {
-  getSearchableFields,
-  getFilterableFields,
-  getSortableFields,
-  getRequiredFields,
-  getImmutableFields,
+  getFieldsWithTrait,
+  FIELD_TRAIT,
 } = require('../../config/metadata-accessors');
 const { logger } = require('../../config/logger');
 const db = require('../../db/connection');
@@ -414,10 +411,9 @@ class GenericEntityService {
       defaultSort = DEFAULT_SORT,
     } = metadata;
 
-    // Use accessors for field properties (supports both legacy arrays and field-level)
-    const searchableFields = getSearchableFields(metadata);
-    const filterableFields = getFilterableFields(metadata);
-    const sortableFields = getSortableFields(metadata);
+    const searchableFields = getFieldsWithTrait(metadata, FIELD_TRAIT.SEARCHABLE);
+    const filterableFields = getFieldsWithTrait(metadata, FIELD_TRAIT.FILTERABLE);
+    const sortableFields = getFieldsWithTrait(metadata, FIELD_TRAIT.SORTABLE);
 
     // Embed each FK's display value (LEFT JOIN target, project <fk>_display)
     let selectClause = `${tableName}.*`;
@@ -618,7 +614,7 @@ class GenericEntityService {
       tableName,
       primaryKey,
     } = metadata;
-    const filterableFields = getFilterableFields(metadata);
+    const filterableFields = getFieldsWithTrait(metadata, FIELD_TRAIT.FILTERABLE);
 
     // Validate field is filterable (security: prevent arbitrary column access)
     // SYSTEMIC: Primary key is ALWAYS allowed (for findById to work)
@@ -704,7 +700,7 @@ class GenericEntityService {
     const metadata = this.requireEntityMetadata(entityName);
 
     const { tableName } = metadata;
-    const filterableFields = getFilterableFields(metadata);
+    const filterableFields = getFieldsWithTrait(metadata, FIELD_TRAIT.FILTERABLE);
 
     // Build filter clause
     const filterResult = QueryBuilderService.buildFilterClause(
@@ -793,7 +789,7 @@ class GenericEntityService {
     const metadata = this.requireEntityMetadata(entityName);
 
     const { tableName } = metadata;
-    const requiredFields = getRequiredFields(metadata);
+    const requiredFields = getFieldsWithTrait(metadata, FIELD_TRAIT.REQUIRED);
 
     // Validate data is an object
     if (!data || typeof data !== 'object' || Array.isArray(data)) {
@@ -1001,7 +997,7 @@ class GenericEntityService {
       identityField,
       systemProtected,
     } = metadata;
-    const immutableFields = getImmutableFields(metadata);
+    const immutableFields = getFieldsWithTrait(metadata, FIELD_TRAIT.IMMUTABLE);
 
     // Validate and coerce ID (throws on invalid)
     // silent: true - IDs from controllers are strings, coercion is expected

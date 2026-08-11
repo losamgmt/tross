@@ -13,33 +13,27 @@ jest.mock("../../../config/models", () => ({
   customer: {
     name: "customer",
     tableName: "customers",
-    searchableFields: ["first_name", "last_name", "email"],
-    filterableFields: ["email", "is_active", "status"],
-    sortableFields: ["first_name", "created_at"],
     defaultSort: { field: "created_at", order: "DESC" },
-    fields: [
-      { name: "id", label: "ID" },
-      { name: "first_name", label: "First Name" },
-      { name: "last_name", label: "Last Name" },
-      { name: "email", label: "Email" },
-      { name: "phone", label: "Phone" },
-      { name: "is_active", label: "Active" },
-      { name: "created_at", label: "Created At" },
-    ],
+    fields: {
+      id: { label: "ID" },
+      first_name: { label: "First Name", searchable: true, sortable: true },
+      last_name: { label: "Last Name", searchable: true },
+      email: { label: "Email", searchable: true, filterable: true },
+      phone: { label: "Phone" },
+      is_active: { label: "Active", filterable: true },
+      created_at: { label: "Created At", sortable: true },
+    },
   },
   user: {
     name: "user",
     tableName: "users",
-    searchableFields: ["email"],
-    filterableFields: ["email", "is_active"],
-    sortableFields: ["email", "created_at"],
     defaultSort: { field: "created_at", order: "DESC" },
-    fields: [
-      { name: "id", label: "ID" },
-      { name: "email", label: "Email" },
-      { name: "auth0_id", label: "Auth0 ID" }, // Should be excluded (sensitive)
-      { name: "is_active", label: "Active" },
-    ],
+    fields: {
+      id: { label: "ID" },
+      email: { label: "Email", searchable: true, filterable: true, sortable: true },
+      auth0_id: { label: "Auth0 ID" }, // Excluded via hardcoded sensitive set
+      is_active: { label: "Active", filterable: true },
+    },
   },
 }));
 
@@ -166,7 +160,7 @@ describe("ExportService", () => {
       db.query.mockResolvedValueOnce({ rows: [] });
 
       await ExportService.exportToCSV("customer", {
-        filters: { status: "active" },
+        filters: { email: "test@example.com" },
       });
 
       const queryCall = db.query.mock.calls[0];
