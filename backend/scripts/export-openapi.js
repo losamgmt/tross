@@ -8,7 +8,8 @@ const fs = require('fs');
 const path = require('path');
 const swaggerSpec = require('../config/swagger');
 
-const outputPath = path.join(__dirname, '../../docs/api/openapi.json');
+// Write to the committed reference artifact (CI-gated for freshness).
+const outputPath = path.join(__dirname, '../../docs/reference/openapi.json');
 const outputDir = path.dirname(outputPath);
 
 // Ensure directory exists

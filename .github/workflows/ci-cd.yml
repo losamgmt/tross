@@ -61,10 +61,11 @@ jobs:
         run: |
           echo "🔄 Running sync scripts..."
           npm run sync:all
+          npm run docs:api:export
           
           echo "🔍 Checking for uncommitted changes..."
           if [ -n "$(git status --porcelain)" ]; then
-            echo "❌ Sync scripts produced changes. Please run 'npm run sync:all' locally and commit."
+            echo "❌ Generated artifacts are stale. Run 'npm run sync:all && npm run docs:api:export' locally and commit."
             git status --porcelain
             git diff --stat
             exit 1
