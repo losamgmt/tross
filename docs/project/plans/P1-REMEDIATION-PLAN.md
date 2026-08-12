@@ -263,7 +263,9 @@ of `origin/main` — local-only, no push (locked decision #1)**.
   is `undefined`; `getImmutableFields(role)` returns `[]` with **no** deprecation
   warning (and `metadata-accessors` suppresses warnings in test env regardless). No
   metadata file uses a top-level `immutableFields` array. **Changing it would break
-  protected-role field-locking.** No action taken.
+  protected-role field-locking.** No action taken. _(Doc note 2026-08-10:
+  `getImmutableFields` was later consolidated into `getFieldsWithTrait(meta,
+  FIELD_TRAIT.IMMUTABLE)`; the finding is unchanged.)_
 
 ### Step 5 — H7: remove role-hierarchy dual authority
 - **Problem:** `backend/config/constants.js` re-exports the **static**

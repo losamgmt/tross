@@ -192,14 +192,14 @@ fields: {
 
 ### Accessor Functions
 
-All consumers use accessor functions that derive values from field-level properties:
+All consumers use a generic field-trait accessor that derives values from field-level properties:
 
 ```javascript
-const { getRequiredFields, getSearchableFields } = require('../metadata-accessors');
+const { getFieldsWithTrait, FIELD_TRAIT } = require('../metadata-accessors');
 
-// These extract values from field definitions
-const required = getRequiredFields(metadata);  // ['name', 'email']
-const searchable = getSearchableFields(metadata);  // ['name', 'description']
+// These extract field names carrying a given trait
+const required = getFieldsWithTrait(metadata, FIELD_TRAIT.REQUIRED);  // ['name', 'email']
+const searchable = getFieldsWithTrait(metadata, FIELD_TRAIT.SEARCHABLE);  // ['name', 'description']
 ```
 
 ---

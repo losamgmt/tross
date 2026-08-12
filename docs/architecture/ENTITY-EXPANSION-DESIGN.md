@@ -1779,6 +1779,11 @@ function hasFieldPermission(fieldName, operation, userRole, metadata) {
 | 5 | Update cache key to include schema version | Line ~215 |
 
 **Backward Compatibility:**
+
+> **Superseded 2026-08-10:** migration complete (models are 100% field-centric), so the
+> legacy-array fallback shown below was removed. The shipped accessor is the generic
+> `getFieldsWithTrait(metadata, FIELD_TRAIT.REQUIRED)` — see `config/metadata-accessors.js`.
+
 ```javascript
 // Support both patterns during migration
 function getRequiredFields(metadata) {

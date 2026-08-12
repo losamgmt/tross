@@ -382,21 +382,27 @@ fields: {
 
 ### Accessor Functions (Derivation)
 
-All consumers now use accessor functions that derive values from field-level properties:
+> **Note (2026-08-10, accessor consolidation W1–W4):** the per-trait
+> `get{Required,Immutable,Searchable,Filterable,Sortable}Fields` + `isField*` +
+> `checkLegacyUsage`/`getMigrationStatus` accessors were consolidated into the generic
+> `getFieldsWithTrait(meta, FIELD_TRAIT.X)` / `fieldHasTrait(meta, field, FIELD_TRAIT.X)`.
+> Examples below reflect the current API.
+
+All consumers now use a generic field-trait accessor that derives values from field-level properties:
 
 ```javascript
-const { getRequiredFields, getImmutableFields } = require('../metadata-accessors');
+const { getFieldsWithTrait, FIELD_TRAIT } = require('../metadata-accessors');
 
-// Returns array derived from fields where required: true
-const required = getRequiredFields(metadata);
+// Returns field names where fields[name].required === true
+const required = getFieldsWithTrait(metadata, FIELD_TRAIT.REQUIRED);
 ```
 
 ### Consumers Updated
 
-- `GenericEntityService` - Uses `getRequiredFields()`, `getImmutableFields()`
-- `sync-entity-metadata.js` - Uses all 5 accessors for frontend JSON generation
-- `validation-deriver.js` - Uses `getRequiredFields()`
-- Test factories - Uses accessor functions for behavioral tests
+- `GenericEntityService` - Uses `getFieldsWithTrait(meta, FIELD_TRAIT.REQUIRED/IMMUTABLE)`
+- `sync-entity-metadata.js` - Uses `getFieldsWithTrait` for frontend JSON generation
+- `validation-deriver.js` - Uses `getFieldsWithTrait(meta, FIELD_TRAIT.REQUIRED)`
+- Test factories - Use `getFieldsWithTrait` for behavioral tests
 
 ### Verification
 
@@ -416,20 +422,16 @@ npm test --workspace=backend
 New infrastructure supporting the field-centric migration:
 
 ### Metadata Accessors (`config/metadata-accessors.js`)
-Provides backwards-compatible access to field properties during migration:
+Field-trait access is a single generic pair (consolidated 2026-08-10, W1–W4 — the per-trait accessors below were removed):
 
 | Function | Purpose |
 |----------|---------|
-| `getRequiredFields(meta)` | Returns required fields (field-level first, fallback to array) |
-| `getImmutableFields(meta)` | Returns immutable fields |
-| `getSearchableFields(meta)` | Returns searchable fields |
-| `getFilterableFields(meta)` | Returns filterable fields |
-| `getSortableFields(meta)` | Returns sortable fields |
+| `getFieldsWithTrait(meta, FIELD_TRAIT.X)` | Field names carrying trait X (REQUIRED/IMMUTABLE/SEARCHABLE/FILTERABLE/SORTABLE) |
+| `fieldHasTrait(meta, field, FIELD_TRAIT.X)` | Whether one field carries trait X |
 | `getFieldAccess(meta, field)` | Returns field access rules |
 | `getAllHooks(meta)` | Returns all beforeChange/afterChange hooks |
-| `checkLegacyUsage(meta)` | Migration helper: identifies legacy patterns |
 
-**Migration Support:** Logs deprecation warnings (disabled in test mode) when legacy patterns used.
+**Historical (removed):** `get{Required,Immutable,Searchable,Filterable,Sortable}Fields`, `isField*`, and the migration helpers `checkLegacyUsage`/`getMigrationStatus` — models are 100% field-centric, so the legacy-array bridge and its deprecation warnings are gone.
 
 ### Action Handlers (`config/action-handlers.js`)
 Generic interpreters for hook actions:
