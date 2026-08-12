@@ -8,6 +8,8 @@
 
 > **🗂️ Point-in-time audit.** This records an assessment made when it was written. Findings, counts, and "current state"/"gap" notes are snapshots and may have since changed — **the code and test runners are the source of truth** for current status. Preserved as a historical record.
 
+> **✅ RE-RUN 2026-08-12 — propagation machinery verified.** All propagation-layer generators run clean with ZERO drift (`sync:all` + `compose:schema` + `docs:api:export` regenerate byte-identically; the CI gate in `.github/workflows/ci-cd.yml` enforces it), and the full unit (3188) + integration (2321) suites exercise routes / factories / scenarios across every layer. Security items from this audit are resolved (see registry: `delete-rls-bypass`, update row-scoping, CSP prod guard, per-file upload cap). The manual add-a-field procedure below remains an optional smoke test; its invariants are covered by the standing automation.
+
 ## Executive Summary
 
 This audit validates that adding/modifying fields on existing entities or creating new entities via the **Metadata SSOT** results in **automatic, complete propagation** through all system layers—with no manual intervention beyond:

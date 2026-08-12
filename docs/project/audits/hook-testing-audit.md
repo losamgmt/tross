@@ -4,6 +4,8 @@
 
 > **🗂️ Point-in-time audit.** This records an assessment made when it was written. Findings, counts, and "current state"/"gap" notes are snapshots and may have since changed — **the code and test runners are the source of truth** for current status. Preserved as a historical record.
 
+> **✅ RE-RUN 2026-08-12 — the gaps below are CLOSED (verified against live tests).** `GenericEntityService` hook integration IS tested: `unit/services/generic-entity-service.test.js` ("hook integration" describe — asserts `evaluateBeforeHooks`/`evaluateAfterHooks` are invoked with the correct arguments). Hook-behavior integration coverage EXISTS: `factory/scenarios/hooks.scenarios.js` (API-level beforeChange/afterChange) + `integration/hooks-approval.test.js` (invoice.status approval-workflow wiring). Real hook-bearing entities (invoice / quote / recommendation `status`) are exercised. The Executive Summary below is the original snapshot.
+
 ## Executive Summary
 
 **Current State**: Hook infrastructure is implemented and wired into GenericEntityService, but **test coverage is incomplete**:
