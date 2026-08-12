@@ -39,6 +39,25 @@ const { sanitizeIdentifier } = require('../../utils/sql-safety');
 // ============================================================================
 
 /**
+ * The columns to SELECT for a related entity: the relationship's `fields`, minus
+ * any that have no backing column. A COMPUTED entity's display `name` is composed
+ * on read (no column), so it must not be projected in a relationship query.
+ */
+function _projectionColumns(relDef) {
+  const fields = relDef.fields || [];
+  if (fields.length === 0 || !fields.includes('name')) {
+    return fields;
+  }
+  const targetMeta = Object.values(allMetadata).find(
+    (m) => m.tableName === relDef.table,
+  );
+  if (targetMeta && !targetMeta.fields?.name) {
+    return fields.filter((f) => f !== 'name');
+  }
+  return fields;
+}
+
+/**
  * Escape special regex characters in a string
  * @param {string} str - String to escape
  * @returns {string} Escaped string safe for regex
@@ -164,7 +183,8 @@ async function loadManyToMany(relationshipName, relDef, parentIds, rlsContext = 
     return new Map();
   }
 
-  const { table, through, foreignKey, targetKey, fields = [] } = relDef;
+  const { table, through, foreignKey, targetKey } = relDef;
+  const fields = _projectionColumns(relDef);
 
   // Validate required M:M properties
   if (!through || !targetKey) {
@@ -250,7 +270,8 @@ async function loadHasMany(relationshipName, relDef, parentIds, rlsContext = nul
     return new Map();
   }
 
-  const { table, foreignKey, fields = [] } = relDef;
+  const { table, foreignKey } = relDef;
+  const fields = _projectionColumns(relDef);
 
   // Build select - always include FK for grouping
   const selectFields = fields.length > 0

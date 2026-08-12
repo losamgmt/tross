@@ -271,14 +271,6 @@ module.exports = {
       delete: 'none',
     },
 
-    // Computed display name (compute-on-read; not user-writable)
-    name: {
-      create: 'none',
-      read: 'customer',
-      update: 'none',
-      delete: 'none',
-    },
-
     // Summary - brief description for computed name
     summary: {
       create: 'customer',
@@ -525,8 +517,6 @@ module.exports = {
       TRAITS.IMMUTABLE, TRAIT_SETS.IDENTITY,
     ),
 
-    // COMPUTED entity name field (aliased as "Title" in UI)
-    name: withTraits(FIELD.NAME, TRAIT_SETS.SEARCHABLE_LOOKUP),
     summary: withTraits(FIELD.SUMMARY, TRAIT_SETS.FULLTEXT),
 
     // Priority enum

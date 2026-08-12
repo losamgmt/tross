@@ -674,7 +674,6 @@
     ],
     "searchableFields": [
       "contract_number",
-      "name",
       "summary",
       "terms"
     ],
@@ -685,7 +684,6 @@
       "updated_at",
       "status",
       "contract_number",
-      "name",
       "customer_id",
       "start_date",
       "end_date",
@@ -697,7 +695,6 @@
       "updated_at",
       "status",
       "contract_number",
-      "name",
       "customer_id",
       "start_date",
       "end_date",
@@ -763,10 +760,6 @@
         "readonly": true,
         "maxLength": 100,
         "pattern": "^CTR-[0-9]{4}-[0-9]+$"
-      },
-      "name": {
-        "type": "string",
-        "maxLength": 255
       },
       "summary": {
         "type": "string",
@@ -1883,7 +1876,6 @@
     ],
     "searchableFields": [
       "invoice_number",
-      "name",
       "summary"
     ],
     "filterableFields": [
@@ -1893,7 +1885,6 @@
       "updated_at",
       "status",
       "invoice_number",
-      "name",
       "customer_id",
       "work_order_id",
       "tax",
@@ -1909,7 +1900,6 @@
       "updated_at",
       "status",
       "invoice_number",
-      "name",
       "customer_id",
       "work_order_id",
       "due_date",
@@ -1978,10 +1968,6 @@
         "readonly": true,
         "maxLength": 100,
         "pattern": "^INV-[0-9]{4}-[0-9]+$"
-      },
-      "name": {
-        "type": "string",
-        "maxLength": 255
       },
       "summary": {
         "type": "string",
@@ -5942,7 +5928,6 @@
     ],
     "searchableFields": [
       "work_order_number",
-      "name",
       "summary"
     ],
     "filterableFields": [
@@ -5952,7 +5937,6 @@
       "updated_at",
       "status",
       "work_order_number",
-      "name",
       "priority",
       "customer_id",
       "property_id",
@@ -5971,7 +5955,6 @@
       "updated_at",
       "status",
       "work_order_number",
-      "name",
       "priority",
       "customer_id",
       "property_id",
@@ -6107,10 +6090,6 @@
         "readonly": true,
         "maxLength": 100,
         "pattern": "^WO-[0-9]{4}-[0-9]+$"
-      },
-      "name": {
-        "type": "string",
-        "maxLength": 255
       },
       "summary": {
         "type": "string",

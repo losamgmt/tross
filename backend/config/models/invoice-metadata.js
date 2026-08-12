@@ -226,14 +226,6 @@ module.exports = {
       delete: 'none',
     },
 
-    // Computed display name (compute-on-read; not user-writable)
-    name: {
-      create: 'none',
-      read: 'customer',
-      update: 'none',
-      delete: 'none',
-    },
-
     // Brief description of this invoice
     summary: {
       create: 'dispatcher',
@@ -466,8 +458,6 @@ module.exports = {
       TRAITS.IMMUTABLE, TRAIT_SETS.IDENTITY,
     ),
 
-    // COMPUTED entity name field - optional because computed from template
-    name: withTraits(FIELD.NAME, TRAIT_SETS.SEARCHABLE_LOOKUP),
     summary: withTraits(FIELD.SUMMARY, TRAIT_SETS.FULLTEXT),
 
     // FK fields with embedded traits
