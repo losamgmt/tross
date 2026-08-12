@@ -199,6 +199,11 @@ backend/coverage/
 backend/test-db-connection.js# Demo folder - do not deploy
 LANE/
 
+# Generated docs artifacts — derived from metadata SSOT; regenerate on demand, do not commit.
+# validation-rules.json is a retired vestige (validation derives from entity-metadata.json);
+# `npm run docs:validation` still regenerates it locally for reference only.
+docs/reference/validation-rules.json
+
 # External reference material (not project code; excluded from review + VCS)
 docs/REFERENCE_CODE/
 
