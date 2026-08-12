@@ -14,22 +14,22 @@
  *   frontend/lib/generated/resource_type.dart
  */
 
-const fs = require("fs");
-const path = require("path");
+const fs = require('fs');
+const path = require('path');
 
 // Shared utilities - DRY compliance
-const { BACKEND_MODELS_DIR, RESOURCE_TYPE_DART } = require("./lib/paths");
-const { snakeToCamel } = require("./lib/string-utils");
+const { BACKEND_MODELS_DIR, RESOURCE_TYPE_DART } = require('./lib/paths');
+const { snakeToCamel } = require('./lib/string-utils');
 
 // Import SSOT: synthetic resources from permissions-deriver
 const {
   SYNTHETIC_RESOURCES: SYNTHETIC_RESOURCES_MAP,
-} = require("../backend/config/permissions-deriver");
+} = require('../backend/config/permissions-deriver');
 
 // Import SSOT: parent-derived constant
 const {
   RLS_RESOURCE_TYPES,
-} = require("../backend/config/constants");
+} = require('../backend/config/constants');
 
 /**
  * Transform synthetic resources from permissions-deriver format to generator format.
@@ -57,10 +57,10 @@ function getSyntheticResources(entityResources) {
 
   // Add the parent-derived marker (special case - not a real resource)
   synthetics.push({
-    name: "parentDerived",
+    name: 'parentDerived',
     snakeCase: RLS_RESOURCE_TYPES.PARENT_DERIVED,
     comment:
-      "Marker: entity derives permissions from parent context (e.g., file_attachment)",
+      'Marker: entity derives permissions from parent context (e.g., file_attachment)',
   });
 
   return synthetics;
@@ -73,7 +73,7 @@ function loadEntityMetadata() {
   const entities = [];
 
   const files = fs.readdirSync(BACKEND_MODELS_DIR).filter((f) => {
-    return f.endsWith("-metadata.js") && !f.includes(".types.");
+    return f.endsWith('-metadata.js') && !f.includes('.types.');
   });
 
   for (const file of files) {
@@ -100,7 +100,7 @@ function loadEntityMetadata() {
         tableName,
         resource,
         camelName: snakeToCamel(resource),
-        needsSnakeCase: resource.includes("_"),
+        needsSnakeCase: resource.includes('_'),
       });
     } catch (err) {
       console.error(`  Error loading ${file}: ${err.message}`);
@@ -148,7 +148,7 @@ enum ResourceType {
 
   // Add synthetic resources
   for (const synth of syntheticResources) {
-    const comment = synth.comment ? ` // ${synth.comment}` : "";
+    const comment = synth.comment ? ` // ${synth.comment}` : '';
     if (synth.snakeCase) {
       code += `  ${synth.name}('${synth.snakeCase}'),${comment}\n`;
     } else {
@@ -207,10 +207,10 @@ function ensureOutputDir() {
  * Main execution
  */
 function main() {
-  console.log("Generating ResourceType enum from backend metadata...\n");
+  console.log('Generating ResourceType enum from backend metadata...\n');
 
   // Load entity metadata
-  console.log("Loading entity metadata...");
+  console.log('Loading entity metadata...');
   const entities = loadEntityMetadata();
   console.log(`  Found ${entities.length} entities\n`);
 
@@ -222,7 +222,7 @@ function main() {
   const syntheticResources = getSyntheticResources(entityResources);
 
   // Generate Dart code
-  console.log("Generating Dart enum...");
+  console.log('Generating Dart enum...');
   const dartCode = generateDartEnum(entities, syntheticResources);
 
   // Write output
@@ -231,11 +231,11 @@ function main() {
   console.log(`  Written to: ${RESOURCE_TYPE_DART}\n`);
 
   // Summary
-  console.log("Summary:");
+  console.log('Summary:');
   console.log(`  Entity resources: ${entities.length}`);
   console.log(`  Synthetic resources: ${syntheticResources.length}`);
   console.log(`  Total enum values: ${entities.length + syntheticResources.length}`);
-  console.log("\nDone!");
+  console.log('\nDone!');
 }
 
 main();

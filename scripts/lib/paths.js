@@ -7,39 +7,39 @@
  * @module scripts/lib/paths
  */
 
-const path = require("path");
+const path = require('path');
 
 // Root directories
-const ROOT_DIR = path.resolve(__dirname, "../..");
-const BACKEND_DIR = path.join(ROOT_DIR, "backend");
-const FRONTEND_DIR = path.join(ROOT_DIR, "frontend");
-const CONFIG_DIR = path.join(ROOT_DIR, "config");
-const SCRIPTS_DIR = path.join(ROOT_DIR, "scripts");
+const ROOT_DIR = path.resolve(__dirname, '../..');
+const BACKEND_DIR = path.join(ROOT_DIR, 'backend');
+const FRONTEND_DIR = path.join(ROOT_DIR, 'frontend');
+const CONFIG_DIR = path.join(ROOT_DIR, 'config');
+const SCRIPTS_DIR = path.join(ROOT_DIR, 'scripts');
 
 // Backend paths
-const BACKEND_CONFIG_DIR = path.join(BACKEND_DIR, "config");
-const BACKEND_MODELS_DIR = path.join(BACKEND_CONFIG_DIR, "models");
+const BACKEND_CONFIG_DIR = path.join(BACKEND_DIR, 'config');
+const BACKEND_MODELS_DIR = path.join(BACKEND_CONFIG_DIR, 'models');
 
 // Frontend paths
-const FRONTEND_ASSETS_DIR = path.join(FRONTEND_DIR, "assets");
-const FRONTEND_CONFIG_DIR = path.join(FRONTEND_ASSETS_DIR, "config");
-const FRONTEND_LIB_DIR = path.join(FRONTEND_DIR, "lib");
-const FRONTEND_GENERATED_DIR = path.join(FRONTEND_LIB_DIR, "generated");
+const FRONTEND_ASSETS_DIR = path.join(FRONTEND_DIR, 'assets');
+const FRONTEND_CONFIG_DIR = path.join(FRONTEND_ASSETS_DIR, 'config');
+const FRONTEND_LIB_DIR = path.join(FRONTEND_DIR, 'lib');
+const FRONTEND_GENERATED_DIR = path.join(FRONTEND_LIB_DIR, 'generated');
 
 // Specific files
 const ENTITY_METADATA_JSON = path.join(
   FRONTEND_CONFIG_DIR,
-  "entity-metadata.json"
+  'entity-metadata.json',
 );
 const FRONTEND_PERMISSIONS_JSON = path.join(
   FRONTEND_CONFIG_DIR,
-  "permissions.json"
+  'permissions.json',
 );
-const CONFIG_PERMISSIONS_JSON = path.join(CONFIG_DIR, "permissions.json");
-const RESOURCE_TYPE_DART = path.join(FRONTEND_GENERATED_DIR, "resource_type.dart");
-const BACKEND_MODELS_INDEX = path.join(BACKEND_MODELS_DIR, "index.js");
-const NAV_CONFIG_JSON = path.join(FRONTEND_CONFIG_DIR, "nav-config.json");
-const ENTITY_REGISTRY_DART = path.join(FRONTEND_DIR, "test", "factory", "entity_registry.dart");
+const CONFIG_PERMISSIONS_JSON = path.join(CONFIG_DIR, 'permissions.json');
+const RESOURCE_TYPE_DART = path.join(FRONTEND_GENERATED_DIR, 'resource_type.dart');
+const BACKEND_MODELS_INDEX = path.join(BACKEND_MODELS_DIR, 'index.js');
+const NAV_CONFIG_JSON = path.join(FRONTEND_CONFIG_DIR, 'nav-config.json');
+const ENTITY_REGISTRY_DART = path.join(FRONTEND_DIR, 'test', 'factory', 'entity_registry.dart');
 
 module.exports = {
   // Root directories

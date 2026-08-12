@@ -5,10 +5,10 @@
  * Usage: node scripts/kill-port.js 3001 8080
  */
 
-const { execSync, spawn } = require("child_process");
-const os = require("os");
+const { execSync } = require('child_process');
+const os = require('os');
 
-const isWindows = os.platform() === "win32";
+const isWindows = os.platform() === 'win32';
 
 /**
  * Find process ID using a port (Windows)
@@ -18,14 +18,14 @@ const isWindows = os.platform() === "win32";
 function findProcessWindows(port) {
   try {
     const output = execSync(`netstat -ano | findstr :${port}`, {
-      encoding: "utf8",
-      stdio: ["pipe", "pipe", "ignore"],
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'ignore'],
     });
-    const lines = output.trim().split("\n");
+    const lines = output.trim().split('\n');
 
     for (const line of lines) {
       // Look for LISTENING state
-      if (line.includes("LISTENING")) {
+      if (line.includes('LISTENING')) {
         const parts = line.trim().split(/\s+/);
         const pid = parts[parts.length - 1];
         if (pid && !isNaN(pid)) {
@@ -34,7 +34,7 @@ function findProcessWindows(port) {
       }
     }
     return null;
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -47,12 +47,12 @@ function findProcessWindows(port) {
 function findProcessUnix(port) {
   try {
     const output = execSync(`lsof -ti:${port}`, {
-      encoding: "utf8",
-      stdio: ["pipe", "pipe", "ignore"],
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'ignore'],
     });
-    const pid = output.trim().split("\n")[0];
+    const pid = output.trim().split('\n')[0];
     return pid || null;
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -65,14 +65,14 @@ function findProcessUnix(port) {
 function getProcessDetailsWindows(pid) {
   try {
     const output = execSync(`tasklist /FI "PID eq ${pid}" /FO CSV /NH`, {
-      encoding: "utf8",
-      stdio: ["pipe", "pipe", "ignore"],
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'ignore'],
     });
-    const parts = output.split(",");
-    const processName = parts[0]?.replace(/"/g, "") || "Unknown";
+    const parts = output.split(',');
+    const processName = parts[0]?.replace(/"/g, '') || 'Unknown';
     return processName;
-  } catch (error) {
-    return "Unknown";
+  } catch {
+    return 'Unknown';
   }
 }
 
@@ -84,12 +84,12 @@ function getProcessDetailsWindows(pid) {
 function getProcessDetailsUnix(pid) {
   try {
     const output = execSync(`ps -p ${pid} -o comm=`, {
-      encoding: "utf8",
-      stdio: ["pipe", "pipe", "ignore"],
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'ignore'],
     });
-    return output.trim() || "Unknown";
-  } catch (error) {
-    return "Unknown";
+    return output.trim() || 'Unknown';
+  } catch {
+    return 'Unknown';
   }
 }
 
@@ -100,9 +100,9 @@ function getProcessDetailsUnix(pid) {
  */
 function killProcessWindows(pid) {
   try {
-    execSync(`taskkill /PID ${pid} /F`, { stdio: ["pipe", "pipe", "ignore"] });
+    execSync(`taskkill /PID ${pid} /F`, { stdio: ['pipe', 'pipe', 'ignore'] });
     return true;
-  } catch (error) {
+  } catch {
     return false;
   }
 }
@@ -114,9 +114,9 @@ function killProcessWindows(pid) {
  */
 function killProcessUnix(pid) {
   try {
-    execSync(`kill -9 ${pid}`, { stdio: ["pipe", "pipe", "ignore"] });
+    execSync(`kill -9 ${pid}`, { stdio: ['pipe', 'pipe', 'ignore'] });
     return true;
-  } catch (error) {
+  } catch {
     return false;
   }
 }
@@ -165,9 +165,9 @@ async function main() {
   const args = process.argv.slice(2);
 
   if (args.length === 0) {
-    console.log("❌ No ports specified");
-    console.log("Usage: node scripts/kill-port.js <port1> [port2] [port3] ...");
-    console.log("Example: node scripts/kill-port.js 3001 8080");
+    console.log('❌ No ports specified');
+    console.log('Usage: node scripts/kill-port.js <port1> [port2] [port3] ...');
+    console.log('Example: node scripts/kill-port.js 3001 8080');
     process.exit(1);
   }
 
@@ -185,14 +185,14 @@ async function main() {
     if (!success) {
       allSuccess = false;
     }
-    console.log(""); // Blank line between ports
+    console.log(''); // Blank line between ports
   }
 
   if (allSuccess) {
-    console.log("✅ All ports cleaned successfully");
+    console.log('✅ All ports cleaned successfully');
     process.exit(0);
   } else {
-    console.log("⚠️  Some ports could not be cleaned");
+    console.log('⚠️  Some ports could not be cleaned');
     process.exit(1);
   }
 }
@@ -200,7 +200,7 @@ async function main() {
 // Run if called directly
 if (require.main === module) {
   main().catch((error) => {
-    console.error("❌ Error:", error.message);
+    console.error('❌ Error:', error.message);
     process.exit(1);
   });
 }

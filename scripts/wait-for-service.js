@@ -4,9 +4,9 @@
  * Usage: node scripts/wait-for-service.js <url> [max-attempts] [delay-ms]
  */
 
-const http = require("http");
-const https = require("https");
-const { URL } = require("url");
+const http = require('http');
+const https = require('https');
+const { URL } = require('url');
 
 /**
  * Check if a URL is responding
@@ -17,18 +17,18 @@ async function checkUrl(urlString) {
   return new Promise((resolve) => {
     try {
       const url = new URL(urlString);
-      const client = url.protocol === "https:" ? https : http;
+      const client = url.protocol === 'https:' ? https : http;
 
       const req = client.get(url, { timeout: 2000 }, (res) => {
         resolve(res.statusCode >= 200 && res.statusCode < 500);
       });
 
-      req.on("error", () => resolve(false));
-      req.on("timeout", () => {
+      req.on('error', () => resolve(false));
+      req.on('timeout', () => {
         req.destroy();
         resolve(false);
       });
-    } catch (error) {
+    } catch {
       resolve(false);
     }
   });
@@ -51,12 +51,12 @@ async function waitForService(url, maxAttempts = 30, delayMs = 1000) {
     const isReady = await checkUrl(url);
 
     if (isReady) {
-      console.log("✅ SUCCESS\n");
+      console.log('✅ SUCCESS\n');
       console.log(`✅ Service is ready at ${url}`);
       return true;
     }
 
-    console.log("❌ Not ready");
+    console.log('❌ Not ready');
 
     if (attempt < maxAttempts) {
       await new Promise((resolve) => setTimeout(resolve, delayMs));
@@ -76,12 +76,12 @@ async function main() {
   const args = process.argv.slice(2);
 
   if (args.length === 0) {
-    console.log("❌ No URL specified");
+    console.log('❌ No URL specified');
     console.log(
-      "Usage: node scripts/wait-for-service.js <url> [max-attempts] [delay-ms]",
+      'Usage: node scripts/wait-for-service.js <url> [max-attempts] [delay-ms]',
     );
     console.log(
-      "Example: node scripts/wait-for-service.js http://localhost:3001/api/health 30 1000",
+      'Example: node scripts/wait-for-service.js http://localhost:3001/api/health 30 1000',
     );
     process.exit(1);
   }
@@ -98,7 +98,7 @@ async function main() {
 // Run if called directly
 if (require.main === module) {
   main().catch((error) => {
-    console.error("❌ Error:", error.message);
+    console.error('❌ Error:', error.message);
     process.exit(1);
   });
 }

@@ -92,8 +92,8 @@ const pluralizeTable = (entityKey) =>
 
 /** Serialize a default value for SQL */
 function serializeDefault(value) {
-  if (typeof value === 'string') return `'${escapeSql(value)}'`;
-  if (typeof value === 'boolean') return value ? 'TRUE' : 'FALSE';
+  if (typeof value === 'string') {return `'${escapeSql(value)}'`;}
+  if (typeof value === 'boolean') {return value ? 'TRUE' : 'FALSE';}
   if (typeof value === 'object' && value !== null) {
     return `'${escapeSql(JSON.stringify(value))}'::jsonb`;
   }
@@ -145,16 +145,16 @@ function normalizeEntity(raw) {
   const skipForSystem = new Set(['is_active', 'updated_at']);
   const skipForSharedPK = new Set(['is_active']);
   for (const tier1 of CONFIG.TIER1_COLUMNS) {
-    if (isSystemTable && skipForSystem.has(tier1.name)) continue;
-    if (sharedPrimaryKey && skipForSharedPK.has(tier1.name)) continue;
-    
+    if (isSystemTable && skipForSystem.has(tier1.name)) {continue;}
+    if (sharedPrimaryKey && skipForSharedPK.has(tier1.name)) {continue;}
+
     // For sharedPrimaryKey entities, replace SERIAL PRIMARY KEY with INTEGER PRIMARY KEY + FK
     // FK reference is now in fields.id (type: 'foreignKey', references: 'user')
     if (sharedPrimaryKey && tier1.name === 'id') {
       const idFieldDef = raw.fields?.id;
       if (idFieldDef?.type === 'foreignKey' && idFieldDef.references) {
         // Get the related entity's table name from metadata
-        const relatedEntityMeta = require(`../backend/config/models`)[idFieldDef.references];
+        const relatedEntityMeta = require('../backend/config/models')[idFieldDef.references];
         const refTable = relatedEntityMeta?.tableName || pluralizeTable(idFieldDef.references);
         columns.push({
           name: 'id',
@@ -213,21 +213,21 @@ function normalizeEntity(raw) {
 
   let otherOrder = ORDER.OTHER;
   for (const [fieldName, fieldDef] of Object.entries(raw.fields)) {
-    if (skipFields.has(fieldName)) continue;
+    if (skipFields.has(fieldName)) {continue;}
     const col = normalizeField(fieldName, fieldDef, raw);
     col.order = otherOrder++;
     columns.push(col);
   }
 
   // Indexes: identity, searchable, foreign keys
-  if (identityField !== 'id') indexes.push(identityField);
+  if (identityField !== 'id') {indexes.push(identityField);}
   if (raw.searchableFields) {
     for (const field of raw.searchableFields) {
-      if (field !== 'id' && !indexes.includes(field)) indexes.push(field);
+      if (field !== 'id' && !indexes.includes(field)) {indexes.push(field);}
     }
   }
   for (const [fieldName, fieldDef] of Object.entries(raw.fields)) {
-    if (fieldDef.type === 'foreignKey' && !indexes.includes(fieldName)) indexes.push(fieldName);
+    if (fieldDef.type === 'foreignKey' && !indexes.includes(fieldName)) {indexes.push(fieldName);}
   }
 
   return { entityKey, tableName, columns, indexes, uniqueConstraints: raw.uniqueConstraints || [] };
@@ -361,7 +361,7 @@ function sortByDependencies(entities) {
     inDegree.set(entity.tableName, 0);
   }
 
-  for (const [table, deps] of graph) {
+  for (const [, deps] of graph) {
     for (const dep of deps) {
       if (inDegree.has(dep)) {
         inDegree.set(dep, inDegree.get(dep) + 1);
@@ -484,7 +484,7 @@ function generateTableSql(entity, collectForeignKeys = null) {
 function generateIndexSql(entity) {
   const { tableName, indexes } = entity;
   return indexes.map((field) =>
-    `CREATE INDEX IF NOT EXISTS idx_${tableName}_${field} ON ${tableName}(${field});`
+    `CREATE INDEX IF NOT EXISTS idx_${tableName}_${field} ON ${tableName}(${field});`,
   );
 }
 

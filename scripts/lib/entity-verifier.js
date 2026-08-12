@@ -72,7 +72,7 @@ function loadContext(entityName) {
 
 /** Safe require with cache clear */
 function safeRequire(filePath) {
-  if (!filePath || !fs.existsSync(filePath)) return null;
+  if (!filePath || !fs.existsSync(filePath)) {return null;}
   try {
     delete require.cache[require.resolve(filePath)];
     return require(filePath);
@@ -129,7 +129,7 @@ const verifyMetadataExists = (ctx) => ({
 });
 
 const verifyMetadataFields = (ctx) => {
-  if (!ctx.metadata) return { passed: false, detail: 'No metadata loaded' };
+  if (!ctx.metadata) {return { passed: false, detail: 'No metadata loaded' };}
 
   const missing = CONFIG.REQUIRED_FIELDS.filter((f) => !ctx.metadata[f]);
   return missing.length === 0
@@ -138,10 +138,10 @@ const verifyMetadataFields = (ctx) => {
 };
 
 const verifyFrontendJson = (ctx) => {
-  if (!ctx.frontendJson) return { passed: false, detail: 'Cannot read entity-metadata.json' };
+  if (!ctx.frontendJson) {return { passed: false, detail: 'Cannot read entity-metadata.json' };}
 
   const entry = ctx.frontendJson[ctx.entityName];
-  if (!entry) return { passed: false, detail: `"${ctx.entityName}" not in JSON` };
+  if (!entry) {return { passed: false, detail: `"${ctx.entityName}" not in JSON` };}
 
   // Freshness: the on-disk entry must match a fresh regeneration from the source metadata.
   // Guards against a stale entity-metadata.json (metadata changed but `sync:all` not re-run).
@@ -157,7 +157,7 @@ const verifyFrontendJson = (ctx) => {
 };
 
 const verifyPermissions = (ctx) => {
-  if (!ctx.permissionsJson) return { passed: false, detail: 'Cannot read permissions.json' };
+  if (!ctx.permissionsJson) {return { passed: false, detail: 'Cannot read permissions.json' };}
 
   const resourceName = ctx.metadata?.rlsResource || ctx.entityName + 's';
   const hasResource = ctx.permissionsJson.resources?.[resourceName];
@@ -171,7 +171,7 @@ const verifyDartEnum = (ctx) => {
   if (CONFIG.DART_EXCLUSIONS.includes(ctx.entityName)) {
     return { skip: true, detail: 'Excluded by design' };
   }
-  if (!ctx.dartContent) return { passed: false, detail: 'Cannot read resource_type.dart' };
+  if (!ctx.dartContent) {return { passed: false, detail: 'Cannot read resource_type.dart' };}
 
   // Dart enum uses table name (plural) or camelCase with string parameter
   // Examples: "customers," or "auditLogs('audit_logs'),"
@@ -183,7 +183,7 @@ const verifyDartEnum = (ctx) => {
 };
 
 const verifySchema = (ctx) => {
-  if (!ctx.schemaContent) return { passed: false, detail: 'Cannot read schema.sql' };
+  if (!ctx.schemaContent) {return { passed: false, detail: 'Cannot read schema.sql' };}
 
   const tableName = ctx.metadata?.tableName || ctx.entityName + 's';
   const pattern = new RegExp(`CREATE TABLE[^;]*\\b${tableName}\\b`, 'i');
@@ -199,7 +199,7 @@ const verifyRegistry = (ctx) => {
   }
 
   const found = ctx.registryEntities.all.includes(ctx.entityName);
-  if (!found) return { passed: false, detail: 'Not discovered' };
+  if (!found) {return { passed: false, detail: 'Not discovered' };}
 
   const isGeneric = ctx.registryEntities.genericCrud.includes(ctx.entityName);
   return { passed: true, detail: isGeneric ? 'Generic CRUD' : 'Specialized' };

@@ -15,8 +15,8 @@
  * Run after any backend model changes.
  */
 
-const fs = require("fs");
-const path = require("path");
+const fs = require('fs');
+const path = require('path');
 
 // Shared utilities - DRY compliance
 const {
@@ -24,12 +24,12 @@ const {
   ENTITY_METADATA_JSON,
   NAV_CONFIG_JSON,
   ENTITY_REGISTRY_DART,
-} = require("./lib/paths");
+} = require('./lib/paths');
 const {
   snakeToTitleCase,
   camelToTitleCase,
   capitalize,
-} = require("./lib/string-utils");
+} = require('./lib/string-utils');
 
 // Metadata accessor functions - derive values from field-level properties
 // when legacy arrays are not present (supports field-centric migration)
@@ -40,27 +40,27 @@ const {
   getFeatures,
   getJunction,
   getEntityDisplayField,
-} = require("../backend/config/metadata-accessors");
+} = require('../backend/config/metadata-accessors');
 
 // Import all backend metadata
-const backendModels = require(path.join(BACKEND_MODELS_DIR, "index.js"));
+const backendModels = require(path.join(BACKEND_MODELS_DIR, 'index.js'));
 
 // Explicit singular → plural mappings for irregular/special plurals
 // Standard English rules don't handle all cases correctly
 const PLURAL_OVERRIDES = {
-  User: "Users",
-  Role: "Roles",
-  Customer: "Customers",
-  Technician: "Technicians",
-  "Work Order": "Work Orders",
-  Contract: "Contracts",
-  Invoice: "Invoices",
-  Inventory: "Inventory", // Inventory is uncountable - no 's'
-  Preferences: "Preferences", // Already plural (or singular form of preferences)
-  Notification: "Notifications",
-  "Saved View": "Saved Views",
-  "File Attachment": "File Attachments",
-  "Audit Log": "Audit Logs",
+  User: 'Users',
+  Role: 'Roles',
+  Customer: 'Customers',
+  Technician: 'Technicians',
+  'Work Order': 'Work Orders',
+  Contract: 'Contracts',
+  Invoice: 'Invoices',
+  Inventory: 'Inventory', // Inventory is uncountable - no 's'
+  Preferences: 'Preferences', // Already plural (or singular form of preferences)
+  Notification: 'Notifications',
+  'Saved View': 'Saved Views',
+  'File Attachment': 'File Attachments',
+  'Audit Log': 'Audit Logs',
 };
 
 /**
@@ -74,18 +74,18 @@ function getPluralForm(singular) {
   }
 
   // Basic English pluralization rules as fallback
-  if (singular.endsWith("y") && !/[aeiou]y$/i.test(singular)) {
-    return singular.slice(0, -1) + "ies";
+  if (singular.endsWith('y') && !/[aeiou]y$/i.test(singular)) {
+    return singular.slice(0, -1) + 'ies';
   }
   if (
-    singular.endsWith("s") ||
-    singular.endsWith("x") ||
-    singular.endsWith("ch") ||
-    singular.endsWith("sh")
+    singular.endsWith('s') ||
+    singular.endsWith('x') ||
+    singular.endsWith('ch') ||
+    singular.endsWith('sh')
   ) {
-    return singular + "es";
+    return singular + 'es';
   }
-  return singular + "s";
+  return singular + 's';
 }
 
 /**
@@ -100,11 +100,11 @@ function transformField(fieldName, fieldDef, enums, allModels) {
   // Helper to get display field for a related entity
   const getDisplayFieldForEntity = (entityName) => {
     const relatedMeta = allModels?.[entityName];
-    return relatedMeta ? getEntityDisplayField(relatedMeta) : "name";
+    return relatedMeta ? getEntityDisplayField(relatedMeta) : 'name';
   };
 
   // Foreign key handling - SINGLE PATH: type + references required
-  if (fieldDef.type === "foreignKey" && fieldDef.references) {
+  if (fieldDef.type === 'foreignKey' && fieldDef.references) {
     result.references = fieldDef.references;
     result.displayField =
       fieldDef.displayField || getDisplayFieldForEntity(fieldDef.references);
@@ -112,27 +112,27 @@ function transformField(fieldName, fieldDef, enums, allModels) {
 
   // Copy other properties
   // Note: backend uses both 'readonly' and 'readOnly' (camelCase) - check both
-  if (fieldDef.required) result.required = true;
-  if (fieldDef.readonly || fieldDef.readOnly) result.readonly = true;
-  if (fieldDef.maxLength) result.maxLength = fieldDef.maxLength;
-  if (fieldDef.minLength) result.minLength = fieldDef.minLength;
-  if (fieldDef.min !== undefined) result.min = fieldDef.min;
-  if (fieldDef.max !== undefined) result.max = fieldDef.max;
-  if (fieldDef.default !== undefined) result.default = fieldDef.default;
-  if (fieldDef.pattern) result.pattern = fieldDef.pattern;
+  if (fieldDef.required) {result.required = true;}
+  if (fieldDef.readonly || fieldDef.readOnly) {result.readonly = true;}
+  if (fieldDef.maxLength) {result.maxLength = fieldDef.maxLength;}
+  if (fieldDef.minLength) {result.minLength = fieldDef.minLength;}
+  if (fieldDef.min !== undefined) {result.min = fieldDef.min;}
+  if (fieldDef.max !== undefined) {result.max = fieldDef.max;}
+  if (fieldDef.default !== undefined) {result.default = fieldDef.default;}
+  if (fieldDef.pattern) {result.pattern = fieldDef.pattern;}
   // Field derivation construct (frontend applies the sync methods it implements, e.g. timeOffset)
-  if (fieldDef.derived) result.derived = fieldDef.derived;
+  if (fieldDef.derived) {result.derived = fieldDef.derived;}
 
   // Handle enum values with optional colors
   // NEW pattern: enumKey references enums.[enumKey] where values are object keys
   // LEGACY pattern: fieldDef.values array OR enums.[fieldName].values
-  if (fieldDef.type === "enum") {
+  if (fieldDef.type === 'enum') {
     const enumKey = fieldDef.enumKey || fieldName;
     const enumDef = enums?.[enumKey];
-    
+
     let values = [];
     let colors = {};
-    
+
     if (enumDef && typeof enumDef === 'object') {
       // New pattern: values are object keys, colors inside each value
       // e.g., { active: { color: 'success' }, inactive: { color: 'warning' } }
@@ -190,11 +190,11 @@ function transformPreferenceSchema(schema) {
     };
 
     // For enum types, generate displayLabels if not provided
-    if (def.type === "enum" && def.values && !def.displayLabels) {
+    if (def.type === 'enum' && def.values && !def.displayLabels) {
       result[key].displayLabels = {};
       for (const val of def.values) {
         // Convert value to display label (e.g., 'system' -> 'System', 'in_progress' -> 'In Progress')
-        result[key].displayLabels[val] = val.includes("_")
+        result[key].displayLabels[val] = val.includes('_')
           ? snakeToTitleCase(val)
           : capitalize(val);
       }
@@ -219,7 +219,7 @@ function transformModel(entityName, backendMeta, allModels) {
     entityKey: backendMeta.entityKey,
     // Table name in database (plural, also used for API URLs)
     tableName: backendMeta.tableName,
-    primaryKey: backendMeta.primaryKey || "id",
+    primaryKey: backendMeta.primaryKey || 'id',
     identityField: backendMeta.identityField,
     rlsResource: backendMeta.rlsResource,
     // Material icon for navigation menus and entity displays
@@ -254,7 +254,7 @@ function transformModel(entityName, backendMeta, allModels) {
   result.displayColumns = backendMeta.displayColumns ?? [];
 
   // Default sort - ALWAYS emit (sensible default if none)
-  result.defaultSort = backendMeta.defaultSort ?? { field: "created_at", order: "DESC" };
+  result.defaultSort = backendMeta.defaultSort ?? { field: 'created_at', order: 'DESC' };
 
   // Field aliases for UI labels - ALWAYS emit (empty object if none)
   result.fieldAliases = backendMeta.fieldAliases ?? {};
@@ -291,10 +291,10 @@ function transformModel(entityName, backendMeta, allModels) {
     result.preferenceSchema = transformPreferenceSchema(
       backendMeta.preferenceSchema,
     );
-  } else if (entityName === "preferences" && backendMeta.fields) {
+  } else if (entityName === 'preferences' && backendMeta.fields) {
     // Auto-generate preferenceSchema from fields for the preferences entity
     // Exclude system fields (id, created_at, updated_at)
-    const systemFields = ["id", "created_at", "updated_at"];
+    const systemFields = ['id', 'created_at', 'updated_at'];
     const preferenceFields = {};
 
     for (const [fieldName, fieldDef] of Object.entries(backendMeta.fields)) {
@@ -387,10 +387,10 @@ function buildEntityPlacements() {
  * and writes back with proper formatting.
  */
 function updateNavConfig() {
-  console.log("\n🔄 Updating nav-config.json entityPlacements...\n");
+  console.log('\n🔄 Updating nav-config.json entityPlacements...\n');
 
   // Read existing nav-config.json
-  const existingConfig = JSON.parse(fs.readFileSync(NAV_CONFIG_JSON, "utf8"));
+  const existingConfig = JSON.parse(fs.readFileSync(NAV_CONFIG_JSON, 'utf8'));
 
   // Build placements from metadata
   const entityPlacements = buildEntityPlacements();
@@ -421,14 +421,14 @@ function updateNavConfig() {
  * @param {string[]} entities - Sorted list of entity names
  */
 function updateEntityRegistry(entities) {
-  console.log("\n🔄 Updating entity_registry.dart allKnownEntities...\n");
+  console.log('\n🔄 Updating entity_registry.dart allKnownEntities...\n');
 
   const sortedEntities = [...entities].sort();
-  const dartContent = fs.readFileSync(ENTITY_REGISTRY_DART, "utf8");
+  const dartContent = fs.readFileSync(ENTITY_REGISTRY_DART, 'utf8');
 
   // Build the new const declaration
-  const indent = "  ";
-  const entityLines = sortedEntities.map((e) => `${indent}'${e}',`).join("\n");
+  const indent = '  ';
+  const entityLines = sortedEntities.map((e) => `${indent}'${e}',`).join('\n');
   const newConst = `const allKnownEntities = <String>[\n${entityLines}\n];`;
 
   // Regex to match the existing const declaration
@@ -436,7 +436,7 @@ function updateEntityRegistry(entities) {
   const constRegex = /const allKnownEntities = <String>\[[\s\S]*?\];/;
 
   if (!constRegex.test(dartContent)) {
-    console.error("  ⚠️  Could not find allKnownEntities const in entity_registry.dart");
+    console.error('  ⚠️  Could not find allKnownEntities const in entity_registry.dart');
     return;
   }
 
@@ -461,12 +461,12 @@ function updateEntityRegistry(entities) {
  */
 function buildFrontendMetadata(models) {
   const frontendMetadata = {
-    $schema: "http://json-schema.org/draft-07/schema#",
-    $id: "https://tross.com/schemas/entity-metadata.json",
-    title: "Tross Entity Metadata",
+    $schema: 'http://json-schema.org/draft-07/schema#',
+    $id: 'https://tross.com/schemas/entity-metadata.json',
+    title: 'Tross Entity Metadata',
     description:
-      "Frontend mirror of backend entity metadata. Auto-generated by sync-entity-metadata.js",
-    version: "1.0.0",
+      'Frontend mirror of backend entity metadata. Auto-generated by sync-entity-metadata.js',
+    version: '1.0.0',
   };
 
   for (const [entityName, backendMeta] of Object.entries(models)) {
@@ -478,7 +478,7 @@ function buildFrontendMetadata(models) {
 }
 
 function syncMetadata() {
-  console.log("🔄 Syncing entity metadata from backend to frontend...\n");
+  console.log('🔄 Syncing entity metadata from backend to frontend...\n');
 
   // Build frontend metadata (pure), then write. No timestamps → deterministic output
   // for CI idempotency; use git history for change tracking.
@@ -494,7 +494,7 @@ function syncMetadata() {
 
   console.log(`\n✅ Synced ${entities.length} entities to:`);
   console.log(`   ${ENTITY_METADATA_JSON}`);
-  console.log(`\nEntities: ${entities.join(", ")}`);
+  console.log(`\nEntities: ${entities.join(', ')}`);
 
   // Also update nav-config.json entityPlacements (SSOT)
   updateNavConfig();

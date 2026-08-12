@@ -22,7 +22,7 @@ function snakeToCamel(str) {
  * @returns {string} Snake case string (e.g., 'work_order')
  */
 function camelToSnake(str) {
-  return str.replace(/([A-Z])/g, "_$1").toLowerCase();
+  return str.replace(/([A-Z])/g, '_$1').toLowerCase();
 }
 
 /**
@@ -32,9 +32,9 @@ function camelToSnake(str) {
  */
 function snakeToTitleCase(str) {
   return str
-    .split("_")
+    .split('_')
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
+    .join(' ');
 }
 
 /**
@@ -44,7 +44,7 @@ function snakeToTitleCase(str) {
  */
 function camelToTitleCase(str) {
   return str
-    .replace(/([A-Z])/g, " $1")
+    .replace(/([A-Z])/g, ' $1')
     .replace(/^./, (s) => s.toUpperCase())
     .trim();
 }
@@ -55,7 +55,7 @@ function camelToTitleCase(str) {
  * @returns {string} Capitalized string (e.g., 'System')
  */
 function capitalize(str) {
-  if (!str) return str;
+  if (!str) {return str;}
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 

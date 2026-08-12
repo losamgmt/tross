@@ -48,7 +48,7 @@ Examples:
   for (const name of entities) {
     const result = verifyEntity(name);
     console.log(formatResult(result));
-    if (result.failed > 0) allPassed = false;
+    if (result.failed > 0) {allPassed = false;}
   }
 
   process.exit(allPassed ? 0 : 1);
