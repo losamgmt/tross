@@ -2,10 +2,10 @@
 
 /**
  * Integration Providers Registry
- * 
+ *
  * Re-exports provider metadata accessors and loads provider modules.
  * This is the service-layer entry point for provider operations.
- * 
+ *
  * METADATA: config/integration-providers.js (SSOT for provider config)
  * IMPLEMENTATIONS: providers/*.js (actual API calls)
  */
@@ -31,8 +31,8 @@ function loadProviderModule(name) {
   if (!hasProvider(name)) {
     throw new Error(`Unknown provider: ${name}`);
   }
-  
-  // eslint-disable-next-line global-require
+
+
   return require(`./${name}`);
 }
 
@@ -58,11 +58,11 @@ module.exports = {
   getApiKeyProviders,
   getWebhookProviders,
   validateProviderEnv,
-  
+
   // Provider module loading
   loadProviderModule,
   getProviderWithModule,
-  
+
   // Convenience: list of names (backwards compatible)
   list: getProviderNames,
   exists: hasProvider,

@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /**
  * Strict Database Initialization Script
- * 
+ *
  * Runs schema.sql and demo-data.sql with FAIL-FAST behavior.
  * Used by Railway deploy to ensure database is properly initialized.
- * 
+ *
  * USES THE SAME CONNECTION AS THE REST OF THE APP (db/connection.js)
  * This ensures SSL, connection pooling, and environment detection all work.
- * 
+ *
  * Exit codes:
  *   0 - Success (both schema and seed applied)
  *   1 - Failure (any error - deploy should abort)
@@ -77,7 +77,7 @@ async function initDatabase() {
     for (const check of checks) {
       const result = await db.query(check.query);
       const count = parseInt(result.rows[0].count);
-      
+
       if (check.expected !== undefined && count !== check.expected) {
         log(`  ⚠️  ${check.name}: ${count} (expected ${check.expected})`, 'yellow');
         allPassed = false;
@@ -95,14 +95,14 @@ async function initDatabase() {
     } else {
       log('⚠️ Database initialized but some verification checks failed', 'yellow');
     }
-    
+
     // Close pool gracefully
     await db.end();
     process.exit(0);
 
   } catch (error) {
     log('═'.repeat(50), 'red');
-    log(`❌ Database initialization FAILED:`, 'red');
+    log('❌ Database initialization FAILED:', 'red');
     log(`   ${error.message}`, 'red');
     if (error.detail) {
       log(`   Detail: ${error.detail}`, 'red');
@@ -113,14 +113,14 @@ async function initDatabase() {
     if (error.code) {
       log(`   Code: ${error.code}`, 'red');
     }
-    
+
     // Try to close pool
     try {
       await db.end();
-    } catch (e) {
+    } catch {
       // Ignore cleanup errors
     }
-    
+
     process.exit(1);
   }
 }

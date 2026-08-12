@@ -2,7 +2,7 @@
 
 /**
  * QuickBooks Integration Provider
- * 
+ *
  * Provider for QuickBooks Online integration.
  * Required methods: healthCheck, refreshToken
  * Optional: business operations (syncInvoice, etc.)
@@ -36,7 +36,7 @@ async function healthCheck(tokens) {
       `${getApiBase()}/company/${tokens.realm_id}/companyinfo/${tokens.realm_id}`,
       {
         headers: { Authorization: `Bearer ${tokens.access_token}` },
-      }
+      },
     );
     return response.ok;
   } catch (error) {
@@ -61,11 +61,11 @@ async function refreshToken(refreshTokenValue) {
       client_secret: process.env.QB_CLIENT_SECRET,
     }),
   });
-  
+
   if (!response.ok) {
     throw new AppError('QuickBooks token refresh failed', 401, ERROR_CODES.TOKEN_REFRESH_FAILED);
   }
-  
+
   const data = await response.json();
   return {
     access_token: data.access_token,
@@ -83,7 +83,7 @@ async function refreshToken(refreshTokenValue) {
  */
 async function syncInvoice(tokens, { invoice }) {
   logger.info('Syncing invoice to QuickBooks', { invoiceId: invoice.id });
-  
+
   // TODO: Implement actual QuickBooks invoice creation
   // const response = await fetch(
   //   `${getApiBase()}/company/${tokens.realm_id}/invoice`,
@@ -96,7 +96,7 @@ async function syncInvoice(tokens, { invoice }) {
   //     body: JSON.stringify({ /* QB invoice format */ }),
   //   }
   // );
-  
+
   throw new AppError('QuickBooks syncInvoice not implemented', 501, ERROR_CODES.NOT_IMPLEMENTED);
 }
 
@@ -108,7 +108,7 @@ async function syncInvoice(tokens, { invoice }) {
  */
 async function syncCustomer(tokens, { customer }) {
   logger.info('Syncing customer to QuickBooks', { customerId: customer.id });
-  
+
   // TODO: Implement actual QuickBooks customer creation
   throw new AppError('QuickBooks syncCustomer not implemented', 501, ERROR_CODES.NOT_IMPLEMENTED);
 }

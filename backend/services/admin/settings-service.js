@@ -375,9 +375,9 @@ class SystemSettingsService {
       const responseTime = Date.now() - start;
       const settingsCount = parseInt(result.rows[0].count, 10);
 
-      logger.debug('System settings health check passed', { 
-        responseTime, 
-        settingsCount 
+      logger.debug('System settings health check passed', {
+        responseTime,
+        settingsCount,
       });
 
       return {

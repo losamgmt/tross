@@ -2,11 +2,11 @@
 
 /**
  * Stripe Integration Provider
- * 
+ *
  * Provider for Stripe payment integration.
  * Required methods: healthCheck, refreshToken
  * Optional: business operations (syncPayment, etc.)
- * 
+ *
  * Note: Stripe uses API keys, not OAuth tokens.
  * The refreshToken method is a no-op that returns the existing tokens.
  */
@@ -39,10 +39,10 @@ async function healthCheck(tokens) {
 
 /**
  * REQUIRED: Refresh tokens
- * 
+ *
  * Note: Stripe uses API keys which don't expire, so this is a no-op.
  * Keeping the method for interface compliance.
- * 
+ *
  * @param {string} _refreshTokenValue - Not used for Stripe
  * @returns {Promise<Object>} Same tokens (no refresh needed)
  */
@@ -50,7 +50,7 @@ async function refreshToken(_refreshTokenValue) {
   // Stripe API keys don't expire - this is a no-op
   // The runner will pass the existing tokens back
   logger.debug('Stripe token refresh: API keys do not expire');
-  
+
   // Return null to indicate no change - caller will use existing tokens
   return null;
 }
@@ -63,7 +63,7 @@ async function refreshToken(_refreshTokenValue) {
  */
 async function createPaymentIntent(tokens, { amount, currency = 'usd', metadata = {} }) {
   logger.info('Creating Stripe payment intent', { amount, currency });
-  
+
   const response = await fetch(`${STRIPE_API_BASE}/payment_intents`, {
     method: 'POST',
     headers: {
@@ -74,20 +74,20 @@ async function createPaymentIntent(tokens, { amount, currency = 'usd', metadata 
       amount: String(amount),
       currency,
       ...Object.fromEntries(
-        Object.entries(metadata).map(([k, v]) => [`metadata[${k}]`, v])
+        Object.entries(metadata).map(([k, v]) => [`metadata[${k}]`, v]),
       ),
     }),
   });
-  
+
   if (!response.ok) {
     const error = await response.json();
     throw new AppError(
       `Stripe payment intent failed: ${error.error?.message || 'Unknown error'}`,
       response.status,
-      'STRIPE_PAYMENT_FAILED'
+      'STRIPE_PAYMENT_FAILED',
     );
   }
-  
+
   return response.json();
 }
 
@@ -99,7 +99,7 @@ async function createPaymentIntent(tokens, { amount, currency = 'usd', metadata 
  */
 async function syncPayment(tokens, { payment }) {
   logger.info('Syncing payment to Stripe', { paymentId: payment.id });
-  
+
   // TODO: Implement payment sync logic
   throw new AppError('Stripe syncPayment not implemented', 501, ERROR_CODES.NOT_IMPLEMENTED);
 }
