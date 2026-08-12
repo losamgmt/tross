@@ -118,106 +118,8 @@ function displayName(entity) {
 }
 
 // ============================================================================
-// TEXT UTILITIES
-// ============================================================================
-
-/**
- * Truncate text to specified length with ellipsis
- *
- * @param {string} text - Text to truncate
- * @param {number} maxLength - Maximum length before truncation
- * @returns {string} Truncated text with ellipsis if needed
- *
- * @example
- * truncate('This is a long description', 10) // 'This is a...'
- */
-function truncate(text, maxLength = 30) {
-  if (!text) {
-    return '';
-  }
-
-  const trimmed = text.trim();
-  if (trimmed.length <= maxLength) {
-    return trimmed;
-  }
-
-  return trimmed.slice(0, maxLength).trim() + '...';
-}
-
-// ============================================================================
 // COMPUTED ENTITY NAME FUNCTIONS
 // ============================================================================
-
-/**
- * Compute name for COMPUTED entities (work_order, invoice, contract)
- * Template format: "{customer.fullName}: {summary}: {identifier}"
- *
- * @param {Object} options - Options for computing name
- * @param {Object} options.entity - The entity (work_order, invoice, contract)
- * @param {Object} options.customer - Related customer entity
- * @param {string} options.identifierField - Name of identifier field (e.g., 'work_order_number')
- * @returns {string} Computed name
- *
- * @example
- * computeName({
- *   entity: { summary: 'Fix kitchen sink', work_order_number: 'WO-2024-0001' },
- *   customer: { first_name: 'Jane', last_name: 'Smith' },
- *   identifierField: 'work_order_number'
- * })
- * // Returns: 'Jane Smith: Fix kitchen sink: WO-2024-0001'
- */
-function computeName({ entity, customer, identifierField }) {
-  if (!entity) {
-    return '';
-  }
-
-  const customerName = customer ? fullName(customer) : 'Unknown Customer';
-  const summary = truncate(entity.summary || '', 50);
-  const identifier = entity[identifierField] || '';
-
-  // Build name parts, filtering out empty values
-  const parts = [customerName];
-  if (summary) {
-    parts.push(summary);
-  }
-  if (identifier) {
-    parts.push(identifier);
-  }
-
-  return parts.join(': ');
-}
-
-/**
- * Format a template string with entity data
- * Supports simple {field} and {field.subfield} notation
- *
- * @param {string} template - Template string with {field} placeholders
- * @param {Object} data - Data object to fill placeholders
- * @returns {string} Formatted string
- *
- * @example
- * formatTemplate('{first_name} {last_name}', { first_name: 'Jane', last_name: 'Smith' })
- * // Returns: 'Jane Smith'
- */
-function formatTemplate(template, data) {
-  if (!template || !data) {
-    return template || '';
-  }
-
-  return template.replace(/\{([^}]+)\}/g, (match, path) => {
-    const parts = path.split('.');
-    let value = data;
-
-    for (const part of parts) {
-      if (isNil(value)) {
-        return '';
-      }
-      value = value[part];
-    }
-
-    return isNil(value) ? '' : String(value);
-  });
-}
 
 /**
  * Compose a COMPUTED entity's display name ON READ from its `computedName` template.
@@ -366,12 +268,7 @@ module.exports = {
   sortName,
   displayName,
 
-  // Text utilities
-  truncate,
-
   // COMPUTED entity functions
-  computeName,
-  formatTemplate,
   composeComputedName,
 
   // Display-name resolution (SSOT)
