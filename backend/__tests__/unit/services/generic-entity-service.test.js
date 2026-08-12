@@ -370,8 +370,9 @@ describe("GenericEntityService", () => {
         // Act
         const result = await GenericEntityService.findById("work_order", 42);
 
-        // Assert
-        expect(result).toEqual(mockWorkOrder);
+        // Assert (COMPUTED entities get a synthesized `name`; empty here as the
+        // minimal mock carries none of the template's source fields)
+        expect(result).toEqual({ ...mockWorkOrder, name: "" });
         // findById delegates to findByField with table-prefixed columns
         const [query, params] = db.query.mock.calls[0];
         expect(query).toContain("SELECT work_orders.*");
@@ -1146,8 +1147,9 @@ describe("GenericEntityService", () => {
           rlsContext: { role: "customer", userId: 1, customer_profile_id: 100 },
         });
 
-        // Assert
-        expect(result.data).toEqual(mockInvoices);
+        // Assert (COMPUTED entities get a synthesized `name`; only invoice_number
+        // is present on the mock, so the composite reduces to it)
+        expect(result.data).toEqual([{ ...mockInvoices[0], name: "INV-001" }]);
         const selectQuery = db.query.mock.calls[1][0];
         expect(selectQuery).toContain("customer_id =");
       });

@@ -238,8 +238,11 @@ class GenericEntityService {
     if (!metadata.computedName || !data) {
       return data;
     }
+    // Synthesize `name` unconditionally: it is a computed projection (like
+    // <fk>_display), backed by no stored column, composed only from the
+    // already-redacted row parts (own fields + surviving <fk>_display).
     const apply = (row) => {
-      if (row && Object.prototype.hasOwnProperty.call(row, 'name')) {
+      if (row) {
         row.name = composeComputedName(row, metadata);
       }
       return row;

@@ -88,6 +88,21 @@ describe('COMPUTED display name (compute-on-read)', () => {
     expect(res.body.data.name).not.toContain('HACKED');
   });
 
+  test('quote unifies to "{customer}: {quote_number}" (name synthesized, no column)', async () => {
+    const create = await request(app)
+      .post('/api/quotes')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ customer_id: customerId });
+    expect(create.status).toBe(201);
+    const { id, quote_number: quoteNumber } = create.body.data;
+
+    const res = await request(app)
+      .get(`/api/quotes/${id}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.data.name).toBe(`${customerName}: ${quoteNumber}`);
+  });
+
   test('freshness: renaming the customer changes the composed name on next read (never stored)', async () => {
     const create = await request(app)
       .post('/api/work_orders')

@@ -120,9 +120,9 @@ module.exports = {
   // ============================================================================
 
   computedName: {
-    template: '{quote_number}: {description}',
-    sources: ['quote_number', 'description'],
-    readOnly: false,
+    template: '{customer.fullName}: {quote_number}',
+    sources: ['customer_id', 'quote_number'],
+    readOnly: true, // Computed display is not user-writable (compute-on-read)
   },
 
   // ============================================================================
