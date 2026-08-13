@@ -452,6 +452,49 @@ describe('HookService', () => {
       expect(result.errors[0].action).toBe('failing_action');
     });
 
+    test('propagates a failed action (success:false) when inside a Unit of Work (context.tx)', async () => {
+      executeAction.mockResolvedValueOnce({ success: false, error: 'boom' });
+      const hooks = [{ on: 'change', do: 'failing_action' }];
+
+      await expect(
+        evaluateAfterHooks({
+          hooks,
+          oldValue: 'draft',
+          newValue: 'sent',
+          context: { ...baseContext, tx: { query: jest.fn() } },
+        }),
+      ).rejects.toThrow(/failing_action/);
+    });
+
+    test('propagates a thrown action when inside a Unit of Work (context.tx)', async () => {
+      executeAction.mockRejectedValueOnce(new Error('kaboom'));
+      const hooks = [{ on: 'change', do: 'throwing_action' }];
+
+      await expect(
+        evaluateAfterHooks({
+          hooks,
+          oldValue: 'draft',
+          newValue: 'sent',
+          context: { ...baseContext, tx: { query: jest.fn() } },
+        }),
+      ).rejects.toThrow('kaboom');
+    });
+
+    test('logs and continues on failure when NOT in a Unit of Work (no context.tx)', async () => {
+      executeAction.mockResolvedValueOnce({ success: false, error: 'boom' });
+      const hooks = [{ on: 'change', do: 'failing_action' }];
+
+      const result = await evaluateAfterHooks({
+        hooks,
+        oldValue: 'draft',
+        newValue: 'sent',
+        context: baseContext,
+      });
+
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].action).toBe('failing_action');
+    });
+
     test('stops at cascade depth limit', async () => {
       const hooks = [{ on: 'change', do: 'test_action' }];
 

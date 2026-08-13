@@ -576,6 +576,7 @@ const handlers = {
           const result = await GenericEntityService.create('notification', notificationData, {
             user: context.user?.id || 'system',
             skipHooks: true, // Avoid recursive hooks on notification creation
+            client: context.tx, // join the caller's Unit of Work when present
           });
 
           results.in_app.push({ userId, notificationId: result?.id });
@@ -662,6 +663,7 @@ const handlers = {
       const result = await GenericEntityService.create(entity, data, {
         user: context.user?.id || 'system',
         skipHooks: false, // Allow hooks on created entity
+        client: context.tx, // join the caller's Unit of Work when present
       });
 
       return {
@@ -728,6 +730,7 @@ const handlers = {
       const result = await GenericEntityService.update(targetEntity, targetId, resolvedUpdates, {
         user: context.user?.id || 'system',
         skipHooks: false, // Allow hooks on updated entity
+        client: context.tx, // join the caller's Unit of Work when present
       });
 
       return {
@@ -791,6 +794,7 @@ const handlers = {
       await GenericEntityService.update(targetEntity, targetId, { [targetField]: computedValue }, {
         user: context.user?.id || 'system',
         skipHooks: true, // Avoid recursive hooks on compute updates
+        client: context.tx, // join the caller's Unit of Work when present
       });
 
       return {

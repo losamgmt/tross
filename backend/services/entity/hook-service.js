@@ -297,7 +297,14 @@ async function evaluateAfterHooks({
         hookDepth,
       };
 
-      await executeAction(actionKey, actionContext);
+      const actionResult = await executeAction(actionKey, actionContext);
+      // executeAction returns {success:false} instead of throwing; inside a Unit
+      // of Work a failed reactive action must abort the whole transaction.
+      if (actionResult && actionResult.success === false) {
+        throw new Error(
+          `afterChange action '${actionKey}' failed: ${actionResult.error || 'unknown error'}`,
+        );
+      }
       actionsExecuted.push(actionKey);
 
       logger.debug('Action executed', {
@@ -313,7 +320,11 @@ async function evaluateAfterHooks({
         error: error.message,
       });
       errors.push({ action: actionKey, error: error.message });
-      // Continue with next hook — don't fail the request
+      // Inside a Unit of Work (context.tx) propagate so the enclosing transaction
+      // rolls back; on the pool, log-and-continue (legacy behavior).
+      if (context.tx) {
+        throw error;
+      }
     }
   }
 

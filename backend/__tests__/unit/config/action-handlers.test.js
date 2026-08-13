@@ -260,6 +260,20 @@ describe('action-handlers', () => {
         expect(result.data.origin_type).toBe('request');
         expect(result.data.origin_id).toBe(42);
       });
+
+      it('threads the caller transaction client (context.tx) into the GES create', async () => {
+        const tx = { query: jest.fn() };
+        const config = { type: 'create_entity', entity: 'audit_log' };
+        const context = { entity: 'request', record: { id: 42 }, tx };
+
+        await ACTION_HANDLERS.create_entity(config, context);
+
+        expect(GenericEntityService.create).toHaveBeenCalledWith(
+          'audit_log',
+          expect.any(Object),
+          expect.objectContaining({ client: tx }),
+        );
+      });
     });
 
     describe('update_entity handler', () => {
