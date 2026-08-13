@@ -12,6 +12,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tross/config/constants.dart';
 import 'package:tross/config/table_column.dart';
 import 'package:tross/widgets/organisms/tables/data_table.dart';
 import 'package:tross/services/metadata_table_column_factory.dart';
@@ -126,7 +127,7 @@ void main() {
 
     testWidgets('shows error state for all entities', (tester) async {
       const errorMessage = 'Failed to load data';
-      
+
       for (final entityName in EntityTestRegistry.allEntityNames) {
         await pumpTestWidget(
           tester,
@@ -183,13 +184,16 @@ void main() {
           withProviders: true,
         );
 
-        // Use displayColumns if configured, otherwise all fields minus system fields
+        // Mirror the factory: only displayColumns that are real fields become
+        // columns (computed display fields like work_order's "name"/Title are not).
         final int expectedCount;
         if (metadata.displayColumns?.isNotEmpty ?? false) {
-          expectedCount = metadata.displayColumns!.length;
+          expectedCount = metadata.displayColumns!
+              .where((f) => metadata.fields.containsKey(f))
+              .length;
         } else {
           expectedCount = metadata.fields.keys
-              .where((f) => !{'id', 'created_at', 'updated_at'}.contains(f))
+              .where((f) => !FieldConstants.systemFields.contains(f))
               .length;
         }
 
