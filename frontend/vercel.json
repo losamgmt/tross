@@ -5,7 +5,7 @@
     "silent": false,
     "autoJobCancelation": true
   },
-  "buildCommand": "if [ ! -d ../flutter ]; then cd .. && git clone https://github.com/flutter/flutter.git && cd frontend; fi && ../flutter/bin/flutter clean && ../flutter/bin/flutter build web --release --dart-define=USE_PROD_BACKEND=true --no-tree-shake-icons",
+  "buildCommand": "if [ ! -d ../flutter ]; then cd .. && git clone https://github.com/flutter/flutter.git && cd frontend; fi && ../flutter/bin/flutter clean && ../flutter/bin/flutter build web --release --dart-define=USE_PROD_BACKEND=true --dart-define=AUTH0_DOMAIN=${AUTH0_DOMAIN:-dev-mglpuahc3cwf66wq.us.auth0.com} --dart-define=AUTH0_CLIENT_ID=${AUTH0_CLIENT_ID:-WxWdn4aInQlttryLO0TYdvheBka8yXX4} --dart-define=AUTH0_AUDIENCE=${AUTH0_AUDIENCE:-} --no-tree-shake-icons",
   "outputDirectory": "build/web",
   "installCommand": "if [ ! -d ../flutter ]; then cd .. && git clone https://github.com/flutter/flutter.git && cd frontend; fi && ../flutter/bin/flutter pub get",
   "framework": null,
