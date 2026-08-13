@@ -11,7 +11,8 @@ const { logger } = require('../config/logger');
 
 // Required environment variables with validation rules
 const REQUIRED_ENV_VARS = {
-  // Database (CRITICAL) - Tross uses individual params, not DATABASE_URL
+  // Database (CRITICAL) - satisfied by either DATABASE_URL (Railway/Heroku/Render)
+  // or these individual DB_* vars (local/self-managed). See DB_INDIVIDUAL_VARS below.
   DB_HOST: {
     required: true,
     default: '127.0.0.1',
@@ -120,6 +121,16 @@ const PRODUCTION_CHECKS = {
   },
 };
 
+// DB config can come from DATABASE_URL (managed platforms) OR these individual
+// vars (local/self-managed). When DATABASE_URL is set, these are not required.
+const DB_INDIVIDUAL_VARS = new Set([
+  'DB_HOST',
+  'DB_PORT',
+  'DB_NAME',
+  'DB_USER',
+  'DB_PASSWORD',
+]);
+
 /**
  * Validate environment variables at startup
  *
@@ -140,11 +151,17 @@ function validateEnvironment(options = {}) {
   const defaults = {}; // Defaults that would be applied
   const { isProduction } = require('../config/app-mode');
   const isProd = isProduction();
+  // Railway/Heroku/Render provide a single DATABASE_URL instead of DB_* vars.
+  const usingDatabaseUrl = !!process.env.DATABASE_URL;
 
   logger.info('🔍 Validating environment variables...');
 
   // Check required variables
   for (const [key, config] of Object.entries(REQUIRED_ENV_VARS)) {
+    // Individual DB_* vars are not required when connecting via DATABASE_URL.
+    if (usingDatabaseUrl && DB_INDIVIDUAL_VARS.has(key)) {
+      continue;
+    }
     const value = process.env[key];
 
     // Check if required
@@ -184,10 +201,30 @@ function validateEnvironment(options = {}) {
     logger.info('🏭 Running production-specific checks...');
 
     for (const [key, config] of Object.entries(PRODUCTION_CHECKS)) {
+      // Skip individual DB_* prod checks when DATABASE_URL is the connection source.
+      if (usingDatabaseUrl && DB_INDIVIDUAL_VARS.has(key)) {
+        continue;
+      }
       const value = process.env[key];
       if (value && !config.validator(value)) {
         errors.push(`PRODUCTION: ${key} - ${config.error}`);
       }
+    }
+  }
+
+  // Validate DATABASE_URL format when present (managed-platform connection string)
+  if (usingDatabaseUrl) {
+    try {
+      const parsed = new URL(process.env.DATABASE_URL);
+      if (!/^postgres(ql)?:$/.test(parsed.protocol)) {
+        errors.push(
+          'INVALID: DATABASE_URL - must be a postgres:// or postgresql:// connection string',
+        );
+      } else {
+        logger.info('  ✓ DATABASE_URL: *** (managed connection string)');
+      }
+    } catch {
+      errors.push('INVALID: DATABASE_URL - not a valid connection URL');
     }
   }
 

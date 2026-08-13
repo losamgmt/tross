@@ -67,6 +67,8 @@ describe('utils/startup-validator.js', () => {
     delete process.env.__MOCK_AUTH0_AUDIENCE__;
     delete process.env.AUTH_MODE;
     delete process.env.DB_PASSWORD;
+    // Default to individual-DB-var mode; DATABASE_URL-mode is tested explicitly below.
+    delete process.env.DATABASE_URL;
 
     // Default to non-production, test mode
     isProduction.mockReturnValue(false);
@@ -255,6 +257,31 @@ describe('utils/startup-validator.js', () => {
         const result = validateStartup();
 
         expect(result.errors.filter(e => e.includes('DB_PASSWORD'))).toHaveLength(0);
+      });
+    });
+
+    describe('Database Password Check (DATABASE_URL mode)', () => {
+      test('should pass with a strong password embedded in DATABASE_URL', () => {
+        isProduction.mockReturnValue(true);
+        isTestMode.mockReturnValue(false);
+        process.env.DATABASE_URL =
+          'postgresql://user:ThisIsAVeryStrongPassword123!@db.internal:5432/tross';
+
+        const result = validateStartup();
+
+        expect(result.valid).toBe(true);
+      });
+
+      test('should fail with a weak password embedded in DATABASE_URL', () => {
+        isProduction.mockReturnValue(true);
+        isTestMode.mockReturnValue(false);
+        process.env.DATABASE_URL =
+          'postgresql://user:tross123@db.internal:5432/tross';
+
+        const result = validateStartup();
+
+        expect(result.valid).toBe(false);
+        expect(result.errors.some(e => e.includes('DB_PASSWORD is weak'))).toBe(true);
       });
     });
 

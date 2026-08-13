@@ -39,6 +39,8 @@ describe("utils/env-validator.js", () => {
     process.env.AUTH0_CLIENT_ID = "test_client_id_12345678901234567890";
     process.env.AUTH0_CLIENT_SECRET = "test_client_secret_12345678901234567890";
     process.env.JWT_SECRET = "test-jwt-secret-key-that-is-long-enough";
+    // Default to individual-DB-var mode; DATABASE_URL-mode is tested explicitly below.
+    delete process.env.DATABASE_URL;
 
     // Re-require module with fresh env
     const envValidator = require("../../../utils/env-validator");
@@ -87,6 +89,49 @@ describe("utils/env-validator.js", () => {
 
           expect(result.valid).toBe(true);
         });
+      });
+    });
+
+    describe("DATABASE_URL mode (managed platforms)", () => {
+      const setDbUrl = (url) => {
+        process.env.DATABASE_URL = url;
+        // Managed platforms provide DATABASE_URL instead of individual DB_* vars.
+        delete process.env.DB_HOST;
+        delete process.env.DB_NAME;
+        delete process.env.DB_USER;
+        delete process.env.DB_PASSWORD;
+        delete process.env.DB_PORT;
+        jest.resetModules();
+        return require("../../../utils/env-validator").validateEnvironment;
+      };
+
+      test("valid when DATABASE_URL is set and individual DB_* vars are absent", () => {
+        const validate = setDbUrl(
+          "postgresql://user:pass@db.internal:5432/tross",
+        );
+        const result = validate({ exitOnError: false });
+        expect(result.valid).toBe(true);
+        expect(result.errors).toHaveLength(0);
+      });
+
+      test("does not require DB_PASSWORD when DATABASE_URL is present", () => {
+        const validate = setDbUrl("postgres://user:pass@db.internal:5432/tross");
+        const result = validate({ exitOnError: false });
+        expect(result.errors.some((e) => e.includes("DB_PASSWORD"))).toBe(false);
+      });
+
+      test("rejects a non-postgres DATABASE_URL scheme", () => {
+        const validate = setDbUrl("mysql://user:pass@db.internal:3306/tross");
+        const result = validate({ exitOnError: false });
+        expect(result.valid).toBe(false);
+        expect(result.errors.some((e) => e.includes("DATABASE_URL"))).toBe(true);
+      });
+
+      test("rejects a malformed DATABASE_URL", () => {
+        const validate = setDbUrl("not-a-url");
+        const result = validate({ exitOnError: false });
+        expect(result.valid).toBe(false);
+        expect(result.errors.some((e) => e.includes("DATABASE_URL"))).toBe(true);
       });
     });
 

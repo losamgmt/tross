@@ -163,16 +163,29 @@ function validateStartup(options = {}) {
   // WARNING CHECK: Database Password Strength
   // ============================================================================
   if (isProduction()) {
-    const dbPassword = process.env.DB_PASSWORD || '';
-    const isWeakPassword =
-      STARTUP_VALIDATION.WEAK_PASSWORDS.includes(dbPassword) ||
-      dbPassword.length < STARTUP_VALIDATION.MIN_PASSWORD_LENGTH;
+    // Password may come from DATABASE_URL (Railway/Heroku/Render) or DB_PASSWORD.
+    let dbPassword = null;
+    if (process.env.DATABASE_URL) {
+      try {
+        dbPassword = new URL(process.env.DATABASE_URL).password || '';
+      } catch {
+        dbPassword = null; // Malformed URL is reported by env-validator; skip here.
+      }
+    } else {
+      dbPassword = process.env.DB_PASSWORD || '';
+    }
 
-    if (isWeakPassword) {
-      errors.push(
-        'DB_PASSWORD is weak or uses default value. ' +
-        `Production requires a strong password (${STARTUP_VALIDATION.MIN_PASSWORD_LENGTH}+ characters).`,
-      );
+    if (dbPassword !== null) {
+      const isWeakPassword =
+        STARTUP_VALIDATION.WEAK_PASSWORDS.includes(dbPassword) ||
+        dbPassword.length < STARTUP_VALIDATION.MIN_PASSWORD_LENGTH;
+
+      if (isWeakPassword) {
+        errors.push(
+          'DB_PASSWORD is weak or uses default value. ' +
+          `Production requires a strong password (${STARTUP_VALIDATION.MIN_PASSWORD_LENGTH}+ characters).`,
+        );
+      }
     }
   }
 
