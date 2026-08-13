@@ -114,7 +114,7 @@ beforeChange: [
   { on: 'draft→published', blocked: true, bypassRoles: ['manager'] }
 ]
 
-// afterChange: Can REACT to the change (runs AFTER commit)
+// afterChange: Reacts to the change INSIDE the write's transaction (Unit of Work — ADR 013)
 afterChange: [
   { on: 'published', do: 'notify_subscribers' }
 ]
@@ -122,7 +122,7 @@ afterChange: [
 
 **Rules:**
 - `beforeChange` can block, require approval, or conditionally allow
-- `afterChange` can only trigger actions (cannot block — change already happened)
+- `afterChange` only triggers actions (cannot block the decision), but runs inside the write's Unit of Work — a failed action rolls the whole write back (ADR 013)
 - First hook to block wins; all afterChange hooks run
 
 ### 3. Actions Live in the Registry, Not in Metadata
@@ -477,7 +477,7 @@ The behavioral layer consists of exactly TWO hook types:
 | Hook | Purpose | When | Can Block? |
 |------|---------|------|------------|
 | `beforeChange` | Validate, block, or require approval | Before commit | Yes |
-| `afterChange` | React to committed changes | After commit | No |
+| `afterChange` | React to the change, atomically | Inside the write's transaction — Unit of Work (ADR 013) | No (a failed action rolls back the write) |
 
 ### beforeChange Hooks (Blocking Logic)
 
@@ -524,7 +524,7 @@ total_amount: {
 
 ### afterChange Hooks (Reactive Logic)
 
-Evaluated AFTER a change is successfully committed. Cannot block.
+Evaluated INSIDE the write's transaction — the Unit of Work — after the row is written but BEFORE commit. Cannot block the decision, but a failed action rolls back the entire write (atomic; see ADR 013).
 
 ```javascript
 status: {
