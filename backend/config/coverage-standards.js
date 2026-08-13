@@ -65,8 +65,6 @@ const collectCoverageFrom = [
   // Middleware that's hard to unit test
   '!middleware/rate-limit.js',
   '!middleware/dev-auth.js',
-  // Infrastructure that requires real database transactions
-  '!db/helpers/transaction-helper.js',
   // Dev tools that aren't runtime code
   '!utils/validation-sync-checker.js',
   '!utils/permission-check.js',
