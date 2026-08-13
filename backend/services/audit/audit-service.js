@@ -46,6 +46,7 @@ class AuditService {
    * @param {string} params.userAgent - Client user agent
    * @param {string} params.result - Result status (use AuditResults constants, defaults to SUCCESS)
    * @param {string} params.errorMessage - Error message if failed
+   * @param {Object} [params.client] - pg client to run the INSERT inside a caller's transaction; when present a failed audit THROWS so the Unit of Work rolls back (no committed change without its audit row)
    * @returns {Promise<void>}
    */
   static async log({
@@ -59,6 +60,7 @@ class AuditService {
     userAgent = null,
     result = AuditResults.SUCCESS,
     errorMessage = null,
+    client = null,
   }) {
     try {
       // CRITICAL FIX: Safely coerce userId to integer or null
@@ -66,7 +68,9 @@ class AuditService {
       // This prevents "invalid input syntax for type integer" PostgreSQL errors
       const safeUserId = toSafeUserId(userId, 'userId');
 
-      await db.query(
+      // Inside a Unit of Work (client provided) the audit INSERT joins that txn;
+      // otherwise it is a best-effort pool write.
+      await (client || db).query(
         `INSERT INTO audit_logs 
          (user_id, action, resource_type, resource_id, old_values, new_values, 
           ip_address, user_agent, result, error_message)
@@ -125,6 +129,12 @@ class AuditService {
           resourceType,
           timestamp: new Date().toISOString(),
         });
+      }
+
+      // Inside a Unit of Work, a failed audit MUST roll back the write; on the
+      // pool it stays non-fatal (audit must never break a standalone operation).
+      if (client) {
+        throw error;
       }
     }
   }

@@ -57,6 +57,7 @@ const VALID_OPERATIONS = ['create', 'update', 'delete'];
  * @param {string} [auditContext.userAgent] - Client user agent
  * @param {Object} [auditContext.oldValues] - Previous values (for update/delete)
  * @param {Object} [auditContext.newValues] - New values (for create/update)
+ * @param {Object} [client=null] - pg client to run the audit INSERT inside a caller's transaction; when present a failed audit throws (rolls back the Unit of Work)
  * @returns {Promise<void>}
  *
  * @example
@@ -73,6 +74,7 @@ async function logEntityAudit(
   result,
   auditContext,
   oldValues = null,
+  client = null,
 ) {
   // Validate operation
   if (!operation || !VALID_OPERATIONS.includes(operation)) {
@@ -122,6 +124,7 @@ async function logEntityAudit(
       ipAddress: auditContext.ipAddress || null,
       userAgent: auditContext.userAgent || null,
       result: AuditResults.SUCCESS,
+      client,
     });
   } catch (error) {
     // Non-blocking - log and continue
@@ -131,6 +134,11 @@ async function logEntityAudit(
       entityName,
       resourceId: result?.id,
     });
+    // Inside a Unit of Work (client threaded), propagate so the enclosing
+    // transaction rolls back — no committed change without its audit row.
+    if (client) {
+      throw error;
+    }
   }
 }
 
@@ -146,6 +154,7 @@ async function logEntityAudit(
  * @param {Object} result - The operation result (contains id)
  * @param {Object} [auditContext] - Audit context; when falsy, nothing is logged
  * @param {Object} [oldValues=null] - Previous values (for update/delete)
+ * @param {Object} [client=null] - pg client to run the audit INSERT inside a caller's transaction (propagates to logEntityAudit)
  * @returns {Promise<void>}
  */
 async function logEntityAuditIfEnabled(
@@ -154,9 +163,10 @@ async function logEntityAuditIfEnabled(
   result,
   auditContext,
   oldValues = null,
+  client = null,
 ) {
   if (auditContext && isAuditEnabled(entityName)) {
-    await logEntityAudit(operation, entityName, result, auditContext, oldValues);
+    await logEntityAudit(operation, entityName, result, auditContext, oldValues, client);
   }
 }
 

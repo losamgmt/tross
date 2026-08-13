@@ -88,6 +88,49 @@ describe("services/audit/audit-service.js - Core Operations", () => {
       });
     });
 
+    test("should run the INSERT on the provided transaction client, not the pool", async () => {
+      const client = {
+        query: jest.fn().mockResolvedValue({ rows: [], rowCount: 1 }),
+      };
+
+      await auditService.log({
+        action: AuditActions.USER_CREATE,
+        resourceType: ResourceTypes.USER,
+        client,
+      });
+
+      expect(client.query).toHaveBeenCalledWith(
+        expect.stringContaining("INSERT INTO audit_logs"),
+        expect.any(Array),
+      );
+      expect(db.query).not.toHaveBeenCalled();
+    });
+
+    test("should re-throw when the audit INSERT fails inside a transaction (Unit of Work rolls back)", async () => {
+      const client = {
+        query: jest.fn().mockRejectedValue(new Error("insert failed")),
+      };
+
+      await expect(
+        auditService.log({
+          action: AuditActions.USER_CREATE,
+          resourceType: ResourceTypes.USER,
+          client,
+        }),
+      ).rejects.toThrow("insert failed");
+    });
+
+    test("should stay non-fatal on the pool (no client) when the INSERT fails", async () => {
+      db.query.mockRejectedValueOnce(new Error("pool insert failed"));
+
+      await expect(
+        auditService.log({
+          action: AuditActions.USER_CREATE,
+          resourceType: ResourceTypes.USER,
+        }),
+      ).resolves.toBeUndefined();
+    });
+
     test("should use default values for optional fields", async () => {
       // Arrange - minimal required fields
       const auditData = {
