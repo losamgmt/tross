@@ -299,17 +299,24 @@ class AuthService {
         _user = profile;
         _provider = AppConstants.authProviderAuth0;
 
-        // Store authentication data with expiry
-        await _tokenService.storeAuthData(
-          token: _token!,
-          user: _user!,
-          refreshToken: credentials.refreshToken,
-          provider: AppConstants.authProviderAuth0,
-          expiresAt: expiresAt,
-        );
-
-        // Schedule proactive token refresh
-        await _refreshManager.scheduleRefresh();
+        // A web secure-storage failure must not block login (token/user are
+        // already in memory); degrade to session-only instead of looping.
+        try {
+          await _tokenService.storeAuthData(
+            token: _token!,
+            user: _user!,
+            refreshToken: credentials.refreshToken,
+            provider: AppConstants.authProviderAuth0,
+            expiresAt: expiresAt,
+          );
+          await _refreshManager.scheduleRefresh();
+        } catch (storageError, storageStack) {
+          ErrorService.logError(
+            'Auth0 login: session persistence failed (continuing in-session)',
+            error: storageError,
+            stackTrace: storageStack,
+          );
+        }
 
         ErrorService.logInfo('Auth0 login completed successfully');
         return true;
