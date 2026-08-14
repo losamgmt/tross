@@ -63,7 +63,6 @@ Tross documentation hub.
 | [Service Layer Standards](reference/service-layer-standards.md) | Service structure & health-check scope |
 | [Testing](reference/TESTING.md)                             | Philosophy, pyramid, patterns     |
 | [Test Authentication](reference/test-authentication.md)     | TestContext auth patterns         |
-| [Validation Rules](reference/validation-rules.json)         | Generated validation-rule spec    |
 
 ---
 
