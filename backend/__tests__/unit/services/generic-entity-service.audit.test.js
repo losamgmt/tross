@@ -221,6 +221,7 @@ describe("GenericEntityService - Audit Logging", () => {
         expect.objectContaining({ id: 1, phone: "555-9999" }),
         mockAuditContext,
         expect.objectContaining({ id: 1, phone: "555-1234" }), // old values
+        expect.anything(), // Unit-of-Work client
       );
     });
 
@@ -241,6 +242,7 @@ describe("GenericEntityService - Audit Logging", () => {
         expect.objectContaining({ id: 1 }),
         undefined,
         expect.objectContaining({ id: 1 }),
+        expect.anything(), // Unit-of-Work client
       );
     });
 

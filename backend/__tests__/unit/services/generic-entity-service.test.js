@@ -2872,7 +2872,7 @@ describe("GenericEntityService", () => {
     // ------------------------------------------------------------------------
 
     describe("update() afterChange hooks", () => {
-      test("should call evaluateAfterHooks after successful update", async () => {
+      test("should run afterChange hooks after successful update", async () => {
         // Arrange
         const existingRecord = { id: 1, status: "draft" };
         const updatedRecord = { id: 1, status: "approved" };
@@ -2908,18 +2908,15 @@ describe("GenericEntityService", () => {
             status: "approved",
           });
 
-          // Assert: evaluateAfterHooks was called with correct arguments
-          expect(hookService.evaluateAfterHooks).toHaveBeenCalledWith(
+          // Assert: update delegates the reactive step to runAfterChangeHooks,
+          // inside the Unit of Work, with the pre-update oldRecord.
+          expect(hookService.runAfterChangeHooks).toHaveBeenCalledWith(
             expect.objectContaining({
-              hooks: expect.arrayContaining([
-                expect.objectContaining({ action: "notify" }),
-              ]),
-              oldValue: "draft",
-              newValue: "approved",
-              context: expect.objectContaining({
-                entity: "recommendation",
-                field: "status",
-              }),
+              entityName: "recommendation",
+              changedData: expect.objectContaining({ status: "approved" }),
+              oldRecord: expect.objectContaining({ status: "draft" }),
+              operation: "update",
+              client: expect.anything(),
             }),
           );
         } finally {
@@ -2959,8 +2956,8 @@ describe("GenericEntityService", () => {
             GenericEntityService.update("recommendation", 1, { status: "approved" }),
           ).rejects.toThrow();
 
-          // Assert: afterHooks should NOT have been called
-          expect(hookService.evaluateAfterHooks).not.toHaveBeenCalled();
+          // Assert: the reactive step should NOT run when a beforeHook blocks
+          expect(hookService.runAfterChangeHooks).not.toHaveBeenCalled();
         } finally {
           GenericEntityService.requireEntityMetadata = originalGetMetadata;
         }

@@ -33,7 +33,6 @@ const PaginationService = require('./pagination-service');
 const QueryBuilderService = require('./query-builder-service');
 const {
   evaluateBeforeHooks,
-  evaluateAfterHooks,
   runAfterChangeHooks,
 } = require('./hook-service');
 const { buildUpdateClause } = require('../../db/helpers/update-helper');
@@ -987,16 +986,21 @@ class GenericEntityService {
    *
    * SRP: ONLY updates a row using metadata-driven field validation
    *
-   * TRANSACTION SEMANTICS (NOT wrapped in a DB transaction):
+   * TRANSACTION SEMANTICS (single Unit of Work — see ADR 013):
+   * - oldRecord fetch + system-protection + beforeChange + UPDATE + re-fetch +
+   *   afterChange hooks + audit all run on ONE pg client via withTransaction():
+   *   they commit together or roll back together.
    * - beforeChange hooks run PRE-write and may block the update (403) or require
-   *   approval (202) — a blocked update never persists.
-   * - The UPDATE is auto-committed via db.query(); afterChange hooks then run
-   *   POST-COMMIT and are reactive: their failures are caught and logged inside
-   *   evaluateAfterHooks — they never roll back the write or fail the request.
-   *   Recursion is bounded by `options.skipHooks` and HOOK_LIMITS.maxCascadeDepth.
-   * - Audit is written post-commit as a blocking await.
-   * - Contrast: delete() and batch() DO use BEGIN/COMMIT/ROLLBACK. Full
-   *   transactionalization of update is deferred to P2.
+   *   approval (202); a blocked update throws, so the transaction rolls back and
+   *   nothing persists.
+   * - afterChange hooks run IN-transaction; cascade actions join the same Unit of
+   *   Work (context.tx = client) and a hook failure aborts the whole update
+   *   (Option A atomicity). Recursion is bounded by `options.skipHooks` and the
+   *   hook cascade-depth cap (HOOK_LIMITS.maxCascadeDepth).
+   * - When options.client is supplied (e.g. batch), this update JOINS the
+   *   caller's transaction (propagation) instead of opening its own.
+   * - External side-effects (email/SMS/webhooks) are NOT run here; they are
+   *   deferred to the Stage 2 durable outbox drained after commit.
    *
    * @param {string} entityName - Entity name (e.g., 'user', 'role', 'customer')
    * @param {number|string} id - Primary key value
@@ -1006,7 +1010,7 @@ class GenericEntityService {
    * @param {boolean} [options.skipHooks] - Skip hook evaluation (prevents recursion)
    * @param {string|number} [options.user] - User ID for hook/audit context
    * @param {Object} [options.rlsContext] - ADR-011 RLS context; row-scopes the update (out-of-scope → null → 404) AND redacts the returned record to the caller's role. Omit for internal/system callers (no scoping/redaction).
-   * @param {Object} [options.client] - Optional pg client to run the UPDATE and its re-fetch on a caller's open transaction (batch); defaults to the pool
+   * @param {Object} [options.client] - Optional pg client; when provided the whole update JOINS the caller's open transaction (propagation) instead of opening its own
    * @returns {Promise<Object|null>} Updated entity, or null if not found or not authorized by RLS
    * @throws {Error} If entityName invalid, id invalid, or no valid fields provided
    *
@@ -1109,187 +1113,187 @@ class GenericEntityService {
     }
 
     // =========================================================================
-    // CAPTURE OLD VALUES (for hooks, audit, and system protection)
-    // Single fetch used by: system protection check, beforeChange hooks,
-    // afterChange hooks, and audit old-vs-new comparison
+    // SINGLE UNIT OF WORK (ADR 013)
+    // oldRecord fetch, system-protection, beforeChange, UPDATE, re-fetch,
+    // afterChange hooks and audit all run on ONE pg client. When options.client
+    // is supplied (e.g. batch), this JOINS the caller's transaction (propagation);
+    // otherwise it opens its own. Everything commits together or rolls back together.
     // =========================================================================
-    const oldRecord = await this.findById(entityName, safeId, {
-      client: options.client,
-    });
-    if (!oldRecord) {
-      return null; // Record doesn't exist
-    }
-
-    // =========================================================================
-    // SYSTEM PROTECTION CHECK (against existing record)
-    // =========================================================================
-    if (systemProtected) {
-      // Check if attempting to modify system-protected immutable fields
-      const attemptedImmutable = (systemProtected.immutableFields || []).filter(
-        (field) => filteredData[field] !== undefined,
-      );
-
-      if (attemptedImmutable.length > 0) {
-        // Use protectedByField if specified, otherwise fall back to identityField
-        const protectionField =
-          systemProtected.protectedByField || identityField;
-        const identityValue = oldRecord[protectionField];
-
-        if (systemProtected.values.includes(identityValue)) {
-          throw new AppError(
-            `Cannot modify ${attemptedImmutable.join(', ')} on system ${entityName}: ${identityValue}`,
-            403,
-            ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS,
-          );
+    return withTransaction(
+      async (client) => {
+        // =====================================================================
+        // CAPTURE OLD VALUES (for hooks, audit, and system protection)
+        // Single fetch used by: system protection check, beforeChange hooks,
+        // afterChange hooks, and audit old-vs-new comparison
+        // =====================================================================
+        const oldRecord = await this.findById(entityName, safeId, { client });
+        if (!oldRecord) {
+          return null; // Record doesn't exist
         }
-      }
-    }
 
-    // =========================================================================
-    // EVALUATE BEFORE-CHANGE HOOKS (may block the update)
-    // Hooks are defined in metadata.fields[fieldName].beforeChange
-    // Skip if options.skipHooks is true (prevents recursive hook execution)
-    // =========================================================================
-    if (metadata.fields && !options.skipHooks) {
-      for (const [fieldName, newValue] of Object.entries(filteredData)) {
-        const fieldMeta = metadata.fields[fieldName];
-        const hooks = fieldMeta?.beforeChange;
-        if (hooks && hooks.length > 0) {
-          const oldValue = oldRecord[fieldName];
-          const hookResult = await evaluateBeforeHooks({
-            hooks,
-            oldValue,
-            newValue,
-            context: {
-              entity: entityName,
-              record: oldRecord,
-              field: fieldName,
-              user: options.user || options.auditContext?.userId,
-            },
-            operation: 'update',
-          });
+        // =====================================================================
+        // SYSTEM PROTECTION CHECK (against existing record)
+        // =====================================================================
+        if (systemProtected) {
+          // Check if attempting to modify system-protected immutable fields
+          const attemptedImmutable = (
+            systemProtected.immutableFields || []
+          ).filter((field) => filteredData[field] !== undefined);
 
-          if (!hookResult.allowed) {
-            if (hookResult.requiresApproval) {
+          if (attemptedImmutable.length > 0) {
+            // Use protectedByField if specified, otherwise fall back to identityField
+            const protectionField =
+              systemProtected.protectedByField || identityField;
+            const identityValue = oldRecord[protectionField];
+
+            if (systemProtected.values.includes(identityValue)) {
               throw new AppError(
-                hookResult.approvalInfo?.description || 'Change requires approval',
-                202,
-                ERROR_CODES.APPROVAL_REQUIRED,
-                { approvalInfo: hookResult.approvalInfo },
+                `Cannot modify ${attemptedImmutable.join(', ')} on system ${entityName}: ${identityValue}`,
+                403,
+                ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS,
               );
             }
-            throw new AppError(
-              hookResult.blockReason || 'Change blocked by policy',
-              403,
-              ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS,
-            );
           }
         }
-      }
-    }
 
-    // Full param list = SET values (from buildUpdateClause) + the id; a fresh
-    // array so buildUpdateClause's return is not mutated.
-    const values = [...updateValues, safeId];
+        // =====================================================================
+        // EVALUATE BEFORE-CHANGE HOOKS (may block the update)
+        // Hooks are defined in metadata.fields[fieldName].beforeChange
+        // Skip if options.skipHooks is true (prevents recursive hook execution)
+        // =====================================================================
+        if (metadata.fields && !options.skipHooks) {
+          for (const [fieldName, newValue] of Object.entries(filteredData)) {
+            const fieldMeta = metadata.fields[fieldName];
+            const hooks = fieldMeta?.beforeChange;
+            if (hooks && hooks.length > 0) {
+              const oldValue = oldRecord[fieldName];
+              const hookResult = await evaluateBeforeHooks({
+                hooks,
+                oldValue,
+                newValue,
+                context: {
+                  entity: entityName,
+                  record: oldRecord,
+                  field: fieldName,
+                  user: options.user || options.auditContext?.userId,
+                },
+                operation: 'update',
+              });
 
-    // Row-scope the write by RLS (defense-in-depth): even if a caller reaches
-    // update() without a route-level access pre-check, an out-of-scope row matches
-    // zero rows and yields null (→ 404). Internal/system callers (no rlsContext)
-    // are unaffected. We scope the UPDATE itself rather than the oldRecord fetch,
-    // because hooks + audit require the full (unredacted) oldRecord.
-    let whereClause = `${primaryKey} = $${values.length}`;
-    if (rlsContext) {
-      const rlsFilter = buildRLSFilter(
-        rlsContext,
-        metadata,
-        rlsContext.operation || 'update',
-        values.length + 1,
-        allMetadata,
-      );
-      if (rlsFilter.clause) {
-        whereClause += ` AND ${rlsFilter.clause}`;
-        values.push(...rlsFilter.params);
-      }
-    }
-
-    // Build parameterized UPDATE query
-    const query = `
-      UPDATE ${tableName}
-      SET ${updates.join(', ')}
-      WHERE ${whereClause}
-      RETURNING ${primaryKey}
-    `;
-
-    logger.debug('GenericEntityService.update', {
-      entity: entityName,
-      table: tableName,
-      id: safeId,
-      fieldsUpdated: updates.length,
-    });
-
-    // Execute query (use the caller's transaction client when threaded, else the pool)
-    const exec = options.client || db;
-    const result = await exec.query(query, values);
-
-    // Return null if not found (no rows updated)
-    if (result.rows.length === 0) {
-      return null;
-    }
-
-    logger.info(`${entityName} updated`, {
-      id: safeId,
-      fieldsUpdated: updates.length,
-    });
-
-    // Re-fetch using findById to include JOINs (defaultIncludes)
-    // This ensures the returned record has all relationship data
-    const updatedRecord = await this.findById(entityName, safeId, {
-      client: options.client,
-    });
-
-    // =========================================================================
-    // EVALUATE AFTER-CHANGE HOOKS (trigger actions, cannot block)
-    // Hooks are defined in metadata.fields[fieldName].afterChange
-    // Errors are logged but don't fail the request
-    // Skip if options.skipHooks is true (prevents recursive hook execution)
-    // =========================================================================
-    if (metadata.fields && !options.skipHooks) {
-      for (const [fieldName, newValue] of Object.entries(filteredData)) {
-        const fieldMeta = metadata.fields[fieldName];
-        const hooks = fieldMeta?.afterChange;
-        if (hooks && hooks.length > 0) {
-          const oldValue = oldRecord[fieldName];
-          // Only evaluate if value actually changed
-          if (oldValue !== newValue) {
-            await evaluateAfterHooks({
-              hooks,
-              oldValue,
-              newValue,
-              context: {
-                entity: entityName,
-                record: updatedRecord,
-                field: fieldName,
-                user: options.user || options.auditContext?.userId,
-              },
-              operation: 'update',
-            });
+              if (!hookResult.allowed) {
+                if (hookResult.requiresApproval) {
+                  throw new AppError(
+                    hookResult.approvalInfo?.description ||
+                      'Change requires approval',
+                    202,
+                    ERROR_CODES.APPROVAL_REQUIRED,
+                    { approvalInfo: hookResult.approvalInfo },
+                  );
+                }
+                throw new AppError(
+                  hookResult.blockReason || 'Change blocked by policy',
+                  403,
+                  ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS,
+                );
+              }
+            }
           }
         }
-      }
-    }
 
-    // Log audit event (blocking to ensure audit is written before response)
-    await logEntityAuditIfEnabled(
-      'update',
-      entityName,
-      updatedRecord,
-      options.auditContext,
-      oldRecord,
+        // Full param list = SET values (from buildUpdateClause) + the id; a fresh
+        // array so buildUpdateClause's return is not mutated.
+        const values = [...updateValues, safeId];
+
+        // Row-scope the write by RLS (defense-in-depth): even if a caller reaches
+        // update() without a route-level access pre-check, an out-of-scope row matches
+        // zero rows and yields null (→ 404). Internal/system callers (no rlsContext)
+        // are unaffected. We scope the UPDATE itself rather than the oldRecord fetch,
+        // because hooks + audit require the full (unredacted) oldRecord.
+        let whereClause = `${primaryKey} = $${values.length}`;
+        if (rlsContext) {
+          const rlsFilter = buildRLSFilter(
+            rlsContext,
+            metadata,
+            rlsContext.operation || 'update',
+            values.length + 1,
+            allMetadata,
+          );
+          if (rlsFilter.clause) {
+            whereClause += ` AND ${rlsFilter.clause}`;
+            values.push(...rlsFilter.params);
+          }
+        }
+
+        // Build parameterized UPDATE query
+        const query = `
+          UPDATE ${tableName}
+          SET ${updates.join(', ')}
+          WHERE ${whereClause}
+          RETURNING ${primaryKey}
+        `;
+
+        logger.debug('GenericEntityService.update', {
+          entity: entityName,
+          table: tableName,
+          id: safeId,
+          fieldsUpdated: updates.length,
+        });
+
+        // Execute the UPDATE on the Unit-of-Work client
+        const result = await client.query(query, values);
+
+        // Return null if not found (no rows updated)
+        if (result.rows.length === 0) {
+          return null;
+        }
+
+        logger.info(`${entityName} updated`, {
+          id: safeId,
+          fieldsUpdated: updates.length,
+        });
+
+        // Re-fetch using findById to include JOINs (defaultIncludes) — reads the
+        // uncommitted UPDATE within this same Unit of Work.
+        const updatedRecord = await this.findById(entityName, safeId, {
+          client,
+        });
+
+        // =====================================================================
+        // AFTER-CHANGE HOOKS FOR UPDATE (trigger actions) — IN-TRANSACTION
+        // Cascade actions join this Unit of Work (context.tx = client) and a
+        // hook failure aborts the whole update (Option A atomicity, ADR 013).
+        // runAfterChangeHooks fires only for fields whose value actually changed.
+        // Skip when options.skipHooks is set (batch delegates; prevents recursion).
+        // =====================================================================
+        if (!options.skipHooks) {
+          await runAfterChangeHooks({
+            metadata,
+            entityName,
+            changedData: filteredData,
+            record: updatedRecord,
+            oldRecord,
+            client,
+            user: options.user || options.auditContext?.userId,
+            operation: 'update',
+          });
+        }
+
+        // Log audit event on the same client (commits/rolls back with the write)
+        await logEntityAuditIfEnabled(
+          'update',
+          entityName,
+          updatedRecord,
+          options.auditContext,
+          oldRecord,
+          client,
+        );
+
+        // Redact non-readable fields for the caller's role (ADR-011 output boundary).
+        // Applied AFTER hooks + audit, which require the full updated record.
+        return this._redactForContext(updatedRecord, metadata, rlsContext);
+      },
+      { client: options.client },
     );
-
-    // Redact non-readable fields for the caller's role (ADR-011 output boundary).
-    // Applied AFTER hooks + audit, which require the full updated record.
-    return this._redactForContext(updatedRecord, metadata, rlsContext);
   }
 
   /**
