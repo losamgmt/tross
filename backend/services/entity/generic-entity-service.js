@@ -1301,12 +1301,20 @@ class GenericEntityService {
    *
    * SRP: ONLY deletes a row using metadata-driven cascade deletion
    *
+   * TRANSACTION SEMANTICS (single Unit of Work — see ADR 013):
+   * - RLS existence check + cascade delete + DELETE + audit all run on ONE pg
+   *   client via withTransaction(): they commit together or roll back together.
+   * - When options.client is supplied (e.g. batch), this delete JOINS the
+   *   caller's transaction (propagation) instead of opening its own.
+   * - A not-found / out-of-scope check returns null and commits a no-op (nothing
+   *   was written); any error rolls the whole delete back.
+   *
    * @param {string} entityName - Entity name (e.g., 'user', 'role', 'customer')
    * @param {number|string} id - Primary key value
    * @param {Object} [options={}] - Additional options
    * @param {Object} [options.auditContext] - Audit context from buildAuditContext()
    * @param {Object} [options.rlsContext] - ADR-011 RLS context; row-scopes the delete so a caller cannot delete rows outside their access scope (out-of-scope → null → 404). Omit for internal/system callers (no filtering).
-   * @param {Object} [options.client] - Optional pg client to run the delete on a caller's open transaction (batch); when present, the caller owns BEGIN/COMMIT/ROLLBACK and release, and this method does not manage its own transaction. Defaults to the pool.
+   * @param {Object} [options.client] - Optional pg client; when provided the whole delete JOINS the caller's open transaction (propagation) instead of opening its own
    * @returns {Promise<Object|null>} Deleted entity, or null if not found or not authorized by RLS
    * @throws {Error} If entityName invalid, id invalid, or DB constraint violation
    *
@@ -1363,102 +1371,84 @@ class GenericEntityService {
       }
     }
 
-    // Transaction handling: when a caller threads their own client (batch), run
-    // on it and let the caller own BEGIN/COMMIT/ROLLBACK + release. Otherwise
-    // open and manage our own transaction for cascade + delete atomicity.
-    const ownTransaction = !externalClient;
-    const client = externalClient || (await db.getClient());
+    // =========================================================================
+    // SINGLE UNIT OF WORK (ADR 013)
+    // RLS existence check + cascade + DELETE + audit all run on ONE pg client.
+    // When options.client is supplied (e.g. batch), this JOINS the caller's
+    // transaction (propagation); otherwise it opens its own. A not-found check
+    // returns null and commits a no-op (nothing was written).
+    // =========================================================================
+    return withTransaction(
+      async (client) => {
+        // Check the record exists AND is within the caller's RLS scope.
+        // Applying RLS here (operation 'delete') prevents deleting rows outside the
+        // caller's access scope: an out-of-scope row matches zero rows and returns
+        // null (surfaced as 404), mirroring how reads hide unauthorized rows.
+        // Internal/system callers (no rlsContext) are unaffected — no clause added.
+        const checkClauses = [`${primaryKey} = $1`];
+        const checkParams = [safeId];
 
-    try {
-      if (ownTransaction) {
-        await client.query('BEGIN');
-      }
+        if (rlsContext) {
+          const rlsFilter = buildRLSFilter(
+            rlsContext,
+            metadata,
+            rlsContext.operation || 'delete',
+            checkParams.length + 1,
+            allMetadata,
+          );
+          if (rlsFilter.clause) {
+            checkClauses.push(rlsFilter.clause);
+            checkParams.push(...rlsFilter.params);
+          }
+        }
 
-      // Check the record exists AND is within the caller's RLS scope.
-      // Applying RLS here (operation 'delete') prevents deleting rows outside the
-      // caller's access scope: an out-of-scope row matches zero rows and returns
-      // null (surfaced as 404), mirroring how reads hide unauthorized rows.
-      // Internal/system callers (no rlsContext) are unaffected — no clause added.
-      const checkClauses = [`${primaryKey} = $1`];
-      const checkParams = [safeId];
+        const checkQuery = `SELECT * FROM ${tableName} WHERE ${checkClauses.join(' AND ')}`;
+        const checkResult = await client.query(checkQuery, checkParams);
 
-      if (rlsContext) {
-        const rlsFilter = buildRLSFilter(
-          rlsContext,
+        if (checkResult.rows.length === 0) {
+          return null; // Not found / out-of-scope — no-op Unit of Work
+        }
+
+        // Record fetched for audit logging
+        const recordBeforeDelete = checkResult.rows[0];
+
+        // Cascade delete dependents (metadata-driven)
+        const cascadeResult = await cascadeDeleteDependents(
+          client,
           metadata,
-          rlsContext.operation || 'delete',
-          checkParams.length + 1,
-          allMetadata,
+          safeId,
         );
-        if (rlsFilter.clause) {
-          checkClauses.push(rlsFilter.clause);
-          checkParams.push(...rlsFilter.params);
-        }
-      }
 
-      const checkQuery = `SELECT * FROM ${tableName} WHERE ${checkClauses.join(' AND ')}`;
-      const checkResult = await client.query(checkQuery, checkParams);
+        // Delete the entity itself
+        const deleteQuery = `DELETE FROM ${tableName} WHERE ${primaryKey} = $1 RETURNING *`;
+        const deleteResult = await client.query(deleteQuery, [safeId]);
 
-      if (checkResult.rows.length === 0) {
-        if (ownTransaction) {
-          await client.query('ROLLBACK');
-        }
-        return null;
-      }
+        logger.info(`${entityName} deleted`, {
+          id: safeId,
+          cascadedDependents: cascadeResult.totalDeleted,
+        });
 
-      // Record fetched for audit logging
-      const recordBeforeDelete = checkResult.rows[0];
+        // Strip auth identifiers from response
+        const filteredResult = stripAuthIdentifiers(deleteResult.rows[0], metadata);
+        const filteredOldValues = stripAuthIdentifiers(
+          recordBeforeDelete,
+          metadata,
+        );
 
-      // Cascade delete dependents (metadata-driven)
-      const cascadeResult = await cascadeDeleteDependents(
-        client,
-        metadata,
-        safeId,
-      );
+        // Log audit event on the same client (commits/rolls back with the delete)
+        await logEntityAuditIfEnabled(
+          'delete',
+          entityName,
+          filteredResult,
+          options.auditContext,
+          filteredOldValues,
+          client,
+        );
 
-      // Delete the entity itself
-      const deleteQuery = `DELETE FROM ${tableName} WHERE ${primaryKey} = $1 RETURNING *`;
-      const deleteResult = await client.query(deleteQuery, [safeId]);
-
-      if (ownTransaction) {
-        await client.query('COMMIT');
-      }
-
-      logger.info(`${entityName} deleted`, {
-        id: safeId,
-        cascadedDependents: cascadeResult.totalDeleted,
-      });
-
-      // Strip auth identifiers from response
-      const filteredResult = stripAuthIdentifiers(deleteResult.rows[0], metadata);
-      const filteredOldValues = stripAuthIdentifiers(recordBeforeDelete, metadata);
-
-      // Log audit event (blocking to ensure audit is written before response)
-      await logEntityAuditIfEnabled(
-        'delete',
-        entityName,
-        filteredResult,
-        options.auditContext,
-        filteredOldValues,
-      );
-
-      return filteredResult;
-    } catch (error) {
-      if (ownTransaction) {
-        await client.query('ROLLBACK');
-      }
-
-      logger.error(`Error deleting ${entityName}`, {
-        error: error.message,
-        id: safeId,
-      });
-
-      throw error;
-    } finally {
-      if (ownTransaction) {
-        client.release();
-      }
-    }
+        return filteredResult;
+      },
+      { client: externalClient },
+    );
   }
 
   // ============================================================================

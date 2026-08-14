@@ -321,6 +321,7 @@ describe("GenericEntityService - Audit Logging", () => {
         expect.objectContaining({ id: 1 }),
         mockAuditContext,
         expect.objectContaining({ id: 1 }), // old values
+        expect.anything(), // Unit-of-Work client
       );
     });
 
@@ -343,15 +344,15 @@ describe("GenericEntityService - Audit Logging", () => {
         expect.objectContaining({ id: 1 }),
         undefined,
         expect.objectContaining({ id: 1 }),
+        expect.anything(), // Unit-of-Work client
       );
     });
 
     test("should return null for non-existent entity (no audit)", async () => {
-      // Arrange - entity not found
+      // Arrange - entity not found (BEGIN + SELECT; the empty UoW commits a no-op)
       mockClient.query
         .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // BEGIN
-        .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // SELECT (not found)
-        .mockResolvedValueOnce({ rows: [], rowCount: 0 }); // ROLLBACK
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 }); // SELECT (not found)
 
       // Act
       const result = await GenericEntityService.delete("customer", 999, {

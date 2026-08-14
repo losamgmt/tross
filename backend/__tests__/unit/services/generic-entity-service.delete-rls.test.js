@@ -37,11 +37,10 @@ describe('GenericEntityService.delete() — RLS scoping (delete-rls-bypass)', ()
     queryText().find((q) => /SELECT \* FROM notifications/i.test(q));
 
   test('applies the RLS clause to the existence check and returns null when it filters the row out', async () => {
-    // BEGIN → RLS-scoped existence check returns no rows (out of scope) → ROLLBACK
+    // BEGIN → RLS-scoped existence check returns no rows (out of scope) → no-op COMMIT
     mockClient.query
       .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // BEGIN
-      .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // scoped SELECT (no match)
-      .mockResolvedValueOnce({ rows: [], rowCount: 0 }); // ROLLBACK
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 }); // scoped SELECT (no match)
 
     const result = await GenericEntityService.delete('notification', 999, {
       rlsContext: CUSTOMER_CTX,
@@ -54,17 +53,16 @@ describe('GenericEntityService.delete() — RLS scoping (delete-rls-bypass)', ()
     expect(check).toBeDefined();
     expect(check).toMatch(/user_id/);
 
-    // Crucially: NO DELETE was issued, and the transaction rolled back.
+    // Crucially: NO DELETE was issued; the empty Unit of Work commits a no-op.
     const allText = queryText().join(' | ');
     expect(allText).not.toMatch(/DELETE FROM/i);
-    expect(allText).toMatch(/ROLLBACK/);
+    expect(allText).toMatch(/COMMIT/);
   });
 
   test('does NOT add an RLS clause when no rlsContext is supplied (internal/system caller)', async () => {
     mockClient.query
       .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // BEGIN
-      .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // unscoped SELECT (not found)
-      .mockResolvedValueOnce({ rows: [], rowCount: 0 }); // ROLLBACK
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 }); // unscoped SELECT (not found)
 
     const result = await GenericEntityService.delete('notification', 999);
 

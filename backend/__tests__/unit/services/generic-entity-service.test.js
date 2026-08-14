@@ -2256,20 +2256,20 @@ describe("GenericEntityService", () => {
         expect(result).toBeNull();
       });
 
-      test("should rollback transaction when entity not found", async () => {
+      test("should commit a no-op transaction when entity not found", async () => {
         // Arrange
         mockClient.query
-          .mockResolvedValueOnce({ rows: [], rowCount: 0 })
-          .mockResolvedValueOnce({ rows: [], rowCount: 0 })
-          .mockResolvedValueOnce({ rows: [], rowCount: 0 });
+          .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // BEGIN
+          .mockResolvedValueOnce({ rows: [], rowCount: 0 }); // SELECT (not found)
 
         // Act
-        await GenericEntityService.delete("user", 999);
+        const result = await GenericEntityService.delete("user", 999);
 
-        // Assert
+        // Assert: nothing was written, so the empty Unit of Work commits harmlessly
+        expect(result).toBeNull();
         const queries = mockClient.query.mock.calls.map((c) => c[0]);
-        expect(queries).toContain("ROLLBACK");
-        expect(queries).not.toContain("COMMIT");
+        expect(queries).toContain("COMMIT");
+        expect(queries).not.toContain("ROLLBACK");
       });
 
       test("should release client when entity not found", async () => {
