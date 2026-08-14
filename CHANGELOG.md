@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - Transactional write path: one atomic Unit of Work (2026-08-14)
+
+Every entity write is now a single transaction-propagating Unit of Work (ADR 013). `create`, `update`, `delete`, and `batch` all compose one `withTransaction({ client })` primitive (join-or-create): the write, its `afterChange` hooks and cascades, and its audit row now commit together or roll back together. A failing reactive action or audit write rolls the write back — previously `afterChange` ran post-commit and its failures were swallowed, and audit was a separate post-commit statement. Hook-triggered nested writes join the parent transaction. External/async side-effects are explicitly out of scope (a durable outbox is deferred until one is needed).
+
+### Security - Production hardening & go-live (2026-08-13)
+
+- Removed a committed production database credential from the repository, purged it from all git history, and rotated the secret; enabled GitHub Secret Scanning + Push Protection. Railway is now the single source of truth for production DB credentials.
+- First production deploy (Railway API + Vercel web): made the environment validators `DATABASE_URL`-aware, fixed the Auth0 login flow, and hardened the Vercel Auth0 build.
+
+### Changed - Unified, queryable display name (2026-08-07 → 08-11)
+
+Every entity now has a first-class, populated, queryable display `name` (HUMAN = generated first+last, SIMPLE = authored, COMPUTED = composed on read), enabling sort/filter-by-name. Foreign-key references embed a scalar `<fk>_display` label at the source, eliminating the frontend N+1 lookup. COMPUTED display names are composed on read (never stored), so there is no cross-entity staleness; the vestigial stored `name` columns were dropped (migration 007).
+
+### Changed - GenericEntityService decomposition (2026-08-06)
+
+The CRUD god-object was strangled into a thin orchestrator over focused collaborators (query building, pagination, relationship loading, hooks, field derivation, cascade/audit helpers), one seam per commit. Also fixed a row-level-security bypass on single `DELETE` and added defense-in-depth RLS scoping to `UPDATE`.
+
+### Added - Metadata-driven field derivation (2026-07 → 08)
+
+One declarative `derived: { from, via, params }` construct plus an `applyDerived` engine replaced separate backend derivers and duplicated frontend logic (`via` = `lookup` | `timeOffset`), and fixed a latent stale-value bug on `work_order.property_id`.
+
 ### Removed - Metadata model cleanup (P2 Group A) (2026-07-08)
 
 Retired dead and redundant entity-metadata abstractions so the model has exactly one clear way to express each concept.
