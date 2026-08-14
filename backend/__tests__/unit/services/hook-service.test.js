@@ -29,6 +29,7 @@ const {
   evaluateWhen,
   evaluateBeforeHooks,
   evaluateAfterHooks,
+  runAfterChangeHooks,
   HOOK_LIMITS,
   WHEN_OPERATORS,
 } = require('../../../services/entity/hook-service');
@@ -566,6 +567,90 @@ describe('HookService', () => {
         'afterChange hook missing "do" property',
         expect.any(Object)
       );
+    });
+  });
+
+  describe('runAfterChangeHooks (shared create/update reactive step)', () => {
+    beforeEach(() => {
+      getAction.mockReturnValue({ type: 'notification' });
+      executeAction.mockResolvedValue({ success: true });
+    });
+
+    test('create: fires afterChange for hooked fields (oldValue=null), threading the client as tx', async () => {
+      const metadata = {
+        fields: {
+          status: { afterChange: [{ on: 'create', do: 'notify_customer' }] },
+          name: {},
+        },
+      };
+      const client = { query: jest.fn() };
+
+      await runAfterChangeHooks({
+        metadata,
+        entityName: 'invoice',
+        changedData: { status: 'sent', name: 'X' },
+        record: { id: 1, status: 'sent' },
+        client,
+        user: 7,
+        operation: 'create',
+      });
+
+      expect(executeAction).toHaveBeenCalledTimes(1);
+      expect(executeAction).toHaveBeenCalledWith(
+        'notify_customer',
+        expect.objectContaining({ tx: client, oldValue: null, newValue: 'sent' }),
+      );
+    });
+
+    test('update: reacts only to fields whose value actually changed', async () => {
+      const metadata = {
+        fields: { status: { afterChange: [{ on: 'change', do: 'notify_customer' }] } },
+      };
+
+      await runAfterChangeHooks({
+        metadata,
+        entityName: 'invoice',
+        changedData: { status: 'sent' },
+        record: { id: 1, status: 'sent' },
+        oldRecord: { id: 1, status: 'sent' },
+        operation: 'update',
+      });
+
+      expect(executeAction).not.toHaveBeenCalled();
+    });
+
+    test('update: reacts when the value changed, passing the old value', async () => {
+      const metadata = {
+        fields: { status: { afterChange: [{ on: 'change', do: 'notify_customer' }] } },
+      };
+
+      await runAfterChangeHooks({
+        metadata,
+        entityName: 'invoice',
+        changedData: { status: 'sent' },
+        record: { id: 1, status: 'sent' },
+        oldRecord: { id: 1, status: 'draft' },
+        operation: 'update',
+      });
+
+      expect(executeAction).toHaveBeenCalledWith(
+        'notify_customer',
+        expect.objectContaining({ oldValue: 'draft', newValue: 'sent' }),
+      );
+    });
+
+    test('skips fields without afterChange hooks', async () => {
+      const metadata = { fields: { name: {} } };
+
+      await runAfterChangeHooks({
+        metadata,
+        entityName: 'invoice',
+        changedData: { name: 'X' },
+        record: { id: 1 },
+        operation: 'create',
+      });
+
+      expect(executeAction).not.toHaveBeenCalled();
     });
   });
 });

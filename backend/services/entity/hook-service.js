@@ -340,6 +340,68 @@ async function evaluateAfterHooks({
   return { actionsExecuted, errors };
 }
 
+/**
+ * Run all afterChange hooks for a set of changed fields, inside the caller's
+ * Unit of Work.
+ *
+ * SHARED by GenericEntityService create() and update() so the reactive step is
+ * defined once (DRY). Threads the transaction `client` as `context.tx` so cascade
+ * actions join the same transaction and a failure aborts it (see ADR 013).
+ *
+ * @param {Object} params
+ * @param {Object} params.metadata - Entity metadata (reads fields[x].afterChange)
+ * @param {string} params.entityName - Entity name
+ * @param {Object} params.changedData - Written fields (fieldName -> newValue)
+ * @param {Object} params.record - Post-write record (hook context)
+ * @param {Object} [params.oldRecord=null] - Pre-write record; when provided (update),
+ *   hooks fire only for fields whose value actually changed. Omit for create.
+ * @param {Object} [params.client=null] - The Unit-of-Work pg client (threaded to hooks)
+ * @param {number|string} [params.user] - Acting user id (hook context)
+ * @param {string} params.operation - 'create' | 'update'
+ * @returns {Promise<void>}
+ */
+async function runAfterChangeHooks({
+  metadata,
+  entityName,
+  changedData,
+  record,
+  oldRecord = null,
+  client = null,
+  user,
+  operation,
+}) {
+  if (!metadata.fields) {
+    return;
+  }
+
+  for (const [fieldName, newValue] of Object.entries(changedData)) {
+    const hooks = metadata.fields[fieldName]?.afterChange;
+    if (!hooks || hooks.length === 0) {
+      continue;
+    }
+
+    const oldValue = oldRecord ? oldRecord[fieldName] : null;
+    // On update, only react when the value actually changed.
+    if (oldRecord && oldValue === newValue) {
+      continue;
+    }
+
+    await evaluateAfterHooks({
+      hooks,
+      oldValue,
+      newValue,
+      context: {
+        entity: entityName,
+        record,
+        field: fieldName,
+        user,
+        tx: client,
+      },
+      operation,
+    });
+  }
+}
+
 // ============================================================================
 // EXPORTS
 // ============================================================================
@@ -348,6 +410,7 @@ module.exports = {
   // Core functions
   evaluateBeforeHooks,
   evaluateAfterHooks,
+  runAfterChangeHooks,
   matchesOn,
   evaluateWhen,
 
