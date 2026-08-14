@@ -102,7 +102,7 @@ describe("Database Migration System", () => {
 
     test("should record migration metadata", async () => {
       // Apply first migration manually to test metadata
-      const testVersion = "999_test";
+      const testVersion = "999";
       const testName = "test_migration";
       const testChecksum = "abc123";
 
@@ -137,12 +137,12 @@ describe("Database Migration System", () => {
         `INSERT INTO schema_migrations (version, name, checksum)
          VALUES ($1, $2, $3)
          ON CONFLICT (version) DO NOTHING`,
-        ["001_add", "test_already_applied", "checksum123"],
+        ["991", "test_already_applied", "checksum123"],
       );
 
       const beforeCount = await pool.query(
         "SELECT COUNT(*) FROM schema_migrations WHERE version = $1",
-        ["001_add"],
+        ["991"],
       );
 
       // Try to run migrations (dry run)
@@ -150,7 +150,7 @@ describe("Database Migration System", () => {
 
       const afterCount = await pool.query(
         "SELECT COUNT(*) FROM schema_migrations WHERE version = $1",
-        ["001_add"],
+        ["991"],
       );
 
       // Should still be 1 (not duplicated)
@@ -158,7 +158,7 @@ describe("Database Migration System", () => {
 
       // Cleanup
       await pool.query("DELETE FROM schema_migrations WHERE version = $1", [
-        "001_add",
+        "991",
       ]);
     });
   });
@@ -177,7 +177,7 @@ describe("Database Migration System", () => {
         `INSERT INTO schema_migrations (version, name, checksum)
          VALUES ($1, $2, $3)
          ON CONFLICT (version) DO NOTHING`,
-        ["999_nonexistent", "nonexistent_migration", "fake_checksum"],
+        ["998", "nonexistent_migration", "fake_checksum"],
       );
 
       const isValid = await verifyMigrations();
@@ -187,7 +187,7 @@ describe("Database Migration System", () => {
 
       // Cleanup
       await pool.query("DELETE FROM schema_migrations WHERE version = $1", [
-        "999_nonexistent",
+        "998",
       ]);
     });
   });

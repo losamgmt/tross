@@ -100,7 +100,9 @@ function generateDropStatements(tableNames, legacyTables) {
 // COMPOSER
 // ============================================================================
 
-function composeSchema() {
+function composeSchema(options = {}) {
+  const includeDrop = options.includeDrop !== false;
+
   console.log('📦 Schema Composer\n');
 
   // 1. Read header
@@ -137,7 +139,21 @@ function composeSchema() {
   const infrastructureTableNames = extractTableNames(infrastructure);
   console.log(`\n🗃️  Found ${tableNames.length} entity tables + ${infrastructureTableNames.length} infrastructure tables`);
 
-  const dropSection = generateDropStatements(tableNames, CONFIG.INFRASTRUCTURE_TABLES);
+  const dropSection = includeDrop
+    ? generateDropStatements(tableNames, CONFIG.INFRASTRUCTURE_TABLES)
+    : [
+        '-- ============================================================================',
+        '-- PRESERVE MODE: DROP section omitted (data-preserving schema)',
+        '-- Tables use CREATE TABLE IF NOT EXISTS, so existing data is kept on re-apply.',
+        '-- Regenerate the destructive (reset) variant with: npm run compose:schema',
+        '-- ============================================================================',
+        '',
+      ].join('\n');
+  console.log(
+    includeDrop
+      ? '  ✓ DROP section: included (reset mode)'
+      : '  ✓ DROP section: omitted (preserve mode)',
+  );
 
   // 6. Strip header from generated (it has its own header comment)
   // Find where the first entity definition starts (marked by "-- Entity:")
@@ -180,7 +196,11 @@ function composeSchema() {
 // ============================================================================
 
 function main() {
-  const result = composeSchema();
+  // Destructive (reset) DROP section is included by default; --no-drop or
+  // SCHEMA_DROP=false emits a data-preserving (create-if-not-exists) schema.
+  const includeDrop =
+    !process.argv.includes('--no-drop') && process.env.SCHEMA_DROP !== 'false';
+  const result = composeSchema({ includeDrop });
   return result.success ? 0 : 1;
 }
 

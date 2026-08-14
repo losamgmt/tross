@@ -39,7 +39,9 @@ function log(message, color = 'reset') {
   console.log(`${colors[color]}${message}${colors.reset}`);
 }
 
-async function initDatabase() {
+async function initDatabase(options = {}) {
+  const seedFile = options.seedFile || SEED_FILE;
+
   log('🚀 Tross Database Initialization (strict mode)', 'blue');
   log('═'.repeat(50), 'blue');
 
@@ -56,8 +58,8 @@ async function initDatabase() {
     log('✅ Schema applied successfully', 'green');
 
     // Apply seed data
-    log('🌱 Applying demo-data.sql...', 'blue');
-    const seedSQL = await fs.readFile(SEED_FILE, 'utf8');
+    log(`🌱 Applying ${path.basename(seedFile)}...`, 'blue');
+    const seedSQL = await fs.readFile(seedFile, 'utf8');
     await db.query(seedSQL);
     log('✅ Seed data applied successfully', 'green');
 
@@ -96,9 +98,7 @@ async function initDatabase() {
       log('⚠️ Database initialized but some verification checks failed', 'yellow');
     }
 
-    // Close pool gracefully
-    await db.end();
-    process.exit(0);
+    return { allPassed };
 
   } catch (error) {
     log('═'.repeat(50), 'red');
@@ -114,15 +114,24 @@ async function initDatabase() {
       log(`   Code: ${error.code}`, 'red');
     }
 
-    // Try to close pool
-    try {
-      await db.end();
-    } catch {
-      // Ignore cleanup errors
-    }
-
-    process.exit(1);
+    throw error;
   }
 }
 
-initDatabase();
+// Direct CLI invocation runs the rebuild strategy and owns process lifecycle.
+// When required as a module (e.g. by deploy-db.js), the caller closes the pool.
+if (require.main === module) {
+  initDatabase()
+    .then(() => db.end())
+    .then(() => process.exit(0))
+    .catch(async () => {
+      try {
+        await db.end();
+      } catch {
+        // Ignore cleanup errors
+      }
+      process.exit(1);
+    });
+}
+
+module.exports = { initDatabase };

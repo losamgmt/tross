@@ -16,8 +16,9 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
   -- Audit fields
   applied_by VARCHAR(255) DEFAULT CURRENT_USER,
   notes TEXT,
-  
-  CONSTRAINT version_format CHECK (version ~ '^\d{3}_')
+
+  -- Version is the 3-digit prefix of the migration filename (e.g. 001), no underscore
+  CONSTRAINT version_format CHECK (version ~ '^\d{3}$')
 );
 
 -- Index for fast version lookups

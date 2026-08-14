@@ -149,14 +149,44 @@ Deployment is automated from Git by the platform (push to `main` → Railway/Ver
 
 ## Database Schema & Migrations
 
-Entity tables are DERIVED from metadata into `backend/schema.sql` (see [DATABASE_ARCHITECTURE.md](../architecture/DATABASE_ARCHITECTURE.md)); migrations are **forward-only numbered SQL files** (`npm run db:migrate`) for evolving an existing database while preserving its data.
+Entity tables are DERIVED from metadata into `backend/schema.sql` (see [DATABASE_ARCHITECTURE.md](../architecture/DATABASE_ARCHITECTURE.md)). Deployment initializes the database through a single parameterized tool — `backend/scripts/deploy-db.js` (`npm run db:deploy`) — which supports **two interchangeable strategies, built in from the start:**
 
-> ⚠️ **Pre-production deploy behavior — READ BEFORE GO-LIVE.** The Railway start command runs `scripts/init-db-strict.js`, which applies `schema.sql` on **every deploy**. In the current **pre-production** mode `schema.sql` opens with a `DROP TABLE … CASCADE` reset block, so **each deploy rebuilds the database and reseeds — real data is NOT preserved** (login survives only because the seed recreates the admin users). This is intentional pre-launch. **Before any real production data exists, disable the reset** (make `compose-schema.js` skip the DROP section) and move the deploy to a create-if-not-exists + migration flow. Tracked as `deploy-resets-prod-data` in the registry.
+| Strategy | What it does | Data | When |
+| --- | --- | --- | --- |
+| **`rebuild`** (default) | Applies `schema.sql` (which DROPs + recreates all tables) then seeds. Clean slate on every deploy. | **Not preserved** | Pre-launch — chosen for its straightforwardness while the schema is still moving. |
+| **`migrate`** | Applies pending forward-only numbered migrations from `backend/migrations/` on top of the existing schema (tracked in `schema_migrations`; idempotent; transactional). A fresh database is bootstrapped to the current schema and baselined, so the command works either way. | **Preserved** | Go-live and beyond, once real data must survive deploys. |
 
-**Migration best practices:**
+**Selecting the strategy** (first match wins): `--strategy=<rebuild|migrate>` → `DEPLOY_DB_STRATEGY` env → default `rebuild`. The Railway start command is strategy-agnostic (`node scripts/deploy-db.js`), so deploy behavior is switched with an **environment variable — no code change.**
 
-- Keep each migration small and idempotent (`IF [NOT] EXISTS`).
-- Never edit an applied migration — add a new one.
+```bash
+npm run db:deploy                            # rebuild (default) + demo seed
+npm run db:deploy:rebuild                    # explicit clean rebuild
+npm run db:deploy:migrate                    # forward migrations (data-preserving)
+DEPLOY_DB_SEED=essential npm run db:deploy   # rebuild with the minimal seed
+```
+
+### Current mode: rebuild (pre-launch)
+
+`schema.sql` opens with a `DROP TABLE … CASCADE` reset block, so each deploy rebuilds and reseeds — real data is not preserved (login survives because the seed recreates the admin users). This is the intended pre-launch behavior. Seeds: `seeds/demo-data.sql` (full demo dataset — the deploy default) or `seeds/essential-data.sql` (roles + admin + preferences + settings only).
+
+### Switching to data-preserving deploys (go-live)
+
+1. Regenerate a preserve-mode schema (omits the DROP block; tables become `CREATE TABLE IF NOT EXISTS`): `npm run compose:schema -- --no-drop`.
+2. Set `DEPLOY_DB_STRATEGY=migrate` in the Railway environment.
+
+Deploys then apply only new numbered migrations and preserve data. Forward-migration tooling:
+
+```bash
+npm run db:migrate                        # apply pending migrations
+npm run db:migrate:status                 # applied vs pending
+node scripts/run-migrations.js --dry-run  # preview without applying
+node scripts/run-migrations.js --verify   # checksum-integrity check
+```
+
+**Migration authoring:**
+
+- One change per file, named `NNN_description.sql` (3-digit prefix); keep each idempotent (`IF [NOT] EXISTS`).
+- Never edit an applied migration — add a new one (checksums detect drift).
 - Back up the database before a structural change.
 
 ---

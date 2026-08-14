@@ -44,7 +44,7 @@ async function ensureMigrationsTable() {
  */
 async function getAppliedMigrations() {
   const result = await pool.query(
-    'SELECT version, checksum FROM schema_migrations ORDER BY version',
+    'SELECT version, name, applied_at, checksum FROM schema_migrations ORDER BY version',
   );
   return result.rows;
 }
@@ -294,6 +294,32 @@ async function getStatus() {
   console.log(`Total: ${applied.length} applied, ${pending.length} pending\n`);
 }
 
+/**
+ * Baseline: record all on-disk migrations as already-applied WITHOUT running them.
+ * Used when a database is created fresh from the current composed schema.sql (which
+ * already reflects every migration), so those deltas must not be re-applied.
+ */
+async function baselineMigrations() {
+  await ensureMigrationsTable();
+
+  const files = await getMigrationFiles();
+  for (const file of files) {
+    const { version, name } = parseMigrationFilename(file);
+    const content = await fs.readFile(path.join(MIGRATIONS_DIR, file), 'utf8');
+    const checksum = calculateChecksum(content);
+
+    await pool.query(
+      `INSERT INTO schema_migrations (version, name, execution_time_ms, checksum)
+       VALUES ($1, $2, 0, $3)
+       ON CONFLICT (version) DO NOTHING`,
+      [version, name, checksum],
+    );
+  }
+
+  logger.info(`✅ Baselined ${files.length} migration(s) as applied`);
+  return { baselined: files.length };
+}
+
 // CLI Handler
 if (require.main === module) {
   const args = process.argv.slice(2);
@@ -325,4 +351,5 @@ module.exports = {
   runMigrations,
   verifyMigrations,
   getStatus,
+  baselineMigrations,
 };
