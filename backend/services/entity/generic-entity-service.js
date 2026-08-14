@@ -27,12 +27,14 @@ const {
 } = require('../../config/metadata-accessors');
 const { logger } = require('../../config/logger');
 const db = require('../../db/connection');
+const { withTransaction } = require('../../db/helpers/transaction-helper');
 const { toSafeId } = require('../../validators/type-coercion');
 const PaginationService = require('./pagination-service');
 const QueryBuilderService = require('./query-builder-service');
 const {
   evaluateBeforeHooks,
   evaluateAfterHooks,
+  runAfterChangeHooks,
 } = require('./hook-service');
 const { buildUpdateClause } = require('../../db/helpers/update-helper');
 const { applyDerived } = require('./field-derivation');
@@ -781,16 +783,17 @@ class GenericEntityService {
    *
    * SRP: ONLY inserts a new row using metadata-driven field validation
    *
-   * TRANSACTION SEMANTICS (NOT wrapped in a DB transaction):
-   * - The INSERT is auto-committed via db.query() the moment it runs.
-   * - afterChange hooks then run POST-COMMIT and are reactive: their failures are
-   *   caught and logged inside evaluateAfterHooks — they never roll back the write
-   *   or fail the request. Recursion is bounded by `options.skipHooks` and the hook
-   *   cascade-depth cap (HOOK_LIMITS.maxCascadeDepth).
-   * - Audit is written post-commit as a blocking await (audit integrity is
-   *   intentionally allowed to surface as an error).
-   * - Contrast: delete() and batch() DO use BEGIN/COMMIT/ROLLBACK. Wrapping the
-   *   write + afterChange + audit in a single transaction is deferred to P2.
+   * TRANSACTION SEMANTICS (single Unit of Work — see ADR 013):
+   * - INSERT + afterChange hooks + audit all run on ONE pg client via
+   *   withTransaction(): they commit together or roll back together.
+   * - afterChange hooks run IN-transaction; cascade actions join the same Unit
+   *   of Work (context.tx = client) and a hook failure aborts the whole write
+   *   (Option A atomicity). Recursion is bounded by `options.skipHooks` and the
+   *   hook cascade-depth cap (HOOK_LIMITS.maxCascadeDepth).
+   * - When options.client is supplied (e.g. batch), this create JOINS the
+   *   caller's transaction (propagation) instead of opening its own.
+   * - External side-effects (email/SMS/webhooks) are NOT run here; they are
+   *   deferred to the Stage 2 durable outbox drained after commit.
    *
    * @param {string} entityName - Entity name (e.g., 'user', 'role', 'customer')
    * @param {Object} data - Entity data to insert
@@ -799,7 +802,7 @@ class GenericEntityService {
    * @param {boolean} [options.skipHooks] - Skip hook evaluation (prevents recursion)
    * @param {string|number} [options.user] - User ID for hook/audit context
    * @param {Object} [options.rlsContext] - ADR-011 RLS context; redacts the returned record to the caller's role (omit for internal/system callers → full record)
-   * @param {Object} [options.client] - Optional pg client to run the INSERT on a caller's open transaction (batch); defaults to the pool
+   * @param {Object} [options.client] - Optional pg client; when provided the whole create JOINS the caller's open transaction (propagation) instead of opening its own
    * @returns {Promise<Object>} Created entity with all fields (RETURNING *)
    * @throws {Error} If entityName invalid, required fields missing, or DB error
    *
@@ -839,141 +842,144 @@ class GenericEntityService {
     const cleanData = sanitizeData(data, metadata);
 
     // =========================================================================
-    // AUTO-GENERATE IDENTIFIERS FOR COMPUTED ENTITIES
-    // COMPUTED entities (work_order, invoice, contract) have auto-generated
-    // identifiers in the format PREFIX-YYYY-NNNN (e.g., WO-2025-0001)
+    // SINGLE UNIT OF WORK (ADR 013)
+    // Identifier reservation, derivations, INSERT, afterChange hooks and audit
+    // all run on ONE pg client. When options.client is supplied (e.g. batch),
+    // this JOINS the caller's transaction (propagation); otherwise it opens its
+    // own. Everything commits together or rolls back together.
     // =========================================================================
-    const namePattern = NAME_PATTERN_MAP[entityName];
-    if (namePattern === NAME_PATTERNS.COMPUTED) {
-      const identifierField = IDENTIFIER_FIELDS[entityName];
-      if (identifierField && !cleanData[identifierField]) {
-        cleanData[identifierField] = await generateIdentifier(entityName, options.client);
-        logger.debug('Auto-generated identifier for COMPUTED entity', {
-          entity: entityName,
-          field: identifierField,
-          value: cleanData[identifierField],
-        });
-      }
-    }
-
-    // =========================================================================
-    // APPLY METADATA-DRIVEN FIELD DERIVATIONS
-    // For fields with `derived: { from, via }`, compute the value per method.
-    // Example: work_order.property_id via:'lookup' from unit_id → unit.property_id
-    // =========================================================================
-    await applyDerived(entityName, cleanData, metadata);
-
-    // Validate required fields are present (after sanitization and auto-generation)
-    const missingFields = requiredFields.filter(
-      (field) =>
-        cleanData[field] === undefined ||
-        cleanData[field] === null ||
-        cleanData[field] === '',
-    );
-
-    if (missingFields.length > 0) {
-      throw new AppError(
-        `Missing required fields for ${entityName}: ${missingFields.join(', ')}`,
-        400,
-        ERROR_CODES.VALIDATION_FAILED,
-      );
-    }
-
-    // Filter data using EXCLUSION pattern - allow all fields EXCEPT system-managed ones
-    // Uses centralized constant from config/constants.js
-    // EXCEPTION: sharedPrimaryKey entities (e.g., preferences) allow 'id' to be provided
-    const allowedSystemFields = metadata.sharedPrimaryKey ? ['id'] : [];
-    const { kept: filteredData } = partitionFields(
-      cleanData,
-      (value, field) =>
-        (!ENTITY_FIELDS.SYSTEM_MANAGED_ON_CREATE.includes(field) ||
-          allowedSystemFields.includes(field)) &&
-        value !== undefined,
-    );
-
-    // Check we have at least one field to insert
-    const fields = Object.keys(filteredData);
-    if (fields.length === 0) {
-      throw new AppError(
-        `No valid fields provided for ${entityName}`,
-        400,
-        ERROR_CODES.VALIDATION_FAILED,
-      );
-    }
-
-    // Serialize JSON/JSONB fields for database insertion
-    const serializedData = this._serializeForDb(filteredData, metadata);
-
-    // Build parameterized INSERT query
-    const columns = fields.join(', ');
-    const placeholders = fields.map((_, i) => `$${i + 1}`).join(', ');
-    const values = fields.map((field) => serializedData[field]);
-
-    const query = `
-      INSERT INTO ${tableName} (${columns})
-      VALUES (${placeholders})
-      RETURNING *
-    `;
-
-    logger.debug('GenericEntityService.create', {
-      entity: entityName,
-      table: tableName,
-      fields,
-    });
-
-    // Execute query (use the caller's transaction client when threaded, else the pool)
-    const exec = options.client || db;
-    const result = await exec.query(query, values);
-
-    logger.info(`${entityName} created`, {
-      id: result.rows[0]?.[metadata.primaryKey],
-      identityField: result.rows[0]?.[metadata.identityField],
-    });
-
-    // Strip auth identifiers from response
-    const filteredResult = stripAuthIdentifiers(result.rows[0], metadata);
-
-    // =========================================================================
-    // EVALUATE AFTER-CHANGE HOOKS FOR CREATE (trigger actions)
-    // POST-COMMIT + reactive: the row is already persisted; hook failures are
-    // caught/logged inside evaluateAfterHooks and never fail the request or roll
-    // back the write.
-    // Hooks are defined in metadata.fields[fieldName].afterChange
-    // For create, oldValue is null/undefined (field didn't exist)
-    // Skip if options.skipHooks is true (prevents recursive hook execution)
-    // =========================================================================
-    if (metadata.fields && !options.skipHooks) {
-      for (const [fieldName, newValue] of Object.entries(filteredData)) {
-        const fieldMeta = metadata.fields[fieldName];
-        const hooks = fieldMeta?.afterChange;
-        if (hooks && hooks.length > 0) {
-          await evaluateAfterHooks({
-            hooks,
-            oldValue: null,
-            newValue,
-            context: {
+    return withTransaction(
+      async (client) => {
+        // =====================================================================
+        // AUTO-GENERATE IDENTIFIERS FOR COMPUTED ENTITIES
+        // COMPUTED entities (work_order, invoice, contract) have auto-generated
+        // identifiers in the format PREFIX-YYYY-NNNN (e.g., WO-2025-0001).
+        // Runs on the txn client so the reservation is atomic with the INSERT.
+        // =====================================================================
+        const namePattern = NAME_PATTERN_MAP[entityName];
+        if (namePattern === NAME_PATTERNS.COMPUTED) {
+          const identifierField = IDENTIFIER_FIELDS[entityName];
+          if (identifierField && !cleanData[identifierField]) {
+            cleanData[identifierField] = await generateIdentifier(entityName, client);
+            logger.debug('Auto-generated identifier for COMPUTED entity', {
               entity: entityName,
-              record: filteredResult,
-              field: fieldName,
-              user: options.user || options.auditContext?.userId,
-            },
+              field: identifierField,
+              value: cleanData[identifierField],
+            });
+          }
+        }
+
+        // =====================================================================
+        // APPLY METADATA-DRIVEN FIELD DERIVATIONS
+        // For fields with `derived: { from, via }`, compute the value per method.
+        // Example: work_order.property_id via:'lookup' from unit_id → unit.property_id
+        // =====================================================================
+        await applyDerived(entityName, cleanData, metadata);
+
+        // Validate required fields are present (after sanitization and auto-generation)
+        const missingFields = requiredFields.filter(
+          (field) =>
+            cleanData[field] === undefined ||
+            cleanData[field] === null ||
+            cleanData[field] === '',
+        );
+
+        if (missingFields.length > 0) {
+          throw new AppError(
+            `Missing required fields for ${entityName}: ${missingFields.join(', ')}`,
+            400,
+            ERROR_CODES.VALIDATION_FAILED,
+          );
+        }
+
+        // Filter data using EXCLUSION pattern - allow all fields EXCEPT system-managed ones
+        // Uses centralized constant from config/constants.js
+        // EXCEPTION: sharedPrimaryKey entities (e.g., preferences) allow 'id' to be provided
+        const allowedSystemFields = metadata.sharedPrimaryKey ? ['id'] : [];
+        const { kept: filteredData } = partitionFields(
+          cleanData,
+          (value, field) =>
+            (!ENTITY_FIELDS.SYSTEM_MANAGED_ON_CREATE.includes(field) ||
+              allowedSystemFields.includes(field)) &&
+            value !== undefined,
+        );
+
+        // Check we have at least one field to insert
+        const fields = Object.keys(filteredData);
+        if (fields.length === 0) {
+          throw new AppError(
+            `No valid fields provided for ${entityName}`,
+            400,
+            ERROR_CODES.VALIDATION_FAILED,
+          );
+        }
+
+        // Serialize JSON/JSONB fields for database insertion
+        const serializedData = this._serializeForDb(filteredData, metadata);
+
+        // Build parameterized INSERT query
+        const columns = fields.join(', ');
+        const placeholders = fields.map((_, i) => `$${i + 1}`).join(', ');
+        const values = fields.map((field) => serializedData[field]);
+
+        const query = `
+          INSERT INTO ${tableName} (${columns})
+          VALUES (${placeholders})
+          RETURNING *
+        `;
+
+        logger.debug('GenericEntityService.create', {
+          entity: entityName,
+          table: tableName,
+          fields,
+        });
+
+        // Execute the INSERT on the Unit-of-Work client
+        const result = await client.query(query, values);
+
+        logger.info(`${entityName} created`, {
+          id: result.rows[0]?.[metadata.primaryKey],
+          identityField: result.rows[0]?.[metadata.identityField],
+        });
+
+        // Strip auth identifiers from response
+        const filteredResult = stripAuthIdentifiers(result.rows[0], metadata);
+
+        // =====================================================================
+        // AFTER-CHANGE HOOKS FOR CREATE (trigger actions) — IN-TRANSACTION
+        // Cascade actions join this Unit of Work (context.tx = client) and a
+        // hook failure aborts the whole write (Option A atomicity, ADR 013).
+        // Skip when options.skipHooks is set (batch delegates; prevents recursion).
+        // =====================================================================
+        if (!options.skipHooks) {
+          await runAfterChangeHooks({
+            metadata,
+            entityName,
+            changedData: filteredData,
+            record: filteredResult,
+            oldRecord: null,
+            client,
+            user: options.user || options.auditContext?.userId,
             operation: 'create',
           });
         }
-      }
-    }
 
-    // Log audit event (blocking to ensure audit is written before response)
-    await logEntityAuditIfEnabled(
-      'create',
-      entityName,
-      filteredResult,
-      options.auditContext,
+        // Log audit event on the same client (commits/rolls back with the write)
+        await logEntityAuditIfEnabled(
+          'create',
+          entityName,
+          filteredResult,
+          options.auditContext,
+          null,
+          client,
+        );
+
+        // Redact non-readable fields for the caller's role (ADR-011 output boundary).
+        // Applied AFTER hooks + audit, which require the full created record.
+        return this._redactForContext(filteredResult, metadata, options.rlsContext);
+      },
+      { client: options.client },
     );
-
-    // Redact non-readable fields for the caller's role (ADR-011 output boundary).
-    // Applied AFTER hooks + audit, which require the full created record.
-    return this._redactForContext(filteredResult, metadata, options.rlsContext);
   }
 
   /**

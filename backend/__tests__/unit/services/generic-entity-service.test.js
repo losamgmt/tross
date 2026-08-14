@@ -30,6 +30,7 @@ jest.mock("../../../config/logger", () => ({
 jest.mock("../../../services/entity/hook-service", () => ({
   evaluateBeforeHooks: jest.fn().mockResolvedValue({ allowed: true }),
   evaluateAfterHooks: jest.fn().mockResolvedValue({ executed: [] }),
+  runAfterChangeHooks: jest.fn().mockResolvedValue(undefined),
 }));
 
 // ============================================================================
@@ -43,7 +44,19 @@ const {
 } = require("../../../config/metadata-accessors");
 const hookService = require("../../../services/entity/hook-service");
 
+// Pristine mock references captured at load. Some nested describes (e.g. delete)
+// REASSIGN db.query / db.getClient in their beforeEach; restore them after every
+// test so the reassignment never leaks into later describes. This matters now
+// that create()/update() run through getClient() (single Unit of Work, ADR 013).
+const __pristineDbQuery = db.query;
+const __pristineGetClient = db.getClient;
+
 describe("GenericEntityService", () => {
+  afterEach(() => {
+    db.query = __pristineDbQuery;
+    db.getClient = __pristineGetClient;
+  });
+
   // ==========================================================================
   // requireEntityMetadata TESTS
   // ==========================================================================
@@ -2959,7 +2972,7 @@ describe("GenericEntityService", () => {
     // ------------------------------------------------------------------------
 
     describe("create() afterChange hooks", () => {
-      test("should call evaluateAfterHooks on create with oldValue null", async () => {
+      test("should run afterChange hooks on create with oldRecord null", async () => {
         // Arrange
         const createdRecord = { id: 1, status: "draft", name: "Test" };
 
@@ -2993,19 +3006,16 @@ describe("GenericEntityService", () => {
             status: "draft",
           });
 
-          // Assert: evaluateAfterHooks was called with oldValue: null
-          expect(hookService.evaluateAfterHooks).toHaveBeenCalledWith(
+          // Assert: create delegates the reactive step to runAfterChangeHooks,
+          // inside the Unit of Work (client threaded), with oldRecord null.
+          // (runAfterChangeHooks internally fans out to evaluateAfterHooks.)
+          expect(hookService.runAfterChangeHooks).toHaveBeenCalledWith(
             expect.objectContaining({
-              hooks: expect.arrayContaining([
-                expect.objectContaining({ action: "log" }),
-              ]),
-              oldValue: null,
-              newValue: "Test",
+              entityName: "recommendation",
+              changedData: expect.objectContaining({ name: "Test" }),
+              oldRecord: null,
               operation: "create",
-              context: expect.objectContaining({
-                entity: "recommendation",
-                field: "name",
-              }),
+              client: expect.anything(),
             }),
           );
         } finally {

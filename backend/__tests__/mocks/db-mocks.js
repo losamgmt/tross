@@ -89,13 +89,18 @@ function createDBMock(options = {}) {
   // Create a mock client for transaction support
   const mockClient = createMockClient();
 
-  // Smart default: BEGIN/COMMIT/ROLLBACK auto-resolve
-  mockClient.query.mockImplementation((sql) => {
-    if (sql === "BEGIN" || sql === "COMMIT" || sql === "ROLLBACK") {
+  // Smart default: transaction-control statements (BEGIN/COMMIT/ROLLBACK and
+  // SAVEPOINT/RELEASE) auto-resolve; all DATA queries delegate to the same smart
+  // queryMock as the pool. This mirrors a real pg client so the own-transaction
+  // path (getClient) behaves exactly like the pool path (db.query) — including
+  // recording INSERT/UPDATE/SELECT calls on queryMock for assertions.
+  mockClient.query.mockImplementation((sql, params) => {
+    const normalized = typeof sql === "string" ? sql.trim().toUpperCase() : "";
+    if (/^(BEGIN|COMMIT|ROLLBACK|SAVEPOINT|RELEASE)/.test(normalized)) {
       return Promise.resolve({ rows: [], rowCount: 0 });
     }
-    // Default: empty result (can be overridden per test)
-    return Promise.resolve({ rows: [], rowCount: 0 });
+    // Delegate data queries to the pool mock (shared behavior + call recording)
+    return queryMock(sql, params);
   });
 
   return {

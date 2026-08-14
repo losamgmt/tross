@@ -66,6 +66,7 @@ describe("db/helpers/audit-helper.js", () => {
           ipAddress: "127.0.0.1",
           userAgent: "Test Agent",
           result: AuditResults.SUCCESS,
+          client: null,
         });
       });
 
@@ -91,6 +92,7 @@ describe("db/helpers/audit-helper.js", () => {
           ipAddress: "192.168.1.1",
           userAgent: "Mozilla/5.0",
           result: AuditResults.SUCCESS,
+          client: null,
         });
       });
 
@@ -113,6 +115,7 @@ describe("db/helpers/audit-helper.js", () => {
           ipAddress: null,
           userAgent: null,
           result: AuditResults.SUCCESS,
+          client: null,
         });
       });
 

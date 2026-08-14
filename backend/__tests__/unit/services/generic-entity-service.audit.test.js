@@ -39,9 +39,19 @@ describe("GenericEntityService - Audit Logging", () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
-    // Set up mock client for delete operations
+    // Transaction client mirrors the pool: txn-control statements auto-resolve,
+    // and data queries delegate to db.query (which each test configures). Tests
+    // that need a bespoke sequence (delete) still queue mockResolvedValueOnce,
+    // which takes precedence over this default implementation.
     mockClient = {
-      query: jest.fn(),
+      query: jest.fn((sql, params) => {
+        const normalized =
+          typeof sql === "string" ? sql.trim().toUpperCase() : "";
+        if (/^(BEGIN|COMMIT|ROLLBACK|SAVEPOINT|RELEASE)/.test(normalized)) {
+          return Promise.resolve({ rows: [], rowCount: 0 });
+        }
+        return db.query(sql, params);
+      }),
       release: jest.fn(),
     };
     db.getClient.mockResolvedValue(mockClient);
@@ -94,6 +104,8 @@ describe("GenericEntityService - Audit Logging", () => {
         "customer",
         expect.objectContaining({ id: 1 }),
         mockAuditContext,
+        null,
+        expect.anything(),
       );
     });
 
@@ -112,6 +124,8 @@ describe("GenericEntityService - Audit Logging", () => {
         "customer",
         expect.objectContaining({ id: 1 }),
         undefined,
+        null,
+        expect.anything(),
       );
     });
 
@@ -134,6 +148,8 @@ describe("GenericEntityService - Audit Logging", () => {
         "customer",
         expect.objectContaining({ id: 1 }),
         null,
+        null,
+        expect.anything(),
       );
     });
 
@@ -385,6 +401,8 @@ describe("GenericEntityService - Audit Logging", () => {
         "customer",
         expect.any(Object),
         partialContext,
+        null,
+        expect.anything(),
       );
     });
 
