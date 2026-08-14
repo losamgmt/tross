@@ -7,7 +7,7 @@ This document explains **why** Tross validates data the way it does, and the arc
 For implementation details, see the code itself:
 
 - `backend/config/models/*-metadata.js` - field definitions
-- `backend/utils/validation-deriver.js` - Joi schema derivation
+- `backend/config/validation-deriver.js` - Joi schema derivation
 - `frontend/lib/services/metadata/` - frontend validation loading
 
 ---
@@ -32,17 +32,17 @@ For implementation details, see the code itself:
 **Decision**: Validate data at four independent layers.
 
 ```
-Frontend Form → Backend Joi → Model Logic → Database Constraints
+Frontend Form → Backend Joi → Business Rules (hooks/derivation) → Database Constraints
 ```
 
 **Why Each Layer Exists**:
 
-| Layer       | Purpose             | Why Not Skip It?                            |
-| ----------- | ------------------- | ------------------------------------------- |
-| Frontend    | Instant UX feedback | Users shouldn't wait for network round-trip |
-| Backend Joi | Security boundary   | Never trust client input, period            |
-| Model       | Business logic      | Complex rules that span multiple fields     |
-| Database    | Final guarantee     | Protects data even if app layers fail       |
+| Layer          | Purpose             | Why Not Skip It?                            |
+| -------------- | ------------------- | ------------------------------------------- |
+| Frontend       | Instant UX feedback | Users shouldn't wait for network round-trip |
+| Backend Joi    | Security boundary   | Never trust client input, period            |
+| Business rules | Cross-field logic   | `beforeChange` hooks + derivations in `GenericEntityService` |
+| Database       | Final guarantee     | Protects data even if app layers fail       |
 
 **Why Not Just Database Constraints?**
 
@@ -118,9 +118,9 @@ Frontend Form → Backend Joi → Model Logic → Database Constraints
 When adding or modifying validation:
 
 1. **Start with metadata** - define the field in `*-metadata.js`
-2. **Update database** - add column/constraint to `schema.sql`
-3. **Sync** - run `sync-entity-metadata.js`
-4. **Done** - derivation handles everything else
+2. **Regenerate the schema** - `npm run compose:schema` derives `schema.sql` from metadata (never hand-edit it)
+3. **Sync** - `npm run sync:all` projects metadata to the frontend
+4. **Done** - validation, Swagger, and UI all derive from the metadata automatically
 
 **Why this order?**
 

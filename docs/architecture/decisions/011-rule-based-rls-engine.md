@@ -6,6 +6,12 @@
 
 ---
 
+> **📌 Implemented rule shape (correction, 2026-08-14).** The `access` typedef below is the original design
+> sketch. The IMPLEMENTED engine (`backend/db/helpers/rls/` + each `*-metadata.js` `rlsRules`) uses a NESTED
+> `junction` object — `access: { type: 'junction', junction: { table, localKey, foreignKey, filter } }`, alongside
+> `access: { type: 'direct', field, value }` and `access: null`. The live engine + metadata are authoritative for
+> the exact field names; the typedef below is retained unchanged as the decision record (R-A).
+
 ## Context
 
 ### Problem Statement

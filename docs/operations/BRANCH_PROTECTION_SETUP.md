@@ -1,8 +1,6 @@
 # Branch Protection Setup Guide
 
-**⚠️ NOTE:** Branch protection rules require **GitHub Team plan** ($4/user/month) for private repositories. This guide is for reference when you upgrade OR if you make the repo public.
-
-**Current strategy:** Trust-based workflow with CI checks (advisory, not enforced).
+**Status (2026-08-14):** the repo is now **public**, so branch protection is available at no cost, and a `main` **ruleset is active** — force-pushes blocked and PRs required, with the solo owner (admin) able to bypass for direct pushes; the two collaborators are read-only. The steps below document the fuller PR-gated setup for when a write-collaborator is added.
 
 ---
 

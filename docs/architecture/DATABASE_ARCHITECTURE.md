@@ -24,6 +24,8 @@ Every business entity MUST have these fields:
 | `created_at`   | Creation timestamp (cached from audit_logs)            |
 | `updated_at`   | Auto-managed modification timestamp                    |
 
+> **Tenancy (reserved).** The system is single-tenant today. `tenant_id` is the reserved canonical name for the future tenant-scoping Tier-1 field; it is intentionally NOT added until multi-tenancy is triggered (avoids a dead column). See [ADR-014: Tenancy Model & Evolution](decisions/014-tenancy-model-and-evolution.md).
+
 ### Tier 2: Lifecycle Fields (Optional)
 
 Entities with workflow requirements add:

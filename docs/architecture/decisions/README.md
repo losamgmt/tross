@@ -29,6 +29,8 @@ Each ADR records its own status (Accepted / Superseded / etc.) in its header —
 11. [Rule-Based RLS Engine](011-rule-based-rls-engine.md)
 12. [Declarative Routing with go_router](012-declarative-routing-go-router.md)
 13. [Transactional Write Path & Reactive-Action Atomicity (Unit of Work)](013-transactional-write-path-unit-of-work.md)
+14. [Tenancy Model & Evolution](014-tenancy-model-and-evolution.md)
+15. [API Versioning Strategy](015-api-versioning-strategy.md)
 
 ---
 

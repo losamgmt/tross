@@ -1,6 +1,7 @@
 # Environment Variables Reference
 
-Complete reference for all environment variables used in Tross.
+Complete reference for all environment variables used in Tross. For how these combine into the three run modes
+(TEST / LOCAL_DEV / PRODUCTION) and the mode-derived feature flags, see [environment-contract.md](environment-contract.md).
 
 ## Quick Start
 

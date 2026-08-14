@@ -13,7 +13,7 @@ const AppError = require('../utils/app-error');
 class ExampleService {
   // Business methods...
 
-  // Health check methods (required)
+  // Health check methods (external-resource services only — see §3)
   static isConfigured() { /* ... */ }
   static getConfigurationInfo() { /* ... */ }
   static async healthCheck(timeoutMs = 5000) { /* ... */ }
@@ -63,7 +63,7 @@ const SOME_CONSTANT = 'value';
 class ServiceName {
   // Business methods...
 
-  // Health check methods (REQUIRED)
+  // Health check methods (external-resource services only — see §3; static logic layers omit them)
   static isConfigured() { /* ... */ }
   static getConfigurationInfo() { /* ... */ }
   static async healthCheck(timeoutMs = 5000) { /* ... */ }
@@ -93,7 +93,9 @@ await pool.query('SELECT ...');  // Don't do this
 
 ### 3. Health Check Pattern
 
-All services that interact with external resources (DB, APIs, storage) MUST implement these methods:
+Services that OWN an external-resource connection (DB pool, external APIs, storage) implement these methods.
+**Static logic layers** (e.g. `GenericEntityService`, which composes `db.query` / `withTransaction` but owns no
+connection or config of its own) OMIT them — a health check there would be vacuous:
 
 ```javascript
 class ServiceName {

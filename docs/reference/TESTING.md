@@ -76,26 +76,19 @@ cd frontend && flutter test --coverage
 
 **What to test:**
 
-- Model methods (CRUD operations)
-- Service logic (business rules)
+- Service logic (`GenericEntityService`, hooks, derivations)
 - Validators (input validation)
 - Utilities (helpers, formatters)
 
-**Example:** Model validation
+**Example:** metadata-driven service validation
 
 ```javascript
-// __tests__/unit/models/Customer.validation.test.js
-describe("Customer Model - Validation", () => {
-  it("should require email", async () => {
-    await expect(Customer.create({ name: "Test" })).rejects.toThrow(
-      "email is required",
-    );
-  });
-
-  it("should validate email format", async () => {
-    await expect(Customer.create({ email: "invalid" })).rejects.toThrow(
-      "Invalid email format",
-    );
+// __tests__/unit/services/generic-entity-service.test.js
+describe("GenericEntityService.create - validation", () => {
+  it("rejects a customer missing a required field", async () => {
+    await expect(
+      GenericEntityService.create("customer", { first_name: "Test" }),
+    ).rejects.toThrow(/required/);
   });
 });
 ```
@@ -105,7 +98,7 @@ describe("Customer Model - Validation", () => {
 - Mock external dependencies (DB, APIs)
 - Test one thing per test
 - Use descriptive test names
-- Fast (<5s timeout)
+- Fast and isolated (timeouts live in the Jest config)
 
 ---
 
@@ -183,7 +176,7 @@ runRouteTests("customers", { app, db });
 - Use test database (not dev/prod!)
 - Clean database between tests
 - Test auth/permissions
-- Moderate speed (<10s timeout)
+- Real DB, moderate speed (timeouts live in the Jest config)
 
 ---
 

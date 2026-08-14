@@ -13,7 +13,7 @@ AppError(msg, statusCode, code)
     ↓
 Route throws / Middleware catches
     ↓
-Global error handler (server.js:225)
+Global error handler (server.js — the errorHandler middleware)
     ↓ (pattern matching if no statusCode)
     ↓ "not found" → 404
     ↓ "invalid/required" → 400

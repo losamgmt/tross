@@ -7,6 +7,8 @@
 
 ---
 
+> **Note (2026-08-14):** examples below write the junction table singular (`customer_unit`); the canonical name is **`customer_units`** (plural, per the Entity Contract + live schema). Read the plural as authoritative.
+
 ## Context
 
 TROSS supports many-to-many (M:M) relationships through junction tables (e.g., `customer_unit` links `customers` and `units`). The frontend needed a pattern to:

@@ -11,7 +11,7 @@ RESTful API design patterns and conventions.
 - **RESTful** - Resources as nouns, actions as HTTP verbs
 - **Consistent** - Same patterns across all endpoints
 - **Self-documenting** - OpenAPI/Swagger for live docs
-- **Versioned** - Future-proof with API versions
+- **Evolvable** - unversioned today (`/api/{resource}`); the versioning strategy for breaking changes is defined in ADR-015
 - **Secure** - Auth on everything except health checks
 
 ---

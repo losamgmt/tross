@@ -28,6 +28,7 @@ Tross documentation hub.
 | [Quick Start](getting-started/QUICK_START.md)         | Get running in 5 minutes          |
 | [Development](getting-started/DEVELOPMENT.md)         | Daily workflow, code organization |
 | [Troubleshooting](getting-started/TROUBLESHOOTING.md) | Common issues & solutions         |
+| [Edge-Case Troubleshooting](getting-started/EDGE-CASE-TROUBLESHOOTING.md) | Deep debugging map — where to look when things break |
 
 ---
 
@@ -42,6 +43,8 @@ Tross documentation hub.
 | [ERD](architecture/ERD.md)                                         | Entity relationship diagram         |
 | [Schema-Driven UI](architecture/SCHEMA_DRIVEN_UI.md)               | Single source of truth              |
 | [Validation Architecture](architecture/VALIDATION_ARCHITECTURE.md) | Multi-layer validation              |
+| [Field Types](architecture/FIELD_TYPES.md)                         | Semantic field types & traits       |
+| [Platform Utilities](architecture/PLATFORM_UTILITIES.md)           | Cross-platform (web/mobile) utilities |
 | [Architecture Lock](architecture/ARCHITECTURE_LOCK.md)             | Frozen patterns                     |
 | [Architecture Decisions](architecture/decisions/)                  | ADRs for key choices                |
 
@@ -55,8 +58,12 @@ Tross documentation hub.
 | [OpenAPI Spec](reference/openapi.json)                      | Generated API specification       |
 | [Authentication](reference/AUTH.md)                         | Dual auth strategy, JWT, sessions |
 | [Security](reference/SECURITY.md)                           | Triple-tier: Auth0 + RBAC + RLS   |
-| [Environment Variables](reference/ENVIRONMENT_VARIABLES.md) | Configuration reference           |
+| [Environment Variables](reference/ENVIRONMENT_VARIABLES.md) | Full variable catalog             |
+| [Environment Contract](reference/environment-contract.md)   | 3-mode model + mode-derived flags |
+| [Service Layer Standards](reference/service-layer-standards.md) | Service structure & health-check scope |
 | [Testing](reference/TESTING.md)                             | Philosophy, pyramid, patterns     |
+| [Test Authentication](reference/test-authentication.md)     | TestContext auth patterns         |
+| [Validation Rules](reference/validation-rules.json)         | Generated validation-rule spec    |
 
 ---
 
@@ -91,5 +98,6 @@ Tross documentation hub.
 | [MVP Scope](project/MVP_SCOPE.md)                                | Original project scope         |
 | [Implementation Plan](project/plans/IMPLEMENTATION-PLAN.md)      | Metadata implementation plan (historical record) |
 | [Metadata Completion](project/plans/METADATA-COMPLETION-PLAN.md) | Metadata completion coordinator (historical record) |
+| [Frontend Reading Plan](project/FRONTEND_READING_PLAN.md)        | Junction-entity frontend plan (historical record) |
 | [Audits](project/audits/)                                        | Technical audits & reviews     |
 | [Process](project/process/)                                      | Development process docs       |

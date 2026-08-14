@@ -82,7 +82,6 @@ DATABASE_URL=postgresql://user:password@db-host:5432/tross_prod
 
 # Security (CRITICAL - generate strong secrets; minimum strength is enforced at startup)
 JWT_SECRET=<a strong random secret>
-SESSION_SECRET=<a strong random secret>
 
 # Auth0 (Production credentials)
 AUTH0_DOMAIN=your-tenant.auth0.com
@@ -148,11 +147,13 @@ Deployment is automated from Git by the platform (push to `main` → Railway/Ver
 
 ---
 
-## Database Migrations
+## Database Schema & Migrations
 
-Migrations are **forward-only numbered SQL files** applied by the migration runner (`npm run db:migrate`); entity tables are generated from metadata (see [DATABASE_ARCHITECTURE.md](../architecture/DATABASE_ARCHITECTURE.md)). On the managed platform, migrations run as part of the deploy.
+Entity tables are DERIVED from metadata into `backend/schema.sql` (see [DATABASE_ARCHITECTURE.md](../architecture/DATABASE_ARCHITECTURE.md)); migrations are **forward-only numbered SQL files** (`npm run db:migrate`) for evolving an existing database while preserving its data.
 
-**Best practices:**
+> ⚠️ **Pre-production deploy behavior — READ BEFORE GO-LIVE.** The Railway start command runs `scripts/init-db-strict.js`, which applies `schema.sql` on **every deploy**. In the current **pre-production** mode `schema.sql` opens with a `DROP TABLE … CASCADE` reset block, so **each deploy rebuilds the database and reseeds — real data is NOT preserved** (login survives only because the seed recreates the admin users). This is intentional pre-launch. **Before any real production data exists, disable the reset** (make `compose-schema.js` skip the DROP section) and move the deploy to a create-if-not-exists + migration flow. Tracked as `deploy-resets-prod-data` in the registry.
+
+**Migration best practices:**
 
 - Keep each migration small and idempotent (`IF [NOT] EXISTS`).
 - Never edit an applied migration — add a new one.

@@ -88,9 +88,9 @@ This document certifies which architectural patterns are locked and explains the
 
 **What's locked:**
 
-- Database schema drives UI generation
-- Metadata fetched at runtime
-- Generic components introspect metadata
+- Entity metadata (the SSOT) drives UI generation
+- Metadata is projected to the frontend at BUILD time (`npm run sync:all`) and loaded at startup — NOT fetched per request
+- Generic components introspect the synced metadata
 - Customization layer for overrides
 
 **See:** `SCHEMA_DRIVEN_UI.md`
@@ -149,6 +149,8 @@ These should always be true:
 - Zero hardcoded enum values (all in metadata)
 - All migrations idempotent (safe to run multiple times)
 - All entity behavior derived from metadata
+
+> **Enforcement (fitness functions).** These invariants are guardrails and should be machine-enforced, not merely aspirational. CI already guards several (sync idempotency + freshness, metadata validation at load, ESLint, and the docs link-checker). Promoting the remainder — a circular-dependency check, a "no hardcoded enum literal" guard, and (on multi-tenancy) a tenant-scope guard per [ADR-014](decisions/014-tenancy-model-and-evolution.md) — to executable CI checks is tracked as `quality-invariants-as-fitness-functions` in the internal registry.
 
 ## References
 

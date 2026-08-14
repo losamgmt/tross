@@ -122,7 +122,7 @@ Database (PostgreSQL)        Object Storage (Cloudflare)
 - ✅ Professional security
 - ✅ Focus on business logic
 
-**Dev Mode:** File-based dev users (`backend/config/test-users.js`) for fast local development.
+**Dev Mode:** file-based dev users (in the dev test-user config) for fast local development — see `../reference/AUTH.md`.
 
 ---
 
@@ -170,8 +170,8 @@ enforceRLS               → Reads req.entityMetadata.rlsResource, applies RLS p
 id SERIAL PRIMARY KEY
 [identity_field] VARCHAR(X) UNIQUE NOT NULL
 is_active BOOLEAN DEFAULT true NOT NULL
-created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
-updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
+updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
 ```
 
 **TIER 2 - Lifecycle State (Optional):**
@@ -247,11 +247,7 @@ The concrete strategy classes and the selection logic live in the auth service (
 - Regression prevention
 - Documentation via tests
 
-**Performance:**
-
-- Unit tests: <5s timeout
-- Integration tests: <10s timeout
-- Full suite: <70s (parallelized)
+**Performance:** the tiers run under tight, ascending timeouts (unit fastest, integration slower, full suite parallelized). The exact thresholds live in the Jest config (the SSOT) — not transcribed here.
 
 ---
 

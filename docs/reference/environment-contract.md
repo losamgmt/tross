@@ -92,6 +92,9 @@ The `TEST_JWT_SECRET` constant is defined in `app-mode.js` and is intentionally 
 
 ## Environment Variables Reference
 
+> This section lists only the variables that drive **mode** behavior. The complete variable catalog (database,
+> CORS, rate-limiting, logging, platform vars) lives in [ENVIRONMENT_VARIABLES.md](ENVIRONMENT_VARIABLES.md).
+
 ### Required Variables
 
 | Variable | Required In | Description |

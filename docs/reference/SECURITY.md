@@ -98,6 +98,8 @@ All blocked write attempts are logged with event type `DEV_WRITE_BLOCKED`.
 
 The concrete rule shape, operators, and traversal limits live in the RLS engine and are governed by the row-level-security ADR. This document deliberately does not transcribe rule structures, so it cannot drift from the engine.
 
+> **Tenancy (future).** The platform is single-tenant today. When multi-tenancy is adopted, a `tenant` scope is added to this grant model as an **additive layer above** the per-role rules — no existing rule changes, and deny-by-default already covers "no tenant match → no rows." See [ADR-014: Tenancy Model & Evolution](../architecture/decisions/014-tenancy-model-and-evolution.md).
+
 ---
 
 ### Sub-Entity Security (Parent-Derived Access)
