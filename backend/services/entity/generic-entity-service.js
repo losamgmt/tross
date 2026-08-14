@@ -1461,10 +1461,13 @@ class GenericEntityService {
    * SRP: ONLY orchestrates multiple create/update/delete operations atomically
    *
    * PHILOSOPHY:
-   * - ALL SUCCEED OR ALL FAIL: Transactional guarantee
+   * - ALL SUCCEED OR ALL FAIL: Transactional guarantee — a single Unit of Work
+   *   via withTransaction; delegated create/update/delete JOIN it (ADR 013)
    * - ORDERED EXECUTION: Operations execute in array order (for dependencies)
    * - DETAILED RESULTS: Returns success/failure for each operation
    * - AUDIT TRAIL: Each operation is individually audited
+   * - PARTIAL SUCCESS: continueOnError uses per-op SAVEPOINTs so a failed op undoes
+   *   only its own writes and survivors still commit
    *
    * @param {string} entityName - Entity name (e.g., 'user', 'role', 'customer')
    * @param {Array<Object>} operations - Array of operations to execute
@@ -1588,155 +1591,160 @@ class GenericEntityService {
     const errors = [];
     const stats = { created: 0, updated: 0, deleted: 0, failed: 0 };
 
-    // Get a client for transaction
-    const client = await db.getClient();
+    // ─────────────────────────────────────────────────────────────────────────
+    // SINGLE UNIT OF WORK (ADR 013)
+    // The whole batch runs on ONE pg client via withTransaction; delegated
+    // create/update/delete JOIN it (propagation). continueOnError uses per-op
+    // SAVEPOINTs so a failed op undoes only its own writes and survivors still
+    // commit; a non-continueOnError failure throws out of the callback to roll
+    // the whole batch back, then is caught below to return the failure result.
+    // ─────────────────────────────────────────────────────────────────────────
+    let aborted = null;
 
     try {
-      await client.query('BEGIN');
+      await withTransaction(async (client) => {
+        for (let i = 0; i < operations.length; i++) {
+          const op = operations[i];
 
-      for (let i = 0; i < operations.length; i++) {
-        const op = operations[i];
-
-        // Per-op SAVEPOINT under continueOnError lets a failed op undo its own
-        // partial writes (e.g. a delete whose cascade already ran) without
-        // discarding earlier successful ops; the batch still COMMITs survivors.
-        const savepoint = continueOnError ? `op_${i}` : null;
-        if (savepoint) {
-          await client.query(`SAVEPOINT ${savepoint}`);
-        }
-
-        try {
-          // Delegate to the canonical single-entity methods ON this transaction.
-          // skipHooks keeps batch hook-free (S6a); create/update/delete already
-          // sanitize, derive, generate identifiers, enforce system-protection,
-          // audit, and redact for rlsContext.
-          const delegateOptions = {
-            client,
-            skipHooks: true,
-            rlsContext,
-            auditContext,
-          };
-          let result;
-
-          switch (op.operation) {
-            case 'create':
-              result = await this.create(entityName, op.data, delegateOptions);
-              stats.created++;
-              break;
-
-            case 'update':
-              result = await this.update(
-                entityName,
-                op.id,
-                op.data,
-                delegateOptions,
-              );
-              if (result === null) {
-                throw new AppError(
-                  `Record not found: ${op.id}`,
-                  404,
-                  ERROR_CODES.RESOURCE_NOT_FOUND,
-                );
-              }
-              stats.updated++;
-              break;
-
-            case 'delete':
-              result = await this.delete(entityName, op.id, delegateOptions);
-              if (result === null) {
-                throw new AppError(
-                  `Record not found: ${op.id}`,
-                  404,
-                  ERROR_CODES.RESOURCE_NOT_FOUND,
-                );
-              }
-              stats.deleted++;
-              break;
-          }
-
-          // Delegated create/update/delete already redacted for rlsContext.
-          results.push({
-            index: i,
-            operation: op.operation,
-            success: true,
-            result,
-          });
-
+          // Per-op SAVEPOINT under continueOnError lets a failed op undo its own
+          // partial writes (e.g. a delete whose cascade already ran) without
+          // discarding earlier successful ops; the batch still COMMITs survivors.
+          const savepoint = continueOnError ? `op_${i}` : null;
           if (savepoint) {
-            await client.query(`RELEASE SAVEPOINT ${savepoint}`);
+            await client.query(`SAVEPOINT ${savepoint}`);
           }
-        } catch (opError) {
-          stats.failed++;
 
-          const errorEntry = {
-            index: i,
-            operation: op.operation,
-            success: false,
-            error: opError.message,
-          };
+          try {
+            // Delegate to the canonical single-entity methods ON this transaction.
+            // skipHooks keeps batch hook-free (S6a); create/update/delete already
+            // sanitize, derive, generate identifiers, enforce system-protection,
+            // audit, and redact for rlsContext.
+            const delegateOptions = {
+              client,
+              skipHooks: true,
+              rlsContext,
+              auditContext,
+            };
+            let result;
 
-          errors.push(errorEntry);
-          results.push(errorEntry);
+            switch (op.operation) {
+              case 'create':
+                result = await this.create(entityName, op.data, delegateOptions);
+                stats.created++;
+                break;
 
-          if (continueOnError) {
-            // Undo just this op's partial writes; keep earlier successful ops.
-            if (savepoint) {
-              await client.query(`ROLLBACK TO SAVEPOINT ${savepoint}`);
+              case 'update':
+                result = await this.update(
+                  entityName,
+                  op.id,
+                  op.data,
+                  delegateOptions,
+                );
+                if (result === null) {
+                  throw new AppError(
+                    `Record not found: ${op.id}`,
+                    404,
+                    ERROR_CODES.RESOURCE_NOT_FOUND,
+                  );
+                }
+                stats.updated++;
+                break;
+
+              case 'delete':
+                result = await this.delete(entityName, op.id, delegateOptions);
+                if (result === null) {
+                  throw new AppError(
+                    `Record not found: ${op.id}`,
+                    404,
+                    ERROR_CODES.RESOURCE_NOT_FOUND,
+                  );
+                }
+                stats.deleted++;
+                break;
             }
-          } else {
-            // Roll the whole transaction back and return immediately.
-            await client.query('ROLLBACK');
 
-            logger.warn(`Batch ${entityName} failed at operation ${i}`, {
+            // Delegated create/update/delete already redacted for rlsContext.
+            results.push({
+              index: i,
               operation: op.operation,
-              error: opError.message,
-              stats,
+              success: true,
+              result,
             });
 
-            return {
+            if (savepoint) {
+              await client.query(`RELEASE SAVEPOINT ${savepoint}`);
+            }
+          } catch (opError) {
+            stats.failed++;
+
+            const errorEntry = {
+              index: i,
+              operation: op.operation,
               success: false,
-              results,
-              errors,
-              stats,
-              message: `Batch aborted at operation ${i}: ${opError.message}`,
+              error: opError.message,
             };
+
+            errors.push(errorEntry);
+            results.push(errorEntry);
+
+            if (continueOnError) {
+              // Undo just this op's partial writes; keep earlier successful ops.
+              if (savepoint) {
+                await client.query(`ROLLBACK TO SAVEPOINT ${savepoint}`);
+              }
+            } else {
+              // Abort: throw out of the callback so withTransaction ROLLS BACK the
+              // whole batch; the structured failure result is returned below.
+              aborted = { index: i, operation: op.operation, message: opError.message };
+              throw opError;
+            }
           }
         }
+      });
+    } catch (error) {
+      if (aborted) {
+        logger.warn(`Batch ${entityName} failed at operation ${aborted.index}`, {
+          operation: aborted.operation,
+          error: aborted.message,
+          stats,
+        });
+
+        return {
+          success: false,
+          results,
+          errors,
+          stats,
+          message: `Batch aborted at operation ${aborted.index}: ${aborted.message}`,
+        };
       }
 
-      // If continueOnError and we have errors, still commit successful operations
-      // This is intentional - caller requested partial success
-      await client.query('COMMIT');
-
-      const success = errors.length === 0;
-
-      logger.info(`Batch ${entityName} completed`, {
-        success,
-        stats,
-        errorCount: errors.length,
-      });
-
-      return {
-        success,
-        results,
-        errors,
-        stats,
-        message: success
-          ? `Batch completed: ${stats.created} created, ${stats.updated} updated, ${stats.deleted} deleted`
-          : `Batch completed with ${errors.length} error(s): ${stats.created} created, ${stats.updated} updated, ${stats.deleted} deleted`,
-      };
-    } catch (error) {
-      await client.query('ROLLBACK');
-
+      // Unexpected failure (withTransaction already rolled back) — propagate.
       logger.error(`Batch ${entityName} transaction failed`, {
         error: error.message,
         stats,
       });
 
       throw error;
-    } finally {
-      client.release();
     }
+
+    // Success — or continueOnError with survivors committed.
+    const success = errors.length === 0;
+
+    logger.info(`Batch ${entityName} completed`, {
+      success,
+      stats,
+      errorCount: errors.length,
+    });
+
+    return {
+      success,
+      results,
+      errors,
+      stats,
+      message: success
+        ? `Batch completed: ${stats.created} created, ${stats.updated} updated, ${stats.deleted} deleted`
+        : `Batch completed with ${errors.length} error(s): ${stats.created} created, ${stats.updated} updated, ${stats.deleted} deleted`,
+    };
   }
 }
 
