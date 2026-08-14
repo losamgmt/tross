@@ -68,8 +68,12 @@ This atomicity is correct **because every reactive action today is a database op
 
 - 1.1 — audit write accepts a transaction client (joins the UoW; fails it on error). ✅
 - 1.2 — reactive-action layer becomes transaction-aware (client threading + failure propagation). ✅
-- 1.3 / 1.4 — `create()` / `update()` adopt the `ownTransaction` pattern (write + hooks + audit atomic).
-- 1.5 — atomicity integration tests.
+- 1.3a — `withTransaction` gains propagation (`{ client }` → join-or-create); becomes the shared primitive. ✅
+- 1.3b — `runAfterChangeHooks` orchestrator: the reactive step defined once, shared by `create` / `update`. ✅
+- 1.3 — `create()` composes `withTransaction` (INSERT + afterChange hooks + audit atomic). ✅
+- 1.4 — `update()` composes `withTransaction` (oldRecord + beforeChange + UPDATE + afterChange + audit atomic; approval/block roll back a no-op). ✅
+- 1.4b — `delete()` and `batch()` retire their hand-rolled `BEGIN/COMMIT/ROLLBACK` and compose `withTransaction` (one primitive everywhere; batch keeps savepoints). ⏳
+- 1.5 — atomicity integration tests (rollback-on-hook-failure, cascade-in-parent-txn, audit-in-txn). ⏳
 - Stage 2 (deferred) — durable outbox + drainer for external / async side-effects; unifies the webhook queue.
 
 **Known exceptions (outside the canonical funnel today)**
