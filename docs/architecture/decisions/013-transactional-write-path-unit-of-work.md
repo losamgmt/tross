@@ -64,7 +64,7 @@ This atomicity is correct **because every reactive action today is a database op
 - A buggy reactive action can now **fail a user's write** — an availability cost traded for correctness. Bounded by the cascade-depth cap; only 3/34 entities declare hooks today, so the engine is lightly exercised.
 - In-transaction cascades extend transaction/lock duration. Current actions are bounded (single-row writes, `SUM` recomputes); a genuinely expensive or external side-effect is the signal to move it to the Stage-2 outbox.
 
-**Rollout (REL-1 Stage 1)**
+**Rollout (REL-1 Stage 1 — COMPLETE)**
 
 - 1.1 — audit write accepts a transaction client (joins the UoW; fails it on error). ✅
 - 1.2 — reactive-action layer becomes transaction-aware (client threading + failure propagation). ✅
@@ -72,9 +72,11 @@ This atomicity is correct **because every reactive action today is a database op
 - 1.3b — `runAfterChangeHooks` orchestrator: the reactive step defined once, shared by `create` / `update`. ✅
 - 1.3 — `create()` composes `withTransaction` (INSERT + afterChange hooks + audit atomic). ✅
 - 1.4 — `update()` composes `withTransaction` (oldRecord + beforeChange + UPDATE + afterChange + audit atomic; approval/block roll back a no-op). ✅
-- 1.4b — `delete()` and `batch()` retire their hand-rolled `BEGIN/COMMIT/ROLLBACK` and compose `withTransaction` (one primitive everywhere; batch keeps savepoints). ⏳
-- 1.5 — atomicity integration tests (rollback-on-hook-failure, cascade-in-parent-txn, audit-in-txn). ⏳
+- 1.4b — `delete()` and `batch()` retire their hand-rolled `BEGIN/COMMIT/ROLLBACK` and compose `withTransaction` (one primitive everywhere; batch keeps savepoints; delete audit now in-txn; not-found is a no-op commit). ✅
+- 1.5 — atomicity capstone tests: create/update roll back on afterChange failure (Option A) and on audit failure; delete rolls back on audit failure; propagation joins never self-commit/rollback. ✅
 - Stage 2 (deferred) — durable outbox + drainer for external / async side-effects; unifies the webhook queue.
+
+All four write methods (`create` / `update` / `delete` / `batch`) now compose the single canonical `withTransaction` primitive: write + afterChange hooks + cascades + audit are one atomic Unit of Work.
 
 **Known exceptions (outside the canonical funnel today)**
 
